@@ -90,6 +90,64 @@ last_error, last_error_at
 
 ---
 
+## Программный контракт обмена (критически важно)
+
+Контракт уже реализован в `packages/shared/src/sync.ts`. Нельзя обходить — только расширять.
+
+### Как это работает
+
+**1. Zod-схема = единственный источник правды**
+
+`SyncEventSchema` в `packages/shared` — это discriminated union всех возможных событий.
+Каждый тип события имеет строго типизированный payload.
+
+```typescript
+// При получении сообщения из RabbitMQ — всегда парсить через схему:
+const event = SyncEventSchema.parse(JSON.parse(rawMessage));
+// Если сообщение не соответствует схеме → ZodError → nack, DLQ
+```
+
+**2. Exhaustive switch = compile-time гарантия обработки**
+
+Каждый consumer обязан использовать `assertNever` в default-ветке:
+
+```typescript
+import { SyncEventSchema, assertNever } from 'shared';
+
+function handleEvent(raw: unknown): void {
+    const event = SyncEventSchema.parse(raw); // runtime validation
+
+    switch (event.eventType) {
+        case 'product.updated':
+            // event.payload здесь строго типизирован как ProductUpdatedPayload
+            await applyProductUpdate(event.payload);
+            break;
+        case 'price.updated':
+            await applyPriceUpdate(event.payload);
+            break;
+        // ...все остальные типы...
+        default:
+            return assertNever(event); // TypeScript ошибка если пропустили case
+    }
+}
+```
+
+**Что происходит при добавлении нового события:**
+
+1. Добавляешь новый вариант в `SyncEventSchema` в `packages/shared`
+2. TypeScript **не скомпилируется** во всех consumer-файлах где есть exhaustive switch
+3. Ошибка компиляции = обязательное требование добавить обработчик
+4. CI упадёт → PR не смержится без обработчика
+
+**3. Правила изменения схемы**
+
+- Новый тип события → добавить в `SyncEventSchema` + payload-схему в `packages/shared`
+- Изменение payload существующего события → обратная совместимость обязательна (новые поля — `.optional()`)
+- Удаление типа события → сначала убрать все consumer-обработчики, потом из схемы
+- Схему менять только в `packages/shared` — никогда в плагине напрямую
+
+---
+
 ## Правила разработки
 
 - Читать `AGENTS.md` — там все обязательные правила
