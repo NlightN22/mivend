@@ -2,6 +2,7 @@
     "name": "mivend",
     "version": "0.0.1",
     "private": true,
+    "license": "GPL-3.0-or-later",
     "scripts": {
         "dev:central": "dotenv -e apps/server/.env.central -- pnpm --filter server dev",
         "dev:branch": "dotenv -e apps/server/.env.branch -- pnpm --filter server dev",
