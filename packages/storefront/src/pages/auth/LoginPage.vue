@@ -22,7 +22,12 @@
                 </el-form-item>
                 <el-alert v-if="error" type="error" :title="t('auth.loginError')" show-icon />
                 <el-form-item>
-                    <el-button type="primary" native-type="submit" :loading="loading" style="width: 100%">
+                    <el-button
+                        type="primary"
+                        native-type="submit"
+                        :loading="loading"
+                        style="width: 100%"
+                    >
                         {{ t('auth.login') }}
                     </el-button>
                 </el-form-item>
