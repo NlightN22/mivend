@@ -1,0 +1,46 @@
+{
+    "name": "mivend",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "dev:central": "dotenv -e apps/server/.env.central -- pnpm --filter server dev",
+        "dev:branch": "dotenv -e apps/server/.env.branch -- pnpm --filter server dev",
+        "build": "pnpm -r build",
+        "lint": "eslint .",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "prepare": "husky"
+    },
+    "lint-staged": {
+        "*.ts": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "*.{json,yml,yaml,md}": [
+            "prettier --write"
+        ]
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.0.0",
+        "@typescript-eslint/eslint-plugin": "^8.0.0",
+        "@typescript-eslint/parser": "^8.0.0",
+        "dotenv-cli": "^7.0.0",
+        "eslint": "^9.0.0",
+        "eslint-config-prettier": "^10.1.8",
+        "husky": "^9.1.7",
+        "lint-staged": "^17.0.8",
+        "prettier": "^3.8.4",
+        "typescript": "^5.4.0",
+        "vitest": "^4.1.9"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "@apollo/protobufjs",
+            "bcrypt",
+            "msgpackr-extract",
+            "sharp"
+        ]
+    }
+}

@@ -1,0 +1,25 @@
+{
+    "name": "server",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+        "build": "tsc",
+        "start": "node dist/main.js"
+    },
+    "dependencies": {
+        "@vendure/admin-ui-plugin": "^3.0.0",
+        "@vendure/asset-server-plugin": "^3.0.0",
+        "@vendure/core": "^3.0.0",
+        "@vendure/job-queue-plugin": "^3.0.0",
+        "bullmq": "^5.0.0",
+        "pg": "^8.11.0",
+        "shared": "workspace:*",
+        "@mivend/plugin-customer-pricing": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.4.0"
+    }
+}

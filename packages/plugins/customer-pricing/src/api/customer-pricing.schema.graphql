@@ -1,0 +1,15 @@
+enum PriceType {
+    RETAIL
+    WHOLESALE
+    WHOLESALE_VIP
+    DEALER
+    DEALER_VIP
+}
+
+extend type Customer {
+    priceType: PriceType
+}
+
+extend type Mutation {
+    setCustomerPriceType(customerId: ID!, priceType: PriceType!): Customer!
+}
