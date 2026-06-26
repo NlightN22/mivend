@@ -193,6 +193,31 @@ Do not use any other license. Do not omit the field.
 
 ---
 
+## Storefront rules
+
+See `docs/frontend.md` for the full architecture. Critical rules:
+
+1. **Pages are thin.** No business logic in `pages/` — all logic goes to composables or stores.
+   A page component should only compose: layout + components + store calls.
+
+2. **Never edit `src/api/generated/`** — it is overwritten by codegen on every run.
+   Run `pnpm --filter @mivend/storefront codegen` after changing `.graphql` operation files.
+
+3. **All GraphQL operations must be typed via codegen.** Raw string queries with hand-written
+   types are forbidden. Every query/mutation lives in a `.graphql` file next to the page or
+   component that uses it.
+
+4. **No hardcoded UI strings in templates.** Use `$t('key')` from vue-i18n.
+   All strings are defined in `src/i18n/ru.ts`.
+
+5. **Virtual scroll for long lists.** Use `ElTableV2` for any list that may exceed 100 rows.
+   Standard `ElTable` only for short static lists (e.g. cart items).
+
+6. **One Pinia store per domain.** Stores do not import each other.
+   Cross-domain logic belongs in a composable, not in a store.
+
+---
+
 ## What not to do
 
 - Do not add error handling for scenarios that cannot happen.
@@ -203,3 +228,5 @@ Do not use any other license. Do not omit the field.
 - Do not write multi-line docstrings or comment blocks.
 - **Do not hardcode business enums or type lists in code.** Use database entities instead.
 - **Do not omit `"license": "GPL-3.0-or-later"` from any `package.json`.**
+- **Do not put business logic in page components.** Pages are thin — use composables and stores.
+- **Do not write raw GraphQL strings with manual types.** Use codegen.
