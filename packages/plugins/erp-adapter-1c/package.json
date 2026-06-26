@@ -1,0 +1,19 @@
+{
+    "name": "@mivend/erp-adapter-1c",
+    "version": "0.0.1",
+    "private": true,
+    "license": "GPL-3.0-or-later",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch"
+    },
+    "dependencies": {
+        "@mivend/plugin-sync": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.4.0",
+        "vitest": "^4.1.9"
+    }
+}

@@ -1,0 +1,29 @@
+{
+    "name": "@mivend/plugin-sync",
+    "version": "0.0.1",
+    "private": true,
+    "license": "GPL-3.0-or-later",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch"
+    },
+    "peerDependencies": {
+        "@vendure/core": "^3.0.0"
+    },
+    "dependencies": {
+        "amqplib": "^0.10.4",
+        "bullmq": "^5.0.0",
+        "shared": "workspace:*"
+    },
+    "devDependencies": {
+        "@nestjs/common": "^10.0.0",
+        "@types/amqplib": "^0.10.0",
+        "@vendure/common": "^3.0.0",
+        "@vendure/core": "^3.0.0",
+        "typeorm": "^0.3.0",
+        "typescript": "^5.4.0",
+        "vitest": "^4.1.9"
+    }
+}
