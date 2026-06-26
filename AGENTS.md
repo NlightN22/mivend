@@ -32,6 +32,7 @@ This is a public open-source repository. Keep all content generic.
 
 - Code, variable names, comments, GraphQL fields, entity names, migration files: **English only.**
 - Chat, commit messages, PR descriptions, human-readable docs: **Russian.**
+- GitHub Issues (title, body, comments): **English.**
 
 ---
 
@@ -86,6 +87,15 @@ before it is considered done.
 - Coverage: positive scenario + at least one negative/edge scenario per operation
 - Infrastructure: real PostgreSQL + Redis via GitHub Actions services (see `.github/workflows/integration.yml`)
 - Rule: no mocking of the database — integration tests hit a real DB
+
+### Running tests
+
+Always run tests via Makefile, not directly through pnpm:
+
+- `make test` — unit tests (offline, no infrastructure needed)
+- `make test-int` — integration tests (starts dev infrastructure via `make up` automatically)
+
+Never use `pnpm test` or `pnpm --filter ... test` directly — use the Makefile targets.
 
 ### CI/CD
 
@@ -227,6 +237,31 @@ Every `package.json` in the monorepo must contain:
 
 This applies to all packages without exception: `apps/*`, `packages/shared`, `packages/plugins/*`.
 Do not use any other license. Do not omit the field.
+
+---
+
+## UI kit rules
+
+`packages/ui-kit` is the single source of truth for all visual components.
+
+**Never style a UI element inside a page or feature component.** If a button, tag, input, table,
+or any other visual element needs to look different — change it in the ui-kit component, not at
+the call site.
+
+Allowed at the page/feature level:
+
+- Layout and positioning (`display`, `flex`, `grid`, `gap`, `margin`, `padding` for spacing between blocks)
+- Page-specific slot content passed into ui-kit components
+- Conditional visibility (`v-if`, `v-show`)
+
+Forbidden at the page/feature level:
+
+- Overriding colors, fonts, borders, shadows of ui-kit components via scoped CSS
+- Duplicating a ui-kit component with a slightly different style instead of extending the original
+- Using raw Element Plus components (`ElButton`, `ElTable`, etc.) directly in pages — always use the `Mv*` wrapper
+
+If a ui-kit component does not support a required variant, **add the variant to the ui-kit** and use it everywhere.
+This keeps the design consistent and changes visible across the whole application.
 
 ---
 

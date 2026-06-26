@@ -7,6 +7,7 @@ export default {
         loginError: 'Неверный email или пароль',
     },
     catalog: {
+        title: 'Каталог',
         search: 'Поиск по артикулу или названию',
         noResults: 'Ничего не найдено',
         addToCart: 'В корзину',
@@ -26,6 +27,7 @@ export default {
         date: 'Дата',
         status: 'Статус',
         total: 'Сумма',
+        empty: 'Заказов пока нет',
     },
     account: {
         title: 'Личный кабинет',

@@ -8,7 +8,9 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
         build lint fmt \
         test test-int \
         docker-build docker-push \
-        prod-up prod-down
+        prod-up prod-down \
+        dev seed \
+        storybook storefront storefront-dev
 
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
 
@@ -26,6 +28,28 @@ ps:
 
 restart:
 	$(COMPOSE_DEV) restart
+
+# ── Full dev stack ─────────────────────────────────────────────────────────────
+
+dev:
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) --profile app up -d
+	pnpm --filter @mivend/storefront dev
+
+seed:
+	node infrastructure/scripts/seed.mjs
+
+# ── UI development ─────────────────────────────────────────────────────────────
+
+storybook:
+	pnpm --filter @mivend/ui-kit build-storybook
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) --profile ui up -d storybook
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) restart storybook
+
+storefront:
+	pnpm --filter @mivend/storefront dev
+
+storefront-dev:
+	pnpm --filter @mivend/storefront dev
 
 # ── Code ───────────────────────────────────────────────────────────────────────
 

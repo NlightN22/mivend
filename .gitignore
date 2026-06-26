@@ -1,5 +1,6 @@
 node_modules/
 dist/
+tasks/
 
 # Environment files — commit only .example variants
 .env
@@ -9,6 +10,7 @@ dist/
 
 # Generated assets
 static/assets/
+storybook-static/
 
 # Logs
 *.log

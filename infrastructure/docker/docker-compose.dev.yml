@@ -72,6 +72,50 @@ services:
             timeout: 10s
             retries: 10
 
+    server:
+        image: node:20-slim
+        working_dir: /app
+        command: node apps/server/dist/main.js
+        volumes:
+            - ../../:/app
+        ports:
+            - '3000:3000'
+            - '3002:3002'
+        environment:
+            INSTANCE_TYPE: central
+            INSTANCE_ID: central
+            PORT: '3000'
+            ADMIN_UI_PORT: '3002'
+            NODE_ENV: development
+            DB_HOST: postgres-central
+            DB_PORT: '5432'
+            DB_USERNAME: postgres
+            DB_PASSWORD: postgres
+            DB_NAME: mivend_central
+            REDIS_HOST: redis
+            REDIS_PORT: '6379'
+            RABBITMQ_URL: amqp://mivend:mivend@rabbitmq:5672
+            SUPERADMIN_USERNAME: superadmin
+            SUPERADMIN_PASSWORD: superadmin
+        depends_on:
+            postgres-central:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        profiles:
+            - app
+
+    storybook:
+        image: nginx:alpine
+        ports:
+            - '6006:80'
+        volumes:
+            - ../../packages/ui-kit/storybook-static:/usr/share/nginx/html:ro
+        profiles:
+            - ui
+
 volumes:
     postgres-central-data:
     postgres-branch-data:
