@@ -77,4 +77,4 @@ jobs:
               run: pnpm build
 
             - name: Run integration tests
-              run: pnpm --filter "packages/**" test:integration
+              run: pnpm --filter "{packages/**}" test:integration
