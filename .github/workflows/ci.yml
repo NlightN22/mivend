@@ -1,0 +1,65 @@
+name: CI
+
+on:
+    push:
+        branches: ['**']
+    pull_request:
+        branches: [main]
+
+jobs:
+    lint-and-typecheck:
+        name: Lint & type check
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+
+            - run: pnpm install --frozen-lockfile
+
+            - name: Lint
+              run: pnpm lint
+
+            - name: Format check
+              run: pnpm format:check
+
+            - name: Type check (server)
+              run: pnpm --filter server exec tsc --noEmit
+
+            - name: Type check (storefront)
+              run: pnpm --filter @mivend/storefront exec vue-tsc --noEmit
+
+    unit-tests:
+        name: Unit tests
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+
+            - run: pnpm install --frozen-lockfile
+
+            - name: Run unit tests
+              run: pnpm test
+
+            - name: Upload coverage
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage
+                  path: coverage/
+                  if-no-files-found: ignore

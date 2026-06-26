@@ -1,0 +1,28 @@
+{
+    "name": "@mivend/ui-kit",
+    "version": "0.0.1",
+    "private": true,
+    "license": "GPL-3.0-or-later",
+    "type": "module",
+    "main": "./src/index.ts",
+    "scripts": {
+        "storybook": "storybook dev -p 6006",
+        "build-storybook": "storybook build",
+        "type-check": "vue-tsc --noEmit"
+    },
+    "dependencies": {
+        "@element-plus/icons-vue": "^2.3.0",
+        "element-plus": "^2.9.0",
+        "vue": "^3.5.0"
+    },
+    "devDependencies": {
+        "@chromatic-com/storybook": "^3.0.0",
+        "@storybook/addon-essentials": "^8.0.0",
+        "@storybook/vue3": "^8.0.0",
+        "@storybook/vue3-vite": "^8.0.0",
+        "@vitejs/plugin-vue": "^5.2.0",
+        "typescript": "^5.4.0",
+        "vite": "^6.3.0",
+        "vue-tsc": "^2.2.0"
+    }
+}

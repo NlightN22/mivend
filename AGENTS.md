@@ -66,6 +66,43 @@ mivend/
 
 ---
 
+## Testing requirements
+
+Testing is mandatory — not optional. Every plugin and significant piece of logic must have tests
+before it is considered done.
+
+### Unit tests
+
+- Location: `src/__tests__/unit/` inside each package
+- Runner: Vitest
+- Required for: all service methods with business logic, all utility functions
+- Not required for: resolvers (covered by integration), trivial getters/setters
+- Rule: mock external dependencies (DB, RabbitMQ, external APIs) — unit tests must run offline
+
+### Integration tests
+
+- Location: `src/__tests__/integration/` inside each package
+- Required for: every plugin, all sync flows, all business-critical API operations
+- Coverage: positive scenario + at least one negative/edge scenario per operation
+- Infrastructure: real PostgreSQL + Redis via GitHub Actions services (see `.github/workflows/integration.yml`)
+- Rule: no mocking of the database — integration tests hit a real DB
+
+### CI/CD
+
+- Every push: lint + type-check + unit tests (`.github/workflows/ci.yml`)
+- Every PR to main: integration tests (`.github/workflows/integration.yml`)
+- A PR cannot be merged if CI is red
+
+### Definition of done for any plugin
+
+A plugin is not done until:
+
+- Unit tests cover all service methods
+- Integration test covers the main happy path and at least one failure case
+- `pnpm test` is green
+
+---
+
 ## Sync rules (non-negotiable)
 
 See `docs/sync.md` for the full design. These rules must never be broken:
