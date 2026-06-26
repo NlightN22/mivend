@@ -59,7 +59,7 @@ Branch DB change (order, reservation)
 | Credit terms / limits | Central → Branch                | Central                      |
 | Orders                | Branch → Central                | Branch                       |
 | Inventory             | Branch owns; Central aggregates | Branch                       |
-| Reservations          | Branch-local only               | —                            |
+| Reservations          | Branch → Central                | Branch                       |
 
 Sync jobs are idempotent. Failures are logged and retried — never silently dropped.
 Every synced entity carries `sourceId` and `syncedAt`.

@@ -93,7 +93,7 @@ See `docs/sync.md` for the full design. These rules must never be broken:
 7. **ERP is master for business data.** Price types, prices, catalog, customer core fields, and
    credit limits flow ERP → Hub → Branch and are never modified locally on branches.
 
-8. **Reservations are never synced.** They are branch-local by design.
+8. **Reservations sync Branch → Central only.** Branch is the source of truth; the hub aggregates for reporting. Reservations never flow from hub back to branches.
 
 ---
 

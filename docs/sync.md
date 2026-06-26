@@ -34,7 +34,7 @@ Data exchange between hub, branches, and the legacy ERP.
 | Credit terms / limits | ERP → Hub → Branch | ERP       |                                                         |
 | Orders                | Branch → Hub → ERP | Branch    | Branch is source of truth for its own orders            |
 | Inventory levels      | Branch → Hub       | Branch    | Hub aggregates; does not modify branch stock            |
-| Reservations          | Branch-local only  | Branch    | Never synced; resolved at order time                    |
+| Reservations          | Branch → Central   | Branch    | Hub aggregates for reporting; branch is source of truth |
 
 ---
 
@@ -205,7 +205,6 @@ Use a unique index on `eventId` in any processed-events log table as a hard safe
 
 ## What is never synced
 
-- Soft reservations — they are branch-local and expire automatically.
 - Admin sessions, API tokens — never leave the instance that issued them.
 - BullMQ job state — local to each instance's Redis.
 - Elasticsearch indexes — rebuilt independently per instance from local DB.
