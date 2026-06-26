@@ -1,6 +1,7 @@
 COMPOSE_DEV = docker compose -f infrastructure/docker/docker-compose.dev.yml
 COMPOSE_PROD = docker compose -f infrastructure/docker/docker-compose.yml
 GITHUB_REPOSITORY_OWNER ?= nlightn22
+VERSION = $(shell node -p "require('./package.json').version")
 GIT_SHA = $(shell git rev-parse --short HEAD)
 
 .PHONY: up down logs ps restart \
@@ -52,10 +53,10 @@ docker-build:
 
 docker-push:
 	docker build -f apps/server/Dockerfile \
-		-t ghcr.io/nlightn22/mivend-server:$(GIT_SHA) \
+		-t ghcr.io/nlightn22/mivend-server:v$(VERSION) \
 		-t ghcr.io/nlightn22/mivend-server:latest \
 		.
-	docker push ghcr.io/nlightn22/mivend-server:$(GIT_SHA)
+	docker push ghcr.io/nlightn22/mivend-server:v$(VERSION)
 	docker push ghcr.io/nlightn22/mivend-server:latest
 
 # ── Production ─────────────────────────────────────────────────────────────────

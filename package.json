@@ -15,6 +15,9 @@
         "test:integration": "pnpm --filter \"{packages/**}\" --no-bail test:integration",
         "infra:up": "docker compose -f infrastructure/docker/docker-compose.dev.yml up -d",
         "infra:down": "docker compose -f infrastructure/docker/docker-compose.dev.yml down",
+        "version:patch": "npm version patch --no-git-tag-version",
+        "version:minor": "npm version minor --no-git-tag-version",
+        "version:major": "npm version major --no-git-tag-version",
         "prepare": "husky"
     },
     "lint-staged": {
