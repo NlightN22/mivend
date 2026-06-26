@@ -3,9 +3,25 @@
     "rabbitmq_version": "3.12.0",
     "product_name": "RabbitMQ",
     "product_version": "3.12.0",
-    "users": [],
+    "users": [
+        {
+            "name": "mivend",
+            "password_hash": "yv66vluY3JJL0L9znAs2TwBPlQ0Ldd8/taIMIwdmHtGZvIH4",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": ["administrator"],
+            "limits": {}
+        }
+    ],
     "vhosts": [{ "name": "/" }],
-    "permissions": [],
+    "permissions": [
+        {
+            "user": "mivend",
+            "vhost": "/",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        }
+    ],
     "topic_permissions": [],
     "parameters": [],
     "global_parameters": [],
