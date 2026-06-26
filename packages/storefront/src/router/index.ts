@@ -12,10 +12,13 @@ export const router = createRouter({
         {
             path: '/',
             component: () => import('../layouts/DefaultLayout.vue'),
-            meta: { requiresAuth: true },
             children: [
                 {
                     path: '',
+                    component: () => import('../pages/home/HomePage.vue'),
+                },
+                {
+                    path: 'catalog',
                     component: () => import('../pages/catalog/CatalogPage.vue'),
                 },
                 {
@@ -25,14 +28,17 @@ export const router = createRouter({
                 {
                     path: 'cart',
                     component: () => import('../pages/cart/CartPage.vue'),
+                    meta: { requiresAuth: true },
                 },
                 {
                     path: 'orders',
                     component: () => import('../pages/orders/OrdersPage.vue'),
+                    meta: { requiresAuth: true },
                 },
                 {
                     path: 'account',
                     component: () => import('../pages/account/AccountPage.vue'),
+                    meta: { requiresAuth: true },
                 },
             ],
         },

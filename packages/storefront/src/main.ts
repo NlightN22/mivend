@@ -13,6 +13,12 @@ import {
     MvSearchInput,
     MvTable,
     MvPageHeader,
+    MvFormField,
+    MvInput,
+    MvPasswordInput,
+    MvNotice,
+    MvLogo,
+    MvProductCard,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
@@ -37,6 +43,12 @@ app.component('MvAmountDisplay', MvAmountDisplay);
 app.component('MvSearchInput', MvSearchInput);
 app.component('MvTable', MvTable);
 app.component('MvPageHeader', MvPageHeader);
+app.component('MvFormField', MvFormField);
+app.component('MvInput', MvInput);
+app.component('MvPasswordInput', MvPasswordInput);
+app.component('MvNotice', MvNotice);
+app.component('MvLogo', MvLogo);
+app.component('MvProductCard', MvProductCard);
 
 app.use(createPinia());
 app.use(router);

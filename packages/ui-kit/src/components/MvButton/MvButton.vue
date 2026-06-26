@@ -7,6 +7,7 @@ interface Props {
   size?: ButtonSize;
   disabled?: boolean;
   loading?: boolean;
+  nativeType?: 'button' | 'submit' | 'reset';
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -14,6 +15,7 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'md',
   disabled: false,
   loading: false,
+  nativeType: 'button',
 });
 
 const emit = defineEmits<{
@@ -35,6 +37,7 @@ function handleClick(event: MouseEvent): void {
       `mv-button--${size}`,
       { 'mv-button--disabled': disabled, 'mv-button--loading': loading },
     ]"
+    :type="nativeType"
     :disabled="disabled || loading"
     @click="handleClick"
   >

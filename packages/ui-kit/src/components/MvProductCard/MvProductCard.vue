@@ -1,0 +1,213 @@
+<script setup lang="ts">
+import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
+
+interface Props {
+  name: string;
+  sku: string;
+  brand?: string;
+  price?: number;
+  currency?: string;
+  stock?: number;
+  slug: string;
+  showPrices?: boolean;
+}
+
+withDefaults(defineProps<Props>(), {
+  brand: '',
+  price: undefined,
+  currency: 'RUB',
+  stock: undefined,
+  showPrices: true,
+});
+
+const emit = defineEmits<{ 'add-to-cart': [] }>();
+</script>
+
+<template>
+  <article class="mv-product-card">
+    <a :href="`/product/${slug}`" class="mv-product-card__img-link">
+      <div class="mv-product-card__img">
+        <span class="mv-product-card__img-icon" aria-hidden="true" />
+      </div>
+    </a>
+
+    <button class="mv-product-card__fav" type="button" aria-label="Add to favorites">
+      &#9825;
+    </button>
+
+    <div class="mv-product-card__body">
+      <div class="mv-product-card__meta">
+        <span class="mv-product-card__brand">{{ brand }}</span>
+        <span class="mv-product-card__sku">{{ sku }}</span>
+      </div>
+
+      <a :href="`/product/${slug}`" class="mv-product-card__name">{{ name }}</a>
+
+      <template v-if="showPrices">
+        <div class="mv-product-card__price-row">
+          <MvAmountDisplay
+            v-if="price !== undefined"
+            :amount="price"
+            :currency="currency"
+            size="md"
+          />
+          <span v-if="stock !== undefined" class="mv-product-card__stock">
+            {{ stock }}&nbsp;шт.
+          </span>
+        </div>
+        <button
+          class="mv-product-card__buy"
+          type="button"
+          @click="emit('add-to-cart')"
+        >
+          В корзину
+        </button>
+      </template>
+
+      <div v-else class="mv-product-card__guest">
+        Войдите для просмотра цен
+      </div>
+    </div>
+  </article>
+</template>
+
+<style scoped>
+.mv-product-card {
+  position: relative;
+  border: 1px solid #dde7e2;
+  border-radius: 20px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.mv-product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 26px rgba(27, 45, 38, 0.1);
+}
+
+.mv-product-card__img-link {
+  display: block;
+  text-decoration: none;
+}
+
+.mv-product-card__img {
+  height: 138px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #f7fbfa, #ebf8f2);
+  border-bottom: 1px solid #edf2ef;
+}
+
+.mv-product-card__img-icon {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #b8e8d8, #d8f4ea);
+}
+
+.mv-product-card__fav {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dde7e2;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  display: grid;
+  place-items: center;
+  color: #a4afa9;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(27, 45, 38, 0.08);
+  line-height: 1;
+}
+
+.mv-product-card__fav:hover {
+  color: #ff4f88;
+  border-color: #ffd2df;
+  background: #fff7fa;
+}
+
+.mv-product-card__body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.mv-product-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #66736e;
+}
+
+.mv-product-card__name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #17231f;
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 38px;
+}
+
+.mv-product-card__name:hover {
+  color: var(--el-color-primary, #00b894);
+}
+
+.mv-product-card__price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.mv-product-card__stock {
+  background: #e2f8ef;
+  color: #008a64;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mv-product-card__buy {
+  width: 100%;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: var(--app-accent-orange, #ff8a00);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mv-product-card__buy:hover {
+  background: #e67a00;
+}
+
+.mv-product-card__guest {
+  font-size: 12px;
+  color: #66736e;
+  text-align: center;
+  padding: 8px 0;
+  border-top: 1px solid #edf2ef;
+  margin-top: auto;
+}
+</style>

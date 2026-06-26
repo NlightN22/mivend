@@ -46,10 +46,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     async function fetchCurrentCustomer(): Promise<void> {
-        const result = await shopApi<{ activeCustomer: typeof customer.value }>(
-            `{ activeCustomer { id firstName lastName emailAddress } }`,
-        );
-        customer.value = result.activeCustomer;
+        try {
+            const result = await shopApi<{ activeCustomer: typeof customer.value }>(
+                `{ activeCustomer { id firstName lastName emailAddress } }`,
+            );
+            customer.value = result.activeCustomer;
+        } catch {
+            customer.value = null;
+        }
     }
 
     return { customer, isLoggedIn, login, logout, fetchCurrentCustomer };
