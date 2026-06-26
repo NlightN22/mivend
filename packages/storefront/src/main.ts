@@ -19,6 +19,7 @@ import {
     MvNotice,
     MvLogo,
     MvProductCard,
+    MvProductRow,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
@@ -49,6 +50,7 @@ app.component('MvPasswordInput', MvPasswordInput);
 app.component('MvNotice', MvNotice);
 app.component('MvLogo', MvLogo);
 app.component('MvProductCard', MvProductCard);
+app.component('MvProductRow', MvProductRow);
 
 app.use(createPinia());
 app.use(router);

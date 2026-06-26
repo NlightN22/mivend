@@ -34,6 +34,8 @@ export type { LogoSize } from './components/MvLogo/MvLogo.vue';
 
 export { default as MvProductCard } from './components/MvProductCard/MvProductCard.vue';
 
+export { default as MvProductRow } from './components/MvProductRow/MvProductRow.vue';
+
 export { colors } from './tokens/colors';
 export type { ColorToken } from './tokens/colors';
 
