@@ -17,6 +17,9 @@ static/assets/
 .DS_Store
 Thumbs.db
 
+# GraphQL codegen output
+src/api/generated/
+
 # Claude Code local state
 .claude/
 

@@ -1,28 +1,40 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
 
 export const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         {
-            path: '/',
-            component: () => import('../pages/CatalogPage.vue'),
-        },
-        {
-            path: '/product/:slug',
-            component: () => import('../pages/ProductPage.vue'),
-        },
-        {
-            path: '/cart',
-            component: () => import('../pages/CartPage.vue'),
-        },
-        {
-            path: '/orders',
-            meta: { requiresAuth: true },
-            component: () => import('../pages/OrdersPage.vue'),
-        },
-        {
             path: '/login',
-            component: () => import('../pages/LoginPage.vue'),
+            component: () => import('../pages/auth/LoginPage.vue'),
+            meta: { layout: 'auth' },
+        },
+        {
+            path: '/',
+            component: () => import('../layouts/DefaultLayout.vue'),
+            meta: { requiresAuth: true },
+            children: [
+                {
+                    path: '',
+                    component: () => import('../pages/catalog/CatalogPage.vue'),
+                },
+                {
+                    path: 'product/:slug',
+                    component: () => import('../pages/catalog/ProductPage.vue'),
+                },
+                {
+                    path: 'cart',
+                    component: () => import('../pages/cart/CartPage.vue'),
+                },
+                {
+                    path: 'orders',
+                    component: () => import('../pages/orders/OrdersPage.vue'),
+                },
+                {
+                    path: 'account',
+                    component: () => import('../pages/account/AccountPage.vue'),
+                },
+            ],
         },
     ],
 });
@@ -35,5 +47,3 @@ router.beforeEach((to, _from, next) => {
         next();
     }
 });
-
-import { useAuthStore } from '../stores/auth';
