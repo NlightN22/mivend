@@ -83,8 +83,8 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-    await dataSource.getRepository(SyncOutboxEntry).delete({});
-    await dataSource.getRepository(SyncProcessedEvent).delete({});
+    await dataSource.query(`DELETE FROM sync_outbox`);
+    await dataSource.query(`DELETE FROM sync_processed_event`);
     await dataSource.query(`DELETE FROM product`);
     await branchRabbitMQ.requireChannel().purgeQueue('sync.branch-a');
     await branchRabbitMQ.requireChannel().purgeQueue('sync.dead-letters');
