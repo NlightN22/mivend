@@ -28,13 +28,13 @@ services:
             - '6379:6379'
 
     rabbitmq:
-        image: rabbitmq:3-management-alpine
+        image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-mivend}/mivend-rabbitmq:latest
         environment:
             RABBITMQ_DEFAULT_USER: mivend
             RABBITMQ_DEFAULT_PASS: mivend
         ports:
             - '5672:5672'
-            - '15672:15672' # management UI: localhost:15672
+            - '15672:15672'
 
     elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
