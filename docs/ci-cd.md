@@ -14,11 +14,10 @@ Tests are split into three categories with different infrastructure requirements
 
 ### Integration tests
 
-- **What:** full plugin cycles hitting a real database — outbox writes, consumer idempotency, DB constraints
-- **Infrastructure:** real PostgreSQL + Redis (no mocks)
+- **What:** full plugin cycles — outbox writes, publish to RabbitMQ, consumer applies changes to DB, idempotency
+- **Infrastructure:** real PostgreSQL + Redis + RabbitMQ (no mocks)
 - **Location:** `src/__tests__/integration/` inside each package
 - **Command:** `pnpm --filter "packages/**" test:integration`
-- **RabbitMQ:** mocked in integration tests (real broker is not required for DB-level assertions)
 
 ### End-to-end tests
 
@@ -44,14 +43,17 @@ Blocks merge if red. Must stay fast (target: under 2 minutes).
 
 Services spun up by GitHub Actions:
 
-| Service    | Image         | Port |
-| ---------- | ------------- | ---- |
-| PostgreSQL | `postgres:16` | 5432 |
-| Redis      | `redis:7`     | 6379 |
+| Service    | Image                                      | Port |
+| ---------- | ------------------------------------------ | ---- |
+| PostgreSQL | `postgres:16`                              | 5432 |
+| Redis      | `redis:7`                                  | 6379 |
+| RabbitMQ   | `ghcr.io/nlightn22/mivend-rabbitmq:latest` | 5672 |
+
+Services: PostgreSQL + Redis + `ghcr.io/nlightn22/mivend-rabbitmq` (с преднастроенной топологией).
 
 Steps: install → build plugins → run integration tests.
 
-Blocks merge if red. RabbitMQ is not a service here — integration tests mock the broker.
+Blocks merge if red.
 
 ### `docker-publish.yml` — runs on push to `main` when `infrastructure/docker/rabbitmq/**` changes
 
@@ -82,7 +84,7 @@ pnpm --filter "packages/**" test:integration
 
 1. **Unit tests never touch the database.** Mock all repositories and external services.
 2. **Integration tests never mock the database.** Hit a real PostgreSQL instance.
-3. **Integration tests may mock RabbitMQ.** A real broker is only required for end-to-end tests.
+3. **Integration tests use a real RabbitMQ.** The `mivend-rabbitmq` image is used — topology is pre-configured, no setup code needed in tests.
 4. **`pnpm test` must pass locally before pushing.** The pre-commit hook runs lint, but not tests — run tests manually.
 5. **A PR cannot be merged if CI or integration tests are red.**
 6. **Docker images are published automatically** — never push to ghcr.io manually.
