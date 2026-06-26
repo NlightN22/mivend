@@ -1,5 +1,4 @@
 services:
-    # Two PostgreSQL instances simulate central hub and one branch locally
     postgres-central:
         image: postgres:16-alpine
         environment:
@@ -10,6 +9,12 @@ services:
             - '5432:5432'
         volumes:
             - postgres-central-data:/var/lib/postgresql/data
+            - ./init-db:/docker-entrypoint-initdb.d:ro
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U postgres']
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
     postgres-branch:
         image: postgres:16-alpine
@@ -21,20 +26,35 @@ services:
             - '5433:5432'
         volumes:
             - postgres-branch-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U postgres']
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
     redis:
         image: redis:7-alpine
         ports:
             - '6379:6379'
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
     rabbitmq:
-        image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-mivend}/mivend-rabbitmq:latest
+        image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-nlightn22}/mivend-rabbitmq:latest
         environment:
             RABBITMQ_DEFAULT_USER: mivend
             RABBITMQ_DEFAULT_PASS: mivend
         ports:
             - '5672:5672'
             - '15672:15672'
+        healthcheck:
+            test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+            interval: 10s
+            timeout: 10s
+            retries: 10
 
     elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
@@ -46,6 +66,11 @@ services:
             - '9200:9200'
         volumes:
             - elasticsearch-data:/usr/share/elasticsearch/data
+        healthcheck:
+            test: ['CMD-SHELL', 'curl -sf http://localhost:9200/_cluster/health || exit 1']
+            interval: 15s
+            timeout: 10s
+            retries: 10
 
 volumes:
     postgres-central-data:

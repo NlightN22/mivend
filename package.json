@@ -12,6 +12,9 @@
         "format:check": "prettier --check .",
         "test": "vitest run",
         "test:watch": "vitest",
+        "test:integration": "pnpm --filter \"{packages/**}\" --no-bail test:integration",
+        "infra:up": "docker compose -f infrastructure/docker/docker-compose.dev.yml up -d",
+        "infra:down": "docker compose -f infrastructure/docker/docker-compose.dev.yml down",
         "prepare": "husky"
     },
     "lint-staged": {
