@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { SyncEventSchema, assertNever } from '../sync';
-import type { SyncEvent, SyncEventByType } from '../sync';
+import { SyncEventSchema, assertNever } from '../../sync';
+import type { SyncEvent, SyncEventByType } from '../../sync';
 
 describe('SyncEventSchema', () => {
     it('parses a valid product.updated event', () => {

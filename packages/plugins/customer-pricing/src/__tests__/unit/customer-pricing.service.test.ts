@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CustomerService, RequestContext, TransactionalConnection } from '@vendure/core';
-import { CustomerPricingService } from '../customer-pricing.service';
+import { CustomerPricingService } from '../../customer-pricing.service';
 
 const retailPriceType = { id: '1', code: 'RETAIL', name: 'Retail', isActive: true };
 const wholesalePriceType = { id: '2', code: 'WHOLESALE', name: 'Wholesale', isActive: true };
