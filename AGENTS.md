@@ -178,6 +178,21 @@ Define TypeScript union types or `as const` arrays **only** for internal technic
 
 ---
 
+## License
+
+This project is licensed under **GPL-3.0-or-later**, required by Vendure core (GPL-3.0-or-later) which this project directly depends on.
+
+Every `package.json` in the monorepo must contain:
+
+```json
+"license": "GPL-3.0-or-later"
+```
+
+This applies to all packages without exception: `apps/*`, `packages/shared`, `packages/plugins/*`.
+Do not use any other license. Do not omit the field.
+
+---
+
 ## What not to do
 
 - Do not add error handling for scenarios that cannot happen.
@@ -187,3 +202,4 @@ Define TypeScript union types or `as const` arrays **only** for internal technic
 - Do not add backwards-compatibility shims when you can just change the code.
 - Do not write multi-line docstrings or comment blocks.
 - **Do not hardcode business enums or type lists in code.** Use database entities instead.
+- **Do not omit `"license": "GPL-3.0-or-later"` from any `package.json`.**
