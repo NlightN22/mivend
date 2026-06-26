@@ -162,7 +162,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
           @click="onSearch"
         >
           <span v-if="loading" class="mv-search__spinner" aria-hidden="true" />
-          <span v-else>Find</span>
+          <span v-else>Найти</span>
         </button>
       </div>
 

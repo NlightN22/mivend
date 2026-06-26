@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { shopApi } from '../../api/client';
 
@@ -27,6 +27,13 @@ const authStore = useAuthStore();
 const products = ref<Product[]>([]);
 const loading = ref(true);
 const error = ref('');
+const inStockOnly = ref(false);
+
+const visibleProducts = computed(() =>
+  inStockOnly.value
+    ? products.value.filter(p => p.variants[0]?.stockLevel !== 'OUT_OF_STOCK')
+    : products.value,
+);
 
 const categories = [
   'Масла и жидкости',
@@ -92,12 +99,8 @@ onMounted(fetchProducts);
         <div class="home-sidebar__filter">
           <div class="home-sidebar__filter-title">Наличие</div>
           <label class="home-sidebar__check">
-            <input type="checkbox" checked />
-            <span>На складе</span>
-          </label>
-          <label class="home-sidebar__check">
-            <input type="checkbox" />
-            <span>Под заказ</span>
+            <input v-model="inStockOnly" type="checkbox" />
+            <span>Только в наличии</span>
           </label>
         </div>
       </aside>
@@ -121,7 +124,7 @@ onMounted(fetchProducts);
 
           <div v-else class="home-products__grid">
             <MvProductCard
-              v-for="product in products"
+              v-for="product in visibleProducts"
               :key="product.id"
               :name="product.name"
               :sku="product.variants[0]?.sku ?? ''"

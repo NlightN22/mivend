@@ -27,9 +27,9 @@ function onSearch(value: string): void {
           <MvLogo name="mivend" size="md" />
         </RouterLink>
 
-        <MvButton variant="catalog" class="app-header__catalog-btn">
+        <button class="app-header__catalog-btn">
           &#9776; Каталог
-        </MvButton>
+        </button>
 
         <div class="app-header__search">
           <MvSearchInput
@@ -41,37 +41,41 @@ function onSearch(value: string): void {
         </div>
 
         <nav class="app-header__nav">
-          <RouterLink to="/account" class="app-header__nav-link">
-            <span class="app-header__nav-icon">&#128100;</span>
-            <span>Кабинет</span>
-          </RouterLink>
-          <RouterLink to="/orders" class="app-header__nav-link">
-            <span class="app-header__nav-icon">&#128230;</span>
-            <span>Заказы</span>
-          </RouterLink>
-          <a href="#" class="app-header__nav-link">
-            <span class="app-header__nav-icon">&#9825;</span>
-            <span>Избранное</span>
-          </a>
-          <RouterLink to="/cart" class="app-header__cart">
-            <span>&#128722;</span>
-            <span class="app-header__cart-text">
-              <small>Корзина</small>
-              0&nbsp;&#8381;
-            </span>
-            <span class="app-header__cart-badge">0</span>
-          </RouterLink>
+          <template v-if="authStore.isLoggedIn">
+            <RouterLink to="/account" class="app-header__nav-link app-header__nav-link--icon">
+              <span class="app-header__nav-icon">&#128100;</span>
+            </RouterLink>
+            <RouterLink to="/orders" class="app-header__nav-link">
+              <span class="app-header__nav-icon">&#128230;</span>
+              <span>Заказы</span>
+            </RouterLink>
+            <a href="#" class="app-header__nav-link">
+              <span class="app-header__nav-icon">&#9825;</span>
+              <span>Избранное</span>
+            </a>
+            <RouterLink to="/cart" class="app-header__cart">
+              <span>&#128722;</span>
+              <span class="app-header__cart-text">
+                <small>Корзина</small>
+                0&nbsp;&#8381;
+              </span>
+              <span class="app-header__cart-badge">0</span>
+            </RouterLink>
+          </template>
+
+          <template v-else>
+            <RouterLink to="/login" class="app-header__nav-link">
+              <span class="app-header__nav-icon">&#128100;</span>
+              <span>Войти</span>
+            </RouterLink>
+          </template>
         </nav>
       </div>
 
-      <div class="app-header__delivery">
+      <div v-if="authStore.isLoggedIn" class="app-header__delivery">
         <span class="app-header__delivery-line">
           Торговая точка &middot;
-          <strong>
-            {{ authStore.customer?.firstName
-              ? `${authStore.customer.firstName} ${authStore.customer.lastName}`
-              : 'Войдите в систему' }}
-          </strong>
+          <strong>{{ authStore.customer?.firstName ?? '' }} {{ authStore.customer?.lastName ?? '' }}</strong>
         </span>
       </div>
     </header>
@@ -126,6 +130,30 @@ function onSearch(value: string): void {
 
 .app-header__catalog-btn {
   width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: var(--app-accent-lime, #c8f21a);
+  color: #14231f;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(200, 242, 26, 0.28);
+  transition: background 0.15s;
+}
+
+.app-header__catalog-btn:hover {
+  background: #b8e010;
+}
+
+.app-header__nav-link--icon {
+  min-width: 44px;
 }
 
 .app-header__search {

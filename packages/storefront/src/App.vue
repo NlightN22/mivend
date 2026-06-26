@@ -3,7 +3,12 @@ import { onMounted } from 'vue';
 import { useAuthStore } from './stores/auth';
 
 const authStore = useAuthStore();
-onMounted(() => authStore.fetchCurrentCustomer());
+onMounted(async () => {
+    await authStore.fetchCurrentCustomer();
+    if (import.meta.env.DEV && !authStore.isLoggedIn) {
+        await authStore.login('ivan@autoservice-nord.example', 'Password123!');
+    }
+});
 </script>
 
 <template>
