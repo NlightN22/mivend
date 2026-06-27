@@ -8,6 +8,7 @@ export interface ProductRecord {
     stockOnHand: number;
     categoryCode?: string;
     brandCode?: string;
+    onSale?: boolean;
     enabled?: boolean;
 }
 

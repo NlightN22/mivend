@@ -290,6 +290,28 @@ See `docs/frontend.md` for the full architecture. Critical rules:
 
 ---
 
+## Vendure-specific gotchas
+
+- **GraphQL schema requires server restart.** Vendure builds the GraphQL schema once at startup. Any change to `customFields`, plugin schemas, or resolvers requires a server restart — hot reload does not apply.
+
+- **Custom fields in Shop API filters are flat, not nested.** When filtering products by a custom field (e.g. `onSale`), it appears directly in `ProductFilterParameter`, not under `customFields`:
+
+    ```graphql
+    # CORRECT
+    filter: { onSale: { eq: true } }
+
+    # WRONG — customFields does not exist in ProductFilterParameter
+    filter: { customFields: { onSale: { eq: true } } }
+    ```
+
+- **`GlobalFlag` is not exported from `@vendure/core`.** Use `'TRUE' as const` for `trackInventory` on variant create/update.
+
+- **Collections in Shop API** have no `isTopLevel` filter — identify top-level collections by `breadcrumbs.length === 2`.
+
+- **`MvCatalogDropdown` must be registered globally in `main.ts`** — it is used inside `AppHeader` which is outside Vue app scope for dynamic imports.
+
+---
+
 ## What not to do
 
 - Do not add error handling for scenarios that cannot happen.
@@ -302,6 +324,30 @@ See `docs/frontend.md` for the full architecture. Critical rules:
 - **Do not omit `"license": "GPL-3.0-or-later"` from any `package.json`.**
 - **Do not put business logic in page components.** Pages are thin — use composables and stores.
 - **Do not write raw GraphQL strings with manual types.** Use codegen.
+
+## Project context maintenance
+
+When the user asks to summarize results, preserve context, prepare context for a new chat, update project memory, or says similar phrases, use the project-context skill.
+
+The goal is not only to continue the current task, but to maintain a compact global project context for future new tasks.
+
+Update:
+
+- `docs/ai/PROJECT_CONTEXT.md`
+
+This file must describe:
+
+- what this project is;
+- what has already been implemented;
+- current architecture and important decisions;
+- planned next work;
+- implementation nuances;
+- known problems and limitations;
+- commands and checks that are important for future work.
+
+Keep it concise and useful for a new Claude Code chat.
+
+Do not dump long logs or full diffs into the context file.
 
 ## Mandatory final checks
 

@@ -8,7 +8,8 @@
         "price": 2490,
         "stockOnHand": 85,
         "categoryCode": "motor-oils",
-        "brandCode": "castrol"
+        "brandCode": "castrol",
+        "onSale": true
     },
     {
         "externalId": "ext-002",
@@ -41,7 +42,8 @@
         "price": 490,
         "stockOnHand": 67,
         "categoryCode": "filters",
-        "brandCode": "mann"
+        "brandCode": "mann",
+        "onSale": true
     },
     {
         "externalId": "ext-005",
@@ -63,7 +65,8 @@
         "price": 2890,
         "stockOnHand": 32,
         "categoryCode": "brake-system",
-        "brandCode": "brembo"
+        "brandCode": "brembo",
+        "onSale": true
     },
     {
         "externalId": "ext-007",
@@ -86,5 +89,188 @@
         "stockOnHand": 15,
         "categoryCode": "batteries",
         "brandCode": "bosch"
+    },
+    {
+        "externalId": "ext-009",
+        "sku": "MOT-0W20-4L",
+        "name": "Motor Oil 0W-20 Full Synthetic 4L",
+        "slug": "motor-oil-0w20-4l",
+        "description": "Ultra-low viscosity full synthetic oil for modern engines",
+        "price": 3290,
+        "stockOnHand": 54,
+        "categoryCode": "motor-oils",
+        "brandCode": "castrol",
+        "onSale": true
+    },
+    {
+        "externalId": "ext-010",
+        "sku": "MOT-5W40-1L",
+        "name": "Motor Oil 5W-40 Synthetic 1L",
+        "slug": "motor-oil-5w40-1l",
+        "description": "Full synthetic motor oil, 1-litre top-up pack",
+        "price": 790,
+        "stockOnHand": 200,
+        "categoryCode": "motor-oils",
+        "brandCode": "lukoil"
+    },
+    {
+        "externalId": "ext-011",
+        "sku": "FIL-FUEL-F301",
+        "name": "Fuel Filter Inline",
+        "slug": "fuel-filter-inline",
+        "description": "Inline fuel filter for gasoline engines",
+        "price": 420,
+        "stockOnHand": 140,
+        "categoryCode": "filters",
+        "brandCode": "mann",
+        "onSale": true
+    },
+    {
+        "externalId": "ext-012",
+        "sku": "FIL-CAB-C101",
+        "name": "Cabin Air Filter",
+        "slug": "cabin-air-filter",
+        "description": "Activated carbon cabin air filter",
+        "price": 680,
+        "stockOnHand": 95,
+        "categoryCode": "filters",
+        "brandCode": "mann"
+    },
+    {
+        "externalId": "ext-013",
+        "sku": "BRK-PAD-R102",
+        "name": "Rear Brake Pads Set",
+        "slug": "rear-brake-pads-set",
+        "description": "Rear brake pads for passenger cars",
+        "price": 1090,
+        "stockOnHand": 60,
+        "categoryCode": "brake-system",
+        "brandCode": "brembo"
+    },
+    {
+        "externalId": "ext-014",
+        "sku": "BRK-FLUID-500",
+        "name": "Brake Fluid DOT4 500ml",
+        "slug": "brake-fluid-dot4-500ml",
+        "description": "DOT4 brake fluid, 500ml",
+        "price": 320,
+        "stockOnHand": 180,
+        "categoryCode": "brake-system",
+        "brandCode": "bosch",
+        "onSale": true
+    },
+    {
+        "externalId": "ext-015",
+        "sku": "SPK-PLUG-IR6",
+        "name": "Spark Plug Iridium",
+        "slug": "spark-plug-iridium",
+        "description": "Iridium long-life spark plug",
+        "price": 490,
+        "stockOnHand": 220,
+        "categoryCode": "spark-plugs",
+        "brandCode": "ngk"
+    },
+    {
+        "externalId": "ext-016",
+        "sku": "BAT-45-STD",
+        "name": "Battery 45Ah Standard",
+        "slug": "battery-45ah-standard",
+        "description": "Standard lead-acid battery 45Ah",
+        "price": 4290,
+        "stockOnHand": 28,
+        "categoryCode": "batteries",
+        "brandCode": "bosch",
+        "onSale": true
+    },
+    {
+        "externalId": "ext-017",
+        "sku": "BAT-75-EFB",
+        "name": "Battery 75Ah EFB",
+        "slug": "battery-75ah-efb",
+        "description": "EFB battery for start-stop vehicles 75Ah",
+        "price": 6890,
+        "stockOnHand": 18,
+        "categoryCode": "batteries",
+        "brandCode": "bosch"
+    },
+    {
+        "externalId": "ext-018",
+        "sku": "MOT-5W30-1L",
+        "name": "Motor Oil 5W-30 Synthetic 1L",
+        "slug": "motor-oil-5w30-1l",
+        "description": "Full synthetic motor oil, 1-litre pack",
+        "price": 690,
+        "stockOnHand": 310,
+        "categoryCode": "motor-oils",
+        "brandCode": "castrol"
+    },
+    {
+        "externalId": "ext-019",
+        "sku": "MOT-15W40-5L",
+        "name": "Motor Oil 15W-40 Mineral 5L",
+        "slug": "motor-oil-15w40-5l",
+        "description": "Mineral motor oil for older engines",
+        "price": 1490,
+        "stockOnHand": 76,
+        "categoryCode": "motor-oils",
+        "brandCode": "lukoil",
+        "onSale": true
+    },
+    {
+        "externalId": "ext-020",
+        "sku": "FIL-OIL-M002",
+        "name": "Oil Filter Heavy Duty",
+        "slug": "oil-filter-heavy-duty",
+        "description": "Heavy duty oil filter for commercial vehicles",
+        "price": 520,
+        "stockOnHand": 88,
+        "categoryCode": "filters",
+        "brandCode": "mann"
+    },
+    {
+        "externalId": "ext-021",
+        "sku": "BRK-DRUM-R301",
+        "name": "Rear Brake Drum",
+        "slug": "rear-brake-drum",
+        "description": "Cast iron rear brake drum",
+        "price": 3490,
+        "stockOnHand": 22,
+        "categoryCode": "brake-system",
+        "brandCode": "brembo",
+        "onSale": true
+    },
+    {
+        "externalId": "ext-022",
+        "sku": "SPK-PLUG-PL4",
+        "name": "Spark Plug Platinum",
+        "slug": "spark-plug-platinum",
+        "description": "Platinum tip spark plug for extended service life",
+        "price": 380,
+        "stockOnHand": 150,
+        "categoryCode": "spark-plugs",
+        "brandCode": "ngk"
+    },
+    {
+        "externalId": "ext-023",
+        "sku": "COOL-G12-1L",
+        "name": "Coolant G12 Red 1L",
+        "slug": "coolant-g12-red-1l",
+        "description": "G12 antifreeze coolant concentrate, red, 1L",
+        "price": 410,
+        "stockOnHand": 195,
+        "categoryCode": "coolants",
+        "brandCode": "castrol"
+    },
+    {
+        "externalId": "ext-024",
+        "sku": "COOL-G12-5L",
+        "name": "Coolant G12 Red 5L",
+        "slug": "coolant-g12-red-5l",
+        "description": "G12 antifreeze coolant concentrate, red, 5L",
+        "price": 1890,
+        "stockOnHand": 62,
+        "categoryCode": "coolants",
+        "brandCode": "castrol",
+        "onSale": true
     }
 ]

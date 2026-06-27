@@ -45,6 +45,12 @@ export const config: VendureConfig = {
                 unique: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP External ID' }],
             },
+            {
+                name: 'onSale',
+                type: 'boolean',
+                defaultValue: false,
+                label: [{ languageCode: LanguageCode.en, value: 'On Sale' }],
+            },
         ],
     },
     paymentOptions: {

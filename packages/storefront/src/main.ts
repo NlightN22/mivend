@@ -24,6 +24,7 @@ import {
     MvQtyStepper,
     MvCard,
     MvBreadcrumbs,
+    MvCatalogDropdown,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
@@ -59,6 +60,7 @@ app.component('MvStockBadge', MvStockBadge);
 app.component('MvQtyStepper', MvQtyStepper);
 app.component('MvCard', MvCard);
 app.component('MvBreadcrumbs', MvBreadcrumbs);
+app.component('MvCatalogDropdown', MvCatalogDropdown);
 
 app.use(createPinia());
 app.use(router);

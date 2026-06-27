@@ -2,6 +2,7 @@ node_modules/
 dist/
 tasks/
 .tests/
+docs/ai/
 
 # Environment files — commit only .example variants
 .env

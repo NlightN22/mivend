@@ -3,18 +3,38 @@ import { onMounted } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
 import { useProductList } from '../../composables/useProductList';
+import { useWidgetProducts } from '../../composables/useWidgetProducts';
 import ProductListView from '../../components/ProductListView.vue';
+import ProductScrollRow from '../../components/ProductScrollRow.vue';
 
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const { items, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } = useProductList({ pageSize: 24 });
+viewMode.value = 'grid';
 
-onMounted(load);
+const newArrivals = useWidgetProducts('new-arrivals');
+const sales = useWidgetProducts('sales');
+
+onMounted(() => {
+    load();
+    newArrivals.load();
+    sales.load();
+});
 </script>
 
 <template>
     <main class="home-page">
         <div class="home-page__inner">
+            <ProductScrollRow
+                title="New Arrivals"
+                :items="newArrivals.items.value"
+                :loading="newArrivals.loading.value"
+            />
+            <ProductScrollRow
+                title="On Sale"
+                :items="sales.items.value"
+                :loading="sales.loading.value"
+            />
             <div class="home-page__header">
                 <h2 class="home-page__title">Popular products</h2>
                 <p class="home-page__subtitle">
@@ -31,6 +51,7 @@ onMounted(load);
                 :view-mode="viewMode"
                 :sort-key="sortKey"
                 :show-prices="authStore.isLoggedIn"
+                :grid-columns="5"
                 @update:view-mode="viewMode = $event"
                 @update:sort-key="sortKey = $event"
                 @load-more="loadMore"

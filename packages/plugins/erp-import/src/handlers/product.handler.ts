@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { GlobalFlag } from '@vendure/common/lib/generated-types';
 import {
     LanguageCode,
     ProductService,
@@ -30,11 +29,13 @@ export class ProductHandler {
 
         const priceInCents = Math.round(record.price * 100);
         const enabled = record.enabled ?? true;
+        const onSale = record.onSale ?? false;
 
         if (existing) {
             await this.productService.update(ctx, {
                 id: existing.id,
                 enabled,
+                customFields: { onSale },
                 translations: [
                     {
                         languageCode: LanguageCode.en,
@@ -54,7 +55,7 @@ export class ProductHandler {
                         id: variants.items[0].id,
                         enabled,
                         price: priceInCents,
-                        trackInventory: GlobalFlag.TRUE,
+                        trackInventory: 'TRUE' as const,
                     },
                 ]);
             }
@@ -70,7 +71,7 @@ export class ProductHandler {
                         description: record.description ?? '',
                     },
                 ],
-                customFields: { externalId: record.externalId },
+                customFields: { externalId: record.externalId, onSale },
             });
             await this.productVariantService.create(ctx, [
                 {

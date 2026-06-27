@@ -7,6 +7,7 @@ interface Props {
   sku: string;
   brand?: string;
   price?: number;
+  compareAtPrice?: number;
   customerPrice?: number;
   currency?: string;
   stockVariant?: 'ok' | 'low' | 'out';
@@ -19,6 +20,7 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   brand: '',
   price: undefined,
+  compareAtPrice: undefined,
   customerPrice: undefined,
   currency: 'RUB',
   stockVariant: undefined,
@@ -78,6 +80,7 @@ const emit = defineEmits<{ 'add-to-cart': [variantId: string | undefined] }>();
             :variant="stockVariant"
             class="mv-product-card__stock-badge"
           />
+        </div>
         <button
           class="mv-product-card__buy"
           type="button"

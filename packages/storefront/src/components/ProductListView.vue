@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 
@@ -12,6 +12,7 @@ const props = defineProps<{
     sortKey: string;
     title?: string;
     showPrices: boolean;
+    gridColumns?: number;
 }>();
 
 const emit = defineEmits<{
@@ -23,6 +24,9 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const sentinel = ref<HTMLElement | null>(null);
+const gridStyle = computed(() =>
+    props.gridColumns ? `repeat(${props.gridColumns}, minmax(0, 1fr))` : 'repeat(3, minmax(0, 1fr))'
+);
 let observer: IntersectionObserver | null = null;
 
 onMounted(() => {
@@ -113,7 +117,7 @@ function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out' }
         </template>
 
         <template v-else>
-            <div class="plv-grid">
+            <div class="plv-grid" :style="{ gridTemplateColumns: gridStyle }">
                 <MvProductCard
                     v-for="p in items"
                     :key="p.id"
@@ -227,6 +231,8 @@ function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out' }
     font-size: 14px;
 }
 
-@media (max-width: 1200px) { .plv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 640px) { .plv-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1400px) { .plv-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; } }
+@media (max-width: 1100px) { .plv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
+@media (max-width: 760px) { .plv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+@media (max-width: 480px) { .plv-grid { grid-template-columns: 1fr !important; } }
 </style>
