@@ -8,6 +8,7 @@ import { ErpAuthGuard } from './guards/erp-auth.guard';
 import { ProductHandler } from './handlers/product.handler';
 import { PriceHandler } from './handlers/price.handler';
 import { StockHandler } from './handlers/stock.handler';
+import { CustomerHandler } from './handlers/customer.handler';
 
 @VendurePlugin({
     imports: [PluginCommonModule],
@@ -20,6 +21,7 @@ import { StockHandler } from './handlers/stock.handler';
         ProductHandler,
         PriceHandler,
         StockHandler,
+        CustomerHandler,
     ],
     compatibility: '>0.0.0',
 })

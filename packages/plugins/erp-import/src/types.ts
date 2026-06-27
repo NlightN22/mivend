@@ -23,10 +23,18 @@ export interface StockRecord {
     stockOnHand: number;
 }
 
+export interface CustomerRecord {
+    email: string;
+    firstName: string;
+    lastName: string;
+    password: string;
+}
+
 export type ImportRecord =
     | { type: 'product'; data: ProductRecord }
     | { type: 'price'; data: PriceRecord }
-    | { type: 'stock'; data: StockRecord };
+    | { type: 'stock'; data: StockRecord }
+    | { type: 'customer'; data: CustomerRecord };
 
 export interface BatchImportBody {
     exchangeId: string;

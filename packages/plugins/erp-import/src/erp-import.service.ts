@@ -3,6 +3,7 @@ import { RequestContext } from '@vendure/core';
 import { ProductHandler } from './handlers/product.handler';
 import { PriceHandler } from './handlers/price.handler';
 import { StockHandler } from './handlers/stock.handler';
+import { CustomerHandler } from './handlers/customer.handler';
 import { ImportRunService } from './import-run.service';
 import type { BatchImportBody, ImportRecord, ImportRunResult } from './types';
 
@@ -15,6 +16,7 @@ export class ErpImportService {
         private readonly productHandler: ProductHandler,
         private readonly priceHandler: PriceHandler,
         private readonly stockHandler: StockHandler,
+        private readonly customerHandler: CustomerHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -60,6 +62,9 @@ export class ErpImportService {
                 break;
             case 'stock':
                 await this.stockHandler.upsert(ctx, record.data);
+                break;
+            case 'customer':
+                await this.customerHandler.upsert(ctx, record.data);
                 break;
         }
     }
