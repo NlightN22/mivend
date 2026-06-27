@@ -52,14 +52,15 @@ const isActive = (path: string) => route.path === path;
       </RouterLink>
     </nav>
 
-    <div class="account-sidebar__section-title">Customer Data</div>
+    <div class="account-sidebar__section-title">Company</div>
     <nav class="account-sidebar__menu">
       <RouterLink to="/account/trading-points" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/trading-points') }">
-        <span>Trading points</span>
+        <span>Trading points</span><span class="account-sidebar__count">4</span>
       </RouterLink>
-      <a href="#" class="account-sidebar__link"><span>Contracts</span></a>
-      <a href="#" class="account-sidebar__link"><span>Limits &amp; Deferred</span></a>
-      <a href="#" class="account-sidebar__link"><span>Users</span></a>
+      <RouterLink to="/account/balance" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/balance') }">
+        <span>Balance &amp; Limits</span>
+      </RouterLink>
+      <a href="#" class="account-sidebar__link"><span>Employees</span></a>
       <a href="#" class="account-sidebar__link"><span>Settings</span></a>
     </nav>
   </aside>

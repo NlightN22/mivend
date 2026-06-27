@@ -51,6 +51,11 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'account/balance',
+                    component: () => import('../pages/account/BalancePage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'documents',
                     component: () => import('../pages/documents/DocumentsPage.vue'),
                     meta: { requiresAuth: true },
