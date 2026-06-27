@@ -50,6 +50,11 @@ export const router = createRouter({
                     component: () => import('../pages/account/TradingPointsPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'documents',
+                    component: () => import('../pages/documents/DocumentsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
             ],
         },
     ],
