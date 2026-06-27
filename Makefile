@@ -33,6 +33,8 @@ restart:
 
 dev:
 	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d
+	@docker exec docker-postgres-central-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_central'" | grep -q 1 \
+		|| docker exec docker-postgres-central-1 psql -U postgres -c "CREATE DATABASE mivend_central"
 	@bash infrastructure/scripts/dev-kill.sh
 	pnpm dev:all
 
