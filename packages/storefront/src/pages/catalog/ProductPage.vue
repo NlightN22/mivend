@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import { useCartStore } from '../../stores/cart';
 import { shopApi } from '../../api/client';
 import ProductGallery from './ProductGallery.vue';
 import ProductBuyPanel from './ProductBuyPanel.vue';
@@ -22,6 +23,7 @@ interface RelatedProduct {
 
 const route = useRoute();
 const authStore = useAuthStore();
+const cartStore = useCartStore();
 
 const product = ref<Product | null>(null);
 const related = ref<RelatedProduct[]>([]);
@@ -114,7 +116,7 @@ onMounted(() => { fetchData(route.params.slug as string); });
           :stock-level="variant?.stockLevel"
           :show-prices="authStore.isLoggedIn"
           :product-name="product.name"
-          @add-to-cart="(qty) => console.log('add-to-cart', product?.slug, qty)"
+          @add-to-cart="(qty) => variant && cartStore.addItem(variant.id, qty)"
         />
       </div>
     </template>

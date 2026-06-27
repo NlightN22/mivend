@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../../stores/auth';
+import { useCartStore } from '../../stores/cart';
 import { shopApi } from '../../api/client';
 
 interface ProductVariant {
+  id: string;
   sku: string;
   price: number;
   currencyCode: string;
@@ -24,6 +26,7 @@ interface Product {
 }
 
 const authStore = useAuthStore();
+const cartStore = useCartStore();
 const products = ref<Product[]>([]);
 const loading = ref(true);
 const error = ref('');
@@ -36,23 +39,28 @@ const visibleProducts = computed(() =>
 );
 
 const categories = [
-  'Масла и жидкости',
-  'Фильтры',
-  'Тормозная система',
-  'Аккумуляторы',
-  'Автохимия',
-  'Инструмент',
+  'Oils & Fluids',
+  'Filters',
+  'Brakes',
+  'Batteries',
+  'Car Care',
+  'Tools',
 ];
 
 function getBrand(product: Product): string {
   return product.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '';
 }
 
-function getStock(stockLevel: string): number | undefined {
-  if (!stockLevel || stockLevel === 'OUT_OF_STOCK') return undefined;
-  if (stockLevel === 'IN_STOCK') return undefined;
-  const n = parseInt(stockLevel, 10);
-  return isNaN(n) ? undefined : n;
+function stockVariantFor(stockLevel: string): 'ok' | 'low' | 'out' {
+  if (stockLevel === 'OUT_OF_STOCK') return 'out';
+  if (stockLevel === 'LOW_STOCK') return 'low';
+  return 'ok';
+}
+
+function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out'; stockQuantity?: number } {
+  if (!authStore.isLoggedIn) return {};
+  const variant = stockVariantFor(stockLevel);
+  return { stockVariant: variant };
 }
 
 async function fetchProducts(): Promise<void> {
@@ -62,7 +70,7 @@ async function fetchProducts(): Promise<void> {
         products(options: { take: 8 }) {
           items {
             id name slug
-            variants { sku price currencyCode stockLevel }
+            variants { id sku price currencyCode stockLevel }
             facetValues { name facet { code } }
           }
         }
@@ -70,7 +78,7 @@ async function fetchProducts(): Promise<void> {
     `);
     products.value = result.products.items;
   } catch {
-    error.value = 'Не удалось загрузить товары';
+    error.value = 'Failed to load products';
   } finally {
     loading.value = false;
   }
@@ -83,7 +91,7 @@ onMounted(fetchProducts);
   <main class="home-page">
     <div class="home-page__inner">
       <aside class="home-page__sidebar">
-        <h3 class="home-sidebar__title">Каталог</h3>
+        <h3 class="home-sidebar__title">Catalog</h3>
         <nav class="home-sidebar__cats">
           <a
             v-for="cat in categories"
@@ -97,10 +105,10 @@ onMounted(fetchProducts);
         </nav>
 
         <div class="home-sidebar__filter">
-          <div class="home-sidebar__filter-title">Наличие</div>
+          <div class="home-sidebar__filter-title">Availability</div>
           <label class="home-sidebar__check">
             <input v-model="inStockOnly" type="checkbox" />
-            <span>Только в наличии</span>
+            <span>In stock only</span>
           </label>
         </div>
       </aside>
@@ -109,16 +117,16 @@ onMounted(fetchProducts);
         <section class="home-products">
           <div class="home-products__header">
             <div>
-              <h2 class="home-products__title">Популярные товары</h2>
+              <h2 class="home-products__title">Popular products</h2>
               <p class="home-products__subtitle">
                 {{ authStore.isLoggedIn
-                  ? 'Актуальные остатки и цены для вашей торговой точки'
-                  : 'Войдите, чтобы видеть цены и остатки' }}
+                  ? 'Current stock and prices for your trading point'
+                  : 'Log in to see prices and stock' }}
               </p>
             </div>
           </div>
 
-          <div v-if="loading" class="home-products__state">Загрузка...</div>
+          <div v-if="loading" class="home-products__state">Loading...</div>
 
           <MvNotice v-else-if="error" variant="error">{{ error }}</MvNotice>
 
@@ -131,10 +139,11 @@ onMounted(fetchProducts);
               :brand="getBrand(product)"
               :price="product.variants[0] ? product.variants[0].price / 100 : undefined"
               :currency="product.variants[0]?.currencyCode ?? 'RUB'"
-              :stock="getStock(product.variants[0]?.stockLevel ?? '')"
               :slug="product.slug"
               :show-prices="authStore.isLoggedIn"
-              @add-to-cart="() => console.log('add-to-cart', product.slug)"
+              :variant-id="product.variants[0]?.id"
+              v-bind="stockProps(product.variants[0]?.stockLevel ?? '')"
+              @add-to-cart="(variantId: string | undefined) => variantId && cartStore.addItem(variantId, 1)"
             />
           </div>
         </section>

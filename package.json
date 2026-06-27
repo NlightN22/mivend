@@ -6,6 +6,7 @@
     "scripts": {
         "dev:central": "dotenv -e apps/server/.env.central -- pnpm --filter server dev",
         "dev:branch": "dotenv -e apps/server/.env.branch -- pnpm --filter server dev",
+        "dev:all": "concurrently --names 'server,storefront' --prefix-colors 'cyan,green' 'pnpm dev:central' 'pnpm --filter @mivend/storefront dev'",
         "build": "pnpm -r build",
         "lint": "eslint .",
         "format": "prettier --write .",
@@ -33,6 +34,7 @@
         "@eslint/js": "^9.0.0",
         "@typescript-eslint/eslint-plugin": "^8.0.0",
         "@typescript-eslint/parser": "^8.0.0",
+        "concurrently": "^9.0.0",
         "dotenv-cli": "^7.0.0",
         "eslint": "^9.0.0",
         "eslint-config-prettier": "^10.1.8",

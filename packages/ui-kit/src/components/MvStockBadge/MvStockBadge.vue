@@ -1,22 +1,38 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+
 interface Props {
-  variant: 'ok' | 'low' | 'out';
+  variant?: 'ok' | 'low' | 'out';
   label?: string;
+  quantity?: number;
 }
 
 const props = defineProps<Props>();
 
-const DEFAULT_LABELS: Record<Props['variant'], string> = {
-  ok: 'В наличии',
-  low: 'Мало',
-  out: 'Нет',
+const DEFAULT_LABELS: Record<'ok' | 'low' | 'out', string> = {
+  ok: 'In stock',
+  low: 'Low stock',
+  out: 'Out of stock',
 };
 
-const text = () => props.label ?? DEFAULT_LABELS[props.variant];
+const resolvedVariant = computed((): 'ok' | 'low' | 'out' => {
+  if (props.quantity !== undefined) {
+    if (props.quantity === 0) return 'out';
+    if (props.quantity < 10) return 'low';
+    return 'ok';
+  }
+  return props.variant ?? 'out';
+});
+
+const text = computed(() => {
+  if (props.label) return props.label;
+  if (props.quantity !== undefined) return `${props.quantity} pcs.`;
+  return DEFAULT_LABELS[resolvedVariant.value];
+});
 </script>
 
 <template>
-  <span :class="['mv-stock-badge', `mv-stock-badge--${variant}`]">{{ text() }}</span>
+  <span :class="['mv-stock-badge', `mv-stock-badge--${resolvedVariant}`]">{{ text }}</span>
 </template>
 
 <style scoped>

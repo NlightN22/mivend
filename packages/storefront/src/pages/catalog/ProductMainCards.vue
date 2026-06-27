@@ -24,11 +24,11 @@ const authStore = useAuthStore();
 
 const specs = computed(() => {
   const rows = [
-    { label: 'Артикул', value: props.sku || '—' },
-    { label: 'Бренд', value: props.brand || '—' },
-    { label: 'Категория', value: props.category || '—' },
+    { label: 'SKU', value: props.sku || '—' },
+    { label: 'Brand', value: props.brand || '—' },
+    { label: 'Category', value: props.category || '—' },
   ];
-  if (props.description) rows.push({ label: 'Описание', value: props.description });
+  if (props.description) rows.push({ label: 'Description', value: props.description });
   return rows;
 });
 
@@ -48,19 +48,19 @@ function getBrand(p: RelatedProduct) {
       </div>
       <h1 class="pmc__title">{{ name }}</h1>
       <div class="pmc__meta">
-        <span>Артикул: <strong>{{ sku || '—' }}</strong></span>
-        <span v-if="brand">Бренд: <strong>{{ brand }}</strong></span>
+        <span>SKU: <strong>{{ sku || '—' }}</strong></span>
+        <span v-if="brand">Brand: <strong>{{ brand }}</strong></span>
       </div>
       <div class="pmc__mini">
-        <div class="pmc__mini-item"><div class="pmc__mini-lbl">Категория</div><div class="pmc__mini-val">{{ category || '—' }}</div></div>
-        <div class="pmc__mini-item"><div class="pmc__mini-lbl">Единица</div><div class="pmc__mini-val">шт.</div></div>
-        <div class="pmc__mini-item"><div class="pmc__mini-lbl">Кратность</div><div class="pmc__mini-val">1 шт.</div></div>
+        <div class="pmc__mini-item"><div class="pmc__mini-lbl">Category</div><div class="pmc__mini-val">{{ category || '—' }}</div></div>
+        <div class="pmc__mini-item"><div class="pmc__mini-lbl">Unit</div><div class="pmc__mini-val">pc.</div></div>
+        <div class="pmc__mini-item"><div class="pmc__mini-lbl">Multiplicity</div><div class="pmc__mini-val">1 pc.</div></div>
       </div>
     </div>
 
     <!-- Specs card -->
     <div class="pmc__card pmc__card--mt">
-      <h2 class="pmc__section-title">Характеристики</h2>
+      <h2 class="pmc__section-title">Specifications</h2>
       <div class="pmc__specs">
         <div v-for="s in specs" :key="s.label" class="pmc__spec-row">
           <span>{{ s.label }}</span><strong>{{ s.value }}</strong>
@@ -70,8 +70,8 @@ function getBrand(p: RelatedProduct) {
 
     <!-- Analogs card -->
     <div v-if="related.length" class="pmc__card pmc__card--mt">
-      <h2 class="pmc__section-title">Аналоги и замены</h2>
-      <p class="pmc__section-sub">Быстрый выбор, если нужен другой производитель.</p>
+      <h2 class="pmc__section-title">Analogs & Substitutes</h2>
+      <p class="pmc__section-sub">Quick pick if you need a different manufacturer.</p>
       <div class="pmc__analogs">
         <div v-for="p in related.slice(0, 3)" :key="p.id" class="pmc__analog">
           <div class="pmc__analog-img">📦</div>
@@ -86,7 +86,7 @@ function getBrand(p: RelatedProduct) {
             size="sm"
             class="pmc__analog-price"
           />
-          <button class="pmc__analog-btn" type="button">В корзину</button>
+          <button class="pmc__analog-btn" type="button">Add to cart</button>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ interface Props {
   currency?: string;
   stockLevel?: string;
   stock?: number;
+  stockQuantity?: number;
   showPrices: boolean;
   productName?: string;
 }
@@ -16,6 +17,7 @@ const props = withDefaults(defineProps<Props>(), {
   currency: 'RUB',
   stockLevel: undefined,
   stock: undefined,
+  stockQuantity: undefined,
   productName: '',
 });
 
@@ -24,6 +26,14 @@ const emit = defineEmits<{ 'add-to-cart': [qty: number] }>();
 const authStore = useAuthStore();
 const qty = ref(1);
 
+const counterparty = computed(() => authStore.counterparty);
+const availableCredit = computed(() => {
+  if (!counterparty.value) return null;
+  return (counterparty.value.creditLimit - counterparty.value.creditBalance) / 100;
+});
+const formatRub = (n: number) =>
+  new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(n);
+
 const stockVariant = computed((): 'ok' | 'low' | 'out' => {
   if (!props.stockLevel || props.stockLevel === 'OUT_OF_STOCK') return 'out';
   if (props.stockLevel === 'LOW_STOCK') return 'low';
@@ -31,17 +41,19 @@ const stockVariant = computed((): 'ok' | 'low' | 'out' => {
 });
 
 const stockLabel = computed(() => {
-  if (props.stock !== undefined) return `${props.stock} шт.`;
-  if (stockVariant.value === 'out') return 'Нет в наличии';
-  if (stockVariant.value === 'low') return 'Мало';
-  return 'В наличии';
+  if (props.stock !== undefined) return `${props.stock} pcs.`;
+  if (stockVariant.value === 'out') return 'Out of stock';
+  if (stockVariant.value === 'low') return 'Low stock';
+  return 'In stock';
 });
 </script>
 
 <template>
   <div class="buy-panel">
     <div class="buy-panel__card">
-      <div class="buy-panel__price-label">Цена клиента</div>
+      <div class="buy-panel__price-label">
+        {{ counterparty?.priceType ? counterparty.priceType + ' price' : 'Customer price' }}
+      </div>
 
       <MvAmountDisplay
         v-if="showPrices && price !== undefined"
@@ -50,24 +62,25 @@ const stockLabel = computed(() => {
         size="lg"
         class="buy-panel__price"
       />
-      <div v-else-if="!showPrices" class="buy-panel__price-hint">Войдите для просмотра цен</div>
+      <div v-else-if="!showPrices" class="buy-panel__price-hint">Log in to see prices</div>
       <div v-else class="buy-panel__price">—</div>
 
-      <div class="buy-panel__price-note">Цена с учётом условий клиента. НДС включён.</div>
+      <div class="buy-panel__price-note">Price includes customer terms and VAT.</div>
 
       <div class="buy-panel__info">
         <div class="buy-panel__info-row">
-          <span>Наличие</span>
-          <MvStockBadge :variant="stockVariant" :label="stockLabel" />
+          <span>Stock</span>
+          <MvStockBadge v-if="stockQuantity !== undefined" :quantity="stockQuantity" />
+          <MvStockBadge v-else :variant="stockVariant" :label="stockLabel" />
         </div>
-        <div class="buy-panel__info-row"><span>Склад</span><strong>Центральный склад</strong></div>
-        <div class="buy-panel__info-row"><span>Отгрузка</span><strong>Сегодня</strong></div>
-        <div class="buy-panel__info-row"><span>Кратность</span><strong>1 шт.</strong></div>
+        <div class="buy-panel__info-row"><span>Warehouse</span><strong>Central warehouse</strong></div>
+        <div class="buy-panel__info-row"><span>Dispatch</span><strong>Today</strong></div>
+        <div class="buy-panel__info-row"><span>Multiplicity</span><strong>1 pc.</strong></div>
       </div>
 
       <div class="buy-panel__qty-row">
         <MvQtyStepper v-model="qty" />
-        <button class="buy-panel__fav" type="button">♡ В избранное</button>
+        <button class="buy-panel__fav" type="button">♡ Favorites</button>
       </div>
 
       <button
@@ -76,30 +89,38 @@ const stockLabel = computed(() => {
         :disabled="!showPrices || stockVariant === 'out'"
         @click="emit('add-to-cart', qty)"
       >
-        Добавить в корзину
+        Add to cart
       </button>
 
       <button class="buy-panel__secondary" type="button" :disabled="!showPrices">
-        Купить в 1 клик
+        Buy in 1 click
       </button>
     </div>
 
-    <div v-if="authStore.isLoggedIn" class="buy-panel__notice buy-panel__notice--green">
+    <div v-if="authStore.isLoggedIn && availableCredit !== null && availableCredit > 0"
+         class="buy-panel__notice buy-panel__notice--green">
       <span>✓</span>
       <div>
-        <strong>Можно оформить без оплаты.</strong>
-        Доступный лимит клиента: 420 000 ₽. Позиция укладывается в лимит.
+        <strong>Can be ordered without upfront payment.</strong>
+        Available credit: {{ formatRub(availableCredit) }}.
+        Payment terms: {{ counterparty!.paymentDelayDays }} days.
       </div>
     </div>
 
     <div class="buy-panel__card buy-panel__delivery">
-      <h2 class="buy-panel__delivery-title">Доставка</h2>
-      <div class="buy-panel__delivery-sub">До текущей торговой точки клиента.</div>
+      <h2 class="buy-panel__delivery-title">Delivery</h2>
+      <div class="buy-panel__delivery-sub">To the customer's current trading point.</div>
       <div class="buy-panel__info">
-        <div class="buy-panel__info-row"><span>Адрес</span><strong>Северное шоссе, 12</strong></div>
-        <div class="buy-panel__info-row"><span>Срок</span><strong>Сегодня до 18:00</strong></div>
-        <div class="buy-panel__info-row"><span>Условие</span><strong>По договору</strong></div>
+        <div class="buy-panel__info-row">
+          <span>Address</span>
+          <strong>{{ authStore.tradingPoint?.address ?? 'Not selected' }}</strong>
+        </div>
+        <div class="buy-panel__info-row"><span>ETA</span><strong>Today by 18:00</strong></div>
+        <div class="buy-panel__info-row"><span>Terms</span><strong>Per contract</strong></div>
       </div>
+      <p v-if="authStore.tradingPoint?.deliveryComment" class="buy-panel__delivery-comment">
+        {{ authStore.tradingPoint.deliveryComment }}
+      </p>
     </div>
   </div>
 </template>
@@ -159,4 +180,5 @@ const stockLabel = computed(() => {
 .buy-panel__delivery { margin-top: 0; }
 .buy-panel__delivery-title { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 4px; }
 .buy-panel__delivery-sub { font-size: 13px; color: #66736e; margin-bottom: 14px; }
+.buy-panel__delivery-comment { font-size: 12px; color: #66736e; margin: 10px 0 0; font-style: italic; }
 </style>

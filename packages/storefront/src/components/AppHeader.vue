@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useCartStore } from '../stores/cart';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const cartStore = useCartStore();
 const searchQuery = ref('');
+
+const cartTotal = computed(() => {
+    if (cartStore.totalPrice === 0) return '0 ₽';
+    return new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽';
+});
 
 function onSearch(value: string): void {
   router.push({ path: '/catalog', query: value ? { q: value } : {} });
@@ -16,8 +23,8 @@ function onSearch(value: string): void {
   <div class="app-header-wrap">
     <div v-if="authStore.isLoggedIn" class="app-header__strip">
       <div class="app-header__strip-inner">
-        <span><strong>Рабочий B2B-портал</strong> для быстрого заказа автотоваров и расходников</span>
-        <span>Актуальные остатки и цены</span>
+        <span><strong>B2B Portal</strong> for fast ordering of auto parts and consumables</span>
+        <span>Live stock and prices</span>
       </div>
     </div>
 
@@ -28,7 +35,7 @@ function onSearch(value: string): void {
         </RouterLink>
 
         <button class="app-header__catalog-btn">
-          &#9776; Каталог
+          &#9776; Catalogue
         </button>
 
         <div class="app-header__search">
@@ -47,26 +54,26 @@ function onSearch(value: string): void {
             </RouterLink>
             <RouterLink to="/orders" class="app-header__nav-link">
               <span class="app-header__nav-icon">&#128230;</span>
-              <span>Заказы</span>
+              <span>Orders</span>
             </RouterLink>
             <a href="#" class="app-header__nav-link">
               <span class="app-header__nav-icon">&#9825;</span>
-              <span>Избранное</span>
+              <span>Favourites</span>
             </a>
             <RouterLink to="/cart" class="app-header__cart">
               <span>&#128722;</span>
               <span class="app-header__cart-text">
-                <small>Корзина</small>
-                0&nbsp;&#8381;
+                <small>Cart</small>
+                {{ cartTotal }}
               </span>
-              <span class="app-header__cart-badge">0</span>
+              <span class="app-header__cart-badge">{{ cartStore.itemCount }}</span>
             </RouterLink>
           </template>
 
           <template v-else>
             <RouterLink to="/login" class="app-header__nav-link">
               <span class="app-header__nav-icon">&#128100;</span>
-              <span>Войти</span>
+              <span>Sign in</span>
             </RouterLink>
           </template>
         </nav>
@@ -74,8 +81,14 @@ function onSearch(value: string): void {
 
       <div v-if="authStore.isLoggedIn" class="app-header__delivery">
         <span class="app-header__delivery-line">
-          Торговая точка &middot;
-          <strong>{{ authStore.customer?.firstName ?? '' }} {{ authStore.customer?.lastName ?? '' }}</strong>
+          <template v-if="authStore.tradingPoint">
+            Trading point &middot;
+            <strong>{{ authStore.tradingPoint.name }}</strong>
+            <span class="app-header__delivery-address">&nbsp;— {{ authStore.tradingPoint.address }}</span>
+          </template>
+          <template v-else>
+            <span class="app-header__delivery-hint">No trading point selected</span>
+          </template>
         </span>
       </div>
     </header>
@@ -249,5 +262,14 @@ function onSearch(value: string): void {
 .app-header__delivery-line strong {
   color: #008a64;
   font-weight: 900;
+}
+
+.app-header__delivery-address {
+  color: #a8b8b2;
+}
+
+.app-header__delivery-hint {
+  color: #a8b8b2;
+  font-style: italic;
 }
 </style>

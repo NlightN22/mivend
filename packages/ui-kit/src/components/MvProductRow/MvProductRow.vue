@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
+import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 
 interface Props {
   name: string;
@@ -10,10 +11,11 @@ interface Props {
   oldPrice?: number;
   currency?: string;
   stock?: number;
-  stockLabel?: string;
+  stockVariant?: 'ok' | 'low' | 'out';
   multiplicity?: number;
   slug?: string;
   showPrices?: boolean;
+  variantId?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -22,32 +24,30 @@ const props = withDefaults(defineProps<Props>(), {
   oldPrice: undefined,
   currency: 'RUB',
   stock: undefined,
-  stockLabel: undefined,
+  stockVariant: undefined,
   multiplicity: 1,
   slug: '',
   showPrices: true,
+  variantId: undefined,
 });
 
 const emit = defineEmits<{
-  'add-to-cart': [qty: number];
+  'add-to-cart': [qty: number, variantId: string | undefined];
   'view-analogs': [];
 }>();
 
 const qty = ref(props.multiplicity);
 
-const stockVariant = computed(() => {
-  if (props.stock === undefined) return 'none';
-  if (props.stock === 0) return 'out';
-  if (props.stock <= 5) return 'low';
-  return 'ok';
+const effectiveStockVariant = computed((): 'ok' | 'low' | 'out' => {
+  if (props.stock !== undefined) {
+    if (props.stock === 0) return 'out';
+    if (props.stock < 10) return 'low';
+    return 'ok';
+  }
+  return props.stockVariant ?? 'out';
 });
 
-const stockText = computed(() => {
-  if (props.stockLabel) return props.stockLabel;
-  if (props.stock === undefined) return '—';
-  if (props.stock === 0) return 'Нет';
-  return `${props.stock} шт.`;
-});
+const canOrder = computed(() => effectiveStockVariant.value !== 'out');
 
 function decQty(): void {
   if (qty.value > props.multiplicity) qty.value -= props.multiplicity;
@@ -72,43 +72,43 @@ function incQty(): void {
     </div>
 
     <div class="mv-product-row__cell">
-      <div class="mv-product-row__cell-label">Артикул</div>
+      <div class="mv-product-row__cell-label">SKU</div>
       <div class="mv-product-row__cell-value mv-product-row__sku">{{ sku }}</div>
     </div>
 
     <div class="mv-product-row__cell">
-      <div class="mv-product-row__cell-label">Наличие</div>
-      <span class="mv-product-row__stock" :class="`mv-product-row__stock--${stockVariant === 'none' ? 'out' : stockVariant}`">
-        {{ stockText }}
-      </span>
+      <div class="mv-product-row__cell-label">Stock</div>
+      <MvStockBadge v-if="stock !== undefined" :quantity="stock" />
+      <MvStockBadge v-else-if="stockVariant" :variant="stockVariant" />
+      <span v-else class="mv-product-row__stock-none">—</span>
     </div>
 
     <div class="mv-product-row__cell">
-      <div class="mv-product-row__cell-label">Кратность</div>
-      <div class="mv-product-row__cell-value">{{ multiplicity }} шт.</div>
+      <div class="mv-product-row__cell-label">Multiplicity</div>
+      <div class="mv-product-row__cell-value">{{ multiplicity }} pcs.</div>
     </div>
 
     <div class="mv-product-row__cell">
-      <div class="mv-product-row__cell-label">Цена</div>
+      <div class="mv-product-row__cell-label">Price</div>
       <template v-if="showPrices && price !== undefined">
         <MvAmountDisplay :amount="price" :currency="currency" size="sm" class="mv-product-row__price" />
         <MvAmountDisplay v-if="oldPrice !== undefined" :amount="oldPrice" :currency="currency" size="sm" class="mv-product-row__old-price" />
       </template>
-      <div v-else-if="!showPrices" class="mv-product-row__price-hint">Войдите</div>
+      <div v-else-if="!showPrices" class="mv-product-row__price-hint">Log in</div>
       <div v-else class="mv-product-row__price-hint">—</div>
     </div>
 
     <div class="mv-product-row__actions">
-      <template v-if="stockVariant !== 'out' && stockVariant !== 'none'">
+      <template v-if="canOrder">
         <div class="mv-product-row__qty">
           <button class="mv-product-row__qty-btn" type="button" @click="decQty">−</button>
           <span class="mv-product-row__qty-val">{{ qty }}</span>
           <button class="mv-product-row__qty-btn" type="button" @click="incQty">+</button>
         </div>
-        <button class="mv-product-row__add-btn" type="button" :disabled="!showPrices" @click="emit('add-to-cart', qty)">+</button>
+        <button class="mv-product-row__add-btn" type="button" :disabled="!showPrices" @click="emit('add-to-cart', qty, variantId)">+</button>
       </template>
       <template v-else>
-        <button class="mv-product-row__analog-btn" type="button" @click="emit('view-analogs')">Аналоги</button>
+        <button class="mv-product-row__analog-btn" type="button" @click="emit('view-analogs')">Analogs</button>
       </template>
     </div>
   </article>
@@ -146,11 +146,7 @@ function incQty(): void {
 .mv-product-row__cell-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #a8b8b2; }
 .mv-product-row__cell-value { font-size: 13px; color: #2c3b36; }
 .mv-product-row__sku { font-family: monospace; font-size: 12px; color: #2c3b36; }
-
-.mv-product-row__stock { font-size: 13px; font-weight: 700; }
-.mv-product-row__stock--ok { color: #00a873; }
-.mv-product-row__stock--low { color: #f57c00; }
-.mv-product-row__stock--out { color: #b4ccc4; }
+.mv-product-row__stock-none { font-size: 13px; color: #b4ccc4; }
 
 .mv-product-row__price { font-weight: 900; letter-spacing: -0.02em; }
 .mv-product-row__old-price { font-size: 12px !important; color: #a8b8b2; text-decoration: line-through; }

@@ -30,9 +30,9 @@ This is a public open-source repository. Keep all content generic.
 
 ## Language
 
-- Code, variable names, comments, GraphQL fields, entity names, migration files: **English only.**
-- Chat, commit messages, PR descriptions, human-readable docs: **Russian.**
-- GitHub Issues (title, body, comments): **English.**
+Everything is in **English** — code, comments, variable names, configs, docs, GitHub issues, pull requests, commit messages, and all project files.
+
+The only exception: individual files explicitly requested to be in Russian by the developer.
 
 ---
 

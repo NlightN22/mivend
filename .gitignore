@@ -1,6 +1,7 @@
 node_modules/
 dist/
 tasks/
+.tests/
 
 # Environment files — commit only .example variants
 .env

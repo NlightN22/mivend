@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
+import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 
 interface Props {
   name: string;
@@ -7,20 +8,24 @@ interface Props {
   brand?: string;
   price?: number;
   currency?: string;
-  stock?: number;
+  stockVariant?: 'ok' | 'low' | 'out';
+  stockQuantity?: number;
   slug: string;
   showPrices?: boolean;
+  variantId?: string;
 }
 
 withDefaults(defineProps<Props>(), {
   brand: '',
   price: undefined,
   currency: 'RUB',
-  stock: undefined,
+  stockVariant: undefined,
+  stockQuantity: undefined,
   showPrices: true,
+  variantId: undefined,
 });
 
-const emit = defineEmits<{ 'add-to-cart': [] }>();
+const emit = defineEmits<{ 'add-to-cart': [variantId: string | undefined] }>();
 </script>
 
 <template>
@@ -51,21 +56,28 @@ const emit = defineEmits<{ 'add-to-cart': [] }>();
             :currency="currency"
             size="md"
           />
-          <span v-if="stock !== undefined" class="mv-product-card__stock">
-            {{ stock }}&nbsp;шт.
-          </span>
+          <MvStockBadge
+            v-if="stockQuantity !== undefined"
+            :quantity="stockQuantity"
+            class="mv-product-card__stock-badge"
+          />
+          <MvStockBadge
+            v-else-if="stockVariant"
+            :variant="stockVariant"
+            class="mv-product-card__stock-badge"
+          />
         </div>
         <button
           class="mv-product-card__buy"
           type="button"
-          @click="emit('add-to-cart')"
+          @click="emit('add-to-cart', variantId)"
         >
-          В корзину
+          Add to cart
         </button>
       </template>
 
       <div v-else class="mv-product-card__guest">
-        Войдите для просмотра цен
+        Log in to see prices
       </div>
     </div>
   </article>
@@ -175,15 +187,7 @@ const emit = defineEmits<{ 'add-to-cart': [] }>();
   margin-top: auto;
 }
 
-.mv-product-card__stock {
-  background: #e2f8ef;
-  color: #008a64;
-  border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
-}
+.mv-product-card__stock-badge { flex-shrink: 0; }
 
 .mv-product-card__buy {
   width: 100%;

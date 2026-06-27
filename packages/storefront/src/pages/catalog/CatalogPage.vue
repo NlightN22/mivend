@@ -2,10 +2,12 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import { useCartStore } from '../../stores/cart';
 import { shopApi } from '../../api/client';
 import CatalogSidebar from './CatalogSidebar.vue';
 
 interface ProductVariant {
+  id: string;
   sku: string;
   price: number;
   currencyCode: string;
@@ -29,6 +31,7 @@ type ViewMode = 'list' | 'grid';
 
 const route = useRoute();
 const authStore = useAuthStore();
+const cartStore = useCartStore();
 
 const products = ref<Product[]>([]);
 const loading = ref(true);
@@ -40,12 +43,12 @@ const sortKey = ref('stock');
 const searchQuery = ref((route.query.q as string) ?? '');
 
 const categories = [
-  { label: 'Масла и жидкости', count: 124 },
-  { label: 'Фильтры', count: 86 },
-  { label: 'Тормозная система', count: 72 },
-  { label: 'Свечи и зажигание', count: 45 },
-  { label: 'АКБ', count: 18 },
-  { label: 'Расходники', count: 96 },
+  { label: 'Oils & Fluids', count: 124 },
+  { label: 'Filters', count: 86 },
+  { label: 'Brakes', count: 72 },
+  { label: 'Ignition', count: 45 },
+  { label: 'Batteries', count: 18 },
+  { label: 'Consumables', count: 96 },
 ];
 
 const allBrands = computed(() => {
@@ -66,6 +69,18 @@ function getStockNum(stockLevel: string): number {
   if (stockLevel === 'IN_STOCK') return 999;
   const n = parseInt(stockLevel, 10);
   return isNaN(n) ? 999 : n;
+}
+
+function stockVariantFor(stockLevel: string): 'ok' | 'low' | 'out' {
+  if (stockLevel === 'OUT_OF_STOCK') return 'out';
+  if (stockLevel === 'LOW_STOCK') return 'low';
+  return 'ok';
+}
+
+function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out'; stockQuantity?: number } {
+  if (!authStore.isLoggedIn) return {};
+  const variant = stockVariantFor(stockLevel);
+  return { stockVariant: variant };
 }
 
 const visibleProducts = computed(() => {
@@ -109,7 +124,7 @@ async function fetchProducts(): Promise<void> {
           totalItems
           items {
             id name slug
-            variants { sku price currencyCode stockLevel }
+            variants { id sku price currencyCode stockLevel }
             facetValues { name facet { code } }
           }
         }
@@ -117,7 +132,7 @@ async function fetchProducts(): Promise<void> {
     `);
     products.value = result.products.items;
   } catch {
-    error.value = 'Не удалось загрузить товары';
+    error.value = 'Failed to load products';
   } finally {
     loading.value = false;
   }
@@ -149,43 +164,43 @@ onMounted(fetchProducts);
           <div class="catalog-toolbar__top">
             <div>
               <div class="catalog-toolbar__title">
-                {{ searchQuery ? `Поиск: "${searchQuery}"` : 'Каталог товаров' }}
+                {{ searchQuery ? `Search: "${searchQuery}"` : 'Product catalog' }}
               </div>
               <div class="catalog-toolbar__note">
-                {{ loading ? 'Загрузка...' : `Найдено ${visibleProducts.length} товаров` }}
+                {{ loading ? 'Loading...' : `${visibleProducts.length} products found` }}
               </div>
             </div>
             <div class="catalog-toolbar__right">
               <select v-model="sortKey" class="catalog-toolbar__select">
-                <option value="stock">Сначала в наличии</option>
-                <option value="price-asc">Сначала дешевле</option>
-                <option value="brand">По бренду</option>
+                <option value="stock">In stock first</option>
+                <option value="price-asc">Lowest price first</option>
+                <option value="brand">By brand</option>
               </select>
               <div class="catalog-toolbar__view">
                 <button
                   :class="['catalog-toolbar__view-btn', { 'catalog-toolbar__view-btn--active': viewMode === 'grid' }]"
                   type="button"
                   @click="viewMode = 'grid'"
-                >&#9638; Плитка</button>
+                >&#9638; Grid</button>
                 <button
                   :class="['catalog-toolbar__view-btn', { 'catalog-toolbar__view-btn--active': viewMode === 'list' }]"
                   type="button"
                   @click="viewMode = 'list'"
-                >&#9783; Список</button>
+                >&#9783; List</button>
               </div>
             </div>
           </div>
         </div>
 
-        <div v-if="loading" class="catalog-state">Загрузка товаров...</div>
+        <div v-if="loading" class="catalog-state">Loading products...</div>
         <MvNotice v-else-if="error" variant="error">{{ error }}</MvNotice>
-        <div v-else-if="visibleProducts.length === 0" class="catalog-state">Товары не найдены</div>
+        <div v-else-if="visibleProducts.length === 0" class="catalog-state">No products found</div>
 
         <template v-else-if="viewMode === 'list'">
           <div class="catalog-list">
             <div class="catalog-list__header">
-              <span></span><span>Товар</span><span>Артикул</span>
-              <span>Наличие</span><span>Кратность</span><span>Цена</span><span>Заказ</span>
+              <span></span><span>Product</span><span>SKU</span>
+              <span>Stock</span><span>Multiplicity</span><span>Price</span><span>Order</span>
             </div>
             <MvProductRow
               v-for="product in visibleProducts"
@@ -195,11 +210,12 @@ onMounted(fetchProducts);
               :brand="getBrand(product)"
               :price="product.variants[0] ? product.variants[0].price / 100 : undefined"
               :currency="product.variants[0]?.currencyCode ?? 'RUB'"
-              :stock="getStockNum(product.variants[0]?.stockLevel ?? '')"
               :slug="product.slug"
               :show-prices="authStore.isLoggedIn"
-              @add-to-cart="(qty: number) => console.log('add-to-cart', product.slug, qty)"
-              @view-analogs="() => console.log('view-analogs', product.slug)"
+              :variant-id="product.variants[0]?.id"
+              v-bind="stockProps(product.variants[0]?.stockLevel ?? '')"
+              @add-to-cart="(qty: number, variantId: string | undefined) => variantId && cartStore.addItem(variantId, qty)"
+              @view-analogs="() => {}"
             />
           </div>
         </template>
@@ -214,10 +230,11 @@ onMounted(fetchProducts);
               :brand="getBrand(product)"
               :price="product.variants[0] ? product.variants[0].price / 100 : undefined"
               :currency="product.variants[0]?.currencyCode ?? 'RUB'"
-              :stock="getStockNum(product.variants[0]?.stockLevel ?? '')"
               :slug="product.slug"
               :show-prices="authStore.isLoggedIn"
-              @add-to-cart="() => console.log('add-to-cart', product.slug)"
+              :variant-id="product.variants[0]?.id"
+              v-bind="stockProps(product.variants[0]?.stockLevel ?? '')"
+              @add-to-cart="(variantId: string | undefined) => variantId && cartStore.addItem(variantId, 1)"
             />
           </div>
         </template>

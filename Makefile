@@ -9,7 +9,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
         test test-int \
         docker-build docker-push \
         prod-up prod-down \
-        dev seed \
+        dev dev-fresh dev-reset seed \
         storybook storefront storefront-dev
 
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
@@ -29,11 +29,19 @@ ps:
 restart:
 	$(COMPOSE_DEV) restart
 
-# ── Full dev stack ─────────────────────────────────────────────────────────────
+# ── Full dev stack (infra in Docker, server+storefront native) ─────────────────
 
 dev:
-	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) --profile app up -d
-	pnpm --filter @mivend/storefront dev
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d
+	pnpm dev:all
+
+# Wipe DB volumes, re-seed via native server, then launch full stack
+dev-fresh:
+	bash infrastructure/scripts/dev-fresh.sh
+
+# Tear down infra containers AND volumes — next up gets a clean DB
+dev-reset:
+	$(COMPOSE_DEV) down -v
 
 seed:
 	node infrastructure/scripts/seed.mjs
@@ -54,7 +62,8 @@ storefront-dev:
 # ── Code ───────────────────────────────────────────────────────────────────────
 
 build:
-	pnpm build
+	pnpm --filter "./packages/plugins/**" build
+	pnpm --filter "server" build
 
 lint:
 	pnpm lint
