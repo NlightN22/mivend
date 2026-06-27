@@ -40,6 +40,8 @@ export { default as MvStockBadge } from './components/MvStockBadge/MvStockBadge.
 export { default as MvQtyStepper } from './components/MvQtyStepper/MvQtyStepper.vue';
 export { default as MvCard } from './components/MvCard/MvCard.vue';
 export { default as MvBreadcrumbs } from './components/MvBreadcrumbs/MvBreadcrumbs.vue';
+export { default as MvCatalogDropdown } from './components/MvCatalogDropdown/MvCatalogDropdown.vue';
+export type { CollectionNode } from './components/MvCatalogDropdown/MvCatalogDropdown.vue';
 
 export { colors } from './tokens/colors';
 export type { ColorToken } from './tokens/colors';

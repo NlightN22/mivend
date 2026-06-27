@@ -331,6 +331,46 @@ const CATALOGUE = [
     ['Battery Terminal Protector Liqui Moly 150ml','liquimoly-bat-protect','auto-chemicals','liqui-moly',62000,180],
 ];
 
+async function createCollection(token, name, slug, facetValueIds, parentId) {
+    const input = {
+        translations: [{ languageCode: 'en', name, slug, description: '' }],
+        filters: facetValueIds.length ? [{
+            code: 'facet-value-filter',
+            arguments: [
+                { name: 'facetValueIds', value: JSON.stringify(facetValueIds) },
+                { name: 'containsAny', value: 'true' },
+            ],
+        }] : [],
+    };
+    if (parentId) input.parentId = parentId;
+    const { data } = await gql(`
+        mutation CreateCollection($input: CreateCollectionInput!) {
+            createCollection(input: $input) { id }
+        }`, { input }, token);
+    console.log(`✔ Collection "${name}"`);
+    return data.createCollection;
+}
+
+function detectPackaging(name) {
+    if (name.includes('0.3L')) return '0-3l';
+    if (name.includes('0.5L')) return '0-5l';
+    if (name.includes('10L'))  return '10l';
+    if (name.includes('1L'))   return '1l';
+    if (name.includes('4L'))   return '4l';
+    if (name.includes('5L'))   return '5l';
+    return null;
+}
+
+// premium brands → OEM tier, mid → Premium, rest → Standard
+const OEM_BRANDS      = new Set(['brembo', 'bilstein', 'skf', 'gates', 'continental', 'philips', 'osram', 'ngk', 'bosch', 'mann']);
+const PREMIUM_BRANDS  = new Set(['motul', 'castrol', 'shell', 'mobil', 'total', 'kyb', 'sachs', 'monroe', 'trw', 'mahle', 'filtron', 'textar', 'ferodo', 'ate', 'dayco', 'denso', 'champion', 'liqui-moly', 'varta', 'exide']);
+
+function detectQualityClass(brandCode) {
+    if (OEM_BRANDS.has(brandCode))     return 'oem';
+    if (PREMIUM_BRANDS.has(brandCode)) return 'premium';
+    return 'standard';
+}
+
 async function main() {
     console.log(`\n── Seeding Vendure development database (${CATALOGUE.length} products) ──\n`);
 
@@ -396,14 +436,38 @@ async function main() {
         { name: 'WD-40',        code: 'wd-40' },
     ]);
 
+    const qualityClass = await createFacet(token, 'Quality Class', 'quality-class', [
+        { name: 'OEM',      code: 'oem' },
+        { name: 'Premium',  code: 'premium' },
+        { name: 'Standard', code: 'standard' },
+    ]);
+
+    const packaging = await createFacet(token, 'Packaging', 'packaging', [
+        { name: '0.3L', code: '0-3l' },
+        { name: '0.5L', code: '0-5l' },
+        { name: '1L',   code: '1l' },
+        { name: '4L',   code: '4l' },
+        { name: '5L',   code: '5l' },
+        { name: '10L',  code: '10l' },
+    ]);
+
     const cat = Object.fromEntries(category.values.map(v => [v.code, v.id]));
     const br  = Object.fromEntries(brand.values.map(v => [v.code, v.id]));
+    const qc  = Object.fromEntries(qualityClass.values.map(v => [v.code, v.id]));
+    const pkg = Object.fromEntries(packaging.values.map(v => [v.code, v.id]));
 
     // ── Products ────────────────────────────────────────────────────────────
     let created = 0;
     for (const [name, slug, catCode, brandCode, price, stock] of CATALOGUE) {
         const facetValueIds = [cat[catCode]].filter(Boolean);
         if (brandCode && br[brandCode]) facetValueIds.push(br[brandCode]);
+
+        const qcCode = detectQualityClass(brandCode);
+        if (qc[qcCode]) facetValueIds.push(qc[qcCode]);
+
+        const pkgCode = detectPackaging(name);
+        if (pkgCode && pkg[pkgCode]) facetValueIds.push(pkg[pkgCode]);
+
         const sku = slug.toUpperCase().replace(/-/g, '_').slice(0, 40);
         await createProduct(token, { name, slug, facetValueIds, sku, price, stock });
         created++;
@@ -411,12 +475,37 @@ async function main() {
     }
     console.log(`✔ Created ${created} products`);
 
+    // ── Collections ─────────────────────────────────────────────────────────
+    console.log('\nCreating collections…');
+    const lubricants = await createCollection(token, 'Lubricants', 'lubricants', [cat['motor-oils'], cat['transmission']]);
+    await createCollection(token, 'Motor Oils',           'motor-oils',           [cat['motor-oils']],     lubricants.id);
+    await createCollection(token, 'Transmission Fluids',  'transmission-fluids',  [cat['transmission']],   lubricants.id);
+
+    const filters = await createCollection(token, 'Filters', 'filters', [cat['filters']]);
+    await createCollection(token, 'Oil Filters',    'oil-filters',    [cat['filters'], br['mann'], br['bosch'], br['mahle'], br['knecht'], br['filtron']], filters.id);
+    await createCollection(token, 'Air Filters',    'air-filters',    [cat['filters'], br['mann'], br['bosch'], br['filtron'], br['mahle']], filters.id);
+    await createCollection(token, 'Cabin Filters',  'cabin-filters',  [cat['filters'], br['mann'], br['bosch'], br['filtron'], br['mahle'], br['knecht']], filters.id);
+
+    const brakeSystem = await createCollection(token, 'Brake System', 'brake-system', [cat['brake-system']]);
+    await createCollection(token, 'Brake Pads',  'brake-pads',  [cat['brake-system'], br['brembo'], br['bosch'], br['trw'], br['textar'], br['ferodo'], br['ate'], br['mintex']], brakeSystem.id);
+    await createCollection(token, 'Brake Discs', 'brake-discs', [cat['brake-system'], br['brembo'], br['bosch'], br['trw'], br['textar'], br['ate']], brakeSystem.id);
+
+    await createCollection(token, 'Spark Plugs',   'spark-plugs',   [cat['spark-plugs']]);
+    await createCollection(token, 'Batteries',     'batteries',     [cat['batteries']]);
+    const suspension = await createCollection(token, 'Suspension', 'suspension', [cat['suspension']]);
+    await createCollection(token, 'Shock Absorbers', 'shock-absorbers', [cat['suspension'], br['sachs'], br['kyb'], br['monroe'], br['bilstein']], suspension.id);
+    await createCollection(token, 'Bearings & Joints', 'bearings-joints', [cat['suspension'], br['skf'], br['trw']], suspension.id);
+
+    await createCollection(token, 'Belts & Drives',  'belts-drives',  [cat['spare-parts']]);
+    await createCollection(token, 'Auto Chemicals',  'auto-chemicals', [cat['auto-chemicals']]);
+    await createCollection(token, 'Accessories',     'accessories',    [cat['accessories']]);
+
     // ── Customers ────────────────────────────────────────────────────────────
     await createCustomer(token, 'Ivan',   'Petrov',   'ivan@autoservice-nord.example', '+79131234567');
     await createCustomer(token, 'Sergey', 'Kovalev',  'sergey@parts-retail.example',   '+79139876543');
     await createCustomer(token, 'Anna',   'Sorokina',  'anna@garazh24.example',          '+79135551122');
 
-    console.log(`\n── Seed complete: ${CATALOGUE.length} products, 3 customers ──\n`);
+    console.log(`\n── Seed complete: ${CATALOGUE.length} products, 3 customers, ${16} collections ──\n`);
 }
 
 main().catch(err => {
