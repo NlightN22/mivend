@@ -1,0 +1,7 @@
+[
+    { "sku": "MOT-5W30-4L", "stockOnHand": 85 },
+    { "sku": "MOT-10W40-4L", "stockOnHand": 124 },
+    { "sku": "FIL-OIL-C001", "stockOnHand": 230 },
+    { "sku": "BRK-PAD-F101", "stockOnHand": 48 },
+    { "sku": "BAT-60-AGM", "stockOnHand": 15 }
+]

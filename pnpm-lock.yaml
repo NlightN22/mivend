@@ -52,6 +52,9 @@ importers:
             '@mivend/plugin-customer-pricing':
                 specifier: workspace:*
                 version: link:../../packages/plugins/customer-pricing
+            '@mivend/plugin-erp-import':
+                specifier: workspace:*
+                version: link:../../packages/plugins/erp-import
             '@mivend/plugin-price-entry':
                 specifier: workspace:*
                 version: link:../../packages/plugins/price-entry
@@ -143,11 +146,23 @@ importers:
                 specifier: ^5.4.0
                 version: 5.9.3
 
-    packages/plugins/erp-adapter-1c:
+    packages/plugins/erp-import:
         dependencies:
-            '@mivend/plugin-sync':
-                specifier: workspace:*
-                version: link:../sync
+            '@nestjs/common':
+                specifier: ^11.0.0
+                version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)
+            '@nestjs/core':
+                specifier: ^11.0.0
+                version: 11.1.27(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.27)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+            '@nestjs/typeorm':
+                specifier: ^11.0.0
+                version: 11.0.2(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.27)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.30(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3)))
+            '@vendure/core':
+                specifier: ^3.6.4
+                version: 3.6.4(@types/express@4.17.25)(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+            typeorm:
+                specifier: ^0.3.20
+                version: 0.3.30(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
         devDependencies:
             typescript:
                 specifier: ^5.4.0

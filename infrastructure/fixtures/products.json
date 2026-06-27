@@ -1,0 +1,90 @@
+[
+    {
+        "externalId": "ext-001",
+        "sku": "MOT-5W30-4L",
+        "name": "Motor Oil 5W-30 Synthetic 4L",
+        "slug": "motor-oil-5w30-4l",
+        "description": "Full synthetic motor oil for gasoline and diesel engines",
+        "price": 2490,
+        "stockOnHand": 85,
+        "categoryCode": "motor-oils",
+        "brandCode": "castrol"
+    },
+    {
+        "externalId": "ext-002",
+        "sku": "MOT-10W40-4L",
+        "name": "Motor Oil 10W-40 Semi-Synthetic 4L",
+        "slug": "motor-oil-10w40-4l",
+        "description": "Semi-synthetic motor oil for mixed fleet",
+        "price": 1890,
+        "stockOnHand": 124,
+        "categoryCode": "motor-oils",
+        "brandCode": "lukoil"
+    },
+    {
+        "externalId": "ext-003",
+        "sku": "FIL-OIL-C001",
+        "name": "Oil Filter Universal",
+        "slug": "oil-filter-universal",
+        "description": "Universal oil filter for passenger cars",
+        "price": 350,
+        "stockOnHand": 230,
+        "categoryCode": "filters",
+        "brandCode": "mann"
+    },
+    {
+        "externalId": "ext-004",
+        "sku": "FIL-AIR-A004",
+        "name": "Air Filter Panel Type",
+        "slug": "air-filter-panel",
+        "description": "Replacement air filter, panel type",
+        "price": 490,
+        "stockOnHand": 67,
+        "categoryCode": "filters",
+        "brandCode": "mann"
+    },
+    {
+        "externalId": "ext-005",
+        "sku": "BRK-PAD-F101",
+        "name": "Front Brake Pads Set",
+        "slug": "front-brake-pads-set",
+        "description": "Front brake pads for passenger cars",
+        "price": 1290,
+        "stockOnHand": 48,
+        "categoryCode": "brake-system",
+        "brandCode": "brembo"
+    },
+    {
+        "externalId": "ext-006",
+        "sku": "BRK-DISC-F201",
+        "name": "Front Brake Disc Pair",
+        "slug": "front-brake-disc-pair",
+        "description": "Ventilated front brake discs",
+        "price": 2890,
+        "stockOnHand": 32,
+        "categoryCode": "brake-system",
+        "brandCode": "brembo"
+    },
+    {
+        "externalId": "ext-007",
+        "sku": "SPK-PLUG-B6S",
+        "name": "Spark Plug Standard",
+        "slug": "spark-plug-standard",
+        "description": "Standard copper core spark plug",
+        "price": 180,
+        "stockOnHand": 340,
+        "categoryCode": "spark-plugs",
+        "brandCode": "ngk"
+    },
+    {
+        "externalId": "ext-008",
+        "sku": "BAT-60-AGM",
+        "name": "Battery 60Ah AGM",
+        "slug": "battery-60ah-agm",
+        "description": "AGM start-stop battery 60Ah",
+        "price": 8490,
+        "stockOnHand": 15,
+        "categoryCode": "batteries",
+        "brandCode": "bosch"
+    }
+]

@@ -6,6 +6,7 @@ import { BullMQJobQueuePlugin } from '@vendure/job-queue-plugin/package/bullmq';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
+import { ErpImportPlugin } from '@mivend/plugin-erp-import';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -35,6 +36,17 @@ export const config: VendureConfig = {
         password: process.env.DB_PASSWORD ?? 'postgres',
         database: process.env.DB_NAME ?? 'mivend',
     },
+    customFields: {
+        Product: [
+            {
+                name: 'externalId',
+                type: 'string',
+                nullable: true,
+                unique: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP External ID' }],
+            },
+        ],
+    },
     paymentOptions: {
         paymentMethodHandlers: [],
     },
@@ -61,6 +73,7 @@ export const config: VendureConfig = {
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         CounterpartyPlugin,
         PriceEntryPlugin,
+        ErpImportPlugin,
         ...instancePlugins,
     ],
 };

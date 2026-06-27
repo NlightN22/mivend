@@ -33,6 +33,7 @@ restart:
 
 dev:
 	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d
+	@bash infrastructure/scripts/dev-kill.sh
 	pnpm dev:all
 
 # Wipe DB volumes, re-seed via native server, then launch full stack
@@ -44,7 +45,10 @@ dev-reset:
 	$(COMPOSE_DEV) down -v
 
 seed:
-	node infrastructure/scripts/seed.mjs
+	@echo "Waiting for server on :3000..."
+	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
+	@echo "Server ready. Seeding..."
+	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-token} node infrastructure/scripts/seed-erp.mjs
 
 # ── UI development ─────────────────────────────────────────────────────────────
 

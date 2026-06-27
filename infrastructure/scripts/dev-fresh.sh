@@ -22,11 +22,9 @@ dotenv -e apps/server/.env.central -- pnpm --filter server dev &
 SERVER_PID=$!
 trap 'kill $SERVER_PID 2>/dev/null || true; wait $SERVER_PID 2>/dev/null || true' EXIT
 
-echo "==> Waiting for Vendure API on :3000..."
-until curl -sf -X POST http://localhost:3000/shop-api \
-    -H 'Content-Type: application/json' \
-    -d '{"query":"{__typename}"}' | grep -q typename; do
-    sleep 3
+echo "==> Waiting for Vendure server on :3000..."
+until curl -sf http://localhost:3000/health >/dev/null 2>&1; do
+    sleep 2
 done
 
 echo "==> Seeding database..."

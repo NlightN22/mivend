@@ -17,7 +17,8 @@
         "shared": "workspace:*",
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
-        "@mivend/plugin-price-entry": "workspace:*"
+        "@mivend/plugin-price-entry": "workspace:*",
+        "@mivend/plugin-erp-import": "workspace:*"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

@@ -1,0 +1,7 @@
+[
+    { "sku": "MOT-5W30-4L", "priceTypeCode": "WHOLESALE", "price": 2100 },
+    { "sku": "MOT-10W40-4L", "priceTypeCode": "WHOLESALE", "price": 1600 },
+    { "sku": "FIL-OIL-C001", "priceTypeCode": "WHOLESALE", "price": 290 },
+    { "sku": "BRK-PAD-F101", "priceTypeCode": "WHOLESALE", "price": 1050 },
+    { "sku": "BAT-60-AGM", "priceTypeCode": "WHOLESALE", "price": 7200 }
+]
