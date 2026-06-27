@@ -312,6 +312,25 @@ See `docs/frontend.md` for the full architecture. Critical rules:
 
 ---
 
+## Dev seed rules
+
+All test/dev data is inserted exclusively via `make seed`, which calls `infrastructure/scripts/seed-erp.mjs`.
+
+The seed script sends data **only through the `erp-import` plugin REST endpoint** (`POST /erp/import/batch`). This means every data type that needs to be seeded must have a corresponding record type in the plugin (`product`, `price`, `stock`, `customer`, etc.).
+
+**Never seed via:**
+
+- Admin GraphQL API directly
+- Raw SQL / `psql` exec
+- TypeORM repositories called outside the plugin
+- Any other bypass of `erp-import`
+
+The only exception: data that structurally cannot be expressed as an import record (e.g. Vendure system configuration, channel setup, tax zones). In that case, document the reason inline in the seed script with a comment explaining why the plugin cannot handle it.
+
+If a new data type needs seeding — **add a record type to `erp-import` first**, then use it from the seed script.
+
+---
+
 ## What not to do
 
 - Do not add error handling for scenarios that cannot happen.
