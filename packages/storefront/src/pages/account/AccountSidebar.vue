@@ -44,12 +44,12 @@ const isActive = (path: string) => route.path === path;
       <RouterLink to="/documents" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/documents') }">
         <span>Documents</span><span class="account-sidebar__count">12</span>
       </RouterLink>
-      <a href="#" class="account-sidebar__link">
+      <RouterLink to="/favorites" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/favorites') }">
         <span>Favorites</span><span class="account-sidebar__count">34</span>
-      </a>
-      <a href="#" class="account-sidebar__link">
+      </RouterLink>
+      <RouterLink to="/requests" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/requests') }">
         <span>Requests</span><span class="account-sidebar__count">2</span>
-      </a>
+      </RouterLink>
     </nav>
 
     <div class="account-sidebar__section-title">Customer Data</div>

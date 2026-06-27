@@ -168,7 +168,14 @@ const shopResolvers = [
     CustomerTradingPointsMutationResolver,
 ];
 
-const adminResolvers = [...shopResolvers, CounterpartyResolver, TradingPointAdminResolver];
+const adminResolvers = [
+    CustomerCounterpartyResolver,
+    CustomerTradingPointResolver,
+    CounterpartyTradingPointResolver,
+    TradingPointResolver,
+    CounterpartyResolver,
+    TradingPointAdminResolver,
+];
 
 @VendurePlugin({
     imports: [PluginCommonModule],

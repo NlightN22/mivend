@@ -9,6 +9,9 @@ import { ProductHandler } from './handlers/product.handler';
 import { PriceHandler } from './handlers/price.handler';
 import { StockHandler } from './handlers/stock.handler';
 import { CustomerHandler } from './handlers/customer.handler';
+import { CounterpartyHandler } from './handlers/counterparty.handler';
+import { CustomerCounterpartyHandler } from './handlers/customer-counterparty.handler';
+import { TradingPointHandler } from './handlers/trading-point.handler';
 
 @VendurePlugin({
     imports: [PluginCommonModule],
@@ -22,6 +25,9 @@ import { CustomerHandler } from './handlers/customer.handler';
         PriceHandler,
         StockHandler,
         CustomerHandler,
+        CounterpartyHandler,
+        CustomerCounterpartyHandler,
+        TradingPointHandler,
     ],
     compatibility: '>0.0.0',
 })

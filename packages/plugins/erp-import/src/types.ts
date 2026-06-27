@@ -30,11 +30,42 @@ export interface CustomerRecord {
     password: string;
 }
 
+export interface CounterpartyRecord {
+    erpId: string;
+    legalName: string;
+    shortName: string;
+    inn?: string | null;
+    creditLimit: number;
+    creditBalance: number;
+    paymentDelayDays: number;
+    priceType: string;
+    isActive: boolean;
+}
+
+export interface CustomerCounterpartyRecord {
+    customerEmail: string;
+    counterpartyErpId: string;
+}
+
+export interface TradingPointRecord {
+    erpId: string;
+    counterpartyErpId: string;
+    name: string;
+    address: string;
+    workingHours?: string | null;
+    isActive: boolean;
+    contactName?: string | null;
+    contactPhone?: string | null;
+}
+
 export type ImportRecord =
     | { type: 'product'; data: ProductRecord }
     | { type: 'price'; data: PriceRecord }
     | { type: 'stock'; data: StockRecord }
-    | { type: 'customer'; data: CustomerRecord };
+    | { type: 'customer'; data: CustomerRecord }
+    | { type: 'counterparty'; data: CounterpartyRecord }
+    | { type: 'customerCounterparty'; data: CustomerCounterpartyRecord }
+    | { type: 'tradingPoint'; data: TradingPointRecord };
 
 export interface BatchImportBody {
     exchangeId: string;

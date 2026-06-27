@@ -148,6 +148,9 @@ importers:
 
     packages/plugins/erp-import:
         dependencies:
+            '@mivend/plugin-counterparty':
+                specifier: workspace:*
+                version: link:../counterparty
             '@nestjs/common':
                 specifier: ^11.0.0
                 version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)

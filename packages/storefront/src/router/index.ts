@@ -55,6 +55,16 @@ export const router = createRouter({
                     component: () => import('../pages/documents/DocumentsPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'favorites',
+                    component: () => import('../pages/favorites/FavoritesPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'requests',
+                    component: () => import('../pages/requests/RequestsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
             ],
         },
     ],

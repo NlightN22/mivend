@@ -114,17 +114,19 @@ function incQty(): void {
     </div>
 
     <div class="mv-product-row__actions">
-      <template v-if="canOrder">
-        <div class="mv-product-row__qty">
-          <button class="mv-product-row__qty-btn" type="button" @click="decQty">−</button>
-          <span class="mv-product-row__qty-val">{{ qty }}</span>
-          <button class="mv-product-row__qty-btn" type="button" @click="incQty">+</button>
-        </div>
-        <button class="mv-product-row__add-btn" type="button" :disabled="!showPrices" @click="emit('add-to-cart', qty, variantId)">+</button>
-      </template>
-      <template v-else>
-        <button class="mv-product-row__analog-btn" type="button" @click="emit('view-analogs')">Analogs</button>
-      </template>
+      <slot name="actions">
+        <template v-if="canOrder">
+          <div class="mv-product-row__qty">
+            <button class="mv-product-row__qty-btn" type="button" @click="decQty">−</button>
+            <span class="mv-product-row__qty-val">{{ qty }}</span>
+            <button class="mv-product-row__qty-btn" type="button" @click="incQty">+</button>
+          </div>
+          <button class="mv-product-row__add-btn" type="button" :disabled="!showPrices" @click="emit('add-to-cart', qty, variantId)">+</button>
+        </template>
+        <template v-else>
+          <button class="mv-product-row__analog-btn" type="button" @click="emit('view-analogs')">Analogs</button>
+        </template>
+      </slot>
     </div>
   </article>
 </template>

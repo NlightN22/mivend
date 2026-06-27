@@ -4,6 +4,9 @@ import { ProductHandler } from './handlers/product.handler';
 import { PriceHandler } from './handlers/price.handler';
 import { StockHandler } from './handlers/stock.handler';
 import { CustomerHandler } from './handlers/customer.handler';
+import { CounterpartyHandler } from './handlers/counterparty.handler';
+import { CustomerCounterpartyHandler } from './handlers/customer-counterparty.handler';
+import { TradingPointHandler } from './handlers/trading-point.handler';
 import { ImportRunService } from './import-run.service';
 import type { BatchImportBody, ImportRecord, ImportRunResult } from './types';
 
@@ -17,6 +20,9 @@ export class ErpImportService {
         private readonly priceHandler: PriceHandler,
         private readonly stockHandler: StockHandler,
         private readonly customerHandler: CustomerHandler,
+        private readonly counterpartyHandler: CounterpartyHandler,
+        private readonly customerCounterpartyHandler: CustomerCounterpartyHandler,
+        private readonly tradingPointHandler: TradingPointHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -65,6 +71,15 @@ export class ErpImportService {
                 break;
             case 'customer':
                 await this.customerHandler.upsert(ctx, record.data);
+                break;
+            case 'counterparty':
+                await this.counterpartyHandler.upsert(ctx, record.data);
+                break;
+            case 'customerCounterparty':
+                await this.customerCounterpartyHandler.assign(ctx, record.data);
+                break;
+            case 'tradingPoint':
+                await this.tradingPointHandler.upsert(ctx, record.data);
                 break;
         }
     }
