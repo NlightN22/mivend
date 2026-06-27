@@ -10,6 +10,7 @@ interface ProductVariant {
   id: string;
   sku: string;
   price: number;
+  customerPrice: number | null;
   currencyCode: string;
   stockLevel: string;
 }
@@ -124,7 +125,7 @@ async function fetchProducts(): Promise<void> {
           totalItems
           items {
             id name slug
-            variants { id sku price currencyCode stockLevel }
+            variants { id sku price customerPrice currencyCode stockLevel }
             facetValues { name facet { code } }
           }
         }
@@ -209,6 +210,7 @@ onMounted(fetchProducts);
               :sku="product.variants[0]?.sku ?? ''"
               :brand="getBrand(product)"
               :price="product.variants[0] ? product.variants[0].price / 100 : undefined"
+              :customer-price="product.variants[0]?.customerPrice != null ? product.variants[0].customerPrice / 100 : undefined"
               :currency="product.variants[0]?.currencyCode ?? 'RUB'"
               :slug="product.slug"
               :show-prices="authStore.isLoggedIn"
@@ -229,6 +231,7 @@ onMounted(fetchProducts);
               :sku="product.variants[0]?.sku ?? ''"
               :brand="getBrand(product)"
               :price="product.variants[0] ? product.variants[0].price / 100 : undefined"
+              :customer-price="product.variants[0]?.customerPrice != null ? product.variants[0].customerPrice / 100 : undefined"
               :currency="product.variants[0]?.currencyCode ?? 'RUB'"
               :slug="product.slug"
               :show-prices="authStore.isLoggedIn"

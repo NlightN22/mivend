@@ -16,7 +16,8 @@
         "pg": "^8.11.0",
         "shared": "workspace:*",
         "@mivend/plugin-customer-pricing": "workspace:*",
-        "@mivend/plugin-counterparty": "workspace:*"
+        "@mivend/plugin-counterparty": "workspace:*",
+        "@mivend/plugin-price-entry": "workspace:*"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

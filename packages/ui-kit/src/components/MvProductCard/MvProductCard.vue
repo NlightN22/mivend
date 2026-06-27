@@ -7,6 +7,7 @@ interface Props {
   sku: string;
   brand?: string;
   price?: number;
+  customerPrice?: number;
   currency?: string;
   stockVariant?: 'ok' | 'low' | 'out';
   stockQuantity?: number;
@@ -18,6 +19,7 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   brand: '',
   price: undefined,
+  customerPrice: undefined,
   currency: 'RUB',
   stockVariant: undefined,
   stockQuantity: undefined,
@@ -50,12 +52,22 @@ const emit = defineEmits<{ 'add-to-cart': [variantId: string | undefined] }>();
 
       <template v-if="showPrices">
         <div class="mv-product-card__price-row">
-          <MvAmountDisplay
-            v-if="price !== undefined"
-            :amount="price"
-            :currency="currency"
-            size="md"
-          />
+          <div class="mv-product-card__prices">
+            <MvAmountDisplay
+              v-if="customerPrice !== undefined"
+              :amount="customerPrice"
+              :currency="currency"
+              size="md"
+              class="mv-product-card__customer-price"
+            />
+            <MvAmountDisplay
+              v-if="price !== undefined"
+              :amount="price"
+              :currency="currency"
+              size="md"
+              :class="customerPrice !== undefined ? 'mv-product-card__base-price--strike' : ''"
+            />
+          </div>
           <MvStockBadge
             v-if="stockQuantity !== undefined"
             :quantity="stockQuantity"
@@ -66,7 +78,6 @@ const emit = defineEmits<{ 'add-to-cart': [variantId: string | undefined] }>();
             :variant="stockVariant"
             class="mv-product-card__stock-badge"
           />
-        </div>
         <button
           class="mv-product-card__buy"
           type="button"
@@ -188,6 +199,10 @@ const emit = defineEmits<{ 'add-to-cart': [variantId: string | undefined] }>();
 }
 
 .mv-product-card__stock-badge { flex-shrink: 0; }
+
+.mv-product-card__prices { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mv-product-card__customer-price { color: #00a878; font-weight: 900; }
+.mv-product-card__base-price--strike { font-size: 12px !important; color: #a8b8b2; text-decoration: line-through; }
 
 .mv-product-card__buy {
   width: 100%;

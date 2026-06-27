@@ -5,6 +5,7 @@ import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import { BullMQJobQueuePlugin } from '@vendure/job-queue-plugin/package/bullmq';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
+import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -59,6 +60,7 @@ export const config: VendureConfig = {
         }),
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         CounterpartyPlugin,
+        PriceEntryPlugin,
         ...instancePlugins,
     ],
 };

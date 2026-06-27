@@ -8,6 +8,7 @@ interface Props {
   sku: string;
   brand?: string;
   price?: number;
+  customerPrice?: number;
   oldPrice?: number;
   currency?: string;
   stock?: number;
@@ -21,6 +22,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   brand: '',
   price: undefined,
+  customerPrice: undefined,
   oldPrice: undefined,
   currency: 'RUB',
   stock: undefined,
@@ -90,9 +92,22 @@ function incQty(): void {
 
     <div class="mv-product-row__cell">
       <div class="mv-product-row__cell-label">Price</div>
-      <template v-if="showPrices && price !== undefined">
-        <MvAmountDisplay :amount="price" :currency="currency" size="sm" class="mv-product-row__price" />
-        <MvAmountDisplay v-if="oldPrice !== undefined" :amount="oldPrice" :currency="currency" size="sm" class="mv-product-row__old-price" />
+      <template v-if="showPrices && (price !== undefined || customerPrice !== undefined)">
+        <MvAmountDisplay
+          v-if="customerPrice !== undefined"
+          :amount="customerPrice"
+          :currency="currency"
+          size="sm"
+          class="mv-product-row__price mv-product-row__price--customer"
+        />
+        <MvAmountDisplay
+          v-if="price !== undefined"
+          :amount="price"
+          :currency="currency"
+          size="sm"
+          :class="customerPrice !== undefined ? 'mv-product-row__old-price' : 'mv-product-row__price'"
+        />
+        <MvAmountDisplay v-if="oldPrice !== undefined && customerPrice === undefined" :amount="oldPrice" :currency="currency" size="sm" class="mv-product-row__old-price" />
       </template>
       <div v-else-if="!showPrices" class="mv-product-row__price-hint">Log in</div>
       <div v-else class="mv-product-row__price-hint">—</div>
@@ -149,6 +164,7 @@ function incQty(): void {
 .mv-product-row__stock-none { font-size: 13px; color: #b4ccc4; }
 
 .mv-product-row__price { font-weight: 900; letter-spacing: -0.02em; }
+.mv-product-row__price--customer { color: #00a878; }
 .mv-product-row__old-price { font-size: 12px !important; color: #a8b8b2; text-decoration: line-through; }
 .mv-product-row__price-hint { font-size: 12px; color: #a8b8b2; }
 
