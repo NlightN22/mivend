@@ -31,6 +31,11 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'checkout',
+                    component: () => import('../pages/checkout/CheckoutPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'orders',
                     component: () => import('../pages/orders/OrdersPage.vue'),
                     meta: { requiresAuth: true },
@@ -50,8 +55,9 @@ export const router = createRouter({
     ],
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
     const authStore = useAuthStore();
+    await authStore.init();
     if (to.meta.requiresAuth && !authStore.isLoggedIn) {
         next({ path: '/login', query: { redirect: to.fullPath } });
     } else {

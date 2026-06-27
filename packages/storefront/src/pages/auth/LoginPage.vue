@@ -17,7 +17,7 @@ async function handleSubmit() {
     loading.value = true;
     error.value = '';
     try {
-        const ok = await authStore.login(form.email, form.password);
+        const ok = await authStore.login(form.email, form.password, form.remember);
         if (ok) {
             await router.push((route.query.redirect as string) ?? '/');
         } else {

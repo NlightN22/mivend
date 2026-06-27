@@ -37,6 +37,8 @@ interface ActiveCustomer {
 
 export const useAuthStore = defineStore('auth', () => {
     const customer = ref<ActiveCustomer | null>(null);
+    const initialized = ref(false);
+    let initPromise: Promise<void> | null = null;
 
     const isLoggedIn = computed(() => customer.value !== null);
 
@@ -49,7 +51,16 @@ export const useAuthStore = defineStore('auth', () => {
     const tradingPoint = computed(() => customer.value?.preferredTradingPoint ?? null);
     const counterparty = computed(() => customer.value?.counterparty ?? null);
 
-    async function login(username: string, password: string): Promise<boolean> {
+    function init(): Promise<void> {
+        if (!initPromise) {
+            initPromise = fetchCurrentCustomer().finally(() => {
+                initialized.value = true;
+            });
+        }
+        return initPromise;
+    }
+
+    async function login(username: string, password: string, rememberMe = false): Promise<boolean> {
         const result = await shopApi<{
             login: {
                 __typename: string;
@@ -57,14 +68,14 @@ export const useAuthStore = defineStore('auth', () => {
                 id?: string;
             };
         }>(
-            `mutation Login($username: String!, $password: String!) {
-                login(username: $username, password: $password) {
+            `mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
+                login(username: $username, password: $password, rememberMe: $rememberMe) {
                     __typename
                     ... on CurrentUser { id }
                     ... on InvalidCredentialsError { errorCode }
                 }
             }`,
-            { username, password },
+            { username, password, rememberMe },
         );
 
         if (result.login.__typename === 'CurrentUser') {
@@ -104,7 +115,9 @@ export const useAuthStore = defineStore('auth', () => {
 
     return {
         customer,
+        initialized,
         isLoggedIn,
+        init,
         portalRole,
         isClientAdmin,
         isBuyer,

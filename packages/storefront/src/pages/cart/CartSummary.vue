@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
+
+const router = useRouter();
 
 const cartStore = useCartStore();
 
@@ -19,7 +22,7 @@ const lineCount = computed(() => cartStore.lines.length);
 <template>
   <aside class="cart-summary">
     <section class="cart-summary__card">
-      <button class="cart-summary__checkout" type="button">
+      <button class="cart-summary__checkout" type="button" @click="router.push('/checkout')">
         Proceed to checkout
       </button>
 

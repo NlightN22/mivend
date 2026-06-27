@@ -7,9 +7,10 @@ const authStore = useAuthStore();
 const cartStore = useCartStore();
 
 onMounted(async () => {
-    await authStore.fetchCurrentCustomer();
-    if (authStore.isLoggedIn) await cartStore.fetchCart();
-    if (import.meta.env.DEV && !authStore.isLoggedIn) {
+    await authStore.init();
+    if (authStore.isLoggedIn) {
+        await cartStore.fetchCart();
+    } else if (import.meta.env.DEV) {
         await authStore.login('ivan@autoservice-nord.example', 'Password123!');
         await cartStore.fetchCart();
     }
