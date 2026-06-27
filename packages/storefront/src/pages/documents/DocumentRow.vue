@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import MvIconButton from '@mivend/ui-kit/src/components/MvIconButton/MvIconButton.vue';
+
 export interface DocData {
     icon: string;
     iconVariant: 'green' | 'orange' | 'blue';
@@ -37,22 +39,31 @@ defineProps<{ doc: DocData }>();
     <span class="doc-row__pill" :class="`doc-row__pill--${doc.statusVariant}`">{{ doc.statusLabel }}</span>
 
     <div class="doc-row__actions">
-      <button v-if="doc.actions.includes('pay')" class="doc-row__icon-btn doc-row__icon-btn--orange" title="Pay">
-        <span class="doc-row__icon-btn-icon">💳</span>
-        <span class="doc-row__icon-btn-label">Pay</span>
-      </button>
-      <button v-if="doc.actions.includes('download')" class="doc-row__icon-btn doc-row__icon-btn--primary" title="Download">
-        <span class="doc-row__icon-btn-icon">⬇</span>
-        <span class="doc-row__icon-btn-label">Download</span>
-      </button>
-      <button v-if="doc.actions.includes('email')" class="doc-row__icon-btn" title="Send by email">
-        <span class="doc-row__icon-btn-icon">✉</span>
-        <span class="doc-row__icon-btn-label">Email</span>
-      </button>
-      <button v-if="doc.actions.includes('order')" class="doc-row__icon-btn" title="Open order">
-        <span class="doc-row__icon-btn-icon">📦</span>
-        <span class="doc-row__icon-btn-label">Order</span>
-      </button>
+      <MvIconButton v-if="doc.actions.includes('pay')" label="Pay" variant="orange">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1.5" y="4" width="15" height="10.5" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M1.5 7.5h15" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="3.5" y="10" width="4" height="1.5" rx="0.75" fill="currentColor"/>
+        </svg>
+      </MvIconButton>
+      <MvIconButton v-if="doc.actions.includes('download')" label="Download" variant="primary">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 2v9m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 13.5h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </MvIconButton>
+      <MvIconButton v-if="doc.actions.includes('email')" label="Email">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1.5" y="3.5" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M1.5 6l7.5 5 7.5-5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </MvIconButton>
+      <MvIconButton v-if="doc.actions.includes('order')" label="Order">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M5.5 7h7M5.5 10h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </MvIconButton>
     </div>
   </article>
 </template>
@@ -135,39 +146,6 @@ defineProps<{ doc: DocData }>();
   justify-content: flex-end;
   gap: 4px;
   flex-wrap: wrap;
-}
-
-.doc-row__icon-btn {
-  border: 0;
-  width: 52px;
-  padding: 8px 4px 6px;
-  border-radius: 12px;
-  background: #f3f8f6;
-  color: #4a5e57;
-  font: inherit;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  transition: background 0.14s;
-}
-
-.doc-row__icon-btn:hover { background: #e2f8ef; color: #008a64; }
-
-.doc-row__icon-btn--primary { background: #e2f8ef; color: #008a64; }
-.doc-row__icon-btn--primary:hover { background: #c6f0df; }
-
-.doc-row__icon-btn--orange { background: #fff0df; color: #e87800; }
-.doc-row__icon-btn--orange:hover { background: #ffe0bf; }
-
-.doc-row__icon-btn-icon { font-size: 18px; line-height: 1; }
-
-.doc-row__icon-btn-label {
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1;
-  white-space: nowrap;
 }
 
 @media (max-width: 1260px) {
