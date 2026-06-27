@@ -37,10 +37,22 @@ defineProps<{ doc: DocData }>();
     <span class="doc-row__pill" :class="`doc-row__pill--${doc.statusVariant}`">{{ doc.statusLabel }}</span>
 
     <div class="doc-row__actions">
-      <button v-if="doc.actions.includes('pay')" class="doc-row__btn doc-row__btn--orange">Pay</button>
-      <button v-if="doc.actions.includes('download')" class="doc-row__btn doc-row__btn--primary">Download</button>
-      <button v-if="doc.actions.includes('email')" class="doc-row__btn">Email</button>
-      <button v-if="doc.actions.includes('order')" class="doc-row__btn">Order</button>
+      <button v-if="doc.actions.includes('pay')" class="doc-row__icon-btn doc-row__icon-btn--orange" title="Pay">
+        <span class="doc-row__icon-btn-icon">💳</span>
+        <span class="doc-row__icon-btn-label">Pay</span>
+      </button>
+      <button v-if="doc.actions.includes('download')" class="doc-row__icon-btn doc-row__icon-btn--primary" title="Download">
+        <span class="doc-row__icon-btn-icon">⬇</span>
+        <span class="doc-row__icon-btn-label">Download</span>
+      </button>
+      <button v-if="doc.actions.includes('email')" class="doc-row__icon-btn" title="Send by email">
+        <span class="doc-row__icon-btn-icon">✉</span>
+        <span class="doc-row__icon-btn-label">Email</span>
+      </button>
+      <button v-if="doc.actions.includes('order')" class="doc-row__icon-btn" title="Open order">
+        <span class="doc-row__icon-btn-icon">📦</span>
+        <span class="doc-row__icon-btn-label">Order</span>
+      </button>
     </div>
   </article>
 </template>
@@ -53,7 +65,7 @@ defineProps<{ doc: DocData }>();
   box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
   padding: 16px 18px;
   display: grid;
-  grid-template-columns: 46px minmax(0, 1.25fr) 150px 140px 120px 210px;
+  grid-template-columns: 46px minmax(0, 1.25fr) 150px 140px 120px 180px;
   gap: 14px;
   align-items: center;
 }
@@ -121,25 +133,42 @@ defineProps<{ doc: DocData }>();
 .doc-row__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
-.doc-row__btn {
+.doc-row__icon-btn {
   border: 0;
-  min-height: 38px;
+  width: 52px;
+  padding: 8px 4px 6px;
   border-radius: 12px;
-  padding: 0 13px;
   background: #f3f8f6;
-  color: #263732;
+  color: #4a5e57;
   font: inherit;
-  font-weight: 950;
   cursor: pointer;
-  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: background 0.14s;
 }
 
-.doc-row__btn--primary { background: #00a878; color: #fff; }
-.doc-row__btn--orange { background: #ff8a00; color: #fff; }
+.doc-row__icon-btn:hover { background: #e2f8ef; color: #008a64; }
+
+.doc-row__icon-btn--primary { background: #e2f8ef; color: #008a64; }
+.doc-row__icon-btn--primary:hover { background: #c6f0df; }
+
+.doc-row__icon-btn--orange { background: #fff0df; color: #e87800; }
+.doc-row__icon-btn--orange:hover { background: #ffe0bf; }
+
+.doc-row__icon-btn-icon { font-size: 18px; line-height: 1; }
+
+.doc-row__icon-btn-label {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
 
 @media (max-width: 1260px) {
   .doc-row {
