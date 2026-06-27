@@ -1,9 +1,10 @@
 import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
-import { Allow, Ctx, RequestContext, Transaction, TransactionalConnection } from '@vendure/core';
+import { Transaction } from '@vendure/core';
+import { Allow, Ctx, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Permission } from '@vendure/common/lib/generated-types';
 
 import { TradingPoint } from './entities/trading-point.entity';
-import { TradingPointService } from './trading-point.service';
+import { TradingPointService, CustomerTradingPointInput } from './trading-point.service';
 
 @Resolver('Customer')
 export class CustomerTradingPointResolver {
@@ -75,6 +76,75 @@ export class TradingPointResolver {
             args.tradingPointId,
             args.comment,
         );
+    }
+}
+
+@Resolver('Query')
+export class CustomerTradingPointsQueryResolver {
+    constructor(private tradingPointService: TradingPointService) {}
+
+    @Query()
+    async myTradingPoints(@Ctx() ctx: RequestContext): Promise<TradingPoint[]> {
+        const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
+        if (!counterpartyId) return [];
+        return this.tradingPointService.findVisibleForCounterparty(ctx, counterpartyId);
+    }
+
+    @Query()
+    async myHiddenTradingPoints(@Ctx() ctx: RequestContext): Promise<TradingPoint[]> {
+        const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
+        if (!counterpartyId) return [];
+        return this.tradingPointService.findHiddenForCounterparty(ctx, counterpartyId);
+    }
+}
+
+@Resolver('Mutation')
+export class CustomerTradingPointsMutationResolver {
+    constructor(private tradingPointService: TradingPointService) {}
+
+    @Transaction()
+    @Mutation()
+    async customerAddTradingPoint(
+        @Ctx() ctx: RequestContext,
+        @Args() args: CustomerTradingPointInput,
+    ): Promise<TradingPoint | null> {
+        const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
+        if (!counterpartyId) return null;
+        return this.tradingPointService.customerAdd(ctx, counterpartyId, args);
+    }
+
+    @Transaction()
+    @Mutation()
+    async customerEditTradingPoint(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string } & CustomerTradingPointInput,
+    ): Promise<TradingPoint | null> {
+        const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
+        if (!counterpartyId) return null;
+        const { id, ...input } = args;
+        return this.tradingPointService.customerEdit(ctx, id, counterpartyId, input);
+    }
+
+    @Transaction()
+    @Mutation()
+    async customerDeleteTradingPoint(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string },
+    ): Promise<boolean> {
+        const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
+        if (!counterpartyId) return false;
+        return this.tradingPointService.customerDelete(ctx, args.id, counterpartyId);
+    }
+
+    @Transaction()
+    @Mutation()
+    async customerRestoreTradingPoint(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string },
+    ): Promise<TradingPoint | null> {
+        const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
+        if (!counterpartyId) return null;
+        return this.tradingPointService.customerRestore(ctx, args.id, counterpartyId);
     }
 }
 

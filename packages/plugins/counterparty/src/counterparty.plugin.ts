@@ -17,6 +17,8 @@ import {
     CounterpartyTradingPointResolver,
     TradingPointResolver,
     TradingPointAdminResolver,
+    CustomerTradingPointsQueryResolver,
+    CustomerTradingPointsMutationResolver,
 } from './trading-point.resolver';
 import { CounterpartyService } from './counterparty.service';
 import { TradingPointService } from './trading-point.service';
@@ -40,6 +42,8 @@ const tradingPointFields = gql`
         workingHours: String
         deliveryComment: String
         isActive: Boolean!
+        customerStatus: String!
+        customerOwned: Boolean!
         contacts: [ContactPerson!]!
     }
 `;
@@ -68,11 +72,32 @@ const shopApiSchema = gql`
 
     extend type Query {
         tradingPoint(id: ID!): TradingPoint
+        myTradingPoints: [TradingPoint!]!
+        myHiddenTradingPoints: [TradingPoint!]!
     }
 
     extend type Mutation {
         setPreferredTradingPoint(tradingPointId: ID!): Boolean!
         updateTradingPointComment(tradingPointId: ID!, comment: String): TradingPoint!
+        customerAddTradingPoint(
+            name: String!
+            address: String!
+            workingHours: String
+            deliveryComment: String
+            contactName: String
+            contactPhone: String
+        ): TradingPoint
+        customerEditTradingPoint(
+            id: ID!
+            name: String!
+            address: String!
+            workingHours: String
+            deliveryComment: String
+            contactName: String
+            contactPhone: String
+        ): TradingPoint
+        customerDeleteTradingPoint(id: ID!): Boolean!
+        customerRestoreTradingPoint(id: ID!): TradingPoint
     }
 `;
 
@@ -139,6 +164,8 @@ const shopResolvers = [
     CustomerTradingPointResolver,
     CounterpartyTradingPointResolver,
     TradingPointResolver,
+    CustomerTradingPointsQueryResolver,
+    CustomerTradingPointsMutationResolver,
 ];
 
 const adminResolvers = [...shopResolvers, CounterpartyResolver, TradingPointAdminResolver];

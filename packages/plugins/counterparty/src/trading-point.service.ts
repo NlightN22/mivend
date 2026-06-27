@@ -7,6 +7,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import { randomUUID } from 'crypto';
 
 import { ContactPerson } from './entities/contact-person.entity';
 import { TradingPoint } from './entities/trading-point.entity';
@@ -157,4 +158,138 @@ export class TradingPointService {
         if (!updated) throw new UserInputError(`TradingPoint not found: id=${tradingPointId}`);
         return updated;
     }
+
+    async findVisibleForCounterparty(
+        ctx: RequestContext,
+        counterpartyId: ID,
+    ): Promise<TradingPoint[]> {
+        return this.connection.getRepository(ctx, TradingPoint).find({
+            where: {
+                counterpartyId: String(counterpartyId),
+                isActive: true,
+                customerStatus: 'active',
+            },
+            relations: ['contacts'],
+            order: { name: 'ASC' },
+        });
+    }
+
+    async findHiddenForCounterparty(
+        ctx: RequestContext,
+        counterpartyId: ID,
+    ): Promise<TradingPoint[]> {
+        return this.connection.getRepository(ctx, TradingPoint).find({
+            where: { counterpartyId: String(counterpartyId), customerStatus: 'hidden' },
+            relations: ['contacts'],
+            order: { name: 'ASC' },
+        });
+    }
+
+    async getCounterpartyIdForUser(ctx: RequestContext): Promise<string | null> {
+        if (!ctx.activeUserId) return null;
+        const rows = await this.connection.rawConnection.query(
+            `SELECT cu."customFieldsCounterpartyid" AS cid FROM customer cu WHERE cu."userId" = $1 LIMIT 1`,
+            [ctx.activeUserId],
+        );
+        return rows?.[0]?.cid ?? null;
+    }
+
+    async customerAdd(
+        ctx: RequestContext,
+        counterpartyId: string,
+        input: CustomerTradingPointInput,
+    ): Promise<TradingPoint> {
+        const repo = this.connection.getRepository(ctx, TradingPoint);
+        const cpRepo = this.connection.getRepository(ctx, ContactPerson);
+        const contact = input.contactName
+            ? cpRepo.create({
+                  name: input.contactName,
+                  phone: input.contactPhone ?? null,
+                  email: null,
+                  isPrimary: true,
+              })
+            : null;
+        const record = repo.create({
+            erpId: `cust_${randomUUID()}`,
+            counterpartyId,
+            name: input.name,
+            address: input.address,
+            workingHours: input.workingHours ?? null,
+            deliveryComment: input.deliveryComment ?? null,
+            isActive: true,
+            customerStatus: 'active',
+            customerOwned: true,
+            contacts: contact ? [contact] : [],
+        });
+        const saved = await repo.save(record);
+        Logger.verbose(`Customer added trading point ${saved.id}`, loggerCtx);
+        return saved;
+    }
+
+    async customerEdit(
+        ctx: RequestContext,
+        id: ID,
+        counterpartyId: string,
+        input: CustomerTradingPointInput,
+    ): Promise<TradingPoint> {
+        const repo = this.connection.getRepository(ctx, TradingPoint);
+        const cpRepo = this.connection.getRepository(ctx, ContactPerson);
+        const record = await repo.findOne({
+            where: { id: String(id), counterpartyId },
+            relations: ['contacts'],
+        });
+        if (!record) throw new UserInputError(`TradingPoint not found or access denied`);
+        record.name = input.name;
+        record.address = input.address;
+        record.workingHours = input.workingHours ?? null;
+        record.deliveryComment = input.deliveryComment ?? null;
+        if (input.contactName !== undefined) {
+            await cpRepo.delete({ tradingPoint: { id: record.id } });
+            record.contacts = input.contactName
+                ? [
+                      cpRepo.create({
+                          name: input.contactName,
+                          phone: input.contactPhone ?? null,
+                          email: null,
+                          isPrimary: true,
+                      }),
+                  ]
+                : [];
+        }
+        const saved = await repo.save(record);
+        Logger.verbose(`Customer edited trading point ${id}`, loggerCtx);
+        return saved;
+    }
+
+    async customerDelete(ctx: RequestContext, id: ID, counterpartyId: string): Promise<boolean> {
+        const repo = this.connection.getRepository(ctx, TradingPoint);
+        const record = await repo.findOne({ where: { id: String(id), counterpartyId } });
+        if (!record) throw new UserInputError(`TradingPoint not found or access denied`);
+        await repo.update({ id: String(id) }, { customerStatus: 'hidden' });
+        Logger.verbose(`Customer soft-deleted trading point ${id}`, loggerCtx);
+        return true;
+    }
+
+    async customerRestore(
+        ctx: RequestContext,
+        id: ID,
+        counterpartyId: string,
+    ): Promise<TradingPoint> {
+        const repo = this.connection.getRepository(ctx, TradingPoint);
+        const record = await repo.findOne({ where: { id: String(id), counterpartyId } });
+        if (!record) throw new UserInputError(`TradingPoint not found or access denied`);
+        await repo.update({ id: String(id) }, { customerStatus: 'active', isActive: true });
+        const updated = await this.findById(ctx, id);
+        if (!updated) throw new UserInputError(`TradingPoint not found: id=${id}`);
+        return updated;
+    }
+}
+
+export interface CustomerTradingPointInput {
+    name: string;
+    address: string;
+    workingHours?: string | null;
+    deliveryComment?: string | null;
+    contactName?: string | null;
+    contactPhone?: string | null;
 }

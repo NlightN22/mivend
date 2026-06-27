@@ -72,6 +72,7 @@
             <dd>{{ tradingPoint.deliveryComment }}</dd>
           </template>
         </dl>
+        <router-link to="/account/trading-points" class="account__link">Manage trading points →</router-link>
       </section>
     </div>
   </div>
@@ -218,4 +219,14 @@ const formatRub = (n: number) =>
   background: #ff8a00;
   transition: width 0.4s ease;
 }
+
+.account__link {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #008a64;
+  text-decoration: none;
+}
+.account__link:hover { text-decoration: underline; }
 </style>

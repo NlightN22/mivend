@@ -43,6 +43,14 @@ export class TradingPoint extends VendureEntity {
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 
+    // 'active' | 'hidden' — customer-controlled soft delete
+    @Column({ type: 'varchar', default: 'active' })
+    customerStatus!: string;
+
+    // true = added/edited by customer (not yet in ERP)
+    @Column({ type: 'boolean', default: false })
+    customerOwned!: boolean;
+
     @OneToMany(() => ContactPerson, (cp: ContactPerson) => cp.tradingPoint, {
         cascade: true,
         eager: true,

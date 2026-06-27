@@ -40,6 +40,11 @@ export const router = createRouter({
                     component: () => import('../pages/account/AccountPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'account/trading-points',
+                    component: () => import('../pages/account/TradingPointsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
             ],
         },
     ],
