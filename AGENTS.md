@@ -302,3 +302,14 @@ See `docs/frontend.md` for the full architecture. Critical rules:
 - **Do not omit `"license": "GPL-3.0-or-later"` from any `package.json`.**
 - **Do not put business logic in page components.** Pages are thin — use composables and stores.
 - **Do not write raw GraphQL strings with manual types.** Use codegen.
+
+## Mandatory final checks
+
+After changing code, tests, package files, build config, lint config, TypeScript config, CI config, or project scripts, use the final-check skill before reporting completion.
+
+The default final checks are:
+
+    make lint
+    make test
+
+Do not claim the task is complete until these checks are run successfully or explicitly skipped with a reason.
