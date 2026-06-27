@@ -23,6 +23,6 @@ export default [
     },
     prettierConfig, // must be last — disables rules that conflict with prettier
     {
-        ignores: ['**/dist/**', '**/node_modules/**', 'infrastructure/scripts/**'],
+        ignores: ['**/dist/**', '**/node_modules/**', '**/storybook-static/**', 'infrastructure/scripts/**'],
     },
 ];
