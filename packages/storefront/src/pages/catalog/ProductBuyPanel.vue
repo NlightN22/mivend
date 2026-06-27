@@ -24,30 +24,18 @@ const emit = defineEmits<{ 'add-to-cart': [qty: number] }>();
 const authStore = useAuthStore();
 const qty = ref(1);
 
-const formattedPrice = computed(() => {
-  if (props.price === undefined) return '';
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    maximumFractionDigits: 0,
-  }).format(props.price);
-});
-
-const stockVariant = computed(() => {
+const stockVariant = computed((): 'ok' | 'low' | 'out' => {
   if (!props.stockLevel || props.stockLevel === 'OUT_OF_STOCK') return 'out';
   if (props.stockLevel === 'LOW_STOCK') return 'low';
   return 'ok';
 });
 
-const stockText = computed(() => {
+const stockLabel = computed(() => {
   if (props.stock !== undefined) return `${props.stock} шт.`;
   if (stockVariant.value === 'out') return 'Нет в наличии';
   if (stockVariant.value === 'low') return 'Мало';
   return 'В наличии';
 });
-
-function dec() { if (qty.value > 1) qty.value--; }
-function inc() { qty.value++; }
 </script>
 
 <template>
@@ -55,12 +43,14 @@ function inc() { qty.value++; }
     <div class="buy-panel__card">
       <div class="buy-panel__price-label">Цена клиента</div>
 
-      <div v-if="showPrices && price !== undefined" class="buy-panel__price">
-        {{ formattedPrice }}
-      </div>
-      <div v-else-if="!showPrices" class="buy-panel__price-hint">
-        Войдите для просмотра цен
-      </div>
+      <MvAmountDisplay
+        v-if="showPrices && price !== undefined"
+        :amount="price"
+        :currency="currency ?? 'RUB'"
+        size="lg"
+        class="buy-panel__price"
+      />
+      <div v-else-if="!showPrices" class="buy-panel__price-hint">Войдите для просмотра цен</div>
       <div v-else class="buy-panel__price">—</div>
 
       <div class="buy-panel__price-note">Цена с учётом условий клиента. НДС включён.</div>
@@ -68,13 +58,7 @@ function inc() { qty.value++; }
       <div class="buy-panel__info">
         <div class="buy-panel__info-row">
           <span>Наличие</span>
-          <strong
-            :class="{
-              'buy-panel__stock--ok': stockVariant === 'ok',
-              'buy-panel__stock--low': stockVariant === 'low',
-              'buy-panel__stock--out': stockVariant === 'out',
-            }"
-          >{{ stockText }}</strong>
+          <MvStockBadge :variant="stockVariant" :label="stockLabel" />
         </div>
         <div class="buy-panel__info-row"><span>Склад</span><strong>Центральный склад</strong></div>
         <div class="buy-panel__info-row"><span>Отгрузка</span><strong>Сегодня</strong></div>
@@ -82,11 +66,7 @@ function inc() { qty.value++; }
       </div>
 
       <div class="buy-panel__qty-row">
-        <div class="buy-panel__qty">
-          <button class="buy-panel__qty-btn" type="button" @click="dec">−</button>
-          <span class="buy-panel__qty-val">{{ qty }}</span>
-          <button class="buy-panel__qty-btn" type="button" @click="inc">+</button>
-        </div>
+        <MvQtyStepper v-model="qty" />
         <button class="buy-panel__fav" type="button">♡ В избранное</button>
       </div>
 
@@ -136,7 +116,7 @@ function inc() { qty.value++; }
 }
 
 .buy-panel__price-label { font-size: 12px; color: #a8b8b2; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
-.buy-panel__price { font-size: 32px; font-weight: 900; letter-spacing: -0.04em; color: #14231f; line-height: 1; margin-bottom: 6px; }
+.buy-panel__price { display: block; font-size: 32px; font-weight: 900; letter-spacing: -0.04em; color: #14231f; line-height: 1; margin-bottom: 6px; }
 .buy-panel__price-hint { font-size: 14px; color: #a8b8b2; margin-bottom: 6px; }
 .buy-panel__price-note { font-size: 12px; color: #a8b8b2; margin-bottom: 16px; }
 
@@ -145,95 +125,33 @@ function inc() { qty.value++; }
 .buy-panel__info-row span { color: #66736e; }
 .buy-panel__info-row strong { color: #14231f; font-weight: 700; }
 
-.buy-panel__stock--ok { color: #00a873 !important; }
-.buy-panel__stock--low { color: #f57c00 !important; }
-.buy-panel__stock--out { color: #b4ccc4 !important; }
-
 .buy-panel__qty-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
 
-.buy-panel__qty {
-  display: flex;
-  align-items: center;
-  border: 1.5px solid #dde7e2;
-  border-radius: 12px;
-  overflow: hidden;
-  height: 44px;
-  flex-shrink: 0;
-}
-
-.buy-panel__qty-btn {
-  width: 38px;
-  height: 100%;
-  border: none;
-  background: transparent;
-  font-size: 20px;
-  cursor: pointer;
-  color: #2c3b36;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.buy-panel__qty-btn:hover { background: #f4faf7; }
-
-.buy-panel__qty-val { min-width: 36px; text-align: center; font-size: 15px; font-weight: 700; color: #14231f; }
-
 .buy-panel__fav {
-  flex: 1;
-  height: 44px;
-  border: 1.5px solid #dde7e2;
-  border-radius: 12px;
-  background: transparent;
-  color: #66736e;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
+  flex: 1; height: 44px; border: 1.5px solid #dde7e2; border-radius: 12px;
+  background: transparent; color: #66736e; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
 }
 .buy-panel__fav:hover { border-color: #e05; color: #e05; }
 
 .buy-panel__add {
-  width: 100%;
-  height: 52px;
-  border: none;
-  border-radius: 14px;
-  background: #ff8a00;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 800;
-  font-family: inherit;
-  cursor: pointer;
-  margin-bottom: 10px;
-  transition: background 0.15s;
+  width: 100%; height: 52px; border: none; border-radius: 14px;
+  background: #ff8a00; color: #fff; font-size: 16px; font-weight: 800;
+  font-family: inherit; cursor: pointer; margin-bottom: 10px; transition: background 0.15s;
 }
 .buy-panel__add:hover:not(:disabled) { background: #e07a00; }
 .buy-panel__add:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .buy-panel__secondary {
-  width: 100%;
-  height: 44px;
-  border: 1.5px solid #dde7e2;
-  border-radius: 14px;
-  background: transparent;
-  color: #2c3b36;
-  font-size: 14px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.15s;
+  width: 100%; height: 44px; border: 1.5px solid #dde7e2; border-radius: 14px;
+  background: transparent; color: #2c3b36; font-size: 14px; font-weight: 700;
+  font-family: inherit; cursor: pointer; transition: border-color 0.15s;
 }
 .buy-panel__secondary:hover:not(:disabled) { border-color: #00b894; color: #00b894; }
 .buy-panel__secondary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .buy-panel__notice {
-  border-radius: 16px;
-  padding: 14px 16px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  font-size: 13px;
-  background: #f0faf6;
-  border: 1px solid #b6e8d4;
-  color: #1a5c40;
+  border-radius: 16px; padding: 14px 16px; display: flex; gap: 10px;
+  align-items: flex-start; font-size: 13px; background: #f0faf6; border: 1px solid #b6e8d4; color: #1a5c40;
 }
 .buy-panel__notice--green span { font-size: 16px; color: #00a873; flex-shrink: 0; margin-top: 1px; }
 .buy-panel__notice strong { display: block; margin-bottom: 2px; }

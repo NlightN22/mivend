@@ -82,13 +82,14 @@ onMounted(() => { fetchData(route.params.slug as string); });
     <MvNotice v-else-if="!product" variant="error">Товар не найден</MvNotice>
 
     <template v-else>
-      <nav class="product-page__crumbs">
-        <RouterLink to="/">Главная</RouterLink>
-        <span>/</span>
-        <RouterLink to="/catalog">Каталог</RouterLink>
-        <span>/</span>
-        <span>{{ product.name }}</span>
-      </nav>
+      <MvBreadcrumbs
+        class="product-page__crumbs"
+        :items="[
+          { label: 'Главная', to: '/' },
+          { label: 'Каталог', to: '/catalog' },
+          { label: product.name },
+        ]"
+      />
 
       <div class="product-page__layout">
         <ProductGallery
@@ -134,17 +135,7 @@ onMounted(() => { fetchData(route.params.slug as string); });
   font-size: 15px;
 }
 
-.product-page__crumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #66736e;
-  margin-bottom: 20px;
-}
-.product-page__crumbs a { color: #66736e; text-decoration: none; }
-.product-page__crumbs a:hover { color: #00b894; }
-.product-page__crumbs span:last-child { color: #2c3b36; font-weight: 600; }
+.product-page__crumbs { margin-bottom: 20px; }
 
 .product-page__layout {
   display: grid;

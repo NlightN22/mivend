@@ -36,6 +36,11 @@ export { default as MvProductCard } from './components/MvProductCard/MvProductCa
 
 export { default as MvProductRow } from './components/MvProductRow/MvProductRow.vue';
 
+export { default as MvStockBadge } from './components/MvStockBadge/MvStockBadge.vue';
+export { default as MvQtyStepper } from './components/MvQtyStepper/MvQtyStepper.vue';
+export { default as MvCard } from './components/MvCard/MvCard.vue';
+export { default as MvBreadcrumbs } from './components/MvBreadcrumbs/MvBreadcrumbs.vue';
+
 export { colors } from './tokens/colors';
 export type { ColorToken } from './tokens/colors';
 

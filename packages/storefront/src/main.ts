@@ -20,6 +20,10 @@ import {
     MvLogo,
     MvProductCard,
     MvProductRow,
+    MvStockBadge,
+    MvQtyStepper,
+    MvCard,
+    MvBreadcrumbs,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
@@ -51,6 +55,10 @@ app.component('MvNotice', MvNotice);
 app.component('MvLogo', MvLogo);
 app.component('MvProductCard', MvProductCard);
 app.component('MvProductRow', MvProductRow);
+app.component('MvStockBadge', MvStockBadge);
+app.component('MvQtyStepper', MvQtyStepper);
+app.component('MvCard', MvCard);
+app.component('MvBreadcrumbs', MvBreadcrumbs);
 
 app.use(createPinia());
 app.use(router);

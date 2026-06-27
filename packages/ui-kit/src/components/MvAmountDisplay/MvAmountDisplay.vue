@@ -3,63 +3,43 @@ export type AmountSize = 'sm' | 'md' | 'lg';
 
 interface Props {
   amount: number;
-  currency: string;
+  currency?: string;
   size?: AmountSize;
+  decimals?: number;
 }
 
 withDefaults(defineProps<Props>(), {
+  currency: 'RUB',
   size: 'md',
+  decimals: 0,
 });
 
-function formatAmount(value: number): string {
+function formatAmount(value: number, currency: string, decimals: number): string {
   return new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    style: 'currency',
+    currency,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(value);
 }
 </script>
 
 <template>
   <span :class="['mv-amount', `mv-amount--${size}`]">
-    <span class="mv-amount__value">{{ formatAmount(amount) }}</span>
-    <span class="mv-amount__currency">{{ currency }}</span>
+    {{ formatAmount(amount, currency, decimals) }}
   </span>
 </template>
 
 <style scoped>
 .mv-amount {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
+  display: inline-block;
   font-family: var(--app-font-family, Inter, system-ui, sans-serif);
   font-weight: 700;
-  color: var(--el-text-color-primary, #17212B);
+  color: var(--el-text-color-primary, #14231f);
   font-variant-numeric: tabular-nums;
 }
 
-.mv-amount--sm {
-  font-size: 13px;
-}
-.mv-amount--sm .mv-amount__currency {
-  font-size: 11px;
-}
-
-.mv-amount--md {
-  font-size: 16px;
-}
-.mv-amount--md .mv-amount__currency {
-  font-size: 13px;
-}
-
-.mv-amount--lg {
-  font-size: 22px;
-}
-.mv-amount--lg .mv-amount__currency {
-  font-size: 16px;
-}
-
-.mv-amount__currency {
-  color: var(--el-text-color-secondary, #667085);
-  font-weight: 500;
-}
+.mv-amount--sm { font-size: 13px; }
+.mv-amount--md { font-size: 16px; }
+.mv-amount--lg { font-size: 22px; }
 </style>

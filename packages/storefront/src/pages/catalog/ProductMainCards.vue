@@ -35,12 +35,6 @@ const specs = computed(() => {
 function getBrand(p: RelatedProduct) {
   return p.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '';
 }
-
-function formatPrice(price: number, currency: string) {
-  return new Intl.NumberFormat('ru-RU', { style: 'currency', currency, maximumFractionDigits: 0 }).format(price / 100);
-}
-
-const STOCK_LABEL: Record<string, string> = { ok: 'В наличии', low: 'Мало', out: 'Нет' };
 </script>
 
 <template>
@@ -48,9 +42,7 @@ const STOCK_LABEL: Record<string, string> = { ok: 'В наличии', low: 'М�
     <!-- Title card -->
     <div class="pmc__card">
       <div class="pmc__labels">
-        <span :class="['pmc__badge', `pmc__badge--${stockVariantLabel}`]">
-          {{ STOCK_LABEL[stockVariantLabel] }}
-        </span>
+        <MvStockBadge :variant="stockVariantLabel" />
         <span v-if="category" class="pmc__label">{{ category }}</span>
         <span v-if="brand" class="pmc__label pmc__label--brand">{{ brand }}</span>
       </div>
@@ -87,9 +79,13 @@ const STOCK_LABEL: Record<string, string> = { ok: 'В наличии', low: 'М�
             <RouterLink :to="`/product/${p.slug}`" class="pmc__analog-name">{{ p.name }}</RouterLink>
             <span class="pmc__analog-brand">{{ getBrand(p) }}</span>
           </div>
-          <div v-if="authStore.isLoggedIn && p.variants[0]" class="pmc__analog-price">
-            {{ formatPrice(p.variants[0].price, p.variants[0].currencyCode) }}
-          </div>
+          <MvAmountDisplay
+            v-if="authStore.isLoggedIn && p.variants[0]"
+            :amount="p.variants[0].price / 100"
+            :currency="p.variants[0].currencyCode"
+            size="sm"
+            class="pmc__analog-price"
+          />
           <button class="pmc__analog-btn" type="button">В корзину</button>
         </div>
       </div>
@@ -99,19 +95,12 @@ const STOCK_LABEL: Record<string, string> = { ok: 'В наличии', low: 'М�
 
 <style scoped>
 .pmc__card {
-  background: #fff;
-  border-radius: 20px;
-  border: 1px solid rgba(221,231,226,0.86);
-  box-shadow: 0 14px 36px rgba(27,45,38,0.08);
-  padding: 20px;
+  background: #fff; border-radius: 20px;
+  border: 1px solid rgba(221,231,226,0.86); box-shadow: 0 14px 36px rgba(27,45,38,0.08); padding: 20px;
 }
 .pmc__card--mt { margin-top: 14px; }
 
 .pmc__labels { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
-.pmc__badge { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-.pmc__badge--ok { background: #e6f9f1; color: #00a873; }
-.pmc__badge--low { background: #fff3e0; color: #f57c00; }
-.pmc__badge--out { background: #f5f5f5; color: #b4ccc4; }
 .pmc__label { padding: 3px 10px; border-radius: 999px; background: #f4f9f7; font-size: 12px; font-weight: 700; color: #66736e; border: 1px solid #dde7e2; }
 .pmc__label--brand { background: #f0f4ff; border-color: #c5d0f0; color: #3a4a9a; }
 
