@@ -91,18 +91,24 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function logout(): Promise<void> {
         try {
-            await shopApi(`mutation { logout { success } }`);
-        } catch {
-            // ignore network errors — clear local state regardless
+            const result = await shopApi<{ logout: { success: boolean } }>(
+                `mutation { logout { success } }`,
+            );
+            console.log('[auth] logout mutation result:', result);
+        } catch (e) {
+            console.warn('[auth] logout mutation failed:', e);
         }
         customer.value = null;
         initPromise = null;
         sessionStorage.setItem(LOGGED_OUT_KEY, '1');
+        console.log('[auth] sessionStorage flag set:', sessionStorage.getItem(LOGGED_OUT_KEY));
     }
 
     async function fetchCurrentCustomer(): Promise<void> {
+        const flag = sessionStorage.getItem(LOGGED_OUT_KEY);
+        console.log('[auth] fetchCurrentCustomer — logged_out flag:', flag);
         // Guard against server-side session surviving after explicit logout
-        if (sessionStorage.getItem(LOGGED_OUT_KEY)) {
+        if (flag) {
             customer.value = null;
             return;
         }
