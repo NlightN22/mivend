@@ -5,7 +5,7 @@ import {
     VendurePlugin,
 } from '@vendure/core';
 import { ElasticsearchPlugin } from '@vendure/elasticsearch-plugin';
-import { CrossReferencePlugin, CrossReferenceService } from '@mivend/plugin-cross-reference';
+import { CrossReferenceService } from '@mivend/plugin-cross-reference';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import gql from 'graphql-tag';
 
@@ -18,10 +18,17 @@ const shopApiSchema = gql`
     }
 `;
 
-const host = process.env.ELASTICSEARCH_HOST ?? 'http://localhost:9200';
+const rawHost = process.env.ELASTICSEARCH_HOST ?? 'http://localhost:9200';
+// ElasticsearchPlugin appends :port to host — strip any existing port from the URL
+const hostUrl = new URL(rawHost);
+const host = `${hostUrl.protocol}//${hostUrl.hostname}`;
+const port = hostUrl.port ? Number(hostUrl.port) : 9200;
 
-const elasticsearchPlugin = ElasticsearchPlugin.init({
+// Exported so vendure-config.ts can add it to the top-level plugins array.
+// ElasticsearchPlugin must be top-level to register with Vendure's core SearchService.
+export const elasticsearchPlugin = ElasticsearchPlugin.init({
     host,
+    port,
     indexSettings: {
         analysis: {
             analyzer: {
@@ -89,7 +96,7 @@ const elasticsearchPlugin = ElasticsearchPlugin.init({
 });
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CrossReferencePlugin, PriceEntryPlugin, elasticsearchPlugin],
+    imports: [PluginCommonModule, PriceEntryPlugin],
     shopApiExtensions: {
         schema: shopApiSchema,
         resolvers: [SearchResultResolver],

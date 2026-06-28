@@ -25,9 +25,16 @@ export async function postBatch(exchangeId: string, records: unknown[]): Promise
 export async function waitForRun(runId: string, timeoutMs = 30_000): Promise<RunStatus> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
-        const res = await fetch(`${SERVER_URL}/erp/import/runs/${runId}`);
+        const res = await fetch(`${SERVER_URL}/erp/import/runs/${runId}`, {
+            headers: { Authorization: `Bearer ${ERP_TOKEN}` },
+        });
         if (!res.ok) throw new Error(`Failed to poll run ${runId}: ${res.status}`);
-        const status = (await res.json()) as RunStatus;
+        const body = (await res.text()).trim();
+        if (!body) {
+            await new Promise(r => setTimeout(r, 1000));
+            continue;
+        }
+        const status = JSON.parse(body) as RunStatus;
         if (status.status === 'done') return status;
         if (status.status === 'failed') {
             throw new Error(`ERP import run ${runId} failed: ${JSON.stringify(status.errors)}`);

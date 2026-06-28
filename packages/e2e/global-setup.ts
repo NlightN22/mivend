@@ -12,8 +12,8 @@ export default async function globalSetup(): Promise<void> {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
 
     const exchangeId = `e2e-seed-${Date.now()}`;
-    const run = await postBatch(exchangeId, seedRecords);
-    await waitForRun(run.runId);
+    await postBatch(exchangeId, seedRecords);
+    await waitForRun(exchangeId);
 
     const browser = await chromium.launch();
     const context = await browser.newContext({ baseURL: STOREFRONT_URL });
