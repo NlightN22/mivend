@@ -202,7 +202,7 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
           </button>
         </div>
 
-        <div v-if="showPasswordForm" class="set-form set-form--narrow">
+        <div v-if="showPasswordForm" class="set-form set-form--narrow set-form--password">
           <label class="set-field set-field--wide">
             <span>Current password</span>
             <input v-model="passwordForm.current" type="password" />
@@ -220,7 +220,7 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
           </div>
         </div>
 
-        <div class="set-sessions">
+        <div class="set-sessions" :class="{ 'set-sessions--spaced': showPasswordForm }">
           <div v-for="s in sessions" :key="s.title" class="set-session">
             <span class="set-session__icon">{{ s.icon }}</span>
             <div class="set-session__info">
@@ -441,7 +441,9 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
 }
 
 /* Sessions */
+.set-form--password { margin-bottom: 4px; padding-bottom: 16px; border-bottom: 1px solid #edf2ef; }
 .set-sessions { display: grid; gap: 8px; }
+.set-sessions--spaced { margin-top: 16px; }
 .set-session {
   display: flex;
   align-items: center;
