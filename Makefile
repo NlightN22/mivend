@@ -7,6 +7,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
 .PHONY: up down logs ps restart \
         build lint fmt \
         test test-int \
+        e2e e2e-ui e2e-report \
         docker-build docker-push \
         prod-up prod-down \
         dev dev-fresh dev-reset seed \
@@ -105,3 +106,14 @@ prod-up:
 
 prod-down:
 	$(COMPOSE_PROD) down
+
+# ── E2E tests ──────────────────────────────────────────────────────────────────
+
+e2e:
+	pnpm --filter @mivend/e2e test
+
+e2e-ui:
+	pnpm --filter @mivend/e2e test:ui
+
+e2e-report:
+	pnpm --filter @mivend/e2e report

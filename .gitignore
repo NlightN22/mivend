@@ -29,3 +29,8 @@ src/api/generated/
 
 # Vendure instance-specific
 .vendure/
+
+# Playwright E2E
+packages/e2e/.auth/
+packages/e2e/playwright-report/
+packages/e2e/test-results/

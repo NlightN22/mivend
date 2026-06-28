@@ -78,3 +78,27 @@ jobs:
 
             - name: Run integration tests
               run: pnpm --filter "{packages/**}" --no-bail test:integration
+
+    # E2E tests require a running server + storefront — run locally via `make e2e`
+    e2e:
+        name: E2E tests (scaffolded)
+        if: false
+        needs: integration
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm --filter @mivend/e2e exec playwright install --with-deps chromium
+            - run: make e2e
+            - uses: actions/upload-artifact@v4
+              if: failure()
+              with:
+                  name: playwright-report
+                  path: packages/e2e/playwright-report/
