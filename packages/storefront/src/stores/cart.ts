@@ -55,7 +55,7 @@ export const useCartStore = defineStore('cart', () => {
     const order = ref<ActiveOrder | null>(null);
 
     const lines = computed(() => order.value?.lines ?? []);
-    const itemCount = computed(() => lines.value.reduce((sum, l) => sum + l.quantity, 0));
+    const itemCount = computed(() => lines.value.length);
     const totalPrice = computed(() => (order.value?.totalWithTax ?? 0) / 100);
     const isEmpty = computed(() => lines.value.length === 0);
 

@@ -88,6 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
     async function logout(): Promise<void> {
         await shopApi(`mutation { logout { success } }`);
         customer.value = null;
+        initPromise = null;
     }
 
     async function fetchCurrentCustomer(): Promise<void> {

@@ -79,24 +79,27 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
                 <nav class="app-header__nav">
                     <template v-if="authStore.isLoggedIn">
-                        <MvIconButton label="Account" @click="router.push('/account')">
+                        <RouterLink to="/account" class="app-header__nav-btn">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="8" r="4"/>
                                 <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
                             </svg>
-                        </MvIconButton>
-                        <MvIconButton label="Orders" @click="router.push('/orders')">
+                            <span>Account</span>
+                        </RouterLink>
+                        <RouterLink to="/orders" class="app-header__nav-btn">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3 9l1.5-6h15L21 9"/>
                                 <rect x="3" y="9" width="18" height="12" rx="2"/>
                                 <path d="M9 13h6M9 17h4"/>
                             </svg>
-                        </MvIconButton>
-                        <MvIconButton label="Favourites" @click="router.push('/favorites')">
+                            <span>Orders</span>
+                        </RouterLink>
+                        <RouterLink to="/favorites" class="app-header__nav-btn">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                             </svg>
-                        </MvIconButton>
+                            <span>Favourites</span>
+                        </RouterLink>
                         <RouterLink to="/cart" class="app-header__cart">
                             <span>&#128722;</span>
                             <span class="app-header__cart-text">
@@ -218,9 +221,58 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 .app-header__nav {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
+.app-header__nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 58px;
+    padding: 7px 6px 6px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: #66736e;
+    cursor: pointer;
+    transition: background 0.14s, color 0.14s;
+}
+
+.app-header__nav-btn span {
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.app-header__nav-btn:hover {
+    background: #f4faf7;
+    color: #008a64;
+}
+
+.app-header__nav-btn.router-link-active {
+    background: #e2f8ef;
+    color: #008a64;
+}
+
+.app-header__nav-link {
+    min-height: 48px;
+    min-width: 60px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #7b8984;
+    text-decoration: none;
+    padding: 0 6px;
+}
+
+.app-header__nav-link:hover { background: #f4faf7; color: #008a64; }
+.app-header__nav-icon { font-size: 18px; line-height: 1; }
 
 .app-header__cart {
     min-height: 52px;
