@@ -45,6 +45,19 @@ function stockVariantFor(sl: string): 'ok' | 'low' | 'out' {
     if (sl === 'LOW_STOCK') return 'low';
     return 'ok';
 }
+
+function cartLineFor(variantId: string | undefined) {
+    if (!variantId) return null;
+    return cartStore.lines.find(l => l.productVariant.id === variantId) ?? null;
+}
+
+async function handleCartQty(lineId: string, qty: number): Promise<void> {
+    if (qty === 0) {
+        await cartStore.removeItem(lineId);
+    } else {
+        await cartStore.adjustItem(lineId, qty);
+    }
+}
 </script>
 
 <template>
@@ -79,7 +92,10 @@ function stockVariantFor(sl: string): 'ok' | 'low' | 'out' {
                         :show-prices="authStore.isLoggedIn"
                         :variant-id="p.variants[0]?.id"
                         :stock-variant="authStore.isLoggedIn ? stockVariantFor(p.variants[0]?.stockLevel ?? '') : undefined"
+                        :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
+                        :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                         @add-to-cart="(variantId) => variantId && cartStore.addItem(variantId, 1)"
+                        @update-cart-qty="handleCartQty"
                     />
                 </div>
             </div>
