@@ -86,7 +86,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     async function logout(): Promise<void> {
-        await shopApi(`mutation { logout { success } }`);
+        try {
+            await shopApi(`mutation { logout { success } }`);
+        } catch {
+            // ignore network errors — clear local state regardless
+        }
         customer.value = null;
         initPromise = null;
     }

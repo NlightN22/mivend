@@ -9,7 +9,7 @@ const router = useRouter();
 
 async function signOutAll() {
     await authStore.logout();
-    router.push('/login');
+    window.location.href = '/login';
 }
 
 const profile = ref({
