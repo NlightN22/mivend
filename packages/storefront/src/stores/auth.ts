@@ -60,6 +60,8 @@ export const useAuthStore = defineStore('auth', () => {
         return initPromise;
     }
 
+    const LOGGED_OUT_KEY = 'mv_logged_out';
+
     async function login(username: string, password: string, rememberMe = false): Promise<boolean> {
         const result = await shopApi<{
             login: {
@@ -79,6 +81,8 @@ export const useAuthStore = defineStore('auth', () => {
         );
 
         if (result.login.__typename === 'CurrentUser') {
+            sessionStorage.removeItem(LOGGED_OUT_KEY);
+            initPromise = null;
             await fetchCurrentCustomer();
             return true;
         }
@@ -93,9 +97,15 @@ export const useAuthStore = defineStore('auth', () => {
         }
         customer.value = null;
         initPromise = null;
+        sessionStorage.setItem(LOGGED_OUT_KEY, '1');
     }
 
     async function fetchCurrentCustomer(): Promise<void> {
+        // Guard against server-side session surviving after explicit logout
+        if (sessionStorage.getItem(LOGGED_OUT_KEY)) {
+            customer.value = null;
+            return;
+        }
         try {
             const result = await shopApi<{ activeCustomer: ActiveCustomer | null }>(
                 `{
