@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../../stores/auth';
 import AccountSidebar from './AccountSidebar.vue';
+
+const authStore = useAuthStore();
+const router = useRouter();
+
+async function signOutAll() {
+    await authStore.logout();
+    router.push('/login');
+}
 
 const profile = ref({
     name: 'Ivan Petrov',
@@ -240,7 +250,7 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
             <h2 class="set-block__title">Sign out</h2>
             <div class="set-block__sub">Sign out from all devices. Manage employees in the Employees section.</div>
           </div>
-          <button class="set-btn set-btn--danger">Sign out everywhere</button>
+          <button class="set-btn set-btn--danger" @click="signOutAll">Sign out everywhere</button>
         </div>
       </div>
     </section>

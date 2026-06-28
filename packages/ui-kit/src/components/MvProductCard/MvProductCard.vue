@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
+import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
 
 interface Props {
   name: string;
@@ -15,6 +16,8 @@ interface Props {
   slug: string;
   showPrices?: boolean;
   variantId?: string;
+  cartQty?: number;
+  cartLineId?: string;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -27,9 +30,14 @@ withDefaults(defineProps<Props>(), {
   stockQuantity: undefined,
   showPrices: true,
   variantId: undefined,
+  cartQty: 0,
+  cartLineId: undefined,
 });
 
-const emit = defineEmits<{ 'add-to-cart': [variantId: string | undefined] }>();
+const emit = defineEmits<{
+  'add-to-cart': [variantId: string | undefined];
+  'update-cart-qty': [lineId: string, qty: number];
+}>();
 </script>
 
 <template>
@@ -81,7 +89,15 @@ const emit = defineEmits<{ 'add-to-cart': [variantId: string | undefined] }>();
             class="mv-product-card__stock-badge"
           />
         </div>
+        <MvQtyStepper
+          v-if="cartQty && cartQty > 0"
+          :model-value="cartQty"
+          :min="0"
+          class="mv-product-card__stepper"
+          @update:model-value="val => cartLineId && emit('update-cart-qty', cartLineId, val)"
+        />
         <button
+          v-else
           class="mv-product-card__buy"
           type="button"
           @click="emit('add-to-cart', variantId)"
@@ -222,6 +238,11 @@ const emit = defineEmits<{ 'add-to-cart': [variantId: string | undefined] }>();
 
 .mv-product-card__buy:hover {
   background: #e67a00;
+}
+
+.mv-product-card__stepper {
+  width: 100%;
+  justify-content: space-between;
 }
 
 .mv-product-card__guest {

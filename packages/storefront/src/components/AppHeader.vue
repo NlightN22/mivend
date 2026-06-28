@@ -79,17 +79,24 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
                 <nav class="app-header__nav">
                     <template v-if="authStore.isLoggedIn">
-                        <RouterLink to="/account" class="app-header__nav-link app-header__nav-link--icon">
-                            <span class="app-header__nav-icon">&#128100;</span>
-                        </RouterLink>
-                        <RouterLink to="/orders" class="app-header__nav-link">
-                            <span class="app-header__nav-icon">&#128230;</span>
-                            <span>Orders</span>
-                        </RouterLink>
-                        <a href="#" class="app-header__nav-link">
-                            <span class="app-header__nav-icon">&#9825;</span>
-                            <span>Favourites</span>
-                        </a>
+                        <MvIconButton label="Account" @click="router.push('/account')">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="8" r="4"/>
+                                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                            </svg>
+                        </MvIconButton>
+                        <MvIconButton label="Orders" @click="router.push('/orders')">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 9l1.5-6h15L21 9"/>
+                                <rect x="3" y="9" width="18" height="12" rx="2"/>
+                                <path d="M9 13h6M9 17h4"/>
+                            </svg>
+                        </MvIconButton>
+                        <MvIconButton label="Favourites" @click="router.push('/favorites')">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                            </svg>
+                        </MvIconButton>
                         <RouterLink to="/cart" class="app-header__cart">
                             <span>&#128722;</span>
                             <span class="app-header__cart-text">
@@ -214,33 +221,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     gap: 6px;
 }
 
-.app-header__nav-link {
-    min-height: 48px;
-    min-width: 60px;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #7b8984;
-    text-decoration: none;
-    padding: 0 6px;
-}
-
-.app-header__nav-link--icon { min-width: 44px; }
-
-.app-header__nav-link:hover {
-    background: #f4faf7;
-    color: #008a64;
-}
-
-.app-header__nav-icon {
-    font-size: 18px;
-    line-height: 1;
-}
 
 .app-header__cart {
     min-height: 52px;

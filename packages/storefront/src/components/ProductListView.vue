@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
+import { useCartStore } from '../stores/cart';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 
 const props = defineProps<{
@@ -23,9 +24,10 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
+const cartStore = useCartStore();
 const sentinel = ref<HTMLElement | null>(null);
 const gridStyle = computed(() =>
-    props.gridColumns ? `repeat(${props.gridColumns}, minmax(0, 1fr))` : 'repeat(3, minmax(0, 1fr))'
+    props.gridColumns ? `repeat(${props.gridColumns}, minmax(0, 1fr))` : 'repeat(4, minmax(0, 1fr))'
 );
 let observer: IntersectionObserver | null = null;
 
@@ -51,6 +53,19 @@ function stockVariantFor(stockLevel: string): 'ok' | 'low' | 'out' {
 function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out' } {
     if (!authStore.isLoggedIn) return {};
     return { stockVariant: stockVariantFor(stockLevel) };
+}
+
+function cartLineFor(variantId: string | undefined) {
+    if (!variantId) return null;
+    return cartStore.lines.find(l => l.productVariant.id === variantId) ?? null;
+}
+
+async function handleCartQty(lineId: string, qty: number): Promise<void> {
+    if (qty === 0) {
+        await cartStore.removeItem(lineId);
+    } else {
+        await cartStore.adjustItem(lineId, qty);
+    }
 }
 </script>
 
@@ -130,8 +145,11 @@ function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out' }
                     :slug="p.slug"
                     :show-prices="showPrices"
                     :variant-id="p.variants[0]?.id"
+                    :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
+                    :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
                     @add-to-cart="(variantId: string | undefined) => variantId && emit('addToCart', variantId, 1)"
+                    @update-cart-qty="handleCartQty"
                 />
             </div>
         </template>
@@ -210,7 +228,7 @@ function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out' }
     color: #66736e;
 }
 
-.plv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.plv-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 
 .plv-state {
     padding: 60px;
@@ -231,7 +249,6 @@ function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out' }
     font-size: 14px;
 }
 
-@media (max-width: 1400px) { .plv-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; } }
 @media (max-width: 1100px) { .plv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
 @media (max-width: 760px) { .plv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
 @media (max-width: 480px) { .plv-grid { grid-template-columns: 1fr !important; } }
