@@ -24,6 +24,7 @@ interface Props {
   error?: string;
   suggestions?: SuggestionGroup[];
   collapsed?: boolean;
+  buttonLabel?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -33,6 +34,7 @@ const props = withDefaults(defineProps<Props>(), {
   error: undefined,
   suggestions: undefined,
   collapsed: false,
+  buttonLabel: 'Search',
 });
 
 const emit = defineEmits<{
@@ -162,7 +164,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
           @click="onSearch"
         >
           <span v-if="loading" class="mv-search__spinner" aria-hidden="true" />
-          <span v-else>Найти</span>
+          <span v-else>{{ props.buttonLabel }}</span>
         </button>
       </div>
 
