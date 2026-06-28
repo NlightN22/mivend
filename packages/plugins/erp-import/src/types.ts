@@ -4,12 +4,18 @@ export interface ProductRecord {
     name: string;
     slug: string;
     description?: string;
+    fullName?: string;
     price: number;
     stockOnHand: number;
     categoryCode?: string;
     brandCode?: string;
     onSale?: boolean;
     enabled?: boolean;
+}
+
+export interface CrossReferenceRecord {
+    externalId: string;
+    refs: Array<{ oemCode: string; oemBrand: string }>;
 }
 
 export interface PriceRecord {
@@ -52,10 +58,18 @@ export interface TradingPointRecord {
     counterpartyErpId: string;
     name: string;
     address: string;
+    latitude?: number | null;
+    longitude?: number | null;
     workingHours?: string | null;
     isActive: boolean;
     contactName?: string | null;
     contactPhone?: string | null;
+}
+
+export interface CategoryRecord {
+    erpId: string;
+    name: string;
+    parentErpId: string | null;
 }
 
 export type ImportRecord =
@@ -65,7 +79,9 @@ export type ImportRecord =
     | { type: 'customer'; data: CustomerRecord }
     | { type: 'counterparty'; data: CounterpartyRecord }
     | { type: 'customerCounterparty'; data: CustomerCounterpartyRecord }
-    | { type: 'tradingPoint'; data: TradingPointRecord };
+    | { type: 'tradingPoint'; data: TradingPointRecord }
+    | { type: 'category'; data: CategoryRecord }
+    | { type: 'crossReference'; data: CrossReferenceRecord };
 
 export interface BatchImportBody {
     exchangeId: string;

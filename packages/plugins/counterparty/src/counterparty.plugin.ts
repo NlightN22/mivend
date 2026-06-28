@@ -194,6 +194,7 @@ const adminResolvers = [
         TradingPointService,
         TradingPointConsumer,
     ],
+    exports: [CounterpartyService, TradingPointService],
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.Customer = [
             ...(config.customFields.Customer ?? []),

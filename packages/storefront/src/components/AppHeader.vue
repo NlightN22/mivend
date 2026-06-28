@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
 import { useCatalogStore } from '../stores/catalog';
 import { useFavoritesStore } from '../stores/favorites';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
 const favoritesStore = useFavoritesStore();
-const searchQuery = ref('');
+const searchQuery = ref((route.query.q as string) ?? '');
+
+watch(() => route.query.q, (q) => {
+    searchQuery.value = (q as string) ?? '';
+});
 const catalogOpen = ref(false);
 
 const cartTotal = computed(() => {

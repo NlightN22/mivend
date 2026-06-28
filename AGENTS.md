@@ -172,9 +172,59 @@ packages/plugins/<name>/
 Rules:
 
 - Plugin options are passed through the `VendurePlugin` options object — not via environment variables directly.
-- Plugins communicate through Vendure's `EventBus` or public service APIs only. Never import another plugin's internal service.
 - All TypeORM entities have explicit `@Column` type annotations. Never rely on TypeScript type inference for columns.
 - If a service file exceeds 300 lines, split it into focused sub-services.
+
+---
+
+## Inter-plugin communication
+
+### Synchronous dependency (Plugin A needs Plugin B's service)
+
+Use standard NestJS `exports` / `imports` — `@VendurePlugin` supports both fields officially.
+
+**Plugin B — exports its service:**
+
+```typescript
+@VendurePlugin({
+    providers: [CounterpartyService],
+    exports: [CounterpartyService],
+})
+export class CounterpartyPlugin {}
+```
+
+**Plugin A — imports Plugin B and injects the service:**
+
+```typescript
+@VendurePlugin({
+    imports: [CounterpartyPlugin],
+    providers: [ErpImportService],
+})
+export class ErpImportPlugin {}
+
+// ErpImportService constructor:
+constructor(private counterpartyService: CounterpartyService) {}
+```
+
+Make sure the consuming plugin also lists the imported plugin in the app's `plugins` array in `vendure-config.ts` — order matters if there are init-time dependencies.
+
+### Asynchronous / decoupled communication
+
+Use Vendure's `EventBus`: one plugin publishes an event, another subscribes. This is the right pattern for plugin-sync and any flow that must not block the caller.
+
+### What not to do
+
+- `TransactionalConnection.rawConnection.getRepository(Entity)` — bypasses service layer and business logic; breaks when the owning plugin changes its schema.
+- `ModuleRef.get(token, { strict: false })` — undocumented NestJS hack that bypasses module boundaries; not Vendure-idiomatic.
+- Importing internal files from another plugin (e.g. `import { CounterpartyService } from '../counterparty/src/...'`) — only import from the plugin's public `index.ts`.
+
+### Monorepo `dist/` and dev watching
+
+Each plugin has `"main": "./dist/index.js"`. When Plugin A imports from `@mivend/plugin-b`, Node.js resolves `dist/index.js` — not `src/`. If `dist/` is stale or missing an export, the import arrives as `undefined` at runtime (TypeORM throws `No metadata for "undefined"`).
+
+In dev, all plugins run `tsc --watch` in parallel alongside the server. This is started automatically by `make dev` via `pnpm dev:plugins`. Changes to any plugin are compiled to `dist/` immediately; `ts-node-dev` picks them up on the next server restart.
+
+**When adding a new plugin**, verify it has `"dev": "tsc --watch"` in its `package.json` scripts. The `pnpm --filter './packages/plugins/**' --parallel run dev` glob picks it up automatically — no other config change needed.
 
 ---
 

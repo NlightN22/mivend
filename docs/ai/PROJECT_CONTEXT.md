@@ -1,6 +1,6 @@
 # Project Context
 
-Updated: 2026-06-27 18:20
+Updated: 2026-06-28 17:30
 
 ---
 
@@ -51,40 +51,75 @@ infrastructure/
 
 | Route | File | Notes |
 |---|---|---|
-| `/` | `HomePage.vue` | New Arrivals widget → On Sale widget → Popular products |
+| `/` | `HomePage.vue` | New Arrivals + On Sale carousels + Popular products |
 | `/catalog` | `CatalogPage.vue` | Facet filter sidebar + ProductListView |
 | `/product/:slug` | `ProductPage.vue` | Gallery, specs, analogs, buy panel |
-| `/cart` | `CartPage.vue` | |
-| `/checkout` | `CheckoutPage.vue` | Payment method, delivery, order items, result states |
+| `/cart` | `CartPage.vue` | CartItemList + CartSummary |
+| `/checkout` | `CheckoutPage.vue` | Payment method, delivery, order items |
+| `/payment-stub` | `PaymentStubPage.vue` | Mock acquiring page (success/pending/fail) |
+| `/order-created` | `OrderCreatedPage.vue` | Post-checkout for invoice/deferred payment |
+| `/payment-result` | `PaymentResultPage.vue` | After online payment (status from query) |
 | `/orders` | `OrdersPage.vue` | Order cards with filter chips + sticky aside |
 | `/account` | `AccountPage.vue` | Customer dashboard with sidebar |
+| `/account/settings` | `SettingsPage.vue` | Profile, notifications, interface, security, sign out |
 | `/account/trading-points` | `TradingPointsPage.vue` | Self-service CRUD |
 | `/documents` | `DocumentsPage.vue` | Document list with horizontal filter toolbar |
+| `/favorites` | `FavoritesPage.vue` | Favorites/wishlist from localStorage |
+| `/access-denied` | `AccessDeniedPage.vue` | 403 page |
+| `/:pathMatch(.*)` | `NotFoundPage.vue` | 404 catchall |
 
 ### Key stores
 
 - `auth.ts` — `customer`, `counterparty`, `tradingPoint`, `isLoggedIn`, `init()` (idempotent, awaited by router guard)
-- `cart.ts` — `lines`, `order`, `totalPrice`, `itemCount`
+- `cart.ts` — `lines`, `order`, `totalPrice`, `itemCount` (= number of positions, not total qty)
 - `checkout.ts` — `selectedPayment`, `selectedDelivery`, `resultState`
+- `favorites.ts` — `items`, `count`, `toggle()`, `has()`, `remove()`, `clear()` — persisted to `localStorage` key `mv_favorites`
 
 ### Auth session fix (important)
 
-Router guard is **async** and calls `await authStore.init()` before checking auth. `init()` is idempotent (memoized promise). This prevents F5 redirect-to-login. `rememberMe` is passed to Vendure `login` mutation.
+Router guard is **async** and calls `await authStore.init()` before checking auth. `init()` is idempotent (memoized promise). Logout sets `sessionStorage` key `mv_logged_out=1` to prevent DEV auto-login from re-authenticating. `fetchCurrentCustomer()` bails early if flag is set.
+
+DEV auto-login in `App.vue` skipped if `sessionStorage.getItem('mv_logged_out')` is truthy.
+
+### Cart itemCount
+
+`itemCount = lines.value.length` — counts SKU positions, not total qty.
+
+### Checkout flow
+
+- "Pay online" → `/payment-stub` (mock) → `/payment-result?status=success|pending|fail`
+- "Generate invoice" → `/order-created?method=invoice`
+- "Deferred payment" → `/order-created?method=deferred`
 
 ### Key components
 
-- `ProductListView.vue` — grid/list toggle, IntersectionObserver infinite scroll
-- `ProductScrollRow.vue` — horizontal carousel with arrow buttons, infinite loop
-- `AppHeader.vue` — sticky, uses `MvCatalogDropdown` mega-menu
+- `ProductListView.vue` — grid/list toggle, IntersectionObserver infinite scroll; wires cart + favorites to both `MvProductCard` and `MvProductRow`
+- `ProductScrollRow.vue` — horizontal carousel; wires cart + favorites to `MvProductCard`
+- `AppHeader.vue` — sticky, uses `MvCatalogDropdown` mega-menu, shows favorites badge count
 - `AccountSidebar.vue` — shared sidebar for all /account/* and /orders and /documents pages
 
 ### UI Kit notable components
 
-`MvProductCard` props: `name`, `sku`, `brand`, `price`, `compareAtPrice`, `customerPrice`, `currency`, `slug`, `showPrices`, `variantId`, `stockVariant`, `stockQuantity`.
+`MvProductCard` props: `name`, `sku`, `brand`, `price`, `customerPrice`, `currency`, `slug`, `showPrices`, `variantId`, `stockVariant`, `cartQty`, `cartLineId`, `isFavorited`.
+Emits: `add-to-cart`, `update-cart-qty`, `toggle-favorite`.
+Shows `MvQtyStepper` (min=0) when `cartQty > 0`, "Add to cart" button otherwise. Heart button toggles favorite state.
 
-`MvIconButton` — 52px icon+label button, props: `label`, `variant` (`default`/`primary`/`orange`), `title`. Icon via slot (use inline SVG). Added to ui-kit for document actions; reuse elsewhere.
+`MvProductRow` props: same cart/favorites props as MvProductCard + `multiplicity`, `stock`.
+Emits: `add-to-cart`, `update-cart-qty`, `view-analogs`.
+Same cart UX as card — stepper when in cart, "+ Add" button when not.
+
+`MvQtyStepper` props: `modelValue`, `min`. Emits: `update:modelValue`.
+`min=0` allows going to 0 (caller decides if that means remove).
+
+`MvIconButton` — icon+label button, props: `label`, `variant`, `title`. Icon via slot (inline SVG).
 
 `MvCatalogDropdown` — **must be registered globally in `main.ts`** (already done).
+
+`MvSearchInput` — prop `buttonLabel` (default `'Search'`). Never hardcode button label.
+
+### Cart item remove confirmation
+
+`CartItem.vue`: stepper `min=0`. When user steps down to 0, an inline "Remove? Yes / No" appears instead of silent delete. `×` button removed.
 
 ---
 
@@ -162,43 +197,56 @@ filter: { customFields: { onSale: ... } }  # WRONG
 - ✅ `plugin-erp-import`: REST push; `onSale` flag supported in product records
 - ✅ Storefront auth with session persistence (async router guard + rememberMe)
 - ✅ Catalog, product page, cart
-- ✅ Header mega-menu (Vendure collections)
+- ✅ Header mega-menu (Vendure collections), favorites badge counter
 - ✅ Facet filter sidebar in catalog
-- ✅ `ProductListView` with infinite scroll and grid/list toggle
-- ✅ `ProductScrollRow` — carousel with arrow buttons, infinite loop
+- ✅ `ProductListView` with infinite scroll and grid/list toggle (cart + favorites wired)
+- ✅ `ProductScrollRow` — carousel (cart + favorites wired)
 - ✅ HomePage: New Arrivals + On Sale carousels + Popular products grid
 - ✅ `onSale` custom field on Product; fixtures have 24 products (10 on sale)
 - ✅ Seed via ERP REST API (`make seed`)
-- ✅ `/checkout` — payment method selector, delivery selector, order items, result states (success/pending/fail)
-- ✅ `/account` — full customer dashboard: sidebar, hero, status cards, recent orders, quick actions, documents snippet, trading point info, frequent products
-- ✅ `/orders` — order cards with filter chips, status pills, sticky aside (payment + balance/limits)
-- ✅ `/documents` — document list with horizontal toolbar (search + sort + period + trading point selects + type chips + status chips), `MvIconButton` SVG actions
-- ✅ `MvIconButton` in ui-kit — reusable icon+label button component
+- ✅ `/checkout` — payment method selector, delivery selector, order items, dynamic checkout button
+- ✅ `/payment-stub` — mock acquiring with success/pending/fail
+- ✅ `/order-created` — post-checkout for invoice and deferred payment
+- ✅ `/payment-result` — payment outcome page
+- ✅ `/account` — full customer dashboard with sidebar
+- ✅ `/account/settings` — profile, notifications, interface, security, sign out
+- ✅ `/orders` — order cards with filter chips + sticky aside
+- ✅ `/documents` — document list with horizontal toolbar + `MvIconButton` SVG actions
+- ✅ `/favorites` — favorites page wired to localStorage store (Issue #16 done)
+- ✅ `/access-denied` and `/:pathMatch(.*)` (404) error pages
+- ✅ `favorites.ts` Pinia store with localStorage persistence + 7 unit tests
+- ✅ `MvProductCard` + `MvProductRow` — unified cart/favorites UX (stepper in cart, Add button out)
+- ✅ Cart item remove confirmation — inline "Remove? Yes/No" on qty→0
+- ✅ `MvIconButton` in ui-kit
+- ✅ `MvSearchInput` — `buttonLabel` prop (no hardcoded Russian)
 
 ---
 
 ## Recent changes (last session)
 
-- `/checkout` page: PaymentMethodSelector, DeliverySelector, CheckoutOrderItems, CheckoutSummary, CheckoutResult
-- `/account` dashboard: 8 sub-components, real credit/tradingPoint data from store, hardcoded orders/docs/products
-- Auth session fix: async router guard awaits `authStore.init()` (memoized), rememberMe wired to Vendure mutation
-- `/orders`: OrderCard, OrdersAside, filter chips, hardcoded data
-- `/documents`: DocumentsPage, DocumentsToolbar (3-row horizontal), DocumentRow, DocumentsFilters (unused — left in repo but not rendered)
-- `MvIconButton` added to ui-kit: slot for SVG icon, label prop, variant prop
-- Document actions: SVG icons (download = arrow+bar, email = envelope, order = doc, pay = card)
+- **Issue #16 closed**: `favorites.ts` store (localStorage, mv_favorites key) + 7 unit tests
+- `MvProductCard`: `isFavorited` prop + `toggle-favorite` emit; filled heart styling
+- `MvProductRow`: refactored to cart-aware — `cartQty`/`cartLineId` props, stepper when in cart, "+ Add" button when not; removed internal qty picker
+- `ProductListView`: wires both card and row to cart + favorites stores
+- `ProductScrollRow`: wires favorites to carousel cards
+- `FavoritesPage`: uses real store data, empty state for no favorites
+- `AppHeader`: favorites badge count (pink, top-right on heart icon)
+- `CartItem`: removed × button; stepper min=0 with inline remove confirmation
+- `auth.ts`: logout sets `mv_logged_out` sessionStorage flag; DEV auto-login skips if flag set (prevents re-auth after explicit logout)
+- Debug `console.log` still present in `auth.ts` (from logout debugging) — **should be cleaned up**
 
 ---
 
 ## Planned next work
 
-- **Issue #14**: `DiscountRule` entity + service in `plugin-price-entry`:
+- **Clean up debug `console.log` from `auth.ts`** (commits `4989846`, `a8cba44` added them)
+- **Issue #14**: `DiscountRule` entity + service in `plugin-price-entry`
   - `discount_rule`: `id, priceTypeCode, facetCode, facetValueCode, percent, validFrom, validTo`
   - Update `customerPrice` resolver to apply best active unconditional discount
   - Add `compareAtPrice: Int` to Shop API schema — returns `PriceEntry` price when discount applied
   - Add discount fixtures (e.g. 10% on Lukoil brand for WHOLESALE)
-- **#18**: i18n — vue-i18n, Russian locale
 - **#19**: Counterparty portal roles
-- **#15, #16**: Promo banners, favorites
+- **#18**: i18n — vue-i18n, Russian locale (deferred, user declined for now)
 - **#23**: `plugin-popular-products` — after real orders exist
 - Real orders backend + wire `/orders` page to live data
 - Real documents backend + wire `/documents` page to live data
@@ -208,15 +256,16 @@ filter: { customFields: { onSale: ... } }  # WRONG
 
 ## Known problems and limitations
 
-- **New Arrivals widget is empty** — seed products were created today; filter is `createdAt > 7 days ago`; on fresh DB all products appear (seeded within the week).
-- **compareAtPrice not in schema** — removed from GQL queries until discount rules built. `MvProductCard` supports the prop but won't show until #14 done.
+- **Debug console.log in auth.ts** — `[auth] logout mutation result:`, `[auth] sessionStorage flag set:`, `[auth] fetchCurrentCustomer — logged_out flag:` still in production code.
+- **New Arrivals widget is empty** — seed products were created at seed time; filter is `createdAt > 7 days ago`; on fresh DB all products appear.
+- **compareAtPrice not in schema** — removed from GQL queries until discount rules built.
 - **Collections not in ERP seed** — `make seed` does NOT create collections. On DB reset, mega-menu empty.
 - **No codegen** — raw GQL strings with manual types.
 - **TradingPointsPage** is 451 lines (over 300 limit) — deferred refactor.
-- **DocumentsFilters.vue** created but not used — left in `src/pages/documents/` as dead file; can be deleted.
-- **All customer-zone pages use hardcoded data** (orders, documents, frequent products, stats) — no real backend for these yet.
-- `make lint`: 0 errors, 25 warnings (pre-existing in `.stories.ts` files + router lazy imports).
-- `make test`: 53/53 green.
+- **DocumentsFilters.vue** created but not used — dead file in `src/pages/documents/`; can be deleted.
+- **All customer-zone pages use hardcoded data** (orders, documents, frequent products, stats) — no real backend yet.
+- `make lint`: 0 errors, 42 warnings (pre-existing in `.stories.ts` files + router lazy imports).
+- `make test`: 60/60 green (including 7 new favorites store tests).
 
 ---
 
@@ -227,8 +276,8 @@ make dev          # infra in Docker + server + storefront
 make dev-fresh    # wipe DB + re-seed + start
 make dev-reset    # tear down infra + volumes
 make seed         # POST fixtures via ERP REST API (server must be running on :3000)
-make lint         # ESLint (0 errors expected)
-make test         # Vitest unit (53 tests, all green)
+make lint         # ESLint (0 errors expected, 42 warnings OK)
+make test         # Vitest unit (60 tests, all green)
 make test-int     # integration tests (needs infra)
 ```
 
@@ -254,6 +303,10 @@ Dev defaults:
 - **Business enums in DB**, not code constants.
 - **Never import from `plugin-sync`** in other plugins.
 - **Auth router guard is async** — `await authStore.init()` before checking `isLoggedIn`. Do not revert to sync guard.
-- **`AccountSidebar.vue`** — reuse on every customer-zone page (`/account`, `/orders`, `/documents`, future pages).
+- **Logout flag** — `mv_logged_out` in sessionStorage. DEV auto-login skips if set. `login()` clears it. Do not break this.
+- **Cart `itemCount` = positions count** (lines.length), not total qty sum.
+- **`MvProductRow`** now has cart/favorites UX — always pass `cartQty`, `cartLineId`, handle `update-cart-qty` from parent. Old `add-to-cart` emit signature changed: now emits `[variantId]` not `[qty, variantId]`.
+- **`AccountSidebar.vue`** — reuse on every customer-zone page.
 - **`MvIconButton`** in ui-kit — use for any small icon+label action button, don't recreate inline.
+- **Never hardcode UI strings** — no Russian text in templates. Use props/slots with English defaults.
 - Always `make lint && make test` before reporting a task done.

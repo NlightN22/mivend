@@ -7,6 +7,8 @@ import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { ErpImportPlugin } from '@mivend/plugin-erp-import';
+import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
+import { SearchPlugin } from '@mivend/plugin-search';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -80,6 +82,8 @@ export const config: VendureConfig = {
         CounterpartyPlugin,
         PriceEntryPlugin,
         ErpImportPlugin,
+        CrossReferencePlugin,
+        SearchPlugin,
         ...instancePlugins,
     ],
 };

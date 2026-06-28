@@ -7,6 +7,8 @@ import { CustomerHandler } from './handlers/customer.handler';
 import { CounterpartyHandler } from './handlers/counterparty.handler';
 import { CustomerCounterpartyHandler } from './handlers/customer-counterparty.handler';
 import { TradingPointHandler } from './handlers/trading-point.handler';
+import { CategoryHandler } from './handlers/category.handler';
+import { CrossReferenceHandler } from './handlers/cross-reference.handler';
 import { ImportRunService } from './import-run.service';
 import type { BatchImportBody, ImportRecord, ImportRunResult } from './types';
 
@@ -23,6 +25,8 @@ export class ErpImportService {
         private readonly counterpartyHandler: CounterpartyHandler,
         private readonly customerCounterpartyHandler: CustomerCounterpartyHandler,
         private readonly tradingPointHandler: TradingPointHandler,
+        private readonly categoryHandler: CategoryHandler,
+        private readonly crossReferenceHandler: CrossReferenceHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -80,6 +84,12 @@ export class ErpImportService {
                 break;
             case 'tradingPoint':
                 await this.tradingPointHandler.upsert(ctx, record.data);
+                break;
+            case 'category':
+                await this.categoryHandler.upsert(ctx, record.data);
+                break;
+            case 'crossReference':
+                await this.crossReferenceHandler.upsert(ctx, record.data);
                 break;
         }
     }

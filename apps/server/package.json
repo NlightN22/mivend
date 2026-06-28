@@ -3,7 +3,7 @@
     "version": "0.0.1",
     "private": true,
     "scripts": {
-        "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+        "dev": "ts-node-dev --respawn --transpile-only --debounce 500 src/main.ts",
         "build": "tsc",
         "start": "node dist/main.js"
     },
@@ -18,7 +18,9 @@
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
-        "@mivend/plugin-erp-import": "workspace:*"
+        "@mivend/plugin-erp-import": "workspace:*",
+        "@mivend/plugin-cross-reference": "workspace:*",
+        "@mivend/plugin-search": "workspace:*"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

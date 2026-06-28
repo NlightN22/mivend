@@ -47,6 +47,18 @@ interface MockHandler {
     upsert: Mock;
 }
 
+interface MockAssignHandler {
+    assign: Mock;
+}
+
+function makeHandler(): MockHandler {
+    return { upsert: vi.fn(async () => {}) };
+}
+
+function makeAssignHandler(): MockAssignHandler {
+    return { assign: vi.fn(async () => {}) };
+}
+
 describe('ErpImportService', () => {
     let importRunService: MockImportRunService;
     let productHandler: MockHandler;
@@ -63,9 +75,9 @@ describe('ErpImportService', () => {
             complete: vi.fn(async () => {}),
             toResult: vi.fn((r: ImportRun) => makeResult(r)),
         };
-        productHandler = { upsert: vi.fn(async () => {}) };
-        priceHandler = { upsert: vi.fn(async () => {}) };
-        stockHandler = { upsert: vi.fn(async () => {}) };
+        productHandler = makeHandler();
+        priceHandler = makeHandler();
+        stockHandler = makeHandler();
         service = new ErpImportService(
             importRunService as unknown as InstanceType<
                 typeof import('../../import-run.service').ImportRunService
@@ -78,6 +90,24 @@ describe('ErpImportService', () => {
             >,
             stockHandler as unknown as InstanceType<
                 typeof import('../../handlers/stock.handler').StockHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/customer.handler').CustomerHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/counterparty.handler').CounterpartyHandler
+            >,
+            makeAssignHandler() as unknown as InstanceType<
+                typeof import('../../handlers/customer-counterparty.handler').CustomerCounterpartyHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/trading-point.handler').TradingPointHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/category.handler').CategoryHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/cross-reference.handler').CrossReferenceHandler
             >,
         );
     });
@@ -139,6 +169,59 @@ describe('ErpImportService', () => {
             .mockResolvedValue(makeRun({ status: 'done' }));
         await service.processBatch(ctx, body);
         expect(stockHandler.upsert).toHaveBeenCalledOnce();
+    });
+
+    it('calls crossReferenceHandler for crossReference records', async () => {
+        const crossReferenceHandler = makeHandler();
+        service = new ErpImportService(
+            importRunService as unknown as InstanceType<
+                typeof import('../../import-run.service').ImportRunService
+            >,
+            productHandler as unknown as InstanceType<
+                typeof import('../../handlers/product.handler').ProductHandler
+            >,
+            priceHandler as unknown as InstanceType<
+                typeof import('../../handlers/price.handler').PriceHandler
+            >,
+            stockHandler as unknown as InstanceType<
+                typeof import('../../handlers/stock.handler').StockHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/customer.handler').CustomerHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/counterparty.handler').CounterpartyHandler
+            >,
+            makeAssignHandler() as unknown as InstanceType<
+                typeof import('../../handlers/customer-counterparty.handler').CustomerCounterpartyHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/trading-point.handler').TradingPointHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/category.handler').CategoryHandler
+            >,
+            crossReferenceHandler as unknown as InstanceType<
+                typeof import('../../handlers/cross-reference.handler').CrossReferenceHandler
+            >,
+        );
+        const body: BatchImportBody = {
+            exchangeId: 'ex-xref',
+            records: [
+                {
+                    type: 'crossReference',
+                    data: {
+                        externalId: 'SKF-VKM31023',
+                        refs: [{ oemCode: '5013135', oemBrand: 'Ford' }],
+                    },
+                },
+            ],
+        };
+        importRunService.findByExchangeId
+            .mockResolvedValueOnce(null)
+            .mockResolvedValue(makeRun({ status: 'done' }));
+        await service.processBatch(ctx, body);
+        expect(crossReferenceHandler.upsert).toHaveBeenCalledOnce();
     });
 
     it('records error when handler throws and continues processing', async () => {

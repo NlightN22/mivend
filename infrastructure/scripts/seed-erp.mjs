@@ -8,6 +8,130 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 const TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-token';
+const ADMIN_USER = process.env.ADMIN_USER ?? 'superadmin';
+const ADMIN_PASS = process.env.ADMIN_PASS ?? 'superadmin';
+
+async function adminGraphql(query, variables, authToken) {
+    const res = await fetch(`${BASE_URL}/admin-api`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ query, variables }),
+    });
+    const json = await res.json();
+    if (json.errors) throw new Error(json.errors[0].message);
+    return json.data;
+}
+
+async function getAdminToken() {
+    const data = await adminGraphql(`
+        mutation Login($u: String!, $p: String!) {
+            login(username: $u, password: $p) {
+                ... on CurrentUser { id }
+                ... on InvalidCredentialsError { message }
+            }
+        }
+    `, { u: ADMIN_USER, p: ADMIN_PASS });
+    if (data.login.message) throw new Error(`Admin login failed: ${data.login.message}`);
+    // token is returned via Set-Cookie, re-use session via cookie jar workaround:
+    // instead use vendure's token-based auth
+    return null; // handled via login mutation which sets cookie
+}
+
+// Vendure Admin API uses cookie-based session; we need to capture and forward the session cookie.
+async function adminGraphqlWithSession(query, variables, cookie) {
+    const res = await fetch(`${BASE_URL}/admin-api`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(cookie ? { Cookie: cookie } : {}),
+        },
+        body: JSON.stringify({ query, variables }),
+    });
+    // Vendure sets two cookies: "session=..." and "session.sig=..." — need both
+    const rawSetCookie = res.headers.get('set-cookie');
+    const sessionCookie = rawSetCookie
+        ? rawSetCookie.split(',').map(c => c.split(';')[0].trim()).join('; ')
+        : cookie;
+    const json = await res.json();
+    if (json.errors) throw new Error(json.errors[0].message);
+    return { data: json.data, cookie: sessionCookie ?? cookie };
+}
+
+async function ensureTaxSetup() {
+    // Login to Admin API
+    let session = await adminGraphqlWithSession(`
+        mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
+            ... on CurrentUser { id }
+            ... on InvalidCredentialsError { message }
+        }}
+    `);
+    if (session.data.login.message) throw new Error(`Admin login failed: ${session.data.login.message}`);
+    const cookie = session.cookie;
+
+    // Check if default channel already has a tax zone assigned
+    const channelCheckRes = await adminGraphqlWithSession(
+        `{ channels { items { id defaultTaxZone { id } } } }`,
+        undefined, cookie,
+    );
+    const defaultChannel = channelCheckRes.data.channels.items[0];
+    if (defaultChannel?.defaultTaxZone?.id) {
+        console.log('  Tax zones already configured, skipping.');
+        return;
+    }
+
+    // Get or create default tax zone
+    const zonesRes = await adminGraphqlWithSession(`{ zones { items { id name } } }`, undefined, cookie);
+    let zoneId = zonesRes.data.zones.items[0]?.id;
+    if (!zoneId) {
+        const zoneRes = await adminGraphqlWithSession(
+            `mutation { createZone(input: { name: "Default Tax Zone", memberIds: [] }) { id } }`,
+            undefined, cookie,
+        );
+        zoneId = zoneRes.data.createZone.id;
+    }
+
+    // Get or create tax category
+    const catRes = await adminGraphqlWithSession(`{ taxCategories { items { id } } }`, undefined, cookie);
+    let taxCategoryId = catRes.data.taxCategories.items[0]?.id;
+    if (!taxCategoryId) {
+        const newCat = await adminGraphqlWithSession(
+            `mutation { createTaxCategory(input: { name: "Standard", isDefault: true }) { id } }`,
+            undefined, cookie,
+        );
+        taxCategoryId = newCat.data.createTaxCategory.id;
+    }
+
+    // Create 0% tax rate
+    await adminGraphqlWithSession(`
+        mutation($zoneId: ID!, $catId: ID!) {
+            createTaxRate(input: {
+                name: "Standard 0%"
+                enabled: true
+                value: 0
+                categoryId: $catId
+                zoneId: $zoneId
+            }) { id }
+        }
+    `, { zoneId, catId: taxCategoryId }, cookie);
+
+    // Assign tax zone to the default channel
+    const channelRes = await adminGraphqlWithSession(`{ channels { items { id } } }`, undefined, cookie);
+    const channelId = channelRes.data.channels.items[0]?.id;
+    if (channelId) {
+        await adminGraphqlWithSession(`
+            mutation($id: ID!, $zoneId: ID!) {
+                updateChannel(input: { id: $id, defaultTaxZoneId: $zoneId }) {
+                    ... on Channel { id }
+                }
+            }
+        `, { id: channelId, zoneId }, cookie);
+    }
+
+    console.log('  Created default tax zone and 0% tax rate.');
+}
 
 function loadFixture(name) {
     return JSON.parse(readFileSync(join(__dirname, `../fixtures/${name}.json`), 'utf8'));
@@ -30,16 +154,36 @@ async function postBatch(exchangeId, records) {
 }
 
 async function main() {
+    const categories = loadFixture('categories');
     const products = loadFixture('products');
+    const crossReferences = loadFixture('cross-references');
     const prices = loadFixture('prices');
     const stock = loadFixture('stock');
     const run = Date.now();
+
+    // Tax zone is Vendure system config — cannot go through erp-import plugin
+    console.log('Ensuring tax zone...');
+    await ensureTaxSetup();
+
+    console.log(`Sending ${categories.length} categories...`);
+    const categoryResult = await postBatch(`seed-categories-${run}`, categories.map(data => ({ type: 'category', data })));
+    console.log(`  → status=${categoryResult.status} processed=${categoryResult.processed} failed=${categoryResult.failed}`);
+    if (categoryResult.errors?.length > 0) {
+        for (const e of categoryResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
 
     console.log(`Sending ${products.length} products...`);
     const productResult = await postBatch(`seed-products-${run}`, products.map(data => ({ type: 'product', data })));
     console.log(`  → status=${productResult.status} processed=${productResult.processed} failed=${productResult.failed}`);
     if (productResult.errors?.length > 0) {
         for (const e of productResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    console.log(`Sending ${crossReferences.length} cross-reference records...`);
+    const xrefResult = await postBatch(`seed-xref-${run}`, crossReferences.map(data => ({ type: 'crossReference', data })));
+    console.log(`  → status=${xrefResult.status} processed=${xrefResult.processed} failed=${xrefResult.failed}`);
+    if (xrefResult.errors?.length > 0) {
+        for (const e of xrefResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
     console.log(`Sending ${prices.length} prices...`);

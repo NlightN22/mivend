@@ -6,7 +6,8 @@
     "scripts": {
         "dev:central": "dotenv -e apps/server/.env.central -- pnpm --filter server dev",
         "dev:branch": "dotenv -e apps/server/.env.branch -- pnpm --filter server dev",
-        "dev:all": "concurrently --names 'server,storefront' --prefix-colors 'cyan,green' 'pnpm dev:central' 'pnpm --filter @mivend/storefront dev'",
+        "dev:plugins": "pnpm --filter './packages/plugins/**' --parallel run dev",
+        "dev:all": "concurrently --names 'plugins,server,storefront' --prefix-colors 'yellow,cyan,green' 'pnpm dev:plugins' 'pnpm dev:central' 'pnpm --filter @mivend/storefront dev'",
         "build": "pnpm -r build",
         "lint": "eslint .",
         "format": "prettier --write .",

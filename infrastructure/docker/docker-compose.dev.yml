@@ -98,6 +98,7 @@ services:
             RABBITMQ_URL: amqp://mivend:mivend@rabbitmq:5672
             SUPERADMIN_USERNAME: superadmin
             SUPERADMIN_PASSWORD: superadmin
+            ELASTICSEARCH_HOST: http://elasticsearch:9200
         depends_on:
             postgres-central:
                 condition: service_healthy

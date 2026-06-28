@@ -1,0 +1,23 @@
+{
+    "name": "@mivend/plugin-cross-reference",
+    "version": "0.0.1",
+    "private": true,
+    "license": "GPL-3.0-or-later",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch"
+    },
+    "peerDependencies": {
+        "@vendure/core": "^3.0.0"
+    },
+    "devDependencies": {
+        "@nestjs/common": "^11.0.0",
+        "@vendure/common": "^3.0.0",
+        "@vendure/core": "^3.0.0",
+        "typeorm": "^0.3.0",
+        "typescript": "^5.4.0",
+        "vitest": "^1.0.0"
+    }
+}

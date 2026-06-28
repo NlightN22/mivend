@@ -9,6 +9,7 @@ import {
 import type { ProductRecord } from '../types';
 
 const loggerCtx = 'ErpProductHandler';
+const CATEGORY_FACET_CODE = 'category';
 
 @Injectable()
 export class ProductHandler {
@@ -30,12 +31,17 @@ export class ProductHandler {
         const priceInCents = Math.round(record.price * 100);
         const enabled = record.enabled ?? true;
         const onSale = record.onSale ?? false;
+        const facetValueIds = await this.resolveFacetValueIds(record.categoryCode);
 
         if (existing) {
             await this.productService.update(ctx, {
                 id: existing.id,
                 enabled,
-                customFields: { onSale },
+                facetValueIds,
+                customFields: {
+                    onSale,
+                    ...(record.fullName !== undefined && { fullName: record.fullName }),
+                },
                 translations: [
                     {
                         languageCode: LanguageCode.en,
@@ -55,7 +61,6 @@ export class ProductHandler {
                         id: variants.items[0].id,
                         enabled,
                         price: priceInCents,
-                        trackInventory: 'TRUE' as const,
                     },
                 ]);
             }
@@ -63,6 +68,7 @@ export class ProductHandler {
         } else {
             const product = await this.productService.create(ctx, {
                 enabled,
+                facetValueIds,
                 translations: [
                     {
                         languageCode: LanguageCode.en,
@@ -71,7 +77,11 @@ export class ProductHandler {
                         description: record.description ?? '',
                     },
                 ],
-                customFields: { externalId: record.externalId, onSale },
+                customFields: {
+                    externalId: record.externalId,
+                    onSale,
+                    fullName: record.fullName ?? '',
+                },
             });
             await this.productVariantService.create(ctx, [
                 {
@@ -85,5 +95,17 @@ export class ProductHandler {
             ]);
             Logger.verbose(`Created product externalId=${record.externalId}`, loggerCtx);
         }
+    }
+
+    private async resolveFacetValueIds(categoryCode: string | undefined): Promise<string[]> {
+        if (!categoryCode) return [];
+        const rows = (await this.connection.rawConnection.query(
+            `SELECT fv.id FROM facet_value fv
+             INNER JOIN facet f ON f.id = fv."facetId"
+             WHERE fv.code = $1 AND f.code = $2
+             LIMIT 1`,
+            [categoryCode, CATEGORY_FACET_CODE],
+        )) as Array<{ id: string }>;
+        return rows.length > 0 ? [String(rows[0].id)] : [];
     }
 }

@@ -1,0 +1,119 @@
+[
+    {
+        "externalId": "ext-003",
+        "refs": [
+            { "oemCode": "5012658", "oemBrand": "Ford" },
+            { "oemCode": "1498456", "oemBrand": "Ford" },
+            { "oemCode": "06J115403C", "oemBrand": "VAG" },
+            { "oemCode": "90915YZZD4", "oemBrand": "Toyota" }
+        ]
+    },
+    {
+        "externalId": "ext-004",
+        "refs": [
+            { "oemCode": "5013135", "oemBrand": "Ford" },
+            { "oemCode": "1498427", "oemBrand": "Ford" },
+            { "oemCode": "5006573", "oemBrand": "Ford" },
+            { "oemCode": "13717536006", "oemBrand": "BMW" }
+        ]
+    },
+    {
+        "externalId": "ext-005",
+        "refs": [
+            { "oemCode": "7H0698151A", "oemBrand": "VAG" },
+            { "oemCode": "34116775151", "oemBrand": "BMW" },
+            { "oemCode": "1901351", "oemBrand": "Ford" }
+        ]
+    },
+    {
+        "externalId": "ext-006",
+        "refs": [
+            { "oemCode": "1K0615301AA", "oemBrand": "VAG" },
+            { "oemCode": "34116864900", "oemBrand": "BMW" },
+            { "oemCode": "5Q0615301K", "oemBrand": "VAG" }
+        ]
+    },
+    {
+        "externalId": "ext-007",
+        "refs": [
+            { "oemCode": "101905631A", "oemBrand": "VAG" },
+            { "oemCode": "90919A2006", "oemBrand": "Toyota" },
+            { "oemCode": "12120032134", "oemBrand": "BMW" }
+        ]
+    },
+    {
+        "externalId": "ext-008",
+        "refs": [
+            { "oemCode": "000915105DE", "oemBrand": "VAG" },
+            { "oemCode": "1931084", "oemBrand": "Ford" }
+        ]
+    },
+    {
+        "externalId": "ext-011",
+        "refs": [
+            { "oemCode": "1525597", "oemBrand": "Ford" },
+            { "oemCode": "1906018", "oemBrand": "Ford" },
+            { "oemCode": "1K0127400D", "oemBrand": "VAG" }
+        ]
+    },
+    {
+        "externalId": "ext-012",
+        "refs": [
+            { "oemCode": "64119272646", "oemBrand": "BMW" },
+            { "oemCode": "6Q0819653", "oemBrand": "VAG" },
+            { "oemCode": "8D0819441", "oemBrand": "VAG" }
+        ]
+    },
+    {
+        "externalId": "ext-013",
+        "refs": [
+            { "oemCode": "7H0698451A", "oemBrand": "VAG" },
+            { "oemCode": "34216775155", "oemBrand": "BMW" },
+            { "oemCode": "1767844", "oemBrand": "Ford" }
+        ]
+    },
+    {
+        "externalId": "ext-015",
+        "refs": [
+            { "oemCode": "12120037244", "oemBrand": "BMW" },
+            { "oemCode": "90919B1005", "oemBrand": "Toyota" },
+            { "oemCode": "101905631B", "oemBrand": "VAG" }
+        ]
+    },
+    {
+        "externalId": "ext-016",
+        "refs": [
+            { "oemCode": "28800YZZAE", "oemBrand": "Toyota" },
+            { "oemCode": "000915105AK", "oemBrand": "VAG" }
+        ]
+    },
+    {
+        "externalId": "ext-017",
+        "refs": [
+            { "oemCode": "1913427", "oemBrand": "Ford" },
+            { "oemCode": "61219253056", "oemBrand": "BMW" }
+        ]
+    },
+    {
+        "externalId": "ext-020",
+        "refs": [
+            { "oemCode": "A0001802609", "oemBrand": "Mercedes" },
+            { "oemCode": "06J115403Q", "oemBrand": "VAG" }
+        ]
+    },
+    {
+        "externalId": "ext-021",
+        "refs": [
+            { "oemCode": "1536446", "oemBrand": "Ford" },
+            { "oemCode": "42431BZ010", "oemBrand": "Toyota" }
+        ]
+    },
+    {
+        "externalId": "ext-022",
+        "refs": [
+            { "oemCode": "25193243", "oemBrand": "GM" },
+            { "oemCode": "MD305289", "oemBrand": "Mitsubishi" },
+            { "oemCode": "101905601A", "oemBrand": "VAG" }
+        ]
+    }
+]
