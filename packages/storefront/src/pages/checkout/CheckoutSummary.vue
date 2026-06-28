@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
+import { useCheckoutStore } from '../../stores/checkout';
 
 const cartStore = useCartStore();
+const checkoutStore = useCheckoutStore();
+const router = useRouter();
 const promoCode = ref('');
 
 const lineCount = computed(() => cartStore.lines.length);
@@ -15,6 +19,24 @@ const subtotal = computed(() =>
 const total = computed(() =>
     new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽',
 );
+
+const btnLabel = computed(() => {
+    if (checkoutStore.selectedPayment === 'online') return 'Pay online →';
+    if (checkoutStore.selectedPayment === 'invoice') return 'Place order & get invoice';
+    return 'Confirm order';
+});
+
+const btnOrange = computed(() => checkoutStore.selectedPayment === 'online');
+
+function handlePrimary(): void {
+    if (checkoutStore.selectedPayment === 'online') {
+        router.push('/payment-stub');
+    } else if (checkoutStore.selectedPayment === 'invoice') {
+        router.push('/order-created?method=invoice');
+    } else {
+        router.push('/order-created?method=deferred');
+    }
+}
 </script>
 
 <template>
@@ -41,10 +63,14 @@ const total = computed(() =>
                 <strong>{{ total }}</strong>
             </div>
 
-            <button class="checkout-summary__pay-btn" type="button">Pay online</button>
-            <button class="checkout-summary__secondary-btn" type="button">Generate invoice</button>
+            <button
+                class="checkout-summary__pay-btn"
+                :class="btnOrange ? 'checkout-summary__pay-btn--orange' : 'checkout-summary__pay-btn--green'"
+                type="button"
+                @click="handlePrimary"
+            >{{ btnLabel }}</button>
 
-            <p class="checkout-summary__legal">
+            <p v-if="checkoutStore.selectedPayment === 'online'" class="checkout-summary__legal">
                 By clicking the button, you are redirected to the payment service and agree to the
                 <a href="#">payment terms</a>.
             </p>
@@ -126,36 +152,26 @@ const total = computed(() =>
     min-height: 56px;
     border: 0;
     border-radius: 18px;
-    background: #ff8a00;
     color: #fff;
+    font: inherit;
     font-size: 16px;
     font-weight: 800;
     cursor: pointer;
-    box-shadow: 0 12px 24px rgba(255, 138, 0, 0.22);
     margin-top: 12px;
-    font: inherit;
-    font-size: 16px;
-    font-weight: 800;
     transition: background 0.15s;
 }
 
-.checkout-summary__pay-btn:hover { background: #e87800; }
-
-.checkout-summary__secondary-btn {
-    width: 100%;
-    min-height: 46px;
-    border: 0;
-    border-radius: 15px;
-    background: #f3f8f6;
-    color: #263732;
-    font-weight: 800;
-    cursor: pointer;
-    margin-top: 9px;
-    font: inherit;
-    transition: background 0.15s;
+.checkout-summary__pay-btn--orange {
+    background: #ff8a00;
+    box-shadow: 0 12px 24px rgba(255, 138, 0, 0.22);
 }
+.checkout-summary__pay-btn--orange:hover { background: #e87800; }
 
-.checkout-summary__secondary-btn:hover { background: #e8f2ed; }
+.checkout-summary__pay-btn--green {
+    background: #00a878;
+    box-shadow: 0 12px 24px rgba(0, 168, 120, 0.22);
+}
+.checkout-summary__pay-btn--green:hover { background: #008a64; }
 
 .checkout-summary__legal {
     margin: 12px 0 0;
