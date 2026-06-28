@@ -63,7 +63,9 @@ const isActive = (path: string) => route.path === path;
       <RouterLink to="/account/employees" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/employees') }">
         <span>Employees</span>
       </RouterLink>
-      <a href="#" class="account-sidebar__link"><span>Settings</span></a>
+      <RouterLink to="/account/settings" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/settings') }">
+        <span>Settings</span>
+      </RouterLink>
     </nav>
   </aside>
 </template>
