@@ -10,7 +10,7 @@ onMounted(async () => {
     await authStore.init();
     if (authStore.isLoggedIn) {
         await cartStore.fetchCart();
-    } else if (import.meta.env.DEV) {
+    } else if (import.meta.env.DEV && !sessionStorage.getItem('mv_logged_out')) {
         await authStore.login('ivan@autoservice-nord.example', 'Password123!');
         await cartStore.fetchCart();
     }
