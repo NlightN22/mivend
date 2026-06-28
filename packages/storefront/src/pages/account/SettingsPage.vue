@@ -164,25 +164,29 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
         <div class="set-block__head">
           <div>
             <h2 class="set-block__title">Interface</h2>
-            <div class="set-block__sub">Default catalog view.</div>
+            <div class="set-block__sub">Personal preferences for working in the catalog and orders.</div>
           </div>
         </div>
 
-        <div class="set-view-toggle">
-          <button
-            class="set-view-btn"
-            :class="{ 'set-view-btn--active': catalogView === 'grid' }"
-            @click="catalogView = 'grid'"
-          >
-            <span class="set-view-icon">▦</span> Grid
-          </button>
-          <button
-            class="set-view-btn"
-            :class="{ 'set-view-btn--active': catalogView === 'list' }"
-            @click="catalogView = 'list'"
-          >
-            <span class="set-view-icon">☷</span> List
-          </button>
+        <div class="set-toggles">
+          <div class="set-toggle-row">
+            <div>
+              <div class="set-toggle-title">Catalog view</div>
+              <div class="set-toggle-note">Default layout when browsing the catalog.</div>
+            </div>
+            <div class="set-segmented">
+              <button
+                class="set-segmented__btn"
+                :class="{ 'set-segmented__btn--active': catalogView === 'grid' }"
+                @click="catalogView = 'grid'"
+              >▦ Grid</button>
+              <button
+                class="set-segmented__btn"
+                :class="{ 'set-segmented__btn--active': catalogView === 'list' }"
+                @click="catalogView = 'list'"
+              >☷ List</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -409,30 +413,32 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
 .set-switch--on { background: #00a878; }
 .set-switch--on::after { transform: translateX(18px); }
 
-/* View toggle */
-.set-view-toggle { display: flex; gap: 8px; }
-.set-view-btn {
+/* Segmented control */
+.set-segmented {
   display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 40px;
-  padding: 0 16px;
-  border-radius: 12px;
   border: 1px solid #dde7e2;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.set-segmented__btn {
+  min-height: 34px;
+  padding: 0 14px;
+  border: none;
   background: #f7fbf9;
   color: #66736e;
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   cursor: pointer;
   transition: 0.14s;
+  border-right: 1px solid #dde7e2;
 }
-.set-view-btn--active {
+.set-segmented__btn:last-child { border-right: none; }
+.set-segmented__btn--active {
   background: #e2f8ef;
-  border-color: #00a878;
   color: #008a64;
 }
-.set-view-icon { font-size: 16px; }
 
 /* Sessions */
 .set-sessions { display: grid; gap: 8px; }
