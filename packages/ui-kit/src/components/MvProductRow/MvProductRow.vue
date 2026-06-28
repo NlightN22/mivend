@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
+import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
 
 interface Props {
   name: string;
@@ -17,6 +18,8 @@ interface Props {
   slug?: string;
   showPrices?: boolean;
   variantId?: string;
+  cartQty?: number;
+  cartLineId?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -31,14 +34,15 @@ const props = withDefaults(defineProps<Props>(), {
   slug: '',
   showPrices: true,
   variantId: undefined,
+  cartQty: 0,
+  cartLineId: undefined,
 });
 
 const emit = defineEmits<{
-  'add-to-cart': [qty: number, variantId: string | undefined];
+  'add-to-cart': [variantId: string | undefined];
+  'update-cart-qty': [lineId: string, qty: number];
   'view-analogs': [];
 }>();
-
-const qty = ref(props.multiplicity);
 
 const effectiveStockVariant = computed((): 'ok' | 'low' | 'out' => {
   if (props.stock !== undefined) {
@@ -51,11 +55,8 @@ const effectiveStockVariant = computed((): 'ok' | 'low' | 'out' => {
 
 const canOrder = computed(() => effectiveStockVariant.value !== 'out');
 
-function decQty(): void {
-  if (qty.value > props.multiplicity) qty.value -= props.multiplicity;
-}
-function incQty(): void {
-  qty.value += props.multiplicity;
+function onStepperChange(qty: number): void {
+  if (props.cartLineId) emit('update-cart-qty', props.cartLineId, qty);
 }
 </script>
 
@@ -116,12 +117,21 @@ function incQty(): void {
     <div class="mv-product-row__actions">
       <slot name="actions">
         <template v-if="canOrder">
-          <div class="mv-product-row__qty">
-            <button class="mv-product-row__qty-btn" type="button" @click="decQty">−</button>
-            <span class="mv-product-row__qty-val">{{ qty }}</span>
-            <button class="mv-product-row__qty-btn" type="button" @click="incQty">+</button>
-          </div>
-          <button class="mv-product-row__add-btn" type="button" :disabled="!showPrices" @click="emit('add-to-cart', qty, variantId)">+</button>
+          <MvQtyStepper
+            v-if="cartQty > 0"
+            :model-value="cartQty"
+            :min="0"
+            @update:model-value="onStepperChange"
+          />
+          <button
+            v-else
+            class="mv-product-row__add-btn"
+            type="button"
+            :disabled="!showPrices"
+            @click="emit('add-to-cart', variantId)"
+          >
+            + Add
+          </button>
         </template>
         <template v-else>
           <button class="mv-product-row__analog-btn" type="button" @click="emit('view-analogs')">Analogs</button>
@@ -184,9 +194,10 @@ function incQty(): void {
 .mv-product-row__qty-val { min-width: 32px; text-align: center; font-size: 14px; font-weight: 700; color: #14231f; }
 
 .mv-product-row__add-btn {
-  width: 36px; height: 36px; border: none; border-radius: 10px;
-  background: var(--mv-color-emerald, #00b894); color: #fff; font-size: 20px; font-weight: 700;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0;
+  height: 36px; padding: 0 14px; border: none; border-radius: 10px;
+  background: var(--mv-color-emerald, #00b894); color: #fff; font-size: 13px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;
+  transition: background 0.15s; flex-shrink: 0; white-space: nowrap; font-family: inherit;
 }
 .mv-product-row__add-btn:hover:not(:disabled) { background: #00a07e; }
 .mv-product-row__add-btn:disabled { opacity: 0.45; cursor: not-allowed; }

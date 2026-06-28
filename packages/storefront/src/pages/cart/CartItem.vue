@@ -7,6 +7,7 @@ const emit = defineEmits<{ 'update:checked': [value: boolean] }>();
 
 const cartStore = useCartStore();
 const qty = ref(props.line.quantity);
+const confirmingRemove = ref(false);
 
 watch(() => props.line.quantity, (v) => { qty.value = v; });
 
@@ -26,13 +27,21 @@ const itemTotal = computed(() =>
 );
 
 async function onQtyChange(newQty: number): Promise<void> {
-    if (newQty < 1) return;
+    if (newQty === 0) {
+        confirmingRemove.value = true;
+        return;
+    }
     qty.value = newQty;
     await cartStore.adjustItem(props.line.id, newQty);
 }
 
-async function remove(): Promise<void> {
+async function confirmRemove(): Promise<void> {
+    confirmingRemove.value = false;
     await cartStore.removeItem(props.line.id);
+}
+
+function cancelRemove(): void {
+    confirmingRemove.value = false;
 }
 </script>
 
@@ -79,17 +88,20 @@ async function remove(): Promise<void> {
     </div>
 
     <div class="cart-item__qty">
-      <MvQtyStepper :model-value="qty" :min="1" @update:model-value="onQtyChange" />
+      <div v-if="confirmingRemove" class="cart-item__remove-confirm">
+        <span>Remove?</span>
+        <button class="cart-item__remove-confirm-yes" type="button" @click="confirmRemove">Yes</button>
+        <button class="cart-item__remove-confirm-no" type="button" @click="cancelRemove">No</button>
+      </div>
+      <MvQtyStepper v-else :model-value="qty" :min="0" @update:model-value="onQtyChange" />
     </div>
-
-    <button class="cart-item__remove" type="button" title="Remove" @click="remove">×</button>
   </article>
 </template>
 
 <style scoped>
 .cart-item {
   display: grid;
-  grid-template-columns: 28px 96px minmax(0, 1fr) 138px 140px 32px;
+  grid-template-columns: 28px 96px minmax(0, 1fr) 138px 160px;
   gap: 14px;
   align-items: center;
   padding: 18px 0;
@@ -144,10 +156,19 @@ async function remove(): Promise<void> {
 .cart-item__price { font-size: 19px !important; font-weight: 950 !important; color: #008a64 !important; }
 .cart-item__price-note { margin-top: 3px; color: #94a09b; font-size: 12px; font-weight: 800; }
 
-.cart-item__remove {
-  width: 32px; height: 32px; border: none; border-radius: 12px;
-  background: #f4faf7; color: #95a29d; font-size: 16px; font-weight: 900;
-  cursor: pointer; display: grid; place-items: center;
+.cart-item__remove-confirm {
+  display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: #66736e;
 }
-.cart-item__remove:hover { background: #fff0ee; color: #f04438; }
+.cart-item__remove-confirm-yes {
+  height: 32px; padding: 0 10px; border: none; border-radius: 10px;
+  background: #fff0ee; color: #f04438; font-size: 12px; font-weight: 900;
+  cursor: pointer; font-family: inherit;
+}
+.cart-item__remove-confirm-yes:hover { background: #fde3e0; }
+.cart-item__remove-confirm-no {
+  height: 32px; padding: 0 10px; border: none; border-radius: 10px;
+  background: #f4faf7; color: #66736e; font-size: 12px; font-weight: 900;
+  cursor: pointer; font-family: inherit;
+}
+.cart-item__remove-confirm-no:hover { background: #e2f8ef; color: #008a64; }
 </style>

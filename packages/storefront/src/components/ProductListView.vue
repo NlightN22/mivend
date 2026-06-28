@@ -146,8 +146,11 @@ function handleToggleFavorite(variantId: string | undefined, p: ProductItem): vo
                     :slug="p.slug"
                     :show-prices="showPrices"
                     :variant-id="p.variants[0]?.id"
+                    :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
+                    :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="(qty: number, variantId: string | undefined) => variantId && emit('addToCart', variantId, qty)"
+                    @add-to-cart="(variantId: string | undefined) => variantId && emit('addToCart', variantId, 1)"
+                    @update-cart-qty="handleCartQty"
                     @view-analogs="() => {}"
                 />
             </div>
