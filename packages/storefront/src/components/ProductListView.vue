@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
+import { useFavoritesStore } from '../stores/favorites';
+import type { FavoriteItem } from '../stores/favorites';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 
 const props = defineProps<{
@@ -25,6 +27,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const cartStore = useCartStore();
+const favoritesStore = useFavoritesStore();
 const sentinel = ref<HTMLElement | null>(null);
 const gridStyle = computed(() =>
     props.gridColumns ? `repeat(${props.gridColumns}, minmax(0, 1fr))` : 'repeat(4, minmax(0, 1fr))'
@@ -66,6 +69,25 @@ async function handleCartQty(lineId: string, qty: number): Promise<void> {
     } else {
         await cartStore.adjustItem(lineId, qty);
     }
+}
+
+function buildFavoriteItem(p: ProductItem): FavoriteItem {
+    const variant = p.variants[0];
+    return {
+        variantId: variant?.id ?? p.id,
+        productSlug: p.slug,
+        name: p.name,
+        sku: variant?.sku ?? '',
+        brand: getBrand(p),
+        price: variant ? variant.price / 100 : undefined,
+        currency: variant?.currencyCode ?? 'RUB',
+        stockVariant: variant ? stockVariantFor(variant.stockLevel ?? '') : undefined,
+        addedAt: 0,
+    };
+}
+
+function handleToggleFavorite(variantId: string | undefined, p: ProductItem): void {
+    favoritesStore.toggle(buildFavoriteItem(p));
 }
 </script>
 
@@ -147,9 +169,11 @@ async function handleCartQty(lineId: string, qty: number): Promise<void> {
                     :variant-id="p.variants[0]?.id"
                     :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
                     :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
+                    :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
                     @add-to-cart="(variantId: string | undefined) => variantId && emit('addToCart', variantId, 1)"
                     @update-cart-qty="handleCartQty"
+                    @toggle-favorite="(variantId: string | undefined) => handleToggleFavorite(variantId, p)"
                 />
             </div>
         </template>

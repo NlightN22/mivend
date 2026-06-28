@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
+import { useFavoritesStore } from '../stores/favorites';
+import type { FavoriteItem } from '../stores/favorites';
 import type { ProductItem } from '../composables/useProductList';
 
 const props = defineProps<{
@@ -12,6 +14,7 @@ const props = defineProps<{
 
 const authStore = useAuthStore();
 const cartStore = useCartStore();
+const favoritesStore = useFavoritesStore();
 
 const CARD_WIDTH = 220;
 const CARD_GAP = 14;
@@ -58,6 +61,21 @@ async function handleCartQty(lineId: string, qty: number): Promise<void> {
         await cartStore.adjustItem(lineId, qty);
     }
 }
+
+function buildFavoriteItem(p: ProductItem): FavoriteItem {
+    const variant = p.variants[0];
+    return {
+        variantId: variant?.id ?? p.id,
+        productSlug: p.slug,
+        name: p.name,
+        sku: variant?.sku ?? '',
+        brand: getBrand(p),
+        price: variant ? variant.price / 100 : undefined,
+        currency: variant?.currencyCode ?? 'RUB',
+        stockVariant: variant ? stockVariantFor(variant.stockLevel ?? '') : undefined,
+        addedAt: 0,
+    };
+}
 </script>
 
 <template>
@@ -94,8 +112,10 @@ async function handleCartQty(lineId: string, qty: number): Promise<void> {
                         :stock-variant="authStore.isLoggedIn ? stockVariantFor(p.variants[0]?.stockLevel ?? '') : undefined"
                         :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
                         :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
+                        :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                         @add-to-cart="(variantId) => variantId && cartStore.addItem(variantId, 1)"
                         @update-cart-qty="handleCartQty"
+                        @toggle-favorite="() => favoritesStore.toggle(buildFavoriteItem(p))"
                     />
                 </div>
             </div>

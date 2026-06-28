@@ -18,6 +18,7 @@ interface Props {
   variantId?: string;
   cartQty?: number;
   cartLineId?: string;
+  isFavorited?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -32,11 +33,13 @@ withDefaults(defineProps<Props>(), {
   variantId: undefined,
   cartQty: 0,
   cartLineId: undefined,
+  isFavorited: false,
 });
 
 const emit = defineEmits<{
   'add-to-cart': [variantId: string | undefined];
   'update-cart-qty': [lineId: string, qty: number];
+  'toggle-favorite': [variantId: string | undefined];
 }>();
 </script>
 
@@ -48,8 +51,14 @@ const emit = defineEmits<{
       </div>
     </a>
 
-    <button class="mv-product-card__fav" type="button" aria-label="Add to favorites">
-      &#9825;
+    <button
+      class="mv-product-card__fav"
+      :class="{ 'mv-product-card__fav--active': isFavorited }"
+      type="button"
+      aria-label="Toggle favorite"
+      @click="emit('toggle-favorite', variantId)"
+    >
+      {{ isFavorited ? '♥' : '♡' }}
     </button>
 
     <div class="mv-product-card__body">
@@ -167,6 +176,13 @@ const emit = defineEmits<{
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(27, 45, 38, 0.08);
   line-height: 1;
+  transition: border-color 0.14s, color 0.14s, background 0.14s;
+}
+
+.mv-product-card__fav--active {
+  border-color: #ffd2df;
+  background: #fff7fa;
+  color: #ff4f88;
 }
 
 .mv-product-card__fav:hover {

@@ -4,11 +4,13 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
 import { useCatalogStore } from '../stores/catalog';
+import { useFavoritesStore } from '../stores/favorites';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
+const favoritesStore = useFavoritesStore();
 const searchQuery = ref('');
 const catalogOpen = ref(false);
 
@@ -95,9 +97,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                             <span>Orders</span>
                         </RouterLink>
                         <RouterLink to="/favorites" class="app-header__nav-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                            </svg>
+                            <span class="app-header__nav-icon-wrap">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                                <span v-if="favoritesStore.count > 0" class="app-header__fav-badge">{{ favoritesStore.count }}</span>
+                            </span>
                             <span>Favourites</span>
                         </RouterLink>
                         <RouterLink to="/cart" class="app-header__cart">
@@ -256,6 +261,30 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 .app-header__nav-btn.router-link-active {
     background: #e2f8ef;
     color: #008a64;
+}
+
+.app-header__nav-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-header__fav-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #ff4f88;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    display: grid;
+    place-items: center;
+    padding: 0 3px;
+    line-height: 1;
 }
 
 .app-header__nav-link {

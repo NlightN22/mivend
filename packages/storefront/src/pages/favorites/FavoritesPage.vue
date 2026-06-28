@@ -5,110 +5,89 @@ import FavoritesToolbar from './FavoritesToolbar.vue';
 import FavoriteProductCard from './FavoriteProductCard.vue';
 import FavoriteProductRow from './FavoriteProductRow.vue';
 import type { FavoriteProduct } from './FavoriteProductCard.vue';
+import { useFavoritesStore } from '../../stores/favorites';
+import { useCartStore } from '../../stores/cart';
 
-const activeGroup = ref('all');
+const favoritesStore = useFavoritesStore();
+const cartStore = useCartStore();
+
 const search = ref('');
 const sort = ref('available');
+const activeGroup = ref('all');
 const activeChip = ref('all');
 const viewMode = ref<'grid' | 'list'>('grid');
 
-const allProducts: FavoriteProduct[] = [
-    {
-        id: '1',
-        brand: 'Komponent',
-        sku: 'KMP-5W40-4L',
-        name: 'Engine oil Komponent 5W-40 synthetic 4 L',
-        note: 'Added from order #347982. Frequently ordered by this trading point.',
-        price: '3 470 ₽',
-        stockLabel: '24 pcs.',
-        stockVariant: 'ok',
-        qty: 2,
-        emoji: '🛢️',
-    },
-    {
-        id: '2',
-        brand: 'Sakura',
-        sku: 'C-1139',
-        name: 'Oil filter Sakura C-1139',
-        note: 'Suitable for regular service orders. Price is stable.',
-        price: '850 ₽',
-        stockLabel: '18 pcs.',
-        stockVariant: 'ok',
-        qty: 5,
-        emoji: '🔧',
-    },
-    {
-        id: '3',
-        brand: 'Komponent',
-        sku: 'AF-G11-10',
-        name: 'Antifreeze G11 green 10 kg',
-        note: 'Stock is running low. Better to add now or replace with an analog.',
-        price: '3 890 ₽',
-        stockLabel: '3 pcs.',
-        stockVariant: 'low',
-        qty: 1,
-        emoji: '❄️',
-    },
-    {
-        id: '4',
-        brand: 'Lavr',
-        sku: 'LN-1741',
-        name: 'Brake cleaner Lavr 650 ml',
-        note: 'Service consumable. Convenient to add in bulk.',
-        price: '310 ₽',
-        stockLabel: '96 pcs.',
-        stockVariant: 'ok',
-        qty: 12,
-        emoji: '🧽',
-    },
-    {
-        id: '5',
-        brand: 'Bosch',
-        sku: 'AR601S',
-        name: 'Wiper blades Bosch Aerotwin AR601S',
-        note: 'Seasonal item. Price dropped 4% since added.',
-        price: '1 680 ₽',
-        stockLabel: '12 pcs.',
-        stockVariant: 'ok',
-        qty: 1,
-        emoji: '🛞',
-    },
-    {
-        id: '6',
-        brand: 'Trialli',
-        sku: 'PF-2412',
-        name: 'Front brake pads Trialli PF-2412',
-        note: 'Out of stock at current trading point. Can be kept in favorites.',
-        price: '2 140 ₽',
-        stockLabel: 'None',
-        stockVariant: 'none',
-        qty: 1,
-        emoji: '⚙️',
-    },
-];
+const localQty = ref<Record<string, number>>({});
 
-const products = ref(allProducts.map(p => ({ ...p })));
-
-const availableCount = computed(() => products.value.filter(p => p.stockVariant !== 'none').length);
-
-function handleRemove(id: string) {
-    const idx = products.value.findIndex(p => p.id === id);
-    if (idx !== -1) products.value.splice(idx, 1);
+function getQty(variantId: string): number {
+    return localQty.value[variantId] ?? 1;
 }
 
-function handleQtyChange(id: string, delta: number) {
-    const item = products.value.find(p => p.id === id);
-    if (item) item.qty = Math.max(1, item.qty + delta);
+function toCard(item: ReturnType<typeof favoritesStore.items>[number]): FavoriteProduct {
+    const priceStr = item.price != null
+        ? new Intl.NumberFormat('ru-RU').format(item.price) + ' ' + (item.currency === 'RUB' ? '₽' : item.currency)
+        : '—';
+    const sv = item.stockVariant;
+    const stockVariant: 'ok' | 'low' | 'none' =
+        sv === 'ok' ? 'ok' : sv === 'low' ? 'low' : 'none';
+    const stockLabel =
+        sv === 'ok' ? 'In stock' : sv === 'low' ? 'Low stock' : 'None';
+    return {
+        id: item.variantId,
+        brand: item.brand,
+        sku: item.sku,
+        name: item.name,
+        note: '',
+        price: priceStr,
+        stockLabel,
+        stockVariant,
+        qty: getQty(item.variantId),
+        emoji: '📦',
+    };
 }
 
-function handleAddAll() {
-    // placeholder: add all available to cart
+const filteredCards = computed<FavoriteProduct[]>(() => {
+    let items = favoritesStore.items.map(toCard);
+    if (search.value.trim()) {
+        const q = search.value.toLowerCase();
+        items = items.filter(p =>
+            p.name.toLowerCase().includes(q) ||
+            p.sku.toLowerCase().includes(q) ||
+            p.brand.toLowerCase().includes(q)
+        );
+    }
+    if (activeChip.value === 'available') {
+        items = items.filter(p => p.stockVariant !== 'none');
+    }
+    return items;
+});
+
+const availableCount = computed(() =>
+    filteredCards.value.filter(p => p.stockVariant !== 'none').length
+);
+
+function handleRemove(id: string): void {
+    favoritesStore.remove(id);
 }
 
-function handleClearUnavailable() {
-    products.value = products.value.filter(p => p.stockVariant !== 'none');
+function handleQtyChange(id: string, delta: number): void {
+    localQty.value[id] = Math.max(1, (localQty.value[id] ?? 1) + delta);
 }
 
+async function handleAddAll(): Promise<void> {
+    for (const card of filteredCards.value) {
+        if (card.stockVariant !== 'none') {
+            await cartStore.addItem(card.id, card.qty);
+        }
+    }
+}
+
+function handleClearUnavailable(): void {
+    const outIds = favoritesStore.items
+        .filter(i => i.stockVariant === 'out' || i.stockVariant == null)
+        .map(i => i.variantId);
+    outIds.forEach(id => favoritesStore.remove(id));
+}
 </script>
 
 <template>
@@ -127,7 +106,11 @@ function handleClearUnavailable() {
         </div>
       </div>
 
-      <div class="favorites-page__main">
+      <div v-if="favoritesStore.items.length === 0" class="favorites-page__empty">
+        <p>No favorites yet. Click the heart icon on any product to save it here.</p>
+      </div>
+
+      <div v-else class="favorites-page__main">
           <FavoritesToolbar
             :search="search"
             :sort="sort"
@@ -141,19 +124,11 @@ function handleClearUnavailable() {
             @update:view-mode="viewMode = $event"
           />
 
-          <div class="favorites-page__notice">
-            <span>ℹ️</span>
-            <div>
-              <strong>Favorites is not a substitute for reordering.</strong>
-              This is where customers keep recurring items — reordering remains an action on a specific order.
-            </div>
-          </div>
-
           <div v-if="viewMode === 'grid'" class="favorites-page__grid">
             <FavoriteProductCard
-              v-for="product in products"
-              :key="product.id"
-              :product="product"
+              v-for="card in filteredCards"
+              :key="card.id"
+              :product="card"
               @remove="handleRemove"
               @qty-change="handleQtyChange"
             />
@@ -161,16 +136,16 @@ function handleClearUnavailable() {
 
           <div v-else class="favorites-page__list">
             <FavoriteProductRow
-              v-for="product in products"
-              :key="product.id"
-              :product="product"
-              @add-to-cart="() => {}"
+              v-for="card in filteredCards"
+              :key="card.id"
+              :product="card"
+              @add-to-cart="(id, qty) => cartStore.addItem(id, qty)"
             />
           </div>
 
           <div class="favorites-page__bulk">
             <div>
-              <div class="favorites-page__bulk-title">{{ availableCount }} available items selected</div>
+              <div class="favorites-page__bulk-title">{{ availableCount }} available items</div>
               <div class="favorites-page__bulk-note">You can add them to the cart with the specified quantities. Unavailable items will remain in favorites.</div>
             </div>
             <button class="favorites-page__btn favorites-page__btn--orange" @click="handleAddAll">Add available to cart</button>
@@ -238,29 +213,17 @@ function handleClearUnavailable() {
 .favorites-page__btn--primary { background: #00a878; color: #fff; }
 .favorites-page__btn--orange { background: #ff8a00; color: #fff; }
 
+.favorites-page__empty {
+  padding: 48px 0;
+  text-align: center;
+  color: #66736e;
+  font-size: 15px;
+}
+
 .favorites-page__main {
   display: grid;
   gap: 16px;
   min-width: 0;
-}
-
-.favorites-page__notice {
-  padding: 15px 16px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 138, 0, 0.22);
-  background: #fff5df;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  color: #573a14;
-  font-size: 14px;
-  line-height: 1.42;
-}
-
-.favorites-page__notice strong {
-  display: block;
-  color: #33210a;
-  margin-bottom: 2px;
 }
 
 .favorites-page__grid {
@@ -295,7 +258,6 @@ function handleClearUnavailable() {
 }
 
 @media (max-width: 1260px) {
-  .favorites-page__layout { grid-template-columns: 1fr; }
   .favorites-page__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
