@@ -4,8 +4,10 @@
     "private": true,
     "scripts": {
         "dev": "ts-node-dev --respawn --transpile-only --debounce 500 src/main.ts",
+        "dev:worker": "ts-node-dev --respawn --transpile-only --debounce 500 src/worker.ts",
         "build": "tsc",
-        "start": "node dist/main.js"
+        "start": "node dist/main.js",
+        "start:worker": "node dist/worker.js"
     },
     "dependencies": {
         "@vendure/admin-ui-plugin": "^3.0.0",
