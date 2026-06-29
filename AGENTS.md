@@ -165,9 +165,32 @@ packages/plugins/<name>/
 │   ├── entities/             # TypeORM entities (one file per entity)
 │   ├── api/                  # GraphQL schema extensions (.graphql files)
 │   └── types.ts              # Plugin-specific TypeScript types
-├── index.ts                  # Public exports only
-└── package.json
+├── index.ts                  # Public exports only — re-exports from ./src/...
+├── tsconfig.json             # extends ../../../tsconfig.base.json, outDir: ./dist, rootDir: .
+└── package.json              # main: ./dist/index.js, types: ./dist/index.d.ts
 ```
+
+**`package.json` required fields:**
+
+```json
+{
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch"
+    }
+}
+```
+
+**`index.ts` required pattern** — always re-export via `./src/`, never `./`:
+
+```typescript
+export { MyPlugin } from './src/my.plugin';
+export { MyService } from './src/my.service';
+```
+
+**Why:** Node resolves `@mivend/plugin-x` → `dist/index.js`. The root `index.ts` compiles to `dist/index.js` and re-exports from `dist/src/...`. Without a root `index.ts`, there is no `dist/index.js` and the server crashes at startup with `Cannot find module`.
 
 Rules:
 
