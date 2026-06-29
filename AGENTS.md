@@ -88,6 +88,12 @@ before it is considered done.
 - Infrastructure: real PostgreSQL + Redis via GitHub Actions services (see `.github/workflows/integration.yml`)
 - Rule: no mocking of the database — integration tests hit a real DB
 
+### E2E tests (Playwright)
+
+- Location: `packages/e2e/storefront/`
+- Requires running dev stack (`make dev`) and seeded data (`make seed`)
+- Before writing or debugging E2E tests, read **`docs/e2e-testing.md`** — it documents known gotchas (stale auth, auto-loadMore instability, cart persistence across runs, ES null vs undefined).
+
 ### Running tests
 
 Always run tests via Makefile, not directly through pnpm:
