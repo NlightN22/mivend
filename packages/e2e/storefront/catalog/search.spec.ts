@@ -29,7 +29,7 @@ test.describe('Catalog search', () => {
         await searchInput.press('Enter');
 
         await page.waitForLoadState('networkidle');
-        await expect(page.getByText('Engine Oil 5W-30')).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText('Engine Oil 5W-30').first()).toBeVisible({ timeout: 10000 });
     });
 
     test('search by OEM code returns matching product', async ({ page }) => {
@@ -38,7 +38,7 @@ test.describe('Catalog search', () => {
         await searchInput.press('Enter');
 
         await page.waitForLoadState('networkidle');
-        await expect(page.getByText('Engine Oil 5W-30')).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText('Engine Oil 5W-30').first()).toBeVisible({ timeout: 10000 });
     });
 
     test('clearing search term restores full catalog', async ({ page }) => {
