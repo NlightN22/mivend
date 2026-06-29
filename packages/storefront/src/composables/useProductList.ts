@@ -63,8 +63,15 @@ interface EsFacetValueResult {
     count: number;
 }
 
-const SEARCH_QUERY = `
-    query CatalogSearch($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+interface SearchResult {
+    totalItems: number;
+    items: EsSearchItem[];
+    facetValues: EsFacetValueResult[];
+}
+
+// Products query — all filters applied
+const PRODUCTS_QUERY = `
+    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
         search(input: {
             term: $term
             take: $take
@@ -95,13 +102,29 @@ const SEARCH_QUERY = `
     }
 `;
 
-// Values from the same facet group → OR (e.g. Castrol OR Lukoil)
-// Values from different facet groups → AND (e.g. brand=Castrol AND category=Engine Oils)
-// facetGroups is passed in to know which id belongs to which facet
-function buildFacetValueFilters(
-    ids: string[],
-    facetGroups: Array<{ values: Array<{ id: string }> }>,
-): { or: string[] }[] {
+// Facets query — only term + price range, NO facetValueFilters
+// This keeps the full facet panel visible regardless of active facet selections.
+const FACETS_QUERY = `
+    query CatalogFacets($term: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+        search(input: {
+            term: $term
+            take: 0
+            skip: 0
+            groupByProduct: true
+            inStock: $inStock
+            priceRangeWithTax: $priceRangeWithTax
+        }) {
+            facetValues {
+                facetValue { id name facet { code name } }
+                count
+            }
+        }
+    }
+`;
+
+// Values from the same facet group → OR (Castrol OR Lukoil)
+// Values from different facet groups → AND (brand=Castrol AND category=Engine Oils)
+function buildFacetValueFilters(ids: string[], facetGroups: FacetGroup[]): { or: string[] }[] {
     if (ids.length === 0) return [];
     const idSet = new Set(ids);
     const groups: string[][] = [];
@@ -113,13 +136,29 @@ function buildFacetValueFilters(
             groupIds.forEach(id => covered.add(id));
         }
     }
-    // Any ids not covered by known groups go into their own OR group
     const uncovered = ids.filter(id => !covered.has(id));
     if (uncovered.length > 0) groups.push(uncovered);
     return groups.map(g => ({ or: g }));
 }
 
-function mapItems(items: EsSearchItem[], facetMap: Map<string, FacetValue>): ProductItem[] {
+function buildFacetGroups(facetValues: EsFacetValueResult[]): FacetGroup[] {
+    const groupMap = new Map<string, FacetGroup>();
+    for (const { facetValue, count } of facetValues) {
+        const { code, name } = facetValue.facet;
+        if (!groupMap.has(code)) groupMap.set(code, { code, name, values: [] });
+        groupMap.get(code)!.values.push({ id: facetValue.id, name: facetValue.name, count });
+    }
+    return [...groupMap.values()].map(g => ({
+        ...g,
+        values: g.values.sort((a, b) => a.name.localeCompare(b.name)),
+    }));
+}
+
+function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): ProductItem[] {
+    const facetMap = new Map<string, FacetValue>();
+    for (const { facetValue } of facetValues) {
+        facetMap.set(facetValue.id, facetValue);
+    }
     return items.map(item => ({
         id: item.productId,
         name: item.productName,
@@ -165,61 +204,36 @@ export function useProductList(options: UseProductListOptions = {}): {
     const sortKey = ref('stock');
     let currentSkip = 0;
 
-    async function fetchPage(skip: number): Promise<{
-        items: ProductItem[];
-        facetGroups: FacetGroup[];
-        total: number;
-    }> {
-        const term = query?.value || undefined;
-        const facetValueIds = filters?.value.facetValueIds ?? [];
-        const inStock = filters?.value.inStock ? true : undefined;
+    function buildPriceRange() {
         const priceMin = filters?.value.priceMin;
         const priceMax = filters?.value.priceMax;
-        const priceRangeWithTax =
-            priceMin != null || priceMax != null
-                ? {
-                      min: priceMin != null ? Math.round(priceMin * 100) : 0,
-                      max: priceMax != null ? Math.round(priceMax * 100) : 999_999_999,
-                  }
-                : undefined;
+        if (priceMin == null && priceMax == null) return undefined;
+        return {
+            min: priceMin != null ? Math.round(priceMin * 100) : 0,
+            max: priceMax != null ? Math.round(priceMax * 100) : 999_999_999,
+        };
+    }
 
-        const result = await shopApi<{
-            search: {
-                totalItems: number;
-                items: EsSearchItem[];
-                facetValues: EsFacetValueResult[];
-            };
-        }>(SEARCH_QUERY, {
+    async function fetchProducts(skip: number): Promise<{ search: SearchResult }> {
+        const term = query?.value || undefined;
+        const facetValueIds = filters?.value.facetValueIds ?? [];
+        return shopApi<{ search: SearchResult }>(PRODUCTS_QUERY, {
             term,
             take: pageSize,
             skip,
             facetValueFilters: buildFacetValueFilters(facetValueIds, facetGroups.value),
-            inStock,
-            priceRangeWithTax,
+            inStock: filters?.value.inStock ? true : undefined,
+            priceRangeWithTax: buildPriceRange(),
         });
+    }
 
-        const facetMap = new Map<string, FacetValue>();
-        for (const { facetValue } of result.search.facetValues) {
-            facetMap.set(facetValue.id, facetValue);
-        }
-
-        // Build facet groups from search result facetValues
-        const groupMap = new Map<string, FacetGroup>();
-        for (const { facetValue, count } of result.search.facetValues) {
-            const { code, name } = facetValue.facet;
-            if (!groupMap.has(code)) groupMap.set(code, { code, name, values: [] });
-            groupMap.get(code)!.values.push({ id: facetValue.id, name: facetValue.name, count });
-        }
-        const groups = [...groupMap.values()].map(g => ({
-            ...g,
-            values: g.values.sort((a, b) => a.name.localeCompare(b.name)),
-        }));
-
-        return {
-            items: mapItems(result.search.items, facetMap),
-            facetGroups: groups,
-            total: result.search.totalItems,
-        };
+    async function fetchFacets(): Promise<{ search: Pick<SearchResult, 'facetValues'> }> {
+        const term = query?.value || undefined;
+        return shopApi<{ search: Pick<SearchResult, 'facetValues'> }>(FACETS_QUERY, {
+            term,
+            inStock: filters?.value.inStock ? true : undefined,
+            priceRangeWithTax: buildPriceRange(),
+        });
     }
 
     let loadSeq = 0;
@@ -227,19 +241,23 @@ export function useProductList(options: UseProductListOptions = {}): {
     async function load(): Promise<void> {
         const seq = ++loadSeq;
         loading.value = true;
-        let page;
+        let productsResult: { search: SearchResult };
+        let facetsResult: { search: Pick<SearchResult, 'facetValues'> };
         try {
-            page = await fetchPage(0);
+            [productsResult, facetsResult] = await Promise.all([fetchProducts(0), fetchFacets()]);
         } catch (e) {
             if (seq === loadSeq) loading.value = false;
             throw e;
         }
-        if (seq !== loadSeq) return; // superseded — discard result, loading already cleared by newer call
-        items.value = page.items;
-        facetGroups.value = page.facetGroups;
-        totalItems.value = page.total;
-        currentSkip = page.items.length;
-        hasMore.value = page.items.length === pageSize && currentSkip < page.total;
+        if (seq !== loadSeq) return;
+
+        facetGroups.value = buildFacetGroups(facetsResult.search.facetValues);
+        items.value = mapItems(productsResult.search.items, facetsResult.search.facetValues);
+        totalItems.value = productsResult.search.totalItems;
+        currentSkip = productsResult.search.items.length;
+        hasMore.value =
+            productsResult.search.items.length === pageSize &&
+            currentSkip < productsResult.search.totalItems;
         loading.value = false;
     }
 
@@ -247,10 +265,10 @@ export function useProductList(options: UseProductListOptions = {}): {
         if (loadingMore.value || !hasMore.value) return;
         loadingMore.value = true;
         try {
-            const page = await fetchPage(currentSkip);
-            items.value = [...items.value, ...page.items];
-            currentSkip += page.items.length;
-            hasMore.value = currentSkip < page.total;
+            const result = await fetchProducts(currentSkip);
+            items.value = [...items.value, ...mapItems(result.search.items, [])];
+            currentSkip += result.search.items.length;
+            hasMore.value = currentSkip < result.search.totalItems;
         } finally {
             loadingMore.value = false;
         }
