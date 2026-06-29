@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
-import { useProductList } from '../../composables/useProductList';
+import { useProductList, type FilterState } from '../../composables/useProductList';
 import CatalogFacets from './CatalogFacets.vue';
 import ProductListView from '../../components/ProductListView.vue';
 
@@ -12,54 +12,31 @@ const authStore = useAuthStore();
 const cartStore = useCartStore();
 
 const searchQuery = ref((route.query.q as string) ?? '');
-const inStockOnly = ref(false);
-const selectedFacetValues = ref(new Set<string>());
+const filters = ref<FilterState>({ facetValueIds: [], inStock: false });
 
-const { items, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore, reset } =
-    useProductList({ pageSize: 24, query: searchQuery });
-
-const facetGroups = computed(() => {
-    const map = new Map<string, { code: string; name: string; values: Map<string, string> }>();
-    for (const p of items.value) {
-        for (const fv of p.facetValues) {
-            if (!map.has(fv.facet.code)) {
-                map.set(fv.facet.code, { code: fv.facet.code, name: fv.facet.name, values: new Map() });
-            }
-            map.get(fv.facet.code)!.values.set(fv.id, fv.name);
-        }
-    }
-    return [...map.values()].map(g => ({
-        code: g.code,
-        name: g.name,
-        values: [...g.values.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
-    }));
-});
-
-const visibleItems = computed(() => {
-    let list = items.value;
-    if (inStockOnly.value) list = list.filter(p => p.variants[0]?.stockLevel !== 'OUT_OF_STOCK');
-    if (selectedFacetValues.value.size > 0) {
-        list = list.filter(p => p.facetValues.some(fv => selectedFacetValues.value.has(fv.id)));
-    }
-    return list;
-});
+const { items, facetGroups, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } =
+    useProductList({ pageSize: 24, query: searchQuery, filters });
 
 function toggleFacetValue(id: string): void {
-    const next = new Set(selectedFacetValues.value);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    selectedFacetValues.value = next;
+    const ids = filters.value.facetValueIds;
+    filters.value = {
+        ...filters.value,
+        facetValueIds: ids.includes(id) ? ids.filter(v => v !== id) : [...ids, id],
+    };
 }
 
 function resetFilters(): void {
-    inStockOnly.value = false;
-    selectedFacetValues.value = new Set();
-    reset();
+    filters.value = { facetValueIds: [], inStock: false };
 }
 
-watch(() => route.query.q, (q) => {
-    searchQuery.value = (q as string) ?? '';
-});
+const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
+
+watch(
+    () => route.query.q,
+    q => {
+        searchQuery.value = (q as string) ?? '';
+    },
+);
 
 onMounted(load);
 </script>
@@ -69,15 +46,15 @@ onMounted(load);
         <div class="catalog-page__inner">
             <CatalogFacets
                 :facet-groups="facetGroups"
-                :in-stock-only="inStockOnly"
+                :in-stock-only="filters.inStock"
                 :selected-facet-values="selectedFacetValues"
-                @update:in-stock-only="inStockOnly = $event"
+                @update:in-stock-only="filters = { ...filters, inStock: $event }"
                 @toggle-facet-value="toggleFacetValue"
                 @reset="resetFilters"
             />
 
             <ProductListView
-                :items="visibleItems"
+                :items="items"
                 :loading="loading"
                 :loading-more="loadingMore"
                 :has-more="hasMore"

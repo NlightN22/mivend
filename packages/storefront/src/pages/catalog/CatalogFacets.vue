@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-    facetGroups: { code: string; name: string; values: { id: string; name: string }[] }[];
+    facetGroups: { code: string; name: string; values: { id: string; name: string; count: number }[] }[];
     inStockOnly: boolean;
     selectedFacetValues: Set<string>;
 }>();
@@ -42,7 +42,7 @@ const emit = defineEmits<{
                     :checked="selectedFacetValues.has(val.id)"
                     @change="emit('toggleFacetValue', val.id)"
                 />
-                <span>{{ val.name }}</span>
+                <span>{{ val.name }} <span class="catalog-facets__count">({{ val.count }})</span></span>
             </label>
         </div>
 
@@ -115,4 +115,6 @@ const emit = defineEmits<{
 }
 
 .catalog-facets__reset:hover { border-color: #00b894; color: #00b894; }
+
+.catalog-facets__count { color: #9aada6; font-size: 12px; }
 </style>
