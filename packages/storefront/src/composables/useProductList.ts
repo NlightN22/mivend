@@ -242,17 +242,21 @@ export function useProductList(options: UseProductListOptions = {}): {
         const seq = ++loadSeq;
         loading.value = true;
         let productsResult: { search: SearchResult };
-        let facetsResult: { search: Pick<SearchResult, 'facetValues'> };
+        let facetsResult: { search: Pick<SearchResult, 'facetValues'> } | null;
         try {
-            [productsResult, facetsResult] = await Promise.all([fetchProducts(0), fetchFacets()]);
+            [productsResult, facetsResult] = await Promise.all([
+                fetchProducts(0),
+                fetchFacets().catch(() => null),
+            ]);
         } catch (e) {
             if (seq === loadSeq) loading.value = false;
             throw e;
         }
         if (seq !== loadSeq) return;
 
-        facetGroups.value = buildFacetGroups(facetsResult.search.facetValues);
-        items.value = mapItems(productsResult.search.items, facetsResult.search.facetValues);
+        const facetValues = facetsResult?.search.facetValues ?? productsResult.search.facetValues;
+        facetGroups.value = buildFacetGroups(facetValues);
+        items.value = mapItems(productsResult.search.items, facetValues);
         totalItems.value = productsResult.search.totalItems;
         currentSkip = productsResult.search.items.length;
         hasMore.value =
