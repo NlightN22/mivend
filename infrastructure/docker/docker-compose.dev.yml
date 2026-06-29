@@ -28,6 +28,7 @@ services:
             - '5433:5432'
         volumes:
             - postgres-branch-data:/var/lib/postgresql/data
+            - ./init-db-branch:/docker-entrypoint-initdb.d:ro
         healthcheck:
             test: ['CMD-SHELL', 'pg_isready -U postgres']
             interval: 10s
