@@ -8,6 +8,7 @@ import type { ProductItem, ViewMode } from '../composables/useProductList';
 
 const props = defineProps<{
     items: ProductItem[];
+    totalItems: number;
     loading: boolean;
     loadingMore: boolean;
     hasMore: boolean;
@@ -97,7 +98,7 @@ function handleToggleFavorite(variantId: string | undefined, p: ProductItem): vo
             <div>
                 <div v-if="title" class="plv-toolbar__title">{{ title }}</div>
                 <div class="plv-toolbar__count">
-                    {{ loading ? 'Loading...' : `${items.length} products found` }}
+                    {{ loading ? 'Loading...' : `${totalItems} products found` }}
                 </div>
             </div>
             <div class="plv-toolbar__right">

@@ -9,7 +9,7 @@ import ProductScrollRow from '../../components/ProductScrollRow.vue';
 
 const authStore = useAuthStore();
 const cartStore = useCartStore();
-const { items, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } = useProductList({ pageSize: 24 });
+const { items, totalItems, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } = useProductList({ pageSize: 24 });
 viewMode.value = 'grid';
 
 const newArrivals = useWidgetProducts('new-arrivals');
@@ -45,6 +45,7 @@ onMounted(() => {
             </div>
             <ProductListView
                 :items="items"
+                :total-items="totalItems"
                 :loading="loading"
                 :loading-more="loadingMore"
                 :has-more="hasMore"

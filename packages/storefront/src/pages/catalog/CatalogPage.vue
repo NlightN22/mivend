@@ -14,7 +14,7 @@ const cartStore = useCartStore();
 const searchQuery = ref((route.query.q as string) ?? '');
 const filters = ref<FilterState>({ facetValueIds: [], inStock: false, priceMin: null, priceMax: null });
 
-const { items, facetGroups, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } =
+const { items, facetGroups, totalItems, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } =
     useProductList({ pageSize: 24, query: searchQuery, filters });
 
 function toggleFacetValue(id: string): void {
@@ -59,6 +59,7 @@ onMounted(load);
 
             <ProductListView
                 :items="items"
+                :total-items="totalItems"
                 :loading="loading"
                 :loading-more="loadingMore"
                 :has-more="hasMore"
