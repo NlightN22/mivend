@@ -35,6 +35,8 @@ export type ViewMode = 'list' | 'grid';
 export interface FilterState {
     facetValueIds: string[];
     inStock: boolean;
+    priceMin: number | null;
+    priceMax: number | null;
 }
 
 interface UseProductListOptions {
@@ -62,7 +64,7 @@ interface EsFacetValueResult {
 }
 
 const SEARCH_QUERY = `
-    query CatalogSearch($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean) {
+    query CatalogSearch($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
         search(input: {
             term: $term
             take: $take
@@ -70,6 +72,7 @@ const SEARCH_QUERY = `
             groupByProduct: true
             facetValueFilters: $facetValueFilters
             inStock: $inStock
+            priceRangeWithTax: $priceRangeWithTax
         }) {
             totalItems
             items {
@@ -92,11 +95,28 @@ const SEARCH_QUERY = `
     }
 `;
 
-function buildFacetValueFilters(ids: string[]): { or: string[] }[] {
+// Values from the same facet group → OR (e.g. Castrol OR Lukoil)
+// Values from different facet groups → AND (e.g. brand=Castrol AND category=Engine Oils)
+// facetGroups is passed in to know which id belongs to which facet
+function buildFacetValueFilters(
+    ids: string[],
+    facetGroups: Array<{ values: Array<{ id: string }> }>,
+): { or: string[] }[] {
     if (ids.length === 0) return [];
-    // Group selected values by facet: within a facet → OR, between facets → AND
-    // For simplicity, treat all selected as a single OR group (same facet use-case)
-    return [{ or: ids }];
+    const idSet = new Set(ids);
+    const groups: string[][] = [];
+    const covered = new Set<string>();
+    for (const group of facetGroups) {
+        const groupIds = group.values.map(v => v.id).filter(id => idSet.has(id));
+        if (groupIds.length > 0) {
+            groups.push(groupIds);
+            groupIds.forEach(id => covered.add(id));
+        }
+    }
+    // Any ids not covered by known groups go into their own OR group
+    const uncovered = ids.filter(id => !covered.has(id));
+    if (uncovered.length > 0) groups.push(uncovered);
+    return groups.map(g => ({ or: g }));
 }
 
 function mapItems(items: EsSearchItem[], facetMap: Map<string, FacetValue>): ProductItem[] {
@@ -153,6 +173,15 @@ export function useProductList(options: UseProductListOptions = {}): {
         const term = query?.value || undefined;
         const facetValueIds = filters?.value.facetValueIds ?? [];
         const inStock = filters?.value.inStock ? true : undefined;
+        const priceMin = filters?.value.priceMin;
+        const priceMax = filters?.value.priceMax;
+        const priceRangeWithTax =
+            priceMin != null || priceMax != null
+                ? {
+                      min: priceMin != null ? Math.round(priceMin * 100) : 0,
+                      max: priceMax != null ? Math.round(priceMax * 100) : 999_999_999,
+                  }
+                : undefined;
 
         const result = await shopApi<{
             search: {
@@ -164,8 +193,9 @@ export function useProductList(options: UseProductListOptions = {}): {
             term,
             take: pageSize,
             skip,
-            facetValueFilters: buildFacetValueFilters(facetValueIds),
+            facetValueFilters: buildFacetValueFilters(facetValueIds, facetGroups.value),
             inStock,
+            priceRangeWithTax,
         });
 
         const facetMap = new Map<string, FacetValue>();

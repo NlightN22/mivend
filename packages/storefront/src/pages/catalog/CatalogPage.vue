@@ -12,7 +12,7 @@ const authStore = useAuthStore();
 const cartStore = useCartStore();
 
 const searchQuery = ref((route.query.q as string) ?? '');
-const filters = ref<FilterState>({ facetValueIds: [], inStock: false });
+const filters = ref<FilterState>({ facetValueIds: [], inStock: false, priceMin: null, priceMax: null });
 
 const { items, facetGroups, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } =
     useProductList({ pageSize: 24, query: searchQuery, filters });
@@ -26,7 +26,7 @@ function toggleFacetValue(id: string): void {
 }
 
 function resetFilters(): void {
-    filters.value = { facetValueIds: [], inStock: false };
+    filters.value = { facetValueIds: [], inStock: false, priceMin: null, priceMax: null };
 }
 
 const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
@@ -48,8 +48,12 @@ onMounted(load);
                 :facet-groups="facetGroups"
                 :in-stock-only="filters.inStock"
                 :selected-facet-values="selectedFacetValues"
+                :price-min="filters.priceMin"
+                :price-max="filters.priceMax"
                 @update:in-stock-only="filters = { ...filters, inStock: $event }"
                 @toggle-facet-value="toggleFacetValue"
+                @update:price-min="filters = { ...filters, priceMin: $event }"
+                @update:price-max="filters = { ...filters, priceMax: $event }"
                 @reset="resetFilters"
             />
 
