@@ -85,6 +85,15 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     async function adjustItem(lineId: string, qty: number): Promise<void> {
+        // Optimistic update — reflect change immediately, sync with server after
+        if (order.value) {
+            order.value = {
+                ...order.value,
+                lines: order.value.lines
+                    .map(l => (l.id === lineId ? { ...l, quantity: qty } : l))
+                    .filter(l => l.quantity > 0),
+            };
+        }
         await shopApi(
             `
             mutation AdjustCartLine($lineId: ID!, $qty: Int!) {
@@ -101,6 +110,13 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     async function removeItem(lineId: string): Promise<void> {
+        // Optimistic update
+        if (order.value) {
+            order.value = {
+                ...order.value,
+                lines: order.value.lines.filter(l => l.id !== lineId),
+            };
+        }
         await shopApi(
             `
             mutation RemoveCartLine($lineId: ID!) {

@@ -42,6 +42,7 @@ export interface FilterState {
 interface UseProductListOptions {
     pageSize?: number;
     query?: Ref<string>;
+    collectionSlug?: Ref<string | undefined>;
     filters?: Ref<FilterState>;
 }
 
@@ -71,7 +72,7 @@ interface SearchResult {
 
 // Products query — all filters applied
 const PRODUCTS_QUERY = `
-    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput, $collectionSlug: String) {
         search(input: {
             term: $term
             take: $take
@@ -80,6 +81,7 @@ const PRODUCTS_QUERY = `
             facetValueFilters: $facetValueFilters
             inStock: $inStock
             priceRangeWithTax: $priceRangeWithTax
+            collectionSlug: $collectionSlug
         }) {
             totalItems
             items {
@@ -102,10 +104,10 @@ const PRODUCTS_QUERY = `
     }
 `;
 
-// Facets query — only term + price range, NO facetValueFilters
+// Facets query — only term + price range + collection, NO facetValueFilters
 // This keeps the full facet panel visible regardless of active facet selections.
 const FACETS_QUERY = `
-    query CatalogFacets($term: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+    query CatalogFacets($term: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput, $collectionSlug: String) {
         search(input: {
             term: $term
             take: 0
@@ -113,6 +115,7 @@ const FACETS_QUERY = `
             groupByProduct: true
             inStock: $inStock
             priceRangeWithTax: $priceRangeWithTax
+            collectionSlug: $collectionSlug
         }) {
             facetValues {
                 facetValue { id name facet { code name } }
@@ -192,7 +195,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     loadMore: () => Promise<void>;
     load: () => Promise<void>;
 } {
-    const { pageSize = 24, query, filters } = options;
+    const { pageSize = 24, query, collectionSlug, filters } = options;
 
     const items = ref<ProductItem[]>([]);
     const facetGroups = ref<FacetGroup[]>([]);
@@ -224,6 +227,7 @@ export function useProductList(options: UseProductListOptions = {}): {
             facetValueFilters: buildFacetValueFilters(facetValueIds, facetGroups.value),
             inStock: filters?.value.inStock ? true : undefined,
             priceRangeWithTax: buildPriceRange(),
+            collectionSlug: collectionSlug?.value || undefined,
         });
     }
 
@@ -233,6 +237,7 @@ export function useProductList(options: UseProductListOptions = {}): {
             term,
             inStock: filters?.value.inStock ? true : undefined,
             priceRangeWithTax: buildPriceRange(),
+            collectionSlug: collectionSlug?.value || undefined,
         });
     }
 
@@ -279,6 +284,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     }
 
     if (query) watch(query, load);
+    if (collectionSlug) watch(collectionSlug, load);
     if (filters) watch(filters, load, { deep: true });
     watch(sortKey, load);
 

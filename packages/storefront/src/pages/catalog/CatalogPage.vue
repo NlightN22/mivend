@@ -12,10 +12,11 @@ const authStore = useAuthStore();
 const cartStore = useCartStore();
 
 const searchQuery = ref((route.query.q as string) ?? '');
+const collectionSlug = ref<string | undefined>((route.query.collection as string) || undefined);
 const filters = ref<FilterState>({ facetValueIds: [], inStock: false, priceMin: null, priceMax: null });
 
 const { items, facetGroups, totalItems, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } =
-    useProductList({ pageSize: 24, query: searchQuery, filters });
+    useProductList({ pageSize: 24, query: searchQuery, collectionSlug, filters });
 
 function toggleFacetValue(id: string): void {
     const ids = filters.value.facetValueIds;
@@ -31,12 +32,16 @@ function resetFilters(): void {
 
 const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
 
-watch(
-    () => route.query.q,
-    q => {
-        searchQuery.value = (q as string) ?? '';
-    },
-);
+watch(() => route.query.q, q => {
+    searchQuery.value = (q as string) ?? '';
+    collectionSlug.value = undefined;
+});
+
+watch(() => route.query.collection, slug => {
+    collectionSlug.value = (slug as string) || undefined;
+    searchQuery.value = '';
+    resetFilters();
+});
 
 onMounted(load);
 </script>
@@ -65,7 +70,7 @@ onMounted(load);
                 :has-more="hasMore"
                 :view-mode="viewMode"
                 :sort-key="sortKey"
-                :title="searchQuery ? `Search: &quot;${searchQuery}&quot;` : 'Product catalog'"
+                :title="searchQuery ? `Search: &quot;${searchQuery}&quot;` : collectionSlug ? collectionSlug : 'Product catalog'"
                 :show-prices="authStore.isLoggedIn"
                 @update:view-mode="viewMode = $event"
                 @update:sort-key="sortKey = $event"
