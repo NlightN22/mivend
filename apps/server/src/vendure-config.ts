@@ -9,6 +9,7 @@ import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { ErpImportPlugin } from '@mivend/plugin-erp-import';
 import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { SearchPlugin, elasticsearchPlugin } from '@mivend/plugin-search';
+import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -39,6 +40,27 @@ export const config: VendureConfig = {
         database: process.env.DB_NAME ?? 'mivend',
     },
     customFields: {
+        Order: [
+            {
+                name: 'erpOrderId',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP Order ID' }],
+            },
+            {
+                name: 'erpStatus',
+                type: 'string',
+                nullable: true,
+                defaultValue: 'PENDING',
+                label: [{ languageCode: LanguageCode.en, value: 'ERP Status' }],
+            },
+            {
+                name: 'erpStatusAt',
+                type: 'datetime',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP Status Updated At' }],
+            },
+        ],
         Product: [
             {
                 name: 'externalId',
@@ -85,6 +107,7 @@ export const config: VendureConfig = {
         CrossReferencePlugin,
         elasticsearchPlugin,
         SearchPlugin,
+        ErpOrderPlugin,
         ...instancePlugins,
     ],
 };

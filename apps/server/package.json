@@ -22,7 +22,8 @@
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-erp-import": "workspace:*",
         "@mivend/plugin-cross-reference": "workspace:*",
-        "@mivend/plugin-search": "workspace:*"
+        "@mivend/plugin-search": "workspace:*",
+        "@mivend/plugin-erp-order": "workspace:*"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

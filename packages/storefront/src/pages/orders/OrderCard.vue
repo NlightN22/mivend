@@ -1,44 +1,60 @@
 <script setup lang="ts">
-export interface OrderData {
-    number: string;
-    meta: string;
-    statusLabel: string;
-    statusVariant: 'default' | 'warning' | 'muted';
-    amount: string;
-    debtLabel: string;
-    debtOk: boolean;
-    thumb: string;
-    preview: string;
-    showPay: boolean;
-    payLabel: string;
-}
+import { computed } from 'vue';
+import type { OrderSummary } from './useOrders';
+import { STATUS_LABEL, STATUS_VARIANT } from './useOrders';
 
-defineProps<{ order: OrderData }>();
+const props = defineProps<{ order: OrderSummary }>();
+
+const statusKey = computed(() => props.order.customFields.erpStatus ?? 'PENDING');
+const statusLabel = computed(() => STATUS_LABEL[statusKey.value] ?? statusKey.value);
+const statusVariant = computed(() => STATUS_VARIANT[statusKey.value] ?? 'default');
+
+const formattedTotal = computed(() => {
+    return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(
+        props.order.totalWithTax / 100,
+    ) + ' ' + (props.order.currencyCode === 'RUB' ? '₽' : props.order.currencyCode);
+});
+
+const meta = computed(() => {
+    const date = new Date(props.order.createdAt).toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+    const addr = props.order.shippingAddress?.streetLine1 ?? '';
+    const count = props.order.lines.length;
+    return [date, addr, `${count} item${count !== 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+});
+
+const preview = computed(() => {
+    const names = props.order.lines.slice(0, 3).map(l => l.productVariant.product.name);
+    const rest = props.order.lines.length - names.length;
+    return rest > 0 ? `${names.join(', ')} and ${rest} more` : names.join(', ');
+});
 </script>
 
 <template>
     <article class="order-card">
         <div class="order-card-head">
             <div>
-                <div class="order-title">Order {{ order.number }}</div>
-                <div class="order-meta">{{ order.meta }}</div>
+                <div class="order-title">Order {{ order.code }}</div>
+                <div class="order-meta">{{ meta }}</div>
             </div>
-            <span class="status-pill" :class="order.statusVariant !== 'default' ? order.statusVariant : ''">
-                {{ order.statusLabel }}
+            <span class="status-pill" :class="statusVariant !== 'default' ? statusVariant : ''">
+                {{ statusLabel }}
             </span>
             <div class="order-pay">
-                <div class="order-sum">{{ order.amount }}</div>
-                <div class="order-debt" :class="{ ok: order.debtOk }">{{ order.debtLabel }}</div>
+                <div class="order-sum">{{ formattedTotal }}</div>
             </div>
         </div>
         <div class="order-card-body">
             <div class="order-preview">
-                <div class="order-thumb">{{ order.thumb }}</div>
-                <div>{{ order.preview }}</div>
+                <div class="order-thumb">📦</div>
+                <div>{{ preview }}</div>
             </div>
             <div class="order-card-actions">
                 <button class="small-btn primary">Open</button>
-                <button v-if="order.showPay" class="small-btn pay">{{ order.payLabel }}</button>
                 <button class="small-btn">Repeat</button>
                 <button class="small-btn">Documents</button>
             </div>
@@ -57,7 +73,7 @@ defineProps<{ order: OrderData }>();
 
 .order-card-head {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 160px 160px;
+    grid-template-columns: minmax(0, 1fr) 200px 160px;
     gap: 14px;
     align-items: center;
     padding: 18px 20px;
@@ -83,16 +99,7 @@ defineProps<{ order: OrderData }>();
     font-size: 21px;
     font-weight: 950;
     letter-spacing: -0.045em;
-    margin-bottom: 3px;
 }
-
-.order-debt {
-    color: #e87800;
-    font-size: 13px;
-    font-weight: 900;
-}
-
-.order-debt.ok { color: #008a64; }
 
 .status-pill {
     display: inline-flex;
@@ -110,6 +117,7 @@ defineProps<{ order: OrderData }>();
 
 .status-pill.muted { background: #eef4f1; color: #5f6e68; }
 .status-pill.warning { background: #fff4e3; color: #a45e00; }
+.status-pill.error { background: #ffeeed; color: #c0362c; }
 
 .order-card-body {
     padding: 16px 20px 18px;
@@ -161,8 +169,6 @@ defineProps<{ order: OrderData }>();
 .small-btn:hover { background: #e4f0eb; }
 .small-btn.primary { background: #00a878; color: #fff; }
 .small-btn.primary:hover { background: #008a64; }
-.small-btn.pay { background: #ff8a00; color: #fff; }
-.small-btn.pay:hover { background: #e87800; }
 
 @media (max-width: 760px) {
     .order-card-head { grid-template-columns: 1fr; }

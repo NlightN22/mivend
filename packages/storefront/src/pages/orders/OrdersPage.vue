@@ -1,76 +1,55 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import AccountSidebar from '../account/AccountSidebar.vue';
-import OrderCard, { type OrderData } from './OrderCard.vue';
+import OrderCard from './OrderCard.vue';
 import OrdersAside from './OrdersAside.vue';
+import { useOrders } from './useOrders';
+import type { ErpStatus } from './useOrders';
+
+const { orders, loading, load } = useOrders();
 
 const activeFilter = ref('all');
+const searchQuery = ref('');
+
+const FILTER_GROUPS: Record<string, ErpStatus[]> = {
+    pending:   ['PENDING', 'SENT_TO_ERP', 'RESERVED'],
+    confirmed: ['CONFIRMED', 'ASSEMBLED'],
+    in_transit: ['SHIPPED'],
+    closed:    ['DELIVERED', 'CANCELLED'],
+};
 
 const filters = [
-    { key: 'all', label: 'All orders 8' },
-    { key: 'erp', label: 'Awaiting ERP 3' },
-    { key: 'assembly', label: 'Assembly 2' },
-    { key: 'ready', label: 'Ready to ship 1' },
-    { key: 'unpaid', label: 'Unpaid 4' },
-    { key: 'closed', label: 'Closed' },
+    { key: 'all',        label: 'All orders' },
+    { key: 'pending',    label: 'In progress' },
+    { key: 'confirmed',  label: 'Confirmed' },
+    { key: 'in_transit', label: 'Shipped' },
+    { key: 'closed',     label: 'Closed' },
 ];
 
-const orders: OrderData[] = [
-    {
-        number: '#348921',
-        meta: 'Today, 14:28 · North Highway, 12 · 7 items',
-        statusLabel: 'Awaiting ERP',
-        statusVariant: 'warning',
-        amount: '42 860 ₽',
-        debtLabel: 'Balance: 42 860 ₽',
-        debtOk: false,
-        thumb: '🛢️',
-        preview: 'Motor oil, oil filter, antifreeze G11 and 4 more items. Reserve will be confirmed after ERP processing.',
-        showPay: true,
-        payLabel: 'Pay',
-    },
-    {
-        number: '#348744',
-        meta: 'Yesterday, 17:10 · North Highway, 12 · 12 items',
-        statusLabel: 'Reserve confirmed',
-        statusVariant: 'default',
-        amount: '86 420 ₽',
-        debtLabel: 'Remaining: 21 420 ₽',
-        debtOk: false,
-        thumb: '🔧',
-        preview: 'Brake pads, spark plugs, wipers and consumables. Partial payment received, remaining balance can be paid separately.',
-        showPay: true,
-        payLabel: 'Pay balance',
-    },
-    {
-        number: '#347982',
-        meta: 'Jun 24 · North Highway, 12 · 5 items',
-        statusLabel: 'Shipped',
-        statusVariant: 'muted',
-        amount: '18 730 ₽',
-        debtLabel: 'Paid in full',
-        debtOk: true,
-        thumb: '📦',
-        preview: 'Order shipped. Documents available, items can be re-added to a new cart via repeat order.',
-        showPay: false,
-        payLabel: '',
-    },
-    {
-        number: '#347611',
-        meta: 'Jun 21 · North Highway, 12 · 19 items',
-        statusLabel: 'Ready to ship',
-        statusVariant: 'default',
-        amount: '124 300 ₽',
-        debtLabel: 'Balance: 124 300 ₽',
-        debtOk: false,
-        thumb: '🚚',
-        preview: 'Order assembled and awaiting shipment. Delivery to current trading point by default.',
-        showPay: true,
-        payLabel: 'Pay',
-    },
-];
+const filteredOrders = computed(() => {
+    let result = orders.value;
 
-const searchQuery = ref('');
+    if (activeFilter.value !== 'all') {
+        const allowed = FILTER_GROUPS[activeFilter.value] ?? [];
+        result = result.filter(o => {
+            const s = o.customFields.erpStatus ?? 'PENDING';
+            return allowed.includes(s as ErpStatus);
+        });
+    }
+
+    if (searchQuery.value.trim()) {
+        const q = searchQuery.value.toLowerCase();
+        result = result.filter(o =>
+            o.code.toLowerCase().includes(q) ||
+            o.lines.some(l => l.productVariant.product.name.toLowerCase().includes(q)) ||
+            (o.shippingAddress?.streetLine1?.toLowerCase().includes(q) ?? false),
+        );
+    }
+
+    return result;
+});
+
+onMounted(() => { void load(); });
 </script>
 
 <template>
@@ -102,9 +81,15 @@ const searchQuery = ref('');
                 </button>
             </div>
 
-            <div class="orders-page-grid">
+            <div v-if="loading" class="orders-state">Loading orders...</div>
+
+            <div v-else-if="filteredOrders.length === 0" class="orders-state">
+                No orders found.
+            </div>
+
+            <div v-else class="orders-page-grid">
                 <div class="orders-page-list">
-                    <OrderCard v-for="order in orders" :key="order.number" :order="order" />
+                    <OrderCard v-for="order in filteredOrders" :key="order.id" :order="order" />
                 </div>
                 <OrdersAside />
             </div>
@@ -192,6 +177,13 @@ const searchQuery = ref('');
     background: #00a878;
     border-color: #00a878;
     color: #fff;
+}
+
+.orders-state {
+    color: #66736e;
+    font-size: 14px;
+    padding: 32px 0;
+    text-align: center;
 }
 
 .orders-page-grid {
