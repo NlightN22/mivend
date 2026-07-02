@@ -44,6 +44,7 @@ const schemaExtension = gql`
             useFactory: (): CustomerPricingPluginOptions => CustomerPricingPlugin.options,
         },
     ],
+    exports: [CustomerPricingService],
     compatibility: '>0.0.0',
 })
 export class CustomerPricingPlugin {

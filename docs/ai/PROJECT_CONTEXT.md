@@ -198,7 +198,8 @@ Registered in `vendure-config.ts` as `orderOptions: { orderCodeStrategy: new Seq
 - Admin API: `upsertDiscountRule` / `bulkUpsertDiscountRules`, mirrors `upsertPriceEntry` pattern.
 - ERP import: `discountRule` record type (`packages/plugins/erp-import/src/handlers/discount-rule.handler.ts`) — imports via `@mivend/plugin-price-entry`'s exported `DiscountRuleService` (not raw SQL, unlike `price.handler.ts`).
 - `MvProductCard`/`MvProductRow` (ui-kit) previously always struck through the raw retail `price` whenever `customerPrice` was present — that violated "retail price never shown" and was unrelated to any real discount. Fixed: strikethrough now only renders from `compareAtPrice`/`oldPrice`, and raw `price` is only shown as a fallback when `customerPrice` is undefined.
-- **`ProductPage.vue` not yet wired** — only catalog grid/list uses `compareAtPrice` so far (see Planned next work).
+- `ProductPage.vue`/`ProductBuyPanel.vue` now wired to `customerPrice`/`compareAtPrice` too (was catalog-only initially).
+- **`CustomerPriceCalculationStrategy`** (`apps/server/src/customer-price-calculation.strategy.ts`) — registered as `orderOptions.orderItemPriceCalculationStrategy`. Reuses `PriceResolutionService` so the price actually charged in an order (`OrderLine.unitPrice`) matches what the customer saw in the catalog/product page — previously Vendure's default strategy just used raw `ProductVariant.listPrice`, making `customerPrice`/discounts catalog-display-only and cosmetic.
 
 ---
 
@@ -272,7 +273,10 @@ ERP callback payload:
 - ✅ `/account` full customer zone + settings + trading points
 - ✅ `/documents`, `/favorites`, `/access-denied`, 404
 - ✅ `MvFavoriteButton` shared ui-kit component — favorites toggle works identically in catalog grid and list views
-- ✅ E2E: orders (incl. ERP status flow) + favorites + catalog segments green (49 tests); full suite last run 94/95 (one flaky test since fixed)
+- ✅ `plugin-price-entry`: `DiscountRule` (facet + time-window % discounts) + `PriceResolutionService` as the single shared source for `customerPrice`/`compareAtPrice`, used by catalog (grid/list/product page) *and* real order pricing
+- ✅ Real order pricing: `CustomerPriceCalculationStrategy` makes `OrderLine.unitPrice` match the discounted price shown in the storefront (previously cosmetic-only)
+- ✅ Counterparty → price type now correctly populates `customer_price_type` (was silently writing to an unused Vendure `CustomerGroup`)
+- ✅ E2E: orders (incl. ERP status flow) + favorites + catalog + discounts + auth + account segments green (51+ tests); full suite last run 94/95 (one flaky test since fixed)
 
 ---
 
@@ -294,46 +298,34 @@ ERP callback payload:
 
 - **Volume/weight-tiered discounts** (follow-up to issue #14, NOT built): business also
   has discounts scaled by purchase weight of a facet-scoped product group (e.g. 15% at
-  500kg, 18% at 800kg, 20% at 1000kg of a brand) — this is cart/order-time pricing, not
-  catalog display, and needs: `weight`/`volume` custom fields on `ProductVariant` (real
-  per-unit properties, not yet in schema), an erp-import extension to populate them, and
-  a custom Vendure `PromotionCondition` (see `has-facet-values-condition` in
-  `@vendure/core` for the pattern) that sums weight across matching order lines instead
-  of counting piece quantity. Vendure's native Promotions engine
-  (`has-facet-values-condition` + `facet-values-percentage-discount-action`) is the
-  right foundation — just needs a weight-aware condition, not a from-scratch pricing
-  engine.
+  500kg, 18% at 800kg, 20% at 1000kg of a brand). Design agreed with the user this
+  session: extend `DiscountRule` with a nullable `minWeightKg` column (flat facet+period
+  rules keep it null); `ProductVariant` needs a real `weight` customField (data already
+  exists in 1C, just isn't sent yet — add to `ProductRecord`/`product.handler.ts`);
+  computed inside `CustomerPriceCalculationStrategy` (`apps/server/src/customer-price-calculation.strategy.ts`,
+  see below) using its `order`/`quantity` args to sum weight across matching facet lines
+  and compare to thresholds — mutually exclusive with the flat discount, highest percent
+  wins (confirmed business rule). UX: a static promo block in the cart (not a live
+  "N kg to next tier" calculator) plus a temporary corner toast when adding a qualifying
+  item to cart from the catalog — both separate, smaller follow-ups.
 - **Wire `/documents` to real backend** (no backend entity yet)
 - **#19**: Counterparty portal roles
 - **#23**: `plugin-popular-products` — after real orders exist
 - Checkout: wire "Pay online" to real acquiring plugin
-- **`ProductPage.vue`** (product detail page) doesn't query `customerPrice`/
-  `compareAtPrice` at all yet — only catalog grid/list (`ProductListView.vue`) was
-  wired this session. Its GraphQL query only fetches raw `variant.price`.
 
 ---
 
 ## Known problems and limitations
 
 - **New Arrivals widget** — filter is `createdAt > 7 days ago`; not actually broken (verified live), just means on a freshly reseeded DB every product qualifies as "new" since all rows were just inserted. Cosmetic-only in dev, will behave correctly once seed data ages.
-- **Counterparty → price type wiring gap**: `erp-import`'s counterparty handler assigns
-  a Vendure `CustomerGroup` for `priceType`, but never populates
-  `plugin-customer-pricing`'s `customer_price_type` table — which is what
-  `PriceEntryService.getPriceTypeCodeForUser()` actually reads. Without it,
-  `customerPrice`/`compareAtPrice` silently resolve to `null` for every ERP-imported
-  customer. Worked around in `packages/e2e/global-setup.ts`
-  (`ensureCustomerPriceType()`) by calling the admin `upsertPriceType` +
-  `setCustomerPriceType` mutations directly after seeding. **Not fixed in the app** —
-  needs the counterparty import flow (or a dedicated event listener) to also upsert
-  `CustomerPriceType` when a counterparty's `priceType` is set/changed.
 - **Collections not in ERP seed** — `make seed` does NOT create collections. On DB reset, mega-menu empty.
 - **No codegen** — raw GQL strings with manual types.
 - **TradingPointsPage** is 451 lines (over 300 limit) — deferred refactor.
 - **DocumentsFilters.vue** dead file in `src/pages/documents/` — not used, can be deleted.
 - **ES must be running** for E2E tests — `make up` before `make test-e2e`. ES yellow status (single node, no replicas) is normal in dev.
-- `make lint`: 0 errors, ~55 warnings (pre-existing in `.stories.ts` + router lazy imports + erp-order new files).
-- `make test`: 77/77 green.
-- E2E: orders + favorites + catalog + discounts segments (52 tests) green; full suite last verified 94/95 (one flaky test since fixed).
+- `make lint`: 0 errors, ~55 warnings (pre-existing in `.stories.ts` + router lazy imports + erp-order new files). `eslint.config.js` now sets `argsIgnorePattern: '^_'` for `no-unused-vars` (needed for strategy interfaces with unused trailing args, e.g. `CustomerPriceCalculationStrategy`).
+- `make test`: 79/79 green.
+- E2E: orders + favorites + catalog + discounts + auth + account segments (51-52 tests) green; full suite last verified 94/95 (one flaky test since fixed).
 
 ---
 

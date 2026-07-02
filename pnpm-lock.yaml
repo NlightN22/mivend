@@ -67,6 +67,9 @@ importers:
             '@mivend/plugin-search':
                 specifier: workspace:*
                 version: link:../../packages/plugins/search
+            '@mivend/plugin-sync':
+                specifier: workspace:*
+                version: link:../../packages/plugins/sync
             '@vendure/admin-ui-plugin':
                 specifier: ^3.0.0
                 version: 3.6.4(express@5.2.1)
@@ -110,6 +113,9 @@ importers:
 
     packages/plugins/counterparty:
         dependencies:
+            '@mivend/plugin-customer-pricing':
+                specifier: workspace:*
+                version: link:../customer-pricing
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)

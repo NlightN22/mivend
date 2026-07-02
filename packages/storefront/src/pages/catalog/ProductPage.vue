@@ -8,7 +8,15 @@ import ProductGallery from './ProductGallery.vue';
 import ProductBuyPanel from './ProductBuyPanel.vue';
 import ProductMainCards from './ProductMainCards.vue';
 
-interface Variant { id: string; sku: string; price: number; currencyCode: string; stockLevel: string; }
+interface Variant {
+  id: string;
+  sku: string;
+  price: number;
+  customerPrice: number | null;
+  compareAtPrice: number | null;
+  currencyCode: string;
+  stockLevel: string;
+}
 interface FacetValue { name: string; facet: { code: string }; }
 interface Product {
   id: string; name: string; slug: string; description: string;
@@ -49,7 +57,7 @@ async function fetchData(slug: string) {
         query ProductDetail($slug: String!) {
           product(slug: $slug) {
             id name slug description
-            variants { id sku price currencyCode stockLevel }
+            variants { id sku price customerPrice compareAtPrice currencyCode stockLevel }
             facetValues { name facet { code } }
           }
         }`, { slug }),
@@ -111,7 +119,8 @@ onMounted(() => { fetchData(route.params.slug as string); });
 
         <ProductBuyPanel
           class="product-page__side"
-          :price="variant ? variant.price / 100 : undefined"
+          :price="variant ? (variant.customerPrice ?? variant.price) / 100 : undefined"
+          :compare-at-price="variant?.compareAtPrice != null ? variant.compareAtPrice / 100 : undefined"
           :currency="variant?.currencyCode ?? 'RUB'"
           :stock-level="variant?.stockLevel"
           :show-prices="authStore.isLoggedIn"

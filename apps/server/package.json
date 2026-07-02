@@ -23,7 +23,8 @@
         "@mivend/plugin-erp-import": "workspace:*",
         "@mivend/plugin-cross-reference": "workspace:*",
         "@mivend/plugin-search": "workspace:*",
-        "@mivend/plugin-erp-order": "workspace:*"
+        "@mivend/plugin-erp-order": "workspace:*",
+        "@mivend/plugin-sync": "workspace:*"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

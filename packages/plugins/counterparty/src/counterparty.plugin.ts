@@ -5,6 +5,7 @@ import {
     VendurePlugin,
 } from '@vendure/core';
 import gql from 'graphql-tag';
+import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 
 import { CounterpartyConsumer } from './consumers/counterparty.consumer';
 import { TradingPointConsumer } from './consumers/trading-point.consumer';
@@ -178,7 +179,7 @@ const adminResolvers = [
 ];
 
 @VendurePlugin({
-    imports: [PluginCommonModule],
+    imports: [PluginCommonModule, CustomerPricingPlugin],
     entities: [Counterparty, TradingPoint, ContactPerson],
     shopApiExtensions: {
         schema: shopApiSchema,

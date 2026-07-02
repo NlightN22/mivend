@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/auth';
 
 interface Props {
   price?: number;
+  compareAtPrice?: number;
   currency?: string;
   stockLevel?: string;
   stock?: number;
@@ -14,6 +15,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   price: undefined,
+  compareAtPrice: undefined,
   currency: 'RUB',
   stockLevel: undefined,
   stock: undefined,
@@ -55,6 +57,13 @@ const stockLabel = computed(() => {
         {{ counterparty?.priceType ? counterparty.priceType + ' price' : 'Customer price' }}
       </div>
 
+      <MvAmountDisplay
+        v-if="showPrices && compareAtPrice !== undefined"
+        :amount="compareAtPrice"
+        :currency="currency ?? 'RUB'"
+        size="sm"
+        class="buy-panel__compare-at-price"
+      />
       <MvAmountDisplay
         v-if="showPrices && price !== undefined"
         :amount="price"
@@ -137,6 +146,7 @@ const stockLabel = computed(() => {
 }
 
 .buy-panel__price-label { font-size: 12px; color: #a8b8b2; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.buy-panel__compare-at-price { font-size: 14px !important; color: #a8b8b2; text-decoration: line-through; margin-bottom: 2px; }
 .buy-panel__price { display: block; font-size: 32px; font-weight: 900; letter-spacing: -0.04em; color: #14231f; line-height: 1; margin-bottom: 6px; }
 .buy-panel__price-hint { font-size: 14px; color: #a8b8b2; margin-bottom: 6px; }
 .buy-panel__price-note { font-size: 12px; color: #a8b8b2; margin-bottom: 16px; }

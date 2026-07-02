@@ -22,6 +22,7 @@
         "typescript": "^5.4.0"
     },
     "dependencies": {
+        "@mivend/plugin-customer-pricing": "workspace:*",
         "graphql-tag": "^2.12.6"
     }
 }

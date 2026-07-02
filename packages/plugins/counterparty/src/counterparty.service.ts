@@ -1,14 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
-    CustomerGroup,
-    CustomerGroupService,
     CustomerService,
     Logger,
     RequestContext,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyUpsertPayload, loggerCtx } from './types';
@@ -18,7 +17,7 @@ export class CounterpartyService {
     constructor(
         private connection: TransactionalConnection,
         private customerService: CustomerService,
-        private customerGroupService: CustomerGroupService,
+        private customerPricingService: CustomerPricingService,
     ) {}
 
     async upsert(ctx: RequestContext, payload: CounterpartyUpsertPayload): Promise<Counterparty> {
@@ -82,7 +81,7 @@ export class CounterpartyService {
             id: customerId,
             customFields: { counterpartyId: counterparty.id } as Record<string, unknown>,
         });
-        await this.syncCustomerPriceGroup(ctx, customerId, counterparty.priceType);
+        await this.assignPriceType(ctx, customerId, counterparty.priceType);
     }
 
     async setCustomerRole(ctx: RequestContext, customerId: ID, role: string): Promise<void> {
@@ -92,39 +91,12 @@ export class CounterpartyService {
         });
     }
 
-    private async syncCustomerPriceGroup(
+    private async assignPriceType(
         ctx: RequestContext,
         customerId: ID,
         priceType: string,
     ): Promise<void> {
-        const repo = this.connection.getRepository(ctx, CustomerGroup);
-
-        let group = await repo.findOne({ where: { name: priceType } });
-        if (!group) {
-            group = await this.customerGroupService.create(ctx, {
-                name: priceType,
-                customFields: {},
-            });
-        }
-
-        const allGroups = await repo.find();
-        for (const g of allGroups) {
-            if (g.id === group.id) continue;
-            try {
-                await this.customerGroupService.removeCustomersFromGroup(ctx, {
-                    customerGroupId: g.id,
-                    customerIds: [customerId],
-                });
-            } catch {
-                // customer wasn't in this group
-            }
-        }
-
-        await this.customerGroupService.addCustomersToGroup(ctx, {
-            customerGroupId: group.id,
-            customerIds: [customerId],
-        });
-
-        Logger.verbose(`Assigned customer ${customerId} to price group "${priceType}"`, loggerCtx);
+        await this.customerPricingService.assignCustomerPriceTypeByCode(ctx, customerId, priceType);
+        Logger.verbose(`Assigned customer ${customerId} to price type "${priceType}"`, loggerCtx);
     }
 }

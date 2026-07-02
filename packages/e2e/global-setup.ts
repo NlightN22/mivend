@@ -64,39 +64,6 @@ async function ensureShippingMethod(token: string): Promise<void> {
     );
 }
 
-async function ensureCustomerPriceType(
-    token: string,
-    customerEmail: string,
-    priceTypeCode: string,
-): Promise<void> {
-    // erp-import's counterparty handler only assigns a Vendure CustomerGroup for
-    // priceType — it does not populate plugin-customer-pricing's customer_price_type
-    // table, which is what PriceEntryService.getPriceTypeCodeForUser() actually reads.
-    // Bootstrap it directly here so customerPrice/compareAtPrice resolve correctly in
-    // e2e tests (see docs/ai/PROJECT_CONTEXT.md known problems for the underlying gap).
-    const { data: priceTypeData } = await adminGql<{ upsertPriceType: { id: string } }>(
-        `mutation($code: String!, $name: String!) { upsertPriceType(code: $code, name: $name) { id } }`,
-        { code: priceTypeCode, name: priceTypeCode },
-        token,
-    );
-
-    const { data: customerData } = await adminGql<{
-        customers: { items: { id: string }[] };
-    }>(
-        `query($email: String!) { customers(options: { filter: { emailAddress: { eq: $email } } }) { items { id } } }`,
-        { email: customerEmail },
-        token,
-    );
-    const customerId = customerData.customers.items[0]?.id;
-    if (!customerId) return;
-
-    await adminGql(
-        `mutation($customerId: ID!, $priceTypeId: ID!) { setCustomerPriceType(customerId: $customerId, priceTypeId: $priceTypeId) { id } }`,
-        { customerId, priceTypeId: priceTypeData.upsertPriceType.id },
-        token,
-    );
-}
-
 async function ensureCountry(token: string, code: string, name: string): Promise<void> {
     const { data } = await adminGql<{ countries: { items: { id: string }[] } }>(
         `query($code: String!) { countries(options: { filter: { code: { eq: $code } } }) { items { id } } }`,
@@ -126,10 +93,6 @@ export default async function globalSetup(): Promise<void> {
     const exchangeId = `e2e-seed-${Date.now()}`;
     await postBatch(exchangeId, seedRecords);
     await waitForRun(exchangeId);
-
-    if (adminToken) {
-        await ensureCustomerPriceType(adminToken, E2E_CUSTOMER.email, 'WHOLESALE');
-    }
 
     const browser = await chromium.launch();
     const context = await browser.newContext({ baseURL: STOREFRONT_URL });

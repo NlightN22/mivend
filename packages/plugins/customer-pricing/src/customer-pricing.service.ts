@@ -89,4 +89,13 @@ export class CustomerPricingService {
 
         return record;
     }
+
+    async assignCustomerPriceTypeByCode(
+        ctx: RequestContext,
+        customerId: ID,
+        priceTypeCode: string,
+    ): Promise<CustomerPriceType> {
+        const priceType = await this.upsertPriceType(ctx, priceTypeCode, priceTypeCode);
+        return this.setCustomerPriceType(ctx, customerId, priceType.id);
+    }
 }
