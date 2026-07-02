@@ -11,6 +11,7 @@ import { ErpImportPlugin } from '@mivend/plugin-erp-import';
 import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { SearchPlugin, elasticsearchPlugin } from '@mivend/plugin-search';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
+import { SyncPlugin, StubErpAdapter } from '@mivend/plugin-sync';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -112,6 +113,18 @@ export const config: VendureConfig = {
         elasticsearchPlugin,
         SearchPlugin,
         ErpOrderPlugin,
+        SyncPlugin.init({
+            instanceType,
+            instanceId: process.env.INSTANCE_ID ?? 'central',
+            redis: {
+                host: process.env.REDIS_HOST ?? 'localhost',
+                port: parseInt(process.env.REDIS_PORT ?? '6379'),
+            },
+            rabbitmq: {
+                url: process.env.RABBITMQ_URL ?? 'amqp://mivend:mivend@localhost:5672',
+            },
+            erpAdapter: new StubErpAdapter(),
+        }),
         ...instancePlugins,
     ],
 };

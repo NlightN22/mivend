@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
+import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 
 interface Props {
   name: string;
@@ -20,6 +21,7 @@ interface Props {
   variantId?: string;
   cartQty?: number;
   cartLineId?: string;
+  isFavorited?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -36,11 +38,13 @@ const props = withDefaults(defineProps<Props>(), {
   variantId: undefined,
   cartQty: 0,
   cartLineId: undefined,
+  isFavorited: false,
 });
 
 const emit = defineEmits<{
   'add-to-cart': [variantId: string | undefined];
   'update-cart-qty': [lineId: string, qty: number];
+  'toggle-favorite': [variantId: string | undefined];
   'view-analogs': [];
 }>();
 
@@ -115,6 +119,11 @@ function onStepperChange(qty: number): void {
     </div>
 
     <div class="mv-product-row__actions">
+      <MvFavoriteButton
+        class="mv-product-row__fav"
+        :is-favorited="isFavorited"
+        @toggle="emit('toggle-favorite', variantId)"
+      />
       <slot name="actions">
         <template v-if="canOrder">
           <MvQtyStepper

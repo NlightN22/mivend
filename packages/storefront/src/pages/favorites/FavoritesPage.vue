@@ -141,6 +141,7 @@ function handleClearUnavailable(): void {
               :key="card.id"
               :product="card"
               @add-to-cart="(id, qty) => cartStore.addItem(id, qty)"
+              @remove="handleRemove"
             />
           </div>
 

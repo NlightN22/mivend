@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
+import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 
 interface Props {
   name: string;
@@ -55,15 +56,11 @@ const canOrder = computed(() => props.stockVariant !== 'out');
       </div>
     </a>
 
-    <button
+    <MvFavoriteButton
       class="mv-product-card__fav"
-      :class="{ 'mv-product-card__fav--active': isFavorited }"
-      type="button"
-      aria-label="Toggle favorite"
-      @click="emit('toggle-favorite', variantId)"
-    >
-      {{ isFavorited ? '♥' : '♡' }}
-    </button>
+      :is-favorited="isFavorited"
+      @toggle="emit('toggle-favorite', variantId)"
+    />
 
     <div class="mv-product-card__body">
       <div class="mv-product-card__meta">
@@ -178,31 +175,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 36px;
-  height: 36px;
-  border: 1px solid #dde7e2;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  display: grid;
-  place-items: center;
-  color: #a4afa9;
-  font-size: 18px;
-  cursor: pointer;
   box-shadow: 0 8px 18px rgba(27, 45, 38, 0.08);
-  line-height: 1;
-  transition: border-color 0.14s, color 0.14s, background 0.14s;
-}
-
-.mv-product-card__fav--active {
-  border-color: #ffd2df;
-  background: #fff7fa;
-  color: #ff4f88;
-}
-
-.mv-product-card__fav:hover {
-  color: #ff4f88;
-  border-color: #ffd2df;
-  background: #fff7fa;
 }
 
 .mv-product-card__body {

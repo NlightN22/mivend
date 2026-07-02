@@ -34,6 +34,8 @@ export { default as MvModal } from './components/MvModal/MvModal.vue';
 export { default as MvLogo } from './components/MvLogo/MvLogo.vue';
 export type { LogoSize } from './components/MvLogo/MvLogo.vue';
 
+export { default as MvFavoriteButton } from './components/MvFavoriteButton/MvFavoriteButton.vue';
+
 export { default as MvProductCard } from './components/MvProductCard/MvProductCard.vue';
 
 export { default as MvProductRow } from './components/MvProductRow/MvProductRow.vue';

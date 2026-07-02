@@ -21,21 +21,25 @@ export class ErpOrderService {
     }
 
     async updateStatus(ctx: RequestContext, payload: ErpStatusUpdatePayload): Promise<void> {
-        const order = await this.connection.rawConnection
-            .getRepository(Order)
-            .findOne({ where: { code: payload.orderCode } });
+        const repo = this.connection.getRepository(ctx, Order);
+        const order = await repo.findOne({ where: { code: payload.orderCode } });
 
         if (!order) {
             this.logger.warn(`updateStatus: order not found for code=${payload.orderCode}`);
             return;
         }
 
-        order.customFields.erpStatus = payload.status;
-        order.customFields.erpStatusAt = new Date();
-        if (payload.erpOrderId) {
-            order.customFields.erpOrderId = payload.erpOrderId;
-        }
-        await this.connection.rawConnection.getRepository(Order).save(order);
+        // `repo.update()` issues a plain SQL UPDATE without loading/recomputing
+        // the full entity — `save()` would recompute calculated fields (discounts,
+        // taxSummary) which require lines/surcharges to be joined, crashing the process.
+        await repo.update(order.id, {
+            customFields: {
+                ...order.customFields,
+                erpStatus: payload.status,
+                erpStatusAt: new Date(),
+                ...(payload.erpOrderId ? { erpOrderId: payload.erpOrderId } : {}),
+            },
+        });
         this.logger.log(`Order ${order.code} status → ${payload.status}`);
     }
 }
