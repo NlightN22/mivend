@@ -144,4 +144,24 @@ export const seedRecords = [
             isActive: true,
         },
     },
+    {
+        type: 'tradingPoint' as const,
+        data: {
+            erpId: 'e2e-tp-002',
+            counterpartyErpId: E2E_COUNTERPARTY_ID,
+            name: 'E2E North Depot',
+            address: 'North Ave 42',
+            isActive: true,
+        },
+    },
+    {
+        type: 'tradingPoint' as const,
+        data: {
+            erpId: 'e2e-tp-003',
+            counterpartyErpId: E2E_COUNTERPARTY_ID,
+            name: 'E2E Warehouse',
+            address: 'Warehouse Rd 7',
+            isActive: true,
+        },
+    },
 ];

@@ -46,11 +46,18 @@ If a previous run added items to the cart, the next run sees `cartQty > 0` on al
 **Rule:** any test that depends on cart state must clear it first:
 
 ```typescript
-await page.request.post('http://localhost:3000/shop-api', {
+const base = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
+await page.request.post(`${base}/shop-api`, {
     data: { query: 'mutation { removeAllOrderLines { __typename } }' },
     headers: { 'Content-Type': 'application/json' },
 });
 ```
+
+> **Why the storefront URL, not the backend directly?**
+> `page.request` sends the browser's session cookie. That cookie was obtained via the storefront
+> proxy (`localhost:5173`), so browsers scope it to that origin. Calling `localhost:3000` directly
+> bypasses the proxy and the request arrives without a session, clearing a different (anonymous)
+> cart instead of the test user's cart.
 
 ### 3. Stale auth cookies after server restart
 

@@ -1,5 +1,6 @@
 import { ref, watch, type Ref } from 'vue';
 import { shopApi } from '../api/client';
+import { useViewMode } from './useViewMode';
 
 interface ProductVariant {
     id: string;
@@ -19,7 +20,7 @@ export interface FacetValue {
 export interface FacetGroup {
     code: string;
     name: string;
-    values: { id: string; name: string; count: number }[];
+    values: { id: string; code: string; name: string; count: number }[];
 }
 
 export interface ProductItem {
@@ -42,7 +43,6 @@ export interface FilterState {
 interface UseProductListOptions {
     pageSize?: number;
     query?: Ref<string>;
-    collectionSlug?: Ref<string | undefined>;
     filters?: Ref<FilterState>;
 }
 
@@ -72,7 +72,7 @@ interface SearchResult {
 
 // Products query — all filters applied
 const PRODUCTS_QUERY = `
-    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput, $collectionSlug: String) {
+    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
         search(input: {
             term: $term
             take: $take
@@ -81,7 +81,6 @@ const PRODUCTS_QUERY = `
             facetValueFilters: $facetValueFilters
             inStock: $inStock
             priceRangeWithTax: $priceRangeWithTax
-            collectionSlug: $collectionSlug
         }) {
             totalItems
             items {
@@ -97,17 +96,17 @@ const PRODUCTS_QUERY = `
                 customerPrice
             }
             facetValues {
-                facetValue { id name facet { code name } }
+                facetValue { id code name facet { code name } }
                 count
             }
         }
     }
 `;
 
-// Facets query — only term + price range + collection, NO facetValueFilters
+// Facets query — only term + price range, NO facetValueFilters
 // This keeps the full facet panel visible regardless of active facet selections.
 const FACETS_QUERY = `
-    query CatalogFacets($term: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput, $collectionSlug: String) {
+    query CatalogFacets($term: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
         search(input: {
             term: $term
             take: 0
@@ -115,10 +114,9 @@ const FACETS_QUERY = `
             groupByProduct: true
             inStock: $inStock
             priceRangeWithTax: $priceRangeWithTax
-            collectionSlug: $collectionSlug
         }) {
             facetValues {
-                facetValue { id name facet { code name } }
+                facetValue { id code name facet { code name } }
                 count
             }
         }
@@ -149,7 +147,14 @@ function buildFacetGroups(facetValues: EsFacetValueResult[]): FacetGroup[] {
     for (const { facetValue, count } of facetValues) {
         const { code, name } = facetValue.facet;
         if (!groupMap.has(code)) groupMap.set(code, { code, name, values: [] });
-        groupMap.get(code)!.values.push({ id: facetValue.id, name: facetValue.name, count });
+        groupMap
+            .get(code)!
+            .values.push({
+                id: facetValue.id,
+                code: facetValue.code,
+                name: facetValue.name,
+                count,
+            });
     }
     return [...groupMap.values()].map(g => ({
         ...g,
@@ -191,11 +196,12 @@ export function useProductList(options: UseProductListOptions = {}): {
     loadingMore: Ref<boolean>;
     hasMore: Ref<boolean>;
     viewMode: Ref<ViewMode>;
+    setViewMode: (mode: ViewMode) => void;
     sortKey: Ref<string>;
     loadMore: () => Promise<void>;
     load: () => Promise<void>;
 } {
-    const { pageSize = 24, query, collectionSlug, filters } = options;
+    const { pageSize = 24, query, filters } = options;
 
     const items = ref<ProductItem[]>([]);
     const facetGroups = ref<FacetGroup[]>([]);
@@ -203,7 +209,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     const loading = ref(false);
     const loadingMore = ref(false);
     const hasMore = ref(true);
-    const viewMode = ref<ViewMode>('list');
+    const { viewMode, setViewMode } = useViewMode();
     const sortKey = ref('stock');
     let currentSkip = 0;
 
@@ -227,7 +233,6 @@ export function useProductList(options: UseProductListOptions = {}): {
             facetValueFilters: buildFacetValueFilters(facetValueIds, facetGroups.value),
             inStock: filters?.value.inStock ? true : undefined,
             priceRangeWithTax: buildPriceRange(),
-            collectionSlug: collectionSlug?.value || undefined,
         });
     }
 
@@ -237,7 +242,6 @@ export function useProductList(options: UseProductListOptions = {}): {
             term,
             inStock: filters?.value.inStock ? true : undefined,
             priceRangeWithTax: buildPriceRange(),
-            collectionSlug: collectionSlug?.value || undefined,
         });
     }
 
@@ -284,7 +288,6 @@ export function useProductList(options: UseProductListOptions = {}): {
     }
 
     if (query) watch(query, load);
-    if (collectionSlug) watch(collectionSlug, load);
     if (filters) watch(filters, load, { deep: true });
     watch(sortKey, load);
 
@@ -296,6 +299,7 @@ export function useProductList(options: UseProductListOptions = {}): {
         loadingMore,
         hasMore,
         viewMode,
+        setViewMode,
         sortKey,
         loadMore,
         load,

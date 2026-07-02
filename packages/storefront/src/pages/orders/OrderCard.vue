@@ -54,7 +54,7 @@ const preview = computed(() => {
                 <div>{{ preview }}</div>
             </div>
             <div class="order-card-actions">
-                <button class="small-btn primary">Open</button>
+                <router-link :to="`/orders/${order.id}`" class="small-btn primary">Open</router-link>
                 <button class="small-btn">Repeat</button>
                 <button class="small-btn">Documents</button>
             </div>

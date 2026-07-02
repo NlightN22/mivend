@@ -9,7 +9,12 @@ const STEPPER_DEC = '.mv-qty-stepper__btn:first-child';
 const FIRST_ROW = '.mv-product-row:first-of-type';
 
 async function clearCart(page: Page): Promise<void> {
-    await page.request.post('http://localhost:3000/shop-api', {
+    const url = `${process.env.STOREFRONT_URL ?? 'http://localhost:5173'}/shop-api`;
+    await page.request.post(url, {
+        data: { query: 'mutation { transitionOrderToState(state: "AddingItems") { __typename } }' },
+        headers: { 'Content-Type': 'application/json' },
+    });
+    await page.request.post(url, {
         data: { query: 'mutation { removeAllOrderLines { __typename } }' },
         headers: { 'Content-Type': 'application/json' },
     });

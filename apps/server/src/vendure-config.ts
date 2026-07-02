@@ -1,5 +1,6 @@
 import path from 'path';
 import { LanguageCode, VendureConfig } from '@vendure/core';
+import { SequentialOrderCodeStrategy } from './order-code.strategy';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import { BullMQJobQueuePlugin } from '@vendure/job-queue-plugin/package/bullmq';
@@ -76,6 +77,9 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'On Sale' }],
             },
         ],
+    },
+    orderOptions: {
+        orderCodeStrategy: new SequentialOrderCodeStrategy(),
     },
     paymentOptions: {
         paymentMethodHandlers: [],

@@ -58,6 +58,9 @@ importers:
             '@mivend/plugin-erp-import':
                 specifier: workspace:*
                 version: link:../../packages/plugins/erp-import
+            '@mivend/plugin-erp-order':
+                specifier: workspace:*
+                version: link:../../packages/plugins/erp-order
             '@mivend/plugin-price-entry':
                 specifier: workspace:*
                 version: link:../../packages/plugins/price-entry
@@ -216,6 +219,34 @@ importers:
                 specifier: ^4.1.9
                 version: 4.1.9(@types/node@20.19.43)(vite@8.1.0(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.0))
 
+    packages/plugins/erp-order:
+        dependencies:
+            '@nestjs/common':
+                specifier: ^11.0.0
+                version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)
+            '@nestjs/core':
+                specifier: ^11.0.0
+                version: 11.1.27(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.27)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+            '@nestjs/graphql':
+                specifier: ^13.0.0
+                version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
+            '@vendure/core':
+                specifier: ^3.6.4
+                version: 3.6.4(@types/express@4.17.25)(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+            graphql:
+                specifier: ^16.0.0
+                version: 16.14.2
+            graphql-tag:
+                specifier: ^2.12.6
+                version: 2.12.7(graphql@16.14.2)
+        devDependencies:
+            '@types/express':
+                specifier: ^4.17.0
+                version: 4.17.25
+            typescript:
+                specifier: ^5.4.0
+                version: 5.9.3
+
     packages/plugins/price-entry:
         dependencies:
             graphql-tag:
@@ -286,6 +317,9 @@ importers:
 
     packages/plugins/sync:
         dependencies:
+            '@mivend/plugin-erp-order':
+                specifier: workspace:*
+                version: link:../erp-order
             amqplib:
                 specifier: ^0.10.4
                 version: 0.10.9
@@ -302,6 +336,9 @@ importers:
             '@types/amqplib':
                 specifier: ^0.10.0
                 version: 0.10.8
+            '@types/express':
+                specifier: ^4.17.0
+                version: 4.17.25
             '@vendure/common':
                 specifier: ^3.0.0
                 version: 3.6.4
@@ -9240,6 +9277,12 @@ packages:
                 integrity: sha512-Fe1jyPJoUGpJOYKOri44jduR7My4yYINOMJISuMAbmrs+L5LbIDUc8NTWZYY3EJLK0yPLuCmcd5zoCsE4k2/KA==,
             }
 
+    vue-component-type-helpers@3.3.6:
+        resolution:
+            {
+                integrity: sha512-FkljacAwJ9BUoSUdpFe3VDy0sGigNlTH9+2zcXUWmZOjN8swiCkl3t48wOJun0OsUd2cEIda1l04tsxMiKIIrQ==,
+            }
+
     vue-demi@0.14.10:
         resolution:
             {
@@ -11372,7 +11415,7 @@ snapshots:
             ts-dedent: 2.3.0
             type-fest: 2.19.0
             vue: 3.5.39(typescript@5.9.3)
-            vue-component-type-helpers: 3.3.5
+            vue-component-type-helpers: 3.3.6
 
     '@sxzz/popperjs-es@2.11.8': {}
 
@@ -15140,6 +15183,8 @@ snapshots:
     vue-component-type-helpers@2.2.12: {}
 
     vue-component-type-helpers@3.3.5: {}
+
+    vue-component-type-helpers@3.3.6: {}
 
     vue-demi@0.14.10(vue@3.5.39(typescript@5.9.3)):
         dependencies:

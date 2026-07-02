@@ -20,6 +20,7 @@ export const ERP_ORDER_STATUSES = [
 export type ErpOrderStatus = (typeof ERP_ORDER_STATUSES)[number];
 
 export interface ErpStatusUpdatePayload {
-    erpOrderId: string;
+    orderCode: string;
     status: ErpOrderStatus;
+    erpOrderId?: string;
 }

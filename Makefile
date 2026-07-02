@@ -6,7 +6,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
 
 .PHONY: up down logs ps restart \
         build lint fmt \
-        test test-int \
+        test test-int test-e2e \
         e2e e2e-ui e2e-report \
         docker-build docker-push \
         prod-up prod-down \
@@ -16,7 +16,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
 
 up:
-	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --build
 
 down:
 	$(COMPOSE_DEV) down
@@ -109,7 +109,7 @@ prod-down:
 
 # ── E2E tests ──────────────────────────────────────────────────────────────────
 
-e2e:
+e2e test-e2e:
 	pnpm --filter @mivend/e2e test
 
 e2e-ui:

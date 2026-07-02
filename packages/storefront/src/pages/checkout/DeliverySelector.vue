@@ -1,14 +1,56 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { MvModal } from '@mivend/ui-kit';
 import { useCheckoutStore } from '../../stores/checkout';
 import { useAuthStore } from '../../stores/auth';
+import { shopApi } from '../../api/client';
 
 const checkoutStore = useCheckoutStore();
 const authStore = useAuthStore();
 
-const tradingPointAddress = computed(() =>
-    authStore.tradingPoint?.address ?? 'Trading point not selected',
-);
+const tradingPointName = computed(() => authStore.tradingPoint?.name ?? 'Trading point not selected');
+const tradingPointAddress = computed(() => authStore.tradingPoint?.address ?? '');
+
+// ── Change point modal ──────────────────────────────────────────────────────
+
+interface PointOption {
+    id: string;
+    name: string;
+    address: string;
+}
+
+const modalOpen = ref(false);
+const points = ref<PointOption[]>([]);
+const loadingPoints = ref(false);
+const savingId = ref<string | null>(null);
+
+async function openModal(): Promise<void> {
+    modalOpen.value = true;
+    if (points.value.length) return;
+    loadingPoints.value = true;
+    try {
+        const result = await shopApi<{ myTradingPoints: PointOption[] }>(
+            `{ myTradingPoints { id name address } }`,
+        );
+        points.value = result.myTradingPoints ?? [];
+    } finally {
+        loadingPoints.value = false;
+    }
+}
+
+async function selectPoint(id: string): Promise<void> {
+    if (savingId.value) return;
+    savingId.value = id;
+    try {
+        await shopApi(`mutation($id: ID!) { setPreferredTradingPoint(tradingPointId: $id) }`, { id });
+        await authStore.fetchCurrentCustomer();
+        modalOpen.value = false;
+    } finally {
+        savingId.value = null;
+    }
+}
+
+const currentId = computed(() => authStore.customer?.customFields?.preferredTradingPointId ?? null);
 </script>
 
 <template>
@@ -16,9 +58,13 @@ const tradingPointAddress = computed(() =>
         <div class="delivery-selector__head">
             <div>
                 <h2 class="delivery-selector__title">Delivery</h2>
-                <p class="delivery-selector__subtitle">Delivery to your current trading point.</p>
+                <p class="delivery-selector__subtitle">
+                    Delivery to your current trading point.
+                </p>
             </div>
-            <button class="delivery-selector__change-btn" type="button">Change point</button>
+            <button class="delivery-selector__change-btn" type="button" @click="openModal">
+                Change point
+            </button>
         </div>
         <div class="delivery-selector__grid">
             <button
@@ -27,10 +73,10 @@ const tradingPointAddress = computed(() =>
                 type="button"
                 @click="checkoutStore.setDelivery('courier')"
             >
-                <div class="delivery-selector__card-title">
-                    <span>🚚</span> Courier
-                </div>
-                <p class="delivery-selector__card-note">{{ tradingPointAddress }} · today until 18:00 · per contract terms.</p>
+                <div class="delivery-selector__card-title"><span>🚚</span> Courier</div>
+                <p class="delivery-selector__card-note">
+                    {{ tradingPointAddress || tradingPointName }} · today until 18:00 · per contract terms.
+                </p>
             </button>
             <button
                 class="delivery-selector__card"
@@ -38,13 +84,38 @@ const tradingPointAddress = computed(() =>
                 type="button"
                 @click="checkoutStore.setDelivery('pickup')"
             >
-                <div class="delivery-selector__card-title">
-                    <span>🏬</span> Self-pickup
-                </div>
-                <p class="delivery-selector__card-note">Central warehouse · available after assembly confirmation.</p>
+                <div class="delivery-selector__card-title"><span>🏬</span> Self-pickup</div>
+                <p class="delivery-selector__card-note">
+                    Central warehouse · available after assembly confirmation.
+                </p>
             </button>
         </div>
     </article>
+
+    <MvModal v-if="modalOpen" title="Select trading point" @close="modalOpen = false">
+        <div v-if="loadingPoints" class="ds-modal-loading">Loading…</div>
+        <div v-else-if="!points.length" class="ds-modal-empty">No trading points found.</div>
+        <ul v-else class="ds-point-list">
+            <li
+                v-for="pt in points"
+                :key="pt.id"
+                class="ds-point-item"
+                :class="{
+                    'ds-point-item--active': pt.id === currentId,
+                    'ds-point-item--saving': savingId === pt.id,
+                }"
+                @click="selectPoint(pt.id)"
+            >
+                <div class="ds-point-item__check">
+                    <span v-if="pt.id === currentId">✓</span>
+                </div>
+                <div>
+                    <div class="ds-point-item__name">{{ pt.name }}</div>
+                    <div class="ds-point-item__addr">{{ pt.address }}</div>
+                </div>
+            </li>
+        </ul>
+    </MvModal>
 </template>
 
 <style scoped>
@@ -90,6 +161,8 @@ const tradingPointAddress = computed(() =>
     flex: 0 0 auto;
 }
 
+.delivery-selector__change-btn:hover { background: #e6f0ec; }
+
 .delivery-selector__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -127,6 +200,74 @@ const tradingPointAddress = computed(() =>
     color: #66736e;
     font-size: 13px;
     line-height: 1.4;
+}
+
+/* Modal content */
+.ds-modal-loading,
+.ds-modal-empty {
+    text-align: center;
+    padding: 24px 0;
+    color: #66736e;
+    font-size: 14px;
+}
+
+.ds-point-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.ds-point-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid #dde7e2;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: 0.14s ease;
+}
+
+.ds-point-item:hover { background: #f3f8f6; border-color: #b0ccbf; }
+
+.ds-point-item--active {
+    border-color: #00a878;
+    background: linear-gradient(135deg, #fff, #f3fff7);
+}
+
+.ds-point-item--saving { opacity: 0.6; pointer-events: none; }
+
+.ds-point-item__check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #dde7e2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #00a878;
+    flex-shrink: 0;
+}
+
+.ds-point-item--active .ds-point-item__check {
+    border-color: #00a878;
+    background: #00a878;
+    color: #fff;
+}
+
+.ds-point-item__name {
+    font-size: 14px;
+    font-weight: 800;
+    color: #14231f;
+    margin-bottom: 2px;
+}
+
+.ds-point-item__addr {
+    font-size: 13px;
+    color: #66736e;
 }
 
 @media (max-width: 900px) {

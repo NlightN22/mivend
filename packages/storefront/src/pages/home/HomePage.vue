@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useAuthStore } from '../../stores/auth';
-import { useCartStore } from '../../stores/cart';
 import { useProductList } from '../../composables/useProductList';
 import { useWidgetProducts } from '../../composables/useWidgetProducts';
 import ProductListView from '../../components/ProductListView.vue';
 import ProductScrollRow from '../../components/ProductScrollRow.vue';
 
 const authStore = useAuthStore();
-const cartStore = useCartStore();
-const { items, totalItems, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } = useProductList({ pageSize: 24 });
-viewMode.value = 'grid';
+const { items, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode, sortKey, load, loadMore } = useProductList({ pageSize: 24 });
 
 const newArrivals = useWidgetProducts('new-arrivals');
 const sales = useWidgetProducts('sales');
@@ -53,10 +50,9 @@ onMounted(() => {
                 :sort-key="sortKey"
                 :show-prices="authStore.isLoggedIn"
                 :grid-columns="5"
-                @update:view-mode="viewMode = $event"
+                @update:view-mode="setViewMode($event)"
                 @update:sort-key="sortKey = $event"
                 @load-more="loadMore"
-                @add-to-cart="(variantId, qty) => cartStore.addItem(variantId, qty)"
             />
         </div>
     </main>

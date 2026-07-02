@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
-import { useCartStore } from '../stores/cart';
 import { useFavoritesStore } from '../stores/favorites';
+import { useCartActions } from '../composables/useCartActions';
 import type { FavoriteItem } from '../stores/favorites';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 
@@ -23,12 +23,11 @@ const emit = defineEmits<{
     'update:viewMode': [v: ViewMode];
     'update:sortKey': [v: string];
     'loadMore': [];
-    'addToCart': [variantId: string, qty: number];
 }>();
 
 const authStore = useAuthStore();
-const cartStore = useCartStore();
 const favoritesStore = useFavoritesStore();
+const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
 const sentinel = ref<HTMLElement | null>(null);
 const gridStyle = computed(() =>
     props.gridColumns ? `repeat(${props.gridColumns}, minmax(0, 1fr))` : 'repeat(4, minmax(0, 1fr))'
@@ -59,18 +58,6 @@ function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out' }
     return { stockVariant: stockVariantFor(stockLevel) };
 }
 
-function cartLineFor(variantId: string | undefined) {
-    if (!variantId) return null;
-    return cartStore.lines.find(l => l.productVariant.id === variantId) ?? null;
-}
-
-async function handleCartQty(lineId: string, qty: number): Promise<void> {
-    if (qty === 0) {
-        await cartStore.removeItem(lineId);
-    } else {
-        await cartStore.adjustItem(lineId, qty);
-    }
-}
 
 function buildFavoriteItem(p: ProductItem): FavoriteItem {
     const variant = p.variants[0];
@@ -150,8 +137,8 @@ function handleToggleFavorite(variantId: string | undefined, p: ProductItem): vo
                     :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
                     :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="(variantId: string | undefined) => variantId && emit('addToCart', variantId, 1)"
-                    @update-cart-qty="handleCartQty"
+                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId)"
+                    @update-cart-qty="onUpdateQty"
                     @view-analogs="() => {}"
                 />
             </div>
@@ -175,9 +162,10 @@ function handleToggleFavorite(variantId: string | undefined, p: ProductItem): vo
                     :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="(variantId: string | undefined) => variantId && emit('addToCart', variantId, 1)"
-                    @update-cart-qty="handleCartQty"
+                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId)"
+                    @update-cart-qty="onUpdateQty"
                     @toggle-favorite="(variantId: string | undefined) => handleToggleFavorite(variantId, p)"
+                    @view-analogs="() => {}"
                 />
             </div>
         </template>

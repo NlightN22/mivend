@@ -53,6 +53,8 @@ const ACTIVE_ORDER_QUERY = `
 
 export const useCartStore = defineStore('cart', () => {
     const order = ref<ActiveOrder | null>(null);
+    // Counts in-flight adjust/remove mutations; fetchCart skips update while non-zero
+    let pendingMutations = 0;
 
     const lines = computed(() => order.value?.lines ?? []);
     const itemCount = computed(() => lines.value.length);
@@ -62,25 +64,78 @@ export const useCartStore = defineStore('cart', () => {
     async function fetchCart(): Promise<void> {
         try {
             const result = await shopApi<{ activeOrder: ActiveOrder | null }>(ACTIVE_ORDER_QUERY);
-            order.value = result.activeOrder;
+            if (pendingMutations === 0) order.value = result.activeOrder;
         } catch {
-            order.value = null;
+            if (pendingMutations === 0) order.value = null;
         }
     }
 
     async function addItem(variantId: string, qty: number): Promise<void> {
-        await shopApi(
-            `
-            mutation AddToCart($variantId: ID!, $qty: Int!) {
-                addItemToOrder(productVariantId: $variantId, quantity: $qty) {
-                    __typename
-                    ... on Order { id totalWithTax lines { id quantity } }
-                    ... on ErrorResult { errorCode message }
-                }
+        // Optimistic: insert a temp line so badge + stepper appear instantly
+        const tempId = `optimistic-${variantId}`;
+        if (order.value) {
+            const existing = order.value.lines.find(l => l.productVariant.id === variantId);
+            if (existing) {
+                order.value = {
+                    ...order.value,
+                    lines: order.value.lines.map(l =>
+                        l.id === existing.id ? { ...l, quantity: l.quantity + qty } : l,
+                    ),
+                };
+            } else {
+                order.value = {
+                    ...order.value,
+                    lines: [
+                        ...order.value.lines,
+                        {
+                            id: tempId,
+                            quantity: qty,
+                            productVariant: { id: variantId },
+                        } as CartLine,
+                    ],
+                };
             }
-        `,
-            { variantId, qty },
-        );
+        }
+        pendingMutations++;
+        let realLineId: string | undefined;
+        try {
+            // Request real lineId in response so we can replace the temp id before fetchCart
+            const result = await shopApi<{
+                addItemToOrder: {
+                    __typename: string;
+                    lines?: { id: string; quantity: number; productVariant: { id: string } }[];
+                };
+            }>(
+                `
+                mutation AddToCart($variantId: ID!, $qty: Int!) {
+                    addItemToOrder(productVariantId: $variantId, quantity: $qty) {
+                        __typename
+                        ... on Order {
+                            id totalWithTax
+                            lines { id quantity productVariant { id } }
+                        }
+                        ... on ErrorResult { errorCode message }
+                    }
+                }
+            `,
+                { variantId, qty },
+            );
+            const serverLine = result.addItemToOrder.lines?.find(
+                l => l.productVariant.id === variantId,
+            );
+            realLineId = serverLine?.id;
+            if (realLineId && order.value) {
+                // Replace temp id with real id so stepper adjustments use the correct lineId
+                order.value = {
+                    ...order.value,
+                    lines: order.value.lines.map(l =>
+                        l.id === tempId ? { ...l, id: realLineId! } : l,
+                    ),
+                };
+            }
+        } finally {
+            pendingMutations--;
+        }
         await fetchCart();
     }
 
@@ -94,18 +149,23 @@ export const useCartStore = defineStore('cart', () => {
                     .filter(l => l.quantity > 0),
             };
         }
-        await shopApi(
-            `
-            mutation AdjustCartLine($lineId: ID!, $qty: Int!) {
-                adjustOrderLine(orderLineId: $lineId, quantity: $qty) {
-                    __typename
-                    ... on Order { id totalWithTax lines { id quantity } }
-                    ... on ErrorResult { errorCode message }
+        pendingMutations++;
+        try {
+            await shopApi(
+                `
+                mutation AdjustCartLine($lineId: ID!, $qty: Int!) {
+                    adjustOrderLine(orderLineId: $lineId, quantity: $qty) {
+                        __typename
+                        ... on Order { id totalWithTax lines { id quantity } }
+                        ... on ErrorResult { errorCode message }
+                    }
                 }
-            }
-        `,
-            { lineId, qty },
-        );
+            `,
+                { lineId, qty },
+            );
+        } finally {
+            pendingMutations--;
+        }
         await fetchCart();
     }
 
@@ -117,18 +177,23 @@ export const useCartStore = defineStore('cart', () => {
                 lines: order.value.lines.filter(l => l.id !== lineId),
             };
         }
-        await shopApi(
-            `
-            mutation RemoveCartLine($lineId: ID!) {
-                removeOrderLine(orderLineId: $lineId) {
-                    __typename
-                    ... on Order { id totalWithTax lines { id quantity } }
-                    ... on ErrorResult { errorCode message }
+        pendingMutations++;
+        try {
+            await shopApi(
+                `
+                mutation RemoveCartLine($lineId: ID!) {
+                    removeOrderLine(orderLineId: $lineId) {
+                        __typename
+                        ... on Order { id totalWithTax lines { id quantity } }
+                        ... on ErrorResult { errorCode message }
+                    }
                 }
-            }
-        `,
-            { lineId },
-        );
+            `,
+                { lineId },
+            );
+        } finally {
+            pendingMutations--;
+        }
         await fetchCart();
     }
 

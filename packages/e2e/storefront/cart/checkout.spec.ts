@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 const ADD_BTN = /^\+\s*Add$|^Add to cart$/;
 
 async function clearCart(page: Page): Promise<void> {
-    await page.request.post('http://localhost:3000/shop-api', {
+    await page.request.post(`${process.env.STOREFRONT_URL ?? 'http://localhost:5173'}/shop-api`, {
         data: { query: 'mutation { removeAllOrderLines { __typename } }' },
         headers: { 'Content-Type': 'application/json' },
     });

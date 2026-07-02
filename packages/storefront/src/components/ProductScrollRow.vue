@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
-import { useCartStore } from '../stores/cart';
 import { useFavoritesStore } from '../stores/favorites';
+import { useCartActions } from '../composables/useCartActions';
 import type { FavoriteItem } from '../stores/favorites';
 import type { ProductItem } from '../composables/useProductList';
 
@@ -13,8 +13,8 @@ const props = defineProps<{
 }>();
 
 const authStore = useAuthStore();
-const cartStore = useCartStore();
 const favoritesStore = useFavoritesStore();
+const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
 
 const CARD_WIDTH = 220;
 const CARD_GAP = 14;
@@ -49,18 +49,6 @@ function stockVariantFor(sl: string): 'ok' | 'low' | 'out' {
     return 'ok';
 }
 
-function cartLineFor(variantId: string | undefined) {
-    if (!variantId) return null;
-    return cartStore.lines.find(l => l.productVariant.id === variantId) ?? null;
-}
-
-async function handleCartQty(lineId: string, qty: number): Promise<void> {
-    if (qty === 0) {
-        await cartStore.removeItem(lineId);
-    } else {
-        await cartStore.adjustItem(lineId, qty);
-    }
-}
 
 function buildFavoriteItem(p: ProductItem): FavoriteItem {
     const variant = p.variants[0];
@@ -113,9 +101,10 @@ function buildFavoriteItem(p: ProductItem): FavoriteItem {
                         :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
                         :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                         :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
-                        @add-to-cart="(variantId) => variantId && cartStore.addItem(variantId, 1)"
-                        @update-cart-qty="handleCartQty"
+                        @add-to-cart="(variantId) => onAddToCart(variantId)"
+                        @update-cart-qty="onUpdateQty"
                         @toggle-favorite="() => favoritesStore.toggle(buildFavoriteItem(p))"
+                        @view-analogs="() => {}"
                     />
                 </div>
             </div>

@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # Kill stale dev server + storefront processes before starting a fresh stack.
 
-pids=$(pgrep -f "ts-node-dev/lib/bin" 2>/dev/null)
+pids=$(pgrep -f "ts-node-dev" 2>/dev/null)
+[ -n "$pids" ] && kill -9 $pids 2>/dev/null || true
+
+pids=$(pgrep -f "tsc --watch" 2>/dev/null)
 [ -n "$pids" ] && kill -9 $pids 2>/dev/null || true
 
 pids=$(pgrep -f "concurrently/dist/bin/concurrently" 2>/dev/null)
 [ -n "$pids" ] && kill -9 $pids 2>/dev/null || true
 
-pids=$(pgrep -f "vite/dist/node/cli" 2>/dev/null)
+pids=$(pgrep -f "vite" 2>/dev/null)
 [ -n "$pids" ] && kill -9 $pids 2>/dev/null || true
 
 fuser -k 3000/tcp 2>/dev/null || true

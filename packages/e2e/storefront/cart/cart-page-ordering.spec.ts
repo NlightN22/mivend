@@ -11,7 +11,13 @@ const CONFIRM_YES = '.cart-item__remove-confirm-yes';
 const CONFIRM_NO = '.cart-item__remove-confirm-no';
 
 async function clearCart(page: Page): Promise<void> {
-    await page.request.post('http://localhost:3000/shop-api', {
+    const url = `${process.env.STOREFRONT_URL ?? 'http://localhost:5173'}/shop-api`;
+    // Transition back to AddingItems if needed (e.g. order left in ArrangingPayment by other tests)
+    await page.request.post(url, {
+        data: { query: 'mutation { transitionOrderToState(state: "AddingItems") { __typename } }' },
+        headers: { 'Content-Type': 'application/json' },
+    });
+    await page.request.post(url, {
         data: { query: 'mutation { removeAllOrderLines { __typename } }' },
         headers: { 'Content-Type': 'application/json' },
     });

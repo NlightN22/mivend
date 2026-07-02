@@ -1,13 +1,13 @@
 services:
     postgres-central:
-        image: postgres:16-alpine
+        build: ./postgres
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
             POSTGRES_DB: mivend_central
-            POSTGRES_HOST_AUTH_METHOD: trust
+            POSTGRES_APP_DB: mivend_central
         ports:
-            - '5432:5432'
+            - '127.0.0.1:5432:5432'
         volumes:
             - postgres-central-data:/var/lib/postgresql/data
             - ./init-db:/docker-entrypoint-initdb.d:ro
@@ -18,14 +18,14 @@ services:
             retries: 5
 
     postgres-branch:
-        image: postgres:16-alpine
+        build: ./postgres
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
             POSTGRES_DB: mivend_branch
-            POSTGRES_HOST_AUTH_METHOD: trust
+            POSTGRES_APP_DB: mivend_branch
         ports:
-            - '5433:5432'
+            - '127.0.0.1:5433:5432'
         volumes:
             - postgres-branch-data:/var/lib/postgresql/data
             - ./init-db-branch:/docker-entrypoint-initdb.d:ro
@@ -38,7 +38,7 @@ services:
     redis:
         image: redis:7-alpine
         ports:
-            - '6379:6379'
+            - '127.0.0.1:6379:6379'
         healthcheck:
             test: ['CMD', 'redis-cli', 'ping']
             interval: 10s
@@ -51,8 +51,8 @@ services:
             RABBITMQ_DEFAULT_USER: mivend
             RABBITMQ_DEFAULT_PASS: mivend
         ports:
-            - '5672:5672'
-            - '15672:15672'
+            - '127.0.0.1:5672:5672'
+            - '127.0.0.1:15672:15672'
         healthcheck:
             test: ['CMD', 'rabbitmq-diagnostics', 'ping']
             interval: 10s
@@ -66,7 +66,7 @@ services:
             - xpack.security.enabled=false
             - ES_JAVA_OPTS=-Xms512m -Xmx512m
         ports:
-            - '9200:9200'
+            - '127.0.0.1:9200:9200'
         volumes:
             - elasticsearch-data:/usr/share/elasticsearch/data
         healthcheck:

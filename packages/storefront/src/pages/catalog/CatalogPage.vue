@@ -1,22 +1,69 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
-import { useCartStore } from '../../stores/cart';
 import { useProductList, type FilterState } from '../../composables/useProductList';
 import CatalogFacets from './CatalogFacets.vue';
 import ProductListView from '../../components/ProductListView.vue';
 
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
-const cartStore = useCartStore();
+
+function parseFiltersFromQuery(): FilterState {
+    const facetValueIds = route.query.fv
+        ? String(route.query.fv).split(',').filter(Boolean)
+        : [];
+    return {
+        facetValueIds,
+        inStock: route.query.inStock === '1',
+        priceMin: route.query.priceMin ? Number(route.query.priceMin) : null,
+        priceMax: route.query.priceMax ? Number(route.query.priceMax) : null,
+    };
+}
 
 const searchQuery = ref((route.query.q as string) ?? '');
-const collectionSlug = ref<string | undefined>((route.query.collection as string) || undefined);
-const filters = ref<FilterState>({ facetValueIds: [], inStock: false, priceMin: null, priceMax: null });
+const pendingCategoryCode = ref<string | undefined>(
+    collectionSlugToCategoryCode((route.query.collection as string) || undefined),
+);
+const filters = ref<FilterState>(parseFiltersFromQuery());
 
-const { items, facetGroups, totalItems, loading, loadingMore, hasMore, viewMode, sortKey, load, loadMore } =
-    useProductList({ pageSize: 24, query: searchQuery, collectionSlug, filters });
+const { items, facetGroups, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode, sortKey, load, loadMore } =
+    useProductList({ pageSize: 24, query: searchQuery, filters });
+
+// Sync filter state → URL (replace so back button works correctly)
+let syncingFromUrl = false;
+watch(filters, f => {
+    if (syncingFromUrl) return;
+    router.replace({
+        query: {
+            ...route.query,
+            fv: f.facetValueIds.length ? f.facetValueIds.join(',') : undefined,
+            inStock: f.inStock ? '1' : undefined,
+            priceMin: f.priceMin ?? undefined,
+            priceMax: f.priceMax ?? undefined,
+        },
+    });
+}, { deep: true });
+
+function collectionSlugToCategoryCode(slug: string | undefined): string | undefined {
+    if (!slug) return undefined;
+    // "cat-cat-engine-oils" → "cat-engine-oils"  (strip leading "cat-")
+    return slug.startsWith('cat-') ? slug.slice(4) : slug;
+}
+
+function applyPendingCategory(): void {
+    const code = pendingCategoryCode.value;
+    if (!code) return;
+    const catGroup = facetGroups.value.find(g => g.code === 'category');
+    const val = catGroup?.values.find(v => v.code === code);
+    if (val) {
+        filters.value = { ...filters.value, facetValueIds: [val.id] };
+        pendingCategoryCode.value = undefined;
+    }
+}
+
+watch(facetGroups, applyPendingCategory);
 
 function toggleFacetValue(id: string): void {
     const ids = filters.value.facetValueIds;
@@ -27,6 +74,7 @@ function toggleFacetValue(id: string): void {
 }
 
 function resetFilters(): void {
+    pendingCategoryCode.value = undefined;
     filters.value = { facetValueIds: [], inStock: false, priceMin: null, priceMax: null };
 }
 
@@ -34,13 +82,21 @@ const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds))
 
 watch(() => route.query.q, q => {
     searchQuery.value = (q as string) ?? '';
-    collectionSlug.value = undefined;
+    pendingCategoryCode.value = undefined;
+    resetFilters();
 });
 
 watch(() => route.query.collection, slug => {
-    collectionSlug.value = (slug as string) || undefined;
+    pendingCategoryCode.value = collectionSlugToCategoryCode((slug as string) || undefined);
     searchQuery.value = '';
     resetFilters();
+});
+
+// Restore filters when navigating back via browser history
+watch(() => route.query.fv, () => {
+    syncingFromUrl = true;
+    filters.value = parseFiltersFromQuery();
+    syncingFromUrl = false;
 });
 
 onMounted(load);
@@ -70,12 +126,11 @@ onMounted(load);
                 :has-more="hasMore"
                 :view-mode="viewMode"
                 :sort-key="sortKey"
-                :title="searchQuery ? `Search: &quot;${searchQuery}&quot;` : collectionSlug ? collectionSlug : 'Product catalog'"
+                :title="searchQuery ? `Search: &quot;${searchQuery}&quot;` : 'Product catalog'"
                 :show-prices="authStore.isLoggedIn"
-                @update:view-mode="viewMode = $event"
+                @update:view-mode="setViewMode($event)"
                 @update:sort-key="sortKey = $event"
                 @load-more="loadMore"
-                @add-to-cart="(variantId, qty) => cartStore.addItem(variantId, qty)"
             />
         </div>
     </main>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
@@ -21,7 +22,7 @@ interface Props {
   isFavorited?: boolean;
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   brand: '',
   price: undefined,
   compareAtPrice: undefined,
@@ -40,7 +41,10 @@ const emit = defineEmits<{
   'add-to-cart': [variantId: string | undefined];
   'update-cart-qty': [lineId: string, qty: number];
   'toggle-favorite': [variantId: string | undefined];
+  'view-analogs': [variantId: string | undefined];
 }>();
+
+const canOrder = computed(() => props.stockVariant !== 'out');
 </script>
 
 <template>
@@ -98,20 +102,30 @@ const emit = defineEmits<{
             class="mv-product-card__stock-badge"
           />
         </div>
-        <MvQtyStepper
-          v-if="cartQty && cartQty > 0"
-          :model-value="cartQty"
-          :min="0"
-          class="mv-product-card__stepper"
-          @update:model-value="val => cartLineId && emit('update-cart-qty', cartLineId, val)"
-        />
+        <template v-if="canOrder">
+          <MvQtyStepper
+            v-if="cartQty && cartQty > 0"
+            :model-value="cartQty"
+            :min="0"
+            class="mv-product-card__stepper"
+            @update:model-value="val => cartLineId && emit('update-cart-qty', cartLineId, val)"
+          />
+          <button
+            v-else
+            class="mv-product-card__buy"
+            type="button"
+            @click="emit('add-to-cart', variantId)"
+          >
+            Add to cart
+          </button>
+        </template>
         <button
           v-else
-          class="mv-product-card__buy"
+          class="mv-product-card__analogs"
           type="button"
-          @click="emit('add-to-cart', variantId)"
+          @click="emit('view-analogs', variantId)"
         >
-          Add to cart
+          View analogs
         </button>
       </template>
 
@@ -259,6 +273,18 @@ const emit = defineEmits<{
 .mv-product-card__stepper {
   width: 100%;
   justify-content: space-between;
+}
+
+.mv-product-card__analogs {
+  width: 100%;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: #f3f8f6;
+  color: #263732;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .mv-product-card__guest {

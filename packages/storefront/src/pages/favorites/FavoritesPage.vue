@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useViewMode } from '../../composables/useViewMode';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import FavoritesToolbar from './FavoritesToolbar.vue';
 import FavoriteProductCard from './FavoriteProductCard.vue';
@@ -15,7 +16,7 @@ const search = ref('');
 const sort = ref('available');
 const activeGroup = ref('all');
 const activeChip = ref('all');
-const viewMode = ref<'grid' | 'list'>('grid');
+const { viewMode, setViewMode } = useViewMode();
 
 const localQty = ref<Record<string, number>>({});
 
@@ -121,7 +122,7 @@ function handleClearUnavailable(): void {
             @update:sort="sort = $event"
             @update:active-group="activeGroup = $event"
             @update:active-chip="activeChip = $event"
-            @update:view-mode="viewMode = $event"
+            @update:view-mode="setViewMode($event)"
           />
 
           <div v-if="viewMode === 'grid'" class="favorites-page__grid">
