@@ -81,11 +81,18 @@ const canOrder = computed(() => props.stockVariant !== 'out');
               class="mv-product-card__customer-price"
             />
             <MvAmountDisplay
-              v-if="price !== undefined"
+              v-if="compareAtPrice !== undefined"
+              :amount="compareAtPrice"
+              :currency="currency"
+              size="md"
+              class="mv-product-card__base-price--strike"
+            />
+            <MvAmountDisplay
+              v-if="customerPrice === undefined && price !== undefined"
               :amount="price"
               :currency="currency"
               size="md"
-              :class="customerPrice !== undefined ? 'mv-product-card__base-price--strike' : ''"
+              class="mv-product-card__customer-price"
             />
           </div>
           <MvStockBadge

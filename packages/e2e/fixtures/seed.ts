@@ -47,6 +47,7 @@ export const seedRecords = [
             fullName: 'Engine Oil 5W-30 4L Synthetic',
             price: 850,
             stockOnHand: 100,
+            brandCode: 'e2e-discount-brand',
         },
     },
     {
@@ -133,6 +134,18 @@ export const seedRecords = [
     {
         type: 'price' as const,
         data: { sku: 'E2E-AIR-001', priceTypeCode: 'WHOLESALE', price: 252 },
+    },
+    {
+        type: 'discountRule' as const,
+        data: {
+            erpId: 'e2e-discount-rule-001',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'e2e-discount-brand',
+            percent: 10,
+            validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        },
     },
     {
         type: 'tradingPoint' as const,

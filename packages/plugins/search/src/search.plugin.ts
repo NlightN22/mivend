@@ -15,6 +15,7 @@ import { SearchService } from './search.service';
 const shopApiSchema = gql`
     extend type SearchResult {
         customerPrice: Int
+        compareAtPrice: Int
     }
 `;
 

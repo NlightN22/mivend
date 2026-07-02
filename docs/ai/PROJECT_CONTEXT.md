@@ -191,8 +191,14 @@ Registered in `vendure-config.ts` as `orderOptions: { orderCodeStrategy: new Seq
 ### Price Entry plugin (`@mivend/plugin-price-entry`)
 
 - `PriceEntry` entity: `variantId × priceTypeCode → price`
-- Shop API: `customerPrice: Int` on `ProductVariant` (resolved per customer's price type)
-- `compareAtPrice` **not yet implemented** — pending discount rule architecture (see issue #14)
+- `DiscountRule` entity: `erpId (natural key), priceTypeCode, facetCode?, facetValueCode?, percent, validFrom, validTo` — `facetCode`/`facetValueCode` both null = global discount (rare, supported). Multiple matching active rules → highest `percent` wins. No overlap/open-ended-period handling needed (business periods are always fully bounded, non-overlapping).
+- `PriceResolutionService.resolve(ctx, variantId)` — **single shared entrypoint** for `{ customerPrice, compareAtPrice }`. Used by both `ProductVariantPriceResolver` (price-entry, raw `products`/`product` queries) and `SearchService`/`SearchResultResolver` (plugin-search, ES-backed `search` query) — do not duplicate discount logic in a third place; always go through this service.
+- Facet matching merges **both** `ProductVariant.facetValues` and `Product.facetValues` — erp-import's product handler assigns brand/category facets to the Product, not the variant, so matching only variant-level facets misses everything.
+- Shop API: `customerPrice: Int` and `compareAtPrice: Int` on `ProductVariant` and on ES `SearchResult`. `compareAtPrice` is `null` unless a discount is actually active (no strikethrough otherwise).
+- Admin API: `upsertDiscountRule` / `bulkUpsertDiscountRules`, mirrors `upsertPriceEntry` pattern.
+- ERP import: `discountRule` record type (`packages/plugins/erp-import/src/handlers/discount-rule.handler.ts`) — imports via `@mivend/plugin-price-entry`'s exported `DiscountRuleService` (not raw SQL, unlike `price.handler.ts`).
+- `MvProductCard`/`MvProductRow` (ui-kit) previously always struck through the raw retail `price` whenever `customerPrice` was present — that violated "retail price never shown" and was unrelated to any real discount. Fixed: strikethrough now only renders from `compareAtPrice`/`oldPrice`, and raw `price` is only shown as a fallback when `customerPrice` is undefined.
+- **`ProductPage.vue` not yet wired** — only catalog grid/list uses `compareAtPrice` so far (see Planned next work).
 
 ---
 
@@ -265,53 +271,69 @@ ERP callback payload:
 - ✅ `/orders` — order cards with filter chips; `/orders/:id` — order detail page
 - ✅ `/account` full customer zone + settings + trading points
 - ✅ `/documents`, `/favorites`, `/access-denied`, 404
-- ✅ E2E Playwright suite: **94/94 green** (catalog, search, filters, cart, checkout, product page, orders)
+- ✅ `MvFavoriteButton` shared ui-kit component — favorites toggle works identically in catalog grid and list views
+- ✅ E2E: orders (incl. ERP status flow) + favorites + catalog segments green (49 tests); full suite last run 94/95 (one flaky test since fixed)
 
 ---
 
 ## Recent changes (last session)
 
-- **`SequentialOrderCodeStrategy`** (`apps/server/src/order-code.strategy.ts`) — sequential `ORD-YYYY-NNNNNN` order codes. `init(injector)` pattern, not `@Injectable()`.
-- **`plugin-erp-order` rewrite**: added `ErpOrderResolver` with `myOrders` Shop API query; `ErpOrderStatusEvent` now uses `orderCode` as cross-reference key (not `erpOrderId`); `updateStatus()` finds order by `order.code`.
-- **`plugin-sync`**: added `POST /erp/callback/order-status` REST endpoint; publishes `ErpOrderStatusEvent`.
-- **E2E global-setup**: Bearer token auth (via `vendure-auth-token` response header, not cookie); `ensureCountry()` creates RU country; `ensureShippingMethod()` creates "Free Shipping" if none exist.
-- **E2E orders tests** (`packages/e2e/storefront/orders/orders.spec.ts`): new `searchInStock()` helper with ES retry (5 attempts, 3s delay); `goToOrders()` timeout raised to 20s; `clearCart()` transitions to `AddingItems` first.
-- **E2E cart tests** (5 files): all `clearCart()` helpers updated to call `transitionOrderToState('AddingItems')` before `removeAllOrderLines` — fixes test pollution when cart is in ArrangingPayment state.
-- **Elasticsearch must be running**: `make up` starts ES container. Without it `search` query returns server error. `make test-e2e` requires `make up` first.
+- **`SyncPlugin` wired into `vendure-config.ts`** — it existed in code but was never registered, so `POST /erp/callback/order-status` 404'd. Now initialized with `StubErpAdapter` (RabbitMQ/Redis already provisioned in docker-compose).
+- **Fixed a process-crashing bug** in `ErpOrderService.updateStatus()` (`packages/plugins/erp-order/src/erp-order.service.ts`): a full `repo.save(order)` recomputed Vendure's calculated Order fields (`discounts`, `taxSummary`), which require `lines`/`surcharges` to be joined — this crashed the entire Nest process. Replaced with `repo.update(id, {...})`, a plain SQL update that skips entity recompute.
+- **E2E order-status-flow** (`packages/e2e/storefront/orders/order-status-flow.spec.ts`): place order → POST ERP callback → verify status badge on `/orders/:id` and `/orders`. Note: Vendure reuses one active order per session across repeated checkouts (`OrderPlacedEvent` fires only once per order id), so the test compares two sequential callback statuses rather than asserting a fixed baseline — do the same in any new order-status test to avoid flakiness.
+- **E2E orders helpers extracted** to `packages/e2e/storefront/orders/helpers.ts` (shared by `orders.spec.ts` and `order-status-flow.spec.ts`); `placeTestOrder()` now returns `{ id, code }` straight from the `transitionOrderToState` mutation response instead of a separate `myOrders` "most recent" query (that was a race condition).
+- **`MvFavoriteButton`** (`packages/ui-kit/src/components/MvFavoriteButton/`) — extracted shared favorites toggle (`mv-favorite-btn` / `mv-favorite-btn--active` classes, `aria-label="Toggle favorite"`). Used by `MvProductCard` (grid) and now also `MvProductRow` (list, previously had no favorites toggle at all). `ProductListView.vue` wires `favoritesStore` to both.
+- **`FavoriteProductRow.vue`** (favorites page list view) — previously had no way to remove an item in list view; now reuses the same toggle (`isFavorited=true`, click → `remove`).
+- **E2E favorites** (`packages/e2e/storefront/favorites/favorites.spec.ts`) — empty state, add from catalog (grid + list), persist across reload, remove, heart icon state.
+- Removed debug `console.log` calls from `auth.ts`.
+- Confirmed **New Arrivals widget is not actually broken** — verified live via screenshot; see Known problems for nuance.
 
 ---
 
 ## Planned next work
 
-- **Clean up debug `console.log` from `auth.ts`** — `[auth] fetchCurrentCustomer — logged_out flag:` etc.
-- **Issue #14**: `DiscountRule` entity + service in `plugin-price-entry`
-  - `discount_rule`: `id, priceTypeCode, facetCode, facetValueCode, percent, validFrom, validTo`
-  - Update `customerPrice` resolver to apply best active unconditional discount
-  - Add `compareAtPrice: Int` to Shop API schema — returns `PriceEntry` price when discount applied
-  - Add discount fixtures (e.g. 10% on Lukoil brand for WHOLESALE)
-- **E2E for order status flow**: create order → verify PENDING status → POST `/erp/callback/order-status` → verify badge updates in UI
-- **Wire `/orders` to real backend**: currently shows static cards; needs `myOrders` query wired
+- **Volume/weight-tiered discounts** (follow-up to issue #14, NOT built): business also
+  has discounts scaled by purchase weight of a facet-scoped product group (e.g. 15% at
+  500kg, 18% at 800kg, 20% at 1000kg of a brand) — this is cart/order-time pricing, not
+  catalog display, and needs: `weight`/`volume` custom fields on `ProductVariant` (real
+  per-unit properties, not yet in schema), an erp-import extension to populate them, and
+  a custom Vendure `PromotionCondition` (see `has-facet-values-condition` in
+  `@vendure/core` for the pattern) that sums weight across matching order lines instead
+  of counting piece quantity. Vendure's native Promotions engine
+  (`has-facet-values-condition` + `facet-values-percentage-discount-action`) is the
+  right foundation — just needs a weight-aware condition, not a from-scratch pricing
+  engine.
 - **Wire `/documents` to real backend** (no backend entity yet)
 - **#19**: Counterparty portal roles
 - **#23**: `plugin-popular-products` — after real orders exist
 - Checkout: wire "Pay online" to real acquiring plugin
+- **`ProductPage.vue`** (product detail page) doesn't query `customerPrice`/
+  `compareAtPrice` at all yet — only catalog grid/list (`ProductListView.vue`) was
+  wired this session. Its GraphQL query only fetches raw `variant.price`.
 
 ---
 
 ## Known problems and limitations
 
-- **Debug console.log in auth.ts** — still in production code.
-- **New Arrivals widget is empty** — filter is `createdAt > 7 days ago`; on fresh DB all products appear (seeded recently).
-- **compareAtPrice not in schema** — removed from GQL queries until discount rules built.
+- **New Arrivals widget** — filter is `createdAt > 7 days ago`; not actually broken (verified live), just means on a freshly reseeded DB every product qualifies as "new" since all rows were just inserted. Cosmetic-only in dev, will behave correctly once seed data ages.
+- **Counterparty → price type wiring gap**: `erp-import`'s counterparty handler assigns
+  a Vendure `CustomerGroup` for `priceType`, but never populates
+  `plugin-customer-pricing`'s `customer_price_type` table — which is what
+  `PriceEntryService.getPriceTypeCodeForUser()` actually reads. Without it,
+  `customerPrice`/`compareAtPrice` silently resolve to `null` for every ERP-imported
+  customer. Worked around in `packages/e2e/global-setup.ts`
+  (`ensureCustomerPriceType()`) by calling the admin `upsertPriceType` +
+  `setCustomerPriceType` mutations directly after seeding. **Not fixed in the app** —
+  needs the counterparty import flow (or a dedicated event listener) to also upsert
+  `CustomerPriceType` when a counterparty's `priceType` is set/changed.
 - **Collections not in ERP seed** — `make seed` does NOT create collections. On DB reset, mega-menu empty.
 - **No codegen** — raw GQL strings with manual types.
 - **TradingPointsPage** is 451 lines (over 300 limit) — deferred refactor.
 - **DocumentsFilters.vue** dead file in `src/pages/documents/` — not used, can be deleted.
-- **`/orders` page uses static card data** — `myOrders` Shop API exists but storefront not wired yet.
 - **ES must be running** for E2E tests — `make up` before `make test-e2e`. ES yellow status (single node, no replicas) is normal in dev.
 - `make lint`: 0 errors, ~55 warnings (pre-existing in `.stories.ts` + router lazy imports + erp-order new files).
-- `make test`: 70/70 green.
-- E2E: 94/94 green (requires `make up` + running dev stack).
+- `make test`: 77/77 green.
+- E2E: orders + favorites + catalog + discounts segments (52 tests) green; full suite last verified 94/95 (one flaky test since fixed).
 
 ---
 

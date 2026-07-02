@@ -1,0 +1,179 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { DiscountRuleService } from '../../discount-rule.service';
+
+const mockRepo = {
+    findOne: vi.fn(),
+    create: vi.fn(),
+    save: vi.fn(),
+    createQueryBuilder: vi.fn(),
+};
+
+const mockQb = {
+    insert: vi.fn(),
+    into: vi.fn(),
+    values: vi.fn(),
+    orUpdate: vi.fn(),
+    execute: vi.fn(),
+    where: vi.fn(),
+    andWhere: vi.fn(),
+    getMany: vi.fn(),
+};
+mockQb.insert.mockReturnValue(mockQb);
+mockQb.into.mockReturnValue(mockQb);
+mockQb.values.mockReturnValue(mockQb);
+mockQb.orUpdate.mockReturnValue(mockQb);
+mockQb.where.mockReturnValue(mockQb);
+mockQb.andWhere.mockReturnValue(mockQb);
+
+const mockConnection = {
+    getRepository: vi.fn(() => mockRepo),
+};
+
+const mockCtx = {} as unknown as RequestContext;
+
+const now = new Date('2026-07-15T00:00:00.000Z');
+
+function rule(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
+    return {
+        priceTypeCode: 'WHOLESALE',
+        facetCode: 'brand',
+        facetValueCode: 'lukoil',
+        percent: 10,
+        validFrom: new Date('2026-07-01T00:00:00.000Z'),
+        validTo: new Date('2026-07-31T00:00:00.000Z'),
+        ...overrides,
+    };
+}
+
+describe('DiscountRuleService', () => {
+    let service: DiscountRuleService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockRepo.createQueryBuilder.mockReturnValue(mockQb);
+        service = new DiscountRuleService(mockConnection as unknown as TransactionalConnection);
+    });
+
+    describe('upsert', () => {
+        it('creates new record when none exists for erpId', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            const input = rule({ erpId: 'erp-1' });
+            mockRepo.create.mockReturnValue(input);
+            mockRepo.save.mockResolvedValue(input);
+
+            await service.upsert(mockCtx, input as never);
+
+            expect(mockRepo.create).toHaveBeenCalledWith(input);
+            expect(mockRepo.save).toHaveBeenCalledWith(input);
+        });
+
+        it('updates existing record matched by erpId', async () => {
+            const existing = rule({ erpId: 'erp-1', percent: 5 });
+            mockRepo.findOne.mockResolvedValue(existing);
+            mockRepo.save.mockResolvedValue(existing);
+
+            await service.upsert(mockCtx, rule({ erpId: 'erp-1', percent: 15 }) as never);
+
+            expect(existing.percent).toBe(15);
+            expect(mockRepo.create).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('bulkUpsert', () => {
+        it('returns 0 and skips DB for empty array', async () => {
+            const result = await service.bulkUpsert(mockCtx, []);
+            expect(result).toBe(0);
+            expect(mockRepo.createQueryBuilder).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('getBestDiscountPercent', () => {
+        it('returns null when no rules match', async () => {
+            mockQb.getMany.mockResolvedValue([]);
+
+            const result = await service.getBestDiscountPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'castrol' }],
+                now,
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('returns the percent of a single matching facet rule', async () => {
+            mockQb.getMany.mockResolvedValue([rule({ percent: 10 })]);
+
+            const result = await service.getBestDiscountPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+            );
+
+            expect(result).toBe(10);
+        });
+
+        it('falls back to a global rule (null facet) when no facet rule matches', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ facetCode: null, facetValueCode: null, percent: 5 }),
+            ]);
+
+            const result = await service.getBestDiscountPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'castrol' }],
+                now,
+            );
+
+            expect(result).toBe(5);
+        });
+
+        it('picks the highest percent when multiple rules match', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ facetCode: 'brand', facetValueCode: 'lukoil', percent: 10 }),
+                rule({ facetCode: 'category', facetValueCode: 'oil', percent: 20 }),
+            ]);
+
+            const result = await service.getBestDiscountPercent(
+                mockCtx,
+                'WHOLESALE',
+                [
+                    { facetCode: 'brand', valueCode: 'lukoil' },
+                    { facetCode: 'category', valueCode: 'oil' },
+                ],
+                now,
+            );
+
+            expect(result).toBe(20);
+        });
+
+        it('ignores a rule that does not match the variant facet values', async () => {
+            mockQb.getMany.mockResolvedValue([rule({ facetValueCode: 'castrol' })]);
+
+            const result = await service.getBestDiscountPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('filters by priceTypeCode and validity window at the query level', async () => {
+            mockQb.getMany.mockResolvedValue([]);
+
+            await service.getBestDiscountPercent(mockCtx, 'WHOLESALE', [], now);
+
+            expect(mockQb.where).toHaveBeenCalledWith('dr.priceTypeCode = :priceTypeCode', {
+                priceTypeCode: 'WHOLESALE',
+            });
+            expect(mockQb.andWhere).toHaveBeenCalledWith(
+                'dr.validFrom <= :now AND dr.validTo >= :now',
+                { now },
+            );
+        });
+    });
+});

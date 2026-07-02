@@ -106,13 +106,19 @@ function onStepperChange(qty: number): void {
           class="mv-product-row__price mv-product-row__price--customer"
         />
         <MvAmountDisplay
-          v-if="price !== undefined"
+          v-if="oldPrice !== undefined"
+          :amount="oldPrice"
+          :currency="currency"
+          size="sm"
+          class="mv-product-row__old-price"
+        />
+        <MvAmountDisplay
+          v-if="customerPrice === undefined && price !== undefined"
           :amount="price"
           :currency="currency"
           size="sm"
-          :class="customerPrice !== undefined ? 'mv-product-row__old-price' : 'mv-product-row__price'"
+          class="mv-product-row__price"
         />
-        <MvAmountDisplay v-if="oldPrice !== undefined && customerPrice === undefined" :amount="oldPrice" :currency="currency" size="sm" class="mv-product-row__old-price" />
       </template>
       <div v-else-if="!showPrices" class="mv-product-row__price-hint">Log in</div>
       <div v-else class="mv-product-row__price-hint">—</div>

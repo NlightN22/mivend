@@ -11,6 +11,16 @@ export class SearchResultResolver {
         @Ctx() ctx: RequestContext,
         @Parent() result: { productVariantId: string },
     ): Promise<number | null> {
-        return this.searchService.getCustomerPrice(ctx, result.productVariantId);
+        return (await this.searchService.getResolvedPrice(ctx, result.productVariantId))
+            .customerPrice;
+    }
+
+    @ResolveField()
+    async compareAtPrice(
+        @Ctx() ctx: RequestContext,
+        @Parent() result: { productVariantId: string },
+    ): Promise<number | null> {
+        return (await this.searchService.getResolvedPrice(ctx, result.productVariantId))
+            .compareAtPrice;
     }
 }

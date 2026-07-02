@@ -109,6 +109,9 @@ describe('ErpImportService', () => {
             makeHandler() as unknown as InstanceType<
                 typeof import('../../handlers/cross-reference.handler').CrossReferenceHandler
             >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/discount-rule.handler').DiscountRuleHandler
+            >,
         );
     });
 
@@ -203,6 +206,9 @@ describe('ErpImportService', () => {
             >,
             crossReferenceHandler as unknown as InstanceType<
                 typeof import('../../handlers/cross-reference.handler').CrossReferenceHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/discount-rule.handler').DiscountRuleHandler
             >,
         );
         const body: BatchImportBody = {

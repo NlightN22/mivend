@@ -1,6 +1,7 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
+import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { ErpImportController } from './erp-import.controller';
 import { CategoryHandler } from './handlers/category.handler';
 import { CrossReferenceHandler } from './handlers/cross-reference.handler';
@@ -16,9 +17,10 @@ import { CustomerHandler } from './handlers/customer.handler';
 import { CounterpartyHandler } from './handlers/counterparty.handler';
 import { CustomerCounterpartyHandler } from './handlers/customer-counterparty.handler';
 import { TradingPointHandler } from './handlers/trading-point.handler';
+import { DiscountRuleHandler } from './handlers/discount-rule.handler';
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CounterpartyPlugin, CrossReferencePlugin],
+    imports: [PluginCommonModule, CounterpartyPlugin, CrossReferencePlugin, PriceEntryPlugin],
     entities: [ImportRun, ImportRunError],
     controllers: [ErpImportController],
     providers: [
@@ -34,6 +36,7 @@ import { TradingPointHandler } from './handlers/trading-point.handler';
         TradingPointHandler,
         CategoryHandler,
         CrossReferenceHandler,
+        DiscountRuleHandler,
     ],
     compatibility: '>0.0.0',
 })

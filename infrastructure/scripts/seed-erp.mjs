@@ -194,6 +194,24 @@ async function main() {
     const stockResult = await postBatch(`seed-stock-${run}`, stock.map(data => ({ type: 'stock', data })));
     console.log(`  → status=${stockResult.status} processed=${stockResult.processed} failed=${stockResult.failed}`);
 
+    const discountRules = [
+        {
+            erpId: 'discount-lukoil-wholesale',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'lukoil',
+            percent: 10,
+            validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+    ];
+    console.log(`Sending ${discountRules.length} discount rules...`);
+    const discountResult = await postBatch(`seed-discount-rules-${run}`, discountRules.map(data => ({ type: 'discountRule', data })));
+    console.log(`  → status=${discountResult.status} processed=${discountResult.processed} failed=${discountResult.failed}`);
+    if (discountResult.errors?.length > 0) {
+        for (const e of discountResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
     const customers = [
         { email: 'ivan@autoservice-nord.example', firstName: 'Ivan', lastName: 'Petrov', password: 'Password123!' },
         { email: 'sergey@parts-retail.example', firstName: 'Sergey', lastName: 'Volkov', password: 'Password123!' },

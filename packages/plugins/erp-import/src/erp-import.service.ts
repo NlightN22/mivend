@@ -9,6 +9,7 @@ import { CustomerCounterpartyHandler } from './handlers/customer-counterparty.ha
 import { TradingPointHandler } from './handlers/trading-point.handler';
 import { CategoryHandler } from './handlers/category.handler';
 import { CrossReferenceHandler } from './handlers/cross-reference.handler';
+import { DiscountRuleHandler } from './handlers/discount-rule.handler';
 import { ImportRunService } from './import-run.service';
 import type { BatchImportBody, ImportRecord, ImportRunResult } from './types';
 
@@ -27,6 +28,7 @@ export class ErpImportService {
         private readonly tradingPointHandler: TradingPointHandler,
         private readonly categoryHandler: CategoryHandler,
         private readonly crossReferenceHandler: CrossReferenceHandler,
+        private readonly discountRuleHandler: DiscountRuleHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -90,6 +92,9 @@ export class ErpImportService {
                 break;
             case 'crossReference':
                 await this.crossReferenceHandler.upsert(ctx, record.data);
+                break;
+            case 'discountRule':
+                await this.discountRuleHandler.upsert(ctx, record.data);
                 break;
         }
     }

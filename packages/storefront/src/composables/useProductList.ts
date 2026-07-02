@@ -7,6 +7,7 @@ interface ProductVariant {
     sku: string;
     price: number;
     customerPrice: number | null;
+    compareAtPrice: number | null;
     currencyCode: string;
     stockLevel: string;
 }
@@ -57,6 +58,7 @@ interface EsSearchItem {
     inStock: boolean;
     facetValueIds: string[];
     customerPrice: number | null;
+    compareAtPrice: number | null;
 }
 
 interface EsFacetValueResult {
@@ -94,6 +96,7 @@ const PRODUCTS_QUERY = `
                 inStock
                 facetValueIds
                 customerPrice
+                compareAtPrice
             }
             facetValues {
                 facetValue { id code name facet { code name } }
@@ -147,14 +150,12 @@ function buildFacetGroups(facetValues: EsFacetValueResult[]): FacetGroup[] {
     for (const { facetValue, count } of facetValues) {
         const { code, name } = facetValue.facet;
         if (!groupMap.has(code)) groupMap.set(code, { code, name, values: [] });
-        groupMap
-            .get(code)!
-            .values.push({
-                id: facetValue.id,
-                code: facetValue.code,
-                name: facetValue.name,
-                count,
-            });
+        groupMap.get(code)!.values.push({
+            id: facetValue.id,
+            code: facetValue.code,
+            name: facetValue.name,
+            count,
+        });
     }
     return [...groupMap.values()].map(g => ({
         ...g,
@@ -177,6 +178,7 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
                 sku: item.sku,
                 price: item.priceWithTax?.value ?? item.priceWithTax?.min ?? 0,
                 customerPrice: item.customerPrice,
+                compareAtPrice: item.compareAtPrice,
                 currencyCode: item.currencyCode,
                 stockLevel: item.inStock ? 'IN_STOCK' : 'OUT_OF_STOCK',
             },

@@ -72,6 +72,16 @@ export interface CategoryRecord {
     parentErpId: string | null;
 }
 
+export interface DiscountRuleRecord {
+    erpId: string;
+    priceTypeCode: string;
+    facetCode: string | null;
+    facetValueCode: string | null;
+    percent: number;
+    validFrom: string;
+    validTo: string;
+}
+
 export type ImportRecord =
     | { type: 'product'; data: ProductRecord }
     | { type: 'price'; data: PriceRecord }
@@ -81,7 +91,8 @@ export type ImportRecord =
     | { type: 'customerCounterparty'; data: CustomerCounterpartyRecord }
     | { type: 'tradingPoint'; data: TradingPointRecord }
     | { type: 'category'; data: CategoryRecord }
-    | { type: 'crossReference'; data: CrossReferenceRecord };
+    | { type: 'crossReference'; data: CrossReferenceRecord }
+    | { type: 'discountRule'; data: DiscountRuleRecord };
 
 export interface BatchImportBody {
     exchangeId: string;
