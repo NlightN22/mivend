@@ -205,12 +205,18 @@ Registered in `vendure-config.ts` as `orderOptions: { orderCodeStrategy: new Seq
 
 ## Pricing model (business rules — do not deviate)
 
+See **`docs/pricing.md`** for the full architecture (entities, resolution flow,
+real-order pricing via `CustomerPriceCalculationStrategy`, ERP import, and the
+volume/weight-tier design agreed but not yet built). Summary:
+
 - Storefront does **not** show retail prices. Retail is irrelevant.
 - Each counterparty is assigned a **price type** (e.g. WHOLESALE) — this is the base price.
-- **Discount rules** (planned, not yet built) apply on top: by brand/category facet, time-limited, or volume.
+- `DiscountRule` (facet + mandatory time-window, % discount) applies on top — built in
+  issue #14. Volume/weight-tiered discounts are a separate, not-yet-built follow-up.
 - `compareAtPrice` = base `PriceEntry` price (before discount), shown as strikethrough only when discount active.
-- `customerPrice` = price after applying best unconditional discount.
+- `customerPrice` = price after applying the best matching discount.
 - **`compareAtPrice` must NOT be `variant.price`** (Vendure's built-in field). It comes from `PriceEntry`.
+- `customerPrice` now drives the **real order price** too (`CustomerPriceCalculationStrategy`) — not just catalog display.
 
 ---
 

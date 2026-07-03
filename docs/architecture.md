@@ -87,7 +87,7 @@ Branch app is stateless — multiple instances behind a load balancer share all 
 
 **Reservation:** soft reservation per warehouse. Default TTL is configurable; managers can extend up to a configured maximum without additional approval. Auto-release on expiry.
 
-**Pricing:** multiple price types per customer (e.g. wholesale, special). Price type is assigned per customer and resolved at order time.
+**Pricing:** multiple price types per customer (e.g. wholesale, special). Price type is assigned per customer and resolved at order time. Discount rules (facet + time-window %) apply on top. See `docs/pricing.md` for the full resolution flow, from ERP import through catalog display to the price actually charged on an order.
 
 **Credit terms:** each customer has a deferred payment period and a credit limit defined by contract. Orders are checked against the credit limit before confirmation.
 
