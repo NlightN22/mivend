@@ -67,10 +67,13 @@ PriceResolutionService.resolve(ctx, variantId)
      everything (this was a real bug during development — verify with both
      relations loaded if debugging "discount doesn't apply")
 
-4. percent = DiscountRuleService.getBestDiscountPercent(ctx, priceTypeCode, facetValues, now)
+4. percent = DiscountRuleService.getBestPercent(ctx, priceTypeCode, facetValues, now, weightByFacet)
    — SQL-level filter: priceTypeCode matches, validFrom <= now <= validTo
    — in-memory filter: facetCode/facetValueCode matches one of the variant's facet
      values, OR the rule is global (facetCode/facetValueCode both null)
+   — a rule with minWeightKg set also requires weightByFacet to meet the threshold
+     (see "Volume/weight-tiered discounts" below) — weightByFacet is empty here for
+     catalog display, so tiered rules simply never match at this call site
    — returns the MAXIMUM percent among all matching rules (no stacking)
 
 5. if percent is null:  { customerPrice: basePrice, compareAtPrice: null }
