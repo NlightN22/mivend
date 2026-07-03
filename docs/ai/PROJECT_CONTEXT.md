@@ -149,10 +149,17 @@ Same cart UX as card — stepper when in cart, "+ Add" button when not.
 
 ### Order code strategy
 
-`apps/server/src/order-code.strategy.ts` — `SequentialOrderCodeStrategy` implements `OrderCodeStrategy`.
-Format: `ORD-YYYY-NNNNNN` (e.g. `ORD-2026-000001`). Sequence resets per year.
-Uses `init(injector)` pattern (NOT `@Injectable()`) to get `TransactionalConnection`.
-Registered in `vendure-config.ts` as `orderOptions: { orderCodeStrategy: new SequentialOrderCodeStrategy() }`.
+`apps/server/src/order-code.strategy.ts` — `DateStampedOrderCodeStrategy` implements `OrderCodeStrategy`.
+Format: `ORD-YYYYMM-<8-char random hex>` (e.g. `ORD-202607-28607FEA`). **No DB read/write** —
+the original `ORD-YYYY-NNNNNN` sequential-counter design (`MAX(...) + 1` query) had a
+real TOCTOU race under concurrent order creation (two orders reading the same "next"
+number before either commits — hit this during e2e testing). The business only needs
+year+month for quick orientation, not gapless sequential numbers, so the fix is to drop
+the DB round-trip entirely: a random suffix is practically collision-free and needs no
+coordination. (If gapless sequential numbering is ever required, the correct fix is an
+atomic counter table with `UPDATE ... RETURNING`, not a `SEQUENCE` — Postgres sequences
+don't guarantee gaplessness either.)
+Registered in `vendure-config.ts` as `orderOptions: { orderCodeStrategy: new DateStampedOrderCodeStrategy() }`.
 
 ### ERP Order plugin (`@mivend/plugin-erp-order`)
 
@@ -254,7 +261,7 @@ filter: { customFields: { onSale: ... } }  # WRONG
 
 ERP callback payload:
 ```json
-{ "orderCode": "ORD-2026-000001", "status": "PROCESSING", "erpOrderId": "ДО-0012345" }
+{ "orderCode": "ORD-202607-28607FEA", "status": "PROCESSING", "erpOrderId": "ДО-0012345" }
 ```
 `erpOrderId` is optional. `orderCode` is always the Vendure-generated code (known at order creation, used as cross-reference key).
 
@@ -264,7 +271,7 @@ ERP callback payload:
 
 - ✅ Vendure central server with Docker dev stack
 - ✅ Worker process (`apps/server/src/worker.ts`) — BullMQ job processing, ES reindex
-- ✅ Sequential order codes `ORD-YYYY-NNNNNN` via `SequentialOrderCodeStrategy`
+- ✅ Order codes `ORD-YYYYMM-<random hex>` via `DateStampedOrderCodeStrategy` (race-free — no DB counter, see "Order code strategy" below)
 - ✅ `plugin-price-entry`: price types + customerPrice resolver
 - ✅ `plugin-customer-pricing`: customer ↔ price type assignment
 - ✅ `plugin-counterparty`: legal entities + trading points + self-service CRUD
@@ -331,7 +338,7 @@ ERP callback payload:
 - **ES must be running** for E2E tests — `make up` before `make test-e2e`. ES yellow status (single node, no replicas) is normal in dev.
 - `make lint`: 0 errors, ~55 warnings (pre-existing in `.stories.ts` + router lazy imports + erp-order new files). `eslint.config.js` now sets `argsIgnorePattern: '^_'` for `no-unused-vars` (needed for strategy interfaces with unused trailing args, e.g. `CustomerPriceCalculationStrategy`).
 - `make test`: 93/93 green.
-- E2E: orders (incl. order-status-flow + volume-discount + amount-discount) + favorites + catalog (incl. discounts) + auth + account segments (48+ tests) green; full suite last verified 94/95 (one flaky test since fixed). Note: hit a one-off `SequentialOrderCodeStrategy` unique-code race during a run (documented risk) — didn't reproduce on retry, not investigated further.
+- E2E: orders (incl. order-status-flow + volume-discount + amount-discount) + favorites + catalog (incl. discounts) + auth + account segments (48+ tests) green; full suite last verified 94/95 (one flaky test since fixed). The order-code unique-key race hit during one run is now fixed (see "Order code strategy") — reverified green after the fix.
 - **`tsc --noEmit` on `plugin-price-entry` reports spurious `"@vendure/core" has no exported member ..."` errors** even on trivial imports, reproducible on a from-scratch minimal file — environment/dependency-resolution quirk, not a real type error (dist/ still emits correct JS via `tsc --watch` despite it, and everything works at runtime — verified via live GraphQL/e2e). `make lint`/`make test` are unaffected (different resolution path) and remain the authoritative gates. Not investigated further — flag if it recurs or blocks `make build`.
 
 ---
@@ -384,7 +391,7 @@ Dev defaults:
 - **Plugin root `index.ts`** — must re-export from `./src/`, not `./`. Without it `tsc` produces no `dist/index.js`.
 - **E2E cart tests** — call `transitionOrderToState('AddingItems')` then `removeAllOrderLines` in clearCart; auto-loadMore makes row count non-deterministic.
 - **E2E orders tests** — `searchInStock()` retries 5× with 3s delay (ES may not be ready after seed). `goToOrders()` timeout is 20s.
-- **ERP callback key** — `orderCode` (Vendure code, e.g. `ORD-2026-000001`) is the cross-reference. `erpOrderId` (1C doc code) is unknown at order creation — never use it as lookup key.
-- **`OrderCodeStrategy` DI** — use `init(injector): void` pattern, instantiate with `new SequentialOrderCodeStrategy()` (no constructor args). Do NOT use `@Injectable()`.
+- **ERP callback key** — `orderCode` (Vendure code, e.g. `ORD-202607-28607FEA`) is the cross-reference. `erpOrderId` (1C doc code) is unknown at order creation — never use it as lookup key.
+- **`OrderCodeStrategy` instantiation** — plain class instantiated with `new DateStampedOrderCodeStrategy()` in `vendure-config.ts` (no constructor args, no `init(injector)` needed anymore since it doesn't touch the DB). Do NOT use `@Injectable()`. Do NOT reintroduce a `MAX(...) + 1` DB counter for order codes — see "Order code strategy" for why.
 - **Vendure admin API auth** — Bearer token via `vendure-auth-token` response header (not Set-Cookie). Use `Authorization: Bearer <token>` on subsequent requests.
 - Always `make lint && make test` before reporting a task done.

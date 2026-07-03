@@ -116,10 +116,13 @@ docs for the exact list). It calls `PriceResolutionService.resolve()` and uses
 only when the customer has no resolvable price (guest, or no `PriceEntry` for their
 price type).
 
-Follows the same `init(injector)` pattern as `SequentialOrderCodeStrategy`
-(`apps/server/src/order-code.strategy.ts`) — both are plain classes instantiated with
-`new` in `vendure-config.ts`, not NestJS-managed providers, so they pull their
-dependencies from the `Injector` passed to `init()`.
+Uses Vendure's `init(injector)` pattern (a plain class instantiated with `new` in
+`vendure-config.ts`, not a NestJS-managed provider) to pull `PriceResolutionService`
+from the `Injector`. `apps/server/src/order-code.strategy.ts`
+(`DateStampedOrderCodeStrategy`) is a sibling strategy in the same file/pattern family,
+though it no longer needs `init()` itself — its `code = ORD-YYYYMM-<random hex>` format
+needs no DB access at all (see "Do not redo" below for why the previous MAX+1 approach
+was replaced).
 
 ---
 

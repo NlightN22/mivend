@@ -1,6 +1,6 @@
 import path from 'path';
 import { LanguageCode, VendureConfig } from '@vendure/core';
-import { SequentialOrderCodeStrategy } from './order-code.strategy';
+import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
@@ -89,7 +89,7 @@ export const config: VendureConfig = {
         ],
     },
     orderOptions: {
-        orderCodeStrategy: new SequentialOrderCodeStrategy(),
+        orderCodeStrategy: new DateStampedOrderCodeStrategy(),
         orderItemPriceCalculationStrategy: new CustomerPriceCalculationStrategy(),
     },
     paymentOptions: {
