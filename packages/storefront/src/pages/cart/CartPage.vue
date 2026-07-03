@@ -3,6 +3,7 @@ import { onMounted } from 'vue';
 import { useCartStore } from '../../stores/cart';
 import CartItemList from './CartItemList.vue';
 import CartSummary from './CartSummary.vue';
+import CartPromoBanner from './CartPromoBanner.vue';
 
 const cartStore = useCartStore();
 
@@ -33,10 +34,13 @@ onMounted(() => cartStore.fetchCart());
       <RouterLink to="/catalog" class="cart-page__empty-btn">Go to catalog</RouterLink>
     </div>
 
-    <div v-else class="cart-page__layout">
-      <CartItemList />
-      <CartSummary />
-    </div>
+    <template v-else>
+      <CartPromoBanner />
+      <div class="cart-page__layout">
+        <CartItemList />
+        <CartSummary />
+      </div>
+    </template>
 
     <!-- TODO: recently viewed -->
   </main>

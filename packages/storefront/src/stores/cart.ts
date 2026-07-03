@@ -22,6 +22,8 @@ export interface CartLine {
     quantity: number;
     linePrice: number;
     linePriceWithTax: number;
+    unitPrice: number;
+    compareAtPrice: number | null;
     productVariant: ProductVariant;
 }
 
@@ -38,7 +40,7 @@ const ACTIVE_ORDER_QUERY = `
         activeOrder {
             id state totalWithTax subTotalWithTax
             lines {
-                id quantity linePrice linePriceWithTax
+                id quantity linePrice linePriceWithTax unitPrice compareAtPrice
                 productVariant {
                     id sku name price currencyCode stockLevel
                     product {

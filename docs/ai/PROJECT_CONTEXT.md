@@ -305,6 +305,7 @@ ERP callback payload:
 - **E2E favorites** (`packages/e2e/storefront/favorites/favorites.spec.ts`) — empty state, add from catalog (grid + list), persist across reload, remove, heart icon state.
 - Removed debug `console.log` calls from `auth.ts`.
 - Confirmed **New Arrivals widget is not actually broken** — verified live via screenshot; see Known problems for nuance.
+- ✅ Discount UX: `MvToast`/`MvToastContainer`/`useToast` (general-purpose, `ui-kit`) + toast on add-to-cart (catalog/product page) + `CartPromoBanner.vue` reflecting the *real* active discount (incl. tiers) via new `OrderLine.compareAtPrice` field — see `docs/pricing.md`
 
 ---
 
@@ -318,9 +319,7 @@ ERP callback payload:
   multi-step approval workflow (director, department heads), calling the already-exposed
   `upsertDiscountRule`/`bulkUpsertDiscountRules` Admin mutations directly — no data-layer
   changes needed when this is built.
-- UX for volume discounts (not built): a static promo block in the cart (not a live
-  "N kg to next tier" calculator) plus a temporary corner toast when adding a qualifying
-  item to cart from the catalog.
+- **Wire `ProductScrollRow.vue`/home-page widgets to `compareAtPrice`** — `useWidgetProducts.ts` still doesn't fetch it, so the discount toast never fires from home-page add-to-cart (catalog + product page are wired). Low priority, mirror the `useProductList.ts` field addition.
 - **Wire `/documents` to real backend** (no backend entity yet)
 - **#19**: Counterparty portal roles
 - **#23**: `plugin-popular-products` — after real orders exist
@@ -338,7 +337,7 @@ ERP callback payload:
 - **ES must be running** for E2E tests — `make up` before `make test-e2e`. ES yellow status (single node, no replicas) is normal in dev.
 - `make lint`: 0 errors, ~55 warnings (pre-existing in `.stories.ts` + router lazy imports + erp-order new files). `eslint.config.js` now sets `argsIgnorePattern: '^_'` for `no-unused-vars` (needed for strategy interfaces with unused trailing args, e.g. `CustomerPriceCalculationStrategy`).
 - `make test`: 93/93 green.
-- E2E: orders (incl. order-status-flow + volume-discount + amount-discount) + favorites + catalog (incl. discounts) + auth + account segments (48+ tests) green; full suite last verified 94/95 (one flaky test since fixed). The order-code unique-key race hit during one run is now fixed (see "Order code strategy") — reverified green after the fix.
+- E2E: orders + catalog (95 tests combined) + cart (47 tests) all green after the discount-UX pass; full suite last verified 94/95 (one flaky test since fixed). The order-code unique-key race hit during one run is now fixed (see "Order code strategy") — reverified green after the fix.
 - **`tsc --noEmit` on `plugin-price-entry` reports spurious `"@vendure/core" has no exported member ..."` errors** even on trivial imports, reproducible on a from-scratch minimal file — environment/dependency-resolution quirk, not a real type error (dist/ still emits correct JS via `tsc --watch` despite it, and everything works at runtime — verified via live GraphQL/e2e). `make lint`/`make test` are unaffected (different resolution path) and remain the authoritative gates. Not investigated further — flag if it recurs or blocks `make build`.
 
 ---

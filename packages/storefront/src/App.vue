@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
+import { MvToastContainer } from '@mivend/ui-kit';
 import { useAuthStore } from './stores/auth';
 import { useCartStore } from './stores/cart';
 
@@ -19,4 +20,5 @@ onMounted(async () => {
 
 <template>
     <RouterView />
+    <MvToastContainer />
 </template>

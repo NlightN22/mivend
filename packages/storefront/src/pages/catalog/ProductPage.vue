@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { toast } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
 import { shopApi } from '../../api/client';
@@ -40,6 +41,16 @@ const error = ref('');
 
 const variant = computed(() => product.value?.variants[0]);
 const brand = computed(() => product.value?.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '');
+
+function handleAddToCart(qty: number): void {
+  if (!variant.value) return;
+  cartStore.addItem(variant.value.id, qty);
+  const { customerPrice, compareAtPrice } = variant.value;
+  if (compareAtPrice != null && customerPrice != null) {
+    const percent = Math.round((1 - customerPrice / compareAtPrice) * 100);
+    if (percent > 0) toast(`Скидка ${percent}% на бренд ${brand.value}`, 'success');
+  }
+}
 const category = computed(() => product.value?.facetValues.find(fv => fv.facet.code === 'category')?.name ?? '');
 const stockVariantLabel = computed((): 'ok' | 'low' | 'out' => {
   const sl = variant.value?.stockLevel ?? '';
@@ -125,7 +136,7 @@ onMounted(() => { fetchData(route.params.slug as string); });
           :stock-level="variant?.stockLevel"
           :show-prices="authStore.isLoggedIn"
           :product-name="product.name"
-          @add-to-cart="(qty) => variant && cartStore.addItem(variant.id, qty)"
+          @add-to-cart="handleAddToCart"
         />
       </div>
     </template>

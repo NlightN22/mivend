@@ -77,6 +77,14 @@ function buildFavoriteItem(p: ProductItem): FavoriteItem {
 function handleToggleFavorite(variantId: string | undefined, p: ProductItem): void {
     favoritesStore.toggle(buildFavoriteItem(p));
 }
+
+function discountHintFor(p: ProductItem): { brand: string; percent: number } | undefined {
+    const variant = p.variants[0];
+    if (!variant || variant.compareAtPrice == null || variant.customerPrice == null) return undefined;
+    const percent = Math.round((1 - variant.customerPrice / variant.compareAtPrice) * 100);
+    if (percent <= 0) return undefined;
+    return { brand: getBrand(p), percent };
+}
 </script>
 
 <template>
@@ -139,7 +147,7 @@ function handleToggleFavorite(variantId: string | undefined, p: ProductItem): vo
                     :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId)"
+                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1, discountHintFor(p))"
                     @update-cart-qty="onUpdateQty"
                     @toggle-favorite="(variantId: string | undefined) => handleToggleFavorite(variantId, p)"
                     @view-analogs="() => {}"
@@ -166,7 +174,7 @@ function handleToggleFavorite(variantId: string | undefined, p: ProductItem): vo
                     :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId)"
+                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1, discountHintFor(p))"
                     @update-cart-qty="onUpdateQty"
                     @toggle-favorite="(variantId: string | undefined) => handleToggleFavorite(variantId, p)"
                     @view-analogs="() => {}"

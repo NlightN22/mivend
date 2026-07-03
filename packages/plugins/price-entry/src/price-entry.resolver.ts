@@ -1,6 +1,13 @@
 import { Args, Mutation, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Permission } from '@vendure/common/lib/generated-types';
-import { Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
+import {
+    Allow,
+    Ctx,
+    OrderLine,
+    RequestContext,
+    Transaction,
+    TransactionalConnection,
+} from '@vendure/core';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { PriceEntryInput, PriceEntryService } from './price-entry.service';
@@ -26,6 +33,35 @@ export class ProductVariantPriceResolver {
         @Parent() variant: { id: string },
     ): Promise<number | null> {
         return (await this.priceResolutionService.resolve(ctx, variant.id)).compareAtPrice;
+    }
+}
+
+@Resolver('OrderLine')
+export class OrderLineDiscountResolver {
+    constructor(
+        private priceResolutionService: PriceResolutionService,
+        private connection: TransactionalConnection,
+    ) {}
+
+    // Re-exposes what CustomerPriceCalculationStrategy already computed for this line's
+    // unitPrice — for display only, so the cart can show whether (and how much of) a
+    // discount, including a weight/amount tier, is currently active.
+    @ResolveField()
+    async compareAtPrice(
+        @Ctx() ctx: RequestContext,
+        @Parent() orderLine: { id: string },
+    ): Promise<number | null> {
+        const line = await this.connection.getRepository(ctx, OrderLine).findOne({
+            where: { id: orderLine.id },
+            relations: ['order', 'order.lines'],
+        });
+        if (!line) return null;
+        const { compareAtPrice } = await this.priceResolutionService.resolve(
+            ctx,
+            String(line.productVariantId),
+            { order: line.order, quantity: line.quantity },
+        );
+        return compareAtPrice;
     }
 }
 

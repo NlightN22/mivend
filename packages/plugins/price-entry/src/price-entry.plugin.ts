@@ -5,6 +5,7 @@ import { ProductVariantPriceEntry } from './price-entry.entity';
 import { DiscountRule } from './discount-rule.entity';
 import {
     DiscountRuleAdminResolver,
+    OrderLineDiscountResolver,
     PriceEntryAdminResolver,
     ProductVariantPriceResolver,
 } from './price-entry.resolver';
@@ -15,6 +16,10 @@ import { PriceResolutionService } from './price-resolution.service';
 const shopApiSchema = gql`
     extend type ProductVariant {
         customerPrice: Int
+        compareAtPrice: Int
+    }
+
+    extend type OrderLine {
         compareAtPrice: Int
     }
 `;
@@ -71,7 +76,7 @@ const adminApiSchema = gql`
     entities: [ProductVariantPriceEntry, DiscountRule],
     shopApiExtensions: {
         schema: shopApiSchema,
-        resolvers: [ProductVariantPriceResolver],
+        resolvers: [ProductVariantPriceResolver, OrderLineDiscountResolver],
     },
     adminApiExtensions: {
         schema: adminApiSchema,

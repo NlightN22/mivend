@@ -224,9 +224,29 @@ is a decimal amount (same convention as `PriceRecord.price`), converted to the s
 currency unit in `discount-rule.handler.ts`. Verified end-to-end via
 `packages/e2e/storefront/orders/amount-discount.spec.ts`.
 
-UX (agreed, not built yet): no live "buy N more kg for a better price" calculator in the
-cart — a static promo block in the cart, and a temporary corner toast when adding a
-qualifying item to the cart from the catalog.
+**Built — UX.** No live "buy N more kg for a better price" calculator, as agreed — just:
+
+- A toast on add-to-cart, reusing catalog-level `compareAtPrice`/`customerPrice`
+  already fetched by `ProductListView.vue`/`ProductPage.vue` (no backend change — this
+  only ever reflects the _flat_ facet+period discount, never a tier, since the catalog
+  has no order-quantity context). Wired through
+  `useCartActions.onAddToCart(variantId, qty, discountHint?)`
+  (`packages/storefront/src/composables/useCartActions.ts`).
+- A static promo block in the cart (`CartPromoBanner.vue`,
+  `packages/storefront/src/pages/cart/`), which _does_ reflect the real active discount
+  including a reached tier — via a new `OrderLine.compareAtPrice` field
+  (`OrderLineDiscountResolver` in `price-entry.resolver.ts`) that re-exposes what
+  `CustomerPriceCalculationStrategy` already computed for that line's `unitPrice`, using
+  the same `PriceResolutionService.resolve(ctx, variantId, { order, quantity })` call —
+  zero new pricing logic, just a read-only view of it.
+- The toast itself (`MvToast`/`MvToastContainer`/`useToast`) lives in `ui-kit` as a
+  general-purpose primitive (queue-based, module-level state, no Pinia dependency) —
+  not discount-specific. Mounted once in `App.vue`.
+- **Known gap, not fixed here:** `ProductScrollRow.vue`/home-page widgets
+  (`useWidgetProducts.ts`) still don't fetch `compareAtPrice` at all (pre-existing,
+  noted when `ProductPage.vue` was wired) — the toast won't fire from home-page
+  "Add to cart" clicks. Low priority; fix by mirroring the same field addition already
+  done for `useProductList.ts`.
 
 Vendure has a native Promotions engine (`has-facet-values-condition` +
 `facet-values-percentage-discount-action` in `@vendure/core`) that's close to this shape
