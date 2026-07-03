@@ -32,4 +32,10 @@ export class DiscountRule extends VendureEntity {
 
     @Column({ type: 'float', nullable: true })
     minWeightKg!: number | null;
+
+    // Base price (in the smallest currency unit, e.g. kopecks) that must be spent on
+    // this rule's facet within the order to reach this tier. Mutually exclusive with
+    // minWeightKg — a rule uses one metric or the other, never both.
+    @Column({ type: 'bigint', nullable: true })
+    minAmount!: number | null;
 }

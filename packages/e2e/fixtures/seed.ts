@@ -73,6 +73,7 @@ export const seedRecords = [
             fullName: 'Brake Pads Front Disc Type',
             price: 1200,
             stockOnHand: 30,
+            brandCode: 'e2e-amount-brand',
         },
     },
     {
@@ -160,6 +161,19 @@ export const seedRecords = [
             validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
             validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             minWeightKg: 200,
+        },
+    },
+    {
+        type: 'discountRule' as const,
+        data: {
+            erpId: 'e2e-discount-rule-amount-001',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'e2e-amount-brand',
+            percent: 30,
+            validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            minAmount: 2000,
         },
     },
     {

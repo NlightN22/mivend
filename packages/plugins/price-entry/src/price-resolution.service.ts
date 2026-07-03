@@ -15,6 +15,11 @@ export interface OrderPricingContext {
     quantity: number;
 }
 
+interface FacetAggregates {
+    weightByFacet: Map<string, number>;
+    amountByFacet: Map<string, number>;
+}
+
 interface VariantFacetsAndWeight {
     facetValues: VariantFacetValue[];
     weight: number;
@@ -44,9 +49,20 @@ export class PriceResolutionService {
         if (basePrice === null) return { customerPrice: null, compareAtPrice: null };
 
         const { facetValues, weight } = await this.getVariantFacetsAndWeight(ctx, variantId);
-        const weightByFacet = orderContext
-            ? await this.buildWeightByFacet(ctx, variantId, facetValues, weight, orderContext)
-            : new Map<string, number>();
+        const { weightByFacet, amountByFacet } = orderContext
+            ? await this.buildAggregates(
+                  ctx,
+                  variantId,
+                  facetValues,
+                  weight,
+                  basePrice,
+                  priceTypeCode,
+                  orderContext,
+              )
+            : {
+                  weightByFacet: new Map<string, number>(),
+                  amountByFacet: new Map<string, number>(),
+              };
 
         const percent = await this.discountRuleService.getBestPercent(
             ctx,
@@ -54,6 +70,7 @@ export class PriceResolutionService {
             facetValues,
             new Date(),
             weightByFacet,
+            amountByFacet,
         );
 
         if (percent === null) return { customerPrice: basePrice, compareAtPrice: null };
@@ -63,39 +80,56 @@ export class PriceResolutionService {
         };
     }
 
-    private async buildWeightByFacet(
+    /**
+     * Sums, per facet value, both the weight (kg) and the spend (base price × quantity)
+     * across the variant being priced and every other line already in the order that
+     * shares a facet value with it. Skips the priced variant's own pre-existing line to
+     * avoid double-counting on `adjustOrderLine`, where `orderContext.quantity` is
+     * already the final post-change quantity.
+     */
+    private async buildAggregates(
         ctx: RequestContext,
         variantId: string,
         thisFacetValues: VariantFacetValue[],
         thisWeight: number,
+        thisBasePrice: number,
+        priceTypeCode: string,
         orderContext: OrderPricingContext,
-    ): Promise<Map<string, number>> {
+    ): Promise<FacetAggregates> {
         const weightByFacet = new Map<string, number>();
+        const amountByFacet = new Map<string, number>();
         const addContribution = (
             facetValues: VariantFacetValue[],
-            contributionKg: number,
+            weightKg: number,
+            amount: number,
         ): void => {
             for (const fv of facetValues) {
                 const key = facetKey(fv.facetCode, fv.valueCode);
-                weightByFacet.set(key, (weightByFacet.get(key) ?? 0) + contributionKg);
+                weightByFacet.set(key, (weightByFacet.get(key) ?? 0) + weightKg);
+                amountByFacet.set(key, (amountByFacet.get(key) ?? 0) + amount);
             }
         };
 
         // orderContext.quantity is the final quantity for this line (Vendure passes the
         // post-change value for both addItemToOrder and adjustOrderLine) — skip this
         // variant's own existing line below to avoid double-counting on adjustOrderLine.
-        addContribution(thisFacetValues, thisWeight * orderContext.quantity);
+        addContribution(
+            thisFacetValues,
+            thisWeight * orderContext.quantity,
+            thisBasePrice * orderContext.quantity,
+        );
 
         for (const line of orderContext.order.lines) {
-            if (String(line.productVariantId) === variantId) continue;
-            const { facetValues, weight } = await this.getVariantFacetsAndWeight(
-                ctx,
-                String(line.productVariantId),
-            );
-            addContribution(facetValues, weight * line.quantity);
+            const lineVariantId = String(line.productVariantId);
+            if (lineVariantId === variantId) continue;
+            const [{ facetValues, weight }, price] = await Promise.all([
+                this.getVariantFacetsAndWeight(ctx, lineVariantId),
+                this.priceEntryService.getForVariant(ctx, lineVariantId, priceTypeCode),
+            ]);
+            addContribution(facetValues, weight * line.quantity, (price ?? 0) * line.quantity);
         }
 
-        return weightByFacet;
+        return { weightByFacet, amountByFacet };
     }
 
     private async getVariantFacetsAndWeight(

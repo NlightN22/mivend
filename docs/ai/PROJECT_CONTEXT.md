@@ -281,7 +281,7 @@ ERP callback payload:
 - ✅ `MvFavoriteButton` shared ui-kit component — favorites toggle works identically in catalog grid and list views
 - ✅ `plugin-price-entry`: `DiscountRule` (facet + time-window % discounts) + `PriceResolutionService` as the single shared source for `customerPrice`/`compareAtPrice`, used by catalog (grid/list/product page) *and* real order pricing
 - ✅ Real order pricing: `CustomerPriceCalculationStrategy` makes `OrderLine.unitPrice` match the discounted price shown in the storefront (previously cosmetic-only)
-- ✅ Volume/weight-tiered discount ladder: `DiscountRule.minWeightKg` + `ProductVariant.weight` + order-context weight aggregation in `PriceResolutionService`/`CustomerPriceCalculationStrategy` — see `docs/pricing.md`
+- ✅ Volume-tiered discount ladders: weight (`DiscountRule.minWeightKg` + `ProductVariant.weight`) and spend amount (`DiscountRule.minAmount`), both via order-context aggregation in `PriceResolutionService`/`CustomerPriceCalculationStrategy` — see `docs/pricing.md`
 - ✅ Counterparty → price type now correctly populates `customer_price_type` (was silently writing to an unused Vendure `CustomerGroup`)
 - ✅ E2E: orders (incl. ERP status flow) + favorites + catalog + discounts + auth + account segments green (51+ tests); full suite last run 94/95 (one flaky test since fixed)
 
@@ -303,13 +303,9 @@ ERP callback payload:
 
 ## Planned next work
 
-- **Sum-based volume tiers** (follow-up to the weight ladder below): business may also
-  want tiers keyed on money spent on a facet group, not just weight (e.g. "spend
-  50,000₽ on brand X → 15% off"). Same shape as the weight ladder — a threshold column
-  + aggregation across matching order lines — but aggregates `quantity × basePrice`
-  instead of `quantity × weight`. See `docs/pricing.md` "Not built — sum-based ladder".
 - **Manager portal for discount management** (planned, not started): discount rules
-  (flat and weight-tiered) are **not** expected to come from the ERP in production —
+  (flat, weight-tiered, and amount-tiered) are **not** expected to come from the ERP in
+  production —
   the `discountRule` ERP-import record type exists for dev/test seeding convenience
   only. The real path is a manager-facing portal on Vendure's Admin API with a
   multi-step approval workflow (director, department heads), calling the already-exposed
@@ -334,8 +330,8 @@ ERP callback payload:
 - **DocumentsFilters.vue** dead file in `src/pages/documents/` — not used, can be deleted.
 - **ES must be running** for E2E tests — `make up` before `make test-e2e`. ES yellow status (single node, no replicas) is normal in dev.
 - `make lint`: 0 errors, ~55 warnings (pre-existing in `.stories.ts` + router lazy imports + erp-order new files). `eslint.config.js` now sets `argsIgnorePattern: '^_'` for `no-unused-vars` (needed for strategy interfaces with unused trailing args, e.g. `CustomerPriceCalculationStrategy`).
-- `make test`: 89/89 green.
-- E2E: orders (incl. order-status-flow + volume-discount) + favorites + catalog (incl. discounts) + auth + account segments (47+ tests) green; full suite last verified 94/95 (one flaky test since fixed).
+- `make test`: 93/93 green.
+- E2E: orders (incl. order-status-flow + volume-discount + amount-discount) + favorites + catalog (incl. discounts) + auth + account segments (48+ tests) green; full suite last verified 94/95 (one flaky test since fixed). Note: hit a one-off `SequentialOrderCodeStrategy` unique-code race during a run (documented risk) — didn't reproduce on retry, not investigated further.
 - **`tsc --noEmit` on `plugin-price-entry` reports spurious `"@vendure/core" has no exported member ..."` errors** even on trivial imports, reproducible on a from-scratch minimal file — environment/dependency-resolution quirk, not a real type error (dist/ still emits correct JS via `tsc --watch` despite it, and everything works at runtime — verified via live GraphQL/e2e). `make lint`/`make test` are unaffected (different resolution path) and remain the authoritative gates. Not investigated further — flag if it recurs or blocks `make build`.
 
 ---

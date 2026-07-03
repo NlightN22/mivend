@@ -43,6 +43,7 @@ function rule(overrides: Partial<Record<string, unknown>> = {}): Record<string, 
         validFrom: new Date('2026-07-01T00:00:00.000Z'),
         validTo: new Date('2026-07-31T00:00:00.000Z'),
         minWeightKg: null,
+        minAmount: null,
         ...overrides,
     };
 }
@@ -273,6 +274,62 @@ describe('DiscountRuleService', () => {
             );
 
             expect(result).toBeNull();
+        });
+
+        it('excludes an amount-tiered rule when the spend threshold is not reached', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ percent: 15, minWeightKg: null, minAmount: 5000000 }),
+            ]);
+            const amountByFacet = new Map([['brand:lukoil', 3000000]]);
+
+            const result = await service.getBestPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+                new Map(),
+                amountByFacet,
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('includes an amount-tiered rule once the spend threshold is reached', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ percent: 15, minWeightKg: null, minAmount: 5000000 }),
+            ]);
+            const amountByFacet = new Map([['brand:lukoil', 5000000]]);
+
+            const result = await service.getBestPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+                new Map(),
+                amountByFacet,
+            );
+
+            expect(result).toBe(15);
+        });
+
+        it('picks the higher of a reached weight tier and a reached amount tier', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ percent: 15, minWeightKg: 500 }),
+                rule({ percent: 22, minWeightKg: null, minAmount: 5000000 }),
+            ]);
+            const weightByFacet = new Map([['brand:lukoil', 600]]);
+            const amountByFacet = new Map([['brand:lukoil', 6000000]]);
+
+            const result = await service.getBestPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+                weightByFacet,
+                amountByFacet,
+            );
+
+            expect(result).toBe(22);
         });
     });
 });

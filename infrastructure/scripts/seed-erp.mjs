@@ -239,6 +239,18 @@ async function main() {
             validTo: discountValidTo,
             minWeightKg: 1000,
         },
+        // Spend-based tier example (mutually exclusive metric from the weight ladder
+        // above, same "highest percent wins" rule — see docs/pricing.md).
+        {
+            erpId: 'discount-castrol-wholesale-spend-20000',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'castrol',
+            percent: 15,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minAmount: 20000,
+        },
     ];
     console.log(`Sending ${discountRules.length} discount rules...`);
     const discountResult = await postBatch(`seed-discount-rules-${run}`, discountRules.map(data => ({ type: 'discountRule', data })));

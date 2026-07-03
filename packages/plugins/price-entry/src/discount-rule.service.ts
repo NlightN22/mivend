@@ -14,6 +14,7 @@ export interface DiscountRuleInput {
     validFrom: Date;
     validTo: Date;
     minWeightKg: number | null;
+    minAmount: number | null;
 }
 
 export interface VariantFacetValue {
@@ -57,6 +58,7 @@ export class DiscountRuleService {
                     'validFrom',
                     'validTo',
                     'minWeightKg',
+                    'minAmount',
                 ],
                 ['erpId'],
             )
@@ -68,10 +70,11 @@ export class DiscountRuleService {
     /**
      * Returns the highest matching discount percent, or null if none match.
      *
-     * `weightByFacet` maps `facetCode:valueCode` -> aggregated kg purchased for that
-     * facet value in the current order (empty for catalog display, where quantity is
-     * unknown). A rule with `minWeightKg` set only qualifies once that threshold is
-     * reached; flat rules (`minWeightKg` null) qualify as soon as the facet matches.
+     * `weightByFacet`/`amountByFacet` map `facetCode:valueCode` -> aggregated kg/money
+     * purchased for that facet value in the current order (both empty for catalog
+     * display, where quantity is unknown). A rule with `minWeightKg` or `minAmount` set
+     * only qualifies once that threshold is reached; flat rules (both null) qualify as
+     * soon as the facet matches. A rule never sets both metrics at once.
      */
     async getBestPercent(
         ctx: RequestContext,
@@ -79,6 +82,7 @@ export class DiscountRuleService {
         variantFacetValues: VariantFacetValue[],
         now: Date,
         weightByFacet: Map<string, number> = new Map(),
+        amountByFacet: Map<string, number> = new Map(),
     ): Promise<number | null> {
         const rules = await this.connection
             .getRepository(ctx, DiscountRule)
@@ -94,10 +98,13 @@ export class DiscountRuleService {
                     fv => fv.facetCode === rule.facetCode && fv.valueCode === rule.facetValueCode,
                 );
             if (!facetMatches) return false;
-            if (rule.minWeightKg === null) return true;
+            if (rule.minWeightKg === null && rule.minAmount === null) return true;
             if (rule.facetCode === null || rule.facetValueCode === null) return false;
-            const weight = weightByFacet.get(facetKey(rule.facetCode, rule.facetValueCode)) ?? 0;
-            return weight >= rule.minWeightKg;
+            const key = facetKey(rule.facetCode, rule.facetValueCode);
+            if (rule.minWeightKg !== null) {
+                return (weightByFacet.get(key) ?? 0) >= rule.minWeightKg;
+            }
+            return (amountByFacet.get(key) ?? 0) >= (rule.minAmount ?? 0);
         });
 
         if (matching.length === 0) return null;

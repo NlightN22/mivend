@@ -82,6 +82,9 @@ export interface DiscountRuleRecord {
     validFrom: string;
     validTo: string;
     minWeightKg?: number | null;
+    // Decimal amount (e.g. rubles), same convention as PriceRecord.price — converted
+    // to the smallest currency unit by discount-rule.handler.ts.
+    minAmount?: number | null;
 }
 
 export type ImportRecord =

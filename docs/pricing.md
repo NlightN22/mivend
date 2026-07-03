@@ -207,15 +207,19 @@ heads). That portal will call the exact same Admin GraphQL mutations already exp
 `DiscountRuleService`. **No data-layer rework needed** when that portal is built; ERP
 import and a future admin portal are two independent writers into the same table.
 
-**Not built — sum-based ladder.** The business may also want tiers keyed on purchased
-**amount** (money spent on a facet-scoped group), not just weight — e.g. "spend 50,000₽
-on brand X, get 15% off". This is the same shape as the weight ladder (a threshold
-column + aggregation across matching order lines) but aggregates `quantity × basePrice`
-instead of `quantity × weight`. If/when needed: add a parallel `minAmount` column (or
-generalize `minWeightKg`/`minAmount` into a single "metric type" if both are needed
-simultaneously), and a second aggregation map in `PriceResolutionService` alongside
-`weightByFacet`. Flag this to whoever builds it — don't assume weight is the only tier
-metric ever needed.
+**Built — sum-based ladder.** Tiers can also be keyed on purchased **amount** (money
+spent on a facet-scoped group), not just weight — e.g. "spend 2,000₽ on a facet, get
+30% off". `DiscountRule.minAmount` (smallest currency unit, alongside `minWeightKg`) is
+the parallel metric; a rule sets **one or the other, never both**. In
+`PriceResolutionService.buildAggregates()`, `amountByFacet` sums `quantity × basePrice`
+per facet across the priced line and every other matching order line, computed in the
+same pass as `weightByFacet` (one query per order line, not two).
+`DiscountRuleService.getBestPercent()` takes both maps and picks the highest percent
+among all eligible rules — flat, weight-tiered, and amount-tiered together, still one
+reduction, no special-casing between the two metrics. `erp-import`'s `DiscountRuleRecord.minAmount`
+is a decimal amount (same convention as `PriceRecord.price`), converted to the smallest
+currency unit in `discount-rule.handler.ts`. Verified end-to-end via
+`packages/e2e/storefront/orders/amount-discount.spec.ts`.
 
 UX (agreed, not built yet): no live "buy N more kg for a better price" calculator in the
 cart — a static promo block in the cart, and a temporary corner toast when adding a

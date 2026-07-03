@@ -17,6 +17,7 @@ export class DiscountRuleHandler {
             validFrom: new Date(record.validFrom),
             validTo: new Date(record.validTo),
             minWeightKg: record.minWeightKg ?? null,
+            minAmount: record.minAmount != null ? Math.round(record.minAmount * 100) : null,
         });
     }
 }
