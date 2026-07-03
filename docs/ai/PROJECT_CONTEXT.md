@@ -281,6 +281,7 @@ ERP callback payload:
 - ✅ `MvFavoriteButton` shared ui-kit component — favorites toggle works identically in catalog grid and list views
 - ✅ `plugin-price-entry`: `DiscountRule` (facet + time-window % discounts) + `PriceResolutionService` as the single shared source for `customerPrice`/`compareAtPrice`, used by catalog (grid/list/product page) *and* real order pricing
 - ✅ Real order pricing: `CustomerPriceCalculationStrategy` makes `OrderLine.unitPrice` match the discounted price shown in the storefront (previously cosmetic-only)
+- ✅ Volume/weight-tiered discount ladder: `DiscountRule.minWeightKg` + `ProductVariant.weight` + order-context weight aggregation in `PriceResolutionService`/`CustomerPriceCalculationStrategy` — see `docs/pricing.md`
 - ✅ Counterparty → price type now correctly populates `customer_price_type` (was silently writing to an unused Vendure `CustomerGroup`)
 - ✅ E2E: orders (incl. ERP status flow) + favorites + catalog + discounts + auth + account segments green (51+ tests); full suite last run 94/95 (one flaky test since fixed)
 
@@ -302,18 +303,21 @@ ERP callback payload:
 
 ## Planned next work
 
-- **Volume/weight-tiered discounts** (follow-up to issue #14, NOT built): business also
-  has discounts scaled by purchase weight of a facet-scoped product group (e.g. 15% at
-  500kg, 18% at 800kg, 20% at 1000kg of a brand). Design agreed with the user this
-  session: extend `DiscountRule` with a nullable `minWeightKg` column (flat facet+period
-  rules keep it null); `ProductVariant` needs a real `weight` customField (data already
-  exists in 1C, just isn't sent yet — add to `ProductRecord`/`product.handler.ts`);
-  computed inside `CustomerPriceCalculationStrategy` (`apps/server/src/customer-price-calculation.strategy.ts`,
-  see below) using its `order`/`quantity` args to sum weight across matching facet lines
-  and compare to thresholds — mutually exclusive with the flat discount, highest percent
-  wins (confirmed business rule). UX: a static promo block in the cart (not a live
+- **Sum-based volume tiers** (follow-up to the weight ladder below): business may also
+  want tiers keyed on money spent on a facet group, not just weight (e.g. "spend
+  50,000₽ on brand X → 15% off"). Same shape as the weight ladder — a threshold column
+  + aggregation across matching order lines — but aggregates `quantity × basePrice`
+  instead of `quantity × weight`. See `docs/pricing.md` "Not built — sum-based ladder".
+- **Manager portal for discount management** (planned, not started): discount rules
+  (flat and weight-tiered) are **not** expected to come from the ERP in production —
+  the `discountRule` ERP-import record type exists for dev/test seeding convenience
+  only. The real path is a manager-facing portal on Vendure's Admin API with a
+  multi-step approval workflow (director, department heads), calling the already-exposed
+  `upsertDiscountRule`/`bulkUpsertDiscountRules` Admin mutations directly — no data-layer
+  changes needed when this is built.
+- UX for volume discounts (not built): a static promo block in the cart (not a live
   "N kg to next tier" calculator) plus a temporary corner toast when adding a qualifying
-  item to cart from the catalog — both separate, smaller follow-ups.
+  item to cart from the catalog.
 - **Wire `/documents` to real backend** (no backend entity yet)
 - **#19**: Counterparty portal roles
 - **#23**: `plugin-popular-products` — after real orders exist
@@ -330,8 +334,9 @@ ERP callback payload:
 - **DocumentsFilters.vue** dead file in `src/pages/documents/` — not used, can be deleted.
 - **ES must be running** for E2E tests — `make up` before `make test-e2e`. ES yellow status (single node, no replicas) is normal in dev.
 - `make lint`: 0 errors, ~55 warnings (pre-existing in `.stories.ts` + router lazy imports + erp-order new files). `eslint.config.js` now sets `argsIgnorePattern: '^_'` for `no-unused-vars` (needed for strategy interfaces with unused trailing args, e.g. `CustomerPriceCalculationStrategy`).
-- `make test`: 79/79 green.
-- E2E: orders + favorites + catalog + discounts + auth + account segments (51-52 tests) green; full suite last verified 94/95 (one flaky test since fixed).
+- `make test`: 89/89 green.
+- E2E: orders (incl. order-status-flow + volume-discount) + favorites + catalog (incl. discounts) + auth + account segments (47+ tests) green; full suite last verified 94/95 (one flaky test since fixed).
+- **`tsc --noEmit` on `plugin-price-entry` reports spurious `"@vendure/core" has no exported member ..."` errors** even on trivial imports, reproducible on a from-scratch minimal file — environment/dependency-resolution quirk, not a real type error (dist/ still emits correct JS via `tsc --watch` despite it, and everything works at runtime — verified via live GraphQL/e2e). `make lint`/`make test` are unaffected (different resolution path) and remain the authoritative gates. Not investigated further — flag if it recurs or blocks `make build`.
 
 ---
 

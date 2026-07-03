@@ -29,4 +29,7 @@ export class DiscountRule extends VendureEntity {
 
     @Column({ type: 'timestamp' })
     validTo!: Date;
+
+    @Column({ type: 'float', nullable: true })
+    minWeightKg!: number | null;
 }

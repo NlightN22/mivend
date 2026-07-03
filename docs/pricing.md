@@ -167,23 +167,59 @@ depends on the quantity/weight the customer is actually buying, which isn't know
 browsing the catalog — it can only be computed at order time, across all matching order
 lines.
 
-Agreed design (not implemented):
+**Built** (weight-based ladder):
 
-- Extend `DiscountRule` with a nullable `minWeightKg` column. Flat facet+period rules
-  keep it `null`; a volume tier sets it. Both live in the same table/matching pipeline.
-- Add a `weight` custom field to `ProductVariant` — the data already exists in 1C, it
-  just isn't sent through `erp-import`'s `ProductRecord`/`product.handler.ts` yet.
-- Compute the tier **inside** `CustomerPriceCalculationStrategy`, since it already
-  receives the current `Order` (existing lines) and the `quantity` being added — sum
-  `quantity × variant.weight` across all order lines matching the rule's facet, find the
-  highest threshold met, and compare its percent against the flat discount's percent.
-  Mutually exclusive with the flat discount — **highest percent wins**, matching the
-  same rule as facet+period discounts.
-- UX (agreed, not built): no live "buy N more kg for a better price" calculator in the
-  cart — just a static promo block in the cart, and a temporary corner toast when adding
-  a qualifying item to the cart from the catalog.
-- Vendure has a native Promotions engine (`has-facet-values-condition` +
-  `facet-values-percentage-discount-action` in `@vendure/core`) that's close to this
-  shape but operates on `OrderLine.quantity` (piece count), not weight — not reused
-  directly, but worth knowing it exists if the custom-strategy approach above turns out
-  to be insufficient.
+- `DiscountRule` has a nullable `minWeightKg` column
+  (`packages/plugins/price-entry/src/discount-rule.entity.ts`). Flat facet+period rules
+  keep it `null`; a ladder rung sets it. Both share the same table and matching method.
+- `ProductVariant` has a `weight` (kg) custom field, declared in
+  `apps/server/src/vendure-config.ts` (`customFields.ProductVariant`) and typed via
+  module augmentation in `packages/plugins/price-entry/src/types.ts`. Populated by
+  `erp-import`'s `ProductRecord.weight` → `product.handler.ts`.
+- `DiscountRuleService.getBestPercent(ctx, priceTypeCode, facetValues, now, weightByFacet)`
+  — `weightByFacet: Map<'facetCode:valueCode', kg>` is empty for catalog display (no
+  order/quantity context, so tiered rules never match there) and populated by
+  `PriceResolutionService` when an `orderContext` (`{ order, quantity }`) is passed. A
+  rule qualifies if its facet matches AND (`minWeightKg` is null, OR the aggregated
+  weight for that facet meets it) — flat and tiered rules are evaluated together, same
+  "highest percent wins" reduction, no special-casing.
+- `PriceResolutionService.resolve(ctx, variantId, orderContext?)` computes
+  `weightByFacet` by summing `quantity × variant.weight` across the variant being priced
+  plus every other line already in the order that shares a facet value (skipping the
+  line being priced itself if it already exists, to avoid double-counting on
+  `adjustOrderLine`).
+- `CustomerPriceCalculationStrategy.calculateUnitPrice()` passes `{ order, quantity }` as
+  `orderContext` — this is the _only_ call site that does; catalog/product-page/search
+  resolvers still call `resolve()` with no order context, so tiers are correctly invisible
+  while browsing.
+
+**How rules get created — ERP is a data-loading channel, not the only one.** The
+`discountRule` ERP-import record type (`packages/plugins/erp-import/src/handlers/discount-rule.handler.ts`)
+exists mainly to make **dev/test seeding** convenient (`infrastructure/scripts/seed-erp.mjs`,
+`packages/e2e/fixtures/seed.ts`) — in production, discount rules (flat and weight-tiered
+alike) are **not expected to come from the ERP**. The plan is a manager-facing portal
+built on Vendure's Admin API, with a multi-step approval workflow (director, department
+heads). That portal will call the exact same Admin GraphQL mutations already exposed —
+`upsertDiscountRule` / `bulkUpsertDiscountRules` — directly against
+`DiscountRuleService`. **No data-layer rework needed** when that portal is built; ERP
+import and a future admin portal are two independent writers into the same table.
+
+**Not built — sum-based ladder.** The business may also want tiers keyed on purchased
+**amount** (money spent on a facet-scoped group), not just weight — e.g. "spend 50,000₽
+on brand X, get 15% off". This is the same shape as the weight ladder (a threshold
+column + aggregation across matching order lines) but aggregates `quantity × basePrice`
+instead of `quantity × weight`. If/when needed: add a parallel `minAmount` column (or
+generalize `minWeightKg`/`minAmount` into a single "metric type" if both are needed
+simultaneously), and a second aggregation map in `PriceResolutionService` alongside
+`weightByFacet`. Flag this to whoever builds it — don't assume weight is the only tier
+metric ever needed.
+
+UX (agreed, not built yet): no live "buy N more kg for a better price" calculator in the
+cart — a static promo block in the cart, and a temporary corner toast when adding a
+qualifying item to the cart from the catalog.
+
+Vendure has a native Promotions engine (`has-facet-values-condition` +
+`facet-values-percentage-discount-action` in `@vendure/core`) that's close to this shape
+but operates on `OrderLine.quantity` (piece count), not weight/amount — not reused here,
+since the custom-strategy approach above already covers both metrics without it, but
+worth knowing it exists.

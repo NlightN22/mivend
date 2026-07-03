@@ -22,7 +22,8 @@
         "price": 1890,
         "stockOnHand": 124,
         "categoryCode": "cat-engine-oils",
-        "brandCode": "lukoil"
+        "brandCode": "lukoil",
+        "weight": 4
     },
     {
         "externalId": "ext-003",
@@ -121,7 +122,8 @@
         "price": 790,
         "stockOnHand": 200,
         "categoryCode": "cat-engine-oils",
-        "brandCode": "lukoil"
+        "brandCode": "lukoil",
+        "weight": 1
     },
     {
         "externalId": "ext-011",
@@ -233,7 +235,8 @@
         "stockOnHand": 76,
         "categoryCode": "cat-engine-oils",
         "brandCode": "lukoil",
-        "onSale": true
+        "onSale": true,
+        "weight": 5
     },
     {
         "externalId": "ext-020",

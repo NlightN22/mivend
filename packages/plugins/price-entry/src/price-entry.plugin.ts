@@ -42,6 +42,7 @@ const adminApiSchema = gql`
         percent: Int!
         validFrom: DateTime!
         validTo: DateTime!
+        minWeightKg: Float
     }
 
     input DiscountRuleInput {
@@ -52,6 +53,7 @@ const adminApiSchema = gql`
         percent: Int!
         validFrom: DateTime!
         validTo: DateTime!
+        minWeightKg: Float
     }
 
     extend type Mutation {

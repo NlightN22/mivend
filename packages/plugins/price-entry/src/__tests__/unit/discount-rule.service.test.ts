@@ -42,6 +42,7 @@ function rule(overrides: Partial<Record<string, unknown>> = {}): Record<string, 
         percent: 10,
         validFrom: new Date('2026-07-01T00:00:00.000Z'),
         validTo: new Date('2026-07-31T00:00:00.000Z'),
+        minWeightKg: null,
         ...overrides,
     };
 }
@@ -88,11 +89,11 @@ describe('DiscountRuleService', () => {
         });
     });
 
-    describe('getBestDiscountPercent', () => {
+    describe('getBestPercent', () => {
         it('returns null when no rules match', async () => {
             mockQb.getMany.mockResolvedValue([]);
 
-            const result = await service.getBestDiscountPercent(
+            const result = await service.getBestPercent(
                 mockCtx,
                 'WHOLESALE',
                 [{ facetCode: 'brand', valueCode: 'castrol' }],
@@ -105,7 +106,7 @@ describe('DiscountRuleService', () => {
         it('returns the percent of a single matching facet rule', async () => {
             mockQb.getMany.mockResolvedValue([rule({ percent: 10 })]);
 
-            const result = await service.getBestDiscountPercent(
+            const result = await service.getBestPercent(
                 mockCtx,
                 'WHOLESALE',
                 [{ facetCode: 'brand', valueCode: 'lukoil' }],
@@ -120,7 +121,7 @@ describe('DiscountRuleService', () => {
                 rule({ facetCode: null, facetValueCode: null, percent: 5 }),
             ]);
 
-            const result = await service.getBestDiscountPercent(
+            const result = await service.getBestPercent(
                 mockCtx,
                 'WHOLESALE',
                 [{ facetCode: 'brand', valueCode: 'castrol' }],
@@ -136,7 +137,7 @@ describe('DiscountRuleService', () => {
                 rule({ facetCode: 'category', facetValueCode: 'oil', percent: 20 }),
             ]);
 
-            const result = await service.getBestDiscountPercent(
+            const result = await service.getBestPercent(
                 mockCtx,
                 'WHOLESALE',
                 [
@@ -152,7 +153,7 @@ describe('DiscountRuleService', () => {
         it('ignores a rule that does not match the variant facet values', async () => {
             mockQb.getMany.mockResolvedValue([rule({ facetValueCode: 'castrol' })]);
 
-            const result = await service.getBestDiscountPercent(
+            const result = await service.getBestPercent(
                 mockCtx,
                 'WHOLESALE',
                 [{ facetCode: 'brand', valueCode: 'lukoil' }],
@@ -165,7 +166,7 @@ describe('DiscountRuleService', () => {
         it('filters by priceTypeCode and validity window at the query level', async () => {
             mockQb.getMany.mockResolvedValue([]);
 
-            await service.getBestDiscountPercent(mockCtx, 'WHOLESALE', [], now);
+            await service.getBestPercent(mockCtx, 'WHOLESALE', [], now);
 
             expect(mockQb.where).toHaveBeenCalledWith('dr.priceTypeCode = :priceTypeCode', {
                 priceTypeCode: 'WHOLESALE',
@@ -174,6 +175,104 @@ describe('DiscountRuleService', () => {
                 'dr.validFrom <= :now AND dr.validTo >= :now',
                 { now },
             );
+        });
+
+        it('excludes a weight-tiered rule when the threshold is not reached', async () => {
+            mockQb.getMany.mockResolvedValue([rule({ percent: 15, minWeightKg: 500 })]);
+            const weightByFacet = new Map([['brand:lukoil', 300]]);
+
+            const result = await service.getBestPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+                weightByFacet,
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('includes a weight-tiered rule once the threshold is reached', async () => {
+            mockQb.getMany.mockResolvedValue([rule({ percent: 15, minWeightKg: 500 })]);
+            const weightByFacet = new Map([['brand:lukoil', 500]]);
+
+            const result = await service.getBestPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+                weightByFacet,
+            );
+
+            expect(result).toBe(15);
+        });
+
+        it('picks the highest reached rung of a ladder', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ percent: 15, minWeightKg: 500 }),
+                rule({ percent: 18, minWeightKg: 800 }),
+                rule({ percent: 20, minWeightKg: 1000 }),
+            ]);
+            const weightByFacet = new Map([['brand:lukoil', 850]]);
+
+            const result = await service.getBestPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+                weightByFacet,
+            );
+
+            expect(result).toBe(18);
+        });
+
+        it('picks the higher of a flat rule and a reached weight tier', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ percent: 10, minWeightKg: null }),
+                rule({ percent: 20, minWeightKg: 1000 }),
+            ]);
+            const weightByFacet = new Map([['brand:lukoil', 1200]]);
+
+            const result = await service.getBestPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+                weightByFacet,
+            );
+
+            expect(result).toBe(20);
+        });
+
+        it('a flat rule still wins when no weight tier is reached', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ percent: 10, minWeightKg: null }),
+                rule({ percent: 20, minWeightKg: 1000 }),
+            ]);
+            const weightByFacet = new Map([['brand:lukoil', 200]]);
+
+            const result = await service.getBestPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+                weightByFacet,
+            );
+
+            expect(result).toBe(10);
+        });
+
+        it('defaults weightByFacet to empty (catalog display) — tiered rules never match', async () => {
+            mockQb.getMany.mockResolvedValue([rule({ percent: 20, minWeightKg: 500 })]);
+
+            const result = await service.getBestPercent(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+            );
+
+            expect(result).toBeNull();
         });
     });
 });

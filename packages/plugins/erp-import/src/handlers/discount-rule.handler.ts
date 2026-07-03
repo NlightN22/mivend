@@ -16,6 +16,7 @@ export class DiscountRuleHandler {
             percent: record.percent,
             validFrom: new Date(record.validFrom),
             validTo: new Date(record.validTo),
+            minWeightKg: record.minWeightKg ?? null,
         });
     }
 }

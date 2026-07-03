@@ -19,12 +19,13 @@ export class CustomerPriceCalculationStrategy implements OrderItemPriceCalculati
         ctx: RequestContext,
         productVariant: ProductVariant,
         _orderLineCustomFields: { [key: string]: unknown },
-        _order: Order,
-        _quantity: number,
+        order: Order,
+        quantity: number,
     ): Promise<PriceCalculationResult> {
         const { customerPrice } = await this.priceResolutionService.resolve(
             ctx,
             String(productVariant.id),
+            { order, quantity },
         );
         return {
             price: customerPrice ?? productVariant.listPrice,

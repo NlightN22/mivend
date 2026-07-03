@@ -48,6 +48,7 @@ export const seedRecords = [
             price: 850,
             stockOnHand: 100,
             brandCode: 'e2e-discount-brand',
+            weight: 100,
         },
     },
     {
@@ -145,6 +146,20 @@ export const seedRecords = [
             percent: 10,
             validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
             validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            minWeightKg: null,
+        },
+    },
+    {
+        type: 'discountRule' as const,
+        data: {
+            erpId: 'e2e-discount-rule-volume-001',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'e2e-discount-brand',
+            percent: 25,
+            validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            minWeightKg: 200,
         },
     },
     {

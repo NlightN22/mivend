@@ -68,6 +68,7 @@ export class ProductHandler {
                         id: variants.items[0].id,
                         enabled,
                         price: priceInCents,
+                        customFields: { weight: record.weight ?? null },
                     },
                 ]);
             }
@@ -97,6 +98,7 @@ export class ProductHandler {
                     price: priceInCents,
                     stockOnHand: record.stockOnHand,
                     enabled,
+                    customFields: { weight: record.weight ?? null },
                     translations: [{ languageCode: LanguageCode.en, name: record.name }],
                 },
             ]);

@@ -79,6 +79,14 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'On Sale' }],
             },
         ],
+        ProductVariant: [
+            {
+                name: 'weight',
+                type: 'float',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Weight (kg)' }],
+            },
+        ],
     },
     orderOptions: {
         orderCodeStrategy: new SequentialOrderCodeStrategy(),

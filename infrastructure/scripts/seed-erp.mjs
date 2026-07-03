@@ -194,6 +194,8 @@ async function main() {
     const stockResult = await postBatch(`seed-stock-${run}`, stock.map(data => ({ type: 'stock', data })));
     console.log(`  → status=${stockResult.status} processed=${stockResult.processed} failed=${stockResult.failed}`);
 
+    const discountValidFrom = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const discountValidTo = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const discountRules = [
         {
             erpId: 'discount-lukoil-wholesale',
@@ -201,8 +203,41 @@ async function main() {
             facetCode: 'brand',
             facetValueCode: 'lukoil',
             percent: 10,
-            validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minWeightKg: null,
+        },
+        // Volume ladder for the same brand/price type — mutually exclusive with the
+        // flat rule above; the highest reached tier wins (see docs/pricing.md).
+        {
+            erpId: 'discount-lukoil-wholesale-volume-500',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'lukoil',
+            percent: 15,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minWeightKg: 500,
+        },
+        {
+            erpId: 'discount-lukoil-wholesale-volume-800',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'lukoil',
+            percent: 18,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minWeightKg: 800,
+        },
+        {
+            erpId: 'discount-lukoil-wholesale-volume-1000',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'lukoil',
+            percent: 20,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minWeightKg: 1000,
         },
     ];
     console.log(`Sending ${discountRules.length} discount rules...`);

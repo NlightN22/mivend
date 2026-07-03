@@ -11,6 +11,7 @@ export interface ProductRecord {
     brandCode?: string;
     onSale?: boolean;
     enabled?: boolean;
+    weight?: number;
 }
 
 export interface CrossReferenceRecord {
@@ -80,6 +81,7 @@ export interface DiscountRuleRecord {
     percent: number;
     validFrom: string;
     validTo: string;
+    minWeightKg?: number | null;
 }
 
 export type ImportRecord =
