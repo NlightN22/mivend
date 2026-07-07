@@ -76,6 +76,37 @@ export const seedRecords = [
             brandCode: 'e2e-amount-brand',
         },
     },
+    // Second product sharing e2e-discount-brand — exists to test that a weight-tier
+    // discount unlocked by one order line correctly rebalances onto a *different*
+    // pre-existing line of the same brand (cross-line tier-rebalance coverage).
+    {
+        type: 'product' as const,
+        data: {
+            externalId: 'e2e-prod-006',
+            sku: 'E2E-OIL-002',
+            name: 'Engine Oil 5W-40',
+            slug: 'engine-oil-5w40-e2e',
+            fullName: 'Engine Oil 5W-40 4L Synthetic',
+            price: 550,
+            stockOnHand: 100,
+            brandCode: 'e2e-discount-brand',
+            weight: 50,
+        },
+    },
+    // Second product sharing e2e-amount-brand — same purpose, for the amount-tier ladder.
+    {
+        type: 'product' as const,
+        data: {
+            externalId: 'e2e-prod-007',
+            sku: 'E2E-BRK-002',
+            name: 'Brake Pads Rear',
+            slug: 'brake-pads-rear-e2e',
+            fullName: 'Brake Pads Rear Disc Type',
+            price: 800,
+            stockOnHand: 30,
+            brandCode: 'e2e-amount-brand',
+        },
+    },
     {
         type: 'product' as const,
         data: {
@@ -132,6 +163,14 @@ export const seedRecords = [
     {
         type: 'price' as const,
         data: { sku: 'E2E-SPK-001', priceTypeCode: 'WHOLESALE', price: 405 },
+    },
+    {
+        type: 'price' as const,
+        data: { sku: 'E2E-OIL-002', priceTypeCode: 'WHOLESALE', price: 495 },
+    },
+    {
+        type: 'price' as const,
+        data: { sku: 'E2E-BRK-002', priceTypeCode: 'WHOLESALE', price: 720 },
     },
     {
         type: 'price' as const,

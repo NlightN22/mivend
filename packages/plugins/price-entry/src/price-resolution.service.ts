@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { Order, ProductVariant, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    Order,
+    ProductVariant,
+    RequestContext,
+    TransactionalConnection,
+    translateEntity,
+} from '@vendure/core';
 
 import { PriceEntryService } from './price-entry.service';
-import { DiscountRuleService, VariantFacetValue } from './discount-rule.service';
+import { DiscountRuleService, DiscountTierVM, VariantFacetValue } from './discount-rule.service';
 import './types';
 
 export interface ResolvedPrice {
@@ -15,13 +21,26 @@ export interface OrderPricingContext {
     quantity: number;
 }
 
+export interface TierProgressVM {
+    facetName: string;
+    metric: 'WEIGHT' | 'AMOUNT';
+    current: number;
+    currentPercent: number | null;
+    nextThreshold: number | null;
+    nextPercent: number | null;
+}
+
 interface FacetAggregates {
     weightByFacet: Map<string, number>;
     amountByFacet: Map<string, number>;
 }
 
+interface VariantFacetValueWithName extends VariantFacetValue {
+    name: string;
+}
+
 interface VariantFacetsAndWeight {
-    facetValues: VariantFacetValue[];
+    facetValues: VariantFacetValueWithName[];
     weight: number;
 }
 
@@ -144,16 +163,102 @@ export class PriceResolutionService {
             relations: [
                 'facetValues',
                 'facetValues.facet',
+                'facetValues.translations',
                 'product',
                 'product.facetValues',
                 'product.facetValues.facet',
+                'product.facetValues.translations',
             ],
         });
         if (!variant) return { facetValues: [], weight: 0 };
         const all = [...variant.facetValues, ...(variant.product?.facetValues ?? [])];
         return {
-            facetValues: all.map(fv => ({ facetCode: fv.facet.code, valueCode: fv.code })),
+            facetValues: all.map(fv => {
+                const translated = translateEntity(fv, ctx.languageCode);
+                return { facetCode: fv.facet.code, valueCode: fv.code, name: translated.name };
+            }),
             weight: variant.customFields.weight ?? 0,
+        };
+    }
+
+    /**
+     * Ladder rungs available for a variant's facets — no order context, for catalog
+     * display. Informational only; never implies a price the customer hasn't earned.
+     */
+    async resolveTiers(ctx: RequestContext, variantId: string): Promise<DiscountTierVM[]> {
+        const priceTypeCode = await this.priceEntryService.getPriceTypeCodeForUser(ctx);
+        if (!priceTypeCode) return [];
+        // No PriceEntry for this variant+priceType means there is no base price to ever
+        // discount from — showing a tier ladder badge would be pure noise/misleading.
+        const basePrice = await this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode);
+        if (basePrice === null) return [];
+        const { facetValues } = await this.getVariantFacetsAndWeight(ctx, variantId);
+        return this.discountRuleService.getTiers(ctx, priceTypeCode, facetValues, new Date());
+    }
+
+    /**
+     * Progress toward the next unreached tier for a variant's facet, given the current
+     * order context — reuses the same aggregates `resolve()` computes for pricing, just
+     * exposes them instead of discarding them after `getBestPercent()`.
+     */
+    async resolveTierProgress(
+        ctx: RequestContext,
+        variantId: string,
+        orderContext: OrderPricingContext,
+    ): Promise<TierProgressVM | null> {
+        const priceTypeCode = await this.priceEntryService.getPriceTypeCodeForUser(ctx);
+        if (!priceTypeCode) return null;
+
+        const basePrice = await this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode);
+        if (basePrice === null) return null;
+
+        const { facetValues, weight } = await this.getVariantFacetsAndWeight(ctx, variantId);
+        const tiers = await this.discountRuleService.getTiers(
+            ctx,
+            priceTypeCode,
+            facetValues,
+            new Date(),
+        );
+        if (tiers.length === 0) return null;
+
+        const { weightByFacet, amountByFacet } = await this.buildAggregates(
+            ctx,
+            variantId,
+            facetValues,
+            weight,
+            basePrice,
+            priceTypeCode,
+            orderContext,
+        );
+
+        // A ladder is always scoped to one facetCode+facetValueCode (see docs/pricing.md) —
+        // all tiers here share the same facet, so the first one identifies it.
+        const { facetCode, facetValueCode } = tiers[0];
+        const metric: 'WEIGHT' | 'AMOUNT' = tiers[0].minWeightKg !== null ? 'WEIGHT' : 'AMOUNT';
+        const facetValue = facetValues.find(
+            fv => fv.facetCode === facetCode && fv.valueCode === facetValueCode,
+        );
+        if (!facetValue) return null;
+        const key = facetKey(facetCode, facetValueCode);
+        const current =
+            metric === 'WEIGHT' ? (weightByFacet.get(key) ?? 0) : (amountByFacet.get(key) ?? 0);
+
+        const reached = tiers.filter(
+            t => (metric === 'WEIGHT' ? t.minWeightKg : t.minAmount)! <= current,
+        );
+        const unreached = tiers.filter(
+            t => (metric === 'WEIGHT' ? t.minWeightKg : t.minAmount)! > current,
+        );
+        const currentPercent = reached.length > 0 ? Math.max(...reached.map(t => t.percent)) : null;
+        const next = unreached[0] ?? null;
+
+        return {
+            facetName: facetValue.name,
+            metric,
+            current,
+            currentPercent,
+            nextThreshold: next ? (metric === 'WEIGHT' ? next.minWeightKg : next.minAmount) : null,
+            nextPercent: next ? next.percent : null,
         };
     }
 }

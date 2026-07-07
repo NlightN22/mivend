@@ -1,5 +1,6 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Ctx, RequestContext } from '@vendure/core';
+import type { DiscountTierVM } from '@mivend/plugin-price-entry';
 import { SearchService } from './search.service';
 
 @Resolver('SearchResult')
@@ -22,5 +23,13 @@ export class SearchResultResolver {
     ): Promise<number | null> {
         return (await this.searchService.getResolvedPrice(ctx, result.productVariantId))
             .compareAtPrice;
+    }
+
+    @ResolveField()
+    async discountTiers(
+        @Ctx() ctx: RequestContext,
+        @Parent() result: { productVariantId: string },
+    ): Promise<DiscountTierVM[]> {
+        return this.searchService.getTiers(ctx, result.productVariantId);
     }
 }

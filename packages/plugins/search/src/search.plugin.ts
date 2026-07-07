@@ -16,6 +16,7 @@ const shopApiSchema = gql`
     extend type SearchResult {
         customerPrice: Int
         compareAtPrice: Int
+        discountTiers: [DiscountTier!]!
     }
 `;
 

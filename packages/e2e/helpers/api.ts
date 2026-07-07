@@ -44,6 +44,25 @@ export async function waitForRun(runId: string, timeoutMs = 30_000): Promise<Run
     throw new Error(`ERP import run ${runId} timed out after ${timeoutMs}ms`);
 }
 
+export async function adminGql<T>(
+    query: string,
+    variables?: Record<string, unknown>,
+    token?: string,
+): Promise<{ data: T; token?: string }> {
+    const res = await fetch(`${SERVER_URL}/admin-api`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ query, variables }),
+    });
+    const json = (await res.json()) as { data: T; errors?: Array<{ message: string }> };
+    if (json.errors?.length) throw new Error(json.errors[0].message);
+    const responseToken = res.headers.get('vendure-auth-token') ?? undefined;
+    return { data: json.data, token: responseToken };
+}
+
 export async function shopGql<T>(
     query: string,
     variables?: Record<string, unknown>,

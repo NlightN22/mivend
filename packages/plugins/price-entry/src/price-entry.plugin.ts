@@ -12,15 +12,38 @@ import {
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService } from './discount-rule.service';
 import { PriceResolutionService } from './price-resolution.service';
+import { TierRebalanceService } from './tier-rebalance.service';
 
 const shopApiSchema = gql`
+    type DiscountTier {
+        percent: Int!
+        minWeightKg: Float
+        minAmount: Int
+    }
+
+    enum TierMetric {
+        WEIGHT
+        AMOUNT
+    }
+
+    type TierProgress {
+        facetName: String!
+        metric: TierMetric!
+        current: Float!
+        currentPercent: Int
+        nextThreshold: Float
+        nextPercent: Int
+    }
+
     extend type ProductVariant {
         customerPrice: Int
         compareAtPrice: Int
+        discountTiers: [DiscountTier!]!
     }
 
     extend type OrderLine {
         compareAtPrice: Int
+        tierProgress: TierProgress
     }
 `;
 
@@ -82,7 +105,12 @@ const adminApiSchema = gql`
         schema: adminApiSchema,
         resolvers: [PriceEntryAdminResolver, DiscountRuleAdminResolver],
     },
-    providers: [PriceEntryService, DiscountRuleService, PriceResolutionService],
+    providers: [
+        PriceEntryService,
+        DiscountRuleService,
+        PriceResolutionService,
+        TierRebalanceService,
+    ],
     exports: [DiscountRuleService, PriceResolutionService],
     compatibility: '>0.0.0',
 })

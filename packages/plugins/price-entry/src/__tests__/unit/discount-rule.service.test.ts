@@ -332,4 +332,72 @@ describe('DiscountRuleService', () => {
             expect(result).toBe(22);
         });
     });
+
+    describe('getTiers', () => {
+        it('returns an empty array when no rules match the facet', async () => {
+            mockQb.getMany.mockResolvedValue([]);
+
+            const result = await service.getTiers(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'castrol' }],
+                now,
+            );
+
+            expect(result).toEqual([]);
+        });
+
+        it('excludes flat rules (no threshold) — those surface via compareAtPrice, not the badge', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ percent: 10, minWeightKg: null, minAmount: null }),
+            ]);
+
+            const result = await service.getTiers(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+            );
+
+            expect(result).toEqual([]);
+        });
+
+        it('returns ladder rungs sorted ascending by threshold', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({ percent: 20, minWeightKg: 1000 }),
+                rule({ percent: 15, minWeightKg: 500 }),
+                rule({ percent: 18, minWeightKg: 800 }),
+            ]);
+
+            const result = await service.getTiers(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+            );
+
+            expect(result.map(t => t.percent)).toEqual([15, 18, 20]);
+            expect(result.map(t => t.minWeightKg)).toEqual([500, 800, 1000]);
+        });
+
+        it('ignores tiers for a facet the variant does not match', async () => {
+            mockQb.getMany.mockResolvedValue([
+                rule({
+                    facetCode: 'brand',
+                    facetValueCode: 'castrol',
+                    percent: 15,
+                    minAmount: 200000,
+                }),
+            ]);
+
+            const result = await service.getTiers(
+                mockCtx,
+                'WHOLESALE',
+                [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                now,
+            );
+
+            expect(result).toEqual([]);
+        });
+    });
 });

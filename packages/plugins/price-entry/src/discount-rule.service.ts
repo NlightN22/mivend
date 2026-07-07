@@ -22,6 +22,17 @@ export interface VariantFacetValue {
     valueCode: string;
 }
 
+export interface DiscountTierVM {
+    percent: number;
+    minWeightKg: number | null;
+    minAmount: number | null;
+    // Not part of the GraphQL `DiscountTier` shape (resolvers only read the three
+    // fields above) — kept here so PriceResolutionService can match a tier back to the
+    // facet value it aggregates against, without a second query.
+    facetCode: string;
+    facetValueCode: string;
+}
+
 function facetKey(facetCode: string, valueCode: string): string {
     return `${facetCode}:${valueCode}`;
 }
@@ -109,5 +120,45 @@ export class DiscountRuleService {
 
         if (matching.length === 0) return null;
         return Math.max(...matching.map(r => r.percent));
+    }
+
+    /**
+     * Returns the ladder rungs (rules with a threshold set) for a variant's facets,
+     * sorted ascending by threshold — for display only, no order context involved.
+     * Flat rules (both thresholds null) are excluded; they already surface via
+     * `compareAtPrice`/`customerPrice`, not the tier badge.
+     */
+    async getTiers(
+        ctx: RequestContext,
+        priceTypeCode: string,
+        variantFacetValues: VariantFacetValue[],
+        now: Date,
+    ): Promise<DiscountTierVM[]> {
+        const rules = await this.connection
+            .getRepository(ctx, DiscountRule)
+            .createQueryBuilder('dr')
+            .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
+            .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
+            .getMany();
+
+        const matching = rules.filter(rule => {
+            if (rule.minWeightKg === null && rule.minAmount === null) return false;
+            const facetMatches = variantFacetValues.some(
+                fv => fv.facetCode === rule.facetCode && fv.valueCode === rule.facetValueCode,
+            );
+            return facetMatches;
+        });
+
+        return matching
+            .map(r => ({
+                percent: r.percent,
+                minWeightKg: r.minWeightKg,
+                minAmount: r.minAmount,
+                facetCode: r.facetCode as string,
+                facetValueCode: r.facetValueCode as string,
+            }))
+            .sort(
+                (a, b) => (a.minWeightKg ?? a.minAmount ?? 0) - (b.minWeightKg ?? b.minAmount ?? 0),
+            );
     }
 }

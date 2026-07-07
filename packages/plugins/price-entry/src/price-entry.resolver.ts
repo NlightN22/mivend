@@ -12,8 +12,8 @@ import {
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { PriceEntryInput, PriceEntryService } from './price-entry.service';
 import { DiscountRule } from './discount-rule.entity';
-import { DiscountRuleInput, DiscountRuleService } from './discount-rule.service';
-import { PriceResolutionService } from './price-resolution.service';
+import { DiscountRuleInput, DiscountRuleService, DiscountTierVM } from './discount-rule.service';
+import { PriceResolutionService, TierProgressVM } from './price-resolution.service';
 
 @Resolver('ProductVariant')
 export class ProductVariantPriceResolver {
@@ -33,6 +33,14 @@ export class ProductVariantPriceResolver {
         @Parent() variant: { id: string },
     ): Promise<number | null> {
         return (await this.priceResolutionService.resolve(ctx, variant.id)).compareAtPrice;
+    }
+
+    @ResolveField()
+    async discountTiers(
+        @Ctx() ctx: RequestContext,
+        @Parent() variant: { id: string },
+    ): Promise<DiscountTierVM[]> {
+        return this.priceResolutionService.resolveTiers(ctx, variant.id);
     }
 }
 
@@ -62,6 +70,24 @@ export class OrderLineDiscountResolver {
             { order: line.order, quantity: line.quantity },
         );
         return compareAtPrice;
+    }
+
+    // Progress toward the next unreached weight/amount tier for this line's facet —
+    // for cart display only, so the customer knows how much more unlocks a better rung.
+    @ResolveField()
+    async tierProgress(
+        @Ctx() ctx: RequestContext,
+        @Parent() orderLine: { id: string },
+    ): Promise<TierProgressVM | null> {
+        const line = await this.connection.getRepository(ctx, OrderLine).findOne({
+            where: { id: orderLine.id },
+            relations: ['order', 'order.lines'],
+        });
+        if (!line) return null;
+        return this.priceResolutionService.resolveTierProgress(ctx, String(line.productVariantId), {
+            order: line.order,
+            quantity: line.quantity,
+        });
     }
 }
 

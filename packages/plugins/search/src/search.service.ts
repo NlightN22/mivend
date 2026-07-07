@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
-import { PriceResolutionService, ResolvedPrice } from '@mivend/plugin-price-entry';
+import { DiscountTierVM, PriceResolutionService, ResolvedPrice } from '@mivend/plugin-price-entry';
 
 @Injectable()
 export class SearchService {
@@ -8,5 +8,9 @@ export class SearchService {
 
     async getResolvedPrice(ctx: RequestContext, variantId: string): Promise<ResolvedPrice> {
         return this.priceResolutionService.resolve(ctx, variantId);
+    }
+
+    async getTiers(ctx: RequestContext, variantId: string): Promise<DiscountTierVM[]> {
+        return this.priceResolutionService.resolveTiers(ctx, variantId);
     }
 }
