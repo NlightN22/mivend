@@ -11,11 +11,13 @@ const { items, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode,
 
 const newArrivals = useWidgetProducts('new-arrivals');
 const sales = useWidgetProducts('sales');
+const popular = useWidgetProducts('popular');
 
 onMounted(() => {
     load();
     newArrivals.load();
     sales.load();
+    popular.load();
 });
 </script>
 
@@ -32,8 +34,13 @@ onMounted(() => {
                 :items="sales.items.value"
                 :loading="sales.loading.value"
             />
+            <ProductScrollRow
+                title="Popular products"
+                :items="popular.items.value"
+                :loading="popular.loading.value"
+            />
             <div class="home-page__header">
-                <h2 class="home-page__title">Popular products</h2>
+                <h2 class="home-page__title">Full catalog</h2>
                 <p class="home-page__subtitle">
                     {{ authStore.isLoggedIn
                         ? 'Current stock and prices for your trading point'
