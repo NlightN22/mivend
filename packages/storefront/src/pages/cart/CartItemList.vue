@@ -5,6 +5,7 @@ import CartItem from './CartItem.vue';
 
 const cartStore = useCartStore();
 const checkedIds = ref(new Set<string>());
+const confirmingClear = ref(false);
 
 const allChecked = computed(() =>
     cartStore.lines.length > 0 && cartStore.lines.every(l => checkedIds.value.has(l.id)),
@@ -25,10 +26,20 @@ function setChecked(id: string, value: boolean): void {
     checkedIds.value = next;
 }
 
-async function clearCart(): Promise<void> {
-    for (const line of cartStore.lines) {
-        await cartStore.removeItem(line.id);
+const hasSelection = computed(() => checkedIds.value.size > 0);
+
+async function confirmClear(): Promise<void> {
+    confirmingClear.value = false;
+    if (hasSelection.value) {
+        await cartStore.removeItems([...checkedIds.value]);
+        checkedIds.value = new Set();
+    } else {
+        await cartStore.clearCart();
     }
+}
+
+function cancelClear(): void {
+    confirmingClear.value = false;
 }
 </script>
 
@@ -44,7 +55,20 @@ async function clearCart(): Promise<void> {
         <span>Select all</span>
       </label>
       <div class="item-list__actions">
-        <button class="item-list__action" type="button" @click="clearCart">Clear</button>
+        <div v-if="confirmingClear" class="item-list__clear-confirm">
+          <span>{{ hasSelection ? `Remove ${checkedIds.size} selected?` : 'Clear all?' }}</span>
+          <button class="item-list__clear-confirm-yes" type="button" @click="confirmClear">Yes</button>
+          <button class="item-list__clear-confirm-no" type="button" @click="cancelClear">No</button>
+        </div>
+        <button
+          v-else
+          class="item-list__action"
+          type="button"
+          :disabled="cartStore.lines.length === 0"
+          @click="confirmingClear = true"
+        >
+          {{ hasSelection ? `Clear selected (${checkedIds.size})` : 'Clear' }}
+        </button>
       </div>
     </div>
 
@@ -105,6 +129,23 @@ async function clearCart(): Promise<void> {
   font-size: 13px; font-weight: 850; cursor: pointer; font-family: inherit;
 }
 .item-list__action:hover { background: #e2f8ef; color: #008a64; }
+.item-list__action:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.item-list__clear-confirm {
+  display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: #66736e;
+}
+.item-list__clear-confirm-yes {
+  height: 32px; padding: 0 10px; border: none; border-radius: 10px;
+  background: #fff0ee; color: #f04438; font-size: 12px; font-weight: 900;
+  cursor: pointer; font-family: inherit;
+}
+.item-list__clear-confirm-yes:hover { background: #fde3e0; }
+.item-list__clear-confirm-no {
+  height: 32px; padding: 0 10px; border: none; border-radius: 10px;
+  background: #f4faf7; color: #66736e; font-size: 12px; font-weight: 900;
+  cursor: pointer; font-family: inherit;
+}
+.item-list__clear-confirm-no:hover { background: #e2f8ef; color: #008a64; }
 
 .item-list__spacer { height: 16px; }
 

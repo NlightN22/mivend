@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useCartStore } from '../../stores/cart';
 
 const router = useRouter();
+const cartStore = useCartStore();
 
-function choose(status: 'success' | 'pending' | 'fail'): void {
+async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
+    await cartStore.completeOnlinePayment(status);
     router.push(`/payment-result?status=${status}`);
 }
 </script>

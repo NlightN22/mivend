@@ -78,13 +78,6 @@ function handleToggleFavorite(variantId: string | undefined, p: ProductItem): vo
     favoritesStore.toggle(buildFavoriteItem(p));
 }
 
-function discountHintFor(p: ProductItem): { brand: string; percent: number } | undefined {
-    const variant = p.variants[0];
-    if (!variant || variant.compareAtPrice == null || variant.customerPrice == null) return undefined;
-    const percent = Math.round((1 - variant.customerPrice / variant.compareAtPrice) * 100);
-    if (percent <= 0) return undefined;
-    return { brand: getBrand(p), percent };
-}
 </script>
 
 <template>
@@ -139,6 +132,7 @@ function discountHintFor(p: ProductItem): { brand: string; percent: number } | u
                     :price="p.variants[0] ? p.variants[0].price / 100 : undefined"
                     :customer-price="p.variants[0]?.customerPrice != null ? p.variants[0].customerPrice / 100 : undefined"
                     :old-price="p.variants[0]?.compareAtPrice != null ? p.variants[0].compareAtPrice / 100 : undefined"
+                    :discount-tiers="p.variants[0]?.discountTiers"
                     :currency="p.variants[0]?.currencyCode ?? 'RUB'"
                     :slug="p.slug"
                     :show-prices="showPrices"
@@ -147,7 +141,7 @@ function discountHintFor(p: ProductItem): { brand: string; percent: number } | u
                     :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1, discountHintFor(p))"
+                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1)"
                     @update-cart-qty="onUpdateQty"
                     @toggle-favorite="(variantId: string | undefined) => handleToggleFavorite(variantId, p)"
                     @view-analogs="() => {}"
@@ -166,6 +160,7 @@ function discountHintFor(p: ProductItem): { brand: string; percent: number } | u
                     :price="p.variants[0] ? p.variants[0].price / 100 : undefined"
                     :customer-price="p.variants[0]?.customerPrice != null ? p.variants[0].customerPrice / 100 : undefined"
                     :compare-at-price="p.variants[0]?.compareAtPrice != null ? p.variants[0].compareAtPrice / 100 : undefined"
+                    :discount-tiers="p.variants[0]?.discountTiers"
                     :currency="p.variants[0]?.currencyCode ?? 'RUB'"
                     :slug="p.slug"
                     :show-prices="showPrices"
@@ -174,7 +169,7 @@ function discountHintFor(p: ProductItem): { brand: string; percent: number } | u
                     :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1, discountHintFor(p))"
+                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1)"
                     @update-cart-qty="onUpdateQty"
                     @toggle-favorite="(variantId: string | undefined) => handleToggleFavorite(variantId, p)"
                     @view-analogs="() => {}"

@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { toast } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
+import { discountAddToCartHint } from '../../utils/discountMessages';
 import { shopApi } from '../../api/client';
 import ProductGallery from './ProductGallery.vue';
 import ProductBuyPanel from './ProductBuyPanel.vue';
@@ -42,14 +43,12 @@ const error = ref('');
 const variant = computed(() => product.value?.variants[0]);
 const brand = computed(() => product.value?.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '');
 
-function handleAddToCart(qty: number): void {
+async function handleAddToCart(qty: number): Promise<void> {
   if (!variant.value) return;
-  cartStore.addItem(variant.value.id, qty);
-  const { customerPrice, compareAtPrice } = variant.value;
-  if (compareAtPrice != null && customerPrice != null) {
-    const percent = Math.round((1 - customerPrice / compareAtPrice) * 100);
-    if (percent > 0) toast(`Скидка ${percent}% на бренд ${brand.value}`, 'success');
-  }
+  // Toast reflects the actual applied discount from the mutation response, not a
+  // catalog-level guess — see stores/cart.ts addItem().
+  const discount = await cartStore.addItem(variant.value.id, qty);
+  if (discount) toast(discountAddToCartHint(discount.percent, discount.brand), 'success');
 }
 const category = computed(() => product.value?.facetValues.find(fv => fv.facet.code === 'category')?.name ?? '');
 const stockVariantLabel = computed((): 'ok' | 'low' | 'out' => {

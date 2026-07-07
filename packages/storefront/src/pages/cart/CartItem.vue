@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { MvTooltip } from '@mivend/ui-kit';
 import { useCartStore, type CartLine } from '../../stores/cart';
+import { formatTierValue } from '../../utils/discount';
+import { discountLineReason, discountTierReachedReason } from '../../utils/discountMessages';
 
 const props = defineProps<{ line: CartLine; checked: boolean }>();
 const emit = defineEmits<{ 'update:checked': [value: boolean] }>();
@@ -15,16 +18,37 @@ const brand = computed(() =>
     props.line.productVariant.product.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '',
 );
 
+const totalWeightKg = computed(() => {
+    const weight = props.line.productVariant.customFields.weight;
+    return weight != null ? weight * props.line.quantity : null;
+});
+
+const discountPercent = computed(() => {
+    const { unitPrice, compareAtPrice } = props.line;
+    if (compareAtPrice == null || unitPrice == null) return null;
+    const percent = Math.round((1 - unitPrice / compareAtPrice) * 100);
+    return percent > 0 ? percent : null;
+});
+
+const discountReason = computed(() => {
+    const tp = props.line.tierProgress;
+    if (tp?.currentPercent) {
+        return discountTierReachedReason(
+            tp.facetName,
+            formatTierValue(tp.current, tp.metric),
+            tp.currentPercent,
+        );
+    }
+    if (!brand.value || discountPercent.value == null) return null;
+    return discountLineReason(brand.value, discountPercent.value);
+});
+
 const stockVariant = computed((): 'ok' | 'low' | 'out' => {
     const sl = props.line.productVariant.stockLevel;
     if (!sl || sl === 'OUT_OF_STOCK') return 'out';
     if (sl === 'LOW_STOCK') return 'low';
     return 'ok';
 });
-
-const itemTotal = computed(() =>
-    new Intl.NumberFormat('ru-RU').format(props.line.linePriceWithTax / 100) + ' ₽',
-);
 
 async function onQtyChange(newQty: number): Promise<void> {
     if (newQty === 0) {
@@ -65,7 +89,8 @@ function cancelRemove(): void {
       <div class="cart-item__meta">
         <span>SKU {{ line.productVariant.sku }}</span>
         <span v-if="brand">{{ brand }}</span>
-        <span>qty 1 pc.</span>
+        <span>qty {{ line.quantity }} pc.</span>
+        <span v-if="totalWeightKg != null">{{ totalWeightKg.toLocaleString() }} kg</span>
       </div>
       <div class="cart-item__pills">
         <MvStockBadge :variant="stockVariant" />
@@ -78,13 +103,32 @@ function cancelRemove(): void {
     </div>
 
     <div class="cart-item__price-block">
+      <MvTooltip v-if="discountPercent && discountReason" placement="bottom">
+        <template #trigger>
+          <button type="button" class="cart-item__price-trigger">
+            <MvAmountDisplay
+              :amount="line.linePriceWithTax / 100"
+              currency="RUB"
+              size="sm"
+              class="cart-item__price"
+            />
+            <MvAmountDisplay
+              :amount="(line.compareAtPrice! * line.quantity) / 100"
+              currency="RUB"
+              size="sm"
+              class="cart-item__old-price"
+            />
+          </button>
+        </template>
+        <div>{{ discountReason }}</div>
+      </MvTooltip>
       <MvAmountDisplay
+        v-else
         :amount="line.linePriceWithTax / 100"
         currency="RUB"
         size="sm"
         class="cart-item__price"
       />
-      <div class="cart-item__price-note">{{ itemTotal }}</div>
     </div>
 
     <div class="cart-item__qty">
@@ -152,9 +196,15 @@ function cancelRemove(): void {
 }
 .cart-item__links button:hover { color: #008a64; }
 
-.cart-item__price-block { text-align: right; white-space: nowrap; }
+.cart-item__price-block { text-align: left; white-space: nowrap; }
 .cart-item__price { font-size: 19px !important; font-weight: 950 !important; color: #008a64 !important; }
-.cart-item__price-note { margin-top: 3px; color: #94a09b; font-size: 12px; font-weight: 800; }
+.cart-item__old-price { display: block; font-size: 12px !important; color: #a8b8b2 !important; text-decoration: line-through; }
+
+.cart-item__price-trigger {
+  border: none; background: transparent; padding: 0; margin: 0;
+  cursor: pointer; text-align: left; font-family: inherit;
+  display: inline-flex; flex-direction: column; align-items: flex-start;
+}
 
 .cart-item__remove-confirm {
   display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: #66736e;

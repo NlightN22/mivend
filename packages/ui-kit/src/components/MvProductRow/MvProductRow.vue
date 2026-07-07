@@ -4,6 +4,7 @@ import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
+import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
 
 interface Props {
   name: string;
@@ -12,6 +13,8 @@ interface Props {
   price?: number;
   customerPrice?: number;
   oldPrice?: number;
+  discountTiers?: DiscountTier[];
+  discountTitle?: string;
   currency?: string;
   stock?: number;
   stockVariant?: 'ok' | 'low' | 'out';
@@ -29,6 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
   price: undefined,
   customerPrice: undefined,
   oldPrice: undefined,
+  discountTiers: () => [],
   currency: 'RUB',
   stock: undefined,
   stockVariant: undefined,
@@ -75,7 +79,10 @@ function onStepperChange(qty: number): void {
     <div class="mv-product-row__main">
       <RouterLink v-if="slug" :to="`/product/${slug}`" class="mv-product-row__name">{{ name }}</RouterLink>
       <span v-else class="mv-product-row__name mv-product-row__name--plain">{{ name }}</span>
-      <span v-if="brand" class="mv-product-row__brand">{{ brand }}</span>
+      <div class="mv-product-row__brand-row">
+        <span v-if="brand" class="mv-product-row__brand">{{ brand }}</span>
+        <MvDiscountBadge v-if="discountTiers.length > 0" size="sm" :tiers="discountTiers" :title="discountTitle" />
+      </div>
     </div>
 
     <div class="mv-product-row__cell">
@@ -130,28 +137,31 @@ function onStepperChange(qty: number): void {
         :is-favorited="isFavorited"
         @toggle="emit('toggle-favorite', variantId)"
       />
-      <slot name="actions">
-        <template v-if="canOrder">
-          <MvQtyStepper
-            v-if="cartQty > 0"
-            :model-value="cartQty"
-            :min="0"
-            @update:model-value="onStepperChange"
-          />
-          <button
-            v-else
-            class="mv-product-row__add-btn"
-            type="button"
-            :disabled="!showPrices"
-            @click="emit('add-to-cart', variantId)"
-          >
-            + Add
-          </button>
-        </template>
-        <template v-else>
-          <button class="mv-product-row__analog-btn" type="button" @click="emit('view-analogs')">Analogs</button>
-        </template>
-      </slot>
+      <div class="mv-product-row__control">
+        <slot name="actions">
+          <template v-if="canOrder">
+            <MvQtyStepper
+              v-if="cartQty > 0"
+              :model-value="cartQty"
+              :min="0"
+              size="sm"
+              @update:model-value="onStepperChange"
+            />
+            <button
+              v-else
+              class="mv-product-row__add-btn"
+              type="button"
+              :disabled="!showPrices"
+              @click="emit('add-to-cart', variantId)"
+            >
+              + Add
+            </button>
+          </template>
+          <template v-else>
+            <button class="mv-product-row__analog-btn" type="button" @click="emit('view-analogs')">Analogs</button>
+          </template>
+        </slot>
+      </div>
     </div>
   </article>
 </template>
@@ -182,6 +192,7 @@ function onStepperChange(qty: number): void {
 }
 .mv-product-row__name--plain { cursor: default; }
 .mv-product-row__name:not(.mv-product-row__name--plain):hover { color: #00b894; }
+.mv-product-row__brand-row { display: flex; align-items: center; gap: 6px; }
 .mv-product-row__brand { font-size: 12px; font-weight: 700; color: #66736e; text-transform: uppercase; letter-spacing: 0.04em; }
 
 .mv-product-row__cell { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
@@ -195,7 +206,16 @@ function onStepperChange(qty: number): void {
 .mv-product-row__old-price { font-size: 12px !important; color: #a8b8b2; text-decoration: line-through; }
 .mv-product-row__price-hint { font-size: 12px; color: #a8b8b2; }
 
-.mv-product-row__actions { display: flex; align-items: center; gap: 6px; padding: 0 0 0 8px; justify-content: flex-end; }
+.mv-product-row__actions {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 8px;
+}
+
+.mv-product-row__fav { justify-self: start; }
+.mv-product-row__control { display: flex; justify-content: flex-end; }
 
 .mv-product-row__qty {
   display: flex; align-items: center; border: 1.5px solid #dde7e2;

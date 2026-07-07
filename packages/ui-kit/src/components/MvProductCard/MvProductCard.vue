@@ -4,6 +4,7 @@ import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
+import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
 
 interface Props {
   name: string;
@@ -12,6 +13,8 @@ interface Props {
   price?: number;
   compareAtPrice?: number;
   customerPrice?: number;
+  discountTiers?: DiscountTier[];
+  discountTitle?: string;
   currency?: string;
   stockVariant?: 'ok' | 'low' | 'out';
   stockQuantity?: number;
@@ -28,6 +31,7 @@ const props = withDefaults(defineProps<Props>(), {
   price: undefined,
   compareAtPrice: undefined,
   customerPrice: undefined,
+  discountTiers: () => [],
   currency: 'RUB',
   stockVariant: undefined,
   stockQuantity: undefined,
@@ -53,6 +57,13 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     <a :href="`/product/${slug}`" class="mv-product-card__img-link">
       <div class="mv-product-card__img">
         <span class="mv-product-card__img-icon" aria-hidden="true" />
+        <span
+          v-if="discountTiers.length > 0"
+          class="mv-product-card__discount-badge"
+          @click.stop.prevent
+        >
+          <MvDiscountBadge :tiers="discountTiers" :title="discountTitle" />
+        </span>
       </div>
     </a>
 
@@ -163,11 +174,18 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 }
 
 .mv-product-card__img {
+  position: relative;
   height: 138px;
   display: grid;
   place-items: center;
   background: linear-gradient(145deg, #f7fbfa, #ebf8f2);
   border-bottom: 1px solid #edf2ef;
+}
+
+.mv-product-card__discount-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
 }
 
 .mv-product-card__img-icon {

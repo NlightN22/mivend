@@ -54,6 +54,11 @@ export type { IconButtonVariant } from './components/MvIconButton/MvIconButton.v
 export { default as MvCatalogDropdown } from './components/MvCatalogDropdown/MvCatalogDropdown.vue';
 export type { CollectionNode } from './components/MvCatalogDropdown/MvCatalogDropdown.vue';
 
+export { default as MvTooltip } from './components/MvTooltip/MvTooltip.vue';
+export { default as MvDiscountBadge } from './components/MvDiscountBadge/MvDiscountBadge.vue';
+export type { DiscountTier } from './components/MvDiscountBadge/MvDiscountBadge.vue';
+export { default as MvProgressBar } from './components/MvProgressBar/MvProgressBar.vue';
+
 export { colors } from './tokens/colors';
 export type { ColorToken } from './tokens/colors';
 

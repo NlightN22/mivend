@@ -4,12 +4,14 @@ interface Props {
   min?: number;
   step?: number;
   disabled?: boolean;
+  size?: 'md' | 'sm';
 }
 
 const props = withDefaults(defineProps<Props>(), {
   min: 1,
   step: 1,
   disabled: false,
+  size: 'md',
 });
 
 const emit = defineEmits<{ 'update:modelValue': [n: number] }>();
@@ -25,7 +27,10 @@ function inc() {
 </script>
 
 <template>
-  <div class="mv-qty-stepper" :class="{ 'mv-qty-stepper--disabled': disabled }">
+  <div
+    class="mv-qty-stepper"
+    :class="{ 'mv-qty-stepper--disabled': disabled, 'mv-qty-stepper--sm': size === 'sm' }"
+  >
     <button
       class="mv-qty-stepper__btn"
       type="button"
@@ -53,6 +58,10 @@ function inc() {
 }
 
 .mv-qty-stepper--disabled { opacity: 0.45; pointer-events: none; }
+
+.mv-qty-stepper--sm { height: 32px; }
+.mv-qty-stepper--sm .mv-qty-stepper__btn { width: 28px; font-size: 16px; }
+.mv-qty-stepper--sm .mv-qty-stepper__val { min-width: 26px; font-size: 13px; }
 
 .mv-qty-stepper__btn {
   width: 38px;

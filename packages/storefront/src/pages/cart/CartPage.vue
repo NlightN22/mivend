@@ -35,10 +35,12 @@ onMounted(() => cartStore.fetchCart());
     </div>
 
     <template v-else>
-      <CartPromoBanner />
       <div class="cart-page__layout">
         <CartItemList />
-        <CartSummary />
+        <div class="cart-page__aside">
+          <CartSummary />
+          <CartPromoBanner />
+        </div>
       </div>
     </template>
 
@@ -92,6 +94,12 @@ onMounted(() => cartStore.fetchCart());
   grid-template-columns: minmax(0, 1fr) 420px;
   gap: 24px;
   align-items: start;
+}
+
+.cart-page__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .cart-page__empty {

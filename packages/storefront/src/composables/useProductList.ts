@@ -2,12 +2,19 @@ import { ref, watch, type Ref } from 'vue';
 import { shopApi } from '../api/client';
 import { useViewMode } from './useViewMode';
 
+export interface DiscountTierVM {
+    percent: number;
+    minWeightKg: number | null;
+    minAmount: number | null;
+}
+
 interface ProductVariant {
     id: string;
     sku: string;
     price: number;
     customerPrice: number | null;
     compareAtPrice: number | null;
+    discountTiers: DiscountTierVM[];
     currencyCode: string;
     stockLevel: string;
 }
@@ -59,6 +66,7 @@ interface EsSearchItem {
     facetValueIds: string[];
     customerPrice: number | null;
     compareAtPrice: number | null;
+    discountTiers: DiscountTierVM[];
 }
 
 interface EsFacetValueResult {
@@ -97,6 +105,7 @@ const PRODUCTS_QUERY = `
                 facetValueIds
                 customerPrice
                 compareAtPrice
+                discountTiers { percent minWeightKg minAmount }
             }
             facetValues {
                 facetValue { id code name facet { code name } }
@@ -179,6 +188,7 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
                 price: item.priceWithTax?.value ?? item.priceWithTax?.min ?? 0,
                 customerPrice: item.customerPrice,
                 compareAtPrice: item.compareAtPrice,
+                discountTiers: item.discountTiers,
                 currencyCode: item.currencyCode,
                 stockLevel: item.inStock ? 'IN_STOCK' : 'OUT_OF_STOCK',
             },
@@ -277,10 +287,16 @@ export function useProductList(options: UseProductListOptions = {}): {
     }
 
     async function loadMore(): Promise<void> {
-        if (loadingMore.value || !hasMore.value) return;
+        // While a fresh load() is in flight, currentSkip/hasMore reflect the previous
+        // filter state — appending here would race the replacement in load() and
+        // duplicate rows once both resolve (seen when a narrow filter's IntersectionObserver
+        // sentinel is already in view before the first load() response lands).
+        if (loading.value || loadingMore.value || !hasMore.value) return;
+        const seq = loadSeq;
         loadingMore.value = true;
         try {
             const result = await fetchProducts(currentSkip);
+            if (seq !== loadSeq) return; // a load() started/finished while this was in flight
             items.value = [...items.value, ...mapItems(result.search.items, [])];
             currentSkip += result.search.items.length;
             hasMore.value = currentSkip < result.search.totalItems;

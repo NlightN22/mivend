@@ -154,6 +154,9 @@ const preview = computed(() => {
 }
 
 .small-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 0;
     min-height: 38px;
     border-radius: 12px;
@@ -162,6 +165,8 @@ const preview = computed(() => {
     color: #263732;
     font-weight: 950;
     font-family: inherit;
+    font-size: 14px;
+    text-decoration: none;
     cursor: pointer;
     transition: 0.14s ease;
 }

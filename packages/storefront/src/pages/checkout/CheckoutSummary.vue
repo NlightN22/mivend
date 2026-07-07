@@ -8,6 +8,7 @@ const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
 const router = useRouter();
 const promoCode = ref('');
+const submitting = ref(false);
 
 const lineCount = computed(() => cartStore.lines.length);
 const totalQty = computed(() => cartStore.itemCount);
@@ -28,13 +29,22 @@ const btnLabel = computed(() => {
 
 const btnOrange = computed(() => checkoutStore.selectedPayment === 'online');
 
-function handlePrimary(): void {
-    if (checkoutStore.selectedPayment === 'online') {
-        router.push('/payment-stub');
-    } else if (checkoutStore.selectedPayment === 'invoice') {
-        router.push('/order-created?method=invoice');
-    } else {
-        router.push('/order-created?method=deferred');
+async function handlePrimary(): Promise<void> {
+    if (submitting.value) return;
+    submitting.value = true;
+    try {
+        const ready = await cartStore.beginCheckout();
+        if (!ready) return;
+
+        if (checkoutStore.selectedPayment === 'online') {
+            router.push('/payment-stub');
+            return;
+        }
+        const placed = await cartStore.completeOfflinePayment();
+        if (!placed) return;
+        router.push(`/order-created?method=${checkoutStore.selectedPayment}`);
+    } finally {
+        submitting.value = false;
     }
 }
 </script>
@@ -67,8 +77,9 @@ function handlePrimary(): void {
                 class="checkout-summary__pay-btn"
                 :class="btnOrange ? 'checkout-summary__pay-btn--orange' : 'checkout-summary__pay-btn--green'"
                 type="button"
+                :disabled="submitting"
                 @click="handlePrimary"
-            >{{ btnLabel }}</button>
+            >{{ submitting ? 'Processing…' : btnLabel }}</button>
 
             <p v-if="checkoutStore.selectedPayment === 'online'" class="checkout-summary__legal">
                 By clicking the button, you are redirected to the payment service and agree to the

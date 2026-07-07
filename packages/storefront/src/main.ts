@@ -1,6 +1,5 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import { createI18n } from 'vue-i18n';
 import ElementPlus from 'element-plus';
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';
 import 'element-plus/dist/index.css';
@@ -29,13 +28,7 @@ import {
 
 import App from './App.vue';
 import { router } from './router';
-import ru from './i18n/ru';
-
-const i18n = createI18n({
-    legacy: false,
-    locale: 'ru',
-    messages: { ru },
-});
+import { i18n } from './i18n';
 
 const app = createApp(App);
 

@@ -1,10 +1,6 @@
 import { toast } from '@mivend/ui-kit';
 import { useCartStore } from '../stores/cart';
-
-export interface DiscountHint {
-    brand: string;
-    percent: number;
-}
+import { discountAddToCartHint } from '../utils/discountMessages';
 
 export function useCartActions() {
     const cartStore = useCartStore();
@@ -17,15 +13,14 @@ export function useCartActions() {
         return line;
     }
 
-    async function onAddToCart(
-        variantId: string | undefined,
-        qty = 1,
-        discountHint?: DiscountHint,
-    ): Promise<void> {
+    async function onAddToCart(variantId: string | undefined, qty = 1): Promise<void> {
         if (!variantId) return;
-        await cartStore.addItem(variantId, qty);
-        if (discountHint) {
-            toast(`Скидка ${discountHint.percent}% на бренд ${discountHint.brand}`, 'success');
+        // Toast reflects the *actual* applied discount (from the mutation response),
+        // not a catalog-level guess — the real price can differ once a weight/amount
+        // tier this add crosses (or falls out of) is accounted for.
+        const discount = await cartStore.addItem(variantId, qty);
+        if (discount) {
+            toast(discountAddToCartHint(discount.percent, discount.brand), 'success');
         }
     }
 

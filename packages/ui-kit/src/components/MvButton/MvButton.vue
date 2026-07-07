@@ -8,6 +8,12 @@ interface Props {
   disabled?: boolean;
   loading?: boolean;
   nativeType?: 'button' | 'submit' | 'reset';
+  // When set, renders as a real <a> instead of <button> — required for actions
+  // like file downloads, where a script-triggered window.open() can be treated
+  // as in-place navigation by the browser instead of opening a new tab/download.
+  href?: string;
+  target?: string;
+  download?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -30,7 +36,24 @@ function handleClick(event: MouseEvent): void {
 </script>
 
 <template>
+  <a
+    v-if="href"
+    :class="[
+      'mv-button',
+      `mv-button--${variant}`,
+      `mv-button--${size}`,
+      { 'mv-button--disabled': disabled },
+    ]"
+    :href="href"
+    :target="target"
+    :rel="target === '_blank' ? 'noopener' : undefined"
+    :download="download ? '' : undefined"
+    @click="handleClick"
+  >
+    <slot />
+  </a>
   <button
+    v-else
     :class="[
       'mv-button',
       `mv-button--${variant}`,
@@ -54,6 +77,8 @@ function handleClick(event: MouseEvent): void {
   gap: 8px;
   border: none;
   cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
   font-family: var(--app-font-family, Inter, system-ui, sans-serif);
   font-size: var(--app-font-size-button, 14px);
   font-weight: 700;
