@@ -1,3 +1,5 @@
+import type { DocumentRecord, OrganizationRequisitesRecord } from '@mivend/plugin-documents';
+
 export interface ProductRecord {
     externalId: string;
     sku: string;
@@ -97,7 +99,9 @@ export type ImportRecord =
     | { type: 'tradingPoint'; data: TradingPointRecord }
     | { type: 'category'; data: CategoryRecord }
     | { type: 'crossReference'; data: CrossReferenceRecord }
-    | { type: 'discountRule'; data: DiscountRuleRecord };
+    | { type: 'discountRule'; data: DiscountRuleRecord }
+    | { type: 'document'; data: DocumentRecord }
+    | { type: 'organizationRequisites'; data: OrganizationRequisitesRecord };
 
 export interface BatchImportBody {
     exchangeId: string;

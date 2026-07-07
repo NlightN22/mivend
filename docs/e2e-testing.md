@@ -96,3 +96,37 @@ await expect(page.locator('.mv-product-row').first()).toBeVisible({ timeout: 100
 Tests in the `storefront` project use `storageState: '.auth/storefront-user.json'`. All tests
 share this cookie. Mutations that change server-side state (cart, orders) affect subsequent tests
 in the same run. Use `beforeEach` cleanup or test isolation where needed.
+
+### 7. A UI-driven cart mutation can rotate the session cookie out from under every later test
+
+`storageState: '.auth/storefront-user.json'` (gotcha #6) is a **static snapshot**,
+written once by `global-setup` and then reloaded unchanged into a fresh context for
+every single test file. That's fine as long as every test talks to the server via
+`page.request` (the `gql()` helper) — those calls don't touch that file.
+
+But a test that mutates the cart through a **real UI interaction** (clicking "Add to
+cart" on an actual page, as opposed to calling `addItemToOrder` via `gql()`) uses the
+browser page's own live fetch/cookie jar. If that mutation causes the server to rotate
+the session cookie (observed empirically: authenticated `addItemToOrder` through the
+app's own client did this), Playwright's _live_ page cookie jar picks up the new value
+transparently and the test itself still passes — but the static file on disk still has
+the old, now-invalidated session ID. Every test file that runs afterward loads a fresh
+context from that stale file, gets rejected/falls back to guest/no-price-type, and
+price/discount assertions fail in ways that look like a product bug (raw
+un-discounted prices, `activeCustomer: null`) even though nothing product-side is
+actually broken.
+
+This was diagnosed by elimination: increasing wait times before the UI interaction
+made no difference (ruling out a timing race), but removing the offending test file
+from the run immediately restored every other test to green.
+
+**Rule:** any test that clicks a real UI control to mutate the cart/order (not just
+`gql()`) must re-save the auth state at the end so later tests get the fresh cookie:
+
+```typescript
+await page
+    .context()
+    .storageState({ path: path.join(__dirname, '../../.auth/storefront-user.json') });
+```
+
+See `storefront/orders/add-to-cart-toast.spec.ts` for a working example.

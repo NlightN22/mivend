@@ -1,79 +1,52 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import DocumentsToolbar from './DocumentsToolbar.vue';
 import DocumentRow from './DocumentRow.vue';
-import type { DocData } from './DocumentRow.vue';
+import { useDocuments, toDocData, DOCUMENT_TYPE_LABEL } from './useDocuments';
+import type { TypeFilterOption } from './DocumentsToolbar.vue';
+
+const { documents, loading, load } = useDocuments();
 
 const activeFilter = ref('all');
-const activeChip = ref('all');
 const search = ref('');
 
-const stats = [
-    { title: 'New documents', value: '12', note: 'This month' },
-    { title: 'Total amount', value: '286 410 ₽', note: 'Documents for June' },
-    { title: 'Reconciliation reports', value: '3', note: 'Available for download' },
-    { title: 'Not sent', value: '2', note: 'Can be sent by email' },
-];
+onMounted(load);
 
-const documents: DocData[] = [
+const typeFilters = computed<TypeFilterOption[]>(() => {
+    const counts = new Map<string, number>();
+    for (const doc of documents.value) {
+        counts.set(doc.type, (counts.get(doc.type) ?? 0) + 1);
+    }
+    return [
+        { key: 'all', label: 'All documents', count: documents.value.length },
+        ...Object.entries(DOCUMENT_TYPE_LABEL)
+            .filter(([key]) => counts.has(key))
+            .map(([key, label]) => ({ key, label, count: counts.get(key) ?? 0 })),
+    ];
+});
+
+const filteredDocs = computed(() => {
+    return documents.value.filter(doc => {
+        if (activeFilter.value !== 'all' && doc.type !== activeFilter.value) return false;
+        if (search.value && !doc.number.toLowerCase().includes(search.value.toLowerCase())) return false;
+        return true;
+    });
+});
+
+const stats = computed(() => [
+    { title: 'Total documents', value: String(documents.value.length), note: 'All types' },
     {
-        icon: '📄',
-        iconVariant: 'green',
-        name: 'UPD #KM-004812 from 26.06.2026',
-        meta: 'Order #348921 · North Highway, 12 · 7 items',
-        date: '26.06.2026',
-        amount: '42 860 ₽',
-        statusLabel: 'New',
-        statusVariant: 'green',
-        actions: ['download', 'email', 'order'],
+        title: 'Ready to download',
+        value: String(documents.value.filter(d => d.status === 'ready').length),
+        note: 'Available now',
     },
     {
-        icon: '₽',
-        iconVariant: 'orange',
-        name: 'Invoice #11874',
-        meta: 'Order #348744 · partial payment · balance 21 420 ₽',
-        date: '25.06.2026',
-        amount: '86 420 ₽',
-        statusLabel: 'Due',
-        statusVariant: 'warning',
-        actions: ['pay', 'download', 'email'],
+        title: 'Generating',
+        value: String(documents.value.filter(d => d.status === 'pending' || d.status === 'generating').length),
+        note: 'In progress',
     },
-    {
-        icon: '🧾',
-        iconVariant: 'blue',
-        name: 'Reconciliation report Jun 2026',
-        meta: 'Company · main contract',
-        date: '24.06.2026',
-        amountLabel: 'Balance',
-        amount: '188 580 ₽',
-        statusLabel: 'Generated',
-        statusVariant: 'muted',
-        actions: ['download', 'email'],
-    },
-    {
-        icon: '↩',
-        iconVariant: 'green',
-        name: 'Return #VZ-001932',
-        meta: 'Order #347982 · return by agreement',
-        date: '22.06.2026',
-        amount: '4 710 ₽',
-        statusLabel: 'Closed',
-        statusVariant: 'muted',
-        actions: ['download', 'order'],
-    },
-    {
-        icon: '📦',
-        iconVariant: 'blue',
-        name: 'Waybill #TN-009442',
-        meta: 'Order #347611 · ready for shipment',
-        date: '21.06.2026',
-        amount: '124 300 ₽',
-        statusLabel: 'Available',
-        statusVariant: 'green',
-        actions: ['download', 'email', 'order'],
-    },
-];
+]);
 </script>
 
 <template>
@@ -84,11 +57,7 @@ const documents: DocData[] = [
       <div class="documents-page__head">
         <div>
           <h1 class="documents-page__title">Documents</h1>
-          <p class="documents-page__subtitle">Invoices, sales records, UPD, reconciliation reports, returns and order documents.</p>
-        </div>
-        <div class="documents-page__head-actions">
-          <button class="documents-page__btn">Send by email</button>
-          <button class="documents-page__btn documents-page__btn--primary">Download selected</button>
+          <p class="documents-page__subtitle">Invoices, contracts, returns and reconciliation reports linked to your account.</p>
         </div>
       </div>
 
@@ -103,23 +72,16 @@ const documents: DocData[] = [
       <div class="documents-page__main">
           <DocumentsToolbar
             :active-filter="activeFilter"
-            :active-chip="activeChip"
             :search="search"
+            :type-filters="typeFilters"
             @update:active-filter="activeFilter = $event"
-            @update:active-chip="activeChip = $event"
             @update:search="search = $event"
           />
 
-          <div class="documents-page__notice">
-            <span>ℹ️</span>
-            <div>
-              <strong>Documents are linked to the client and trading point.</strong>
-              You can quickly download, send by email or open the related order.
-            </div>
-          </div>
-
-          <div class="documents-page__list">
-            <DocumentRow v-for="doc in documents" :key="doc.name" :doc="doc" />
+          <div v-if="loading" class="documents-page__state">Loading...</div>
+          <div v-else-if="!filteredDocs.length" class="documents-page__state">No documents found.</div>
+          <div v-else class="documents-page__list">
+            <DocumentRow v-for="doc in filteredDocs" :key="doc.id" :doc="toDocData(doc)" />
           </div>
       </div>
     </section>
@@ -140,10 +102,6 @@ const documents: DocData[] = [
 .documents-page__content { min-width: 0; }
 
 .documents-page__head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
   margin-bottom: 18px;
 }
 
@@ -161,31 +119,9 @@ const documents: DocData[] = [
   line-height: 1.45;
 }
 
-.documents-page__head-actions {
-  display: flex;
-  gap: 9px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.documents-page__btn {
-  border: 0;
-  min-height: 40px;
-  border-radius: 12px;
-  padding: 0 14px;
-  background: #f3f8f6;
-  color: #263732;
-  font: inherit;
-  font-weight: 950;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.documents-page__btn--primary { background: #00a878; color: #fff; }
-
 .documents-page__stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -225,23 +161,11 @@ const documents: DocData[] = [
   min-width: 0;
 }
 
-.documents-page__notice {
-  padding: 15px 16px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 138, 0, 0.22);
-  background: #fff5df;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  color: #573a14;
-  font-size: 14px;
-  line-height: 1.42;
-}
-
-.documents-page__notice strong {
-  display: block;
-  color: #33210a;
-  margin-bottom: 2px;
+.documents-page__state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #66736e;
+  font-size: 15px;
 }
 
 .documents-page__list { display: grid; gap: 10px; }
@@ -252,12 +176,6 @@ const documents: DocData[] = [
     padding-left: 16px;
     padding-right: 16px;
   }
-  .documents-page__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .documents-page__head { display: grid; }
-  .documents-page__head-actions { justify-content: flex-start; }
-}
-
-@media (max-width: 640px) {
   .documents-page__stats { grid-template-columns: 1fr; }
 }
 </style>

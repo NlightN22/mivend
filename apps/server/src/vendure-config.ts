@@ -2,6 +2,7 @@ import path from 'path';
 import { LanguageCode, VendureConfig } from '@vendure/core';
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
+import { offlineTermsPaymentHandler, onlineStubPaymentHandler } from './payment-method-handlers';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import { BullMQJobQueuePlugin } from '@vendure/job-queue-plugin/package/bullmq';
@@ -13,6 +14,8 @@ import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { SearchPlugin, elasticsearchPlugin } from '@mivend/plugin-search';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { SyncPlugin, StubErpAdapter } from '@mivend/plugin-sync';
+import { DocumentsPlugin } from '@mivend/plugin-documents';
+import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -93,12 +96,22 @@ export const config: VendureConfig = {
         orderItemPriceCalculationStrategy: new CustomerPriceCalculationStrategy(),
     },
     paymentOptions: {
-        paymentMethodHandlers: [],
+        paymentMethodHandlers: [offlineTermsPaymentHandler, onlineStubPaymentHandler],
     },
     plugins: [
         AssetServerPlugin.init({
             route: 'assets',
             assetUploadDir: path.join(__dirname, '../static/assets'),
+            // Root-relative by default (not an absolute http://host:port URL) so
+            // asset links resolve against whatever origin the browser is actually
+            // on. The alternative — Vendure's default behind-a-proxy detection via
+            // the request's Host header — breaks when the storefront's dev proxy
+            // (or any reverse proxy) rewrites Host to the backend's internal
+            // address (e.g. Vite's `changeOrigin: true` on /shop-api), baking a
+            // non-public hostname (localhost:3000) into every asset URL. Requires
+            // /assets to be proxied to this server under the same public origin
+            // the storefront is served from (see storefront/vite.config.ts).
+            assetUrlPrefix: process.env.ASSET_URL_PREFIX ?? '/assets/',
         }),
         BullMQJobQueuePlugin.init({
             connection: {
@@ -118,11 +131,13 @@ export const config: VendureConfig = {
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         CounterpartyPlugin,
         PriceEntryPlugin,
+        DocumentsPlugin,
         ErpImportPlugin,
         CrossReferencePlugin,
         elasticsearchPlugin,
         SearchPlugin,
         ErpOrderPlugin,
+        PopularProductsPlugin,
         SyncPlugin.init({
             instanceType,
             instanceId: process.env.INSTANCE_ID ?? 'central',

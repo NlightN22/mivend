@@ -10,6 +10,8 @@
         "start:worker": "node dist/worker.js"
     },
     "dependencies": {
+        "@nestjs/common": "^11.0.0",
+        "@nestjs/swagger": "^11.0.0",
         "@vendure/admin-ui-plugin": "^3.0.0",
         "@vendure/asset-server-plugin": "^3.0.0",
         "@vendure/core": "^3.0.0",
@@ -24,7 +26,9 @@
         "@mivend/plugin-cross-reference": "workspace:*",
         "@mivend/plugin-search": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
-        "@mivend/plugin-sync": "workspace:*"
+        "@mivend/plugin-sync": "workspace:*",
+        "@mivend/plugin-documents": "workspace:*",
+        "@mivend/plugin-popular-products": "workspace:*"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

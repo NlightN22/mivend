@@ -133,6 +133,71 @@ async function ensureTaxSetup() {
     console.log('  Created default tax zone and 0% tax rate.');
 }
 
+// ShippingMethod and PaymentMethod are Vendure system config — cannot go through
+// erp-import plugin. Without at least one of each, checkout can never transition
+// an order out of AddingItems (see docs/ai/PROJECT_CONTEXT.md "Order code strategy"
+// section neighbor "Checkout order-state transition" note).
+async function ensureShippingAndPaymentSetup() {
+    let session = await adminGraphqlWithSession(`
+        mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
+            ... on CurrentUser { id }
+            ... on InvalidCredentialsError { message }
+        }}
+    `);
+    if (session.data.login.message) throw new Error(`Admin login failed: ${session.data.login.message}`);
+    const cookie = session.cookie;
+
+    const methodsRes = await adminGraphqlWithSession(
+        `{ shippingMethods { items { id code } } }`, undefined, cookie,
+    );
+    if (methodsRes.data.shippingMethods.items.length === 0) {
+        await adminGraphqlWithSession(`
+            mutation {
+                createShippingMethod(input: {
+                    code: "pickup"
+                    translations: [{ languageCode: en, name: "Pickup", description: "Pickup per contract terms" }]
+                    checker: { code: "default-shipping-eligibility-checker", arguments: [{ name: "orderMinimum", value: "0" }] }
+                    calculator: { code: "default-shipping-calculator", arguments: [
+                        { name: "rate", value: "0" }
+                        { name: "includesTax", value: "auto" }
+                        { name: "taxRate", value: "0" }
+                    ] }
+                    fulfillmentHandler: "manual-fulfillment"
+                }) { id }
+            }
+        `, undefined, cookie);
+        console.log('  Created "pickup" shipping method.');
+    } else {
+        console.log('  Shipping method already configured, skipping.');
+    }
+
+    const paymentMethodsRes = await adminGraphqlWithSession(
+        `{ paymentMethods { items { id code } } }`, undefined, cookie,
+    );
+    const existingCodes = new Set(paymentMethodsRes.data.paymentMethods.items.map(m => m.code));
+    const paymentMethodsToCreate = [
+        { code: 'offline-terms', handler: 'offline-terms', name: 'Invoice / deferred payment' },
+        { code: 'online-stub', handler: 'online-stub', name: 'Online payment (demo)' },
+    ].filter(m => !existingCodes.has(m.code));
+    for (const m of paymentMethodsToCreate) {
+        await adminGraphqlWithSession(`
+            mutation($code: String!, $handler: String!, $name: String!) {
+                createPaymentMethod(input: {
+                    code: $code
+                    enabled: true
+                    handler: { code: $handler, arguments: [] }
+                    translations: [{ languageCode: en, name: $name }]
+                }) { id }
+            }
+        `, { code: m.code, handler: m.handler, name: m.name }, cookie);
+    }
+    if (paymentMethodsToCreate.length > 0) {
+        console.log(`  Created ${paymentMethodsToCreate.length} payment method(s).`);
+    } else {
+        console.log('  Payment methods already configured, skipping.');
+    }
+}
+
 function loadFixture(name) {
     return JSON.parse(readFileSync(join(__dirname, `../fixtures/${name}.json`), 'utf8'));
 }
@@ -164,6 +229,9 @@ async function main() {
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
     await ensureTaxSetup();
+
+    console.log('Ensuring shipping/payment methods...');
+    await ensureShippingAndPaymentSetup();
 
     console.log(`Sending ${categories.length} categories...`);
     const categoryResult = await postBatch(`seed-categories-${run}`, categories.map(data => ({ type: 'category', data })));
@@ -310,6 +378,66 @@ async function main() {
     console.log(`  → status=${tpResult.status} processed=${tpResult.processed} failed=${tpResult.failed}`);
     if (tpResult.errors?.length > 0) {
         for (const e of tpResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    const organizationRequisites = [
+        {
+            erpId: 'org-001',
+            legalName: 'Mivend Demo Trading Co.',
+            inn: '000000000000',
+            kpp: '000000000',
+            ogrn: '0000000000000',
+            legalAddress: '1 Demo Avenue, Sample City',
+            bankName: 'Demo Bank',
+            bankAccount: '00000000000000000000',
+            bankBik: '000000000',
+            correspondentAccount: '00000000000000000000',
+            signatoryName: 'A. Sample',
+            signatoryTitle: 'General Director',
+        },
+    ];
+    console.log(`Sending ${organizationRequisites.length} organization requisites...`);
+    const requisitesResult = await postBatch(`seed-requisites-${run}`, organizationRequisites.map(data => ({ type: 'organizationRequisites', data })));
+    console.log(`  → status=${requisitesResult.status} processed=${requisitesResult.processed} failed=${requisitesResult.failed}`);
+    if (requisitesResult.errors?.length > 0) {
+        for (const e of requisitesResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    // fileUrl is root-relative (not an absolute https://... URL) so it resolves
+    // against whatever origin the storefront is actually served from — same
+    // reasoning as AssetServerPlugin's assetUrlPrefix (see vendure-config.ts).
+    // In production, real ERP-hosted document URLs would replace these; for
+    // dev/demo seeding, packages/storefront/public/documents/sample-document.pdf
+    // is a real downloadable file, not a dead example.com placeholder.
+    const documents = [
+        {
+            erpId: 'doc-return-001',
+            type: 'return',
+            counterpartyErpId: 'cnt-001',
+            number: 'RET-000123',
+            issueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            amount: 471000,
+            currencyCode: 'RUB',
+            fileUrl: '/documents/sample-document.pdf',
+            metadata: { reason: 'Damaged in transit' },
+        },
+        {
+            erpId: 'doc-reconciliation-001',
+            type: 'reconciliation',
+            counterpartyErpId: 'cnt-001',
+            number: 'REC-2026-06',
+            issueDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+            amount: 18858000,
+            currencyCode: 'RUB',
+            fileUrl: '/documents/sample-document.pdf',
+            metadata: { periodStart: '2026-06-01', periodEnd: '2026-06-30' },
+        },
+    ];
+    console.log(`Sending ${documents.length} ERP-pushed documents...`);
+    const documentsResult = await postBatch(`seed-documents-${run}`, documents.map(data => ({ type: 'document', data })));
+    console.log(`  → status=${documentsResult.status} processed=${documentsResult.processed} failed=${documentsResult.failed}`);
+    if (documentsResult.errors?.length > 0) {
+        for (const e of documentsResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
     console.log('Done.');
