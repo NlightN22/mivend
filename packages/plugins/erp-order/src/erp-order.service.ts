@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EventBus, Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { OrderReadyForErpEvent } from './erp-order.events';
 import './types';
-import type { ErpStatusUpdatePayload } from './types';
+import type { ErpOrderStatus, ErpStatusUpdatePayload, OrderErpStatusInfo } from './types';
 
 @Injectable()
 export class ErpOrderService {
@@ -41,5 +41,21 @@ export class ErpOrderService {
             },
         });
         this.logger.log(`Order ${order.code} status → ${payload.status}`);
+    }
+
+    // Lets the ERP re-query current status on demand (e.g. after a missed
+    // callback, or for reconciliation) — complements updateStatus's push path.
+    async getStatus(ctx: RequestContext, orderCode: string): Promise<OrderErpStatusInfo | null> {
+        const order = await this.connection
+            .getRepository(ctx, Order)
+            .findOne({ where: { code: orderCode } });
+        if (!order) return null;
+
+        return {
+            orderCode: order.code,
+            status: (order.customFields.erpStatus ?? null) as ErpOrderStatus | null,
+            erpOrderId: order.customFields.erpOrderId ?? null,
+            updatedAt: order.customFields.erpStatusAt ?? null,
+        };
     }
 }

@@ -8,6 +8,7 @@ import { shopApiExtensions } from './api/shop.schema';
 @VendurePlugin({
     imports: [PluginCommonModule],
     providers: [ErpOrderService],
+    exports: [ErpOrderService],
     shopApiExtensions: {
         schema: shopApiExtensions,
         resolvers: [ErpOrderResolver],

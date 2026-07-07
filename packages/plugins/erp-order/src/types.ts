@@ -24,3 +24,10 @@ export interface ErpStatusUpdatePayload {
     status: ErpOrderStatus;
     erpOrderId?: string;
 }
+
+export interface OrderErpStatusInfo {
+    orderCode: string;
+    status: ErpOrderStatus | null;
+    erpOrderId: string | null;
+    updatedAt: Date | null;
+}

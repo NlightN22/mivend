@@ -1,0 +1,12 @@
+export { ProductRecordDto } from './product-record.dto';
+export { CrossReferenceRecordDto } from './cross-reference-record.dto';
+export { PriceRecordDto } from './price-record.dto';
+export { StockRecordDto } from './stock-record.dto';
+export { CustomerRecordDto } from './customer-record.dto';
+export { CounterpartyRecordDto } from './counterparty-record.dto';
+export { CustomerCounterpartyRecordDto } from './customer-counterparty-record.dto';
+export { TradingPointRecordDto } from './trading-point-record.dto';
+export { CategoryRecordDto } from './category-record.dto';
+export { DiscountRuleRecordDto } from './discount-rule-record.dto';
+export { DocumentRecordDto } from './document-record.dto';
+export { OrganizationRequisitesRecordDto } from './organization-requisites-record.dto';
