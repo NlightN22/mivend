@@ -1,5 +1,10 @@
 node_modules/
 dist/
+# Defense-in-depth: composite tsc -b projects normally emit this inside dist/
+# (already ignored above), but a misconfigured/relocated tsconfig.json can
+# leave one at a package root instead — a stray one there gets picked up by
+# tsc -b's up-to-date check and can make it silently skip a real build.
+*.tsbuildinfo
 tasks/
 .tests/
 docs/ai/
@@ -10,8 +15,9 @@ docs/ai/
 !.env.*.example
 !.env.example
 
-# Generated assets
-static/assets/
+# Generated assets — no leading slash and a trailing /** so this matches at
+# any depth (apps/server/static/assets/, etc.), not just repo-root static/assets/
+**/static/assets/**
 storybook-static/
 
 # Logs
