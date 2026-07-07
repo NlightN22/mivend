@@ -69,7 +69,7 @@ storefront-dev:
 # ── Code ───────────────────────────────────────────────────────────────────────
 
 build:
-	pnpm --filter "./packages/plugins/**" build
+	pnpm build:plugins
 	pnpm --filter "server" build
 
 lint:

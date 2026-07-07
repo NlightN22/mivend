@@ -189,6 +189,8 @@ packages/plugins/<name>/
 }
 ```
 
+`"dev": "tsc --watch"` is kept for standalone/manual debugging of a single plugin (see the Dev process management section) but is **not** what runs in the normal `make dev` flow — see "Monorepo `dist/` and dev watching" below for the actual mechanism (TypeScript Project References, one shared `tsc -b --watch` process for all plugins).
+
 **`index.ts` required pattern** — always re-export via `./src/`, never `./`:
 
 ```typescript
@@ -251,9 +253,16 @@ Use Vendure's `EventBus`: one plugin publishes an event, another subscribes. Thi
 
 Each plugin has `"main": "./dist/index.js"`. When Plugin A imports from `@mivend/plugin-b`, Node.js resolves `dist/index.js` — not `src/`. If `dist/` is stale or missing an export, the import arrives as `undefined` at runtime (TypeORM throws `No metadata for "undefined"`).
 
-In dev, all plugins run `tsc --watch` in parallel alongside the server. This is started automatically by `make dev` via `pnpm dev:plugins`. Changes to any plugin are compiled to `dist/` immediately; `ts-node-dev` picks them up on the next server restart.
+**In dev, all plugins are built by a single `tsc -b --watch` process** (TypeScript Project References), not by N independent `tsc --watch` processes — one per plugin. This is started automatically by `make dev` via `pnpm dev:plugins` (`tsc -b packages/plugins/tsconfig.json --watch`). Changes to any plugin are compiled to `dist/` immediately; `ts-node-dev` picks them up on the next server restart.
 
-**When adding a new plugin**, verify it has `"dev": "tsc --watch"` in its `package.json` scripts. The `pnpm --filter './packages/plugins/**' --parallel run dev` glob picks it up automatically — no other config change needed.
+**Why not N independent `tsc --watch` processes (the old setup)**: each `tsc --watch` process loads and caches the _entire_ type graph of its dependencies independently, and `@vendure/core`'s type graph (TypeORM + GraphQL + NestJS) is heavy — with 10 plugins that's 10 full copies of that graph in memory simultaneously, which has caused real OOM/VPS crashes. It's also a **correctness bug, not just a memory cost**: an independent `tsc --watch` on plugin A has no visibility into plugin B's source changes — it only rebuilds when _its own_ watched files change, so it can silently keep serving a stale `dist/` for a dependency that was just edited, until some unrelated trigger causes it to rebuild. A single `tsc -b --watch` knows the full dependency graph and rebuilds dependents automatically when a dependency changes, in one process, sharing one compiler instance.
+
+**When adding a new plugin that depends on another `@mivend/plugin-*` package**:
+
+- Add `"composite": true` to the new plugin's `tsconfig.json` `compilerOptions` (required for it to participate in project references — every plugin's `tsconfig.json` already has this).
+- Add a `"references"` array pointing at each `@mivend/plugin-*` dependency's directory, e.g. `"references": [{ "path": "../counterparty" }]` — this must mirror the plugin's actual `package.json` dependencies exactly, or `tsc -b` won't know to rebuild it when that dependency changes (silently reintroducing the stale-`dist/` bug this setup exists to prevent).
+- Add the new plugin's directory to the `"references"` array in `packages/plugins/tsconfig.json` (the root aggregator) — a plugin missing from this list is never built by `tsc -b --watch` at all.
+- A plugin with **no** `@mivend/plugin-*` dependencies still needs `"composite": true` but no `"references"` entry of its own (see `customer-pricing`/`cross-reference`/`erp-order`/`popular-products`/`price-entry`'s `tsconfig.json` for the pattern).
 
 ---
 
@@ -344,6 +353,28 @@ This keeps the design consistent and changes visible across the whole applicatio
 
 ---
 
+## REST endpoint documentation (Swagger/OpenAPI)
+
+Shop/Admin APIs are GraphQL and self-documenting via introspection — this section only applies to plain `@Controller()` REST endpoints (currently `plugin-erp-import` and `plugin-sync`, called by the ERP integration). These are documented automatically via `@nestjs/swagger`, mounted at `/api-docs` (UI) and `/api-docs-json` (raw OpenAPI document) — see `apps/server/src/main.ts` and issue #28.
+
+**Any REST controller's request body, query params, or response shape must be a class, never a plain `interface`.** `@nestjs/swagger`'s `@ApiProperty()` decorators only produce schema metadata on classes — an interface-typed REST payload compiles fine but silently produces an empty/useless schema instead of a build error, so this is easy to violate by accident.
+
+- Put the DTO class next to the controller that uses it, in a `src/dto/` folder — not mixed into a shared `types.ts` with plain internal interfaces.
+- Annotate every field with `@ApiProperty()` (or `@ApiPropertyOptional()` for optional fields), including a `description` when the field name alone doesn't make its meaning obvious.
+- If a REST DTO intentionally mirrors an internal type used elsewhere (e.g. a GraphQL input, or a strict discriminated union used internally), keep the DTO in sync by hand — there is no automatic bridge between plain TypeScript types and Swagger-visible classes.
+- **Mount any new `SwaggerModule.setup()` call via `bootstrap()`'s `onBeforeAppListen` option, never in a `.then()` after `bootstrap()` resolves.** Vendure calls `app.listen()` internally before returning; NestJS finalizes its routing/fallback-handler chain at that point, so routes registered afterward 404 silently even though the OpenAPI document itself builds with correct schemas. This cost real debugging time once — don't repeat it.
+
+**Whenever a REST endpoint's request/response shape changes, the DTO classes must change with it in the same commit — never left for later.** This includes: adding/removing/renaming a field, changing a field's type or nullability, adding a new variant to a discriminated payload (e.g. a new `ImportRecord` type in `erp-import`), or changing a nested object's shape. A DTO drifting out of sync with the real payload is worse than no DTO at all — it actively misleads external integrators (1C or otherwise) into building a client against a contract that no longer matches reality, and won't be caught by `tsc` since the DTO and the internal type are structurally independent (see "keep the DTO in sync by hand" above).
+
+Checklist for any change that touches a REST payload:
+
+- [ ] Updated (or added) the corresponding field(s) on the DTO class, with `@ApiProperty()`/`@ApiPropertyOptional()` and an explicit `type` for any nullable/union-typed field (plain `nullable: true` without `type` silently renders as `type: object` — reflect-metadata cannot infer a type from a TS union; this is a real bug class, not a hypothetical).
+- [ ] If the payload is a discriminated union (like `ImportRecordDto.data`), added the new variant to both the `oneOf` array and the `discriminator.mapping` in the same place (`packages/plugins/erp-import/src/dto/batch-import.dto.ts`'s `TYPE_TO_SCHEMA`) — one without the other produces a schema that silently omits the new type from the published contract.
+- [ ] Regenerated/eyeballed `/api-docs-json` after the change (e.g. `curl localhost:3000/api-docs-json | jq '.components.schemas.<Dto>'`) to confirm the new/changed field actually appears with the right type — don't assume the decorator did what you intended.
+- [ ] Scanned the diff for stray non-English text in any new `description`/`example` string (see the Language section) — DTO field descriptions ship in a public-facing document, unlike most internal code comments.
+
+---
+
 ## Storefront rules
 
 See `docs/frontend.md` for the full architecture. Critical rules:
@@ -419,7 +450,7 @@ Rules:
 - **Always use `make dev`** to start the development stack. It is designed to be the single entry point and handles all processes together.
 - **Never run `pnpm --filter server dev`, `pnpm dev:plugins`, or `pnpm --filter @mivend/storefront dev` directly** unless explicitly debugging a single component in isolation — and even then, kill the process immediately after.
 - **If you started a background process manually, kill it before the session ends.** Track PIDs and clean up with `kill <PID>` or `pkill -f <pattern>`.
-- **`make dev` is not idempotent by design** — running it twice creates duplicate `tsc --watch` processes. Before calling `make dev`, verify no dev processes are already running: `pgrep -f "ts-node-dev|tsc --watch|vite" | wc -l`. If non-zero — stop with `make down` and kill leftover node processes first.
+- **`make dev` is not idempotent by design** — running it twice creates duplicate `tsc --watch` processes. Before calling `make dev`, verify no dev processes are already running: `pgrep -f "ts-node-dev|tsc -b|tsc --watch|vite" | wc -l`. If non-zero — stop with `make down` and kill leftover node processes first.
 - **`make up`** only starts Docker infrastructure (postgres, redis, rabbitmq, elasticsearch). It is safe to call repeatedly.
 
 ---

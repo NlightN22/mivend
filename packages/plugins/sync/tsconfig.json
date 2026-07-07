@@ -1,8 +1,10 @@
 {
     "extends": "../../../tsconfig.base.json",
     "compilerOptions": {
+        "composite": true,
         "outDir": "./dist",
         "rootDir": "."
     },
-    "include": ["src/**/*", "index.ts"]
+    "include": ["src/**/*", "index.ts"],
+    "references": [{ "path": "../erp-order" }, { "path": "../../shared" }]
 }

@@ -1,8 +1,15 @@
 {
     "extends": "../../../tsconfig.base.json",
     "compilerOptions": {
+        "composite": true,
         "outDir": "./dist",
         "rootDir": "."
     },
-    "include": ["src/**/*", "index.ts"]
+    "include": ["src/**/*", "index.ts"],
+    "references": [
+        { "path": "../counterparty" },
+        { "path": "../cross-reference" },
+        { "path": "../documents" },
+        { "path": "../price-entry" }
+    ]
 }

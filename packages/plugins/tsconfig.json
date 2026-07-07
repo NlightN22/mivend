@@ -1,0 +1,16 @@
+{
+    "files": [],
+    "references": [
+        { "path": "../shared" },
+        { "path": "./customer-pricing" },
+        { "path": "./cross-reference" },
+        { "path": "./erp-order" },
+        { "path": "./popular-products" },
+        { "path": "./price-entry" },
+        { "path": "./counterparty" },
+        { "path": "./documents" },
+        { "path": "./search" },
+        { "path": "./sync" },
+        { "path": "./erp-import" }
+    ]
+}
