@@ -6,6 +6,7 @@ import {
 } from '@vendure/core';
 import gql from 'graphql-tag';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
+import { AccessControlPlugin } from '@mivend/plugin-access-control';
 
 import { CounterpartyConsumer } from './consumers/counterparty.consumer';
 import { TradingPointConsumer } from './consumers/trading-point.consumer';
@@ -116,6 +117,9 @@ const adminApiSchema = gql`
         paymentDelayDays: Int!
         priceType: String!
         isActive: Boolean!
+        assignedManagerId: String
+        departmentId: String
+        branchId: String
         tradingPoints: [TradingPoint!]!
     }
 
@@ -179,7 +183,7 @@ const adminResolvers = [
 ];
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CustomerPricingPlugin],
+    imports: [PluginCommonModule, CustomerPricingPlugin, AccessControlPlugin],
     entities: [Counterparty, TradingPoint, ContactPerson],
     shopApiExtensions: {
         schema: shopApiSchema,

@@ -2,6 +2,7 @@
     "files": [],
     "references": [
         { "path": "../shared" },
+        { "path": "./access-control" },
         { "path": "./customer-pricing" },
         { "path": "./cross-reference" },
         { "path": "./erp-order" },

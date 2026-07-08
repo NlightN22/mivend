@@ -16,6 +16,7 @@ import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { SyncPlugin, StubErpAdapter } from '@mivend/plugin-sync';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
+import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-control';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -34,6 +35,7 @@ export const config: VendureConfig = {
             identifier: process.env.SUPERADMIN_USERNAME ?? 'superadmin',
             password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
         },
+        customPermissions: Object.values(CustomPermission),
     },
     dbConnectionOptions: {
         type: 'postgres',
@@ -129,6 +131,7 @@ export const config: VendureConfig = {
             },
         }),
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
+        AccessControlPlugin,
         CounterpartyPlugin,
         PriceEntryPlugin,
         DocumentsPlugin,

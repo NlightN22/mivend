@@ -8,6 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
+import { AccessScopeService } from '@mivend/plugin-access-control';
 
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyUpsertPayload, loggerCtx } from './types';
@@ -18,6 +19,7 @@ export class CounterpartyService {
         private connection: TransactionalConnection,
         private customerService: CustomerService,
         private customerPricingService: CustomerPricingService,
+        private accessScopeService: AccessScopeService,
     ) {}
 
     async upsert(ctx: RequestContext, payload: CounterpartyUpsertPayload): Promise<Counterparty> {
@@ -58,6 +60,32 @@ export class CounterpartyService {
         return this.connection
             .getRepository(ctx, Counterparty)
             .find({ order: { shortName: 'ASC' } });
+    }
+
+    /**
+     * Row-level visibility for the admin `counterparties` query — resolves the caller's scope
+     * via AccessScopeService and filters accordingly. See docs/access-control.md, layer 3.
+     */
+    async findVisible(ctx: RequestContext): Promise<Counterparty[]> {
+        const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
+        const qb = this.connection
+            .getRepository(ctx, Counterparty)
+            .createQueryBuilder('c')
+            .orderBy('c.shortName', 'ASC');
+        switch (scope.kind) {
+            case 'own':
+                qb.where('c.assignedManagerId = :id', { id: scope.administratorId ?? null });
+                break;
+            case 'department':
+                qb.where('c.departmentId = :d AND c.branchId = :b', {
+                    d: scope.departmentId ?? null,
+                    b: scope.branchId ?? null,
+                });
+                break;
+            case 'all':
+                break;
+        }
+        return qb.getMany();
     }
 
     async getForCustomer(ctx: RequestContext, customerId: ID): Promise<Counterparty | null> {

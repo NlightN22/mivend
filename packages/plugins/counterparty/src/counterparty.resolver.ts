@@ -1,6 +1,7 @@
 import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { Permission } from '@vendure/common/lib/generated-types';
 import { Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
+import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyService } from './counterparty.service';
@@ -25,9 +26,9 @@ export class CounterpartyResolver {
     constructor(private counterpartyService: CounterpartyService) {}
 
     @Query()
-    @Allow(Permission.ReadCustomer)
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     async counterparties(@Ctx() ctx: RequestContext): Promise<Counterparty[]> {
-        return this.counterpartyService.findAll(ctx);
+        return this.counterpartyService.findVisible(ctx);
     }
 
     @Transaction()

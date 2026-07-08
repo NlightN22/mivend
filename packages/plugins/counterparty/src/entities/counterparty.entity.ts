@@ -35,4 +35,13 @@ export class Counterparty extends VendureEntity {
 
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
+
+    @Column({ type: 'varchar', nullable: true })
+    assignedManagerId!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    departmentId!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    branchId!: string | null;
 }
