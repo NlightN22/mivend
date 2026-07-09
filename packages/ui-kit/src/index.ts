@@ -17,6 +17,9 @@ export type { ButtonVariant, ButtonSize } from './components/MvButton/MvButton.v
 export { default as MvStatusTag } from './components/MvStatusTag/MvStatusTag.vue';
 export type { StatusTagVariant } from './components/MvStatusTag/MvStatusTag.vue';
 
+export { default as MvStatusBadge } from './components/MvStatusBadge/MvStatusBadge.vue';
+export type { StatusBadgeVariant } from './components/MvStatusBadge/MvStatusBadge.vue';
+
 export { default as MvAmountDisplay } from './components/MvAmountDisplay/MvAmountDisplay.vue';
 export type { AmountSize } from './components/MvAmountDisplay/MvAmountDisplay.vue';
 
@@ -58,6 +61,13 @@ export { default as MvTooltip } from './components/MvTooltip/MvTooltip.vue';
 export { default as MvDiscountBadge } from './components/MvDiscountBadge/MvDiscountBadge.vue';
 export type { DiscountTier } from './components/MvDiscountBadge/MvDiscountBadge.vue';
 export { default as MvProgressBar } from './components/MvProgressBar/MvProgressBar.vue';
+
+export { default as MvKpiCard } from './components/MvKpiCard/MvKpiCard.vue';
+export { default as MvPanel } from './components/MvPanel/MvPanel.vue';
+export { default as MvCountBadge } from './components/MvCountBadge/MvCountBadge.vue';
+export { default as MvAppTopbar } from './components/MvAppTopbar/MvAppTopbar.vue';
+export { default as MvAppSidebar } from './components/MvAppSidebar/MvAppSidebar.vue';
+export type { AppSidebarItem } from './components/MvAppSidebar/MvAppSidebar.vue';
 
 export { colors } from './tokens/colors';
 export type { ColorToken } from './tokens/colors';

@@ -40,6 +40,8 @@ function rowClass({ rowData }: { rowData: TableRow }): string {
 }
 
 const fixedHeight = computed(() => props.height);
+
+const emit = defineEmits<{ 'row-click': [payload: { rowData: TableRow }] }>();
 </script>
 
 <template>
@@ -57,6 +59,7 @@ const fixedHeight = computed(() => props.height);
           :height="fixedHeight"
           :row-height="rowHeight"
           :row-class="rowClass"
+          @row-click="({ rowData }) => emit('row-click', { rowData: rowData as TableRow })"
         >
           <template v-if="!data.length && !loading" #empty>
             <div class="mv-table__empty">{{ emptyText }}</div>
