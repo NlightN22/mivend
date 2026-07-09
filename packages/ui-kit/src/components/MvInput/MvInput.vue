@@ -1,12 +1,18 @@
 <script setup lang="ts">
-defineProps<{
-  modelValue: string;
-  type?: string;
-  placeholder?: string;
-  disabled?: boolean;
-  error?: boolean;
-  autocomplete?: string;
-}>();
+export type InputSize = 'md' | 'sm';
+
+withDefaults(
+  defineProps<{
+    modelValue: string;
+    type?: string;
+    placeholder?: string;
+    disabled?: boolean;
+    error?: boolean;
+    autocomplete?: string;
+    size?: InputSize;
+  }>(),
+  { size: 'md' },
+);
 
 defineEmits<{
   'update:modelValue': [value: string];
@@ -15,7 +21,11 @@ defineEmits<{
 
 <template>
   <input
-    :class="['mv-input', { 'mv-input--error': error, 'mv-input--disabled': disabled }]"
+    :class="[
+      'mv-input',
+      `mv-input--${size}`,
+      { 'mv-input--error': error, 'mv-input--disabled': disabled },
+    ]"
     :type="type ?? 'text'"
     :value="modelValue"
     :placeholder="placeholder"
@@ -65,5 +75,16 @@ defineEmits<{
   opacity: 0.5;
   pointer-events: none;
   background: #f9fafb;
+}
+
+/* Compact density for backoffice filter bars (manager portal) — see
+   docs/ai/manager-portal-pages/00-shared-conventions.md, "FilterBar". */
+.mv-input--sm {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--app-radius-md, 12px);
+  font-size: 14px;
+  font-weight: 400;
+  background: var(--el-fill-color-light, #f8fafc);
 }
 </style>
