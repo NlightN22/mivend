@@ -27,7 +27,7 @@ export class AccessScopeService {
             return { kind: 'own' };
         }
         const roles = admin.user.roles;
-        const maxScope = this.roleScopeConfigService.maxScopeFor(roles, resource);
+        const maxScope = await this.roleScopeConfigService.maxScopeFor(ctx, roles, resource);
         const customFields = admin.customFields as
             | { departmentId?: string | null; branchId?: string | null }
             | undefined;

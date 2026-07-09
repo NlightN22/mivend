@@ -10,7 +10,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
         e2e e2e-ui e2e-report \
         docker-build docker-push \
         prod-up prod-down \
-        dev dev-fresh dev-reset seed \
+        dev dev-fresh dev-reset seed seed-access-roles \
         storybook storefront storefront-dev
 
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
@@ -52,6 +52,12 @@ seed:
 	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
 	@echo "Server ready. Seeding..."
 	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-token} node infrastructure/scripts/seed-erp.mjs
+
+seed-access-roles:
+	@echo "Waiting for server on :3000..."
+	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
+	@echo "Server ready. Seeding access-control roles..."
+	node infrastructure/scripts/seed-access-roles.mjs
 
 # ── UI development ─────────────────────────────────────────────────────────────
 

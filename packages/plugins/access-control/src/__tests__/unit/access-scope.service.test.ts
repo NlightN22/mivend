@@ -4,44 +4,41 @@ import type { AdministratorService, RequestContext } from '@vendure/core';
 import { AccessScopeService } from '../../access-scope.service';
 import { RoleScopeConfigService } from '../../role-scope-config.service';
 
-function mockAdmin(id: string, maxScope: string, customFields: Record<string, unknown> = {}) {
+function mockAdmin(id: string, customFields: Record<string, unknown> = {}) {
     return {
         id,
         customFields,
-        user: {
-            roles: [
-                {
-                    code: 'test-role',
-                    customFields: { accessScopeConfig: JSON.stringify({ counterparty: maxScope }) },
-                },
-            ],
-        },
+        user: { roles: [{ code: 'test-role' }] },
     };
 }
 
 describe('AccessScopeService', () => {
     let administratorService: { findOneByUserId: ReturnType<typeof vi.fn> };
+    let roleScopeConfigService: { maxScopeFor: ReturnType<typeof vi.fn> };
     let service: AccessScopeService;
     const ctx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
     beforeEach(() => {
         administratorService = { findOneByUserId: vi.fn() };
+        roleScopeConfigService = { maxScopeFor: vi.fn() };
         service = new AccessScopeService(
             administratorService as unknown as AdministratorService,
-            new RoleScopeConfigService(),
+            roleScopeConfigService as unknown as RoleScopeConfigService,
         );
     });
 
     it('resolves "own" scope with the administrator id attached', async () => {
-        administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-1', 'own'));
+        administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-1'));
+        roleScopeConfigService.maxScopeFor.mockResolvedValue('own');
         const scope = await service.resolveCounterpartyScope(ctx);
         expect(scope).toEqual({ kind: 'own', administratorId: 'admin-1' });
     });
 
     it('resolves "department" scope with department/branch ids attached', async () => {
         administratorService.findOneByUserId.mockResolvedValue(
-            mockAdmin('admin-2', 'department', { departmentId: 'dept-1', branchId: 'branch-a' }),
+            mockAdmin('admin-2', { departmentId: 'dept-1', branchId: 'branch-a' }),
         );
+        roleScopeConfigService.maxScopeFor.mockResolvedValue('department');
         const scope = await service.resolveCounterpartyScope(ctx);
         expect(scope).toEqual({
             kind: 'department',
@@ -52,7 +49,8 @@ describe('AccessScopeService', () => {
     });
 
     it('resolves "all" scope with no ownership identifiers', async () => {
-        administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-3', 'all'));
+        administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-3'));
+        roleScopeConfigService.maxScopeFor.mockResolvedValue('all');
         const scope = await service.resolveCounterpartyScope(ctx);
         expect(scope).toEqual({ kind: 'all' });
     });
@@ -62,5 +60,6 @@ describe('AccessScopeService', () => {
         const scope = await service.resolveCounterpartyScope(anonymousCtx);
         expect(scope).toEqual({ kind: 'own' });
         expect(administratorService.findOneByUserId).not.toHaveBeenCalled();
+        expect(roleScopeConfigService.maxScopeFor).not.toHaveBeenCalled();
     });
 });

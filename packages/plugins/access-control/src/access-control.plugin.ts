@@ -4,14 +4,28 @@ import {
     RuntimeVendureConfig,
     VendurePlugin,
 } from '@vendure/core';
+import gql from 'graphql-tag';
 
+import { AccessControlResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
+import { RoleAccessScope } from './entities/role-access-scope.entity';
 import { RoleScopeConfigService } from './role-scope-config.service';
+
+const adminApiSchema = gql`
+    extend type Mutation {
+        setRoleAccessScopeConfig(roleCode: String!, accessScopeConfig: String!): Boolean!
+    }
+`;
 
 @VendurePlugin({
     imports: [PluginCommonModule],
+    entities: [RoleAccessScope],
     providers: [AccessScopeService, RoleScopeConfigService],
     exports: [AccessScopeService, RoleScopeConfigService],
+    adminApiExtensions: {
+        schema: adminApiSchema,
+        resolvers: [AccessControlResolver],
+    },
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.Administrator = [
             ...(config.customFields.Administrator ?? []),
@@ -26,21 +40,6 @@ import { RoleScopeConfigService } from './role-scope-config.service';
                 type: 'string' as const,
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Branch ID' }],
-            },
-        ];
-        config.customFields.Role = [
-            ...(config.customFields.Role ?? []),
-            {
-                name: 'accessScopeConfig',
-                type: 'text' as const,
-                nullable: true,
-                label: [{ languageCode: LanguageCode.en, value: 'Access scope config (JSON)' }],
-                description: [
-                    {
-                        languageCode: LanguageCode.en,
-                        value: 'JSON map of resource -> max scope ("own" | "department" | "all"), e.g. {"counterparty":"department"}',
-                    },
-                ],
             },
         ];
         return config;

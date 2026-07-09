@@ -1,56 +1,92 @@
-import { describe, it, expect } from 'vitest';
-import type { Role } from '@vendure/core';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { RequestContext, Role, TransactionalConnection } from '@vendure/core';
 
 import { RoleScopeConfigService } from '../../role-scope-config.service';
+import { RoleAccessScope } from '../../entities/role-access-scope.entity';
 
-function roleWithConfig(code: string, config: Record<string, string> | null): Role {
+function role(code: string): Role {
+    return { code } as unknown as Role;
+}
+
+function scopeRow(roleCode: string, config: Record<string, string> | string): RoleAccessScope {
     return {
-        code,
-        customFields: { accessScopeConfig: config ? JSON.stringify(config) : null },
-    } as unknown as Role;
+        roleCode,
+        accessScopeConfig: typeof config === 'string' ? config : JSON.stringify(config),
+    } as RoleAccessScope;
+}
+
+function createMockRepo() {
+    return {
+        find: vi.fn(),
+        findOne: vi.fn(),
+        create: vi.fn((x: unknown) => x),
+        save: vi.fn(async (x: unknown) => x),
+    };
 }
 
 describe('RoleScopeConfigService', () => {
-    const service = new RoleScopeConfigService();
+    let repo: ReturnType<typeof createMockRepo>;
+    let connection: { getRepository: (...args: unknown[]) => ReturnType<typeof createMockRepo> };
+    let service: RoleScopeConfigService;
+    const ctx = {} as unknown as RequestContext;
 
-    it('returns "own" for a role scoped to own', () => {
-        const role = roleWithConfig('sales-rep', { counterparty: 'own' });
-        expect(service.maxScopeFor([role], 'counterparty')).toBe('own');
+    beforeEach(() => {
+        repo = createMockRepo();
+        connection = { getRepository: () => repo };
+        service = new RoleScopeConfigService(connection as unknown as TransactionalConnection);
     });
 
-    it('returns "department" for a role scoped to department', () => {
-        const role = roleWithConfig('branch-manager', { counterparty: 'department' });
-        expect(service.maxScopeFor([role], 'counterparty')).toBe('department');
+    it('returns "own" for a role scoped to own', async () => {
+        repo.find.mockResolvedValue([scopeRow('sales-rep', { counterparty: 'own' })]);
+        expect(await service.maxScopeFor(ctx, [role('sales-rep')], 'counterparty')).toBe('own');
     });
 
-    it('returns "all" for a role scoped to all', () => {
-        const role = roleWithConfig('central-admin', { counterparty: 'all' });
-        expect(service.maxScopeFor([role], 'counterparty')).toBe('all');
+    it('returns "department" for a role scoped to department', async () => {
+        repo.find.mockResolvedValue([scopeRow('branch-manager', { counterparty: 'department' })]);
+        expect(await service.maxScopeFor(ctx, [role('branch-manager')], 'counterparty')).toBe(
+            'department',
+        );
     });
 
-    it('picks the widest scope across multiple roles', () => {
-        const roles = [
-            roleWithConfig('sales-rep', { counterparty: 'own' }),
-            roleWithConfig('branch-manager', { counterparty: 'department' }),
-        ];
-        expect(service.maxScopeFor(roles, 'counterparty')).toBe('department');
+    it('returns "all" for a role scoped to all', async () => {
+        repo.find.mockResolvedValue([scopeRow('central-admin', { counterparty: 'all' })]);
+        expect(await service.maxScopeFor(ctx, [role('central-admin')], 'counterparty')).toBe('all');
     });
 
-    it('falls back to "own" for a role with no config, never "all"', () => {
-        const role = roleWithConfig('unrecognized-role', null);
-        expect(service.maxScopeFor([role], 'counterparty')).toBe('own');
+    it('picks the widest scope across multiple roles', async () => {
+        repo.find.mockResolvedValue([
+            scopeRow('sales-rep', { counterparty: 'own' }),
+            scopeRow('branch-manager', { counterparty: 'department' }),
+        ]);
+        const result = await service.maxScopeFor(
+            ctx,
+            [role('sales-rep'), role('branch-manager')],
+            'counterparty',
+        );
+        expect(result).toBe('department');
     });
 
-    it('falls back to "own" when the resource is not present in the config', () => {
-        const role = roleWithConfig('order-only-role', { order: 'all' });
-        expect(service.maxScopeFor([role], 'counterparty')).toBe('own');
+    it('falls back to "own" when there is no config row for the role, never "all"', async () => {
+        repo.find.mockResolvedValue([]);
+        expect(await service.maxScopeFor(ctx, [role('unrecognized-role')], 'counterparty')).toBe(
+            'own',
+        );
     });
 
-    it('falls back to "own" on invalid JSON instead of throwing', () => {
-        const role = {
-            code: 'broken-role',
-            customFields: { accessScopeConfig: '{not json' },
-        } as unknown as Role;
-        expect(service.maxScopeFor([role], 'counterparty')).toBe('own');
+    it('falls back to "own" when the resource is not present in the config', async () => {
+        repo.find.mockResolvedValue([scopeRow('order-only-role', { order: 'all' })]);
+        expect(await service.maxScopeFor(ctx, [role('order-only-role')], 'counterparty')).toBe(
+            'own',
+        );
+    });
+
+    it('falls back to "own" on invalid JSON instead of throwing', async () => {
+        repo.find.mockResolvedValue([scopeRow('broken-role', '{not json')]);
+        expect(await service.maxScopeFor(ctx, [role('broken-role')], 'counterparty')).toBe('own');
+    });
+
+    it('returns "own" immediately with no query when there are no roles', async () => {
+        expect(await service.maxScopeFor(ctx, [], 'counterparty')).toBe('own');
+        expect(repo.find).not.toHaveBeenCalled();
     });
 });
