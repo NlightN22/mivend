@@ -17,6 +17,7 @@ const mockConnection = {
 
 const mockCounterpartyService = {
     findByErpId: vi.fn(),
+    findVisible: vi.fn(),
 };
 
 const mockCtx = {} as unknown as RequestContext;
@@ -144,6 +145,29 @@ describe('DocumentsService', () => {
             mockRepo.findOne.mockResolvedValue(requisites);
             const result = await service.getActiveRequisites(mockCtx);
             expect(result).toBe(requisites);
+        });
+    });
+
+    describe('findVisible', () => {
+        it('returns no rows without querying documents when no counterparty is visible', async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([]);
+            const result = await service.findVisible(mockCtx);
+            expect(result).toEqual({ items: [], totalItems: 0 });
+            expect(mockRepo.findAndCount).not.toHaveBeenCalled();
+        });
+
+        it('filters documents by exactly the counterparty ids CounterpartyService.findVisible returned', async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }, { id: '2' }]);
+            mockRepo.findAndCount.mockResolvedValue([[{ id: 'doc-1' }], 1]);
+
+            const result = await service.findVisible(mockCtx);
+
+            expect(mockRepo.findAndCount).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: expect.objectContaining({ counterpartyId: expect.anything() }),
+                }),
+            );
+            expect(result).toEqual({ items: [{ id: 'doc-1' }], totalItems: 1 });
         });
     });
 });

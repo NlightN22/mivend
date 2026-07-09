@@ -8,6 +8,7 @@ import {
     VendurePlugin,
 } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
+import { AccessControlPlugin } from '@mivend/plugin-access-control';
 
 import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
@@ -33,7 +34,7 @@ const OFFLINE_TERMS_METHOD = 'offline-terms';
 const INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CounterpartyPlugin],
+    imports: [PluginCommonModule, CounterpartyPlugin, AccessControlPlugin],
     entities: [Document, OrganizationRequisites],
     shopApiExtensions: {
         schema: shopApiExtensions,
@@ -41,7 +42,7 @@ const INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
     },
     adminApiExtensions: {
         schema: adminApiExtensions,
-        resolvers: [DocumentsAdminResolver],
+        resolvers: [DocumentsAdminResolver, DocumentFieldResolver],
     },
     providers: [DocumentsService, PdfBrowserService, PdfGeneratorService],
     exports: [DocumentsService, PdfGeneratorService],

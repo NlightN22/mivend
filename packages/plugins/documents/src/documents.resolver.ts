@@ -10,6 +10,7 @@ import {
     RequestContext,
 } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { Document } from './entities/document.entity';
 import { DocumentsService, DocumentListOptions } from './documents.service';
@@ -50,6 +51,15 @@ export class DocumentsAdminResolver {
         private documentsService: DocumentsService,
         private pdfGeneratorService: PdfGeneratorService,
     ) {}
+
+    @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    async documents(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: DocumentListOptions },
+    ): Promise<PaginatedList<Document>> {
+        return this.documentsService.findVisible(ctx, args.options);
+    }
 
     @Mutation()
     @Allow(Permission.UpdateCustomer)

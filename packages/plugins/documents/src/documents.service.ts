@@ -8,6 +8,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import { In } from 'typeorm';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { loggerCtx } from './constants';
@@ -38,6 +39,33 @@ export class DocumentsService {
             .getRepository(ctx, Document)
             .findAndCount({
                 where: { counterpartyId: String(counterpartyId) },
+                order: { issueDate: 'DESC' },
+                take,
+                skip,
+            });
+        return { items, totalItems };
+    }
+
+    // Admin-facing document visibility is derived entirely from counterparty visibility — no
+    // dedicated scope resolution here, per docs/access-control.md ("resources whose visibility
+    // is derived from another resource... reuse the owning resource's scope resolution, do not
+    // duplicate resolve<Resource>Scope logic"). Reuses CounterpartyService.findVisible()'s
+    // already-scoped result directly rather than re-deriving own/department/all filtering.
+    async findVisible(
+        ctx: RequestContext,
+        options?: DocumentListOptions,
+    ): Promise<PaginatedList<Document>> {
+        const visibleCounterparties = await this.counterpartyService.findVisible(ctx);
+        const counterpartyIds = visibleCounterparties.map(c => String(c.id));
+        if (counterpartyIds.length === 0) {
+            return { items: [], totalItems: 0 };
+        }
+        const take = options?.take ?? 50;
+        const skip = options?.skip ?? 0;
+        const [items, totalItems] = await this.connection
+            .getRepository(ctx, Document)
+            .findAndCount({
+                where: { counterpartyId: In(counterpartyIds) },
                 order: { issueDate: 'DESC' },
                 take,
                 skip,
