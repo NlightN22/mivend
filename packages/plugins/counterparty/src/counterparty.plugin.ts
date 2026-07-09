@@ -13,7 +13,11 @@ import { TradingPointConsumer } from './consumers/trading-point.consumer';
 import { Counterparty } from './entities/counterparty.entity';
 import { ContactPerson } from './entities/contact-person.entity';
 import { TradingPoint } from './entities/trading-point.entity';
-import { CustomerCounterpartyResolver, CounterpartyResolver } from './counterparty.resolver';
+import {
+    CustomerCounterpartyResolver,
+    CounterpartyResolver,
+    CounterpartyCreditResolver,
+} from './counterparty.resolver';
 import {
     CustomerTradingPointResolver,
     CounterpartyTradingPointResolver,
@@ -112,8 +116,10 @@ const adminApiSchema = gql`
         legalName: String!
         shortName: String!
         inn: String
-        creditLimit: Int!
-        creditBalance: Int!
+        "Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver"
+        creditLimit: Int
+        "Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver"
+        creditBalance: Int
         paymentDelayDays: Int!
         priceType: String!
         isActive: Boolean!
@@ -179,6 +185,7 @@ const adminResolvers = [
     CounterpartyTradingPointResolver,
     TradingPointResolver,
     CounterpartyResolver,
+    CounterpartyCreditResolver,
     TradingPointAdminResolver,
 ];
 

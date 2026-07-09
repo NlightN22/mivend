@@ -8,6 +8,11 @@ export const CustomPermission = {
         name: 'ReadCounterparty',
         description: 'Read counterparty records (scope resolved separately by AccessScopeService)',
     }),
+    ReadCounterpartyCredit: new PermissionDefinition({
+        name: 'ReadCounterpartyCredit',
+        description:
+            "Read a counterparty's creditLimit/creditBalance (financial data, layer 4 redaction)",
+    }),
     ManageAccessControl: new PermissionDefinition({
         name: 'ManageAccessControl',
         description:
