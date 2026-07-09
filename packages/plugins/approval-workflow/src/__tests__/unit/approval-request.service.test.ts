@@ -230,4 +230,25 @@ describe('ApprovalRequestService', () => {
         const result = await service.getMySummary(mockCtx(true), 5);
         expect(result).toEqual({ pendingCount: 0, recent: [] });
     });
+
+    it('findPendingPriceAdjustmentOrderIds extracts dedup orderIds from pending requests only', async () => {
+        requestRepo.find.mockResolvedValue([
+            { id: 'req-1', payload: JSON.stringify({ orderId: 'order-1' }) },
+            { id: 'req-2', payload: JSON.stringify({ orderId: 'order-2' }) },
+            { id: 'req-3', payload: JSON.stringify({ orderId: 'order-1' }) },
+        ]);
+
+        const result = await service.findPendingPriceAdjustmentOrderIds(mockCtx(true));
+
+        expect(requestRepo.find).toHaveBeenCalledWith({
+            where: { requestType: 'priceAdjustmentApproval', status: 'pending' },
+        });
+        expect(result.sort()).toEqual(['order-1', 'order-2']);
+    });
+
+    it('findPendingPriceAdjustmentOrderIds skips rows with invalid JSON payload', async () => {
+        requestRepo.find.mockResolvedValue([{ id: 'req-1', payload: 'not-json' }]);
+        const result = await service.findPendingPriceAdjustmentOrderIds(mockCtx(true));
+        expect(result).toEqual([]);
+    });
 });

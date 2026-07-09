@@ -255,6 +255,27 @@ export class ApprovalRequestService {
         return { pendingCount, recent };
     }
 
+    // Used by the manager portal orders list to flag "waiting approval" orders (see
+    // docs/ai/manager-portal-pages/02-orders-list.md). priceAdjustmentApproval is the only
+    // requestType whose payload references a specific order (see PriceAdjustmentPayload) —
+    // discountGrantApproval/creditTermApproval are standing-policy requests, not per-order.
+    async findPendingPriceAdjustmentOrderIds(ctx: RequestContext): Promise<string[]> {
+        const repo = this.connection.getRepository(ctx, ApprovalRequest);
+        const rows = await repo.find({
+            where: { requestType: 'priceAdjustmentApproval', status: 'pending' },
+        });
+        const orderIds = new Set<string>();
+        for (const row of rows) {
+            try {
+                const payload = JSON.parse(row.payload) as { orderId?: string };
+                if (payload.orderId) orderIds.add(payload.orderId);
+            } catch {
+                Logger.warn(`ApprovalRequest ${row.id} has invalid JSON payload`, loggerCtx);
+            }
+        }
+        return [...orderIds];
+    }
+
     private async getAdministratorId(ctx: RequestContext): Promise<string | null> {
         if (!ctx.activeUserId) return null;
         const admin = await this.administratorService.findOneByUserId(ctx, ctx.activeUserId);

@@ -1,6 +1,6 @@
 import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, ForbiddenError, RequestContext, Transaction } from '@vendure/core';
+import { Allow, Ctx, ForbiddenError, Permission, RequestContext, Transaction } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { ApprovalRequest } from './entities/approval-request.entity';
@@ -47,17 +47,29 @@ export class ApprovalRequestResolver {
 
     // Manager portal dashboard — see docs/ai/manager-portal-pages/01-dashboard.md, "My approval
     // requests status" — one aggregated call instead of a count query plus a list query.
+    // Gated on Authenticated only (like `departments`): the result is inherently scoped to
+    // `requestedByAdministratorId = caller` inside the service, so a role that never submits
+    // approval requests (e.g. Operator) safely gets back an empty summary rather than a
+    // ForbiddenError that would crash the shared dashboard page for that role.
     @Query()
-    @Allow(
-        CustomPermission.RequestPriceAdjustmentApproval.Permission,
-        CustomPermission.RequestDiscountGrantApproval.Permission,
-        CustomPermission.RequestCreditTermApproval.Permission,
-    )
+    @Allow(Permission.Authenticated)
     async myApprovalRequestsSummary(
         @Ctx() ctx: RequestContext,
         @Args() args: { recentLimit?: number },
     ): Promise<{ pendingCount: number; recent: ApprovalRequest[] }> {
         return this.approvalRequestService.getMySummary(ctx, args.recentLimit ?? 5);
+    }
+
+    // Manager portal orders list — see docs/ai/manager-portal-pages/02-orders-list.md,
+    // "waiting approval" flag. Gated on Permission.ReadOrder (same as `visibleOrders`) rather
+    // than an approval-specific permission: any role that can see the order list needs this to
+    // flag orders in it, not just roles that can create/approve requests. No department/branch
+    // scoping here — the caller only ever cross-references these ids against their own
+    // already-scoped `visibleOrders` result.
+    @Query()
+    @Allow(Permission.ReadOrder)
+    async pendingPriceAdjustmentOrderIds(@Ctx() ctx: RequestContext): Promise<string[]> {
+        return this.approvalRequestService.findPendingPriceAdjustmentOrderIds(ctx);
     }
 
     @ResolveField()
