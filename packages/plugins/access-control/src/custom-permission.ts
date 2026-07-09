@@ -18,6 +18,16 @@ export const CustomPermission = {
         description:
             'Manage role scope configuration (departmentId/branchId, max scope per resource)',
     }),
+    AdjustPriceWithinLimit: new PermissionDefinition({
+        name: 'AdjustPriceWithinLimit',
+        description:
+            'Adjust an order line price directly, as long as it stays at/above the floor price (layer 5 gate)',
+    }),
+    ReadFloorPrice: new PermissionDefinition({
+        name: 'ReadFloorPrice',
+        description:
+            'Read the raw floor-price threshold for a variant (financial data, layer 4 redaction)',
+    }),
     RequestPriceAdjustmentApproval: new PermissionDefinition({
         name: 'RequestPriceAdjustmentApproval',
         description: 'Create a one-off price adjustment approval request (layer 5)',

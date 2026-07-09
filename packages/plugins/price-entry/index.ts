@@ -11,3 +11,8 @@ export type {
 } from './src/discount-rule.service';
 export { PriceResolutionService } from './src/price-resolution.service';
 export type { ResolvedPrice, TierProgressVM } from './src/price-resolution.service';
+export { PriceAdjustmentGateService } from './src/price-adjustment-gate.service';
+export { PriceAdjustmentService } from './src/price-adjustment.service';
+export type { PriceAdjustmentResult } from './src/price-adjustment.service';
+export { FLOOR_PRICE_TYPE_CODE } from './src/types';
+export type { PriceAdjustmentDecision } from './src/types';

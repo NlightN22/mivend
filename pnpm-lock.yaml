@@ -442,6 +442,12 @@ importers:
 
     packages/plugins/price-entry:
         dependencies:
+            '@mivend/plugin-access-control':
+                specifier: workspace:*
+                version: link:../access-control
+            '@mivend/plugin-approval-workflow':
+                specifier: workspace:*
+                version: link:../approval-workflow
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)

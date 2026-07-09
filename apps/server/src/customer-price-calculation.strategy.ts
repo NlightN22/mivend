@@ -18,10 +18,21 @@ export class CustomerPriceCalculationStrategy implements OrderItemPriceCalculati
     async calculateUnitPrice(
         ctx: RequestContext,
         productVariant: ProductVariant,
-        _orderLineCustomFields: { [key: string]: unknown },
+        orderLineCustomFields: { [key: string]: unknown },
         order: Order,
         quantity: number,
     ): Promise<PriceCalculationResult> {
+        // A manager-adjusted price (PriceAdjustmentService, gated by the floor-price approval
+        // workflow — see docs/access-control.md layer 5) takes precedence over the normal
+        // resolution path. Set only by that service, never by the customer or ERP import.
+        const manualUnitPrice = orderLineCustomFields.manualUnitPrice;
+        if (typeof manualUnitPrice === 'number') {
+            return {
+                price: manualUnitPrice,
+                priceIncludesTax: productVariant.listPriceIncludesTax,
+            };
+        }
+
         const { customerPrice } = await this.priceResolutionService.resolve(
             ctx,
             String(productVariant.id),
