@@ -420,6 +420,12 @@ importers:
 
     packages/plugins/erp-order:
         dependencies:
+            '@mivend/plugin-access-control':
+                specifier: workspace:*
+                version: link:../access-control
+            '@mivend/plugin-counterparty':
+                specifier: workspace:*
+                version: link:../counterparty
             '@nestjs/common':
                 specifier: ^11.0.0
                 version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -442,6 +448,9 @@ importers:
             '@types/express':
                 specifier: ^4.17.0
                 version: 4.17.25
+            '@vendure/common':
+                specifier: ^3.6.4
+                version: 3.6.4
             typescript:
                 specifier: ^5.4.0
                 version: 5.9.3

@@ -9,7 +9,7 @@ import ApprovalStatusList from '../../components/dashboard/ApprovalStatusList.vu
 import ExpiringDiscountsBanner from '../../components/dashboard/ExpiringDiscountsBanner.vue';
 import QuickActionsPanel from '../../components/dashboard/QuickActionsPanel.vue';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.vue';
-import SavedFilterChips, { type FilterChip } from '../../components/dashboard/SavedFilterChips.vue';
+import SavedFilterChips, { type FilterChip } from '../../components/SavedFilterChips.vue';
 
 const authStore = useAuthStore();
 const data = ref<DashboardData | null>(null);
