@@ -233,6 +233,28 @@ export class ApprovalRequestService {
         return false;
     }
 
+    // Aggregated for the manager portal dashboard (see docs/ai/manager-portal-pages/01-dashboard.md)
+    // so the page fires one query instead of separately paginating + counting.
+    async getMySummary(
+        ctx: RequestContext,
+        recentLimit: number,
+    ): Promise<{ pendingCount: number; recent: ApprovalRequest[] }> {
+        const adminId = await this.getAdministratorId(ctx);
+        if (!adminId) {
+            return { pendingCount: 0, recent: [] };
+        }
+        const repo = this.connection.getRepository(ctx, ApprovalRequest);
+        const [pendingCount, recent] = await Promise.all([
+            repo.count({ where: { requestedByAdministratorId: adminId, status: 'pending' } }),
+            repo.find({
+                where: { requestedByAdministratorId: adminId },
+                order: { createdAt: 'DESC' },
+                take: recentLimit,
+            }),
+        ]);
+        return { pendingCount, recent };
+    }
+
     private async getAdministratorId(ctx: RequestContext): Promise<string | null> {
         if (!ctx.activeUserId) return null;
         const admin = await this.administratorService.findOneByUserId(ctx, ctx.activeUserId);

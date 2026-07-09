@@ -32,6 +32,8 @@ describe('ApprovalRequestService', () => {
         findOneOrFail: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
         createQueryBuilder: ReturnType<typeof vi.fn>;
+        count: ReturnType<typeof vi.fn>;
+        find: ReturnType<typeof vi.fn>;
     };
     let stepRepo: {
         findOne: ReturnType<typeof vi.fn>;
@@ -57,6 +59,8 @@ describe('ApprovalRequestService', () => {
             findOneOrFail: vi.fn(),
             save: vi.fn(async (x: unknown) => x),
             createQueryBuilder: vi.fn(() => updateQueryBuilder),
+            count: vi.fn(async () => 0),
+            find: vi.fn(async () => []),
         };
         stepRepo = {
             findOne: vi.fn(),
@@ -200,5 +204,30 @@ describe('ApprovalRequestService', () => {
         expect(stepRepo.save).toHaveBeenCalledWith(
             expect.objectContaining({ wasEscalated: true, escalatedToAdministratorId: 'admin-9' }),
         );
+    });
+
+    it('getMySummary returns the pending count and recent requests for the caller only', async () => {
+        administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
+        requestRepo.count.mockResolvedValue(2);
+        requestRepo.find.mockResolvedValue([{ id: 'req-1' }, { id: 'req-2' }]);
+
+        const result = await service.getMySummary(mockCtx(true), 5);
+
+        expect(requestRepo.count).toHaveBeenCalledWith({
+            where: { requestedByAdministratorId: 'admin-1', status: 'pending' },
+        });
+        expect(requestRepo.find).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { requestedByAdministratorId: 'admin-1' },
+                take: 5,
+            }),
+        );
+        expect(result).toEqual({ pendingCount: 2, recent: [{ id: 'req-1' }, { id: 'req-2' }] });
+    });
+
+    it('getMySummary returns an empty summary when the caller has no Administrator record', async () => {
+        administratorService.findOneByUserId.mockResolvedValue(null);
+        const result = await service.getMySummary(mockCtx(true), 5);
+        expect(result).toEqual({ pendingCount: 0, recent: [] });
     });
 });

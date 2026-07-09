@@ -34,6 +34,12 @@ const adminApiSchema = gql`
         createdAt: DateTime!
         decidedAt: DateTime
         steps: [ApprovalStep!]!
+        currentStepRole: String
+    }
+
+    type ApprovalRequestsSummary {
+        pendingCount: Int!
+        recent: [ApprovalRequest!]!
     }
 
     type WorkflowDefinition {
@@ -52,6 +58,7 @@ const adminApiSchema = gql`
 
     extend type Query {
         approvalRequest(id: ID!): ApprovalRequest
+        myApprovalRequestsSummary(recentLimit: Int): ApprovalRequestsSummary!
     }
 
     extend type Mutation {

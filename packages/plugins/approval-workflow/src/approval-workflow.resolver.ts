@@ -7,7 +7,7 @@ import { ApprovalRequest } from './entities/approval-request.entity';
 import { ApprovalStep } from './entities/approval-step.entity';
 import { WorkflowDefinition } from './entities/workflow-definition.entity';
 import { ApprovalRequestService } from './approval-request.service';
-import { WorkflowDefinitionService } from './workflow-definition.service';
+import { WorkflowDefinitionService, ParsedWorkflowDefinition } from './workflow-definition.service';
 import { ApprovalStepDecision, WorkflowStepDefinition } from './types';
 import { ApprovalStepService } from './approval-step.service';
 
@@ -27,6 +27,7 @@ export class ApprovalRequestResolver {
     constructor(
         private approvalRequestService: ApprovalRequestService,
         private approvalStepService: ApprovalStepService,
+        private workflowDefinitionService: WorkflowDefinitionService,
     ) {}
 
     @Query()
@@ -44,12 +45,50 @@ export class ApprovalRequestResolver {
         return this.approvalStepService.findRequest(ctx, args.id);
     }
 
+    // Manager portal dashboard — see docs/ai/manager-portal-pages/01-dashboard.md, "My approval
+    // requests status" — one aggregated call instead of a count query plus a list query.
+    @Query()
+    @Allow(
+        CustomPermission.RequestPriceAdjustmentApproval.Permission,
+        CustomPermission.RequestDiscountGrantApproval.Permission,
+        CustomPermission.RequestCreditTermApproval.Permission,
+    )
+    async myApprovalRequestsSummary(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { recentLimit?: number },
+    ): Promise<{ pendingCount: number; recent: ApprovalRequest[] }> {
+        return this.approvalRequestService.getMySummary(ctx, args.recentLimit ?? 5);
+    }
+
     @ResolveField()
     async steps(
         @Ctx() ctx: RequestContext,
         @Parent() request: { id: ID },
     ): Promise<ApprovalStep[]> {
         return this.approvalStepService.findSteps(ctx, request.id);
+    }
+
+    // Human-readable label for the role the request is currently waiting on, e.g. "Purchasing
+    // Dept Head" — null once the request is no longer pending (currentStepIndex is meaningless
+    // after approved/rejected).
+    @ResolveField()
+    async currentStepRole(
+        @Ctx() ctx: RequestContext,
+        @Parent() request: { requestType: string; status: string; currentStepIndex: number },
+    ): Promise<string | null> {
+        if (request.status !== 'pending') {
+            return null;
+        }
+        let definition: ParsedWorkflowDefinition;
+        try {
+            definition = await this.workflowDefinitionService.getDefinition(
+                ctx,
+                request.requestType,
+            );
+        } catch {
+            return null;
+        }
+        return definition.steps[request.currentStepIndex]?.role ?? null;
     }
 
     @Transaction()
