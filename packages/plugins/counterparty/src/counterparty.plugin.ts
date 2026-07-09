@@ -7,6 +7,7 @@ import {
 import gql from 'graphql-tag';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 
 import { CounterpartyConsumer } from './consumers/counterparty.consumer';
 import { TradingPointConsumer } from './consumers/trading-point.consumer';
@@ -26,8 +27,11 @@ import {
     CustomerTradingPointsQueryResolver,
     CustomerTradingPointsMutationResolver,
 } from './trading-point.resolver';
+import { CreditTermResolver } from './credit-term.resolver';
 import { CounterpartyService } from './counterparty.service';
 import { TradingPointService } from './trading-point.service';
+import { CreditTermGateService } from './credit-term-gate.service';
+import { CreditTermService } from './credit-term.service';
 
 const tradingPointFields = gql`
     type ContactPerson {
@@ -126,6 +130,7 @@ const adminApiSchema = gql`
         assignedManagerId: String
         departmentId: String
         branchId: String
+        creditTermOverrideExtraDays: Int
         tradingPoints: [TradingPoint!]!
     }
 
@@ -167,6 +172,20 @@ const adminApiSchema = gql`
 
         updateTradingPointComment(tradingPointId: ID!, comment: String): TradingPoint!
         setPreferredTradingPoint(tradingPointId: ID!): Boolean!
+
+        requestCreditTermExtension(input: CreditTermRequestInput!): ApprovalRequest!
+        decideCreditTermRequest(
+            requestId: ID!
+            decision: String!
+            comment: String
+        ): ApprovalRequest!
+    }
+
+    input CreditTermRequestInput {
+        counterpartyErpId: String!
+        requestedExtraDays: Int!
+        requestedAmount: Int
+        justification: String!
     }
 `;
 
@@ -187,10 +206,16 @@ const adminResolvers = [
     CounterpartyResolver,
     CounterpartyCreditResolver,
     TradingPointAdminResolver,
+    CreditTermResolver,
 ];
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CustomerPricingPlugin, AccessControlPlugin],
+    imports: [
+        PluginCommonModule,
+        CustomerPricingPlugin,
+        AccessControlPlugin,
+        ApprovalWorkflowPlugin,
+    ],
     entities: [Counterparty, TradingPoint, ContactPerson],
     shopApiExtensions: {
         schema: shopApiSchema,
@@ -205,6 +230,8 @@ const adminResolvers = [
         CounterpartyConsumer,
         TradingPointService,
         TradingPointConsumer,
+        CreditTermGateService,
+        CreditTermService,
     ],
     exports: [CounterpartyService, TradingPointService],
     configuration: (config: RuntimeVendureConfig) => {

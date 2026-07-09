@@ -202,6 +202,9 @@ importers:
             '@mivend/plugin-access-control':
                 specifier: workspace:*
                 version: link:../access-control
+            '@mivend/plugin-approval-workflow':
+                specifier: workspace:*
+                version: link:../approval-workflow
             '@mivend/plugin-customer-pricing':
                 specifier: workspace:*
                 version: link:../customer-pricing

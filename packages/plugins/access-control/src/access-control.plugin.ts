@@ -8,8 +8,10 @@ import gql from 'graphql-tag';
 
 import { AccessControlResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
+import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
 import { EmployeeService } from './employee.service';
+import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
 import { RoleScopeConfigService } from './role-scope-config.service';
@@ -22,20 +24,40 @@ const adminApiSchema = gql`
         parentErpId: String
     }
 
+    type CreditTermLimit {
+        roleCode: String!
+        maxExtraDays: Int!
+        maxAmount: Int
+    }
+
     extend type Query {
         departments: [Department!]!
+        creditTermLimit(roleCode: String!): CreditTermLimit
     }
 
     extend type Mutation {
         setRoleAccessScopeConfig(roleCode: String!, accessScopeConfig: String!): Boolean!
+        setCreditTermLimit(roleCode: String!, maxExtraDays: Int!, maxAmount: Int): CreditTermLimit!
     }
 `;
 
 @VendurePlugin({
     imports: [PluginCommonModule],
-    entities: [RoleAccessScope, Department],
-    providers: [AccessScopeService, RoleScopeConfigService, DepartmentService, EmployeeService],
-    exports: [AccessScopeService, RoleScopeConfigService, DepartmentService, EmployeeService],
+    entities: [RoleAccessScope, Department, CreditTermLimit],
+    providers: [
+        AccessScopeService,
+        RoleScopeConfigService,
+        DepartmentService,
+        EmployeeService,
+        CreditTermLimitService,
+    ],
+    exports: [
+        AccessScopeService,
+        RoleScopeConfigService,
+        DepartmentService,
+        EmployeeService,
+        CreditTermLimitService,
+    ],
     adminApiExtensions: {
         schema: adminApiSchema,
         resolvers: [AccessControlResolver],

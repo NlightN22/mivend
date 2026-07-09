@@ -26,6 +26,7 @@
     "dependencies": {
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-approval-workflow": "workspace:*",
         "graphql-tag": "^2.12.6"
     }
 }

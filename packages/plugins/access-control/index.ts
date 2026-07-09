@@ -9,4 +9,6 @@ export { DepartmentService } from './src/department.service';
 export type { DepartmentRecordInput } from './src/department.service';
 export { EmployeeService } from './src/employee.service';
 export type { EmployeeRecordInput } from './src/employee.service';
+export { CreditTermLimit } from './src/entities/credit-term-limit.entity';
+export { CreditTermLimitService } from './src/credit-term-limit.service';
 export type { AccessScope, AccessScopeKind } from './src/types';

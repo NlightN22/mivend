@@ -44,4 +44,12 @@ export class Counterparty extends VendureEntity {
 
     @Column({ type: 'varchar', nullable: true })
     branchId!: string | null;
+
+    // Portal-approved extension on top of the ERP-sourced paymentDelayDays — never written
+    // by erp-import, never mutates paymentDelayDays itself (that field stays ERP master
+    // data, per AGENTS.md sync rules). Set only by CreditTermService once a
+    // creditTermApproval(Escalated) request is approved. Real bidirectional ERP sync
+    // (pushing this back to 1C) is not wired yet — see CreditTermApprovedEvent.
+    @Column({ type: 'int', nullable: true })
+    creditTermOverrideExtraDays!: number | null;
 }
