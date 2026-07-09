@@ -21,6 +21,10 @@ export class AccessScopeService {
         return this.resolveScope(ctx, 'counterparty');
     }
 
+    async resolveOrderScope(ctx: RequestContext): Promise<AccessScope> {
+        return this.resolveScope(ctx, 'order');
+    }
+
     private async resolveScope(ctx: RequestContext, resource: string): Promise<AccessScope> {
         const admin = await this.getAdministrator(ctx);
         if (!admin) {

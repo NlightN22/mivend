@@ -24,6 +24,12 @@ const adminApiSchema = gql`
         parentErpId: String
     }
 
+    type TeamMember {
+        id: ID!
+        firstName: String!
+        lastName: String!
+    }
+
     type CreditTermLimit {
         roleCode: String!
         maxExtraDays: Int!
@@ -32,6 +38,7 @@ const adminApiSchema = gql`
 
     extend type Query {
         departments: [Department!]!
+        teamMembers: [TeamMember!]!
         creditTermLimit(roleCode: String!): CreditTermLimit
     }
 

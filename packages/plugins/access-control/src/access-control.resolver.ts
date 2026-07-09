@@ -1,6 +1,6 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Permission } from '@vendure/common/lib/generated-types';
-import { Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
+import { Allow, AdministratorService, Ctx, RequestContext, Transaction } from '@vendure/core';
 
 import { CustomPermission } from './custom-permission';
 import { CreditTermLimitService } from './credit-term-limit.service';
@@ -9,13 +9,35 @@ import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
 import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.service';
 
+interface TeamMember {
+    id: string;
+    firstName: string;
+    lastName: string;
+}
+
 @Resolver()
 export class AccessControlResolver {
     constructor(
         private roleScopeConfigService: RoleScopeConfigService,
         private departmentService: DepartmentService,
         private creditTermLimitService: CreditTermLimitService,
+        private administratorService: AdministratorService,
     ) {}
+
+    // Names only (no email/roles/customFields) — used to label the "Manager" filter/column on
+    // the manager portal's Orders list (see docs/ai/manager-portal-pages/02-orders-list.md).
+    // Same visibility rule as `departments` below: view-only org-structure data, no dedicated
+    // permission, safe for any authenticated portal user since it carries nothing sensitive.
+    @Query()
+    @Allow(Permission.Authenticated)
+    async teamMembers(@Ctx() ctx: RequestContext): Promise<TeamMember[]> {
+        const result = await this.administratorService.findAll(ctx, { take: 200 });
+        return result.items.map(a => ({
+            id: String(a.id),
+            firstName: a.firstName,
+            lastName: a.lastName,
+        }));
+    }
 
     // Org structure is ERP master data, view-only in the portal for every authenticated
     // administrator — no dedicated permission, per manager-portal-concept.md §3.3 "/team".
