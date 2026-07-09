@@ -1,0 +1,10 @@
+export { ApprovalWorkflowPlugin } from './src/approval-workflow.plugin';
+export { ApprovalRequestService } from './src/approval-request.service';
+export { ApprovalStepService } from './src/approval-step.service';
+export { WorkflowDefinitionService } from './src/workflow-definition.service';
+export type { ParsedWorkflowDefinition } from './src/workflow-definition.service';
+export { ApprovalRequest } from './src/entities/approval-request.entity';
+export { ApprovalStep } from './src/entities/approval-step.entity';
+export { WorkflowDefinition } from './src/entities/workflow-definition.entity';
+export type { WorkflowStepDefinition, ApprovalStepDecision } from './src/types';
+export { buildApprovalMachine, stepIndexFromStateValue } from './src/approval-machine';

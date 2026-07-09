@@ -1,0 +1,117 @@
+import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
+import { ID } from '@vendure/common/lib/shared-types';
+import { Allow, Ctx, ForbiddenError, RequestContext, Transaction } from '@vendure/core';
+import { CustomPermission } from '@mivend/plugin-access-control';
+
+import { ApprovalRequest } from './entities/approval-request.entity';
+import { ApprovalStep } from './entities/approval-step.entity';
+import { WorkflowDefinition } from './entities/workflow-definition.entity';
+import { ApprovalRequestService } from './approval-request.service';
+import { WorkflowDefinitionService } from './workflow-definition.service';
+import { ApprovalStepDecision, WorkflowStepDefinition } from './types';
+import { ApprovalStepService } from './approval-step.service';
+
+// A requestType is an internal technical identifier fixed by the workflow engine, not
+// swappable business data — mapping it to the permission required to *create* that kind of
+// request is therefore code, not a DB table, per AGENTS.md's "internal technical states"
+// carve-out. The chain of *who approves* each step, by contrast, is fully data-driven
+// (WorkflowDefinition.stepsJson).
+const CREATE_PERMISSION_BY_REQUEST_TYPE: Record<string, string> = {
+    priceAdjustmentApproval: CustomPermission.RequestPriceAdjustmentApproval.Permission,
+    discountGrantApproval: CustomPermission.RequestDiscountGrantApproval.Permission,
+    creditTermApproval: CustomPermission.RequestCreditTermApproval.Permission,
+};
+
+@Resolver('ApprovalRequest')
+export class ApprovalRequestResolver {
+    constructor(
+        private approvalRequestService: ApprovalRequestService,
+        private approvalStepService: ApprovalStepService,
+    ) {}
+
+    @Query()
+    @Allow(
+        CustomPermission.ApproveDiscountRequest.Permission,
+        CustomPermission.ApproveSecurityLimit.Permission,
+        CustomPermission.RequestPriceAdjustmentApproval.Permission,
+        CustomPermission.RequestDiscountGrantApproval.Permission,
+        CustomPermission.RequestCreditTermApproval.Permission,
+    )
+    async approvalRequest(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: ID },
+    ): Promise<ApprovalRequest | null> {
+        return this.approvalStepService.findRequest(ctx, args.id);
+    }
+
+    @ResolveField()
+    async steps(
+        @Ctx() ctx: RequestContext,
+        @Parent() request: { id: ID },
+    ): Promise<ApprovalStep[]> {
+        return this.approvalStepService.findSteps(ctx, request.id);
+    }
+
+    @Transaction()
+    @Mutation()
+    async createApprovalRequest(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { requestType: string; payload: string },
+    ): Promise<ApprovalRequest> {
+        const requiredPermission = CREATE_PERMISSION_BY_REQUEST_TYPE[args.requestType];
+        if (!requiredPermission || !ctx.userHasPermissions([requiredPermission as never])) {
+            throw new ForbiddenError();
+        }
+        return this.approvalRequestService.createRequest(
+            ctx,
+            args.requestType,
+            JSON.parse(args.payload) as Record<string, unknown>,
+        );
+    }
+
+    @Transaction()
+    @Mutation()
+    @Allow(
+        CustomPermission.ApproveDiscountRequest.Permission,
+        CustomPermission.ApproveSecurityLimit.Permission,
+    )
+    async decideApprovalRequest(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { requestId: ID; decision: ApprovalStepDecision; comment?: string },
+    ): Promise<ApprovalRequest> {
+        return this.approvalRequestService.decide(ctx, args.requestId, args.decision, args.comment);
+    }
+
+    @Transaction()
+    @Mutation()
+    async escalateApprovalRequest(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { requestId: ID; escalateToAdministratorId: ID },
+    ): Promise<ApprovalRequest> {
+        return this.approvalRequestService.escalate(
+            ctx,
+            args.requestId,
+            args.escalateToAdministratorId,
+        );
+    }
+}
+
+@Resolver('WorkflowDefinition')
+export class WorkflowDefinitionResolver {
+    constructor(private workflowDefinitionService: WorkflowDefinitionService) {}
+
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ManageApprovalWorkflows.Permission)
+    async upsertWorkflowDefinition(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { requestType: string; displayName: string; steps: WorkflowStepDefinition[] },
+    ): Promise<WorkflowDefinition> {
+        return this.workflowDefinitionService.upsertDefinition(
+            ctx,
+            args.requestType,
+            args.displayName,
+            args.steps,
+        );
+    }
+}

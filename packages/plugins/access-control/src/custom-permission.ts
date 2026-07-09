@@ -18,4 +18,29 @@ export const CustomPermission = {
         description:
             'Manage role scope configuration (departmentId/branchId, max scope per resource)',
     }),
+    RequestPriceAdjustmentApproval: new PermissionDefinition({
+        name: 'RequestPriceAdjustmentApproval',
+        description: 'Create a one-off price adjustment approval request (layer 5)',
+    }),
+    RequestDiscountGrantApproval: new PermissionDefinition({
+        name: 'RequestDiscountGrantApproval',
+        description: 'Create/renew a standing discount grant approval request (layer 5)',
+    }),
+    RequestCreditTermApproval: new PermissionDefinition({
+        name: 'RequestCreditTermApproval',
+        description: 'Create a credit-term approval request (layer 5)',
+    }),
+    ApproveDiscountRequest: new PermissionDefinition({
+        name: 'ApproveDiscountRequest',
+        description:
+            'Decide a step of a priceAdjustmentApproval or discountGrantApproval chain (layer 5)',
+    }),
+    ApproveSecurityLimit: new PermissionDefinition({
+        name: 'ApproveSecurityLimit',
+        description: 'Decide a step of a securityLimitApproval chain (layer 5)',
+    }),
+    ManageApprovalWorkflows: new PermissionDefinition({
+        name: 'ManageApprovalWorkflows',
+        description: 'Create/edit WorkflowDefinition chains (layer 5, /settings)',
+    }),
 } as const;
