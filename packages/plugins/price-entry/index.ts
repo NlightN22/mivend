@@ -16,3 +16,5 @@ export { PriceAdjustmentService } from './src/price-adjustment.service';
 export type { PriceAdjustmentResult } from './src/price-adjustment.service';
 export { FLOOR_PRICE_TYPE_CODE } from './src/types';
 export type { PriceAdjustmentDecision } from './src/types';
+export { DiscountGrantService } from './src/discount-grant.service';
+export type { DiscountGrantInput } from './src/discount-grant.service';

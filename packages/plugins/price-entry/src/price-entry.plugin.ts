@@ -17,12 +17,14 @@ import {
     ProductVariantPriceResolver,
 } from './price-entry.resolver';
 import { PriceAdjustmentResolver } from './price-adjustment.resolver';
+import { DiscountGrantResolver } from './discount-grant.resolver';
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService } from './discount-rule.service';
 import { PriceResolutionService } from './price-resolution.service';
 import { TierRebalanceService } from './tier-rebalance.service';
 import { PriceAdjustmentGateService } from './price-adjustment-gate.service';
 import { PriceAdjustmentService } from './price-adjustment.service';
+import { DiscountGrantService } from './discount-grant.service';
 
 const shopApiSchema = gql`
     type DiscountTier {
@@ -101,6 +103,22 @@ const adminApiSchema = gql`
         approvalRequestId: ID
     }
 
+    input DiscountGrantInput {
+        priceTypeCode: String!
+        facetCode: String
+        facetValueCode: String
+        percent: Int!
+        validFrom: DateTime!
+        validTo: DateTime!
+        minWeightKg: Float
+        minAmount: Int
+        justification: String!
+        # Links a renewal to the DiscountRule it extends — see docs/ai/manager-portal-concept.md
+        # §4.1.1. This is the DiscountRule.erpId of the rule being renewed, e.g. a prior
+        # "portal-<requestId>" value.
+        supersedesDiscountRuleId: String
+    }
+
     extend type Query {
         # Restricted to ReadFloorPrice — see PriceAdjustmentResolver.
         floorPrice(variantId: ID!): Int
@@ -122,6 +140,14 @@ const adminApiSchema = gql`
             decision: String!
             comment: String
         ): ApprovalRequest!
+        # Standing policy discount — always requires approval, no direct-apply tier (see
+        # DiscountGrantService).
+        requestDiscountGrant(input: DiscountGrantInput!): ApprovalRequest!
+        decideDiscountGrantRequest(
+            requestId: ID!
+            decision: String!
+            comment: String
+        ): ApprovalRequest!
     }
 `;
 
@@ -134,7 +160,12 @@ const adminApiSchema = gql`
     },
     adminApiExtensions: {
         schema: adminApiSchema,
-        resolvers: [PriceEntryAdminResolver, DiscountRuleAdminResolver, PriceAdjustmentResolver],
+        resolvers: [
+            PriceEntryAdminResolver,
+            DiscountRuleAdminResolver,
+            PriceAdjustmentResolver,
+            DiscountGrantResolver,
+        ],
     },
     providers: [
         PriceEntryService,
@@ -143,6 +174,7 @@ const adminApiSchema = gql`
         TierRebalanceService,
         PriceAdjustmentGateService,
         PriceAdjustmentService,
+        DiscountGrantService,
     ],
     exports: [DiscountRuleService, PriceResolutionService],
     configuration: (config: RuntimeVendureConfig) => {

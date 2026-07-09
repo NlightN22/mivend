@@ -8,12 +8,10 @@
 //
 // Role -> max-scope-per-resource matches the persona matrix in
 // docs/ai/manager-portal-concept.md §2/§3.3 (Оператор/Менеджер/Руководитель отдела/
-// Ген. директор/СБ/Администратор портала). Only the "counterparty" resource is wired up by
-// AccessScopeService so far, and only ReadCounterparty/ReadCounterpartyCredit/ManageAccessControl
-// exist as custom
-// permissions — the approval-workflow permissions from the concept doc (AdjustPriceWithinLimit,
-// ApproveDiscountRequest, ManageApprovalWorkflows, ...) aren't registered yet and are
-// deliberately left out of the `permissions` lists below until that plugin exists.
+// Ген. директор/СБ/Администратор портала). Only the "counterparty"/"documents" resources are
+// wired up by AccessScopeService so far. WorkflowDefinition rows for the requestTypes
+// referenced below (priceAdjustmentApproval, discountGrantApproval) are separate admin
+// config (upsertWorkflowDefinition), not created by this script.
 
 const API_URL = `http://localhost:${process.env.PORT ?? '3000'}/admin-api`;
 
@@ -57,6 +55,7 @@ const ROLES = [
             'ReadCounterparty',
             'AdjustPriceWithinLimit',
             'RequestPriceAdjustmentApproval',
+            'RequestDiscountGrantApproval',
         ],
         accessScopeConfig: { counterparty: 'own' },
     },
