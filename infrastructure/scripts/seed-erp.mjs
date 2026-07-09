@@ -198,6 +198,63 @@ async function ensureShippingAndPaymentSetup() {
     }
 }
 
+// Demo administrators for the org-structure import below. Requires the manager-portal roles
+// to already exist (`make seed-access-roles`) — if a role is missing, the admin is skipped
+// with a warning rather than failing the whole seed run.
+async function ensureOrgStructureAdmins() {
+    let session = await adminGraphqlWithSession(`
+        mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
+            ... on CurrentUser { id }
+            ... on InvalidCredentialsError { message }
+        }}
+    `);
+    if (session.data.login.message) throw new Error(`Admin login failed: ${session.data.login.message}`);
+    const cookie = session.cookie;
+
+    const rolesRes = await adminGraphqlWithSession(
+        `{ roles(options: { take: 20 }) { items { id code } } }`, undefined, cookie,
+    );
+    const roleIdByCode = Object.fromEntries(rolesRes.data.roles.items.map(r => [r.code, r.id]));
+
+    const adminsRes = await adminGraphqlWithSession(
+        `{ administrators(options: { take: 50 }) { items { emailAddress } } }`, undefined, cookie,
+    );
+    const existingEmails = new Set(adminsRes.data.administrators.items.map(a => a.emailAddress));
+
+    const demoAdmins = [
+        { email: 'ivan.operator@mivend.dev', firstName: 'Ivan', lastName: 'Operator', roleCode: 'operator' },
+        { email: 'petr.manager@mivend.dev', firstName: 'Petr', lastName: 'Manager', roleCode: 'manager' },
+        { email: 'olga.depthead@mivend.dev', firstName: 'Olga', lastName: 'DeptHead', roleCode: 'department-head' },
+    ];
+
+    let created = 0;
+    for (const admin of demoAdmins) {
+        if (existingEmails.has(admin.email)) continue;
+        const roleId = roleIdByCode[admin.roleCode];
+        if (!roleId) {
+            console.warn(`  Role "${admin.roleCode}" not found — run "make seed-access-roles" first. Skipping ${admin.email}.`);
+            continue;
+        }
+        await adminGraphqlWithSession(`
+            mutation($input: CreateAdministratorInput!) { createAdministrator(input: $input) { id } }
+        `, {
+            input: {
+                firstName: admin.firstName,
+                lastName: admin.lastName,
+                emailAddress: admin.email,
+                password: 'Password123!',
+                roleIds: [roleId],
+            },
+        }, cookie);
+        created++;
+    }
+    if (created > 0) {
+        console.log(`  Created ${created} demo org-structure administrator(s).`);
+    } else {
+        console.log('  Demo org-structure administrators already exist (or roles missing), skipping.');
+    }
+}
+
 function loadFixture(name) {
     return JSON.parse(readFileSync(join(__dirname, `../fixtures/${name}.json`), 'utf8'));
 }
@@ -232,6 +289,11 @@ async function main() {
 
     console.log('Ensuring shipping/payment methods...');
     await ensureShippingAndPaymentSetup();
+
+    // Administrator accounts are Vendure system config, same carve-out as tax
+    // zones/shipping/payment methods above — cannot go through erp-import.
+    console.log('Ensuring demo org-structure administrators...');
+    await ensureOrgStructureAdmins();
 
     console.log(`Sending ${categories.length} categories...`);
     const categoryResult = await postBatch(`seed-categories-${run}`, categories.map(data => ({ type: 'category', data })));
@@ -438,6 +500,33 @@ async function main() {
     console.log(`  → status=${documentsResult.status} processed=${documentsResult.processed} failed=${documentsResult.failed}`);
     if (documentsResult.errors?.length > 0) {
         for (const e of documentsResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    // Org structure (departments + department/branch/role assignment onto existing
+    // Administrators) — see docs/ai/manager-portal-concept.md §3.2.2. Employee records
+    // match by email and never create the Administrator account itself (see
+    // ensureOrgStructureAdmins() above and EmployeeService in plugin-access-control).
+    const departments = [
+        { erpId: 'dept-sales', name: 'Sales department' },
+        { erpId: 'dept-purchasing', name: 'Purchasing department' },
+    ];
+    console.log(`Sending ${departments.length} departments...`);
+    const departmentResult = await postBatch(`seed-departments-${run}`, departments.map(data => ({ type: 'department', data })));
+    console.log(`  → status=${departmentResult.status} processed=${departmentResult.processed} failed=${departmentResult.failed}`);
+    if (departmentResult.errors?.length > 0) {
+        for (const e of departmentResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    const employees = [
+        { erpId: 'emp-001', email: 'ivan.operator@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'operator', position: 'Sales operator' },
+        { erpId: 'emp-002', email: 'petr.manager@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'manager', position: 'Sales manager' },
+        { erpId: 'emp-003', email: 'olga.depthead@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'department-head', position: 'Head of sales' },
+    ];
+    console.log(`Sending ${employees.length} employees...`);
+    const employeeResult = await postBatch(`seed-employees-${run}`, employees.map(data => ({ type: 'employee', data })));
+    console.log(`  → status=${employeeResult.status} processed=${employeeResult.processed} failed=${employeeResult.failed}`);
+    if (employeeResult.errors?.length > 0) {
+        for (const e of employeeResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
     console.log('Done.');

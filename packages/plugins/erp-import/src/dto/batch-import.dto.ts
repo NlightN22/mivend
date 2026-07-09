@@ -12,6 +12,8 @@ import {
     DiscountRuleRecordDto,
     DocumentRecordDto,
     OrganizationRequisitesRecordDto,
+    DepartmentRecordDto,
+    EmployeeRecordDto,
 } from './records';
 
 const RECORD_TYPE_DTOS = [
@@ -27,6 +29,8 @@ const RECORD_TYPE_DTOS = [
     DiscountRuleRecordDto,
     DocumentRecordDto,
     OrganizationRequisitesRecordDto,
+    DepartmentRecordDto,
+    EmployeeRecordDto,
 ] as const;
 
 // `type` -> which of RECORD_TYPE_DTOS is the shape of `data`. Keep in sync
@@ -44,6 +48,8 @@ const TYPE_TO_SCHEMA: Record<string, (typeof RECORD_TYPE_DTOS)[number]> = {
     discountRule: DiscountRuleRecordDto,
     document: DocumentRecordDto,
     organizationRequisites: OrganizationRequisitesRecordDto,
+    department: DepartmentRecordDto,
+    employee: EmployeeRecordDto,
 };
 
 @ApiExtraModels(...RECORD_TYPE_DTOS)

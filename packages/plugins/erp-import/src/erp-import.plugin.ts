@@ -3,6 +3,7 @@ import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
+import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ErpImportController } from './erp-import.controller';
 import { CategoryHandler } from './handlers/category.handler';
 import { CrossReferenceHandler } from './handlers/cross-reference.handler';
@@ -21,6 +22,8 @@ import { TradingPointHandler } from './handlers/trading-point.handler';
 import { DiscountRuleHandler } from './handlers/discount-rule.handler';
 import { DocumentHandler } from './handlers/document.handler';
 import { OrganizationRequisitesHandler } from './handlers/organization-requisites.handler';
+import { DepartmentHandler } from './handlers/department.handler';
+import { EmployeeHandler } from './handlers/employee.handler';
 
 @VendurePlugin({
     imports: [
@@ -29,6 +32,7 @@ import { OrganizationRequisitesHandler } from './handlers/organization-requisite
         CrossReferencePlugin,
         PriceEntryPlugin,
         DocumentsPlugin,
+        AccessControlPlugin,
     ],
     entities: [ImportRun, ImportRunError],
     controllers: [ErpImportController],
@@ -48,6 +52,8 @@ import { OrganizationRequisitesHandler } from './handlers/organization-requisite
         DiscountRuleHandler,
         DocumentHandler,
         OrganizationRequisitesHandler,
+        DepartmentHandler,
+        EmployeeHandler,
     ],
     compatibility: '>0.0.0',
 })

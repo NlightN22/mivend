@@ -12,6 +12,8 @@ import { CrossReferenceHandler } from './handlers/cross-reference.handler';
 import { DiscountRuleHandler } from './handlers/discount-rule.handler';
 import { DocumentHandler } from './handlers/document.handler';
 import { OrganizationRequisitesHandler } from './handlers/organization-requisites.handler';
+import { DepartmentHandler } from './handlers/department.handler';
+import { EmployeeHandler } from './handlers/employee.handler';
 import { ImportRunService } from './import-run.service';
 import type { BatchImportBody, ImportRecord, ImportRunResult } from './types';
 
@@ -33,6 +35,8 @@ export class ErpImportService {
         private readonly discountRuleHandler: DiscountRuleHandler,
         private readonly documentHandler: DocumentHandler,
         private readonly organizationRequisitesHandler: OrganizationRequisitesHandler,
+        private readonly departmentHandler: DepartmentHandler,
+        private readonly employeeHandler: EmployeeHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -105,6 +109,12 @@ export class ErpImportService {
                 break;
             case 'organizationRequisites':
                 await this.organizationRequisitesHandler.upsert(ctx, record.data);
+                break;
+            case 'department':
+                await this.departmentHandler.upsert(ctx, record.data);
+                break;
+            case 'employee':
+                await this.employeeHandler.upsert(ctx, record.data);
                 break;
         }
     }

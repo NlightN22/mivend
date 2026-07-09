@@ -16,6 +16,7 @@
         "@mivend/plugin-cross-reference": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-documents": "workspace:*",
+        "@mivend/plugin-access-control": "workspace:*",
         "@nestjs/common": "^11.0.0",
         "@nestjs/core": "^11.0.0",
         "@nestjs/swagger": "^11.0.0",

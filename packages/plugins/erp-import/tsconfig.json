@@ -10,6 +10,7 @@
         { "path": "../counterparty" },
         { "path": "../cross-reference" },
         { "path": "../documents" },
-        { "path": "../price-entry" }
+        { "path": "../price-entry" },
+        { "path": "../access-control" }
     ]
 }

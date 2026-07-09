@@ -1,12 +1,26 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Permission } from '@vendure/common/lib/generated-types';
 import { Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
 
 import { CustomPermission } from './custom-permission';
+import { DepartmentService } from './department.service';
+import { Department } from './entities/department.entity';
 import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.service';
 
 @Resolver()
 export class AccessControlResolver {
-    constructor(private roleScopeConfigService: RoleScopeConfigService) {}
+    constructor(
+        private roleScopeConfigService: RoleScopeConfigService,
+        private departmentService: DepartmentService,
+    ) {}
+
+    // Org structure is ERP master data, view-only in the portal for every authenticated
+    // administrator — no dedicated permission, per manager-portal-concept.md §3.3 "/team".
+    @Query()
+    @Allow(Permission.Authenticated)
+    async departments(@Ctx() ctx: RequestContext): Promise<Department[]> {
+        return this.departmentService.findAll(ctx);
+    }
 
     @Transaction()
     @Mutation()

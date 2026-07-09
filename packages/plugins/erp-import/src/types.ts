@@ -1,4 +1,5 @@
 import type { DocumentRecord, OrganizationRequisitesRecord } from '@mivend/plugin-documents';
+import type { DepartmentRecordInput, EmployeeRecordInput } from '@mivend/plugin-access-control';
 
 export interface ProductRecord {
     externalId: string;
@@ -101,7 +102,9 @@ export type ImportRecord =
     | { type: 'crossReference'; data: CrossReferenceRecord }
     | { type: 'discountRule'; data: DiscountRuleRecord }
     | { type: 'document'; data: DocumentRecord }
-    | { type: 'organizationRequisites'; data: OrganizationRequisitesRecord };
+    | { type: 'organizationRequisites'; data: OrganizationRequisitesRecord }
+    | { type: 'department'; data: DepartmentRecordInput }
+    | { type: 'employee'; data: EmployeeRecordInput };
 
 export interface BatchImportBody {
     exchangeId: string;
