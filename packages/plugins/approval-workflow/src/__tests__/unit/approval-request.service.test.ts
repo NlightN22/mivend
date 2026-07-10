@@ -376,4 +376,18 @@ describe('ApprovalRequestService', () => {
             expect(result.map(r => r.id).sort()).toEqual(['req-decided', 'req-submitted']);
         });
     });
+
+    describe('findByRequestType', () => {
+        it('queries by requestType only, ordered by createdAt desc, with no scope filtering', async () => {
+            requestRepo.find.mockResolvedValue([{ id: 'req-1' }]);
+
+            const result = await service.findByRequestType(mockCtx(true), 'discountGrantApproval');
+
+            expect(requestRepo.find).toHaveBeenCalledWith({
+                where: { requestType: 'discountGrantApproval' },
+                order: { createdAt: 'DESC' },
+            });
+            expect(result).toEqual([{ id: 'req-1' }]);
+        });
+    });
 });

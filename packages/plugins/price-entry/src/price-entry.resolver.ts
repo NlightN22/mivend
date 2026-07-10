@@ -91,9 +91,15 @@ export class OrderLineDiscountResolver {
     }
 }
 
-@Resolver('Mutation')
+@Resolver()
 export class PriceEntryAdminResolver {
     constructor(private priceEntryService: PriceEntryService) {}
+
+    @Query()
+    @Allow(Permission.ReadCatalog)
+    async priceTypeCodes(@Ctx() ctx: RequestContext): Promise<string[]> {
+        return this.priceEntryService.listPriceTypeCodes(ctx);
+    }
 
     @Transaction()
     @Mutation()
@@ -128,7 +134,7 @@ export class DiscountRuleAdminResolver {
     @Allow(Permission.ReadCatalog)
     async discountRules(
         @Ctx() ctx: RequestContext,
-        @Args() args: { priceTypeCode: string },
+        @Args() args: { priceTypeCode?: string },
     ): Promise<DiscountRule[]> {
         return this.discountRuleService.findByPriceType(ctx, args.priceTypeCode);
     }

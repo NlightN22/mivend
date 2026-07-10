@@ -301,6 +301,17 @@ export class ApprovalRequestService {
         });
     }
 
+    // Manager portal /discounts (docs/ai/manager-portal-pages/09-discounts.md) — DiscountRule
+    // rows only exist once a discountGrantApproval request is approved (see
+    // DiscountGrantService.decideAndApply), so "Pending approval"/"Rejected" rows in that list
+    // come from here, not from DiscountRule. Not scoped by department/branch: discount grants
+    // are company-wide policy by price type, same visibility as `discountRules` itself.
+    async findByRequestType(ctx: RequestContext, requestType: string): Promise<ApprovalRequest[]> {
+        return this.connection
+            .getRepository(ctx, ApprovalRequest)
+            .find({ where: { requestType }, order: { createdAt: 'DESC' } });
+    }
+
     // Approvals inbox (docs/ai/manager-portal-pages/10-approvals-inbox.md, "Awaiting my
     // decision") — reuses the exact same canDecideStep() gate that decide() itself enforces, so
     // "can I see it in my inbox" and "can I actually decide it" can never drift apart.

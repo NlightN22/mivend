@@ -122,7 +122,8 @@ const adminApiSchema = gql`
     extend type Query {
         # Restricted to ReadFloorPrice — see PriceAdjustmentResolver.
         floorPrice(variantId: ID!): Int
-        discountRules(priceTypeCode: String!): [DiscountRule!]!
+        discountRules(priceTypeCode: String): [DiscountRule!]!
+        priceTypeCodes: [String!]!
     }
 
     extend type Mutation {

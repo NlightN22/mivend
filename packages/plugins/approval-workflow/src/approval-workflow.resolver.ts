@@ -83,6 +83,18 @@ export class ApprovalRequestResolver {
         return this.approvalRequestService.findPriceAdjustmentRequestsForOrder(ctx, args.orderId);
     }
 
+    // Manager portal /discounts (docs/ai/manager-portal-pages/09-discounts.md) — gated on
+    // ReadCatalog, same visibility as `discountRules` (company-wide policy, not scoped by
+    // department/branch).
+    @Query()
+    @Allow(Permission.ReadCatalog)
+    async approvalRequestsByType(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { requestType: string },
+    ): Promise<ApprovalRequest[]> {
+        return this.approvalRequestService.findByRequestType(ctx, args.requestType);
+    }
+
     // Approvals inbox (docs/ai/manager-portal-pages/10-approvals-inbox.md) — one call for both
     // tabs, same aggregated-query rationale as myApprovalRequestsSummary/getMySummary.
     @Query()

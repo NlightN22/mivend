@@ -81,6 +81,18 @@ export class PriceEntryService {
         return map;
     }
 
+    // Price types are ERP master data (see AGENTS.md — "no hardcoded business enums") with no
+    // dedicated list query until now — needed by the manager portal's "New discount grant" form
+    // (docs/ai/manager-portal-pages/09-discounts.md) so its price-type select isn't limited by
+    // the caller's own counterparty scope (which would leave a Manager with no assigned clients
+    // unable to pick any price type at all).
+    async listPriceTypeCodes(_ctx: RequestContext): Promise<string[]> {
+        const rows = await this.connection.rawConnection.query(
+            `SELECT code FROM price_type ORDER BY code`,
+        );
+        return rows.map((row: { code: string }) => row.code);
+    }
+
     async getPriceTypeCodeForUser(ctx: RequestContext): Promise<string | null> {
         if (!ctx.activeUserId) return null;
         const rows = await this.connection.rawConnection.query(

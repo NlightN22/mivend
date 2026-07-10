@@ -69,6 +69,7 @@ const adminApiSchema = gql`
         myApprovalRequestsSummary(recentLimit: Int): ApprovalRequestsSummary!
         pendingPriceAdjustmentOrderIds: [String!]!
         priceAdjustmentRequestsForOrder(orderId: ID!): [ApprovalRequest!]!
+        approvalRequestsByType(requestType: String!): [ApprovalRequest!]!
         myApprovalsInbox: ApprovalsInbox!
     }
 

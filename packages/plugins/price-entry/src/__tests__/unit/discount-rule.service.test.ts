@@ -4,6 +4,7 @@ import { DiscountRuleService } from '../../discount-rule.service';
 
 const mockRepo = {
     findOne: vi.fn(),
+    find: vi.fn(),
     create: vi.fn(),
     save: vi.fn(),
     createQueryBuilder: vi.fn(),
@@ -398,6 +399,26 @@ describe('DiscountRuleService', () => {
             );
 
             expect(result).toEqual([]);
+        });
+    });
+
+    describe('findByPriceType', () => {
+        it('filters by priceTypeCode when provided', async () => {
+            mockRepo.find.mockResolvedValue([]);
+            await service.findByPriceType(mockCtx, 'WHOLESALE');
+            expect(mockRepo.find).toHaveBeenCalledWith({
+                where: { priceTypeCode: 'WHOLESALE' },
+                order: { validTo: 'DESC' },
+            });
+        });
+
+        it('returns every rule across all price types when omitted', async () => {
+            mockRepo.find.mockResolvedValue([]);
+            await service.findByPriceType(mockCtx);
+            expect(mockRepo.find).toHaveBeenCalledWith({
+                where: {},
+                order: { validTo: 'DESC' },
+            });
         });
     });
 });

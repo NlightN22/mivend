@@ -55,10 +55,14 @@ export class DiscountRuleService {
     // Discounts are scoped by price type, not by an individual customer (see DiscountRule —
     // no customerId column). Used by the manager portal's Customers page ("Active discounts"
     // count/list) via the customer's own priceType, and by /discounts.
-    async findByPriceType(ctx: RequestContext, priceTypeCode: string): Promise<DiscountRule[]> {
-        return this.connection
-            .getRepository(ctx, DiscountRule)
-            .find({ where: { priceTypeCode }, order: { validTo: 'DESC' } });
+    // priceTypeCode omitted lists every discount rule across all price types — the manager
+    // portal's /discounts page (docs/ai/manager-portal-pages/09-discounts.md); provided, it's
+    // the customer-detail page's per-customer-price-type view.
+    async findByPriceType(ctx: RequestContext, priceTypeCode?: string): Promise<DiscountRule[]> {
+        return this.connection.getRepository(ctx, DiscountRule).find({
+            where: priceTypeCode ? { priceTypeCode } : {},
+            order: { validTo: 'DESC' },
+        });
     }
 
     async bulkUpsert(ctx: RequestContext, entries: DiscountRuleInput[]): Promise<number> {
