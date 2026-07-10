@@ -72,6 +72,17 @@ export class ApprovalRequestResolver {
         return this.approvalRequestService.findPendingPriceAdjustmentOrderIds(ctx);
     }
 
+    // Order detail page (docs/ai/manager-portal-pages/03-order-detail.md, "Price adjustment
+    // history") — same Permission.ReadOrder reasoning as above.
+    @Query()
+    @Allow(Permission.ReadOrder)
+    async priceAdjustmentRequestsForOrder(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { orderId: ID },
+    ): Promise<ApprovalRequest[]> {
+        return this.approvalRequestService.findPriceAdjustmentRequestsForOrder(ctx, args.orderId);
+    }
+
     @ResolveField()
     async steps(
         @Ctx() ctx: RequestContext,

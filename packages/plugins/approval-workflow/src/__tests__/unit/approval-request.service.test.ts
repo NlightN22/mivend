@@ -251,4 +251,26 @@ describe('ApprovalRequestService', () => {
         const result = await service.findPendingPriceAdjustmentOrderIds(mockCtx(true));
         expect(result).toEqual([]);
     });
+
+    it('findPriceAdjustmentRequestsForOrder returns all statuses matching the given orderId', async () => {
+        requestRepo.find.mockResolvedValue([
+            { id: 'req-1', status: 'approved', payload: JSON.stringify({ orderId: 'order-1' }) },
+            { id: 'req-2', status: 'pending', payload: JSON.stringify({ orderId: 'order-2' }) },
+            { id: 'req-3', status: 'rejected', payload: JSON.stringify({ orderId: 'order-1' }) },
+        ]);
+
+        const result = await service.findPriceAdjustmentRequestsForOrder(mockCtx(true), 'order-1');
+
+        expect(requestRepo.find).toHaveBeenCalledWith({
+            where: { requestType: 'priceAdjustmentApproval' },
+            order: { createdAt: 'DESC' },
+        });
+        expect(result.map(r => r.id)).toEqual(['req-1', 'req-3']);
+    });
+
+    it('findPriceAdjustmentRequestsForOrder skips rows with invalid JSON payload', async () => {
+        requestRepo.find.mockResolvedValue([{ id: 'req-1', payload: 'not-json' }]);
+        const result = await service.findPriceAdjustmentRequestsForOrder(mockCtx(true), 'order-1');
+        expect(result).toEqual([]);
+    });
 });

@@ -276,6 +276,30 @@ export class ApprovalRequestService {
         return [...orderIds];
     }
 
+    // Order detail page (docs/ai/manager-portal-pages/03-order-detail.md, "Price adjustment
+    // history") — all statuses, not just pending, since the page shows history not just what's
+    // outstanding. Not scoped by department/branch: the caller only ever calls this for an
+    // order they've already loaded through their own scoped `visibleOrders` result.
+    async findPriceAdjustmentRequestsForOrder(
+        ctx: RequestContext,
+        orderId: ID,
+    ): Promise<ApprovalRequest[]> {
+        const repo = this.connection.getRepository(ctx, ApprovalRequest);
+        const rows = await repo.find({
+            where: { requestType: 'priceAdjustmentApproval' },
+            order: { createdAt: 'DESC' },
+        });
+        return rows.filter(row => {
+            try {
+                const payload = JSON.parse(row.payload) as { orderId?: string };
+                return payload.orderId === String(orderId);
+            } catch {
+                Logger.warn(`ApprovalRequest ${row.id} has invalid JSON payload`, loggerCtx);
+                return false;
+            }
+        });
+    }
+
     private async getAdministratorId(ctx: RequestContext): Promise<string | null> {
         if (!ctx.activeUserId) return null;
         const admin = await this.administratorService.findOneByUserId(ctx, ctx.activeUserId);

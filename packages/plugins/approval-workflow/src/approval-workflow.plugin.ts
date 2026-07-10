@@ -60,6 +60,7 @@ const adminApiSchema = gql`
         approvalRequest(id: ID!): ApprovalRequest
         myApprovalRequestsSummary(recentLimit: Int): ApprovalRequestsSummary!
         pendingPriceAdjustmentOrderIds: [String!]!
+        priceAdjustmentRequestsForOrder(orderId: ID!): [ApprovalRequest!]!
     }
 
     extend type Mutation {
