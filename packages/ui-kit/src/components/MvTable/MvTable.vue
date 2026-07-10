@@ -42,6 +42,14 @@ function rowClass({ rowData }: { rowData: TableRow }): string {
 const fixedHeight = computed(() => props.height);
 
 const emit = defineEmits<{ 'row-click': [payload: { rowData: TableRow }] }>();
+
+// ElTableV2 has no `row-click` emit of its own — row-level interaction is wired through the
+// `row-event-handlers` prop instead (verified against this project's actual element-plus
+// version; @row-click on the component silently does nothing, since Vue never had an emit to
+// attach it to).
+const rowEventHandlers = {
+  onClick: ({ rowData }: { rowData: TableRow }) => emit('row-click', { rowData }),
+};
 </script>
 
 <template>
@@ -59,7 +67,7 @@ const emit = defineEmits<{ 'row-click': [payload: { rowData: TableRow }] }>();
           :height="fixedHeight"
           :row-height="rowHeight"
           :row-class="rowClass"
-          @row-click="({ rowData }) => emit('row-click', { rowData: rowData as TableRow })"
+          :row-event-handlers="rowEventHandlers"
         >
           <template v-if="!data.length && !loading" #empty>
             <div class="mv-table__empty">{{ emptyText }}</div>
