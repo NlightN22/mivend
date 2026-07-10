@@ -242,11 +242,16 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
 export interface ManagerOption {
     id: string;
     name: string;
+    roleCodes: string[];
 }
 
 export async function fetchManagerOptions(): Promise<ManagerOption[]> {
     const result = await adminApi<{
-        teamMembers: { id: string; firstName: string; lastName: string }[];
-    }>(`query { teamMembers { id firstName lastName } }`);
-    return result.teamMembers.map(a => ({ id: a.id, name: `${a.firstName} ${a.lastName}` }));
+        teamMembers: { id: string; firstName: string; lastName: string; roleCodes: string[] }[];
+    }>(`query { teamMembers { id firstName lastName roleCodes } }`);
+    return result.teamMembers.map(a => ({
+        id: a.id,
+        name: `${a.firstName} ${a.lastName}`,
+        roleCodes: a.roleCodes,
+    }));
 }
