@@ -61,7 +61,16 @@ export class PriceResolutionService {
         variantId: string,
         orderContext?: OrderPricingContext,
     ): Promise<ResolvedPrice> {
-        const priceTypeCode = await this.priceEntryService.getPriceTypeCodeForUser(ctx);
+        // When pricing a line on a real order, the order's own customer is authoritative — not
+        // the caller. This is what makes admin-created orders (manager portal /orders/new) price
+        // at the selected customer's rate instead of falling back to list price: ctx.activeUserId
+        // there is the administrator, who has no customer_price_type row of their own.
+        const priceTypeCode = orderContext?.order.customerId
+            ? await this.priceEntryService.getPriceTypeCodeForCustomer(
+                  ctx,
+                  String(orderContext.order.customerId),
+              )
+            : await this.priceEntryService.getPriceTypeCodeForUser(ctx);
         if (!priceTypeCode) return { customerPrice: null, compareAtPrice: null };
 
         const basePrice = await this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode);

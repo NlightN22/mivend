@@ -61,6 +61,7 @@ function brandVariant(
 describe('PriceResolutionService', () => {
     let priceEntryService: {
         getPriceTypeCodeForUser: ReturnType<typeof vi.fn>;
+        getPriceTypeCodeForCustomer: ReturnType<typeof vi.fn>;
         getForVariant: ReturnType<typeof vi.fn>;
     };
     let discountRuleService: {
@@ -76,6 +77,7 @@ describe('PriceResolutionService', () => {
 
         priceEntryService = {
             getPriceTypeCodeForUser: vi.fn(async () => 'WHOLESALE'),
+            getPriceTypeCodeForCustomer: vi.fn(async () => 'RETAIL'),
             getForVariant: vi.fn(
                 async (_ctx, variantId: string) => pricesByVariantId[variantId] ?? 1000,
             ),
@@ -165,6 +167,27 @@ describe('PriceResolutionService', () => {
 
         expect(result).toEqual({ customerPrice: null, compareAtPrice: null });
         expect(discountRuleService.getBestPercent).not.toHaveBeenCalled();
+    });
+
+    it('prices by the order.customerId, not the caller, when pricing a line on a real order', async () => {
+        variantsById.v1 = brandVariant('v1', 'lukoil', 100);
+        const order = { customerId: 'cust-42', lines: [] } as unknown as Order;
+
+        await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+        expect(priceEntryService.getPriceTypeCodeForCustomer).toHaveBeenCalledWith(
+            mockCtx,
+            'cust-42',
+        );
+        expect(priceEntryService.getPriceTypeCodeForUser).not.toHaveBeenCalled();
+        expect(discountRuleService.getBestPercent).toHaveBeenCalledWith(
+            mockCtx,
+            'RETAIL',
+            expect.anything(),
+            expect.any(Date),
+            expect.anything(),
+            expect.anything(),
+        );
     });
 
     describe('resolveTiers', () => {

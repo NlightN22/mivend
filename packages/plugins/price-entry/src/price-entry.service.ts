@@ -94,4 +94,24 @@ export class PriceEntryService {
         );
         return rows?.[0]?.code ?? null;
     }
+
+    // Used when an order's customer is known but isn't the caller (an administrator building
+    // an order on a customer's behalf via the manager portal — see docs/ai/manager-portal-pages/
+    // 02b-order-create.md). ctx.activeUserId is the ADMIN's user in that case, not the
+    // customer's, so getPriceTypeCodeForUser would resolve nothing and silently fall back to
+    // list price. See PriceResolutionService.resolve().
+    async getPriceTypeCodeForCustomer(
+        ctx: RequestContext,
+        customerId: string,
+    ): Promise<string | null> {
+        const rows = await this.connection.rawConnection.query(
+            `SELECT pt.code
+             FROM price_type pt
+             JOIN customer_price_type cpt ON cpt."priceTypeId" = pt.id
+             WHERE cpt."customerId"::varchar = $1
+             LIMIT 1`,
+            [customerId],
+        );
+        return rows?.[0]?.code ?? null;
+    }
 }
