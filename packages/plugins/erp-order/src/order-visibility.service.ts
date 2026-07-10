@@ -24,6 +24,10 @@ export class OrderVisibilityService {
         // the generic OrderListOptions.filter object since it's a joined column, not a plain
         // Order field. Used by the Orders list's "Manager" filter (Operator/Dept Head only).
         managerId?: string,
+        // Order has no plain-column customerId exposed via OrderFilterParameter (only
+        // customerLastName, a contains filter) — used by the customer detail page's Orders tab
+        // to show only that customer's orders.
+        customerId?: string,
     ): Promise<PaginatedList<Order>> {
         const scope = await this.accessScopeService.resolveOrderScope(ctx);
         const qb = this.listQueryBuilder.build(Order, options, { ctx });
@@ -37,6 +41,9 @@ export class OrderVisibilityService {
             qb.andWhere('counterparty.assignedManagerId = :filterManagerId', {
                 filterManagerId: managerId,
             });
+        }
+        if (customerId) {
+            qb.andWhere('customer.id = :filterCustomerId', { filterCustomerId: customerId });
         }
 
         switch (scope.kind) {

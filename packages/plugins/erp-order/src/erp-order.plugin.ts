@@ -12,7 +12,7 @@ import { shopApiExtensions } from './api/shop.schema';
 
 const adminApiSchema = gql`
     extend type Query {
-        visibleOrders(options: OrderListOptions, managerId: ID): OrderList!
+        visibleOrders(options: OrderListOptions, managerId: ID, customerId: ID): OrderList!
     }
 `;
 

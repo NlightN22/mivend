@@ -1,4 +1,4 @@
-import { Args, Mutation, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { Permission } from '@vendure/common/lib/generated-types';
 import {
     Allow,
@@ -116,9 +116,22 @@ export class PriceEntryAdminResolver {
     }
 }
 
-@Resolver('Mutation')
+@Resolver()
 export class DiscountRuleAdminResolver {
     constructor(private discountRuleService: DiscountRuleService) {}
+
+    // Manager portal Customers page ("Active discounts") and future /discounts — see
+    // DiscountRuleService.findByPriceType. Gated on ReadCatalog (same as catalog browsing),
+    // not UpdateCatalog — every role that can see a customer's price type should be able to
+    // see which discounts apply to it.
+    @Query()
+    @Allow(Permission.ReadCatalog)
+    async discountRules(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { priceTypeCode: string },
+    ): Promise<DiscountRule[]> {
+        return this.discountRuleService.findByPriceType(ctx, args.priceTypeCode);
+    }
 
     @Transaction()
     @Mutation()

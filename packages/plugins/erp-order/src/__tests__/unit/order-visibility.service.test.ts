@@ -80,6 +80,16 @@ describe('OrderVisibilityService', () => {
         );
     });
 
+    it('filters by customerId when provided, in addition to scope', async () => {
+        accessScopeService.resolveOrderScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, undefined, undefined, 'cust-9');
+
+        expect(qb.andWhere).toHaveBeenCalledWith('customer.id = :filterCustomerId', {
+            filterCustomerId: 'cust-9',
+        });
+    });
+
     it('joins customer and counterparty before applying scope', async () => {
         accessScopeService.resolveOrderScope.mockResolvedValue({ kind: 'all' });
 
