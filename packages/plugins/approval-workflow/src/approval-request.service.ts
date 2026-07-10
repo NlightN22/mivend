@@ -9,6 +9,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import { In } from 'typeorm';
 import { createActor } from 'xstate';
 
 import { buildApprovalMachine, stepIndexFromStateValue } from './approval-machine';
@@ -298,6 +299,88 @@ export class ApprovalRequestService {
                 return false;
             }
         });
+    }
+
+    // Approvals inbox (docs/ai/manager-portal-pages/10-approvals-inbox.md, "Awaiting my
+    // decision") — reuses the exact same canDecideStep() gate that decide() itself enforces, so
+    // "can I see it in my inbox" and "can I actually decide it" can never drift apart.
+    async findAwaitingMyDecision(ctx: RequestContext): Promise<ApprovalRequest[]> {
+        const adminId = await this.getAdministratorId(ctx);
+        const repo = this.connection.getRepository(ctx, ApprovalRequest);
+        const stepRepo = this.connection.getRepository(ctx, ApprovalStep);
+        const pending = await repo.find({
+            where: { status: 'pending' },
+            order: { createdAt: 'DESC' },
+        });
+
+        const result: ApprovalRequest[] = [];
+        for (const request of pending) {
+            const definition = await this.workflowDefinitionService.getDefinition(
+                ctx,
+                request.requestType,
+            );
+            const stepDef = definition.steps[request.currentStepIndex];
+            if (!stepDef) continue;
+            const stepRow = await stepRepo.findOne({
+                where: {
+                    approvalRequestId: String(request.id),
+                    stepIndex: request.currentStepIndex,
+                },
+            });
+            if (this.canDecideStep(ctx, stepDef, stepRow, adminId)) {
+                result.push(request);
+            }
+        }
+        return result;
+    }
+
+    // "All requests I'm involved in" tab — union of: requests I submitted, requests where I
+    // decided or was escalated to on any step, and requests currently awaiting my decision.
+    // History, not a to-do list — every status is included.
+    async findAllInvolving(ctx: RequestContext): Promise<ApprovalRequest[]> {
+        const adminId = await this.getAdministratorId(ctx);
+        if (!adminId) return [];
+
+        const requestRepo = this.connection.getRepository(ctx, ApprovalRequest);
+        const stepRepo = this.connection.getRepository(ctx, ApprovalStep);
+
+        const [submitted, decidedSteps, escalatedSteps, awaitingMyDecision] = await Promise.all([
+            requestRepo.find({ where: { requestedByAdministratorId: adminId } }),
+            stepRepo.find({ where: { approverAdministratorId: adminId } }),
+            stepRepo.find({ where: { escalatedToAdministratorId: adminId } }),
+            this.findAwaitingMyDecision(ctx),
+        ]);
+
+        const stepRequestIds = [
+            ...new Set([...decidedSteps, ...escalatedSteps].map(s => s.approvalRequestId)),
+        ];
+        const stepRequests = stepRequestIds.length
+            ? await requestRepo.find({ where: { id: In(stepRequestIds) } })
+            : [];
+
+        const byId = new Map<string, ApprovalRequest>();
+        for (const request of [...submitted, ...stepRequests, ...awaitingMyDecision]) {
+            byId.set(String(request.id), request);
+        }
+        return [...byId.values()].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+    }
+
+    // Current step's definition for a request — used by the ApprovalRequest.escalatesTo/
+    // totalSteps resolver fields (see approval-workflow.resolver.ts).
+    async getCurrentStepDefinition(
+        ctx: RequestContext,
+        request: ApprovalRequest,
+    ): Promise<{ stepDef: WorkflowStepDefinition | undefined; totalSteps: number }> {
+        const definition = await this.workflowDefinitionService.getDefinition(
+            ctx,
+            request.requestType,
+        );
+        return {
+            stepDef: definition.steps[request.currentStepIndex],
+            totalSteps: definition.steps.length,
+        };
     }
 
     private async getAdministratorId(ctx: RequestContext): Promise<string | null> {

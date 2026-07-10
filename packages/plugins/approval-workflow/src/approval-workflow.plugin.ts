@@ -35,11 +35,19 @@ const adminApiSchema = gql`
         decidedAt: DateTime
         steps: [ApprovalStep!]!
         currentStepRole: String
+        stepRoles: [String!]!
+        totalSteps: Int!
+        escalatesTo: [String!]!
     }
 
     type ApprovalRequestsSummary {
         pendingCount: Int!
         recent: [ApprovalRequest!]!
+    }
+
+    type ApprovalsInbox {
+        awaitingMyDecision: [ApprovalRequest!]!
+        allInvolved: [ApprovalRequest!]!
     }
 
     type WorkflowDefinition {
@@ -61,6 +69,7 @@ const adminApiSchema = gql`
         myApprovalRequestsSummary(recentLimit: Int): ApprovalRequestsSummary!
         pendingPriceAdjustmentOrderIds: [String!]!
         priceAdjustmentRequestsForOrder(orderId: ID!): [ApprovalRequest!]!
+        myApprovalsInbox: ApprovalsInbox!
     }
 
     extend type Mutation {

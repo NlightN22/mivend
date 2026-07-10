@@ -13,6 +13,7 @@ interface TeamMember {
     id: string;
     firstName: string;
     lastName: string;
+    roleCodes: string[];
 }
 
 @Resolver()
@@ -24,18 +25,22 @@ export class AccessControlResolver {
         private administratorService: AdministratorService,
     ) {}
 
-    // Names only (no email/roles/customFields) — used to label the "Manager" filter/column on
-    // the manager portal's Orders list (see docs/ai/manager-portal-pages/02-orders-list.md).
-    // Same visibility rule as `departments` below: view-only org-structure data, no dedicated
-    // permission, safe for any authenticated portal user since it carries nothing sensitive.
+    // Names + role codes only (no email/customFields) — used to label the "Manager" filter/
+    // column on the Orders list (see docs/ai/manager-portal-pages/02-orders-list.md) and to
+    // populate the "Escalate to..." picker on the approval detail page (filtered client-side to
+    // administrators whose role is in the current step's escalatesTo list — see
+    // 11-approval-detail.md). Same visibility rule as `departments` below: view-only
+    // org-structure data, no dedicated permission — role codes are already shown everywhere as
+    // badges, not sensitive.
     @Query()
     @Allow(Permission.Authenticated)
     async teamMembers(@Ctx() ctx: RequestContext): Promise<TeamMember[]> {
-        const result = await this.administratorService.findAll(ctx, { take: 200 });
+        const result = await this.administratorService.findAll(ctx, { take: 200 }, ['user.roles']);
         return result.items.map(a => ({
             id: String(a.id),
             firstName: a.firstName,
             lastName: a.lastName,
+            roleCodes: a.user?.roles?.map(r => r.code) ?? [],
         }));
     }
 

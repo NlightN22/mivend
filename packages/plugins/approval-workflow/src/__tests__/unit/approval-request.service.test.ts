@@ -37,6 +37,7 @@ describe('ApprovalRequestService', () => {
     };
     let stepRepo: {
         findOne: ReturnType<typeof vi.fn>;
+        find: ReturnType<typeof vi.fn>;
         create: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
     };
@@ -64,6 +65,7 @@ describe('ApprovalRequestService', () => {
         };
         stepRepo = {
             findOne: vi.fn(),
+            find: vi.fn(async () => []),
             create: vi.fn((x: unknown) => x),
             save: vi.fn(async (x: unknown) => x),
         };
@@ -272,5 +274,106 @@ describe('ApprovalRequestService', () => {
         requestRepo.find.mockResolvedValue([{ id: 'req-1', payload: 'not-json' }]);
         const result = await service.findPriceAdjustmentRequestsForOrder(mockCtx(true), 'order-1');
         expect(result).toEqual([]);
+    });
+
+    describe('findAwaitingMyDecision', () => {
+        it('includes a pending request whose current-step permission the caller holds', async () => {
+            administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
+            requestRepo.find.mockResolvedValue([
+                {
+                    id: 'req-1',
+                    status: 'pending',
+                    requestType: 'priceAdjustmentApproval',
+                    currentStepIndex: 0,
+                },
+            ]);
+            stepRepo.findOne.mockResolvedValue(null);
+
+            const result = await service.findAwaitingMyDecision(mockCtx(true));
+
+            expect(result.map(r => r.id)).toEqual(['req-1']);
+        });
+
+        it('excludes a pending request the caller cannot decide (no permission, not escalated to them)', async () => {
+            administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
+            requestRepo.find.mockResolvedValue([
+                {
+                    id: 'req-1',
+                    status: 'pending',
+                    requestType: 'priceAdjustmentApproval',
+                    currentStepIndex: 0,
+                },
+            ]);
+            stepRepo.findOne.mockResolvedValue(null);
+
+            const result = await service.findAwaitingMyDecision(mockCtx(false));
+
+            expect(result).toEqual([]);
+        });
+
+        it('includes a request escalated to the caller even without the step permission', async () => {
+            administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-2' });
+            requestRepo.find.mockResolvedValue([
+                {
+                    id: 'req-1',
+                    status: 'pending',
+                    requestType: 'priceAdjustmentApproval',
+                    currentStepIndex: 0,
+                },
+            ]);
+            stepRepo.findOne.mockResolvedValue({
+                wasEscalated: true,
+                escalatedToAdministratorId: 'admin-2',
+            });
+
+            const result = await service.findAwaitingMyDecision(mockCtx(false));
+
+            expect(result.map(r => r.id)).toEqual(['req-1']);
+        });
+    });
+
+    describe('findAllInvolving', () => {
+        it('returns an empty array when the caller has no Administrator record', async () => {
+            administratorService.findOneByUserId.mockResolvedValue(null);
+            const result = await service.findAllInvolving(mockCtx(true));
+            expect(result).toEqual([]);
+        });
+
+        it('unions submitted requests, decided/escalated steps, and awaiting-decision requests without duplicates', async () => {
+            administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
+
+            requestRepo.find.mockImplementation(async (options: Record<string, unknown>) => {
+                const where = options.where as Record<string, unknown>;
+                if (where?.requestedByAdministratorId === 'admin-1') {
+                    return [
+                        {
+                            id: 'req-submitted',
+                            status: 'pending',
+                            requestType: 'priceAdjustmentApproval',
+                            currentStepIndex: 0,
+                        },
+                    ];
+                }
+                if (where?.status === 'pending') {
+                    // findAwaitingMyDecision's own lookup — nothing awaiting this caller
+                    return [];
+                }
+                if (where?.id) {
+                    return [{ id: 'req-decided', status: 'approved' }];
+                }
+                return [];
+            });
+            stepRepo.find.mockImplementation(async (options: Record<string, unknown>) => {
+                const where = options.where as Record<string, unknown>;
+                if (where?.approverAdministratorId === 'admin-1') {
+                    return [{ approvalRequestId: 'req-decided' }];
+                }
+                return [];
+            });
+
+            const result = await service.findAllInvolving(mockCtx(true));
+
+            expect(result.map(r => r.id).sort()).toEqual(['req-decided', 'req-submitted']);
+        });
     });
 });

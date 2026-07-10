@@ -28,6 +28,7 @@ const adminApiSchema = gql`
         id: ID!
         firstName: String!
         lastName: String!
+        roleCodes: [String!]!
     }
 
     type CreditTermLimit {

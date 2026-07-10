@@ -83,6 +83,20 @@ export class ApprovalRequestResolver {
         return this.approvalRequestService.findPriceAdjustmentRequestsForOrder(ctx, args.orderId);
     }
 
+    // Approvals inbox (docs/ai/manager-portal-pages/10-approvals-inbox.md) — one call for both
+    // tabs, same aggregated-query rationale as myApprovalRequestsSummary/getMySummary.
+    @Query()
+    @Allow(Permission.Authenticated)
+    async myApprovalsInbox(
+        @Ctx() ctx: RequestContext,
+    ): Promise<{ awaitingMyDecision: ApprovalRequest[]; allInvolved: ApprovalRequest[] }> {
+        const [awaitingMyDecision, allInvolved] = await Promise.all([
+            this.approvalRequestService.findAwaitingMyDecision(ctx),
+            this.approvalRequestService.findAllInvolving(ctx),
+        ]);
+        return { awaitingMyDecision, allInvolved };
+    }
+
     @ResolveField()
     async steps(
         @Ctx() ctx: RequestContext,
@@ -112,6 +126,56 @@ export class ApprovalRequestResolver {
             return null;
         }
         return definition.steps[request.currentStepIndex]?.role ?? null;
+    }
+
+    // Role label for every step in this request's chain, in order — the approval detail page's
+    // ApprovalStepper (see 11-approval-detail.md) needs to render future/not-yet-reached steps
+    // too, which have no ApprovalStep audit row yet and so aren't covered by `steps` or
+    // `currentStepRole` (current-step-only).
+    @ResolveField()
+    async stepRoles(
+        @Ctx() ctx: RequestContext,
+        @Parent() request: { requestType: string },
+    ): Promise<string[]> {
+        try {
+            const definition = await this.workflowDefinitionService.getDefinition(
+                ctx,
+                request.requestType,
+            );
+            return definition.steps.map(s => s.role);
+        } catch {
+            return [];
+        }
+    }
+
+    // Total step count in this request's chain — combined with currentStepIndex client-side for
+    // "Step 2 of 3" (see 10-approvals-inbox.md).
+    @ResolveField()
+    async totalSteps(
+        @Ctx() ctx: RequestContext,
+        @Parent() request: ApprovalRequest,
+    ): Promise<number> {
+        const { totalSteps } = await this.approvalRequestService.getCurrentStepDefinition(
+            ctx,
+            request,
+        );
+        return totalSteps;
+    }
+
+    // The current step's escalatesTo role list — powers the "Escalate to..." select on
+    // 11-approval-detail.md, which must only offer roles from this fixed list, never a free
+    // choice of administrator.
+    @ResolveField()
+    async escalatesTo(
+        @Ctx() ctx: RequestContext,
+        @Parent() request: ApprovalRequest,
+    ): Promise<string[]> {
+        if (request.status !== 'pending') return [];
+        const { stepDef } = await this.approvalRequestService.getCurrentStepDefinition(
+            ctx,
+            request,
+        );
+        return stepDef?.escalatesTo ?? [];
     }
 
     @Transaction()
