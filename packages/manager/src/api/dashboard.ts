@@ -81,7 +81,7 @@ export interface DashboardData {
 // Vendure ships no dedicated "overdue" order state or SLA field yet — "awaiting shipment" is
 // approximated as paid-but-not-fulfilled (state PaymentSettled), and "overdue" as such an order
 // placed more than 3 days ago. Revisit once erp-order exposes a real SLA/overdue signal.
-const IN_PROGRESS_STATES_EXCLUDED = ['AddingItems', 'Cancelled', 'Delivered'];
+const IN_PROGRESS_STATES_EXCLUDED = ['AddingItems', 'Draft', 'Cancelled', 'Delivered'];
 const OVERDUE_AFTER_DAYS = 3;
 
 const DASHBOARD_QUERY = `
@@ -90,20 +90,20 @@ const DASHBOARD_QUERY = `
         $since24h: DateTime!
         $overdueBefore: DateTime!
     ) {
-        activeOrders: orders(options: { filter: { state: { notIn: $excludedStates } } }) {
+        activeOrders: visibleOrders(options: { filter: { state: { notIn: $excludedStates } } }) {
             totalItems
         }
-        activeOrdersLast24h: orders(
+        activeOrdersLast24h: visibleOrders(
             options: {
                 filter: { state: { notIn: $excludedStates }, orderPlacedAt: { after: $since24h } }
             }
         ) {
             totalItems
         }
-        awaitingShipment: orders(options: { filter: { state: { eq: "PaymentSettled" } } }) {
+        awaitingShipment: visibleOrders(options: { filter: { state: { eq: "PaymentSettled" } } }) {
             totalItems
         }
-        overdue: orders(
+        overdue: visibleOrders(
             options: {
                 filter: {
                     state: { eq: "PaymentSettled" }
@@ -113,11 +113,11 @@ const DASHBOARD_QUERY = `
         ) {
             totalItems
         }
-        recentOrdersList: orders(
+        recentOrdersList: visibleOrders(
             options: {
                 take: 20
                 sort: { orderPlacedAt: DESC }
-                filter: { state: { notIn: ["AddingItems"] } }
+                filter: { state: { notIn: ["AddingItems", "Draft"] } }
             }
         ) {
             items {

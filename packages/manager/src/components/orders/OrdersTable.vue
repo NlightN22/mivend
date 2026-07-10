@@ -15,7 +15,8 @@ const props = defineProps<{
 const router = useRouter();
 
 const ORDER_STATE_LABEL: Record<string, string> = {
-    AddingItems: 'Draft',
+    AddingItems: 'Draft (storefront cart)',
+    Draft: 'Draft (order entry)',
     ArrangingPayment: 'Arranging payment',
     PaymentAuthorized: 'Processing',
     PaymentSettled: 'Awaiting shipment',

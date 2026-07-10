@@ -25,8 +25,13 @@ export const router = createRouter({
                     component: () => import('../pages/orders/OrdersPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'orders/new',
+                    name: 'orders-new',
+                    component: () => import('../pages/orders/OrderCreatePage.vue'),
+                    meta: { requiresAuth: true },
+                },
                 ...[
-                    { path: 'orders/new', title: 'New order' },
                     { path: 'orders/:code', title: 'Order detail' },
                     { path: 'customers', title: 'Customers' },
                     { path: 'customers/new', title: 'New client' },

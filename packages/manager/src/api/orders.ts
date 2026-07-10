@@ -37,7 +37,11 @@ export const DEFAULT_FILTERS: OrdersFilters = {
 // technical states"), not a hardcoded business enum.
 export const ORDER_STATE_OPTIONS = [
     { value: '', label: 'All statuses' },
-    { value: 'AddingItems', label: 'Draft' },
+    { value: 'AddingItems', label: 'Draft (storefront cart)' },
+    // "Draft" (capitalized) is Vendure's distinct state for orders created via the admin
+    // draft-order flow — see /orders/new (createDraftOrder) — not the same state as a
+    // customer's own in-progress cart (AddingItems).
+    { value: 'Draft', label: 'Draft (order entry)' },
     { value: 'ArrangingPayment', label: 'Arranging payment' },
     { value: 'PaymentAuthorized', label: 'Processing' },
     { value: 'PaymentSettled', label: 'Awaiting shipment' },
@@ -170,7 +174,7 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
         pendingPriceAdjustmentOrderIds: string[];
     }>(
         `query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
-            open: visibleOrders(options: { filter: { state: { notIn: ["AddingItems", "Cancelled", "Delivered"] } } }) {
+            open: visibleOrders(options: { filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } } }) {
                 totalItems
             }
             overdue: visibleOrders(
@@ -188,7 +192,7 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
             allOpen: visibleOrders(
                 options: {
                     take: 500
-                    filter: { state: { notIn: ["AddingItems", "Cancelled", "Delivered"] } }
+                    filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } }
                 }
             ) {
                 items {
