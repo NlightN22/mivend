@@ -42,7 +42,18 @@ const ROLES = [
     {
         code: 'operator',
         description: 'Operator — processes current orders, all customers in own department/branch',
-        permissions: ['ReadCatalog', 'ReadOrder', 'ReadCustomer', 'ReadCounterparty'],
+        // CreateOrder/UpdateOrder are required for the manager portal's /orders/new draft-order
+        // flow (createDraftOrder, addItemToDraftOrder, setDraftOrderShippingAddress, etc.) —
+        // Operator is the primary user of that page, see docs/ai/manager-portal-pages/
+        // 02b-order-create.md.
+        permissions: [
+            'ReadCatalog',
+            'ReadOrder',
+            'CreateOrder',
+            'UpdateOrder',
+            'ReadCustomer',
+            'ReadCounterparty',
+        ],
         accessScopeConfig: { counterparty: 'department' },
     },
     {
@@ -51,6 +62,8 @@ const ROLES = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'CreateOrder',
+            'UpdateOrder',
             'ReadCustomer',
             'ReadCounterparty',
             'AdjustPriceWithinLimit',
