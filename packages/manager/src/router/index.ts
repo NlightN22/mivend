@@ -61,10 +61,15 @@ export const router = createRouter({
                     component: () => import('../pages/customers/CustomerDetailPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'discounts',
+                    name: 'discounts',
+                    component: () => import('../pages/discounts/DiscountsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
                 ...[
                     { path: 'customers/new', title: 'New client' },
                     { path: 'catalog', title: 'Catalog' },
-                    { path: 'discounts', title: 'Discounts' },
                     { path: 'documents', title: 'Documents' },
                     { path: 'team', title: 'Team' },
                     { path: 'settings', title: 'Settings' },
