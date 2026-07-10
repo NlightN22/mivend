@@ -49,8 +49,19 @@ export const router = createRouter({
                     component: () => import('../pages/approvals/ApprovalDetailPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'customers',
+                    name: 'customers',
+                    component: () => import('../pages/customers/CustomersPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'customers/:id',
+                    name: 'customer-detail',
+                    component: () => import('../pages/customers/CustomerDetailPage.vue'),
+                    meta: { requiresAuth: true },
+                },
                 ...[
-                    { path: 'customers', title: 'Customers' },
                     { path: 'customers/new', title: 'New client' },
                     { path: 'catalog', title: 'Catalog' },
                     { path: 'discounts', title: 'Discounts' },
