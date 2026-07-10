@@ -79,6 +79,12 @@ export { default as MvPagination } from './components/MvPagination/MvPagination.
 
 export { default as MvWarningBanner } from './components/MvWarningBanner/MvWarningBanner.vue';
 
+export { default as MvApprovalStepper } from './components/MvApprovalStepper/MvApprovalStepper.vue';
+export type {
+    ApprovalStepState,
+    ApprovalStepperItem,
+} from './components/MvApprovalStepper/MvApprovalStepper.vue';
+
 export { colors } from './tokens/colors';
 export type { ColorToken } from './tokens/colors';
 
