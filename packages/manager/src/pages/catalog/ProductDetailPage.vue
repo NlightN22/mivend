@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { MvPanel, MvButton } from '@mivend/ui-kit';
+import { MvButton, MvProductGallery, MvProductMainCards } from '@mivend/ui-kit';
 import {
     fetchProductBySlug,
     fetchCrossReferences,
@@ -10,6 +10,7 @@ import {
     type CrossReferenceRow,
     type PriceRow,
 } from '../../api/productDetail';
+import ManagerProductInfoPanel from '../../components/catalog/ManagerProductInfoPanel.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -21,19 +22,18 @@ const loading = ref(true);
 const notFound = ref(false);
 
 const category = computed(
-    () => product.value?.facetValues.find(fv => fv.facetCode === 'category')?.name ?? '—',
+    () => product.value?.facetValues.find(fv => fv.facetCode === 'category')?.name ?? '',
 );
 const brand = computed(
-    () => product.value?.facetValues.find(fv => fv.facetCode === 'brand')?.name ?? '—',
+    () => product.value?.facetValues.find(fv => fv.facetCode === 'brand')?.name ?? '',
 );
 const primaryVariant = computed(() => product.value?.variants[0] ?? null);
 const stockOnHand = computed(() => primaryVariant.value?.stockOnHand ?? 0);
-
-function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-        amount / 100,
-    );
-}
+const stockVariantLabel = computed((): 'ok' | 'low' | 'out' => {
+    if (stockOnHand.value === 0) return 'out';
+    if (stockOnHand.value < 10) return 'low';
+    return 'ok';
+});
 
 onMounted(async () => {
     loading.value = true;
@@ -64,56 +64,52 @@ onMounted(async () => {
         </div>
 
         <template v-else-if="!loading && product">
-            <div class="product-detail-page__header">
-                <div class="product-detail-page__breadcrumb">Catalog / {{ product.name }}</div>
-                <h1 class="product-detail-page__title">{{ product.name }}</h1>
-                <div class="product-detail-page__meta">
-                    <span>SKU: {{ primaryVariant?.sku ?? '—' }}</span>
-                    <span>Category: {{ category }}</span>
-                    <span>Brand: {{ brand }}</span>
-                </div>
+            <div class="product-detail-page__breadcrumb">
+                <RouterLink to="/catalog">Catalog</RouterLink> / {{ product.name }}
             </div>
 
-            <div class="product-detail-page__grid">
-                <MvPanel title="Prices">
-                    <p class="product-detail-page__caption">Base prices are managed in the ERP system.</p>
-                    <table class="product-detail-page__table">
-                        <thead>
-                            <tr>
-                                <th>Price type</th>
-                                <th>Price</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="row in prices" :key="row.priceTypeCode">
-                                <td>{{ row.label }}</td>
-                                <td>{{ row.price !== null ? money(row.price) : '—' }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </MvPanel>
+            <div class="product-detail-page__layout">
+                <MvProductGallery
+                    class="product-detail-page__gallery"
+                    :product-name="product.name"
+                    :show-favorite="false"
+                    :show-documents="false"
+                />
 
-                <MvPanel title="Stock">
-                    <p class="product-detail-page__stock">{{ stockOnHand }} units on hand</p>
-                </MvPanel>
+                <MvProductMainCards
+                    :name="product.name"
+                    :sku="primaryVariant?.sku ?? ''"
+                    description=""
+                    :brand="brand"
+                    :category="category"
+                    :stock-variant-label="stockVariantLabel"
+                    :related="[]"
+                    link-base="/catalog"
+                />
 
-                <MvPanel title="Cross-references / applicability" class="product-detail-page__wide">
-                    <table v-if="crossReferences.length" class="product-detail-page__table">
-                        <thead>
-                            <tr>
-                                <th>OEM code</th>
-                                <th>OEM brand</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="ref in crossReferences" :key="`${ref.oemBrand}-${ref.oemCode}`">
-                                <td>{{ ref.oemCode }}</td>
-                                <td>{{ ref.oemBrand }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <p v-else class="product-detail-page__caption">No known cross-references for this product.</p>
-                </MvPanel>
+                <ManagerProductInfoPanel
+                    class="product-detail-page__info"
+                    :prices="prices"
+                    :stock-on-hand="stockOnHand"
+                />
+            </div>
+
+            <div v-if="crossReferences.length" class="product-detail-page__cross-refs">
+                <h2 class="product-detail-page__section-title">Cross-references / applicability</h2>
+                <table class="product-detail-page__table">
+                    <thead>
+                        <tr>
+                            <th>OEM code</th>
+                            <th>OEM brand</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="ref in crossReferences" :key="`${ref.oemBrand}-${ref.oemCode}`">
+                            <td>{{ ref.oemCode }}</td>
+                            <td>{{ ref.oemBrand }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <div class="product-detail-page__actions">
@@ -139,43 +135,28 @@ onMounted(async () => {
 .product-detail-page__breadcrumb {
     color: var(--el-text-color-secondary, #6b7280);
     font-size: 13px;
-    margin-bottom: 6px;
 }
 
-.product-detail-page__title {
-    margin: 0;
-    font-size: 28px;
-    letter-spacing: -0.03em;
-}
-
-.product-detail-page__meta {
-    display: flex;
-    gap: 16px;
-    margin-top: 8px;
-    color: var(--el-text-color-secondary, #6b7280);
-    font-size: 13px;
-}
-
-.product-detail-page__grid {
+.product-detail-page__layout {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 280px minmax(0, 1fr) 300px;
     gap: 18px;
+    align-items: start;
 }
 
-.product-detail-page__wide {
-    grid-column: 1 / -1;
+.product-detail-page__cross-refs {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid rgba(221, 231, 226, 0.86);
+    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    padding: 20px;
 }
 
-.product-detail-page__caption {
-    color: var(--el-text-color-secondary, #6b7280);
-    font-size: 13px;
-    margin: 0 0 10px;
-}
-
-.product-detail-page__stock {
-    font-size: 20px;
-    font-weight: 700;
-    margin: 0;
+.product-detail-page__section-title {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 12px;
 }
 
 .product-detail-page__table {
@@ -212,8 +193,8 @@ onMounted(async () => {
     margin: 0;
 }
 
-@media (max-width: 900px) {
-    .product-detail-page__grid {
+@media (max-width: 1100px) {
+    .product-detail-page__layout {
         grid-template-columns: 1fr;
     }
 }

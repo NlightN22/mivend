@@ -1,46 +1,46 @@
 import { adminApi } from './client';
+// Imports the TS source directly — see the comment in storefront's useProductList.ts for why
+// 'shared''s compiled package output breaks a Vite production build.
+import {
+    buildFacetValueFilters,
+    buildFacetGroups,
+    type FacetGroup,
+    type EsFacetValueResult,
+} from '../../../shared/src/catalogFacets';
 
 export interface CatalogFilters {
     search: string;
-    categoryValueId: string;
-    brandValueId: string;
+    facetValueIds: string[];
+    inStock: boolean;
+    priceMin: number | null;
+    priceMax: number | null;
 }
 
 export const DEFAULT_CATALOG_FILTERS: CatalogFilters = {
     search: '',
-    categoryValueId: '',
-    brandValueId: '',
+    facetValueIds: [],
+    inStock: false,
+    priceMin: null,
+    priceMax: null,
 };
 
-export interface FacetValueOption {
-    id: string;
-    code: string;
-    name: string;
-}
-
-export interface CatalogFacets {
-    categories: FacetValueOption[];
-    brands: FacetValueOption[];
-}
-
-// category/brand are both plain facets in this dataset (see seed-erp.mjs) — no dedicated
-// Collection-based filter needed, matching the storefront's facet-driven approach.
-export async function fetchCatalogFacets(): Promise<CatalogFacets> {
+// Facets query — no facetValueFilters, so the panel always shows every available value
+// regardless of the current selection (mirrors storefront's FACETS_QUERY).
+export async function fetchCatalogFacets(term: string): Promise<FacetGroup[]> {
     const result = await adminApi<{
-        facets: { items: { code: string; name: string; values: FacetValueOption[] }[] };
+        search: { facetValues: EsFacetValueResult[] };
     }>(
-        `query {
-            facets(options: { take: 50 }) {
-                items { code name values { id code name } }
+        `query($term: String) {
+            search(input: { term: $term, take: 0, skip: 0, groupByProduct: true }) {
+                facetValues {
+                    facetValue { id code name facet { code name } }
+                    count
+                }
             }
         }`,
+        { term: term || undefined },
     );
-    const categoryFacet = result.facets.items.find(f => f.code === 'category');
-    const brandFacet = result.facets.items.find(f => f.code === 'brand');
-    return {
-        categories: categoryFacet?.values ?? [],
-        brands: brandFacet?.values ?? [],
-    };
+    return buildFacetGroups(result.search.facetValues);
 }
 
 export interface CatalogListItem {
@@ -50,6 +50,7 @@ export interface CatalogListItem {
     sku: string;
     slug: string;
     facetValueIds: string[];
+    imagePreview: string | null;
 }
 
 export interface CatalogPageResult {
@@ -57,41 +58,66 @@ export interface CatalogPageResult {
     totalItems: number;
 }
 
-function buildFacetValueFilters(filters: CatalogFilters): { or: string[] }[] {
-    const groups: { or: string[] }[] = [];
-    if (filters.categoryValueId) groups.push({ or: [filters.categoryValueId] });
-    if (filters.brandValueId) groups.push({ or: [filters.brandValueId] });
-    return groups;
+function buildPriceRange(filters: CatalogFilters): { min: number; max: number } | undefined {
+    if (filters.priceMin == null && filters.priceMax == null) return undefined;
+    return {
+        min: filters.priceMin != null ? Math.round(filters.priceMin * 100) : 0,
+        max: filters.priceMax != null ? Math.round(filters.priceMax * 100) : 999_999_999,
+    };
 }
 
 export async function fetchCatalogPage(
     filters: CatalogFilters,
+    facetGroups: FacetGroup[],
     page: number,
     pageSize: number,
 ): Promise<CatalogPageResult> {
     const result = await adminApi<{
-        search: { totalItems: number; items: CatalogListItem[] };
+        search: {
+            totalItems: number;
+            items: (Omit<CatalogListItem, 'imagePreview'> & {
+                productAsset: { preview: string } | null;
+            })[];
+        };
     }>(
-        `query($term: String, $facetValueFilters: [FacetValueFilterInput!], $skip: Int, $take: Int) {
+        `query($term: String, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput, $skip: Int, $take: Int) {
             search(input: {
                 term: $term
                 facetValueFilters: $facetValueFilters
+                inStock: $inStock
+                priceRangeWithTax: $priceRangeWithTax
                 groupByProduct: true
                 skip: $skip
                 take: $take
             }) {
                 totalItems
-                items { productId productVariantId productName sku slug facetValueIds }
+                items {
+                    productId
+                    productVariantId
+                    productName
+                    sku
+                    slug
+                    facetValueIds
+                    productAsset { preview }
+                }
             }
         }`,
         {
             term: filters.search || undefined,
-            facetValueFilters: buildFacetValueFilters(filters),
+            facetValueFilters: buildFacetValueFilters(filters.facetValueIds, facetGroups),
+            inStock: filters.inStock ? true : undefined,
+            priceRangeWithTax: buildPriceRange(filters),
             skip: (page - 1) * pageSize,
             take: pageSize,
         },
     );
-    return { items: result.search.items, totalItems: result.search.totalItems };
+    return {
+        items: result.search.items.map(item => ({
+            ...item,
+            imagePreview: item.productAsset?.preview ?? null,
+        })),
+        totalItems: result.search.totalItems,
+    };
 }
 
 export interface VariantStock {
