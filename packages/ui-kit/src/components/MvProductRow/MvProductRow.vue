@@ -25,6 +25,11 @@ interface Props {
   cartQty?: number;
   cartLineId?: string;
   isFavorited?: boolean;
+  linkBase?: string;
+  showFavorite?: boolean;
+  // Suppresses the qty stepper/"+ Add"/"Analogs" action area entirely — for a view-only,
+  // no-cart consumer (e.g. an internal staff catalog lookup).
+  showActions?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -43,6 +48,9 @@ const props = withDefaults(defineProps<Props>(), {
   cartQty: 0,
   cartLineId: undefined,
   isFavorited: false,
+  linkBase: '/product',
+  showFavorite: true,
+  showActions: true,
 });
 
 const emit = defineEmits<{
@@ -77,7 +85,7 @@ function onStepperChange(qty: number): void {
     </div>
 
     <div class="mv-product-row__main">
-      <RouterLink v-if="slug" :to="`/product/${slug}`" class="mv-product-row__name">{{ name }}</RouterLink>
+      <RouterLink v-if="slug" :to="`${linkBase}/${slug}`" class="mv-product-row__name">{{ name }}</RouterLink>
       <span v-else class="mv-product-row__name mv-product-row__name--plain">{{ name }}</span>
       <div class="mv-product-row__brand-row">
         <span v-if="brand" class="mv-product-row__brand">{{ brand }}</span>
@@ -131,13 +139,14 @@ function onStepperChange(qty: number): void {
       <div v-else class="mv-product-row__price-hint">—</div>
     </div>
 
-    <div class="mv-product-row__actions">
+    <div v-if="showFavorite || showActions" class="mv-product-row__actions">
       <MvFavoriteButton
+        v-if="showFavorite"
         class="mv-product-row__fav"
         :is-favorited="isFavorited"
         @toggle="emit('toggle-favorite', variantId)"
       />
-      <div class="mv-product-row__control">
+      <div v-if="showActions" class="mv-product-row__control">
         <slot name="actions">
           <template v-if="canOrder">
             <MvQtyStepper

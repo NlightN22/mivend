@@ -24,6 +24,11 @@ interface Props {
   cartQty?: number;
   cartLineId?: string;
   isFavorited?: boolean;
+  linkBase?: string;
+  showFavorite?: boolean;
+  // Suppresses the qty stepper/"Add to cart"/"View analogs" action area entirely — for a
+  // view-only, no-cart consumer (e.g. an internal staff catalog lookup).
+  showActions?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -40,6 +45,9 @@ const props = withDefaults(defineProps<Props>(), {
   cartQty: 0,
   cartLineId: undefined,
   isFavorited: false,
+  linkBase: '/product',
+  showFavorite: true,
+  showActions: true,
 });
 
 const emit = defineEmits<{
@@ -54,7 +62,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 
 <template>
   <article class="mv-product-card">
-    <a :href="`/product/${slug}`" class="mv-product-card__img-link">
+    <a :href="`${linkBase}/${slug}`" class="mv-product-card__img-link">
       <div class="mv-product-card__img">
         <span class="mv-product-card__img-icon" aria-hidden="true" />
         <span
@@ -68,6 +76,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     </a>
 
     <MvFavoriteButton
+      v-if="showFavorite"
       class="mv-product-card__fav"
       :is-favorited="isFavorited"
       @toggle="emit('toggle-favorite', variantId)"
@@ -117,31 +126,33 @@ const canOrder = computed(() => props.stockVariant !== 'out');
             class="mv-product-card__stock-badge"
           />
         </div>
-        <template v-if="canOrder">
-          <MvQtyStepper
-            v-if="cartQty && cartQty > 0"
-            :model-value="cartQty"
-            :min="0"
-            class="mv-product-card__stepper"
-            @update:model-value="val => cartLineId && emit('update-cart-qty', cartLineId, val)"
-          />
+        <template v-if="showActions">
+          <template v-if="canOrder">
+            <MvQtyStepper
+              v-if="cartQty && cartQty > 0"
+              :model-value="cartQty"
+              :min="0"
+              class="mv-product-card__stepper"
+              @update:model-value="val => cartLineId && emit('update-cart-qty', cartLineId, val)"
+            />
+            <button
+              v-else
+              class="mv-product-card__buy"
+              type="button"
+              @click="emit('add-to-cart', variantId)"
+            >
+              Add to cart
+            </button>
+          </template>
           <button
             v-else
-            class="mv-product-card__buy"
+            class="mv-product-card__analogs"
             type="button"
-            @click="emit('add-to-cart', variantId)"
+            @click="emit('view-analogs', variantId)"
           >
-            Add to cart
+            View analogs
           </button>
         </template>
-        <button
-          v-else
-          class="mv-product-card__analogs"
-          type="button"
-          @click="emit('view-analogs', variantId)"
-        >
-          View analogs
-        </button>
       </template>
 
       <div v-else class="mv-product-card__guest">

@@ -48,6 +48,12 @@ export { default as MvProductCard } from './components/MvProductCard/MvProductCa
 
 export { default as MvProductRow } from './components/MvProductRow/MvProductRow.vue';
 
+export { default as MvCatalogFacets } from './components/MvCatalogFacets/MvCatalogFacets.vue';
+
+export { default as MvProductGallery } from './components/MvProductGallery/MvProductGallery.vue';
+
+export { default as MvProductMainCards } from './components/MvProductMainCards/MvProductMainCards.vue';
+
 export { default as MvStockBadge } from './components/MvStockBadge/MvStockBadge.vue';
 export { default as MvQtyStepper } from './components/MvQtyStepper/MvQtyStepper.vue';
 export { default as MvCard } from './components/MvCard/MvCard.vue';
