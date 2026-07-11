@@ -12,3 +12,10 @@ export {
     type FacetValue,
     type EsFacetValueResult,
 } from './catalogFacets';
+
+export {
+    buildCategoryTree,
+    resolveCategoryFacetValueId,
+    type CollectionNode,
+    type RawCollection,
+} from './collectionTree';

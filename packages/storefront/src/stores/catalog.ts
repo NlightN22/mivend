@@ -1,27 +1,15 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { shopApi } from '../api/client';
+// Imports the TS source directly — see the comment in useProductList.ts for why 'shared''s
+// compiled package output breaks a Vite production build.
+import {
+    buildCategoryTree,
+    type CollectionNode,
+    type RawCollection,
+} from '../../../shared/src/collectionTree';
 
-export interface CollectionItem {
-    id: string;
-    name: string;
-    slug: string;
-    children: CollectionItem[];
-}
-
-interface RawBreadcrumb {
-    id: string;
-    name: string;
-    slug: string;
-}
-
-interface RawCollection {
-    id: string;
-    name: string;
-    slug: string;
-    breadcrumbs: RawBreadcrumb[];
-    children: { id: string; name: string; slug: string }[];
-}
+export type CollectionItem = CollectionNode;
 
 export const useCatalogStore = defineStore('catalog', () => {
     const collections = ref<CollectionItem[]>([]);
@@ -42,15 +30,7 @@ export const useCatalogStore = defineStore('catalog', () => {
                     }
                 }
             `);
-            // breadcrumbs length === 2 means top-level (root + self)
-            collections.value = result.collections.items
-                .filter(c => c.breadcrumbs.length === 2)
-                .map(c => ({
-                    id: c.id,
-                    name: c.name,
-                    slug: c.slug,
-                    children: c.children ?? [],
-                }));
+            collections.value = buildCategoryTree(result.collections.items);
         } finally {
             loading.value = false;
         }

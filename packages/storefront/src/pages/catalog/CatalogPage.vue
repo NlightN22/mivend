@@ -5,6 +5,9 @@ import { useAuthStore } from '../../stores/auth';
 import { useProductList, type FilterState } from '../../composables/useProductList';
 import { MvCatalogFacets } from '@mivend/ui-kit';
 import ProductListView from '../../components/ProductListView.vue';
+// Imports the TS source directly — see the comment in useProductList.ts for why 'shared''s
+// compiled package output breaks a Vite production build.
+import { resolveCategoryFacetValueId } from '../../../../shared/src/collectionTree';
 
 const route = useRoute();
 const router = useRouter();
@@ -23,8 +26,8 @@ function parseFiltersFromQuery(): FilterState {
 }
 
 const searchQuery = ref((route.query.q as string) ?? '');
-const pendingCategoryCode = ref<string | undefined>(
-    collectionSlugToCategoryCode((route.query.collection as string) || undefined),
+const pendingCategorySlug = ref<string | undefined>(
+    (route.query.collection as string) || undefined,
 );
 const filters = ref<FilterState>(parseFiltersFromQuery());
 
@@ -46,20 +49,12 @@ watch(filters, f => {
     });
 }, { deep: true });
 
-function collectionSlugToCategoryCode(slug: string | undefined): string | undefined {
-    if (!slug) return undefined;
-    // "cat-cat-engine-oils" → "cat-engine-oils"  (strip leading "cat-")
-    return slug.startsWith('cat-') ? slug.slice(4) : slug;
-}
-
 function applyPendingCategory(): void {
-    const code = pendingCategoryCode.value;
-    if (!code) return;
-    const catGroup = facetGroups.value.find(g => g.code === 'category');
-    const val = catGroup?.values.find(v => v.code === code);
-    if (val) {
-        filters.value = { ...filters.value, facetValueIds: [val.id] };
-        pendingCategoryCode.value = undefined;
+    if (!pendingCategorySlug.value) return;
+    const valueId = resolveCategoryFacetValueId(pendingCategorySlug.value, facetGroups.value);
+    if (valueId) {
+        filters.value = { ...filters.value, facetValueIds: [valueId] };
+        pendingCategorySlug.value = undefined;
     }
 }
 
@@ -74,7 +69,7 @@ function toggleFacetValue(id: string): void {
 }
 
 function resetFilters(): void {
-    pendingCategoryCode.value = undefined;
+    pendingCategorySlug.value = undefined;
     filters.value = { facetValueIds: [], inStock: false, priceMin: null, priceMax: null };
 }
 
@@ -82,12 +77,12 @@ const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds))
 
 watch(() => route.query.q, q => {
     searchQuery.value = (q as string) ?? '';
-    pendingCategoryCode.value = undefined;
+    pendingCategorySlug.value = undefined;
     resetFilters();
 });
 
 watch(() => route.query.collection, slug => {
-    pendingCategoryCode.value = collectionSlugToCategoryCode((slug as string) || undefined);
+    pendingCategorySlug.value = (slug as string) || undefined;
     searchQuery.value = '';
     resetFilters();
 });
