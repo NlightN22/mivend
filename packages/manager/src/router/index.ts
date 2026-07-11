@@ -67,9 +67,20 @@ export const router = createRouter({
                     component: () => import('../pages/discounts/DiscountsPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'catalog',
+                    name: 'catalog',
+                    component: () => import('../pages/catalog/CatalogPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'catalog/:slug',
+                    name: 'catalog-detail',
+                    component: () => import('../pages/catalog/ProductDetailPage.vue'),
+                    meta: { requiresAuth: true },
+                },
                 ...[
                     { path: 'customers/new', title: 'New client' },
-                    { path: 'catalog', title: 'Catalog' },
                     { path: 'documents', title: 'Documents' },
                     { path: 'team', title: 'Team' },
                     { path: 'settings', title: 'Settings' },
