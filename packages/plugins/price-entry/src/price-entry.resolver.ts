@@ -3,17 +3,20 @@ import { Permission } from '@vendure/common/lib/generated-types';
 import {
     Allow,
     Ctx,
+    ForbiddenError,
     OrderLine,
     RequestContext,
     Transaction,
     TransactionalConnection,
 } from '@vendure/core';
+import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { PriceEntryInput, PriceEntryService } from './price-entry.service';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRuleInput, DiscountRuleService, DiscountTierVM } from './discount-rule.service';
 import { PriceResolutionService, TierProgressVM } from './price-resolution.service';
+import { FLOOR_PRICE_TYPE_CODE } from './types';
 
 @Resolver('ProductVariant')
 export class ProductVariantPriceResolver {
@@ -99,6 +102,29 @@ export class PriceEntryAdminResolver {
     @Allow(Permission.ReadCatalog)
     async priceTypeCodes(@Ctx() ctx: RequestContext): Promise<string[]> {
         return this.priceEntryService.listPriceTypeCodes(ctx);
+    }
+
+    // A caller with only ReadCatalog must not be able to read the floor price by simply
+    // passing priceTypeCode: FLOOR_PRICE_TYPE_CODE — see docs/access-control.md §3.3 and
+    // PriceAdjustmentResolver.floorPrice, which this mirrors for the batch case.
+    @Query()
+    @Allow(Permission.ReadCatalog, CustomPermission.ReadFloorPrice.Permission)
+    async priceEntriesForVariants(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { variantIds: string[]; priceTypeCode: string },
+    ): Promise<{ variantId: string; price: number }[]> {
+        if (
+            args.priceTypeCode === FLOOR_PRICE_TYPE_CODE &&
+            !ctx.userHasPermissions([CustomPermission.ReadFloorPrice.Permission])
+        ) {
+            throw new ForbiddenError();
+        }
+        const map = await this.priceEntryService.getForVariants(
+            ctx,
+            args.variantIds,
+            args.priceTypeCode,
+        );
+        return [...map.entries()].map(([variantId, price]) => ({ variantId, price }));
     }
 
     @Transaction()

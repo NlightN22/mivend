@@ -67,6 +67,11 @@ const adminApiSchema = gql`
         price: Int!
     }
 
+    type VariantPriceEntry {
+        variantId: ID!
+        price: Int!
+    }
+
     input PriceEntryInput {
         variantId: ID!
         priceTypeCode: String!
@@ -124,6 +129,10 @@ const adminApiSchema = gql`
         floorPrice(variantId: ID!): Int
         discountRules(priceTypeCode: String): [DiscountRule!]!
         priceTypeCodes: [String!]!
+        # Batch lookup for the catalog list/detail pages. Gated on ReadCatalog UNLESS
+        # priceTypeCode is the floor price type, which requires ReadFloorPrice instead —
+        # see PriceEntryAdminResolver.priceEntriesForVariants.
+        priceEntriesForVariants(variantIds: [ID!]!, priceTypeCode: String!): [VariantPriceEntry!]!
     }
 
     extend type Mutation {
