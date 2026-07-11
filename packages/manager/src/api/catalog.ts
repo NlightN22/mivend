@@ -7,6 +7,11 @@ import {
     type FacetGroup,
     type EsFacetValueResult,
 } from '../../../shared/src/catalogFacets';
+import {
+    buildCategoryTree,
+    type CollectionNode,
+    type RawCollection,
+} from '../../../shared/src/collectionTree';
 
 export interface CatalogFilters {
     search: string;
@@ -41,6 +46,24 @@ export async function fetchCatalogFacets(term: string): Promise<FacetGroup[]> {
         { term: term || undefined },
     );
     return buildFacetGroups(result.search.facetValues);
+}
+
+// Top-level categories + their direct children, for the catalog category dropdown (drill-down
+// browsing by structure, as an alternative to the flat facet checkboxes) — same Collection tree
+// storefront's mega-menu uses, via the shared buildCategoryTree shaping logic.
+export async function fetchCategoryTree(): Promise<CollectionNode[]> {
+    const result = await adminApi<{ collections: { items: RawCollection[] } }>(
+        `query {
+            collections(options: { take: 100 }) {
+                items {
+                    id name slug
+                    breadcrumbs { id name slug }
+                    children { id name slug }
+                }
+            }
+        }`,
+    );
+    return buildCategoryTree(result.collections.items);
 }
 
 export interface CatalogListItem {

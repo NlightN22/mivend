@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { MvPanel, MvPagination, MvCatalogFacets, MvProductRow } from '@mivend/ui-kit';
+import { MvPanel, MvPagination, MvCatalogFacets, MvProductRow, MvCatalogDropdown } from '@mivend/ui-kit';
 import {
     DEFAULT_CATALOG_FILTERS,
     fetchCatalogFacets,
     fetchCatalogPage,
+    fetchCategoryTree,
     fetchStockForVariants,
     fetchPriceEntriesForVariants,
     type CatalogFilters,
@@ -12,7 +13,10 @@ import {
 } from '../../api/catalog';
 import { fetchPriceTypeCodes } from '../../api/discounts';
 import { FLOOR_PRICE_TYPE_CODE } from '../../constants/pricing';
-import type { FacetGroup } from 'shared';
+import type { FacetGroup, CollectionNode } from 'shared';
+// Imports the TS source directly — see the comment in api/catalog.ts for why 'shared''s
+// compiled package output breaks a Vite production build.
+import { resolveCategoryFacetValueId } from '../../../../shared/src/collectionTree';
 import CatalogRowExtras from '../../components/catalog/CatalogRowExtras.vue';
 
 const filters = reactive<CatalogFilters>({ ...DEFAULT_CATALOG_FILTERS });
@@ -34,6 +38,24 @@ const floorPrices = ref<Map<string, number> | null>(null);
 const loading = ref(true);
 
 const selectedFacetValues = computed(() => new Set(filters.facetValueIds));
+
+// Category dropdown (drill-down browsing by structure) — an alternative to the flat facet
+// checkboxes above, same MvCatalogDropdown storefront uses for its mega-menu.
+const categoryTree = ref<CollectionNode[]>([]);
+const categoryDropdownOpen = ref(false);
+
+async function toggleCategoryDropdown(): Promise<void> {
+    if (!categoryDropdownOpen.value && categoryTree.value.length === 0) {
+        categoryTree.value = await fetchCategoryTree();
+    }
+    categoryDropdownOpen.value = !categoryDropdownOpen.value;
+}
+
+function navigateToCategory(slug: string): void {
+    const valueId = resolveCategoryFacetValueId(slug, facetGroups.value);
+    if (valueId) filters.facetValueIds = [valueId];
+    categoryDropdownOpen.value = false;
+}
 
 async function loadPricesAndStock(rows: CatalogListItem[]): Promise<void> {
     const variantIds = rows.map(r => r.productVariantId);
@@ -99,8 +121,25 @@ loadAll();
     <div class="catalog-page">
         <div class="catalog-page__header">
             <div class="catalog-page__breadcrumb">Workspace / Catalog</div>
-            <h1 class="catalog-page__title">Catalog</h1>
+            <div class="catalog-page__header-row">
+                <h1 class="catalog-page__title">Catalog</h1>
+                <button
+                    :class="['catalog-page__category-btn', { 'catalog-page__category-btn--open': categoryDropdownOpen }]"
+                    type="button"
+                    @click="toggleCategoryDropdown"
+                >
+                    <span>{{ categoryDropdownOpen ? '✕' : '☰' }}</span> Browse by category
+                </button>
+            </div>
+
+            <MvCatalogDropdown
+                :collections="categoryTree"
+                :open="categoryDropdownOpen"
+                @close="categoryDropdownOpen = false"
+                @navigate="navigateToCategory"
+            />
         </div>
+        <div v-if="categoryDropdownOpen" class="catalog-page__backdrop" @click="categoryDropdownOpen = false" />
 
         <div class="catalog-page__layout">
             <MvCatalogFacets
@@ -160,6 +199,45 @@ loadAll();
     display: flex;
     flex-direction: column;
     gap: 18px;
+}
+
+.catalog-page__header {
+    position: relative;
+}
+
+.catalog-page__header-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.catalog-page__category-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1.5px solid #dde7e2;
+    border-radius: 10px;
+    background: #fff;
+    color: #2c3b36;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.catalog-page__category-btn:hover,
+.catalog-page__category-btn--open {
+    border-color: #00b894;
+    color: #00b894;
+}
+
+.catalog-page__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9;
 }
 
 .catalog-page__breadcrumb {
