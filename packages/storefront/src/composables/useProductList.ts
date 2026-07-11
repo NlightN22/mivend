@@ -1,6 +1,19 @@
 import { ref, watch, type Ref } from 'vue';
 import { shopApi } from '../api/client';
 import { useViewMode } from './useViewMode';
+// Imports the TS source directly (not the 'shared' package's compiled CJS output): Vite/Rollup
+// couldn't reliably interop either the aggregator (`export *` compiled to a runtime
+// __exportStar loop) or the compiled catalogFacets.js directly — importing the source lets
+// esbuild/Vite include it as plain ESM in the same module graph, with no CJS boundary at all.
+// sync.ts (shared's other export) is only ever consumed by ts-node/Node backend code via the
+// compiled 'shared' package, so this never surfaced before.
+import {
+    buildFacetValueFilters,
+    buildFacetGroups,
+    type FacetGroup,
+    type FacetValue,
+    type EsFacetValueResult,
+} from '../../../shared/src/catalogFacets';
 
 export interface DiscountTierVM {
     percent: number;
@@ -19,17 +32,7 @@ interface ProductVariant {
     stockLevel: string;
 }
 
-export interface FacetValue {
-    id: string;
-    name: string;
-    facet: { code: string; name: string };
-}
-
-export interface FacetGroup {
-    code: string;
-    name: string;
-    values: { id: string; code: string; name: string; count: number }[];
-}
+export type { FacetGroup, FacetValue } from 'shared';
 
 export interface ProductItem {
     id: string;
@@ -67,11 +70,6 @@ interface EsSearchItem {
     customerPrice: number | null;
     compareAtPrice: number | null;
     discountTiers: DiscountTierVM[];
-}
-
-interface EsFacetValueResult {
-    facetValue: FacetValue;
-    count: number;
 }
 
 interface SearchResult {
@@ -134,43 +132,6 @@ const FACETS_QUERY = `
         }
     }
 `;
-
-// Values from the same facet group → OR (Castrol OR Lukoil)
-// Values from different facet groups → AND (brand=Castrol AND category=Engine Oils)
-function buildFacetValueFilters(ids: string[], facetGroups: FacetGroup[]): { or: string[] }[] {
-    if (ids.length === 0) return [];
-    const idSet = new Set(ids);
-    const groups: string[][] = [];
-    const covered = new Set<string>();
-    for (const group of facetGroups) {
-        const groupIds = group.values.map(v => v.id).filter(id => idSet.has(id));
-        if (groupIds.length > 0) {
-            groups.push(groupIds);
-            groupIds.forEach(id => covered.add(id));
-        }
-    }
-    const uncovered = ids.filter(id => !covered.has(id));
-    if (uncovered.length > 0) groups.push(uncovered);
-    return groups.map(g => ({ or: g }));
-}
-
-function buildFacetGroups(facetValues: EsFacetValueResult[]): FacetGroup[] {
-    const groupMap = new Map<string, FacetGroup>();
-    for (const { facetValue, count } of facetValues) {
-        const { code, name } = facetValue.facet;
-        if (!groupMap.has(code)) groupMap.set(code, { code, name, values: [] });
-        groupMap.get(code)!.values.push({
-            id: facetValue.id,
-            code: facetValue.code,
-            name: facetValue.name,
-            count,
-        });
-    }
-    return [...groupMap.values()].map(g => ({
-        ...g,
-        values: g.values.sort((a, b) => a.name.localeCompare(b.name)),
-    }));
-}
 
 function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): ProductItem[] {
     const facetMap = new Map<string, FacetValue>();

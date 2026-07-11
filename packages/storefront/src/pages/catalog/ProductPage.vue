@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { toast } from '@mivend/ui-kit';
+import { toast, MvProductGallery, MvProductMainCards } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
 import { discountAddToCartHint } from '../../utils/discountMessages';
 import { shopApi } from '../../api/client';
-import ProductGallery from './ProductGallery.vue';
 import ProductBuyPanel from './ProductBuyPanel.vue';
-import ProductMainCards from './ProductMainCards.vue';
 
 interface Variant {
   id: string;
@@ -112,12 +110,12 @@ onMounted(() => { fetchData(route.params.slug as string); });
       />
 
       <div class="product-page__layout">
-        <ProductGallery
+        <MvProductGallery
           class="product-page__gallery"
           :product-name="product.name"
         />
 
-        <ProductMainCards
+        <MvProductMainCards
           :name="product.name"
           :sku="variant?.sku ?? ''"
           :description="product.description"
@@ -125,6 +123,7 @@ onMounted(() => { fetchData(route.params.slug as string); });
           :category="category"
           :stock-variant-label="stockVariantLabel"
           :related="related"
+          :show-related-prices="authStore.isLoggedIn"
         />
 
         <ProductBuyPanel

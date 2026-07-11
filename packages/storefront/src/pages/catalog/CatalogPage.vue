@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useProductList, type FilterState } from '../../composables/useProductList';
-import CatalogFacets from './CatalogFacets.vue';
+import { MvCatalogFacets } from '@mivend/ui-kit';
 import ProductListView from '../../components/ProductListView.vue';
 
 const route = useRoute();
@@ -105,7 +105,7 @@ onMounted(load);
 <template>
     <main class="catalog-page">
         <div class="catalog-page__inner">
-            <CatalogFacets
+            <MvCatalogFacets
                 :facet-groups="facetGroups"
                 :in-stock-only="filters.inStock"
                 :selected-facet-values="selectedFacetValues"
