@@ -122,6 +122,32 @@ export default async function globalSetup(): Promise<void> {
     const productVariantId = variantsResult.data.productVariants.items[0]?.id;
     if (!productVariantId) throw new Error('Could not find product variant E2E-OIL-001');
 
+    // Every global-setup run creates a fresh confirmed order for this customer but never
+    // cancels the previous run's — stock the seed `stock` records reset is only stockOnHand,
+    // never stockAllocated (Vendure tracks that as derived from real order state, not directly
+    // settable), so allocated stock from old e2e orders accumulates run over run until
+    // addItemToOrder starts failing with InsufficientStockError. Cancelling prior orders here
+    // is the actual idempotent fix — it's the real Vendure mechanism that releases allocated
+    // stock, not a stock-table workaround.
+    const priorOrdersResult = await adminGql<{
+        customer: { orders: { items: { id: string; state: string }[] } } | null;
+    }>(
+        `query($id: ID!) { customer(id: $id) { orders(options: { take: 100 }) { items { id state } } } }`,
+        { id: customerId },
+        operatorToken,
+    );
+    const cancellableStates = new Set(['Cancelled']);
+    for (const priorOrder of priorOrdersResult.data.customer?.orders.items ?? []) {
+        if (cancellableStates.has(priorOrder.state)) continue;
+        await adminGql(
+            `mutation($input: CancelOrderInput!) {
+                cancelOrder(input: $input) { __typename }
+            }`,
+            { input: { orderId: priorOrder.id } },
+            operatorToken,
+        );
+    }
+
     const order = await createConfirmedOrder(operatorToken, customerId, productVariantId);
     fs.writeFileSync(path.join(AUTH_DIR, 'e2e-order.json'), JSON.stringify(order));
 

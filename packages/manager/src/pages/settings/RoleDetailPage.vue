@@ -31,6 +31,7 @@ const role = ref<RoleDetail | null>(null);
 const permissionCatalog = ref<PermissionInfo[]>([]);
 const loading = ref(true);
 const saving = ref(false);
+const loadError = ref('');
 
 const form = reactive({
     permissions: new Set<string>(),
@@ -53,6 +54,7 @@ function permissionDescription(name: string): string {
 async function load(): Promise<void> {
     if (notFound.value) return;
     loading.value = true;
+    loadError.value = '';
     saveResults.permissions = null;
     saveResults.scope = null;
     saveResults.credit = null;
@@ -71,6 +73,9 @@ async function load(): Promise<void> {
         );
         form.maxExtraDays = credit ? String(credit.maxExtraDays) : '';
         form.maxAmount = credit?.maxAmount != null ? String(credit.maxAmount) : '';
+    } catch (e) {
+        // Same cause as RolesListPage.vue's load() — surface it rather than leaving a blank page.
+        loadError.value = e instanceof Error ? e.message : 'Could not load this role';
     } finally {
         loading.value = false;
     }
@@ -125,6 +130,17 @@ async function save(): Promise<void> {
 
     <div v-else-if="notFound" class="role-detail__not-authorized">
         <h1>Role not found</h1>
+        <RouterLink to="/settings/roles">Back to roles</RouterLink>
+    </div>
+
+    <div v-else-if="!loading && loadError" class="role-detail__not-authorized">
+        <h1>Could not load this role</h1>
+        <MvNotice variant="error">{{ loadError }}</MvNotice>
+        <RouterLink to="/settings/roles">Back to roles</RouterLink>
+    </div>
+
+    <div v-else-if="!loading && !role" class="role-detail__not-authorized">
+        <h1>Role not visible to your account</h1>
         <RouterLink to="/settings/roles">Back to roles</RouterLink>
     </div>
 

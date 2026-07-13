@@ -103,6 +103,23 @@ const ROLES = [
             'ReadFloorPrice',
             'ApproveDiscountRequest',
             'ReadEntityHistory',
+            // Manages roles/permissions like portal-admin — see that role's comment for why
+            // this needs the full operational-permission union, not just ManageAccessControl:
+            // Vendure's RoleService hides any Role whose permission set isn't a full subset of
+            // the caller's own (privilege-escalation guard), so seeing/editing the other 5
+            // roles via Settings > Roles & Access requires holding everything any of them can do.
+            'ManageAccessControl',
+            'ReadAdministrator',
+            'UpdateAdministrator',
+            'CreateOrder',
+            'UpdateOrder',
+            'AdjustPriceWithinLimit',
+            'RequestPriceAdjustmentApproval',
+            'RequestDiscountGrantApproval',
+            'RequestCreditTermApproval',
+            'ApproveSecurityLimit',
+            'ManageApprovalWorkflows',
+            'ReassignCounterpartyManager',
         ],
         accessScopeConfig: { counterparty: 'all', order: 'all' },
     },

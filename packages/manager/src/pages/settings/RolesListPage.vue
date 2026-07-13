@@ -1,17 +1,26 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { MvPanel } from '@mivend/ui-kit';
+import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { fetchRoles, type RoleSummary } from '../../api/settings';
 
 const authStore = useAuthStore();
 const roles = ref<RoleSummary[]>([]);
 const loading = ref(true);
+const error = ref('');
 
 async function load(): Promise<void> {
     loading.value = true;
+    error.value = '';
     try {
         roles.value = await fetchRoles();
+    } catch (e) {
+        // Most common cause: the caller holds ManageAccessControl (so the nav link/page is
+        // visible) but not the full permission union every seeded role requires to be visible
+        // via Vendure's native `roles` query (RoleService.activeUserCanReadRole hides a Role
+        // entirely from anyone who doesn't hold its full permission set) — surface the real
+        // GraphQL error instead of silently rendering an empty list.
+        error.value = e instanceof Error ? e.message : 'Could not load roles';
     } finally {
         loading.value = false;
     }
@@ -30,8 +39,10 @@ onMounted(load);
         <div class="roles-list__breadcrumb">Workspace / Settings</div>
         <h1 class="roles-list__title">Roles & access</h1>
 
+        <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
+
         <MvPanel v-if="!loading" title="Roles">
-            <ul class="roles-list__items">
+            <ul v-if="roles.length" class="roles-list__items">
                 <li v-for="role in roles" :key="role.id">
                     <RouterLink :to="`/settings/roles/${role.code}`" class="roles-list__row">
                         <strong>{{ role.code }}</strong>
@@ -39,6 +50,7 @@ onMounted(load);
                     </RouterLink>
                 </li>
             </ul>
+            <p v-else-if="!error" class="roles-list__description">No roles visible to your account.</p>
         </MvPanel>
     </div>
 </template>

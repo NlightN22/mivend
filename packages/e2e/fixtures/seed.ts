@@ -187,6 +187,40 @@ export const seedRecords = [
         type: 'price' as const,
         data: { sku: 'E2E-AIR-001', priceTypeCode: 'WHOLESALE', price: 252 },
     },
+    // `product` records only set stockOnHand on first create (ErpImportService.product.handler.ts
+    // never touches it on update) — every order placed by e2e specs across repeated global-setup
+    // runs permanently drains it, eventually causing InsufficientStockError. `stock` records
+    // (StockHandler) update by SKU unconditionally, so re-running global-setup always resets
+    // these back to their intended fixture value — the idempotency guarantee every other fixture
+    // type here already has.
+    {
+        type: 'stock' as const,
+        data: { sku: 'E2E-OIL-001', stockOnHand: 100 },
+    },
+    {
+        type: 'stock' as const,
+        data: { sku: 'E2E-FLT-001', stockOnHand: 50 },
+    },
+    {
+        type: 'stock' as const,
+        data: { sku: 'E2E-BRK-001', stockOnHand: 30 },
+    },
+    {
+        type: 'stock' as const,
+        data: { sku: 'E2E-OIL-002', stockOnHand: 100 },
+    },
+    {
+        type: 'stock' as const,
+        data: { sku: 'E2E-BRK-002', stockOnHand: 30 },
+    },
+    {
+        type: 'stock' as const,
+        data: { sku: 'E2E-SPK-001', stockOnHand: 0 },
+    },
+    {
+        type: 'stock' as const,
+        data: { sku: 'E2E-AIR-001', stockOnHand: 75 },
+    },
     {
         type: 'discountRule' as const,
         data: {
