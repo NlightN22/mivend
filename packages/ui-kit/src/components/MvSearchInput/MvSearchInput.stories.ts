@@ -107,7 +107,7 @@ export const WithSuggestions: Story = {
             const value = ref('oil');
             const open = ref(true);
             const suggestions = SAMPLE_SUGGESTIONS;
-            function onSearch(v: string) {
+            function onSearch(v: string): void {
                 value.value = v;
                 open.value = false;
             }

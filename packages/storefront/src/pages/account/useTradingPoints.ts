@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import type { TradingPoint } from './TradingPointCard.vue';
 
@@ -37,7 +37,32 @@ function gql(
     }).then(r => r.json());
 }
 
-export function useTradingPoints() {
+export function useTradingPoints(): {
+    visiblePoints: Ref<TradingPoint[]>;
+    hiddenPoints: Ref<TradingPoint[]>;
+    showHidden: Ref<boolean>;
+    loading: Ref<boolean>;
+    addOpen: Ref<boolean>;
+    addSaving: Ref<boolean>;
+    addForm: Ref<TradingPointAddForm>;
+    loadPoints: () => Promise<void>;
+    handleSave: (
+        id: string,
+        data: {
+            name: string;
+            address: string;
+            contactName: string | null;
+            contactPhone: string | null;
+            workingHours: string | null;
+            deliveryComment: string | null;
+        },
+    ) => Promise<void>;
+    handleRemove: (id: string) => Promise<void>;
+    handleRestore: (id: string) => Promise<void>;
+    handleSetCurrent: (id: string) => Promise<void>;
+    openAdd: () => void;
+    submitAdd: () => Promise<void>;
+} {
     const authStore = useAuthStore();
 
     const visiblePoints = ref<TradingPoint[]>([]);

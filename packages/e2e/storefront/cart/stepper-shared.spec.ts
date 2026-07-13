@@ -61,7 +61,7 @@ interface StepperCtx {
 }
 
 function listCtx(page: Page): StepperCtx {
-    const stepper = () => page.locator(LIST_STEPPER);
+    const stepper = (): import('@playwright/test').Locator => page.locator(LIST_STEPPER);
     return {
         add: () => page.locator(LIST_ROW).getByRole('button', { name: LIST_ADD }).click(),
         stepper,
@@ -73,7 +73,8 @@ function listCtx(page: Page): StepperCtx {
 }
 
 function gridCtx(page: Page): StepperCtx {
-    const stepper = () => page.locator(CARD).locator(CARD_STEPPER);
+    const stepper = (): import('@playwright/test').Locator =>
+        page.locator(CARD).locator(CARD_STEPPER);
     return {
         add: () => page.locator(CARD).locator(CARD_ADD).click(),
         stepper,

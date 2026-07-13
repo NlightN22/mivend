@@ -186,7 +186,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     const sortKey = ref('stock');
     let currentSkip = 0;
 
-    function buildPriceRange() {
+    function buildPriceRange(): { min: number; max: number } | undefined {
         const priceMin = filters?.value.priceMin;
         const priceMax = filters?.value.priceMax;
         if (priceMin == null && priceMax == null) return undefined;

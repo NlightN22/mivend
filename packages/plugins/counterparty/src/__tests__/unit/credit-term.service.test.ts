@@ -7,7 +7,7 @@ import { CreditTermService } from '../../credit-term.service';
 import { CreditTermGateService } from '../../credit-term-gate.service';
 import { CounterpartyService } from '../../counterparty.service';
 
-function mockCtx(permissions: string[]) {
+function mockCtx(permissions: string[]): RequestContext {
     return {
         userHasPermissions: (p: string[]) => p.some(x => permissions.includes(x)),
     } as unknown as RequestContext;

@@ -4,7 +4,7 @@ import type { ListQueryBuilder, RequestContext } from '@vendure/core';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
 import { OrderVisibilityService } from '../../order-visibility.service';
 
-function mockQueryBuilder() {
+function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
     const qb: Record<string, ReturnType<typeof vi.fn>> = { alias: vi.fn() as unknown as never };
     (qb as unknown as { alias: string }).alias = 'order';
     qb.leftJoinAndSelect = vi.fn(() => qb);

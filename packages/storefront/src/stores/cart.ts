@@ -150,23 +150,24 @@ export const useCartStore = defineStore('cart', () => {
             // caller can show an accurate discount toast — not a pre-add guess from
             // catalog-level flat compareAtPrice, which can't see a tier this add just
             // unlocked (or a tier this add crosses out of, once other lines shrink).
-            const addToCart = () =>
-                shopApi<{
-                    addItemToOrder: MutationResult & {
-                        lines?: {
+            type AddToCartResult = {
+                addItemToOrder: MutationResult & {
+                    lines?: {
+                        id: string;
+                        quantity: number;
+                        unitPrice: number;
+                        compareAtPrice: number | null;
+                        productVariant: {
                             id: string;
-                            quantity: number;
-                            unitPrice: number;
-                            compareAtPrice: number | null;
-                            productVariant: {
-                                id: string;
-                                product: {
-                                    facetValues: { name: string; facet: { code: string } }[];
-                                };
+                            product: {
+                                facetValues: { name: string; facet: { code: string } }[];
                             };
-                        }[];
-                    };
-                }>(
+                        };
+                    }[];
+                };
+            };
+            const addToCart = (): Promise<AddToCartResult> =>
+                shopApi<AddToCartResult>(
                     `
                 mutation AddToCart($variantId: ID!, $qty: Int!) {
                     addItemToOrder(productVariantId: $variantId, quantity: $qty) {

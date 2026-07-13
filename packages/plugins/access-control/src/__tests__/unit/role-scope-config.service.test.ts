@@ -15,13 +15,13 @@ function scopeRow(roleCode: string, config: Record<string, string> | string): Ro
     } as RoleAccessScope;
 }
 
-function createMockRepo() {
+function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
     return {
         find: vi.fn(),
         findOne: vi.fn(),
         create: vi.fn((x: unknown) => x),
         save: vi.fn(async (x: unknown) => x),
-    };
+    } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 }
 
 describe('RoleScopeConfigService', () => {

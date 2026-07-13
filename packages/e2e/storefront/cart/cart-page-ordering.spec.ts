@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 
 const BADGE = '.app-header__cart-badge';
 const CART_ITEM = '.cart-item';
@@ -40,7 +40,7 @@ async function openCart(page: Page): Promise<void> {
     await expect(page.locator(CART_ITEM).first()).toBeVisible({ timeout: 10000 });
 }
 
-function firstItem(page: Page) {
+function firstItem(page: Page): Locator {
     return page.locator(CART_ITEM).first();
 }
 

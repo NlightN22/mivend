@@ -72,7 +72,7 @@ beforeEach(async () => {
     mockAccessScopeService.resolveCounterpartyScope.mockReset();
 });
 
-async function seedCounterparties() {
+async function seedCounterparties(): Promise<void> {
     await dataSource.getRepository(TestCounterparty).save([
         {
             erpId: 'cp-own-mine',

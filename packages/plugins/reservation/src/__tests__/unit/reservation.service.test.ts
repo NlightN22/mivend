@@ -9,7 +9,13 @@ import type { ReservationExtensionLimitService } from '../../reservation-extensi
 const mockAdministratorService = {} as unknown as AdministratorService;
 const mockExtensionLimitService = {} as unknown as ReservationExtensionLimitService;
 
-function createMockReservationRepo() {
+function createMockReservationRepo(): {
+    count: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    save: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    find: ReturnType<typeof vi.fn>;
+} {
     return {
         count: vi.fn(async () => 0),
         create: vi.fn((x: unknown) => x),
@@ -19,7 +25,7 @@ function createMockReservationRepo() {
     };
 }
 
-function createMockOrderRepo(order: unknown) {
+function createMockOrderRepo(order: unknown): { findOne: ReturnType<typeof vi.fn> } {
     return { findOne: vi.fn(async () => order) };
 }
 

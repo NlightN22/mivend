@@ -20,7 +20,20 @@ function defer<T>(): Deferred<T> {
     return { promise, resolve };
 }
 
-function makeSearchItem(sku: string) {
+function makeSearchItem(sku: string): {
+    productId: string;
+    productVariantId: string;
+    productName: string;
+    slug: string;
+    sku: string;
+    priceWithTax: { value: number };
+    currencyCode: string;
+    inStock: boolean;
+    facetValueIds: string[];
+    customerPrice: null;
+    compareAtPrice: null;
+    discountTiers: unknown[];
+} {
     return {
         productId: sku,
         productVariantId: sku,

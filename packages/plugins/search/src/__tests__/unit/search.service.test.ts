@@ -5,7 +5,7 @@ import type { PriceResolutionService, ResolvedPrice } from '@mivend/plugin-price
 
 const mockCtx = {} as RequestContext;
 
-function makePriceResolutionService(resolved: ResolvedPrice) {
+function makePriceResolutionService(resolved: ResolvedPrice): PriceResolutionService {
     return {
         resolve: vi.fn(async () => resolved),
     } as unknown as PriceResolutionService;

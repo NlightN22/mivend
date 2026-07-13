@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 
 const BADGE = '.app-header__cart-badge';
 const CARD = '.mv-product-card';
@@ -24,7 +24,7 @@ async function switchToGrid(page: Page): Promise<void> {
     await expect(page.locator(CARD).first()).toBeVisible({ timeout: 5000 });
 }
 
-function firstCard(page: Page) {
+function firstCard(page: Page): Locator {
     return page.locator(CARD).first();
 }
 

@@ -20,7 +20,7 @@ const steps = [
     },
 ];
 
-function mockCtx(hasPermission: boolean, activeUserId = 'user-1') {
+function mockCtx(hasPermission: boolean, activeUserId = 'user-1'): RequestContext {
     return {
         activeUserId,
         userHasPermissions: vi.fn(() => hasPermission),

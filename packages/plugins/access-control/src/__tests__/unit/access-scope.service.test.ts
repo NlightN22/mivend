@@ -4,7 +4,10 @@ import type { AdministratorService, RequestContext } from '@vendure/core';
 import { AccessScopeService } from '../../access-scope.service';
 import { RoleScopeConfigService } from '../../role-scope-config.service';
 
-function mockAdmin(id: string, customFields: Record<string, unknown> = {}) {
+function mockAdmin(
+    id: string,
+    customFields: Record<string, unknown> = {},
+): { id: string; customFields: Record<string, unknown>; user: { roles: { code: string }[] } } {
     return {
         id,
         customFields,

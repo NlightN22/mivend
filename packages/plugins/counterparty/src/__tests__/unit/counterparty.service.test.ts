@@ -133,7 +133,7 @@ describe('CounterpartyService', () => {
     });
 
     describe('findVisible', () => {
-        function mockQueryBuilder() {
+        function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
             const qb: Record<string, ReturnType<typeof vi.fn>> = {};
             qb.orderBy = vi.fn(() => qb);
             qb.where = vi.fn(() => qb);

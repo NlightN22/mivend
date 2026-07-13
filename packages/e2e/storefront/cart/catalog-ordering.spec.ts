@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 
 const ADD_BTN = '+ Add';
 const BADGE = '.app-header__cart-badge';
@@ -26,11 +26,11 @@ async function openCatalog(page: Page): Promise<void> {
     await expect(page.locator('.mv-product-row').first()).toBeVisible({ timeout: 10000 });
 }
 
-function firstRowStepper(page: Page) {
+function firstRowStepper(page: Page): Locator {
     return page.locator(FIRST_ROW).locator(STEPPER);
 }
 
-function firstRowAddBtn(page: Page) {
+function firstRowAddBtn(page: Page): Locator {
     return page.locator(FIRST_ROW).getByRole('button', { name: ADD_BTN });
 }
 

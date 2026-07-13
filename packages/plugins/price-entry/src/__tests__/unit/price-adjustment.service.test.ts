@@ -6,7 +6,7 @@ import type { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
 import { PriceAdjustmentService } from '../../price-adjustment.service';
 import { PriceAdjustmentGateService } from '../../price-adjustment-gate.service';
 
-function mockCtx(permissions: string[]) {
+function mockCtx(permissions: string[]): RequestContext {
     return {
         userHasPermissions: (p: string[]) => p.some(x => permissions.includes(x)),
     } as unknown as RequestContext;

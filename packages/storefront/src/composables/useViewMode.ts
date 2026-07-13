@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 
 type ViewMode = 'list' | 'grid';
 
@@ -13,8 +13,8 @@ function read(): ViewMode {
 // Module-level ref so all composable instances stay in sync within a session
 const viewMode = ref<ViewMode>(read());
 
-export function useViewMode() {
-    function setViewMode(mode: ViewMode) {
+export function useViewMode(): { viewMode: Ref<ViewMode>; setViewMode: (mode: ViewMode) => void } {
+    function setViewMode(mode: ViewMode): void {
         viewMode.value = mode;
         localStorage.setItem(STORAGE_KEY, mode);
     }

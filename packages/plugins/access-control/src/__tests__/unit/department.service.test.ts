@@ -3,13 +3,13 @@ import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { DepartmentService } from '../../department.service';
 
-function createMockRepo() {
+function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
     return {
         findOne: vi.fn(),
         create: vi.fn((x: unknown) => x),
         save: vi.fn(async (x: unknown) => x),
         find: vi.fn(async () => [] as unknown[]),
-    };
+    } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 }
 
 describe('DepartmentService', () => {

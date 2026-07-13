@@ -1,11 +1,15 @@
 import { toast } from '@mivend/ui-kit';
-import { useCartStore } from '../stores/cart';
+import { useCartStore, type CartLine } from '../stores/cart';
 import { discountAddToCartHint } from '../utils/discountMessages';
 
-export function useCartActions() {
+export function useCartActions(): {
+    cartLineFor: (variantId: string | undefined) => CartLine | null;
+    onAddToCart: (variantId: string | undefined, qty?: number) => Promise<void>;
+    onUpdateQty: (lineId: string, qty: number) => Promise<void>;
+} {
     const cartStore = useCartStore();
 
-    function cartLineFor(variantId: string | undefined) {
+    function cartLineFor(variantId: string | undefined): CartLine | null {
         if (!variantId) return null;
         // Exclude optimistic temp lines — they have no valid server lineId yet
         const line = cartStore.lines.find(l => l.productVariant.id === variantId) ?? null;

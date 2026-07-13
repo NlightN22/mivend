@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
     CollectionService,
+    Facet,
     FacetService,
+    FacetValue,
     FacetValueService,
     LanguageCode,
     RequestContext,
@@ -27,7 +29,7 @@ export class CategoryHandler {
         await this.ensureCollection(ctx, record, String(facetValue.id));
     }
 
-    private async ensureCategoryFacet(ctx: RequestContext) {
+    private async ensureCategoryFacet(ctx: RequestContext): Promise<Facet> {
         const existing = await this.facetService.findByCode(
             ctx,
             CATEGORY_FACET_CODE,
@@ -45,7 +47,7 @@ export class CategoryHandler {
         ctx: RequestContext,
         facet: { id: string | number },
         record: CategoryRecord,
-    ) {
+    ): Promise<FacetValue> {
         const all = await this.facetValueService.findByFacetId(ctx, facet.id);
         const existing = all.find(v => v.code === record.erpId);
 

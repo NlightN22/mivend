@@ -3,12 +3,12 @@ import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { CreditTermLimitService } from '../../credit-term-limit.service';
 
-function createMockRepo() {
+function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
     return {
         findOne: vi.fn(),
         create: vi.fn((x: unknown) => x),
         save: vi.fn(async (x: unknown) => x),
-    };
+    } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 }
 
 describe('CreditTermLimitService', () => {

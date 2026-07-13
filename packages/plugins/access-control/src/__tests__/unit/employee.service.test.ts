@@ -10,8 +10,11 @@ import type {
 
 import { EmployeeService } from '../../employee.service';
 
-function createMockAdministratorService() {
-    return { update: vi.fn(async (..._args: unknown[]) => ({})) };
+function createMockAdministratorService(): Record<string, ReturnType<typeof vi.fn>> {
+    return { update: vi.fn(async (..._args: unknown[]) => ({})) } as unknown as Record<
+        string,
+        ReturnType<typeof vi.fn>
+    >;
 }
 
 interface MockUserQueryBuilder {
@@ -28,12 +31,19 @@ function createUserQueryBuilder(): MockUserQueryBuilder {
     return qb as unknown as MockUserQueryBuilder;
 }
 
-function createMockRoleService() {
-    return { getSuperAdminRole: vi.fn(async () => ({ id: 'super-admin-role' }) as unknown) };
+function createMockRoleService(): Record<string, ReturnType<typeof vi.fn>> {
+    return {
+        getSuperAdminRole: vi.fn(async () => ({ id: 'super-admin-role' }) as unknown),
+    } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 }
 
-function createMockRequestContextService(systemCtx: unknown) {
-    return { create: vi.fn(async () => systemCtx) };
+function createMockRequestContextService(
+    systemCtx: unknown,
+): Record<string, ReturnType<typeof vi.fn>> {
+    return { create: vi.fn(async () => systemCtx) } as unknown as Record<
+        string,
+        ReturnType<typeof vi.fn>
+    >;
 }
 
 describe('EmployeeService', () => {

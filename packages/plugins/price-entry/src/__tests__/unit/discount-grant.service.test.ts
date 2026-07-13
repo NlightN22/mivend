@@ -6,7 +6,7 @@ import type { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
 import { DiscountGrantService } from '../../discount-grant.service';
 import { DiscountRuleService } from '../../discount-rule.service';
 
-function mockCtx(permissions: string[]) {
+function mockCtx(permissions: string[]): RequestContext {
     return {
         userHasPermissions: (p: string[]) => p.some(x => permissions.includes(x)),
     } as unknown as RequestContext;
