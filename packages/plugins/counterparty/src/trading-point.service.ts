@@ -112,19 +112,29 @@ export class TradingPointService {
             record.deliveryComment = patch.deliveryComment;
         }
         if (patch.contacts !== undefined) {
-            changedFields.contacts = {
-                from: record.contacts.length,
-                to: patch.contacts.length,
-            };
-            await cpRepo.delete({ tradingPoint: { id: record.id } });
-            record.contacts = patch.contacts.map(c =>
-                cpRepo.create({
-                    name: c.name,
-                    phone: c.phone ?? null,
-                    email: c.email ?? null,
-                    isPrimary: c.isPrimary ?? false,
-                }),
-            );
+            // Compare actual contact values, not just counts — the edit form always submits
+            // the full contacts array (even when the caller only touched the address), so a
+            // presence check alone produced a spurious "contacts: 0 → 0" version entry on every
+            // save and an unnecessary delete+recreate. Logging real values (not counts) is also
+            // what makes it possible to tell who actually put in a wrong phone/name, not just
+            // that "something" about contacts changed.
+            const before = record.contacts.map(c => ({
+                name: c.name,
+                phone: c.phone,
+                email: c.email,
+                isPrimary: c.isPrimary,
+            }));
+            const after = patch.contacts.map(c => ({
+                name: c.name,
+                phone: c.phone ?? null,
+                email: c.email ?? null,
+                isPrimary: c.isPrimary ?? false,
+            }));
+            if (JSON.stringify(before) !== JSON.stringify(after)) {
+                changedFields.contacts = { from: before, to: after };
+                await cpRepo.delete({ tradingPoint: { id: record.id } });
+                record.contacts = after.map(c => cpRepo.create(c));
+            }
         }
 
         const saved = await repo.save(record);

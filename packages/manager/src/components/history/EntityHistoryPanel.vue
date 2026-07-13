@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, ref } from 'vue';
 import type { Column } from 'element-plus';
-import { MvFilterBar, MvFilterField, MvInput, MvSelect, MvStatusBadge, MvTable, MvTooltip } from '@mivend/ui-kit';
+import { MvFilterBar, MvFilterField, MvInput, MvModal, MvSelect, MvStatusBadge, MvTable } from '@mivend/ui-kit';
 import type { TableRow } from '@mivend/ui-kit';
 import type { EntityVersionRow } from '../../api/history';
 import type { ManagerOption } from '../../api/orders';
@@ -63,14 +63,40 @@ function summary(row: EntityVersionRow): string {
     return fields.length ? fields.join(', ') : '—';
 }
 
-function fullDiffText(row: EntityVersionRow): string {
-    const fields = parseChangedFields(row);
-    const lines = Object.entries(fields).map(
-        ([field, diff]) => `${field}: ${String(diff.from ?? '—')} → ${String(diff.to ?? '—')}`,
-    );
-    if (row.comment) lines.push(`Comment: ${row.comment}`);
-    return lines.join('\n') || 'No field-level details';
+// Contacts are logged as full { name, phone, email, isPrimary } snapshots (see
+// TradingPointService.updateDetails) — render them readably instead of dumping raw JSON, so a
+// reviewer can actually spot "who typed the wrong phone number" from the modal below.
+function formatDiffValue(field: string, value: unknown): string {
+    if (field === 'contacts' && Array.isArray(value)) {
+        if (value.length === 0) return '(none)';
+        return value
+            .map((c: { name?: string; phone?: string | null }) =>
+                c.phone ? `${c.name} (${c.phone})` : String(c.name),
+            )
+            .join('; ');
+    }
+    if (value === null || value === undefined || value === '') return '(empty)';
+    return String(value);
 }
+
+interface DiffLine {
+    field: string;
+    from: string;
+    to: string;
+}
+
+function diffLines(row: EntityVersionRow): DiffLine[] {
+    const fields = parseChangedFields(row);
+    return Object.entries(fields).map(([field, diff]) => ({
+        field,
+        from: formatDiffValue(field, diff.from),
+        to: formatDiffValue(field, diff.to),
+    }));
+}
+
+// Row selected for the detail modal — clicking a row (not just hovering) is what makes the
+// diff usable for scanning many entries in a row when hunting for who broke what.
+const selectedRow = ref<EntityVersionRow | null>(null);
 
 // Filters
 const search = ref('');
@@ -175,17 +201,8 @@ const columns = computed<Column<TableRow>[]>(() => [
         title: 'Changes',
         dataKey: 'summary',
         flexGrow: 1,
-        cellRenderer: ({ rowData }) => {
-            const row = rowData as unknown as TableRow & { _fullDiff: string; summary: string };
-            return h(
-                MvTooltip,
-                {},
-                {
-                    default: () => h('pre', { class: 'entity-history__diff' }, row._fullDiff),
-                    trigger: () => h('span', { class: 'entity-history__summary' }, row.summary),
-                },
-            );
-        },
+        cellRenderer: ({ cellData }) =>
+            h('span', { class: 'entity-history__summary' }, cellData as unknown as string),
     },
 ] as Column<TableRow>[]);
 
@@ -196,10 +213,13 @@ const rows = computed<TableRow[]>(() =>
         entityName: entityLabel(row.entityName),
         adminName: adminName(row.administratorId),
         summary: summary(row),
-        _fullDiff: fullDiffText(row),
         _key: row.id,
     })),
 );
+
+function handleRowClick({ rowData }: { rowData: TableRow }): void {
+    selectedRow.value = props.history.find(row => row.id === rowData._key) ?? null;
+}
 </script>
 
 <template>
@@ -222,14 +242,53 @@ const rows = computed<TableRow[]>(() =>
             </MvFilterField>
         </MvFilterBar>
 
-        <MvTable
-            v-if="history.length"
-            :columns="columns"
-            :data="rows"
-            :height="Math.min(Math.max(rows.length, 1) * 52 + 40, 520)"
-            empty-text="No changes match these filters"
-        />
+        <div v-if="history.length" class="entity-history__table">
+            <MvTable
+                :columns="columns"
+                :data="rows"
+                :height="Math.min(Math.max(rows.length, 1) * 52 + 40, 520)"
+                empty-text="No changes match these filters"
+                @row-click="handleRowClick"
+            />
+        </div>
         <p v-else class="entity-history__empty">No changes recorded yet</p>
+
+        <MvModal v-if="selectedRow" title="Change details" @close="selectedRow = null">
+            <div class="entity-history__detail">
+                <dl class="entity-history__detail-meta">
+                    <dt>When</dt>
+                    <dd>{{ new Date(selectedRow.createdAt).toLocaleString('en-US') }}</dd>
+                    <dt>Action</dt>
+                    <dd>{{ ACTION_LABEL[selectedRow.action] ?? selectedRow.action }}</dd>
+                    <dt>Object</dt>
+                    <dd>{{ entityLabel(selectedRow.entityName) }}</dd>
+                    <dt>Changed by</dt>
+                    <dd>{{ adminName(selectedRow.administratorId) }}</dd>
+                </dl>
+
+                <table v-if="diffLines(selectedRow).length" class="entity-history__diff-table">
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>From</th>
+                            <th>To</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="line in diffLines(selectedRow)" :key="line.field">
+                            <td>{{ line.field }}</td>
+                            <td>{{ line.from }}</td>
+                            <td>{{ line.to }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p v-else class="entity-history__no-diff">No field-level details for this entry.</p>
+
+                <p v-if="selectedRow.comment" class="entity-history__comment">
+                    Comment: {{ selectedRow.comment }}
+                </p>
+            </div>
+        </MvModal>
     </div>
 </template>
 
@@ -245,6 +304,58 @@ const rows = computed<TableRow[]>(() =>
     font-size: 13px;
     padding: 10px 0;
 }
+
+.entity-history__detail {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.entity-history__detail-meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    margin: 0;
+    font-size: 13px;
+}
+
+.entity-history__detail-meta dt {
+    color: var(--el-text-color-secondary, #6b7280);
+    font-weight: 700;
+}
+
+.entity-history__detail-meta dd {
+    margin: 0;
+}
+
+.entity-history__diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.entity-history__diff-table th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--el-text-color-secondary, #6b7280);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+}
+
+.entity-history__diff-table td {
+    padding: 8px;
+    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    vertical-align: top;
+}
+
+.entity-history__no-diff,
+.entity-history__comment {
+    margin: 0;
+    font-size: 13px;
+    color: var(--el-text-color-secondary, #6b7280);
+}
 </style>
 
 <style>
@@ -254,13 +365,12 @@ const rows = computed<TableRow[]>(() =>
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    cursor: help;
 }
 
-.entity-history__diff {
-    margin: 0;
-    font-family: inherit;
-    font-size: 12px;
-    white-space: pre-wrap;
+/* The whole row opens the detail modal on click (see handleRowClick) — the pointer cursor is
+   the discoverability cue, replacing the old hover-only tooltip. Scoped to this widget's own
+   wrapper (not .mv-table generally) so other MvTable usages elsewhere are unaffected. */
+.entity-history__table .el-table-v2__row {
+    cursor: pointer;
 }
 </style>
