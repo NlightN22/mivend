@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { fetchRoles, type RoleSummary } from '../../api/settings';
+import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 
 const authStore = useAuthStore();
 const roles = ref<RoleSummary[]>([]);
@@ -38,6 +39,7 @@ onMounted(load);
     <div v-else class="roles-list">
         <div class="roles-list__breadcrumb">Workspace / Settings</div>
         <h1 class="roles-list__title">Roles & access</h1>
+        <SettingsSubNav active="roles" />
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 

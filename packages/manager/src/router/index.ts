@@ -95,6 +95,12 @@ export const router = createRouter({
                     component: () => import('../pages/settings/RoleDetailPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'settings/team',
+                    name: 'settings-team',
+                    component: () => import('../pages/settings/TeamPage.vue'),
+                    meta: { requiresAuth: true },
+                },
                 ...[
                     { path: 'customers/new', title: 'New client' },
                     { path: 'documents', title: 'Documents' },

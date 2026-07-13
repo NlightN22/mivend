@@ -31,6 +31,14 @@ export interface PermissionInfo {
     description: string;
 }
 
+export interface TeamMember {
+    id: string;
+    firstName: string;
+    lastName: string;
+    emailAddress: string;
+    roleCode: string | null;
+}
+
 // The 6 manager-portal roles this app manages — distinct from Vendure's own built-in
 // `__customer_role__`/`__super_admin_role__`, which the native `roles` query also returns and
 // which must never be editable from here. Single source of truth for both the role-list query
@@ -177,6 +185,51 @@ export async function setCreditTermLimit(
             setCreditTermLimit(roleCode: $code, maxExtraDays: $maxExtraDays, maxAmount: $maxAmount) { roleCode }
         }`,
         { code, maxExtraDays, maxAmount },
+    );
+}
+
+// Who holds which of the 6 seeded roles — the other half of Roles & Access ("what a role can
+// do" vs "who has it"). Excludes the bootstrap superadmin account (__super_admin_role__) and
+// any administrator not on one of KNOWN_ROLE_CODES, same curation rationale as fetchRoles().
+export async function fetchTeamMembers(): Promise<TeamMember[]> {
+    const result = await adminApi<{
+        administrators: {
+            items: {
+                id: string;
+                firstName: string;
+                lastName: string;
+                emailAddress: string;
+                user: { roles: { code: string }[] };
+            }[];
+        };
+    }>(
+        `query {
+            administrators(options: { take: 200 }) {
+                items { id firstName lastName emailAddress user { roles { code } } }
+            }
+        }`,
+    );
+    const known = new Set<string>(KNOWN_ROLE_CODES);
+    return result.administrators.items
+        .map(a => ({
+            id: a.id,
+            firstName: a.firstName,
+            lastName: a.lastName,
+            emailAddress: a.emailAddress,
+            roleCode: a.user.roles[0]?.code ?? null,
+        }))
+        .filter(m => m.roleCode && known.has(m.roleCode));
+}
+
+export async function updateAdministratorRole(
+    administratorId: string,
+    roleId: string,
+): Promise<void> {
+    await adminApi(
+        `mutation($id: ID!, $roleIds: [ID!]!) {
+            updateAdministrator(input: { id: $id, roleIds: $roleIds }) { id }
+        }`,
+        { id: administratorId, roleIds: [roleId] },
     );
 }
 
