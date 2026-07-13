@@ -1,5 +1,5 @@
 {
-    "name": "@mivend/plugin-counterparty",
+    "name": "@mivend/plugin-versioning",
     "version": "0.0.1",
     "private": true,
     "license": "GPL-3.0-or-later",
@@ -7,8 +7,7 @@
     "types": "./dist/index.d.ts",
     "scripts": {
         "build": "tsc",
-        "dev": "tsc --watch",
-        "test:integration": "vitest run --config vitest.integration.config.ts"
+        "dev": "tsc --watch"
     },
     "peerDependencies": {
         "@vendure/core": "^3.0.0"
@@ -20,14 +19,10 @@
         "@vendure/core": "^3.0.0",
         "graphql": "^16.0.0",
         "typeorm": "^0.3.0",
-        "typescript": "^5.4.0",
-        "vitest": "^4.1.9"
+        "typescript": "^5.4.0"
     },
     "dependencies": {
-        "@mivend/plugin-customer-pricing": "workspace:*",
-        "@mivend/plugin-access-control": "workspace:*",
-        "@mivend/plugin-approval-workflow": "workspace:*",
-        "@mivend/plugin-versioning": "workspace:*",
-        "graphql-tag": "^2.12.6"
+        "graphql-tag": "^2.12.6",
+        "@mivend/plugin-access-control": "workspace:*"
     }
 }

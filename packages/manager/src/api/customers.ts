@@ -11,7 +11,10 @@ export interface TradingPointInfo {
     id: string;
     name: string;
     address: string;
+    workingHours: string | null;
+    deliveryComment: string | null;
     isActive: boolean;
+    contacts: ContactPersonInfo[];
 }
 
 export interface CustomerListItem {
@@ -38,7 +41,7 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
             priceType: string;
             assignedManagerId: string | null;
             branchId: string | null;
-            tradingPoints: (TradingPointInfo & { contacts: ContactPersonInfo[] })[];
+            tradingPoints: TradingPointInfo[];
         }[];
     }>(
         `query {
@@ -51,7 +54,15 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
                 priceType
                 assignedManagerId
                 branchId
-                tradingPoints { id name address isActive contacts { name phone email isPrimary } }
+                tradingPoints {
+                    id
+                    name
+                    address
+                    workingHours
+                    deliveryComment
+                    isActive
+                    contacts { name phone email isPrimary }
+                }
             }
         }`,
     );
@@ -65,12 +76,7 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
         assignedManagerId: c.assignedManagerId,
         branchId: c.branchId,
         contacts: c.tradingPoints.flatMap(tp => tp.contacts),
-        tradingPoints: c.tradingPoints.map(tp => ({
-            id: tp.id,
-            name: tp.name,
-            address: tp.address,
-            isActive: tp.isActive,
-        })),
+        tradingPoints: c.tradingPoints,
     }));
 }
 
@@ -91,6 +97,45 @@ export async function reassignCounterpartyManager(
             reassignCounterpartyManager(counterpartyId: $counterpartyId, administratorId: $administratorId) { id }
         }`,
         { counterpartyId, administratorId },
+    );
+}
+
+export interface TradingPointDetailsPatch {
+    name?: string;
+    address?: string;
+    workingHours?: string | null;
+    deliveryComment?: string | null;
+    contacts?: {
+        name: string;
+        phone?: string | null;
+        email?: string | null;
+        isPrimary?: boolean;
+    }[];
+}
+
+// Staff patch, distinct from ERP sync — gated on "can see this counterparty" (see
+// TradingPointAdminResolver.updateTradingPointDetails). Every successful call is recorded by
+// VersioningService for the customer's History tab.
+export async function updateTradingPointDetails(
+    id: string,
+    input: TradingPointDetailsPatch,
+): Promise<void> {
+    await adminApi(
+        `mutation($id: ID!, $input: TradingPointDetailsInput!) {
+            updateTradingPointDetails(id: $id, input: $input) { id }
+        }`,
+        { id, input },
+    );
+}
+
+// One-click reactivate/deactivate — sets both isActive and customerStatus together (see
+// TradingPointService.setActive).
+export async function setTradingPointActive(id: string, isActive: boolean): Promise<void> {
+    await adminApi(
+        `mutation($id: ID!, $isActive: Boolean!) {
+            setTradingPointActive(id: $id, isActive: $isActive) { id }
+        }`,
+        { id, isActive },
     );
 }
 

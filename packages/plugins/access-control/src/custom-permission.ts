@@ -58,4 +58,9 @@ export const CustomPermission = {
         description:
             "Change a counterparty's assignedManagerId — department-head only within their own department, portal-admin unrestricted (see manager-portal-concept.md §3.3)",
     }),
+    ReadEntityHistory: new PermissionDefinition({
+        name: 'ReadEntityHistory',
+        description:
+            'Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves',
+    }),
 } as const;

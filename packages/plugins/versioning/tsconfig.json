@@ -6,10 +6,5 @@
         "rootDir": "."
     },
     "include": ["src/**/*", "index.ts"],
-    "references": [
-        { "path": "../customer-pricing" },
-        { "path": "../access-control" },
-        { "path": "../approval-workflow" },
-        { "path": "../versioning" }
-    ]
+    "references": [{ "path": "../access-control" }]
 }

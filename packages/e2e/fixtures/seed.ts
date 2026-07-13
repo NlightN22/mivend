@@ -271,4 +271,15 @@ export const seedRecords = [
             isActive: true,
         },
     },
+    // Deliberately inactive — the Reactivate-flow e2e positive case (customers.spec.ts).
+    {
+        type: 'tradingPoint' as const,
+        data: {
+            erpId: 'e2e-tp-004',
+            counterpartyErpId: E2E_COUNTERPARTY_ID,
+            name: 'E2E Inactive Point',
+            address: 'Closed Ave 9',
+            isActive: false,
+        },
+    },
 ];

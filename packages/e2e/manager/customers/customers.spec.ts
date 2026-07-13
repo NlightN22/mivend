@@ -9,6 +9,39 @@ async function openE2eCustomerDetail(page: import('@playwright/test').Page): Pro
     await expect(page).toHaveURL(/\/customers\/.+/);
 }
 
+// page.request shares the browser context's session cookie (manager portal's admin API client
+// uses credentials:'include', not a bearer token — see api/client.ts), so this hits the real
+// admin-api as the currently-logged-in user, authenticated exactly like the page's own fetches.
+async function adminApiViaPage<T>(
+    page: import('@playwright/test').Page,
+    query: string,
+    variables?: Record<string, unknown>,
+): Promise<T> {
+    const res = await page.request.post('/admin-api', { data: { query, variables } });
+    const json = (await res.json()) as { data: T; errors?: { message: string }[] };
+    if (json.errors?.length) throw new Error(json.errors.map(e => e.message).join('; '));
+    return json.data;
+}
+
+// This spec file runs against 3 role-based projects sharing the same backend — force the
+// trading point back to isActive:false before the reactivate test so its assertions don't
+// depend on which project happens to run first (see also global-setup.ts's idempotency guard
+// for the same "shared backend across projects" issue with discount grants).
+async function forceInactiveTradingPoint(page: import('@playwright/test').Page): Promise<void> {
+    const data = await adminApiViaPage<{
+        counterparties: { tradingPoints: { id: string; erpId: string }[] }[];
+    }>(page, `query { counterparties { tradingPoints { id erpId } } }`);
+    const tp = data.counterparties
+        .flatMap(c => c.tradingPoints)
+        .find(t => t.erpId === 'e2e-tp-004');
+    if (!tp) throw new Error('e2e-tp-004 not found');
+    await adminApiViaPage(
+        page,
+        `mutation($id: ID!) { setTradingPointActive(id: $id, isActive: false) { id } }`,
+        { id: tp.id },
+    );
+}
+
 test('customers page shows the client list with company meta and KPIs', async ({ page }) => {
     await page.goto('/customers');
     await expect(page.getByText('Client list')).toBeVisible({ timeout: 15000 });
@@ -92,4 +125,167 @@ test('customer detail Documents tab shows the customer document list', async ({ 
     // assert on the tab rendering real rows rather than a specific count, which would make this
     // test brittle against unrelated seed changes.
     await expect(page.getByText('contract').first()).toBeVisible({ timeout: 15000 });
+});
+
+test('editing a trading point via the real updateTradingPointDetails mutation updates the address (positive)', async ({
+    page,
+}) => {
+    const newAddress = `Edited Street ${Date.now()}`;
+    await openE2eCustomerDetail(page);
+    await page.waitForLoadState('networkidle');
+
+    const row = page.locator('li', { hasText: 'E2E Trading Point' });
+    await row.getByRole('button', { name: 'Edit' }).click();
+    const addressInput = page.getByRole('dialog').getByRole('textbox').nth(1);
+    await addressInput.fill(newAddress);
+    await page.getByRole('button', { name: 'Save changes' }).click();
+
+    await expect(page.getByText(newAddress)).toBeVisible({ timeout: 15000 });
+});
+
+test('reactivating the seeded inactive trading point flips its badge to Active (positive)', async ({
+    page,
+}) => {
+    await forceInactiveTradingPoint(page);
+    await openE2eCustomerDetail(page);
+    await page.waitForLoadState('networkidle');
+
+    const row = page.locator('li', { hasText: 'E2E Inactive Point' });
+    await expect(row.getByText('Inactive', { exact: true })).toBeVisible({ timeout: 15000 });
+    await row.getByRole('button', { name: 'Reactivate' }).click();
+
+    await expect(row.getByText('Active', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(row.getByRole('button', { name: 'Reactivate' })).toHaveCount(0);
+});
+
+// CustomPermission.ReadEntityHistory is leadership-only (department-head/general-director/
+// security-officer/portal-admin) — see infrastructure/scripts/seed-access-roles.mjs. Only
+// manager-department-head is pre-authenticated among this spec's three projects (see
+// playwright.config.ts), so the positive case runs there and the negative case on the other two.
+test('History tab is visible for department-head and lists the edit/reactivate entries (positive)', async ({
+    page,
+}, testInfo) => {
+    test.skip(testInfo.project.name !== 'manager-department-head', 'Leadership-only feature');
+
+    await openE2eCustomerDetail(page);
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('button', { name: 'History' }).click();
+    await expect(page.getByText(/Updated — TradingPoint/).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Reactivated — TradingPoint/).first()).toBeVisible({
+        timeout: 15000,
+    });
+});
+
+test('History tab is absent for non-leadership roles (negative)', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === 'manager-department-head', 'Covered by the positive case');
+
+    await openE2eCustomerDetail(page);
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByRole('button', { name: 'History' })).toHaveCount(0);
+});
+
+// Counterparty-level edits (CounterpartyService.reassignManager) must also produce
+// EntityVersion rows — the History tab already fetches entityVersions('Counterparty', id),
+// but reassignManager only started calling VersioningService.recordChange recently, so this is
+// its own positive/negative pair rather than folded into the TradingPoint History test above.
+// Only department-head holds both ReassignCounterpartyManager and ReadEntityHistory, so both
+// cases run there.
+test('reassigning the counterparty manager records a Counterparty version entry (positive)', async ({
+    page,
+}, testInfo) => {
+    test.skip(
+        testInfo.project.name !== 'manager-department-head',
+        'Needs ReassignCounterpartyManager + ReadEntityHistory',
+    );
+
+    const cpData = await adminApiViaPage<{
+        counterparties: { id: string; erpId: string; assignedManagerId: string | null }[];
+    }>(page, `query { counterparties { id erpId assignedManagerId } }`);
+    const counterparty = cpData.counterparties.find(c => c.erpId === 'e2e-cnt-001');
+    if (!counterparty) throw new Error('e2e-cnt-001 not found');
+    const originalManagerId = counterparty.assignedManagerId;
+
+    const me = await adminApiViaPage<{ activeAdministrator: { id: string } }>(
+        page,
+        `query { activeAdministrator { id } }`,
+    );
+
+    const before = await adminApiViaPage<{ entityVersions: { id: string }[] }>(
+        page,
+        `query($entityId: ID!) { entityVersions(entityName: "Counterparty", entityId: $entityId) { id } }`,
+        { entityId: counterparty.id },
+    );
+
+    await adminApiViaPage(
+        page,
+        `mutation($cid: ID!, $aid: ID!) { reassignCounterpartyManager(counterpartyId: $cid, administratorId: $aid) { id } }`,
+        { cid: counterparty.id, aid: me.activeAdministrator.id },
+    );
+
+    try {
+        const after = await adminApiViaPage<{ entityVersions: { id: string }[] }>(
+            page,
+            `query($entityId: ID!) { entityVersions(entityName: "Counterparty", entityId: $entityId) { id } }`,
+            { entityId: counterparty.id },
+        );
+        expect(after.entityVersions.length).toBe(before.entityVersions.length + 1);
+
+        await openE2eCustomerDetail(page);
+        await page.waitForLoadState('networkidle');
+        await page.getByRole('button', { name: 'History' }).click();
+        await expect(page.getByText(/Updated — Counterparty/).first()).toBeVisible({
+            timeout: 15000,
+        });
+    } finally {
+        // Restore so re-runs (and the "own" scope e2e fixtures elsewhere) see a stable assignee.
+        if (originalManagerId) {
+            await adminApiViaPage(
+                page,
+                `mutation($cid: ID!, $aid: ID!) { reassignCounterpartyManager(counterpartyId: $cid, administratorId: $aid) { id } }`,
+                { cid: counterparty.id, aid: originalManagerId },
+            );
+        }
+    }
+});
+
+test('a rejected out-of-department reassignment records no Counterparty version entry (negative)', async ({
+    page,
+}, testInfo) => {
+    test.skip(
+        testInfo.project.name !== 'manager-department-head',
+        'Needs ReassignCounterpartyManager + ReadEntityHistory',
+    );
+
+    const cpData = await adminApiViaPage<{ counterparties: { id: string; erpId: string }[] }>(
+        page,
+        `query { counterparties { id erpId } }`,
+    );
+    const counterparty = cpData.counterparties.find(c => c.erpId === 'e2e-cnt-001');
+    if (!counterparty) throw new Error('e2e-cnt-001 not found');
+
+    const before = await adminApiViaPage<{ entityVersions: { id: string }[] }>(
+        page,
+        `query($entityId: ID!) { entityVersions(entityName: "Counterparty", entityId: $entityId) { id } }`,
+        { entityId: counterparty.id },
+    );
+
+    // "999999" resolves to no administrator, so CounterpartyService.reassignManager's
+    // department-scope check (target must share the caller's department) always rejects it —
+    // no need to seed a real cross-department administrator for this.
+    await expect(
+        adminApiViaPage(
+            page,
+            `mutation($cid: ID!, $aid: ID!) { reassignCounterpartyManager(counterpartyId: $cid, administratorId: $aid) { id } }`,
+            { cid: counterparty.id, aid: '999999' },
+        ),
+    ).rejects.toThrow();
+
+    const after = await adminApiViaPage<{ entityVersions: { id: string }[] }>(
+        page,
+        `query($entityId: ID!) { entityVersions(entityName: "Counterparty", entityId: $entityId) { id } }`,
+        { entityId: counterparty.id },
+    );
+    expect(after.entityVersions.length).toBe(before.entityVersions.length);
 });

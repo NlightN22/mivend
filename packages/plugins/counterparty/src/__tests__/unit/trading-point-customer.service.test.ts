@@ -34,6 +34,11 @@ const mockConnection = {
 };
 
 const mockCustomerService = {} as unknown as CustomerService;
+const mockAccessScopeService =
+    {} as unknown as import('@mivend/plugin-access-control').AccessScopeService;
+const mockVersioningService = {
+    recordChange: vi.fn(),
+} as unknown as import('@mivend/plugin-versioning').VersioningService;
 const mockCtx = {} as unknown as RequestContext;
 
 describe('TradingPointService — customer methods', () => {
@@ -44,6 +49,8 @@ describe('TradingPointService — customer methods', () => {
         service = new TradingPointService(
             mockConnection as unknown as TransactionalConnection,
             mockCustomerService,
+            mockAccessScopeService,
+            mockVersioningService,
         );
     });
 

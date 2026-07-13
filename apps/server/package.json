@@ -31,7 +31,8 @@
         "@mivend/plugin-popular-products": "workspace:*",
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
-        "@mivend/plugin-reservation": "workspace:*"
+        "@mivend/plugin-reservation": "workspace:*",
+        "@mivend/plugin-versioning": "workspace:*"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

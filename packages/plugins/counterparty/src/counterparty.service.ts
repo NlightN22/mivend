@@ -11,6 +11,7 @@ import {
 } from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
+import { VersioningService } from '@mivend/plugin-versioning';
 
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyUpsertPayload, loggerCtx } from './types';
@@ -23,6 +24,7 @@ export class CounterpartyService {
         private customerPricingService: CustomerPricingService,
         private accessScopeService: AccessScopeService,
         private administratorService: AdministratorService,
+        private versioningService: VersioningService,
     ) {}
 
     async upsert(ctx: RequestContext, payload: CounterpartyUpsertPayload): Promise<Counterparty> {
@@ -137,14 +139,15 @@ export class CounterpartyService {
         const counterparty = await repo.findOne({ where: { id: counterpartyId } });
         if (!counterparty) throw new UserInputError(`Counterparty not found: id=${counterpartyId}`);
 
+        // 'own' scope is never actually reachable here in practice — only department-head/
+        // portal-admin hold CustomPermission.ReassignCounterpartyManager, and those roles are
+        // always 'department'/'all' scoped for the counterparty resource — but
+        // assertCounterpartyWritable is the shared, generically-correct check (see its doc
+        // comment), so it's used here rather than a bespoke inline department-only check.
+        await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
+
         const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
         if (scope.kind === 'department') {
-            if (
-                counterparty.departmentId !== (scope.departmentId ?? null) ||
-                counterparty.branchId !== (scope.branchId ?? null)
-            ) {
-                throw new ForbiddenError();
-            }
             const target = await this.administratorService.findOne(ctx, administratorId);
             const targetDepartmentId = (
                 target?.customFields as { departmentId?: string | null } | undefined
@@ -152,16 +155,23 @@ export class CounterpartyService {
             if (!target || targetDepartmentId !== scope.departmentId) {
                 throw new ForbiddenError();
             }
-        } else if (scope.kind !== 'all') {
-            throw new ForbiddenError();
         }
 
+        const previousManagerId = counterparty.assignedManagerId;
         counterparty.assignedManagerId = String(administratorId);
         const saved = await repo.save(counterparty);
         Logger.verbose(
             `Reassigned counterparty id=${counterpartyId} to administrator=${administratorId}`,
             loggerCtx,
         );
+        await this.versioningService.recordChange(ctx, {
+            entityName: 'Counterparty',
+            entityId: saved.id,
+            action: 'update',
+            changedFields: {
+                assignedManagerId: { from: previousManagerId, to: saved.assignedManagerId },
+            },
+        });
         return saved;
     }
 

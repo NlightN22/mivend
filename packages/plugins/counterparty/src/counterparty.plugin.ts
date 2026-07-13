@@ -8,6 +8,7 @@ import gql from 'graphql-tag';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
+import { VersioningPlugin } from '@mivend/plugin-versioning';
 
 import { CounterpartyConsumer } from './consumers/counterparty.consumer';
 import { TradingPointConsumer } from './consumers/trading-point.consumer';
@@ -179,6 +180,11 @@ const adminApiSchema = gql`
         updateTradingPointComment(tradingPointId: ID!, comment: String): TradingPoint!
         setPreferredTradingPoint(tradingPointId: ID!): Boolean!
 
+        # Staff patch mutations — gated on "can see this counterparty" rather than
+        # Permission.UpdateCustomer; see TradingPointAdminResolver.
+        updateTradingPointDetails(id: ID!, input: TradingPointDetailsInput!): TradingPoint!
+        setTradingPointActive(id: ID!, isActive: Boolean!): TradingPoint!
+
         requestCreditTermExtension(input: CreditTermRequestInput!): ApprovalRequest!
         decideCreditTermRequest(
             requestId: ID!
@@ -192,6 +198,21 @@ const adminApiSchema = gql`
         requestedExtraDays: Int!
         requestedAmount: Int
         justification: String!
+    }
+
+    input ContactPersonInput {
+        name: String!
+        phone: String
+        email: String
+        isPrimary: Boolean
+    }
+
+    input TradingPointDetailsInput {
+        name: String
+        address: String
+        workingHours: String
+        deliveryComment: String
+        contacts: [ContactPersonInput!]
     }
 `;
 
@@ -221,6 +242,7 @@ const adminResolvers = [
         CustomerPricingPlugin,
         AccessControlPlugin,
         ApprovalWorkflowPlugin,
+        VersioningPlugin,
     ],
     entities: [Counterparty, TradingPoint, ContactPerson],
     shopApiExtensions: {

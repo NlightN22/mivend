@@ -59,6 +59,7 @@ beforeAll(async () => {
         { assignCustomerPriceTypeByCode: vi.fn() } as never,
         mockAccessScopeService as unknown as AccessScopeService,
         { findOne: vi.fn() } as never,
+        { recordChange: vi.fn() } as never,
     );
 });
 

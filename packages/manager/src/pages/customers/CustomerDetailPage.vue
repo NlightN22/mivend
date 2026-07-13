@@ -18,10 +18,12 @@ import {
     type CustomerDocument,
 } from '../../api/customers';
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
+import { fetchEntityVersions, type EntityVersionRow } from '../../api/history';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
 import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
 import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTab.vue';
+import CustomerHistoryTab from '../../components/customers/CustomerHistoryTab.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -45,7 +47,21 @@ const reassignError = ref('');
 const CAN_REASSIGN_ROLE_CODES = new Set(['department-head', 'portal-admin']);
 const canReassign = computed(() => !!authStore.roleCode && CAN_REASSIGN_ROLE_CODES.has(authStore.roleCode));
 
-const activeTab = ref<'overview' | 'orders' | 'discounts' | 'documents'>('overview');
+// Mirrors CustomPermission.ReadEntityHistory's grant list in seed-access-roles.mjs (leadership
+// roles only) — same "avoid showing a control the mutation would reject anyway" rationale as
+// CAN_REASSIGN_ROLE_CODES above.
+const CAN_VIEW_HISTORY_ROLE_CODES = new Set([
+    'department-head',
+    'general-director',
+    'security-officer',
+    'portal-admin',
+]);
+const canViewHistory = computed(
+    () => !!authStore.roleCode && CAN_VIEW_HISTORY_ROLE_CODES.has(authStore.roleCode),
+);
+
+const activeTab = ref<'overview' | 'orders' | 'discounts' | 'documents' | 'history'>('overview');
+const history = ref<EntityVersionRow[]>([]);
 
 // Terminal states orders no longer need attention in — mirrors the 'Delivered'/'Cancelled'
 // options in api/orders.ts's ORDER_STATE_OPTIONS.
@@ -92,6 +108,16 @@ async function load(): Promise<void> {
         discounts.value = grants;
         documents.value = docs;
         orders.value = customerId ? await fetchOrdersForCustomer(customerId) : [];
+
+        if (canViewHistory.value) {
+            const versionLists = await Promise.all([
+                fetchEntityVersions('Counterparty', counterpartyId),
+                ...detail.tradingPoints.map(tp => fetchEntityVersions('TradingPoint', tp.id)),
+            ]);
+            history.value = versionLists
+                .flat()
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        }
     } finally {
         loading.value = false;
     }
@@ -180,13 +206,27 @@ async function handleReassign(administratorId: string): Promise<void> {
             <button type="button" :class="{ active: activeTab === 'documents' }" @click="activeTab = 'documents'">
                 Documents
             </button>
+            <button
+                v-if="canViewHistory"
+                type="button"
+                :class="{ active: activeTab === 'history' }"
+                @click="activeTab = 'history'"
+            >
+                History
+            </button>
         </div>
 
         <MvPanel v-if="!loading">
-            <CustomerOverviewTab v-if="activeTab === 'overview'" :customer="customer" :credit="credit" />
+            <CustomerOverviewTab
+                v-if="activeTab === 'overview'"
+                :customer="customer"
+                :credit="credit"
+                @changed="load"
+            />
             <CustomerOrdersTab v-else-if="activeTab === 'orders'" :orders="orders" />
             <CustomerDiscountsTab v-else-if="activeTab === 'discounts'" :discounts="discounts" />
-            <CustomerDocumentsTab v-else :documents="documents" />
+            <CustomerDocumentsTab v-else-if="activeTab === 'documents'" :documents="documents" />
+            <CustomerHistoryTab v-else :history="history" :managers="managers" />
         </MvPanel>
     </div>
 </template>

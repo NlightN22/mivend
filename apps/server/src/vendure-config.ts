@@ -19,6 +19,7 @@ import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
 import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
+import { VersioningPlugin } from '@mivend/plugin-versioning';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -135,6 +136,7 @@ export const config: VendureConfig = {
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         ApprovalWorkflowPlugin,
+        VersioningPlugin,
         CounterpartyPlugin,
         PriceEntryPlugin,
         DocumentsPlugin,

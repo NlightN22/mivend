@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Administrator, AdministratorService, RequestContext } from '@vendure/core';
+import { Administrator, AdministratorService, ForbiddenError, RequestContext } from '@vendure/core';
 
 import { RoleScopeConfigService } from './role-scope-config.service';
 import { AccessScope } from './types';
@@ -23,6 +23,46 @@ export class AccessScopeService {
 
     async resolveOrderScope(ctx: RequestContext): Promise<AccessScope> {
         return this.resolveScope(ctx, 'order');
+    }
+
+    // Throws ForbiddenError unless the caller's counterparty scope covers the given
+    // counterparty — same own/department/all logic CounterpartyService.findVisible uses to
+    // filter a list, but as an assertion for a single record ahead of a write. Shared by any
+    // service that writes data owned by a Counterparty (e.g. TradingPointService) so the
+    // own/department/all switch isn't duplicated per plugin.
+    async assertCounterpartyWritable(
+        ctx: RequestContext,
+        counterparty: {
+            assignedManagerId: string | null;
+            departmentId: string | null;
+            branchId: string | null;
+        },
+    ): Promise<void> {
+        const scope = await this.resolveCounterpartyScope(ctx);
+        switch (scope.kind) {
+            case 'own':
+                // administratorId comes off the Administrator entity's `id: ID`, which can be a
+                // number at runtime under the numeric ID strategy even though Vendure types it
+                // string|number — assignedManagerId is a plain varchar column, so a strict `!==`
+                // between "6" and 6 would always mismatch. Normalize both to string first.
+                if (
+                    counterparty.assignedManagerId !==
+                    (scope.administratorId != null ? String(scope.administratorId) : null)
+                ) {
+                    throw new ForbiddenError();
+                }
+                break;
+            case 'department':
+                if (
+                    counterparty.departmentId !== (scope.departmentId ?? null) ||
+                    counterparty.branchId !== (scope.branchId ?? null)
+                ) {
+                    throw new ForbiddenError();
+                }
+                break;
+            case 'all':
+                break;
+        }
     }
 
     private async resolveScope(ctx: RequestContext, resource: string): Promise<AccessScope> {

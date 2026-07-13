@@ -8,10 +8,26 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { randomUUID } from 'crypto';
+import { AccessScopeService } from '@mivend/plugin-access-control';
+import { ChangedFieldDiff, VersioningService } from '@mivend/plugin-versioning';
 
 import { ContactPerson } from './entities/contact-person.entity';
+import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 import { loggerCtx } from './types';
+
+export interface TradingPointDetailsPatch {
+    name?: string;
+    address?: string;
+    workingHours?: string | null;
+    deliveryComment?: string | null;
+    contacts?: Array<{
+        name: string;
+        phone?: string | null;
+        email?: string | null;
+        isPrimary?: boolean;
+    }>;
+}
 
 export interface TradingPointUpsertPayload {
     erpId: string;
@@ -35,7 +51,117 @@ export class TradingPointService {
     constructor(
         private connection: TransactionalConnection,
         private customerService: CustomerService,
+        private accessScopeService: AccessScopeService,
+        private versioningService: VersioningService,
     ) {}
+
+    // Shared by updateDetails/setActive — resolves the owning Counterparty and asserts the
+    // caller's counterparty scope covers it (own/department/all, see
+    // AccessScopeService.assertCounterpartyWritable). Distinct from the customerAdd/Edit/
+    // Delete/Restore methods below, which are shop-API self-service and scoped by ownership
+    // (counterpartyId equality) rather than a staff role's visibility scope.
+    private async assertStaffCanEdit(
+        ctx: RequestContext,
+        tradingPoint: TradingPoint,
+    ): Promise<void> {
+        const counterparty = await this.connection
+            .getRepository(ctx, Counterparty)
+            .findOne({ where: { id: tradingPoint.counterpartyId } });
+        if (!counterparty) throw new UserInputError('Counterparty not found for trading point');
+        await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
+    }
+
+    // Staff-initiated patch (manager portal), distinct from the ERP-sync `upsert` above: keyed
+    // by id (not erpId), partial (only provided fields change), and gated by the caller's
+    // counterparty visibility scope rather than Permission.UpdateCustomer — "if you can see the
+    // customer, you can fix their trading point data" (see docs/ai plan for this feature).
+    // Every successful patch is recorded via VersioningService for the History tab.
+    async updateDetails(
+        ctx: RequestContext,
+        id: ID,
+        patch: TradingPointDetailsPatch,
+    ): Promise<TradingPoint> {
+        const repo = this.connection.getRepository(ctx, TradingPoint);
+        const record = await repo.findOne({ where: { id: String(id) }, relations: ['contacts'] });
+        if (!record) throw new UserInputError(`TradingPoint not found: id=${id}`);
+        await this.assertStaffCanEdit(ctx, record);
+
+        const changedFields: Record<string, ChangedFieldDiff> = {};
+        const cpRepo = this.connection.getRepository(ctx, ContactPerson);
+
+        if (patch.name !== undefined && patch.name !== record.name) {
+            changedFields.name = { from: record.name, to: patch.name };
+            record.name = patch.name;
+        }
+        if (patch.address !== undefined && patch.address !== record.address) {
+            changedFields.address = { from: record.address, to: patch.address };
+            record.address = patch.address;
+        }
+        if (patch.workingHours !== undefined && patch.workingHours !== record.workingHours) {
+            changedFields.workingHours = { from: record.workingHours, to: patch.workingHours };
+            record.workingHours = patch.workingHours;
+        }
+        if (
+            patch.deliveryComment !== undefined &&
+            patch.deliveryComment !== record.deliveryComment
+        ) {
+            changedFields.deliveryComment = {
+                from: record.deliveryComment,
+                to: patch.deliveryComment,
+            };
+            record.deliveryComment = patch.deliveryComment;
+        }
+        if (patch.contacts !== undefined) {
+            changedFields.contacts = {
+                from: record.contacts.length,
+                to: patch.contacts.length,
+            };
+            await cpRepo.delete({ tradingPoint: { id: record.id } });
+            record.contacts = patch.contacts.map(c =>
+                cpRepo.create({
+                    name: c.name,
+                    phone: c.phone ?? null,
+                    email: c.email ?? null,
+                    isPrimary: c.isPrimary ?? false,
+                }),
+            );
+        }
+
+        const saved = await repo.save(record);
+        if (Object.keys(changedFields).length > 0) {
+            await this.versioningService.recordChange(ctx, {
+                entityName: 'TradingPoint',
+                entityId: saved.id,
+                action: 'update',
+                changedFields,
+            });
+        }
+        Logger.verbose(`Staff updated trading point details id=${id}`, loggerCtx);
+        return saved;
+    }
+
+    // Sets both isActive and customerStatus together — mirrors customerRestore's existing
+    // precedent (line below) rather than exposing the two overlapping flags separately, so
+    // staff has one "Reactivate"/"Deactivate" action regardless of whether the trading point
+    // went inactive via ERP (isActive) or customer self-service (customerStatus).
+    async setActive(ctx: RequestContext, id: ID, isActive: boolean): Promise<TradingPoint> {
+        const repo = this.connection.getRepository(ctx, TradingPoint);
+        const record = await repo.findOne({ where: { id: String(id) } });
+        if (!record) throw new UserInputError(`TradingPoint not found: id=${id}`);
+        await this.assertStaffCanEdit(ctx, record);
+
+        record.isActive = isActive;
+        record.customerStatus = isActive ? 'active' : 'hidden';
+        const saved = await repo.save(record);
+
+        await this.versioningService.recordChange(ctx, {
+            entityName: 'TradingPoint',
+            entityId: saved.id,
+            action: isActive ? 'reactivate' : 'deactivate',
+        });
+        Logger.verbose(`Staff set trading point id=${id} active=${isActive}`, loggerCtx);
+        return saved;
+    }
 
     async upsert(ctx: RequestContext, payload: TradingPointUpsertPayload): Promise<TradingPoint> {
         const repo = this.connection.getRepository(ctx, TradingPoint);
@@ -104,9 +230,14 @@ export class TradingPointService {
         Logger.verbose(`Deactivated trading point erpId=${erpId}`, loggerCtx);
     }
 
+    // Shop API callers (customer self-service) must never see a trading point staff deactivated
+    // — only Admin API (manager portal) needs inactive ones visible, so staff can reactivate them.
     async findByCounterparty(ctx: RequestContext, counterpartyId: ID): Promise<TradingPoint[]> {
         return this.connection.getRepository(ctx, TradingPoint).find({
-            where: { counterpartyId: String(counterpartyId), isActive: true },
+            where: {
+                counterpartyId: String(counterpartyId),
+                ...(ctx.apiType === 'admin' ? {} : { isActive: true }),
+            },
             relations: ['contacts'],
             order: { name: 'ASC' },
         });

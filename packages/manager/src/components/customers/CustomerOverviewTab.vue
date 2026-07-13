@@ -1,11 +1,32 @@
 <script setup lang="ts">
-import { MvStatusBadge } from '@mivend/ui-kit';
-import type { CustomerListItem, CustomerCredit } from '../../api/customers';
+import { ref } from 'vue';
+import { MvStatusBadge, MvModal } from '@mivend/ui-kit';
+import { setTradingPointActive, type CustomerListItem, type CustomerCredit, type TradingPointInfo } from '../../api/customers';
+import TradingPointEditForm from './TradingPointEditForm.vue';
 
 defineProps<{ customer: CustomerListItem; credit: CustomerCredit | null }>();
+const emit = defineEmits<{ changed: [] }>();
+
+const editingTradingPoint = ref<TradingPointInfo | null>(null);
+const reactivating = ref<string | null>(null);
 
 function money(amount: number): string {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount / 100);
+}
+
+function handleEdited(): void {
+    editingTradingPoint.value = null;
+    emit('changed');
+}
+
+async function reactivate(tp: TradingPointInfo): Promise<void> {
+    reactivating.value = tp.id;
+    try {
+        await setTradingPointActive(tp.id, true);
+        emit('changed');
+    } finally {
+        reactivating.value = null;
+    }
 }
 </script>
 
@@ -49,13 +70,35 @@ function money(amount: number): string {
                         <strong>{{ tp.name }}</strong>
                         <div class="overview-tab__contact-meta">{{ tp.address }}</div>
                     </div>
-                    <MvStatusBadge :variant="tp.isActive ? 'success' : 'neutral'">
-                        {{ tp.isActive ? 'Active' : 'Inactive' }}
-                    </MvStatusBadge>
+                    <div class="overview-tab__tp-actions">
+                        <MvStatusBadge :variant="tp.isActive ? 'success' : 'neutral'">
+                            {{ tp.isActive ? 'Active' : 'Inactive' }}
+                        </MvStatusBadge>
+                        <button
+                            v-if="!tp.isActive"
+                            type="button"
+                            class="overview-tab__tp-btn"
+                            :disabled="reactivating === tp.id"
+                            @click="reactivate(tp)"
+                        >
+                            Reactivate
+                        </button>
+                        <button type="button" class="overview-tab__tp-btn" @click="editingTradingPoint = tp">
+                            Edit
+                        </button>
+                    </div>
                 </li>
             </ul>
             <p v-else class="overview-tab__empty">No trading points on file</p>
         </div>
+
+        <MvModal v-if="editingTradingPoint" title="Edit trading point" @close="editingTradingPoint = null">
+            <TradingPointEditForm
+                :trading-point="editingTradingPoint"
+                @submitted="handleEdited"
+                @cancel="editingTradingPoint = null"
+            />
+        </MvModal>
     </div>
 </template>
 
@@ -152,5 +195,26 @@ function money(amount: number): string {
     padding: 10px 12px;
     border: 1px solid var(--el-border-color, #e4e7ec);
     border-radius: 12px;
+}
+
+.overview-tab__tp-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.overview-tab__tp-btn {
+    background: none;
+    border: none;
+    color: var(--el-color-primary-dark-2, #008a70);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.overview-tab__tp-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
 }
 </style>

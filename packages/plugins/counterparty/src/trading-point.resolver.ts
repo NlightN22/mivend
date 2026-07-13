@@ -2,9 +2,14 @@ import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/g
 import { Transaction } from '@vendure/core';
 import { Allow, Ctx, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Permission } from '@vendure/common/lib/generated-types';
+import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { TradingPoint } from './entities/trading-point.entity';
-import { TradingPointService, CustomerTradingPointInput } from './trading-point.service';
+import {
+    TradingPointService,
+    CustomerTradingPointInput,
+    TradingPointDetailsPatch,
+} from './trading-point.service';
 
 @Resolver('Customer')
 export class CustomerTradingPointResolver {
@@ -170,5 +175,30 @@ export class TradingPointAdminResolver {
         },
     ): Promise<TradingPoint> {
         return this.tradingPointService.upsert(ctx, args);
+    }
+
+    // Staff patch mutations, distinct from the ERP-sync upsertTradingPoint above — gated by
+    // "can this caller see the counterparty" (same permission pair as the `counterparties`
+    // query) rather than Permission.UpdateCustomer; the actual own/department/all scope check
+    // happens inside TradingPointService.updateDetails/setActive via
+    // AccessScopeService.assertCounterpartyWritable.
+    @Transaction()
+    @Mutation()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    async updateTradingPointDetails(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string; input: TradingPointDetailsPatch },
+    ): Promise<TradingPoint> {
+        return this.tradingPointService.updateDetails(ctx, args.id, args.input);
+    }
+
+    @Transaction()
+    @Mutation()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    async setTradingPointActive(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string; isActive: boolean },
+    ): Promise<TradingPoint> {
+        return this.tradingPointService.setActive(ctx, args.id, args.isActive);
     }
 }
