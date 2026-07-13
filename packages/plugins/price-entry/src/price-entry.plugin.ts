@@ -142,11 +142,24 @@ const adminApiSchema = gql`
         counterparties: [DiscountGrantCounterparty!]!
     }
 
+    type DiscountGrantForCustomer {
+        id: ID!
+        facetValueCode: String
+        percent: Int!
+        validTo: DateTime!
+        scopeType: String!
+    }
+
     extend type Query {
         # Restricted to ReadFloorPrice — see PriceAdjustmentResolver.
         floorPrice(variantId: ID!): Int
         discountRules(priceTypeCode: String): [DiscountRule!]!
+        # All materialized grants, not just expiring ones — powers /discounts's Customer column.
+        discountGrants: [DiscountGrant!]!
         expiringDiscountGrants(withinDays: Int!): [DiscountGrant!]!
+        # Only grants that actually apply to this counterparty (company-wide or scoped to it) —
+        # see DiscountGrantService.findForCounterparty.
+        discountGrantsForCounterparty(counterpartyId: ID!): [DiscountGrantForCustomer!]!
         priceTypeCodes: [String!]!
         # Batch lookup for the catalog list/detail pages. Gated on ReadCatalog UNLESS
         # priceTypeCode is the floor price type, which requires ReadFloorPrice instead —

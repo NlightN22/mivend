@@ -7,6 +7,13 @@ export interface ContactPersonInfo {
     isPrimary: boolean;
 }
 
+export interface TradingPointInfo {
+    id: string;
+    name: string;
+    address: string;
+    isActive: boolean;
+}
+
 export interface CustomerListItem {
     id: string;
     shortName: string;
@@ -17,6 +24,7 @@ export interface CustomerListItem {
     assignedManagerId: string | null;
     branchId: string | null;
     contacts: ContactPersonInfo[];
+    tradingPoints: TradingPointInfo[];
 }
 
 export async function fetchCustomersList(): Promise<CustomerListItem[]> {
@@ -30,7 +38,7 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
             priceType: string;
             assignedManagerId: string | null;
             branchId: string | null;
-            tradingPoints: { contacts: ContactPersonInfo[] }[];
+            tradingPoints: (TradingPointInfo & { contacts: ContactPersonInfo[] })[];
         }[];
     }>(
         `query {
@@ -43,7 +51,7 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
                 priceType
                 assignedManagerId
                 branchId
-                tradingPoints { contacts { name phone email isPrimary } }
+                tradingPoints { id name address isActive contacts { name phone email isPrimary } }
             }
         }`,
     );
@@ -57,6 +65,12 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
         assignedManagerId: c.assignedManagerId,
         branchId: c.branchId,
         contacts: c.tradingPoints.flatMap(tp => tp.contacts),
+        tradingPoints: c.tradingPoints.map(tp => ({
+            id: tp.id,
+            name: tp.name,
+            address: tp.address,
+            isActive: tp.isActive,
+        })),
     }));
 }
 
@@ -190,26 +204,27 @@ export interface DiscountRuleItem {
     id: string;
     percent: number;
     facetValueCode: string | null;
-    validFrom: string;
     validTo: string;
 }
 
-export async function fetchDiscountRulesForPriceType(
-    priceTypeCode: string,
+// Only grants that actually apply to this counterparty (company-wide or scoped to it) — see
+// DiscountGrantService.findForCounterparty. Using discountRules(priceTypeCode) here would leak
+// grants scoped to a *different* customer that happens to share the same price type.
+export async function fetchDiscountGrantsForCounterparty(
+    counterpartyId: string,
 ): Promise<DiscountRuleItem[]> {
-    const result = await adminApi<{ discountRules: DiscountRuleItem[] }>(
-        `query($priceTypeCode: String!) {
-            discountRules(priceTypeCode: $priceTypeCode) {
+    const result = await adminApi<{ discountGrantsForCounterparty: DiscountRuleItem[] }>(
+        `query($counterpartyId: ID!) {
+            discountGrantsForCounterparty(counterpartyId: $counterpartyId) {
                 id
                 percent
                 facetValueCode
-                validFrom
                 validTo
             }
         }`,
-        { priceTypeCode },
+        { counterpartyId },
     );
-    return result.discountRules;
+    return result.discountGrantsForCounterparty;
 }
 
 // Keyed by counterparty id (the "customer" this whole page means) — capped at 500 rows, same

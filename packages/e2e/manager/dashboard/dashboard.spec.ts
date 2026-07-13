@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readE2eOrder } from '../../helpers/e2e-order';
 
 // One spec file runs against three Playwright projects (manager-operator, manager-manager,
 // manager-department-head — see playwright.config.ts), each pre-authenticated as a different
@@ -38,4 +39,64 @@ test('dashboard shows recent orders and my approval requests panels', async ({ p
     await page.goto('/');
     await expect(page.getByText('Recent orders')).toBeVisible();
     await expect(page.getByText('My approval requests status')).toBeVisible();
+});
+
+// The e2e order (global-setup.ts's createConfirmedOrder) always lands in PaymentSettled and is
+// placed "today" (created fresh by global-setup on this run) — a real, deterministic fixture
+// for the Recent orders filter chips, rather than fabricated rows. See DashboardPage.vue's
+// filteredOrders: 'in-progress' matches state PaymentAuthorized, 'awaiting-shipment' matches
+// PaymentSettled, 'today' matches orderPlacedAt === today.
+async function gotoDashboardWithOrdersLoaded(page: import('@playwright/test').Page): Promise<void> {
+    await page.goto('/');
+    // Recent orders loads asynchronously after the initial paint — wait for the panel itself
+    // before clicking a chip, otherwise the chip click can race the data fetch.
+    await expect(page.getByText('Recent orders')).toBeVisible({ timeout: 15000 });
+    await page.waitForLoadState('networkidle');
+}
+
+// The order code also appears (as a text substring) in the Activity feed's "Order X placed by…"
+// entry — scope to the Recent orders table's cell text specifically to avoid a strict-mode
+// match across both panels.
+function orderCellLocator(
+    page: import('@playwright/test').Page,
+    code: string,
+): import('@playwright/test').Locator {
+    return page.locator('.el-table-v2__cell-text', { hasText: code });
+}
+
+test.describe('Recent orders filter chips', () => {
+    test('"All" chip shows the seeded order (positive)', async ({ page }) => {
+        const order = readE2eOrder();
+        await gotoDashboardWithOrdersLoaded(page);
+        await page.getByRole('button', { name: 'All', exact: true }).click();
+        await expect(orderCellLocator(page, order.code).first()).toBeVisible({ timeout: 15000 });
+    });
+
+    test('"Awaiting shipment" chip shows the seeded order — PaymentSettled (positive)', async ({
+        page,
+    }) => {
+        const order = readE2eOrder();
+        await gotoDashboardWithOrdersLoaded(page);
+        await page.getByRole('button', { name: 'Awaiting shipment', exact: true }).click();
+        await expect(orderCellLocator(page, order.code).first()).toBeVisible({ timeout: 15000 });
+    });
+
+    test('"Today\'s" chip shows the seeded order — placed today (positive)', async ({ page }) => {
+        const order = readE2eOrder();
+        await gotoDashboardWithOrdersLoaded(page);
+        await page.getByRole('button', { name: "Today's", exact: true }).click();
+        await expect(orderCellLocator(page, order.code).first()).toBeVisible({ timeout: 15000 });
+    });
+
+    test('"In progress" chip hides the seeded order — it is PaymentSettled, not PaymentAuthorized (negative)', async ({
+        page,
+    }) => {
+        const order = readE2eOrder();
+        await gotoDashboardWithOrdersLoaded(page);
+        // Establish the order is present under "All" first, so the absence below is a real
+        // filter effect and not the panel failing to load at all.
+        await expect(orderCellLocator(page, order.code).first()).toBeVisible({ timeout: 15000 });
+        await page.getByRole('button', { name: 'In progress', exact: true }).click();
+        await expect(orderCellLocator(page, order.code)).toHaveCount(0);
+    });
 });

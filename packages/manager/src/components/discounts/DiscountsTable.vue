@@ -31,6 +31,7 @@ function findRow(key: string): DiscountRow | undefined {
 }
 
 const columns = computed<Column<TableRow>[]>(() => [
+    { key: 'customer', title: 'Customer', dataKey: 'customer', width: 180 },
     { key: 'priceType', title: 'Price type', dataKey: 'priceType', width: 130 },
     { key: 'facet', title: 'Product group', dataKey: 'facet', width: 160 },
     {
@@ -98,6 +99,7 @@ const columns = computed<Column<TableRow>[]>(() => [
 
 const rows = computed<TableRow[]>(() =>
     props.rows.map(row => ({
+        customer: row.customer,
         priceType: row.priceType,
         facet: row.facet,
         percent: row.percent,

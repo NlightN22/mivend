@@ -8,7 +8,7 @@ import {
     fetchCreditByCounterpartyId,
     fetchCustomerIdForCounterparty,
     fetchOrdersForCustomer,
-    fetchDiscountRulesForPriceType,
+    fetchDiscountGrantsForCounterparty,
     fetchDocumentsForCounterparty,
     reassignCounterpartyManager,
     type CustomerListItem,
@@ -47,6 +47,25 @@ const canReassign = computed(() => !!authStore.roleCode && CAN_REASSIGN_ROLE_COD
 
 const activeTab = ref<'overview' | 'orders' | 'discounts' | 'documents'>('overview');
 
+// Terminal states orders no longer need attention in — mirrors the 'Delivered'/'Cancelled'
+// options in api/orders.ts's ORDER_STATE_OPTIONS.
+const CLOSED_ORDER_STATES = new Set(['Delivered', 'Cancelled']);
+
+const sales30d = computed(() => {
+    const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return orders.value
+        .filter(o => o.orderPlacedAt && new Date(o.orderPlacedAt).getTime() >= since)
+        .reduce((sum, o) => sum + o.totalWithTax, 0);
+});
+
+const openOrdersCount = computed(
+    () => orders.value.filter(o => !CLOSED_ORDER_STATES.has(o.state)).length,
+);
+
+function money(amount: number): string {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount / 100);
+}
+
 async function load(): Promise<void> {
     loading.value = true;
     notFound.value = false;
@@ -65,12 +84,12 @@ async function load(): Promise<void> {
         customer.value = detail;
         credit.value = creditMap.get(counterpartyId) ?? null;
 
-        const [customerId, discountRules, docs] = await Promise.all([
+        const [customerId, grants, docs] = await Promise.all([
             fetchCustomerIdForCounterparty(counterpartyId),
-            fetchDiscountRulesForPriceType(detail.priceType),
+            fetchDiscountGrantsForCounterparty(counterpartyId),
             fetchDocumentsForCounterparty(counterpartyId),
         ]);
-        discounts.value = discountRules;
+        discounts.value = grants;
         documents.value = docs;
         orders.value = customerId ? await fetchOrdersForCustomer(customerId) : [];
     } finally {
@@ -136,6 +155,17 @@ async function handleReassign(administratorId: string): Promise<void> {
             </span>
         </p>
         <p v-if="reassignError" class="customer-detail__error">{{ reassignError }}</p>
+
+        <div v-if="!loading" class="customer-detail__kpis">
+            <div class="customer-detail__kpi">
+                <span class="customer-detail__kpi-label">Sales last 30 days</span>
+                <span class="customer-detail__kpi-value">{{ money(sales30d) }}</span>
+            </div>
+            <div class="customer-detail__kpi">
+                <span class="customer-detail__kpi-label">Open orders</span>
+                <span class="customer-detail__kpi-value">{{ openOrdersCount }}</span>
+            </div>
+        </div>
 
         <div class="customer-detail__tabs">
             <button type="button" :class="{ active: activeTab === 'overview' }" @click="activeTab = 'overview'">
@@ -211,6 +241,35 @@ async function handleReassign(administratorId: string): Promise<void> {
     margin: 4px 0 0;
     color: var(--el-color-danger, #dc2626);
     font-size: 13px;
+}
+
+.customer-detail__kpis {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.customer-detail__kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 16px;
+    border: 1px solid var(--el-border-color, #e4e7ec);
+    border-radius: 14px;
+    background: var(--el-fill-color-lighter, #f9fafb);
+}
+
+.customer-detail__kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 800;
+    color: var(--el-text-color-secondary, #6b7280);
+}
+
+.customer-detail__kpi-value {
+    font-size: 18px;
+    font-weight: 850;
 }
 
 .customer-detail__tabs {

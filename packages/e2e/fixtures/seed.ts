@@ -6,6 +6,10 @@ export const E2E_CUSTOMER = {
 };
 
 export const E2E_COUNTERPARTY_ID = 'e2e-cnt-001';
+// A second, unrelated counterparty used only as the target of a discount grant that must
+// NOT be visible on E2E_COUNTERPARTY_ID's Customer Detail page — see
+// DiscountGrantService.findForCounterparty's customer-scope leak test.
+export const E2E_OTHER_COUNTERPARTY_ID = 'e2e-cnt-002';
 
 export const seedRecords = [
     {
@@ -220,6 +224,21 @@ export const seedRecords = [
             validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
             validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             minAmount: 2000,
+        },
+    },
+    {
+        type: 'counterparty' as const,
+        data: {
+            erpId: E2E_OTHER_COUNTERPARTY_ID,
+            legalName: 'E2E Other Company',
+            shortName: 'E2E Other Co',
+            creditLimit: 50000,
+            creditBalance: 0,
+            paymentDelayDays: 30,
+            priceType: 'WHOLESALE',
+            isActive: true,
+            departmentId: 'dept-sales',
+            branchId: 'branch-central',
         },
     },
     {

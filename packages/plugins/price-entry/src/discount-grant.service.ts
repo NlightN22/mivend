@@ -6,7 +6,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { And, In, LessThanOrEqual, MoreThan } from 'typeorm';
+import { And, Brackets, In, LessThanOrEqual, MoreThan } from 'typeorm';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import {
     ApprovalRequest,
@@ -16,7 +16,16 @@ import {
 import { Counterparty } from '@mivend/plugin-counterparty';
 
 import { DiscountRuleService } from './discount-rule.service';
-import { DiscountGrant } from './discount-grant.entity';
+import { DiscountGrant, DiscountGrantScopeType } from './discount-grant.entity';
+import { DiscountRule } from './discount-rule.entity';
+
+export interface DiscountGrantForCustomer {
+    id: ID;
+    facetValueCode: string | null;
+    percent: number;
+    validTo: Date;
+    scopeType: DiscountGrantScopeType;
+}
 
 const DISCOUNT_GRANT_REQUEST_TYPE = 'discountGrantApproval';
 
@@ -129,6 +138,61 @@ export class DiscountGrantService {
             await grantRepo.save(grant);
         }
         return request;
+    }
+
+    // Powers the Customer Detail page's Discounts tab — a customer must only see grants that
+    // actually apply to them: company-wide (scopeType 'all') or explicitly scoped to their
+    // counterparty id. Without this filter, the tab previously showed every DiscountRule
+    // matching the customer's price type, including grants scoped to a *different* customer.
+    async findForCounterparty(
+        ctx: RequestContext,
+        counterpartyId: ID,
+    ): Promise<DiscountGrantForCustomer[]> {
+        const grants = await this.connection
+            .getRepository(ctx, DiscountGrant)
+            .createQueryBuilder('grant')
+            .leftJoinAndSelect('grant.counterparties', 'counterparty')
+            .where(
+                new Brackets(qb => {
+                    qb.where('grant.scopeType = :all', { all: 'all' }).orWhere(
+                        'counterparty.id = :counterpartyId',
+                        { counterpartyId },
+                    );
+                }),
+            )
+            .orderBy('grant.validTo', 'DESC')
+            .getMany();
+        if (grants.length === 0) return [];
+
+        const ruleIds = [...new Set(grants.map(g => g.discountRuleId))];
+        const rules = await this.connection
+            .getRepository(ctx, DiscountRule)
+            .findBy({ id: In(ruleIds) });
+        const ruleById = new Map(rules.map(r => [String(r.id), r]));
+
+        return grants
+            .map(grant => {
+                const rule = ruleById.get(grant.discountRuleId);
+                if (!rule) return null;
+                return {
+                    id: grant.id,
+                    facetValueCode: rule.facetValueCode,
+                    percent: rule.percent,
+                    validTo: grant.validTo,
+                    scopeType: grant.scopeType,
+                };
+            })
+            .filter((g): g is DiscountGrantForCustomer => g !== null);
+    }
+
+    // Powers the /discounts registry's Customer column — the full list of materialized grants
+    // (not just expiring ones), each with its counterparties, so the manager portal can show
+    // who a discount actually belongs to instead of only the price-type/facet policy.
+    async findAll(ctx: RequestContext): Promise<DiscountGrant[]> {
+        return this.connection.getRepository(ctx, DiscountGrant).find({
+            relations: ['counterparties'],
+            order: { validTo: 'DESC' },
+        });
     }
 
     // Feeds the manager portal dashboard's "discount grants expiring soon" banner — only

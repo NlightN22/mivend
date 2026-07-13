@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { MvStatusBadge } from '@mivend/ui-kit';
 import type { CustomerListItem, CustomerCredit } from '../../api/customers';
 
 defineProps<{ customer: CustomerListItem; credit: CustomerCredit | null }>();
@@ -39,6 +40,22 @@ function money(amount: number): string {
                 <dd>{{ money(credit.creditBalance) }}</dd>
             </div>
         </dl>
+
+        <div class="overview-tab__trading-points">
+            <h3>Trading points</h3>
+            <ul v-if="customer.tradingPoints.length">
+                <li v-for="tp in customer.tradingPoints" :key="tp.id">
+                    <div>
+                        <strong>{{ tp.name }}</strong>
+                        <div class="overview-tab__contact-meta">{{ tp.address }}</div>
+                    </div>
+                    <MvStatusBadge :variant="tp.isActive ? 'success' : 'neutral'">
+                        {{ tp.isActive ? 'Active' : 'Inactive' }}
+                    </MvStatusBadge>
+                </li>
+            </ul>
+            <p v-else class="overview-tab__empty">No trading points on file</p>
+        </div>
     </div>
 </template>
 
@@ -104,5 +121,36 @@ function money(amount: number): string {
 .overview-tab__facts dd {
     margin: 2px 0 0;
     font-size: 14px;
+}
+
+.overview-tab__trading-points {
+    grid-column: 1 / -1;
+}
+
+.overview-tab__trading-points h3 {
+    font-size: 13px;
+    margin: 0 0 10px;
+    color: var(--el-text-color-secondary, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.overview-tab__trading-points ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.overview-tab__trading-points li {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--el-border-color, #e4e7ec);
+    border-radius: 12px;
 }
 </style>

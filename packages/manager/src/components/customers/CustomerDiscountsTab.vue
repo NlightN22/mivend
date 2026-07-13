@@ -40,7 +40,7 @@ function status(discount: DiscountRuleItem): { label: string; variant: 'success'
                 <MvStatusBadge :variant="status(discount).variant">{{ status(discount).label }}</MvStatusBadge>
             </li>
         </ul>
-        <p v-else class="customer-discounts__empty">No discounts for this customer's price type</p>
+        <p v-else class="customer-discounts__empty">No discounts apply to this customer</p>
     </div>
 </template>
 

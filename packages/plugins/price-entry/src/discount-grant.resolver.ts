@@ -4,7 +4,11 @@ import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/co
 import { CustomPermission } from '@mivend/plugin-access-control';
 import { ApprovalRequest, ApprovalStepDecision } from '@mivend/plugin-approval-workflow';
 
-import { DiscountGrantService, DiscountGrantInput } from './discount-grant.service';
+import {
+    DiscountGrantService,
+    DiscountGrantInput,
+    DiscountGrantForCustomer,
+} from './discount-grant.service';
 import { DiscountGrant } from './discount-grant.entity';
 
 @Resolver()
@@ -18,6 +22,21 @@ export class DiscountGrantResolver {
         @Args() args: { withinDays: number },
     ): Promise<DiscountGrant[]> {
         return this.discountGrantService.findExpiringSoon(ctx, args.withinDays);
+    }
+
+    @Query()
+    @Allow(Permission.ReadCatalog)
+    async discountGrants(@Ctx() ctx: RequestContext): Promise<DiscountGrant[]> {
+        return this.discountGrantService.findAll(ctx);
+    }
+
+    @Query()
+    @Allow(Permission.ReadCatalog)
+    async discountGrantsForCounterparty(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { counterpartyId: ID },
+    ): Promise<DiscountGrantForCustomer[]> {
+        return this.discountGrantService.findForCounterparty(ctx, args.counterpartyId);
     }
 
     @Transaction()

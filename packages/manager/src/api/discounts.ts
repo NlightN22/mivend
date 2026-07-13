@@ -38,6 +38,7 @@ export interface DiscountGrantPayload {
     validTo: string;
     justification: string;
     supersedesDiscountRuleId: string | null;
+    counterpartyIds: string[] | null;
 }
 
 export interface DiscountGrantRequestRow {
@@ -82,6 +83,7 @@ export type DiscountRowStatus = 'active' | 'expiring-soon' | 'expired' | 'pendin
 
 export interface DiscountRow {
     key: string;
+    customer: string;
     priceType: string;
     facet: string;
     percent: number;
@@ -91,6 +93,37 @@ export interface DiscountRow {
     justification: string | null;
     ruleErpId: string | null;
     approvalRequestId: string | null;
+}
+
+export interface DiscountGrantRow {
+    id: string;
+    discountRuleId: string;
+    scopeType: string;
+    counterparties: { id: string; legalName: string }[];
+}
+
+export async function fetchAllDiscountGrants(): Promise<DiscountGrantRow[]> {
+    const result = await adminApi<{ discountGrants: DiscountGrantRow[] }>(
+        `query {
+            discountGrants {
+                id
+                discountRuleId
+                scopeType
+                counterparties { id legalName }
+            }
+        }`,
+    );
+    return result.discountGrants;
+}
+
+const ALL_CUSTOMERS_LABEL = 'All customers';
+
+function customerLabel(
+    counterpartyIds: string[] | null | undefined,
+    namesById: Map<string, string>,
+): string {
+    if (!counterpartyIds || counterpartyIds.length === 0) return ALL_CUSTOMERS_LABEL;
+    return counterpartyIds.map(id => namesById.get(id) ?? id).join(', ');
 }
 
 // See docs/ai/manager-portal-concept.md §8.2 — no exact "expiring soon" threshold has been
@@ -105,14 +138,18 @@ function ruleStatus(validTo: string): 'active' | 'expiring-soon' | 'expired' {
     return 'active';
 }
 
-// Merges the two real sources this list draws from: DiscountRule (materialized once a grant is
-// approved) and discountGrantApproval ApprovalRequests (the only place "Pending approval" /
+// Merges three real sources this list draws from: DiscountRule (materialized once a grant is
+// approved), discountGrantApproval ApprovalRequests (the only place "Pending approval" /
 // "Rejected" rows — and the original justification, which DiscountRule doesn't store — come
-// from). A portal-created rule's erpId is always `portal-${requestId}` (see
-// DiscountGrantService.decideAndApply), which is how the two are cross-referenced.
+// from), and DiscountGrant (the only place the actual customer(s) a grant applies to come
+// from — see DiscountGrantService.decideAndApply). A portal-created rule's erpId is always
+// `portal-${requestId}` (how rule <-> request are cross-referenced); DiscountGrant.discountRuleId
+// is the rule's internal id (how rule <-> grant are cross-referenced).
 export function buildDiscountRows(
     rules: DiscountRuleRow[],
     requests: DiscountGrantRequestRow[],
+    grants: DiscountGrantRow[],
+    counterpartyNamesById: Map<string, string>,
 ): DiscountRow[] {
     const approvedByErpId = new Map<
         string,
@@ -128,10 +165,19 @@ export function buildDiscountRows(
         }
     }
 
+    const grantByRuleId = new Map(grants.map(g => [g.discountRuleId, g]));
+
     const ruleRows: DiscountRow[] = rules.map(rule => {
         const matched = approvedByErpId.get(rule.erpId);
+        const grant = grantByRuleId.get(rule.id);
+        const customer = grant
+            ? grant.scopeType === 'all'
+                ? ALL_CUSTOMERS_LABEL
+                : grant.counterparties.map(c => c.legalName).join(', ') || ALL_CUSTOMERS_LABEL
+            : ALL_CUSTOMERS_LABEL;
         return {
             key: `rule-${rule.id}`,
+            customer,
             priceType: rule.priceTypeCode,
             facet: rule.facetValueCode ?? 'All products',
             percent: rule.percent,
@@ -155,6 +201,7 @@ export function buildDiscountRows(
             }
             return {
                 key: `request-${request.id}`,
+                customer: customerLabel(payload?.counterpartyIds, counterpartyNamesById),
                 priceType: payload?.priceTypeCode ?? '—',
                 facet: payload?.facetValueCode ?? 'All products',
                 percent: payload?.percent ?? 0,

@@ -5,7 +5,7 @@ import { adminGql, postBatch, waitForRun } from './helpers/api';
 import { loginAs } from './helpers/storefront-auth';
 import { loginAsManager } from './helpers/manager-auth';
 import { createConfirmedOrder } from './helpers/manager-order';
-import { seedRecords, E2E_CUSTOMER } from './fixtures/seed';
+import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures/seed';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
@@ -161,6 +161,95 @@ export default async function globalSetup(): Promise<void> {
             { cid: e2eCounterpartyId, aid: managerAdminId },
             deptHeadToken,
         );
+    }
+
+    // Seeds two approved DiscountGrant rows through the real requestDiscountGrant ->
+    // decideDiscountGrantRequest flow (DiscountGrant is materialized only on approval —
+    // see DiscountGrantService.decideAndApply, there is no erp-import record type for it) —
+    // one scoped to the e2e counterparty (positive case for the Customer Detail Discounts
+    // tab) and one scoped to an unrelated counterparty (negative case: must never leak onto
+    // e2e counterparty's tab, see DiscountGrantService.findForCounterparty).
+    if (adminToken) {
+        await adminGql(
+            `mutation($requestType: String!, $displayName: String!, $steps: [WorkflowStepInput!]!) {
+                upsertWorkflowDefinition(requestType: $requestType, displayName: $displayName, steps: $steps) { requestType }
+            }`,
+            {
+                requestType: 'discountGrantApproval',
+                displayName: 'Discount grant approval',
+                steps: [
+                    {
+                        order: 0,
+                        role: 'department-head',
+                        requiredPermission: 'ApproveDiscountRequest',
+                        escalatesTo: [],
+                    },
+                ],
+            },
+            adminToken,
+        );
+    }
+
+    const managerLogin = await adminGql<{ login: { __typename: string } }>(
+        `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { __typename ... on CurrentUser { id } } }`,
+        { id: MANAGER_ACCOUNTS.manager.username, pw: MANAGER_ACCOUNTS.manager.password },
+    );
+    const managerToken = managerLogin.token;
+
+    const otherCounterpartyId = counterpartiesResult.data.counterparties.find(
+        c => c.erpId === E2E_OTHER_COUNTERPARTY_ID,
+    )?.id;
+
+    if (managerToken && deptHeadToken && e2eCounterpartyId && otherCounterpartyId) {
+        // requestDiscountGrant always creates a new ApprovalRequest — unlike the
+        // erp-import-backed records above, it has no natural key to upsert on. Guard by
+        // checking the grant already exists so re-running global-setup locally (outside a
+        // fresh CI DB) doesn't pile up duplicates and break the specs' strict-mode text
+        // locators.
+        const existingGrants = await adminGql<{
+            discountGrantsForCounterparty: { percent: number }[];
+        }>(
+            `query($counterpartyId: ID!) { discountGrantsForCounterparty(counterpartyId: $counterpartyId) { percent } }`,
+            { counterpartyId: e2eCounterpartyId },
+            deptHeadToken,
+        );
+        const alreadySeeded = existingGrants.data.discountGrantsForCounterparty.some(
+            g => g.percent === 8,
+        );
+
+        if (!alreadySeeded) {
+            const validTo = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+            const grantInput = (
+                counterpartyIds: string[],
+                percent: number,
+            ): Record<string, unknown> => ({
+                priceTypeCode: 'WHOLESALE',
+                percent,
+                validFrom: new Date().toISOString(),
+                validTo,
+                justification: 'e2e seed grant',
+                counterpartyIds,
+            });
+
+            for (const [counterpartyIds, percent] of [
+                [[e2eCounterpartyId], 8],
+                [[otherCounterpartyId], 99],
+            ] as const) {
+                const requested = await adminGql<{ requestDiscountGrant: { id: string } }>(
+                    `mutation($input: DiscountGrantInput!) { requestDiscountGrant(input: $input) { id } }`,
+                    { input: grantInput([...counterpartyIds], percent) },
+                    managerToken,
+                );
+                const requestId = requested.data.requestDiscountGrant.id;
+                await adminGql(
+                    `mutation($requestId: ID!) {
+                        decideDiscountGrantRequest(requestId: $requestId, decision: "approved") { id status }
+                    }`,
+                    { requestId },
+                    deptHeadToken,
+                );
+            }
+        }
     }
 
     const browser = await chromium.launch();
