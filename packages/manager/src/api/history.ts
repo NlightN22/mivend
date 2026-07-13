@@ -36,3 +36,31 @@ export async function fetchEntityVersions(
     );
     return result.entityVersions;
 }
+
+export interface EntityRef {
+    entityName: string;
+    entityId: string;
+}
+
+// Batch variant of fetchEntityVersions — one request for a whole object graph's audit trail
+// (e.g. a Counterparty plus all of its TradingPoints) instead of one call per ref, so the
+// History widget scales to any entity/relation shape without an N+1 waterfall on load.
+export async function fetchEntityVersionsForRefs(refs: EntityRef[]): Promise<EntityVersionRow[]> {
+    if (refs.length === 0) return [];
+    const result = await adminApi<{ entityVersionsForEntities: EntityVersionRow[] }>(
+        `query($refs: [EntityRefInput!]!) {
+            entityVersionsForEntities(refs: $refs) {
+                id
+                entityName
+                entityId
+                action
+                changedFields
+                administratorId
+                comment
+                createdAt
+            }
+        }`,
+        { refs },
+    );
+    return result.entityVersionsForEntities;
+}

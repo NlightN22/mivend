@@ -18,12 +18,16 @@ import {
     type CustomerDocument,
 } from '../../api/customers';
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
-import { fetchEntityVersions, type EntityVersionRow } from '../../api/history';
+import { fetchEntityVersionsForRefs, type EntityVersionRow } from '../../api/history';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
 import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
 import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTab.vue';
-import CustomerHistoryTab from '../../components/customers/CustomerHistoryTab.vue';
+import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue';
+
+// Human labels for the generic EntityHistoryPanel widget — only the entity types this page
+// versions need an entry; anything else falls back to its raw entityName.
+const HISTORY_ENTITY_LABELS = { Counterparty: 'Customer', TradingPoint: 'Trading point' };
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -110,13 +114,10 @@ async function load(): Promise<void> {
         orders.value = customerId ? await fetchOrdersForCustomer(customerId) : [];
 
         if (canViewHistory.value) {
-            const versionLists = await Promise.all([
-                fetchEntityVersions('Counterparty', counterpartyId),
-                ...detail.tradingPoints.map(tp => fetchEntityVersions('TradingPoint', tp.id)),
+            history.value = await fetchEntityVersionsForRefs([
+                { entityName: 'Counterparty', entityId: counterpartyId },
+                ...detail.tradingPoints.map(tp => ({ entityName: 'TradingPoint', entityId: tp.id })),
             ]);
-            history.value = versionLists
-                .flat()
-                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         }
     } finally {
         loading.value = false;
@@ -226,7 +227,12 @@ async function handleReassign(administratorId: string): Promise<void> {
             <CustomerOrdersTab v-else-if="activeTab === 'orders'" :orders="orders" />
             <CustomerDiscountsTab v-else-if="activeTab === 'discounts'" :discounts="discounts" />
             <CustomerDocumentsTab v-else-if="activeTab === 'documents'" :documents="documents" />
-            <CustomerHistoryTab v-else :history="history" :managers="managers" />
+            <EntityHistoryPanel
+                v-else
+                :history="history"
+                :managers="managers"
+                :entity-labels="HISTORY_ENTITY_LABELS"
+            />
         </MvPanel>
     </div>
 </template>

@@ -17,6 +17,11 @@ export interface RecordChangeInput {
     comment?: string;
 }
 
+export interface EntityRef {
+    entityName: string;
+    entityId: ID;
+}
+
 @Injectable()
 export class VersioningService {
     constructor(
@@ -50,6 +55,32 @@ export class VersioningService {
             where: { entityName, entityId: String(entityId) },
             order: { createdAt: 'DESC' },
         });
+    }
+
+    // Batch variant of findForEntity — lets a single "History" widget fetch the trail for a
+    // whole object graph (e.g. a Counterparty plus all of its TradingPoints) in one round trip
+    // instead of one request per ref. Refs are grouped by entityName so each distinct entity
+    // type becomes a single `entityId IN (...)` clause rather than one OR branch per ref.
+    async findForEntities(ctx: RequestContext, refs: EntityRef[]): Promise<EntityVersion[]> {
+        if (refs.length === 0) return [];
+        const idsByName = new Map<string, string[]>();
+        for (const ref of refs) {
+            const ids = idsByName.get(ref.entityName) ?? [];
+            ids.push(String(ref.entityId));
+            idsByName.set(ref.entityName, ids);
+        }
+
+        const qb = this.connection.getRepository(ctx, EntityVersion).createQueryBuilder('v');
+        const clauses: string[] = [];
+        const params: Record<string, unknown> = {};
+        let i = 0;
+        for (const [entityName, entityIds] of idsByName) {
+            clauses.push(`(v.entityName = :name${i} AND v.entityId IN (:...ids${i}))`);
+            params[`name${i}`] = entityName;
+            params[`ids${i}`] = entityIds;
+            i += 1;
+        }
+        return qb.where(clauses.join(' OR '), params).orderBy('v.createdAt', 'DESC').getMany();
     }
 
     // Mirrors ReservationService.getCallerRoleCode's pattern (see

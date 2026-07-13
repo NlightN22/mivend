@@ -18,4 +18,15 @@ export class VersioningResolver {
     ): Promise<EntityVersion[]> {
         return this.versioningService.findForEntity(ctx, args.entityName, args.entityId);
     }
+
+    // Batch variant — one request for a whole object graph's audit trail (e.g. a Counterparty
+    // plus all of its TradingPoints) instead of one `entityVersions` call per ref.
+    @Query()
+    @Allow(CustomPermission.ReadEntityHistory.Permission)
+    async entityVersionsForEntities(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { refs: { entityName: string; entityId: ID }[] },
+    ): Promise<EntityVersion[]> {
+        return this.versioningService.findForEntities(ctx, args.refs);
+    }
 }

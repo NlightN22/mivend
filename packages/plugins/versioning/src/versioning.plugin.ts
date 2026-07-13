@@ -18,8 +18,14 @@ const adminApiSchema = gql`
         createdAt: DateTime!
     }
 
+    input EntityRefInput {
+        entityName: String!
+        entityId: ID!
+    }
+
     extend type Query {
         entityVersions(entityName: String!, entityId: ID!): [EntityVersion!]!
+        entityVersionsForEntities(refs: [EntityRefInput!]!): [EntityVersion!]!
     }
 `;
 

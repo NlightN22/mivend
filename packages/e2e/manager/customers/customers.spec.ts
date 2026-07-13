@@ -171,10 +171,14 @@ test('History tab is visible for department-head and lists the edit/reactivate e
     await page.waitForLoadState('networkidle');
 
     await page.getByRole('button', { name: 'History' }).click();
-    await expect(page.getByText(/Updated — TradingPoint/).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/Reactivated — TradingPoint/).first()).toBeVisible({
+    // EntityHistoryPanel renders one MvTable row per version — action/object/changed-by are
+    // separate cells, so match on the row's full accessible name rather than a single text node.
+    await expect(page.getByRole('row', { name: /Updated.*Trading point/ }).first()).toBeVisible({
         timeout: 15000,
     });
+    await expect(page.getByRole('row', { name: /Reactivated.*Trading point/ }).first()).toBeVisible(
+        { timeout: 15000 },
+    );
 });
 
 test('History tab is absent for non-leadership roles (negative)', async ({ page }, testInfo) => {
@@ -235,7 +239,9 @@ test('reassigning the counterparty manager records a Counterparty version entry 
         await openE2eCustomerDetail(page);
         await page.waitForLoadState('networkidle');
         await page.getByRole('button', { name: 'History' }).click();
-        await expect(page.getByText(/Updated — Counterparty/).first()).toBeVisible({
+        // CustomerDetailPage.vue's entityLabels maps entityName "Counterparty" -> "Customer"
+        // for display, so the Object column shows "Customer", not the raw entity name.
+        await expect(page.getByRole('row', { name: /Updated.*Customer/ }).first()).toBeVisible({
             timeout: 15000,
         });
     } finally {
