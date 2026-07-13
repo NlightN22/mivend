@@ -67,6 +67,7 @@ export { default as MvTooltip } from './components/MvTooltip/MvTooltip.vue';
 export { default as MvDiscountBadge } from './components/MvDiscountBadge/MvDiscountBadge.vue';
 export type { DiscountTier } from './components/MvDiscountBadge/MvDiscountBadge.vue';
 export { default as MvProgressBar } from './components/MvProgressBar/MvProgressBar.vue';
+export type { ProgressBarVariant } from './components/MvProgressBar/MvProgressBar.vue';
 
 export { default as MvKpiCard } from './components/MvKpiCard/MvKpiCard.vue';
 export { default as MvPanel } from './components/MvPanel/MvPanel.vue';
@@ -77,6 +78,8 @@ export type { AppSidebarItem } from './components/MvAppSidebar/MvAppSidebar.vue'
 
 export { default as MvSelect } from './components/MvSelect/MvSelect.vue';
 export type { SelectOption } from './components/MvSelect/MvSelect.vue';
+
+export { default as MvMultiSelect } from './components/MvMultiSelect/MvMultiSelect.vue';
 
 export { default as MvFilterBar } from './components/MvFilterBar/MvFilterBar.vue';
 export { default as MvFilterField } from './components/MvFilterBar/MvFilterField.vue';

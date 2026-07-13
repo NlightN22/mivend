@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { MvPanel, MvStatusBadge } from '@mivend/ui-kit';
+import { MvPanel, MvStatusBadge, MvSelect } from '@mivend/ui-kit';
+import { useAuthStore } from '../../stores/auth';
 import {
     fetchCustomerById,
     fetchCreditByCounterpartyId,
@@ -9,6 +10,7 @@ import {
     fetchOrdersForCustomer,
     fetchDiscountRulesForPriceType,
     fetchDocumentsForCounterparty,
+    reassignCounterpartyManager,
     type CustomerListItem,
     type CustomerCredit,
     type CustomerOrderItem,
@@ -22,6 +24,7 @@ import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTa
 import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTab.vue';
 
 const route = useRoute();
+const authStore = useAuthStore();
 
 const customer = ref<CustomerListItem | null>(null);
 const credit = ref<CustomerCredit | null>(null);
@@ -31,6 +34,16 @@ const discounts = ref<DiscountRuleItem[]>([]);
 const documents = ref<CustomerDocument[]>([]);
 const loading = ref(true);
 const notFound = ref(false);
+const reassigning = ref(false);
+const reassignError = ref('');
+
+// Mirrors CustomPermission.ReassignCounterpartyManager's grant list in
+// infrastructure/scripts/seed-access-roles.mjs (department-head, portal-admin) — a technical
+// UI-visibility key, not a hardcoded business enum (role codes stay DB-driven), same pattern as
+// dashboard-config.ts's APPROVER_ROLE_CODES. The mutation itself is the real enforcement; this
+// only avoids showing a control that would just be rejected.
+const CAN_REASSIGN_ROLE_CODES = new Set(['department-head', 'portal-admin']);
+const canReassign = computed(() => !!authStore.roleCode && CAN_REASSIGN_ROLE_CODES.has(authStore.roleCode));
 
 const activeTab = ref<'overview' | 'orders' | 'discounts' | 'documents'>('overview');
 
@@ -72,6 +85,20 @@ function managerName(id: string | null): string | null {
     if (!id) return null;
     return managers.value.find(m => m.id === id)?.name ?? null;
 }
+
+async function handleReassign(administratorId: string): Promise<void> {
+    if (!customer.value || !administratorId) return;
+    reassignError.value = '';
+    reassigning.value = true;
+    try {
+        await reassignCounterpartyManager(customer.value.id, administratorId);
+        customer.value = { ...customer.value, assignedManagerId: administratorId };
+    } catch (e) {
+        reassignError.value = e instanceof Error ? e.message : 'Could not reassign manager';
+    } finally {
+        reassigning.value = false;
+    }
+}
 </script>
 
 <template>
@@ -92,11 +119,23 @@ function managerName(id: string | null): string | null {
         </h1>
         <p class="customer-detail__subtitle">
             <span v-if="customer.inn">INN {{ customer.inn }} · </span>
-            <span v-if="managerName(customer.assignedManagerId)">
-                Manager: {{ managerName(customer.assignedManagerId) }}
+            <template v-if="!canReassign">
+                <span v-if="managerName(customer.assignedManagerId)">
+                    Manager: {{ managerName(customer.assignedManagerId) }}
+                </span>
+                <span v-else>No manager assigned</span>
+            </template>
+            <span v-else class="customer-detail__manager-control">
+                Manager:
+                <MvSelect
+                    :model-value="customer.assignedManagerId ?? ''"
+                    :options="[{ value: '', label: 'Unassigned' }, ...managers.map(m => ({ value: m.id, label: m.name }))]"
+                    :disabled="reassigning"
+                    @update:model-value="handleReassign($event)"
+                />
             </span>
-            <span v-else>No manager assigned</span>
         </p>
+        <p v-if="reassignError" class="customer-detail__error">{{ reassignError }}</p>
 
         <div class="customer-detail__tabs">
             <button type="button" :class="{ active: activeTab === 'overview' }" @click="activeTab = 'overview'">
@@ -152,6 +191,25 @@ function managerName(id: string | null): string | null {
 .customer-detail__subtitle {
     margin: 0;
     color: var(--el-text-color-secondary, #6b7280);
+    font-size: 13px;
+}
+
+.customer-detail__manager-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.customer-detail__manager-control :deep(.mv-select) {
+    width: auto;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 13px;
+}
+
+.customer-detail__error {
+    margin: 4px 0 0;
+    color: var(--el-color-danger, #dc2626);
     font-size: 13px;
 }
 

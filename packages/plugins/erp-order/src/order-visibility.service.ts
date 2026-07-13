@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ListQueryBuilder, Order, PaginatedList, RequestContext } from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
+import { Brackets, WhereExpressionBuilder } from 'typeorm';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 
@@ -28,6 +29,11 @@ export class OrderVisibilityService {
         // customerLastName, a contains filter) — used by the customer detail page's Orders tab
         // to show only that customer's orders.
         customerId?: string,
+        // Free-text search across order code + counterparty company name/INN + customer phone —
+        // deliberately server-side, not expressible via OrderFilterParameter._or (see #38):
+        // company name/INN/phone all live on the joined Counterparty/Customer rows, not on
+        // Order itself.
+        search?: string,
     ): Promise<PaginatedList<Order>> {
         const scope = await this.accessScopeService.resolveOrderScope(ctx);
         const qb = this.listQueryBuilder.build(Order, options, { ctx });
@@ -44,6 +50,18 @@ export class OrderVisibilityService {
         }
         if (customerId) {
             qb.andWhere('customer.id = :filterCustomerId', { filterCustomerId: customerId });
+        }
+        if (search) {
+            const term = `%${search}%`;
+            qb.andWhere(
+                new Brackets((bqb: WhereExpressionBuilder) => {
+                    bqb.where(`${qb.alias}.code ILIKE :term`, { term })
+                        .orWhere('customer.phoneNumber ILIKE :term', { term })
+                        .orWhere('counterparty.shortName ILIKE :term', { term })
+                        .orWhere('counterparty.legalName ILIKE :term', { term })
+                        .orWhere('counterparty.inn ILIKE :term', { term });
+                }),
+            );
         }
 
         switch (scope.kind) {

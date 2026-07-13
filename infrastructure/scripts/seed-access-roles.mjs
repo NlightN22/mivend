@@ -8,10 +8,13 @@
 //
 // Role -> max-scope-per-resource matches the persona matrix in
 // docs/ai/manager-portal-concept.md §2/§3.3 (Оператор/Менеджер/Руководитель отдела/
-// Ген. директор/СБ/Администратор портала). Only the "counterparty"/"documents" resources are
-// wired up by AccessScopeService so far. WorkflowDefinition rows for the requestTypes
-// referenced below (priceAdjustmentApproval, discountGrantApproval) are separate admin
-// config (upsertWorkflowDefinition), not created by this script.
+// Ген. директор/СБ/Администратор портала). Only the "counterparty"/"order" resources are wired
+// up by AccessScopeService so far (resolveCounterpartyScope/resolveOrderScope) — every role's
+// accessScopeConfig must set both keys, or the resource missing a key silently falls back to
+// 'own' (see RoleScopeConfigService.maxScopeFor's default) regardless of the role's intended
+// visibility. WorkflowDefinition rows for the requestTypes referenced below
+// (priceAdjustmentApproval, discountGrantApproval) are separate admin config
+// (upsertWorkflowDefinition), not created by this script.
 
 const API_URL = `http://localhost:${process.env.PORT ?? '3000'}/admin-api`;
 
@@ -54,7 +57,7 @@ const ROLES = [
             'ReadCustomer',
             'ReadCounterparty',
         ],
-        accessScopeConfig: { counterparty: 'department' },
+        accessScopeConfig: { counterparty: 'department', order: 'department' },
     },
     {
         code: 'manager',
@@ -71,7 +74,7 @@ const ROLES = [
             'RequestDiscountGrantApproval',
             'RequestCreditTermApproval',
         ],
-        accessScopeConfig: { counterparty: 'own' },
+        accessScopeConfig: { counterparty: 'own', order: 'own' },
     },
     {
         code: 'department-head',
@@ -83,8 +86,9 @@ const ROLES = [
             'ReadCounterparty',
             'ReadFloorPrice',
             'ApproveDiscountRequest',
+            'ReassignCounterpartyManager',
         ],
-        accessScopeConfig: { counterparty: 'department' },
+        accessScopeConfig: { counterparty: 'department', order: 'department' },
     },
     {
         code: 'general-director',
@@ -98,7 +102,7 @@ const ROLES = [
             'ReadFloorPrice',
             'ApproveDiscountRequest',
         ],
-        accessScopeConfig: { counterparty: 'all' },
+        accessScopeConfig: { counterparty: 'all', order: 'all' },
     },
     {
         code: 'security-officer',
@@ -112,7 +116,7 @@ const ROLES = [
             'ReadFloorPrice',
             'ApproveSecurityLimit',
         ],
-        accessScopeConfig: { counterparty: 'all' },
+        accessScopeConfig: { counterparty: 'all', order: 'all' },
     },
     {
         code: 'portal-admin',
@@ -126,8 +130,9 @@ const ROLES = [
             'ReadFloorPrice',
             'ManageAccessControl',
             'ManageApprovalWorkflows',
+            'ReassignCounterpartyManager',
         ],
-        accessScopeConfig: { counterparty: 'all' },
+        accessScopeConfig: { counterparty: 'all', order: 'all' },
     },
 ];
 

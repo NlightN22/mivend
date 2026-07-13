@@ -12,10 +12,13 @@ import {
     type RelatedDocument,
 } from '../../api/orderDetail';
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
-import OrderCustomerCard from '../../components/order-detail/OrderCustomerCard.vue';
+import { fetchCreditByCounterpartyId, type CustomerCredit } from '../../api/customers';
+import { fetchOrderReservations, type OrderReservation } from '../../api/reservation';
+import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
+import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
 
 const route = useRoute();
 const order = ref<OrderDetail | null>(null);
@@ -24,11 +27,27 @@ const adjustmentRequests = ref<PriceAdjustmentRequestSummary[]>([]);
 const documents = ref<RelatedDocument[]>([]);
 const loading = ref(true);
 const notFound = ref(false);
+const creditByCounterpartyId = ref<Map<string, CustomerCredit>>(new Map());
+const reservations = ref<OrderReservation[]>([]);
+
+// Mirrors DEFAULT_RESERVATION_DAYS in packages/plugins/reservation/src/types.ts — used only as
+// the form's initial value before an order's own customFields.reservationDays default loads.
+const FALLBACK_RESERVATION_DAYS = 3;
+const defaultReservationDays = computed(
+    () => order.value?.customFields.reservationDays ?? FALLBACK_RESERVATION_DAYS,
+);
 
 const managerName = computed(() => {
     const managerId = order.value?.customer?.counterparty?.assignedManagerId;
     if (!managerId) return null;
     return managers.value.find(m => m.id === managerId)?.name ?? null;
+});
+
+// Null for a caller without ReadCounterpartyCredit — see fetchCreditByCounterpartyId.
+const credit = computed(() => {
+    const counterpartyId = order.value?.customer?.counterparty?.id;
+    if (!counterpartyId) return null;
+    return creditByCounterpartyId.value.get(counterpartyId) ?? null;
 });
 
 const editable = computed(() => !!order.value && !NON_EDITABLE_ORDER_STATES.includes(order.value.state));
@@ -46,19 +65,22 @@ async function load(): Promise<void> {
     notFound.value = false;
     try {
         const code = route.params.code as string;
-        const [detail, managerOptions] = await Promise.all([
+        const [detail, managerOptions, creditMap] = await Promise.all([
             fetchOrderDetail(code),
             managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
+            fetchCreditByCounterpartyId(),
         ]);
         managers.value = managerOptions;
+        creditByCounterpartyId.value = creditMap;
         if (!detail) {
             notFound.value = true;
             return;
         }
         order.value = detail;
-        [adjustmentRequests.value, documents.value] = await Promise.all([
+        [adjustmentRequests.value, documents.value, reservations.value] = await Promise.all([
             fetchPriceAdjustmentRequestsForOrder(detail.id),
             fetchRelatedDocuments(detail.id),
+            fetchOrderReservations(detail.id),
         ]);
     } finally {
         loading.value = false;
@@ -67,12 +89,14 @@ async function load(): Promise<void> {
 
 async function reload(): Promise<void> {
     if (!order.value) return;
-    const [detail, requests] = await Promise.all([
+    const [detail, requests, reservationRows] = await Promise.all([
         fetchOrderDetail(order.value.code),
         fetchPriceAdjustmentRequestsForOrder(order.value.id),
+        fetchOrderReservations(order.value.id),
     ]);
     order.value = detail;
     adjustmentRequests.value = requests;
+    reservations.value = reservationRows;
 }
 
 onMounted(load);
@@ -100,33 +124,48 @@ watch(() => route.params.code, load);
             </p>
         </div>
 
-        <MvPanel title="Customer">
-            <OrderCustomerCard :order="order" :manager-name="managerName" />
-        </MvPanel>
+        <div class="order-detail__grid">
+            <div class="order-detail__left-stack">
+                <MvPanel title="Order lines">
+                    <OrderLinesTable
+                        :order-id="order.id"
+                        :lines="order.lines"
+                        :currency-code="order.currencyCode"
+                        :editable="editable"
+                        :adjustment-requests="adjustmentRequests"
+                        @adjusted="reload"
+                    />
+                    <div class="order-detail__totals">
+                        <span>Subtotal: {{ money(order.subTotalWithTax) }}</span>
+                        <span>Shipping: {{ money(order.shippingWithTax) }}</span>
+                        <strong>Total: {{ money(order.totalWithTax) }}</strong>
+                    </div>
+                </MvPanel>
 
-        <MvPanel title="Order lines">
-            <OrderLinesTable
-                :order-id="order.id"
-                :lines="order.lines"
-                :currency-code="order.currencyCode"
-                :editable="editable"
-                :adjustment-requests="adjustmentRequests"
-                @adjusted="reload"
-            />
-            <div class="order-detail__totals">
-                <span>Subtotal: {{ money(order.subTotalWithTax) }}</span>
-                <span>Shipping: {{ money(order.shippingWithTax) }}</span>
-                <strong>Total: {{ money(order.totalWithTax) }}</strong>
+                <MvPanel v-if="adjustmentRequests.length" title="Price adjustment history">
+                    <PriceAdjustmentHistoryPanel :requests="adjustmentRequests" />
+                </MvPanel>
             </div>
-        </MvPanel>
 
-        <MvPanel v-if="adjustmentRequests.length" title="Price adjustment history">
-            <PriceAdjustmentHistoryPanel :requests="adjustmentRequests" />
-        </MvPanel>
+            <aside class="order-detail__right-stack">
+                <MvPanel title="Reservation">
+                    <ReservationPanel
+                        :order-id="order.id"
+                        :reservations="reservations"
+                        :default-reservation-days="defaultReservationDays"
+                        @changed="reload"
+                    />
+                </MvPanel>
 
-        <MvPanel title="Related documents">
-            <RelatedDocumentsPanel :documents="documents" />
-        </MvPanel>
+                <MvPanel title="Order context">
+                    <OrderContextPanel :order="order" :manager-name="managerName" :credit="credit" />
+                </MvPanel>
+
+                <MvPanel title="Documents">
+                    <RelatedDocumentsPanel :documents="documents" />
+                </MvPanel>
+            </aside>
+        </div>
     </div>
 </template>
 
@@ -135,7 +174,26 @@ watch(() => route.params.code, load);
     display: flex;
     flex-direction: column;
     gap: 18px;
-    max-width: 960px;
+}
+
+.order-detail__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 18px;
+    align-items: start;
+}
+
+.order-detail__left-stack,
+.order-detail__right-stack {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+}
+
+@media (max-width: 1200px) {
+    .order-detail__grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .order-detail__breadcrumb {

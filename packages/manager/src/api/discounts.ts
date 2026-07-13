@@ -75,6 +75,7 @@ export interface DiscountGrantInput {
     validTo: string;
     justification: string;
     supersedesDiscountRuleId?: string | null;
+    counterpartyIds?: string[] | null;
 }
 
 export type DiscountRowStatus = 'active' | 'expiring-soon' | 'expired' | 'pending' | 'rejected';
@@ -197,4 +198,26 @@ export async function requestDiscountGrant(input: DiscountGrantInput): Promise<{
         { input },
     );
     return result.requestDiscountGrant;
+}
+
+export interface ExpiringDiscountGrant {
+    id: string;
+    validTo: string;
+    counterparties: { id: string; legalName: string }[];
+}
+
+export async function fetchExpiringDiscountGrants(
+    withinDays: number,
+): Promise<ExpiringDiscountGrant[]> {
+    const result = await adminApi<{ expiringDiscountGrants: ExpiringDiscountGrant[] }>(
+        `query($withinDays: Int!) {
+            expiringDiscountGrants(withinDays: $withinDays) {
+                id
+                validTo
+                counterparties { id legalName }
+            }
+        }`,
+        { withinDays },
+    );
+    return result.expiringDiscountGrants;
 }

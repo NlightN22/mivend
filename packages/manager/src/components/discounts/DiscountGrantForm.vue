@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { MvSelect, MvInput, MvButton, MvNotice } from '@mivend/ui-kit';
+import { MvSelect, MvMultiSelect, MvInput, MvButton, MvNotice } from '@mivend/ui-kit';
 import {
     fetchPriceTypeCodes,
     fetchFacets,
@@ -8,12 +8,14 @@ import {
     type DiscountRow,
     type FacetOption,
 } from '../../api/discounts';
+import { fetchCustomersList, type CustomerListItem } from '../../api/customers';
 
 const props = defineProps<{ renewFrom: DiscountRow | null }>();
 const emit = defineEmits<{ submitted: []; cancel: [] }>();
 
 const priceTypes = ref<string[]>([]);
 const facets = ref<FacetOption[]>([]);
+const customers = ref<CustomerListItem[]>([]);
 const submitting = ref(false);
 const error = ref('');
 
@@ -25,6 +27,7 @@ const form = reactive({
     validFrom: '',
     validTo: '',
     justification: '',
+    counterpartyIds: [] as string[],
 });
 
 const isRenewal = computed(() => !!props.renewFrom);
@@ -39,8 +42,16 @@ const facetValueOptions = computed(() => {
     return facet ? facet.values.map(v => ({ value: v.code, label: v.name })) : [];
 });
 
+const customerOptions = computed(() =>
+    customers.value.map(c => ({ value: c.id, label: c.legalName })),
+);
+
 onMounted(async () => {
-    [priceTypes.value, facets.value] = await Promise.all([fetchPriceTypeCodes(), fetchFacets()]);
+    [priceTypes.value, facets.value, customers.value] = await Promise.all([
+        fetchPriceTypeCodes(),
+        fetchFacets(),
+        fetchCustomersList(),
+    ]);
     if (props.renewFrom) {
         form.priceTypeCode = props.renewFrom.priceType;
         form.percent = String(props.renewFrom.percent);
@@ -78,6 +89,7 @@ async function submit(): Promise<void> {
             validTo: new Date(form.validTo).toISOString(),
             justification: form.justification,
             supersedesDiscountRuleId: props.renewFrom?.ruleErpId ?? null,
+            counterpartyIds: form.counterpartyIds.length ? form.counterpartyIds : null,
         });
         emit('submitted');
     } catch (e) {
@@ -101,10 +113,7 @@ async function submit(): Promise<void> {
 
         <div class="discount-grant-form__grid">
             <label>
-                Customer
-                <span class="discount-grant-form__hint">
-                    Discounts apply by price type, not an individual customer
-                </span>
+                Price type
                 <MvSelect
                     :model-value="form.priceTypeCode"
                     :options="[{ value: '', label: 'Select a price type' }, ...priceTypes.map(p => ({ value: p, label: p }))]"
@@ -140,6 +149,18 @@ async function submit(): Promise<void> {
                 <MvInput size="sm" type="date" :model-value="form.validTo" @update:model-value="form.validTo = $event" />
             </label>
         </div>
+
+        <label class="discount-grant-form__customers">
+            Applies to
+            <span class="discount-grant-form__hint">
+                Leave empty for a company-wide discount, or select specific customers
+            </span>
+            <MvMultiSelect
+                :model-value="form.counterpartyIds"
+                :options="customerOptions"
+                @update:model-value="form.counterpartyIds = $event"
+            />
+        </label>
 
         <label class="discount-grant-form__justification">
             Justification
@@ -193,6 +214,7 @@ async function submit(): Promise<void> {
 }
 
 .discount-grant-form__grid label,
+.discount-grant-form__customers,
 .discount-grant-form__justification {
     display: flex;
     flex-direction: column;

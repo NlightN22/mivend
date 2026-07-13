@@ -1,21 +1,25 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { MvKpiCard, MvPanel, MvWarningBanner, MvPagination } from '@mivend/ui-kit';
+import { MvKpiCard, MvPanel, MvWarningBanner, MvPagination, MvStatusBadge } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import { adminApi } from '../../api/client';
 import {
     DEFAULT_FILTERS,
     fetchOrdersPage,
     fetchOrdersSummary,
     fetchManagerOptions,
+    fetchBranchOptions,
     type OrdersFilters,
     type OrderListItem,
     type OrdersSummary,
     type ManagerOption,
+    type BranchOption,
 } from '../../api/orders';
 import OrdersFilterBar from '../../components/orders/OrdersFilterBar.vue';
 import OrdersTable from '../../components/orders/OrdersTable.vue';
 import AttentionList from '../../components/orders/AttentionList.vue';
 import OperationalPanel from '../../components/orders/OperationalPanel.vue';
+import SavedViewsPanel, { type SavedView } from '../../components/orders/SavedViewsPanel.vue';
 import SavedFilterChips, { type FilterChip } from '../../components/SavedFilterChips.vue';
 
 const authStore = useAuthStore();
@@ -32,7 +36,9 @@ const orders = ref<OrderListItem[]>([]);
 const totalItems = ref(0);
 const summary = ref<OrdersSummary | null>(null);
 const managers = ref<ManagerOption[]>([]);
+const branches = ref<BranchOption[]>([]);
 const loading = ref(true);
+const departmentName = ref<string | null>(null);
 
 const CHIPS: FilterChip[] = [
     { key: 'all', label: 'All' },
@@ -48,6 +54,24 @@ function applyChip(key: string): void {
     page.value = 1;
 }
 
+const savedViews = computed<SavedView[]>(() => [
+    { key: 'processing', label: 'My processing', count: summary.value?.processingCount ?? 0 },
+    { key: 'waiting-approval', label: 'Waiting approval', count: summary.value?.waitingApprovalCount ?? 0 },
+    { key: 'today', label: "Today's orders", count: summary.value?.todayCount ?? 0 },
+    { key: 'drafts', label: 'Drafts', count: summary.value?.draftCount ?? 0 },
+]);
+
+function applySavedView(key: string): void {
+    resetFilters();
+    if (key === 'processing') filters.state = 'PaymentAuthorized';
+    else if (key === 'drafts') filters.state = 'Draft';
+    else if (key === 'today') filters.dateRange = 'today';
+    // "Waiting approval" has no Order.state of its own — it's derived from
+    // pendingPriceAdjustmentOrderIds (see fetchOrdersSummary), which OrdersFilters doesn't
+    // support filtering by yet. Resets to an unfiltered list; the Attention column/panel
+    // already surfaces these orders individually.
+}
+
 async function loadOrders(): Promise<void> {
     const result = await fetchOrdersPage(filters, page.value, pageSize);
     orders.value = result.items;
@@ -57,17 +81,33 @@ async function loadOrders(): Promise<void> {
 async function loadAll(): Promise<void> {
     loading.value = true;
     try {
-        const [ordersResult, summaryResult, managerOptions] = await Promise.all([
+        const [ordersResult, summaryResult, managerOptions, branchOptions] = await Promise.all([
             fetchOrdersPage(filters, page.value, pageSize),
             fetchOrdersSummary(),
             managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
+            branches.value.length ? Promise.resolve(branches.value) : fetchBranchOptions(),
         ]);
         orders.value = ordersResult.items;
         totalItems.value = ordersResult.totalItems;
         summary.value = summaryResult;
         managers.value = managerOptions;
+        branches.value = branchOptions;
     } finally {
         loading.value = false;
+    }
+
+    // Cosmetic (department badge next to the role badge) — kept independent so a failure here
+    // never affects the rest of the page (same pattern as DashboardPage.vue).
+    try {
+        const departmentId = authStore.administrator?.customFields.departmentId;
+        const result = await adminApi<{ departments: { erpId: string; name: string }[] }>(
+            `query { departments { erpId name } }`,
+        );
+        // administrator.customFields.departmentId stores the ERP id (see
+        // EmployeeService.assign), not Department's DB row id — match on erpId.
+        departmentName.value = result.departments.find(d => d.erpId === departmentId)?.name ?? null;
+    } catch (e) {
+        console.warn('[orders] could not load department name:', e);
     }
 }
 
@@ -109,6 +149,14 @@ const operationalMetrics = computed(() => {
         },
     ];
 });
+
+const todayAmountFormatted = computed(() => {
+    if (!summary.value) return '';
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: summary.value.currencyCode,
+    }).format(summary.value.todayAmount / 100);
+});
 </script>
 
 <template>
@@ -118,6 +166,10 @@ const operationalMetrics = computed(() => {
                 <div class="orders-page__breadcrumb">Workspace / Orders</div>
                 <h1 class="orders-page__title">Orders</h1>
                 <p class="orders-page__subtitle">{{ totalItems }} orders across your accessible scope.</p>
+            </div>
+            <div class="orders-page__context">
+                <MvStatusBadge variant="info">{{ authStore.roleLabel ?? authStore.roleCode }}</MvStatusBadge>
+                <MvStatusBadge v-if="departmentName" variant="neutral">{{ departmentName }}</MvStatusBadge>
             </div>
         </div>
 
@@ -134,7 +186,7 @@ const operationalMetrics = computed(() => {
             <MvKpiCard label="Open orders" :value="summary.openCount" />
             <MvKpiCard label="Waiting approval" :value="summary.waitingApprovalCount" accent />
             <MvKpiCard label="Overdue" :value="summary.overdueCount" accent />
-            <MvKpiCard label="Today's orders" :value="summary.todayCount" />
+            <MvKpiCard label="Today's amount" :value="todayAmountFormatted" :caption="`${summary.todayCount} orders today`" />
         </div>
 
         <div class="orders-page__grid">
@@ -150,6 +202,7 @@ const operationalMetrics = computed(() => {
                 <OrdersTable
                     :orders="orders"
                     :managers="managers"
+                    :branches="branches"
                     :show-manager-column="showManagerColumn"
                     :pending-approval-order-ids="summary?.pendingApprovalOrderIds ?? new Set()"
                 />
@@ -163,6 +216,9 @@ const operationalMetrics = computed(() => {
                 <MvPanel title="Attention">
                     <AttentionList :items="attentionItems" />
                 </MvPanel>
+                <MvPanel title="Saved views">
+                    <SavedViewsPanel :views="savedViews" @select="applySavedView" />
+                </MvPanel>
             </aside>
         </div>
     </div>
@@ -170,7 +226,18 @@ const operationalMetrics = computed(() => {
 
 <style scoped>
 .orders-page__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
     margin-bottom: 18px;
+}
+
+.orders-page__context {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .orders-page__breadcrumb {

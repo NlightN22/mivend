@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/orderDetail';
+import { fetchAvailableStock } from '../../api/reservation';
 import PriceAdjustmentPanel from '../order-create/PriceAdjustmentPanel.vue';
 
 const props = defineProps<{
@@ -14,6 +15,18 @@ const props = defineProps<{
 const emit = defineEmits<{ adjusted: [] }>();
 
 const openAdjustLineId = ref<string | null>(null);
+const availableByVariantId = ref<Map<string, number>>(new Map());
+
+async function loadAvailableStock(): Promise<void> {
+    const variantIds = [...new Set(props.lines.map(l => l.productVariant.id))];
+    const entries = await Promise.all(
+        variantIds.map(async id => [id, await fetchAvailableStock(id)] as const),
+    );
+    availableByVariantId.value = new Map(entries);
+}
+
+onMounted(loadAvailableStock);
+watch(() => props.lines, loadAvailableStock);
 
 function money(amount: number): string {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: props.currencyCode }).format(
@@ -72,6 +85,7 @@ function toggleAdjust(lineId: string): void {
                 <th>SKU</th>
                 <th>Product</th>
                 <th>Qty</th>
+                <th>Available stock</th>
                 <th>Unit price</th>
                 <th>Adjustment</th>
                 <th v-if="editable"></th>
@@ -84,6 +98,11 @@ function toggleAdjust(lineId: string): void {
                     <td>{{ line.productVariant.sku }}</td>
                     <td>{{ line.productVariant.name }}</td>
                     <td>{{ line.quantity }}</td>
+                    <td>
+                        <span :class="{ 'order-lines__stock--low': (availableByVariantId.get(line.productVariant.id) ?? 0) < line.quantity }">
+                            {{ availableByVariantId.get(line.productVariant.id) ?? '—' }}
+                        </span>
+                    </td>
                     <td>{{ money(line.unitPriceWithTax) }}</td>
                     <td>
                         <RouterLink
@@ -106,7 +125,7 @@ function toggleAdjust(lineId: string): void {
                     <td>{{ money(line.linePriceWithTax) }}</td>
                 </tr>
                 <tr v-if="openAdjustLineId === line.id">
-                    <td :colspan="editable ? 7 : 6">
+                    <td :colspan="editable ? 8 : 7">
                         <PriceAdjustmentPanel
                             :order-id="orderId"
                             :line="line"
@@ -146,6 +165,11 @@ function toggleAdjust(lineId: string): void {
 .order-lines td {
     padding: 10px;
     border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+}
+
+.order-lines__stock--low {
+    color: var(--el-color-danger, #dc2626);
+    font-weight: 700;
 }
 
 .order-lines__adjust {

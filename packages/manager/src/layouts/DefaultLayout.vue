@@ -55,7 +55,11 @@ async function handleLogout(): Promise<void> {
             :user-initials="initials"
             search-placeholder="Search customers, orders, documents, products, VIN, OEM, phone…"
             @logout="handleLogout"
-        />
+        >
+            <template #actions>
+                <RouterLink class="layout__new-order" to="/orders/new">+ New order</RouterLink>
+            </template>
+        </MvAppTopbar>
         <div class="layout__body">
             <MvAppSidebar :items="menuItems" section-title="Workspace" />
             <main class="layout__content">
@@ -82,5 +86,23 @@ async function handleLogout(): Promise<void> {
     flex: 1;
     padding: 24px;
     min-width: 0;
+}
+
+.layout__new-order {
+    display: inline-flex;
+    align-items: center;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--el-color-primary, #00b894);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.layout__new-order:hover {
+    filter: brightness(1.05);
 }
 </style>

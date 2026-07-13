@@ -7,7 +7,9 @@ export interface SelectOption {
     label: string;
 }
 
-defineProps<{ modelValue: string; options: SelectOption[] }>();
+withDefaults(defineProps<{ modelValue: string; options: SelectOption[]; disabled?: boolean }>(), {
+    disabled: false,
+});
 defineEmits<{ 'update:modelValue': [value: string] }>();
 </script>
 
@@ -15,6 +17,7 @@ defineEmits<{ 'update:modelValue': [value: string] }>();
     <select
         class="mv-select"
         :value="modelValue"
+        :disabled="disabled"
         @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
     >
         <option v-for="option in options" :key="option.value" :value="option.value">
@@ -40,5 +43,10 @@ defineEmits<{ 'update:modelValue': [value: string] }>();
     border-color: var(--el-color-primary-light-7, #c8f7ec);
     box-shadow: 0 0 0 4px var(--el-color-primary-light-9, #f0fffa);
     background: #fff;
+}
+
+.mv-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 </style>

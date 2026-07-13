@@ -4,9 +4,13 @@ import { MvKpiCard, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { adminApi } from '../../api/client';
 import { fetchDashboardData, buildActivityFeed, type DashboardData } from '../../api/dashboard';
+import { getDashboardKpiCards } from '../../api/dashboard-config';
+import { fetchExpiringDiscountGrants } from '../../api/discounts';
 import RecentOrdersTable from '../../components/dashboard/RecentOrdersTable.vue';
 import ApprovalStatusList from '../../components/dashboard/ApprovalStatusList.vue';
-import ExpiringDiscountsBanner from '../../components/dashboard/ExpiringDiscountsBanner.vue';
+import ExpiringDiscountsBanner, {
+    type ExpiringDiscount,
+} from '../../components/dashboard/ExpiringDiscountsBanner.vue';
 import QuickActionsPanel from '../../components/dashboard/QuickActionsPanel.vue';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.vue';
 import SavedFilterChips, { type FilterChip } from '../../components/SavedFilterChips.vue';
@@ -14,7 +18,12 @@ import SavedFilterChips, { type FilterChip } from '../../components/SavedFilterC
 const authStore = useAuthStore();
 const data = ref<DashboardData | null>(null);
 const departmentName = ref<string | null>(null);
+const expiringDiscounts = ref<ExpiringDiscount[]>([]);
 const loading = ref(true);
+
+// Same placeholder threshold used on /discounts (docs/ai/manager-portal-concept.md §8.2 — no
+// exact "expiring soon" window has been decided yet).
+const EXPIRING_SOON_DAYS = 14;
 
 const FILTER_CHIPS: FilterChip[] = [
     { key: 'all', label: 'All' },
@@ -39,6 +48,8 @@ const filteredOrders = computed(() => {
     return matched.slice(0, 5);
 });
 
+const kpiCards = computed(() => getDashboardKpiCards(authStore.roleCode));
+
 const activityItems = computed(() =>
     data.value ? buildActivityFeed(data.value.recentOrders, data.value.recentApprovals) : [],
 );
@@ -56,16 +67,35 @@ const pendingBreakdown = computed(() => {
 
 onMounted(async () => {
     try {
-        const [dashboard, departmentsResult] = await Promise.all([
+        const [dashboard, grants] = await Promise.all([
             fetchDashboardData(),
-            adminApi<{ departments: { id: string; name: string }[] }>(
-                `query { departments { id name } }`,
-            ),
+            fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
         ]);
         data.value = dashboard;
-        const departmentId = authStore.administrator?.customFields.departmentId;
-        departmentName.value =
-            departmentsResult.departments.find(d => d.id === departmentId)?.name ?? null;
+        // One grant can list several customers (see DiscountGrant.counterparties) — the banner
+        // shows one line per customer, same shape as the design mock.
+        expiringDiscounts.value = grants.flatMap(grant =>
+            grant.counterparties.map(cp => ({
+                id: `${grant.id}-${cp.id}`,
+                customerName: cp.legalName,
+                validTo: grant.validTo,
+            })),
+        );
+
+        // Cosmetic (department name badge next to the role badge) — kept independent of the
+        // main dashboard data so a failure here never blanks the whole page.
+        try {
+            const departmentId = authStore.administrator?.customFields.departmentId;
+            const departmentsResult = await adminApi<{
+                departments: { erpId: string; name: string }[];
+            }>(`query { departments { erpId name } }`);
+            // administrator.customFields.departmentId stores the ERP id (see
+            // EmployeeService.assign), not Department's DB row id — match on erpId.
+            departmentName.value =
+                departmentsResult.departments.find(d => d.erpId === departmentId)?.name ?? null;
+        } catch (e) {
+            console.warn('[dashboard] could not load department name:', e);
+        }
     } finally {
         loading.value = false;
     }
@@ -89,30 +119,18 @@ onMounted(async () => {
             </div>
         </div>
 
-        <ExpiringDiscountsBanner :discounts="[]" />
+        <ExpiringDiscountsBanner :discounts="expiringDiscounts" />
 
         <div v-if="data" class="dashboard__kpis">
             <MvKpiCard
-                label="Active orders"
-                :value="data.activeOrdersCount"
-                :caption="`${data.activeOrdersPlacedLast24h} placed in the last 24h`"
-                to="/orders"
+                v-for="card in kpiCards"
+                :key="card.key"
+                :label="card.label"
+                :value="card.value(data)"
+                :caption="card.key === 'pending-approvals' ? pendingBreakdown : card.caption?.(data)"
+                :to="card.to"
+                :accent="card.accent"
             />
-            <MvKpiCard
-                label="Awaiting shipment / overdue"
-                :value="data.awaitingShipmentCount"
-                :caption="`${data.overdueCount} overdue (>3 days)`"
-                to="/orders"
-                accent
-            />
-            <MvKpiCard
-                label="Pending approval requests"
-                :value="data.pendingApprovalsCount"
-                :caption="pendingBreakdown"
-                to="/approvals"
-                accent
-            />
-            <MvKpiCard label="My clients" :value="data.myClientsCount" to="/customers" />
         </div>
 
         <div v-if="data" class="dashboard__grid">

@@ -13,7 +13,9 @@ export interface OrderListItem {
         counterparty: {
             shortName: string;
             inn: string | null;
+            priceType: string;
             assignedManagerId: string | null;
+            branchId: string | null;
         } | null;
     } | null;
 }
@@ -78,12 +80,6 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
         orderPlacedAt: { after: dateRangeToAfter(filters.dateRange) },
     };
     if (filters.state) filter.state = { eq: filters.state };
-    if (filters.search) {
-        filter._or = [
-            { code: { contains: filters.search } },
-            { customerLastName: { contains: filters.search } },
-        ];
-    }
     return filter;
 }
 
@@ -97,7 +93,7 @@ const ORDER_ITEM_FIELDS = `
     customer {
         firstName
         lastName
-        counterparty { shortName inn assignedManagerId }
+        counterparty { shortName inn priceType assignedManagerId branchId }
     }
 `;
 
@@ -109,8 +105,8 @@ export async function fetchOrdersPage(
     const result = await adminApi<{
         visibleOrders: { items: OrderListItem[]; totalItems: number };
     }>(
-        `query OrdersPage($options: OrderListOptions, $managerId: ID) {
-            visibleOrders(options: $options, managerId: $managerId) {
+        `query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
+            visibleOrders(options: $options, managerId: $managerId, search: $search) {
                 totalItems
                 items { ${ORDER_ITEM_FIELDS} }
             }
@@ -123,6 +119,7 @@ export async function fetchOrdersPage(
                 filter: buildFilter(filters),
             },
             managerId: filters.managerId || undefined,
+            search: filters.search || undefined,
         },
     );
     return result.visibleOrders;
@@ -140,7 +137,10 @@ export interface OrdersSummary {
     openCount: number;
     overdueCount: number;
     todayCount: number;
+    todayAmount: number;
     waitingApprovalCount: number;
+    processingCount: number;
+    draftCount: number;
     totalAmount: number;
     currencyCode: string;
     pendingApprovalOrderIds: Set<string>;
@@ -159,7 +159,9 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
     const result = await adminApi<{
         open: { totalItems: number };
         overdue: { totalItems: number };
-        today: { totalItems: number };
+        today: { totalItems: number; items: { totalWithTax: number }[] };
+        processing: { totalItems: number };
+        drafts: { totalItems: number };
         allOpen: {
             items: {
                 id: string;
@@ -182,7 +184,14 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
             ) {
                 totalItems
             }
-            today: visibleOrders(options: { filter: { orderPlacedAt: { after: $todayStart } } }) {
+            today: visibleOrders(options: { take: 500, filter: { orderPlacedAt: { after: $todayStart } } }) {
+                totalItems
+                items { totalWithTax }
+            }
+            processing: visibleOrders(options: { filter: { state: { eq: "PaymentAuthorized" } } }) {
+                totalItems
+            }
+            drafts: visibleOrders(options: { filter: { state: { eq: "Draft" } } }) {
                 totalItems
             }
             # Capped at 500 rows — there is no server-side SUM aggregate on the order list yet,
@@ -231,7 +240,10 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
         openCount: result.open.totalItems,
         overdueCount: result.overdue.totalItems,
         todayCount: result.today.totalItems,
+        todayAmount: result.today.items.reduce((sum, o) => sum + o.totalWithTax, 0),
         waitingApprovalCount: result.allOpen.items.filter(o => pendingIds.has(o.id)).length,
+        processingCount: result.processing.totalItems,
+        draftCount: result.drafts.totalItems,
         totalAmount: result.allOpen.items.reduce((sum, o) => sum + o.totalWithTax, 0),
         currencyCode: result.allOpen.items[0]?.currencyCode ?? 'USD',
         pendingApprovalOrderIds: pendingIds,
@@ -254,4 +266,18 @@ export async function fetchManagerOptions(): Promise<ManagerOption[]> {
         name: `${a.firstName} ${a.lastName}`,
         roleCodes: a.roleCodes,
     }));
+}
+
+export interface BranchOption {
+    // erpId, not Branch's DB row id — Counterparty.branchId (see OrderListItem.customer.
+    // counterparty.branchId) stores the ERP id, same convention as departmentId.
+    erpId: string;
+    name: string;
+}
+
+export async function fetchBranchOptions(): Promise<BranchOption[]> {
+    const result = await adminApi<{ branches: { erpId: string; name: string }[] }>(
+        `query { branches { erpId name } }`,
+    );
+    return result.branches;
 }

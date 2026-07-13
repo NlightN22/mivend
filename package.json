@@ -9,7 +9,7 @@
         "dev:branch": "dotenv -e apps/server/.env.branch -- pnpm --filter server dev",
         "dev:plugins": "tsc -b packages/plugins/tsconfig.json --watch",
         "build:plugins": "tsc -b packages/plugins/tsconfig.json",
-        "dev:all": "concurrently --names 'plugins,server,worker,storefront' --prefix-colors 'yellow,cyan,blue,green' 'pnpm dev:plugins' 'pnpm dev:central' 'pnpm dev:worker' 'pnpm --filter @mivend/storefront dev'",
+        "dev:all": "concurrently --names 'plugins,server,worker,storefront,manager' --prefix-colors 'yellow,cyan,blue,green,magenta' 'pnpm dev:plugins' 'pnpm dev:central' 'pnpm dev:worker' 'pnpm --filter @mivend/storefront dev' 'pnpm --filter @mivend/manager dev'",
         "build": "pnpm -r build",
         "lint": "eslint .",
         "format": "prettier --write .",

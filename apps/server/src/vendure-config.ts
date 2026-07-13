@@ -18,6 +18,7 @@ import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
 import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
+import { ReservationPlugin } from '@mivend/plugin-reservation';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -154,6 +155,12 @@ export const config: VendureConfig = {
                 url: process.env.RABBITMQ_URL ?? 'amqp://mivend:mivend@localhost:5672',
             },
             erpAdapter: new StubErpAdapter(),
+        }),
+        ReservationPlugin.init({
+            redis: {
+                host: process.env.REDIS_HOST ?? 'localhost',
+                port: parseInt(process.env.REDIS_PORT ?? '6379'),
+            },
         }),
         ...instancePlugins,
     ],

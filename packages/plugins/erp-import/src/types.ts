@@ -1,5 +1,9 @@
 import type { DocumentRecord, OrganizationRequisitesRecord } from '@mivend/plugin-documents';
-import type { DepartmentRecordInput, EmployeeRecordInput } from '@mivend/plugin-access-control';
+import type {
+    DepartmentRecordInput,
+    BranchRecordInput,
+    EmployeeRecordInput,
+} from '@mivend/plugin-access-control';
 
 export interface ProductRecord {
     externalId: string;
@@ -50,6 +54,11 @@ export interface CounterpartyRecord {
     paymentDelayDays: number;
     priceType: string;
     isActive: boolean;
+    // erpId of the Department/Branch this counterparty belongs to — see AccessScopeService
+    // (packages/plugins/access-control), which resolves 'department' scope by comparing these
+    // against the caller's own department/branch.
+    departmentId?: string | null;
+    branchId?: string | null;
 }
 
 export interface CustomerCounterpartyRecord {
@@ -104,6 +113,7 @@ export type ImportRecord =
     | { type: 'document'; data: DocumentRecord }
     | { type: 'organizationRequisites'; data: OrganizationRequisitesRecord }
     | { type: 'department'; data: DepartmentRecordInput }
+    | { type: 'branch'; data: BranchRecordInput }
     | { type: 'employee'; data: EmployeeRecordInput };
 
 export interface BatchImportBody {

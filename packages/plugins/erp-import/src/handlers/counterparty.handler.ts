@@ -18,6 +18,8 @@ export class CounterpartyHandler {
             paymentDelayDays: record.paymentDelayDays,
             priceType: record.priceType,
             isActive: record.isActive,
+            departmentId: record.departmentId ?? null,
+            branchId: record.branchId ?? null,
         });
     }
 }

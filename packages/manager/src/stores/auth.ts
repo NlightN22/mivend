@@ -49,8 +49,19 @@ export const useAuthStore = defineStore('auth', () => {
 
     // First role is authoritative for the portal role badge — portal roles are configured
     // as one Vendure Role per Administrator (see docs/access-control.md), not combined.
-    const roleLabel = computed(() => administrator.value?.user.roles[0]?.description ?? null);
     const roleCode = computed(() => administrator.value?.user.roles[0]?.code ?? null);
+    // Role.description (seed-access-roles.mjs) is a full sentence meant for admin config UI
+    // ("General director — final approval step, full company-wide visibility"), not a topbar/
+    // badge label — derive a short label from the code instead (e.g. "general-director" ->
+    // "General Director").
+    const roleLabel = computed(() =>
+        roleCode.value
+            ? roleCode.value
+                  .split('-')
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ')
+            : null,
+    );
 
     function init(): Promise<void> {
         if (!initPromise) {

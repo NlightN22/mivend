@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ForbiddenError, UserInputError } from '@vendure/core';
-import type { RequestContext } from '@vendure/core';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
 
 import { DiscountGrantService } from '../../discount-grant.service';
@@ -28,17 +28,36 @@ describe('DiscountGrantService', () => {
         createRequest: ReturnType<typeof vi.fn>;
         decide: ReturnType<typeof vi.fn>;
     };
+    let grantRepo: {
+        create: ReturnType<typeof vi.fn>;
+        save: ReturnType<typeof vi.fn>;
+        find: ReturnType<typeof vi.fn>;
+    };
+    let counterpartyRepo: { findBy: ReturnType<typeof vi.fn> };
+    let connection: { getRepository: ReturnType<typeof vi.fn> };
     let service: DiscountGrantService;
 
     beforeEach(() => {
-        discountRuleService = { upsert: vi.fn(async (..._args: unknown[]) => ({})) };
+        discountRuleService = { upsert: vi.fn(async (..._args: unknown[]) => ({ id: 'rule-1' })) };
         approvalRequestService = {
             createRequest: vi.fn(async () => ({ id: 'req-1' })),
             decide: vi.fn(),
         };
+        grantRepo = {
+            create: vi.fn((input: unknown) => input),
+            save: vi.fn(async (input: unknown) => input),
+            find: vi.fn(async () => []),
+        };
+        counterpartyRepo = { findBy: vi.fn(async () => []) };
+        connection = {
+            getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
+                entity?.name === 'Counterparty' ? counterpartyRepo : grantRepo,
+            ),
+        };
         service = new DiscountGrantService(
             discountRuleService as unknown as DiscountRuleService,
             approvalRequestService as unknown as ApprovalRequestService,
+            connection as unknown as TransactionalConnection,
         );
     });
 
@@ -121,6 +140,66 @@ describe('DiscountGrantService', () => {
             await service.decideAndApply(ctx, 'req-2', 'approved');
 
             expect(discountRuleService.upsert).not.toHaveBeenCalled();
+        });
+
+        it('creates a company-wide DiscountGrant when no counterpartyIds are given', async () => {
+            approvalRequestService.decide.mockResolvedValue({
+                id: 'req-1',
+                status: 'approved',
+                requestType: 'discountGrantApproval',
+                payload: JSON.stringify({ ...validInput, supersedesDiscountRuleId: null }),
+            });
+            const ctx = mockCtx(['ApproveDiscountRequest']);
+
+            await service.decideAndApply(ctx, 'req-1', 'approved', 'ok');
+
+            expect(counterpartyRepo.findBy).not.toHaveBeenCalled();
+            expect(grantRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    scopeType: 'all',
+                    discountRuleId: 'rule-1',
+                    counterparties: [],
+                }),
+            );
+        });
+
+        it('creates a customer-scoped DiscountGrant when counterpartyIds are given', async () => {
+            counterpartyRepo.findBy.mockResolvedValue([{ id: 'cp-1' }, { id: 'cp-2' }]);
+            approvalRequestService.decide.mockResolvedValue({
+                id: 'req-1',
+                status: 'approved',
+                requestType: 'discountGrantApproval',
+                payload: JSON.stringify({
+                    ...validInput,
+                    supersedesDiscountRuleId: null,
+                    counterpartyIds: ['cp-1', 'cp-2'],
+                }),
+            });
+            const ctx = mockCtx(['ApproveDiscountRequest']);
+
+            await service.decideAndApply(ctx, 'req-1', 'approved', 'ok');
+
+            expect(grantRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    scopeType: 'customer',
+                    counterparties: [{ id: 'cp-1' }, { id: 'cp-2' }],
+                }),
+            );
+        });
+    });
+
+    describe('findExpiringSoon', () => {
+        it('queries only customer-scoped grants, ordered by soonest expiry', async () => {
+            const ctx = mockCtx([]);
+            await service.findExpiringSoon(ctx, 14);
+
+            expect(grantRepo.find).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: expect.objectContaining({ scopeType: 'customer' }),
+                    relations: ['counterparties'],
+                    order: { validTo: 'ASC' },
+                }),
+            );
         });
     });
 });

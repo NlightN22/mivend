@@ -13,4 +13,10 @@ export interface CounterpartyUpsertPayload {
     paymentDelayDays: number;
     priceType: string;
     isActive: boolean;
+    // ERP ids (Department.erpId / Branch.erpId), same convention as
+    // Administrator.customFields.departmentId/branchId — see AccessScopeService, which compares
+    // these against the caller's own ERP-id-valued department/branch to resolve 'department'
+    // scope visibility.
+    departmentId?: string | null;
+    branchId?: string | null;
 }

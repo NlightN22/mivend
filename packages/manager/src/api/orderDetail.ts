@@ -18,6 +18,7 @@ export interface OrderDetail {
     subTotalWithTax: number;
     shippingWithTax: number;
     totalWithTax: number;
+    customFields: { reservationDays: number | null };
     lines: OrderDetailLine[];
     customer: {
         firstName: string;
@@ -27,6 +28,7 @@ export interface OrderDetail {
             shortName: string;
             inn: string | null;
             assignedManagerId: string | null;
+            priceType: string;
         } | null;
     } | null;
 }
@@ -55,6 +57,7 @@ export async function fetchOrderDetail(code: string): Promise<OrderDetail | null
                     subTotalWithTax
                     shippingWithTax
                     totalWithTax
+                    customFields { reservationDays }
                     lines {
                         id
                         quantity
@@ -66,7 +69,13 @@ export async function fetchOrderDetail(code: string): Promise<OrderDetail | null
                     customer {
                         firstName
                         lastName
-                        counterparty { id shortName inn assignedManagerId }
+                        counterparty {
+                            id
+                            shortName
+                            inn
+                            assignedManagerId
+                            priceType
+                        }
                     }
                 }
             }

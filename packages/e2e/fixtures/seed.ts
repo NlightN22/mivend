@@ -28,6 +28,13 @@ export const seedRecords = [
             paymentDelayDays: 30,
             priceType: 'WHOLESALE',
             isActive: true,
+            // Must match the seeded manager-portal org structure (infrastructure/scripts/
+            // seed-erp.mjs's departments/branches + seed-access-roles.mjs's department-scoped
+            // roles) or department-scoped test accounts (operator, department-head) won't see
+            // this counterparty at all — see AccessScopeService's 'department' scope, which
+            // requires an exact match, not just "any department set".
+            departmentId: 'dept-sales',
+            branchId: 'branch-central',
         },
     },
     {

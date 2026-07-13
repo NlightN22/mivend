@@ -80,6 +80,8 @@ export class CounterpartyResolver {
             paymentDelayDays: number;
             priceType: string;
             isActive: boolean;
+            departmentId?: string;
+            branchId?: string;
         },
     ): Promise<Counterparty> {
         return this.counterpartyService.upsert(ctx, args);
@@ -95,5 +97,19 @@ export class CounterpartyResolver {
         await this.counterpartyService.setCustomerCounterparty(ctx, args.customerId, args.erpId);
         await this.counterpartyService.setCustomerRole(ctx, args.customerId, args.role);
         return true;
+    }
+
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ReassignCounterpartyManager.Permission)
+    async reassignCounterpartyManager(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { counterpartyId: string; administratorId: string },
+    ): Promise<Counterparty> {
+        return this.counterpartyService.reassignManager(
+            ctx,
+            args.counterpartyId,
+            args.administratorId,
+        );
     }
 }

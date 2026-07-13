@@ -13,6 +13,7 @@ import {
     DocumentRecordDto,
     OrganizationRequisitesRecordDto,
     DepartmentRecordDto,
+    BranchRecordDto,
     EmployeeRecordDto,
 } from './records';
 
@@ -30,6 +31,7 @@ const RECORD_TYPE_DTOS = [
     DocumentRecordDto,
     OrganizationRequisitesRecordDto,
     DepartmentRecordDto,
+    BranchRecordDto,
     EmployeeRecordDto,
 ] as const;
 
@@ -49,6 +51,7 @@ const TYPE_TO_SCHEMA: Record<string, (typeof RECORD_TYPE_DTOS)[number]> = {
     document: DocumentRecordDto,
     organizationRequisites: OrganizationRequisitesRecordDto,
     department: DepartmentRecordDto,
+    branch: BranchRecordDto,
     employee: EmployeeRecordDto,
 };
 

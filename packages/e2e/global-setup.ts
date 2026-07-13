@@ -1,36 +1,28 @@
 import { chromium } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { postBatch, waitForRun } from './helpers/api';
+import { adminGql, postBatch, waitForRun } from './helpers/api';
 import { loginAs } from './helpers/storefront-auth';
+import { loginAsManager } from './helpers/manager-auth';
+import { createConfirmedOrder } from './helpers/manager-order';
 import { seedRecords, E2E_CUSTOMER } from './fixtures/seed';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
-const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
+const MANAGER_URL = process.env.MANAGER_URL ?? 'http://localhost:5174';
 const SUPERADMIN = {
     identifier: process.env.SUPERADMIN_USERNAME ?? 'superadmin',
     password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
 };
 
-async function adminGql<T>(
-    query: string,
-    variables?: Record<string, unknown>,
-    token?: string,
-): Promise<{ data: T; token?: string }> {
-    const res = await fetch(`${SERVER_URL}/admin-api`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ query, variables }),
-    });
-    const json = (await res.json()) as { data: T; errors?: Array<{ message: string }> };
-    if (json.errors?.length) throw new Error(json.errors[0].message);
-    const responseToken = res.headers.get('vendure-auth-token') ?? undefined;
-    return { data: json.data, token: responseToken };
-}
+// Seeded by infrastructure/scripts/seed-access-roles.mjs + seed-erp.mjs (run via `make seed`,
+// a prerequisite for e2e per docs/e2e-testing.md) — same accounts as .tests/accounts.md. Not
+// re-seeded here, only logged in, one per manager-portal dashboard KPI variant we test.
+const MANAGER_ACCOUNTS = {
+    operator: { username: 'ivan.operator@mivend.dev', password: 'Password123!' },
+    manager: { username: 'petr.manager@mivend.dev', password: 'Password123!' },
+    departmentHead: { username: 'olga.depthead@mivend.dev', password: 'Password123!' },
+} as const;
 
 async function ensureShippingMethod(token: string): Promise<void> {
     const { data } = await adminGql<{ shippingMethods: { items: { id: string }[] } }>(
@@ -94,12 +86,98 @@ export default async function globalSetup(): Promise<void> {
     await postBatch(exchangeId, seedRecords);
     await waitForRun(exchangeId);
 
+    // A real, deterministic order for the manager-portal Orders/Order Detail specs — operator
+    // has department-wide visibility (see infrastructure/scripts/seed-access-roles.mjs), so an
+    // order for the e2e counterparty's customer is visible to all three manager-portal test
+    // roles. Written to a JSON file since the order code is server-generated, not fixed.
+    const operatorLogin = await adminGql<{
+        login: { __typename: string };
+    }>(
+        `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { __typename ... on CurrentUser { id } } }`,
+        { id: MANAGER_ACCOUNTS.operator.username, pw: MANAGER_ACCOUNTS.operator.password },
+    );
+    const operatorToken = operatorLogin.token;
+    if (!operatorToken) throw new Error('Could not log in as operator to seed an e2e order');
+
+    const customersResult = await adminGql<{
+        customers: { items: { id: string; emailAddress: string }[] };
+    }>(
+        `query { customers(options: { take: 200 }) { items { id emailAddress } } }`,
+        undefined,
+        operatorToken,
+    );
+    const customerId = customersResult.data.customers.items.find(
+        c => c.emailAddress === E2E_CUSTOMER.email,
+    )?.id;
+    if (!customerId) throw new Error(`Could not find Vendure customer for ${E2E_CUSTOMER.email}`);
+
+    const variantsResult = await adminGql<{
+        productVariants: { items: { id: string }[] };
+    }>(
+        `query { productVariants(options: { filter: { sku: { eq: "E2E-OIL-001" } } }) { items { id } } }`,
+        undefined,
+        operatorToken,
+    );
+    const productVariantId = variantsResult.data.productVariants.items[0]?.id;
+    if (!productVariantId) throw new Error('Could not find product variant E2E-OIL-001');
+
+    const order = await createConfirmedOrder(operatorToken, customerId, productVariantId);
+    fs.writeFileSync(path.join(AUTH_DIR, 'e2e-order.json'), JSON.stringify(order));
+
+    // Assigns the e2e counterparty to petr.manager@mivend.dev so manager-manager's "own" scope
+    // (see #37) has real, deterministic data too — done via the actual reassignCounterpartyManager
+    // mutation (department-head has ReassignCounterpartyManager within their own department,
+    // matching the e2e counterparty's dept-sales — see fixtures/seed.ts), not a DB bypass.
+    const deptHeadLogin = await adminGql<{ login: { __typename: string } }>(
+        `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { __typename ... on CurrentUser { id } } }`,
+        {
+            id: MANAGER_ACCOUNTS.departmentHead.username,
+            pw: MANAGER_ACCOUNTS.departmentHead.password,
+        },
+    );
+    const deptHeadToken = deptHeadLogin.token;
+    if (!deptHeadToken)
+        throw new Error('Could not log in as department-head to assign the e2e manager');
+
+    const counterpartiesResult = await adminGql<{
+        counterparties: { id: string; erpId: string }[];
+    }>(`query { counterparties { id erpId } }`, undefined, deptHeadToken);
+    const e2eCounterpartyId = counterpartiesResult.data.counterparties.find(
+        c => c.erpId === 'e2e-cnt-001',
+    )?.id;
+
+    const teamResult = await adminGql<{
+        teamMembers: { id: string; firstName: string; lastName: string }[];
+    }>(`query { teamMembers { id firstName lastName } }`, undefined, deptHeadToken);
+    const managerAdminId = teamResult.data.teamMembers.find(
+        m => m.firstName === 'Petr' && m.lastName === 'Manager',
+    )?.id;
+
+    if (e2eCounterpartyId && managerAdminId) {
+        await adminGql(
+            `mutation($cid: ID!, $aid: ID!) {
+                reassignCounterpartyManager(counterpartyId: $cid, administratorId: $aid) { id }
+            }`,
+            { cid: e2eCounterpartyId, aid: managerAdminId },
+            deptHeadToken,
+        );
+    }
+
     const browser = await chromium.launch();
     const context = await browser.newContext({ baseURL: STOREFRONT_URL });
     const page = await context.newPage();
 
     await loginAs(page, E2E_CUSTOMER.email, E2E_CUSTOMER.password);
     await context.storageState({ path: path.join(AUTH_DIR, 'storefront-user.json') });
+    await context.close();
+
+    for (const [key, account] of Object.entries(MANAGER_ACCOUNTS)) {
+        const managerContext = await browser.newContext({ baseURL: MANAGER_URL });
+        const managerPage = await managerContext.newPage();
+        await loginAsManager(managerPage, account.username, account.password);
+        await managerContext.storageState({ path: path.join(AUTH_DIR, `manager-${key}.json`) });
+        await managerContext.close();
+    }
 
     await browser.close();
 }

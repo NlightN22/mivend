@@ -11,4 +11,5 @@ export { DiscountRuleRecordDto } from './discount-rule-record.dto';
 export { DocumentRecordDto } from './document-record.dto';
 export { OrganizationRequisitesRecordDto } from './organization-requisites-record.dto';
 export { DepartmentRecordDto } from './department-record.dto';
+export { BranchRecordDto } from './branch-record.dto';
 export { EmployeeRecordDto } from './employee-record.dto';

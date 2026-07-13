@@ -40,6 +40,10 @@ const emit = defineEmits<{ logout: [] }>();
             <span class="mv-app-topbar__search-shortcut">Ctrl K</span>
         </div>
 
+        <div class="mv-app-topbar__actions">
+            <slot name="actions" />
+        </div>
+
         <RouterLink class="mv-app-topbar__user" :to="profileTo">
             <span class="mv-app-topbar__avatar">{{ userInitials }}</span>
             <span class="mv-app-topbar__user-text">
@@ -112,8 +116,14 @@ const emit = defineEmits<{ logout: [] }>();
     font-size: 12px;
 }
 
-.mv-app-topbar__user {
+.mv-app-topbar__actions {
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mv-app-topbar__user {
     display: flex;
     align-items: center;
     gap: 10px;

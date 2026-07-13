@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+export type ProgressBarVariant = 'normal' | 'warn' | 'danger';
+
 interface Props {
   value: number;
   max: number;
   label?: string;
+  variant?: ProgressBarVariant;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   label: undefined,
+  variant: 'normal',
 });
 
 const percent = computed(() => {
@@ -21,7 +25,11 @@ const percent = computed(() => {
   <div class="mv-progress-bar">
     <div v-if="label" class="mv-progress-bar__label">{{ label }}</div>
     <div class="mv-progress-bar__track">
-      <div class="mv-progress-bar__fill" :style="{ width: `${percent}%` }" />
+      <div
+        class="mv-progress-bar__fill"
+        :class="`mv-progress-bar__fill--${variant}`"
+        :style="{ width: `${percent}%` }"
+      />
     </div>
   </div>
 </template>
@@ -48,7 +56,18 @@ const percent = computed(() => {
 .mv-progress-bar__fill {
   height: 100%;
   border-radius: 4px;
-  background: linear-gradient(90deg, #00b894, #00a878);
   transition: width 0.25s ease;
+}
+
+.mv-progress-bar__fill--normal {
+  background: linear-gradient(90deg, #00b894, #00a878);
+}
+
+.mv-progress-bar__fill--warn {
+  background: #d97706;
+}
+
+.mv-progress-bar__fill--danger {
+  background: #dc2626;
 }
 </style>

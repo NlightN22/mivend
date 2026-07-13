@@ -23,6 +23,7 @@ import { DiscountRuleHandler } from './handlers/discount-rule.handler';
 import { DocumentHandler } from './handlers/document.handler';
 import { OrganizationRequisitesHandler } from './handlers/organization-requisites.handler';
 import { DepartmentHandler } from './handlers/department.handler';
+import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 
 @VendurePlugin({
@@ -53,6 +54,7 @@ import { EmployeeHandler } from './handlers/employee.handler';
         DocumentHandler,
         OrganizationRequisitesHandler,
         DepartmentHandler,
+        BranchHandler,
         EmployeeHandler,
     ],
     compatibility: '>0.0.0',

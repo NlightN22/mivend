@@ -15,13 +15,20 @@ export class AdminOrderVisibilityResolver {
     @Allow(Permission.ReadOrder)
     async visibleOrders(
         @Ctx() ctx: RequestContext,
-        @Args() args: { options?: OrderListOptions; managerId?: string; customerId?: string },
+        @Args()
+        args: {
+            options?: OrderListOptions;
+            managerId?: string;
+            customerId?: string;
+            search?: string;
+        },
     ): Promise<PaginatedList<Order>> {
         return this.orderVisibilityService.findVisible(
             ctx,
             args.options,
             args.managerId,
             args.customerId,
+            args.search,
         );
     }
 }

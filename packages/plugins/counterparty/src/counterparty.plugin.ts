@@ -155,9 +155,15 @@ const adminApiSchema = gql`
             paymentDelayDays: Int!
             priceType: String!
             isActive: Boolean!
+            departmentId: String
+            branchId: String
         ): Counterparty!
 
         assignCustomerToCounterparty(customerId: ID!, erpId: String!, role: String!): Boolean!
+
+        # Department-head only within their own department, portal-admin unrestricted — see
+        # CustomPermission.ReassignCounterpartyManager.
+        reassignCounterpartyManager(counterpartyId: ID!, administratorId: ID!): Counterparty!
 
         upsertTradingPoint(
             erpId: String!

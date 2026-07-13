@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Brackets } from 'typeorm';
 import type { ListQueryBuilder, RequestContext } from '@vendure/core';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
 import { OrderVisibilityService } from '../../order-visibility.service';
@@ -88,6 +89,22 @@ describe('OrderVisibilityService', () => {
         expect(qb.andWhere).toHaveBeenCalledWith('customer.id = :filterCustomerId', {
             filterCustomerId: 'cust-9',
         });
+    });
+
+    it('applies a bracketed OR search across code, phone, company name and INN', async () => {
+        accessScopeService.resolveOrderScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, undefined, undefined, undefined, 'acme');
+
+        expect(qb.andWhere).toHaveBeenCalledWith(expect.any(Brackets));
+    });
+
+    it('does not add a search filter when search is empty', async () => {
+        accessScopeService.resolveOrderScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx);
+
+        expect(qb.andWhere).not.toHaveBeenCalledWith(expect.any(Brackets));
     });
 
     it('joins customer and counterparty before applying scope', async () => {

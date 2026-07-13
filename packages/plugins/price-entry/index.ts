@@ -18,3 +18,5 @@ export { FLOOR_PRICE_TYPE_CODE } from './src/types';
 export type { PriceAdjustmentDecision } from './src/types';
 export { DiscountGrantService } from './src/discount-grant.service';
 export type { DiscountGrantInput } from './src/discount-grant.service';
+export { DiscountGrant } from './src/discount-grant.entity';
+export type { DiscountGrantScopeType } from './src/discount-grant.entity';

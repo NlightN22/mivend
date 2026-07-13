@@ -1,14 +1,24 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Query, Mutation, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
+import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import { ApprovalRequest, ApprovalStepDecision } from '@mivend/plugin-approval-workflow';
 
 import { DiscountGrantService, DiscountGrantInput } from './discount-grant.service';
+import { DiscountGrant } from './discount-grant.entity';
 
 @Resolver()
 export class DiscountGrantResolver {
     constructor(private discountGrantService: DiscountGrantService) {}
+
+    @Query()
+    @Allow(Permission.ReadCatalog)
+    async expiringDiscountGrants(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { withinDays: number },
+    ): Promise<DiscountGrant[]> {
+        return this.discountGrantService.findExpiringSoon(ctx, args.withinDays);
+    }
 
     @Transaction()
     @Mutation()

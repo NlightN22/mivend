@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
+    AdministratorService,
     CustomerService,
+    ForbiddenError,
     Logger,
     RequestContext,
     TransactionalConnection,
@@ -20,6 +22,7 @@ export class CounterpartyService {
         private customerService: CustomerService,
         private customerPricingService: CustomerPricingService,
         private accessScopeService: AccessScopeService,
+        private administratorService: AdministratorService,
     ) {}
 
     async upsert(ctx: RequestContext, payload: CounterpartyUpsertPayload): Promise<Counterparty> {
@@ -117,6 +120,49 @@ export class CounterpartyService {
             id: customerId,
             customFields: { portalRole: role } as Record<string, unknown>,
         });
+    }
+
+    // Changes assignedManagerId — department-head only within their own department, portal-admin
+    // unrestricted, matching CustomPermission.ReassignCounterpartyManager's doc comment. Reuses
+    // AccessScopeService's counterparty scope resolution rather than a bespoke role check: a
+    // 'department' scope caller may only reassign a counterparty already in their own
+    // department/branch, and only to an administrator who is themselves in that same
+    // department (never lending a client out to a manager the dept-head doesn't oversee).
+    async reassignManager(
+        ctx: RequestContext,
+        counterpartyId: ID,
+        administratorId: ID,
+    ): Promise<Counterparty> {
+        const repo = this.connection.getRepository(ctx, Counterparty);
+        const counterparty = await repo.findOne({ where: { id: counterpartyId } });
+        if (!counterparty) throw new UserInputError(`Counterparty not found: id=${counterpartyId}`);
+
+        const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
+        if (scope.kind === 'department') {
+            if (
+                counterparty.departmentId !== (scope.departmentId ?? null) ||
+                counterparty.branchId !== (scope.branchId ?? null)
+            ) {
+                throw new ForbiddenError();
+            }
+            const target = await this.administratorService.findOne(ctx, administratorId);
+            const targetDepartmentId = (
+                target?.customFields as { departmentId?: string | null } | undefined
+            )?.departmentId;
+            if (!target || targetDepartmentId !== scope.departmentId) {
+                throw new ForbiddenError();
+            }
+        } else if (scope.kind !== 'all') {
+            throw new ForbiddenError();
+        }
+
+        counterparty.assignedManagerId = String(administratorId);
+        const saved = await repo.save(counterparty);
+        Logger.verbose(
+            `Reassigned counterparty id=${counterpartyId} to administrator=${administratorId}`,
+            loggerCtx,
+        );
+        return saved;
     }
 
     private async assignPriceType(

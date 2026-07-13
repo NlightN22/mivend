@@ -53,4 +53,9 @@ export const CustomPermission = {
         name: 'ManageApprovalWorkflows',
         description: 'Create/edit WorkflowDefinition chains (layer 5, /settings)',
     }),
+    ReassignCounterpartyManager: new PermissionDefinition({
+        name: 'ReassignCounterpartyManager',
+        description:
+            "Change a counterparty's assignedManagerId — department-head only within their own department, portal-admin unrestricted (see manager-portal-concept.md §3.3)",
+    }),
 } as const;

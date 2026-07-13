@@ -225,6 +225,11 @@ async function ensureOrgStructureAdmins() {
         { email: 'ivan.operator@mivend.dev', firstName: 'Ivan', lastName: 'Operator', roleCode: 'operator' },
         { email: 'petr.manager@mivend.dev', firstName: 'Petr', lastName: 'Manager', roleCode: 'manager' },
         { email: 'olga.depthead@mivend.dev', firstName: 'Olga', lastName: 'DeptHead', roleCode: 'department-head' },
+        // Company-wide scope + ReadCounterpartyCredit — the only seeded role that can see every
+        // counterparty's credit numbers (department-head/operator/manager cannot, see
+        // seed-access-roles.mjs). Needed to exercise credit-visible UI (e.g. manager portal
+        // Customers page risk meter) against real data.
+        { email: 'nikolai.director@mivend.dev', firstName: 'Nikolai', lastName: 'Director', roleCode: 'general-director' },
     ];
 
     let created = 0;
@@ -411,6 +416,8 @@ async function main() {
             paymentDelayDays: 14,
             priceType: 'WHOLESALE',
             isActive: true,
+            departmentId: 'dept-sales',
+            branchId: 'branch-central',
         },
     ];
     console.log(`Sending ${counterparties.length} counterparties...`);
@@ -517,10 +524,19 @@ async function main() {
         for (const e of departmentResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
+    const branches = [{ erpId: 'branch-central', name: 'Central branch' }];
+    console.log(`Sending ${branches.length} branches...`);
+    const branchResult = await postBatch(`seed-branches-${run}`, branches.map(data => ({ type: 'branch', data })));
+    console.log(`  → status=${branchResult.status} processed=${branchResult.processed} failed=${branchResult.failed}`);
+    if (branchResult.errors?.length > 0) {
+        for (const e of branchResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
     const employees = [
         { erpId: 'emp-001', email: 'ivan.operator@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'operator', position: 'Sales operator' },
         { erpId: 'emp-002', email: 'petr.manager@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'manager', position: 'Sales manager' },
         { erpId: 'emp-003', email: 'olga.depthead@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'department-head', position: 'Head of sales' },
+        { erpId: 'emp-004', email: 'nikolai.director@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'general-director', position: 'General director' },
     ];
     console.log(`Sending ${employees.length} employees...`);
     const employeeResult = await postBatch(`seed-employees-${run}`, employees.map(data => ({ type: 'employee', data })));

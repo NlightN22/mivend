@@ -32,5 +32,35 @@ export default defineConfig({
                 storageState: '.auth/storefront-user.json',
             },
         },
+        {
+            name: 'manager-operator',
+            testDir: './manager',
+            testMatch: ['**/*.spec.ts'],
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
+                storageState: '.auth/manager-operator.json',
+            },
+        },
+        {
+            name: 'manager-manager',
+            testDir: './manager',
+            testMatch: ['**/*.spec.ts'],
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
+                storageState: '.auth/manager-manager.json',
+            },
+        },
+        {
+            name: 'manager-department-head',
+            testDir: './manager',
+            testMatch: ['**/*.spec.ts'],
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
+                storageState: '.auth/manager-departmentHead.json',
+            },
+        },
     ],
 });

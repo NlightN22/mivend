@@ -1,20 +1,56 @@
 # E2E Testing Guide
 
-Playwright tests are in `packages/e2e/storefront/`.
+Playwright tests are in `packages/e2e/storefront/` (storefront) and `packages/e2e/manager/`
+(manager portal).
 
 ## Running
 
 ```bash
 SERVER_URL=http://localhost:3000 \
   STOREFRONT_URL=http://localhost:5173 \
+  MANAGER_URL=http://localhost:5174 \
   ERP_IMPORT_TOKEN=dev-token \
   pnpm --filter @mivend/e2e test
 ```
 
-Requires a running dev stack (`make dev`) and seeded data (`make seed`).
+Requires a running dev stack (`make dev`) and seeded data. For manager portal tests, seed access
+roles _before_ the ERP seed, since `seed-erp.mjs` skips creating manager-portal Administrators
+for any role it can't find:
 
-Auth state is stored in `packages/e2e/.auth/storefront-user.json` (gitignored).
-Delete this file if tests fail with auth errors after a server restart — Playwright recreates it via `global-setup`.
+```bash
+make seed-access-roles
+make seed
+```
+
+Auth state is stored in `packages/e2e/.auth/storefront-user.json` and
+`packages/e2e/.auth/manager-{operator,manager,departmentHead}.json` (all gitignored).
+Delete these files if tests fail with auth errors after a server restart — Playwright recreates
+them via `global-setup`.
+
+## Manager portal role projects
+
+`playwright.config.ts` defines one project per manager-portal role under test —
+`manager-operator`, `manager-manager`, `manager-department-head` — all running the same spec
+files in `packages/e2e/manager/`, pre-authenticated as the corresponding seeded account from
+`.tests/accounts.md`. A spec that asserts role-specific UI (e.g. which dashboard KPI cards are
+visible) reads `testInfo.project.name` to know which role it's running as — see
+`packages/e2e/manager/dashboard/dashboard.spec.ts` for the pattern. Keep the expectations there in
+sync with `packages/manager/src/api/dashboard-config.ts` whenever that config changes.
+
+Coverage so far: `manager/dashboard/`, `manager/orders/` (list + detail, including reservation
+confirm/release), `manager/customers/` (list, CSV export, row navigation). All of them read a
+single deterministic order created by `global-setup.ts` (`createConfirmedOrder`, see
+`helpers/manager-order.ts`) and written to `.auth/e2e-order.json` (read via
+`helpers/e2e-order.ts`) — this avoids depending on whatever orders already happen to exist in the
+dev DB, which is not deterministic (real usage, other test runs, manual QA all leave orders
+behind).
+
+`global-setup.ts` also assigns the e2e counterparty (`e2e-cnt-001`) to `petr.manager@mivend.dev`
+via the real `reassignCounterpartyManager` mutation (logged in as `olga.depthead@mivend.dev`,
+who has `ReassignCounterpartyManager` within her own department) — this is what makes
+`manager-manager`'s `"own"` access scope see the same test data as `manager-operator`/
+`manager-department-head`'s `"department"` scope. All three role projects run the exact same
+spec files with no skips.
 
 ## Gotchas learned from experience
 

@@ -34,4 +34,18 @@ export class CounterpartyRecordDto {
 
     @ApiProperty()
     isActive!: boolean;
+
+    @ApiPropertyOptional({
+        type: String,
+        nullable: true,
+        description: 'erpId of the department this counterparty belongs to (see Department).',
+    })
+    departmentId?: string | null;
+
+    @ApiPropertyOptional({
+        type: String,
+        nullable: true,
+        description: 'erpId of the branch this counterparty belongs to (see Branch).',
+    })
+    branchId?: string | null;
 }

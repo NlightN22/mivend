@@ -7,9 +7,11 @@ import {
 import gql from 'graphql-tag';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
+import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { DiscountRule } from './discount-rule.entity';
+import { DiscountGrant } from './discount-grant.entity';
 import {
     DiscountRuleAdminResolver,
     OrderLineDiscountResolver,
@@ -122,12 +124,29 @@ const adminApiSchema = gql`
         # §4.1.1. This is the DiscountRule.erpId of the rule being renewed, e.g. a prior
         # "portal-<requestId>" value.
         supersedesDiscountRuleId: String
+        # Omitted/empty = company-wide grant. Provided = the grant applies only to these
+        # counterparties (DiscountGrant.scopeType = 'customer').
+        counterpartyIds: [ID!]
+    }
+
+    type DiscountGrantCounterparty {
+        id: ID!
+        legalName: String!
+    }
+
+    type DiscountGrant {
+        id: ID!
+        discountRuleId: ID!
+        scopeType: String!
+        validTo: DateTime!
+        counterparties: [DiscountGrantCounterparty!]!
     }
 
     extend type Query {
         # Restricted to ReadFloorPrice — see PriceAdjustmentResolver.
         floorPrice(variantId: ID!): Int
         discountRules(priceTypeCode: String): [DiscountRule!]!
+        expiringDiscountGrants(withinDays: Int!): [DiscountGrant!]!
         priceTypeCodes: [String!]!
         # Batch lookup for the catalog list/detail pages. Gated on ReadCatalog UNLESS
         # priceTypeCode is the floor price type, which requires ReadFloorPrice instead —
@@ -163,8 +182,8 @@ const adminApiSchema = gql`
 `;
 
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin, ApprovalWorkflowPlugin],
-    entities: [ProductVariantPriceEntry, DiscountRule],
+    imports: [PluginCommonModule, AccessControlPlugin, ApprovalWorkflowPlugin, CounterpartyPlugin],
+    entities: [ProductVariantPriceEntry, DiscountRule, DiscountGrant],
     shopApiExtensions: {
         schema: shopApiSchema,
         resolvers: [ProductVariantPriceResolver, OrderLineDiscountResolver],

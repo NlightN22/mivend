@@ -8,9 +8,11 @@ import gql from 'graphql-tag';
 
 import { AccessControlResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
+import { BranchService } from './branch.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
 import { EmployeeService } from './employee.service';
+import { Branch } from './entities/branch.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
@@ -22,6 +24,12 @@ const adminApiSchema = gql`
         erpId: String!
         name: String!
         parentErpId: String
+    }
+
+    type Branch {
+        id: ID!
+        erpId: String!
+        name: String!
     }
 
     type TeamMember {
@@ -39,6 +47,7 @@ const adminApiSchema = gql`
 
     extend type Query {
         departments: [Department!]!
+        branches: [Branch!]!
         teamMembers: [TeamMember!]!
         creditTermLimit(roleCode: String!): CreditTermLimit
     }
@@ -51,11 +60,12 @@ const adminApiSchema = gql`
 
 @VendurePlugin({
     imports: [PluginCommonModule],
-    entities: [RoleAccessScope, Department, CreditTermLimit],
+    entities: [RoleAccessScope, Department, Branch, CreditTermLimit],
     providers: [
         AccessScopeService,
         RoleScopeConfigService,
         DepartmentService,
+        BranchService,
         EmployeeService,
         CreditTermLimitService,
     ],
@@ -63,6 +73,7 @@ const adminApiSchema = gql`
         AccessScopeService,
         RoleScopeConfigService,
         DepartmentService,
+        BranchService,
         EmployeeService,
         CreditTermLimitService,
     ],

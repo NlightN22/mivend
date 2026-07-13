@@ -76,6 +76,7 @@ export interface DashboardData {
     recentOrders: RecentOrder[];
     pendingApprovalsCount: number;
     recentApprovals: SubmittedApproval[];
+    awaitingMyDecisionCount: number;
 }
 
 // Vendure ships no dedicated "overdue" order state or SLA field yet — "awaiting shipment" is
@@ -143,6 +144,11 @@ const DASHBOARD_QUERY = `
                 decidedAt
             }
         }
+        myApprovalsInbox {
+            awaitingMyDecision {
+                id
+            }
+        }
     }
 `;
 
@@ -161,6 +167,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         recentOrdersList: { items: RecentOrder[] };
         counterparties: { id: string }[];
         myApprovalRequestsSummary: { pendingCount: number; recent: SubmittedApproval[] };
+        myApprovalsInbox: { awaitingMyDecision: { id: string }[] };
     }>(DASHBOARD_QUERY, {
         excludedStates: IN_PROGRESS_STATES_EXCLUDED,
         since24h,
@@ -176,5 +183,6 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         recentOrders: result.recentOrdersList.items,
         pendingApprovalsCount: result.myApprovalRequestsSummary.pendingCount,
         recentApprovals: result.myApprovalRequestsSummary.recent,
+        awaitingMyDecisionCount: result.myApprovalsInbox.awaitingMyDecision.length,
     };
 }

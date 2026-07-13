@@ -13,6 +13,7 @@
         { "path": "./documents" },
         { "path": "./search" },
         { "path": "./sync" },
-        { "path": "./erp-import" }
+        { "path": "./erp-import" },
+        { "path": "./reservation" }
     ]
 }

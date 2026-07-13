@@ -3,8 +3,10 @@ import { Permission } from '@vendure/common/lib/generated-types';
 import { Allow, AdministratorService, Ctx, RequestContext, Transaction } from '@vendure/core';
 
 import { CustomPermission } from './custom-permission';
+import { BranchService } from './branch.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
+import { Branch } from './entities/branch.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
 import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.service';
@@ -21,6 +23,7 @@ export class AccessControlResolver {
     constructor(
         private roleScopeConfigService: RoleScopeConfigService,
         private departmentService: DepartmentService,
+        private branchService: BranchService,
         private creditTermLimitService: CreditTermLimitService,
         private administratorService: AdministratorService,
     ) {}
@@ -50,6 +53,13 @@ export class AccessControlResolver {
     @Allow(Permission.Authenticated)
     async departments(@Ctx() ctx: RequestContext): Promise<Department[]> {
         return this.departmentService.findAll(ctx);
+    }
+
+    // Same visibility rule as `departments` above.
+    @Query()
+    @Allow(Permission.Authenticated)
+    async branches(@Ctx() ctx: RequestContext): Promise<Branch[]> {
+        return this.branchService.findAll(ctx);
     }
 
     @Transaction()

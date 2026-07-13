@@ -15,6 +15,7 @@ export interface CustomerListItem {
     isActive: boolean;
     priceType: string;
     assignedManagerId: string | null;
+    branchId: string | null;
     contacts: ContactPersonInfo[];
 }
 
@@ -28,6 +29,7 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
             isActive: boolean;
             priceType: string;
             assignedManagerId: string | null;
+            branchId: string | null;
             tradingPoints: { contacts: ContactPersonInfo[] }[];
         }[];
     }>(
@@ -40,6 +42,7 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
                 isActive
                 priceType
                 assignedManagerId
+                branchId
                 tradingPoints { contacts { name phone email isPrimary } }
             }
         }`,
@@ -52,6 +55,7 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
         isActive: c.isActive,
         priceType: c.priceType,
         assignedManagerId: c.assignedManagerId,
+        branchId: c.branchId,
         contacts: c.tradingPoints.flatMap(tp => tp.contacts),
     }));
 }
@@ -59,6 +63,21 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
 export async function fetchCustomerById(counterpartyId: string): Promise<CustomerListItem | null> {
     const all = await fetchCustomersList();
     return all.find(c => c.id === counterpartyId) ?? null;
+}
+
+// Gated on CustomPermission.ReassignCounterpartyManager (department-head within their own
+// department, portal-admin unrestricted) — throws for any other caller, see
+// CounterpartyService.reassignManager.
+export async function reassignCounterpartyManager(
+    counterpartyId: string,
+    administratorId: string,
+): Promise<void> {
+    await adminApi(
+        `mutation($counterpartyId: ID!, $administratorId: ID!) {
+            reassignCounterpartyManager(counterpartyId: $counterpartyId, administratorId: $administratorId) { id }
+        }`,
+        { counterpartyId, administratorId },
+    );
 }
 
 // Vendure's Customer.id (needed to filter orders/create draft orders) is a different id than

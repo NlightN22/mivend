@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
+    AdministratorService,
     CustomerService,
     RequestContext,
     TransactionalConnection,
@@ -35,6 +36,10 @@ const mockAccessScopeService = {
     resolveCounterpartyScope: vi.fn(async () => ({ kind: 'all' })),
 } as unknown as AccessScopeService;
 
+const mockAdministratorService = {
+    findOne: vi.fn(),
+} as unknown as AdministratorService;
+
 const mockCtx = {} as unknown as RequestContext;
 
 describe('CounterpartyService', () => {
@@ -47,6 +52,7 @@ describe('CounterpartyService', () => {
             mockCustomerService,
             mockCustomerPricingService,
             mockAccessScopeService,
+            mockAdministratorService,
         );
     });
 
@@ -143,6 +149,114 @@ describe('CounterpartyService', () => {
             await service.findVisible(mockCtx);
 
             expect(qb.where).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('reassignManager', () => {
+        it('reassigns unconditionally for "all" scope', async () => {
+            mockRepo.findOne.mockResolvedValue({
+                id: 'cp-1',
+                departmentId: 'dept-1',
+                branchId: 'branch-a',
+            });
+            mockRepo.save.mockImplementation(async (c: unknown) => c);
+            (
+                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
+            ).mockResolvedValue({
+                kind: 'all',
+            });
+
+            const result = await service.reassignManager(mockCtx, 'cp-1', 'admin-9');
+
+            expect(result).toEqual(
+                expect.objectContaining({ id: 'cp-1', assignedManagerId: 'admin-9' }),
+            );
+        });
+
+        it('rejects "own" scope entirely', async () => {
+            mockRepo.findOne.mockResolvedValue({
+                id: 'cp-1',
+                departmentId: 'dept-1',
+                branchId: 'branch-a',
+            });
+            (
+                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
+            ).mockResolvedValue({
+                kind: 'own',
+                administratorId: 'admin-1',
+            });
+
+            await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow();
+        });
+
+        it('rejects "department" scope when the counterparty is outside the caller\'s department', async () => {
+            mockRepo.findOne.mockResolvedValue({
+                id: 'cp-1',
+                departmentId: 'dept-OTHER',
+                branchId: 'branch-a',
+            });
+            (
+                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
+            ).mockResolvedValue({
+                kind: 'department',
+                departmentId: 'dept-1',
+                branchId: 'branch-a',
+            });
+
+            await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow();
+        });
+
+        it('rejects "department" scope when the target administrator is in a different department', async () => {
+            mockRepo.findOne.mockResolvedValue({
+                id: 'cp-1',
+                departmentId: 'dept-1',
+                branchId: 'branch-a',
+            });
+            (
+                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
+            ).mockResolvedValue({
+                kind: 'department',
+                departmentId: 'dept-1',
+                branchId: 'branch-a',
+            });
+            (mockAdministratorService.findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+                customFields: { departmentId: 'dept-OTHER' },
+            });
+
+            await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow();
+        });
+
+        it('allows "department" scope when both counterparty and target administrator match the department', async () => {
+            mockRepo.findOne.mockResolvedValue({
+                id: 'cp-1',
+                departmentId: 'dept-1',
+                branchId: 'branch-a',
+            });
+            mockRepo.save.mockImplementation(async (c: unknown) => c);
+            (
+                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
+            ).mockResolvedValue({
+                kind: 'department',
+                departmentId: 'dept-1',
+                branchId: 'branch-a',
+            });
+            (mockAdministratorService.findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+                customFields: { departmentId: 'dept-1' },
+            });
+
+            const result = await service.reassignManager(mockCtx, 'cp-1', 'admin-9');
+
+            expect(result).toEqual(
+                expect.objectContaining({ id: 'cp-1', assignedManagerId: 'admin-9' }),
+            );
+        });
+
+        it('rejects when the counterparty does not exist', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+
+            await expect(service.reassignManager(mockCtx, 'missing', 'admin-9')).rejects.toThrow(
+                UserInputError,
+            );
         });
     });
 });
