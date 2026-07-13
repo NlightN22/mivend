@@ -190,6 +190,71 @@ test('History tab is absent for non-leadership roles (negative)', async ({ page 
     await expect(page.getByRole('button', { name: 'History' })).toHaveCount(0);
 });
 
+// TradingPointService.updateDetails logs real contact values (name/phone/email), not just a
+// count — previously "contacts: 0 -> 0" showed up as a no-op diff on every save because the
+// edit form always resubmits the full contacts array. These two cases cover both halves: an
+// actual contact change must show up with the contact's name, and an address-only save must
+// NOT produce a spurious "contacts" row. Only department-head can open the detail modal
+// (ReadEntityHistory), so both run there.
+test('editing a trading point contact records a readable contacts diff (positive)', async ({
+    page,
+}, testInfo) => {
+    test.skip(testInfo.project.name !== 'manager-department-head', 'Needs ReadEntityHistory');
+
+    const contactName = `QA Contact ${Date.now()}`;
+    await openE2eCustomerDetail(page);
+    await page.waitForLoadState('networkidle');
+
+    const row = page.locator('li', { hasText: 'E2E Trading Point' });
+    await row.getByRole('button', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: '+ Add contact' }).click();
+    // Prior runs may have already left a contact on this trading point (state persists across
+    // test runs) — the newly added row is always the last one.
+    await page.getByRole('dialog').getByPlaceholder('Name').last().fill(contactName);
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 15000 });
+
+    await page.getByRole('button', { name: 'History' }).click();
+    await page
+        .getByRole('row', { name: /Updated.*Trading point/ })
+        .first()
+        .click();
+
+    const modal = page.getByRole('dialog');
+    await expect(modal.getByText('contacts')).toBeVisible({ timeout: 15000 });
+    await expect(modal.getByText(contactName)).toBeVisible();
+});
+
+test('editing only the trading point address does not record a spurious contacts diff (negative)', async ({
+    page,
+}, testInfo) => {
+    test.skip(testInfo.project.name !== 'manager-department-head', 'Needs ReadEntityHistory');
+
+    const newAddress = `Addr Only ${Date.now()}`;
+    await openE2eCustomerDetail(page);
+    await page.waitForLoadState('networkidle');
+
+    const row = page.locator('li', { hasText: 'E2E Trading Point' });
+    await row.getByRole('button', { name: 'Edit' }).click();
+    const addressInput = page.getByRole('dialog').getByRole('textbox').nth(1);
+    await addressInput.fill(newAddress);
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByText(newAddress)).toBeVisible({ timeout: 15000 });
+
+    await page.getByRole('button', { name: 'History' }).click();
+    // "address, contacts" rows from the earlier positive test also contain the substring
+    // "address" — exclude them explicitly so this only matches a true address-only entry.
+    await page
+        .getByRole('row', { name: /Updated.*Trading point/ })
+        .filter({ hasText: 'address', hasNotText: 'contacts' })
+        .first()
+        .click();
+
+    const modal = page.getByRole('dialog');
+    await expect(modal.getByText('address', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(modal.getByText('contacts', { exact: true })).toHaveCount(0);
+});
+
 // Counterparty-level edits (CounterpartyService.reassignManager) must also produce
 // EntityVersion rows — the History tab already fetches entityVersions('Counterparty', id),
 // but reassignManager only started calling VersioningService.recordChange recently, so this is
