@@ -50,6 +50,16 @@ export class RoleScopeConfigService {
         return best;
     }
 
+    // Read-back for the Settings > Roles & Access UI — the config is written blindly via
+    // setScopeFor today; this closes the matching read gap. Reuses parseAccessScopeConfig
+    // (invalid-JSON logging + null-safety already handled there).
+    async getScopeFor(ctx: RequestContext, roleCode: string): Promise<AccessScopeConfig | null> {
+        const row = await this.connection
+            .getRepository(ctx, RoleAccessScope)
+            .findOne({ where: { roleCode } });
+        return row ? parseAccessScopeConfig(row) : null;
+    }
+
     async setScopeFor(
         ctx: RequestContext,
         roleCode: string,

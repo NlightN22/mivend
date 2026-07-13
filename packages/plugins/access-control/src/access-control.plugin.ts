@@ -50,6 +50,7 @@ const adminApiSchema = gql`
         branches: [Branch!]!
         teamMembers: [TeamMember!]!
         creditTermLimit(roleCode: String!): CreditTermLimit
+        roleAccessScopeConfig(roleCode: String!): String
     }
 
     extend type Mutation {

@@ -230,6 +230,9 @@ async function ensureOrgStructureAdmins() {
         // seed-access-roles.mjs). Needed to exercise credit-visible UI (e.g. manager portal
         // Customers page risk meter) against real data.
         { email: 'nikolai.director@mivend.dev', firstName: 'Nikolai', lastName: 'Director', roleCode: 'general-director' },
+        // ManageAccessControl — needed to exercise the manager portal's Settings > Roles &
+        // Access page (see seed-access-roles.mjs's portal-admin permissions).
+        { email: 'anna.portaladmin@mivend.dev', firstName: 'Anna', lastName: 'PortalAdmin', roleCode: 'portal-admin' },
     ];
 
     let created = 0;

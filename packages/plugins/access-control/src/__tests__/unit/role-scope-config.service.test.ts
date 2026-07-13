@@ -89,4 +89,26 @@ describe('RoleScopeConfigService', () => {
         expect(await service.maxScopeFor(ctx, [], 'counterparty')).toBe('own');
         expect(repo.find).not.toHaveBeenCalled();
     });
+
+    describe('getScopeFor', () => {
+        it('returns the parsed config for an existing role row', async () => {
+            repo.findOne.mockResolvedValue(
+                scopeRow('department-head', { counterparty: 'department', order: 'department' }),
+            );
+            expect(await service.getScopeFor(ctx, 'department-head')).toEqual({
+                counterparty: 'department',
+                order: 'department',
+            });
+        });
+
+        it('returns null for a role with no config row', async () => {
+            repo.findOne.mockResolvedValue(null);
+            expect(await service.getScopeFor(ctx, 'unrecognized-role')).toBeNull();
+        });
+
+        it('returns null (not throw) on invalid JSON', async () => {
+            repo.findOne.mockResolvedValue(scopeRow('broken-role', '{not json'));
+            expect(await service.getScopeFor(ctx, 'broken-role')).toBeNull();
+        });
+    });
 });

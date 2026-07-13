@@ -135,6 +135,26 @@ const ROLES = [
             'ManageApprovalWorkflows',
             'ReassignCounterpartyManager',
             'ReadEntityHistory',
+            // Native Vendure permissions gating the roles/role/updateRole operations
+            // (see @vendure/core's RoleResolver) — required for the manager portal's
+            // Settings > Roles & Access page to read/write other roles' permissions.
+            'ReadAdministrator',
+            'UpdateAdministrator',
+            // Vendure's RoleService.activeUserCanReadRole hides a Role entirely from anyone who
+            // doesn't themselves hold every permission that role grants (privilege-escalation
+            // guard, not configurable) — so managing the other 5 roles from the Settings page
+            // requires portal-admin to hold the full union of everything any of them can do,
+            // not just its own operational permissions. Without this, `roles`/`role` silently
+            // returns nothing for operator/manager/department-head/general-director/
+            // security-officer even though ManageAccessControl + ReadAdministrator are granted.
+            'CreateOrder',
+            'UpdateOrder',
+            'AdjustPriceWithinLimit',
+            'RequestPriceAdjustmentApproval',
+            'RequestDiscountGrantApproval',
+            'RequestCreditTermApproval',
+            'ApproveDiscountRequest',
+            'ApproveSecurityLimit',
         ],
         accessScopeConfig: { counterparty: 'all', order: 'all' },
     },

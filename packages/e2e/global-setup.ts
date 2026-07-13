@@ -22,6 +22,7 @@ const MANAGER_ACCOUNTS = {
     operator: { username: 'ivan.operator@mivend.dev', password: 'Password123!' },
     manager: { username: 'petr.manager@mivend.dev', password: 'Password123!' },
     departmentHead: { username: 'olga.depthead@mivend.dev', password: 'Password123!' },
+    portalAdmin: { username: 'anna.portaladmin@mivend.dev', password: 'Password123!' },
 } as const;
 
 async function ensureShippingMethod(token: string): Promise<void> {

@@ -62,5 +62,15 @@ export default defineConfig({
                 storageState: '.auth/manager-departmentHead.json',
             },
         },
+        {
+            name: 'manager-portal-admin',
+            testDir: './manager',
+            testMatch: ['**/*.spec.ts'],
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
+                storageState: '.auth/manager-portalAdmin.json',
+            },
+        },
     ],
 });

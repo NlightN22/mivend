@@ -79,11 +79,26 @@ export const router = createRouter({
                     component: () => import('../pages/catalog/ProductDetailPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'settings',
+                    redirect: '/settings/roles',
+                },
+                {
+                    path: 'settings/roles',
+                    name: 'settings-roles',
+                    component: () => import('../pages/settings/RolesListPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'settings/roles/:code',
+                    name: 'settings-role-detail',
+                    component: () => import('../pages/settings/RoleDetailPage.vue'),
+                    meta: { requiresAuth: true },
+                },
                 ...[
                     { path: 'customers/new', title: 'New client' },
                     { path: 'documents', title: 'Documents' },
                     { path: 'team', title: 'Team' },
-                    { path: 'settings', title: 'Settings' },
                     { path: 'profile', title: 'Profile' },
                 ].map(({ path, title }) => ({
                     path,

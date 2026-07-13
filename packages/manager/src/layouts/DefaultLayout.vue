@@ -18,17 +18,25 @@ const approvalsBadgeCount = ref(0);
 // Full menu per docs/ai/manager-portal-pages/00-shared-conventions.md — only Dashboard has a
 // real page so far, the rest route to a shared "coming soon" placeholder (see router/index.ts)
 // until they're built out one at a time.
-const menuItems = computed<AppSidebarItem[]>(() => [
-    { label: 'Dashboard', path: '/' },
-    { label: 'Orders', path: '/orders' },
-    { label: 'Customers', path: '/customers' },
-    { label: 'Catalog', path: '/catalog' },
-    { label: 'Discounts', path: '/discounts' },
-    { label: 'Approvals', path: '/approvals', badgeCount: approvalsBadgeCount.value },
-    { label: 'Documents', path: '/documents' },
-    { label: 'Team', path: '/team' },
-    { label: 'Settings', path: '/settings' },
-]);
+const menuItems = computed<AppSidebarItem[]>(() => {
+    const items: AppSidebarItem[] = [
+        { label: 'Dashboard', path: '/' },
+        { label: 'Orders', path: '/orders' },
+        { label: 'Customers', path: '/customers' },
+        { label: 'Catalog', path: '/catalog' },
+        { label: 'Discounts', path: '/discounts' },
+        { label: 'Approvals', path: '/approvals', badgeCount: approvalsBadgeCount.value },
+        { label: 'Documents', path: '/documents' },
+        { label: 'Team', path: '/team' },
+    ];
+    // Gated on the same ManageAccessControl permission the Settings > Roles & Access page
+    // itself checks — not a role-code allowlist, so granting/revoking this via the native
+    // Vendure admin UI (any role) is enough, no manager-portal code change needed.
+    if (authStore.hasPermission('ManageAccessControl')) {
+        items.push({ label: 'Settings', path: '/settings' });
+    }
+    return items;
+});
 
 onMounted(async () => {
     try {

@@ -5,6 +5,7 @@ import { adminApi } from '../api/client';
 interface AdministratorRole {
     code: string;
     description: string;
+    permissions: string[];
 }
 
 interface ActiveAdministrator {
@@ -29,7 +30,7 @@ const ACTIVE_ADMINISTRATOR_QUERY = `
             lastName
             emailAddress
             customFields { departmentId branchId }
-            user { roles { code description } }
+            user { roles { code description permissions } }
         }
     }
 `;
@@ -62,6 +63,19 @@ export const useAuthStore = defineStore('auth', () => {
                   .join(' ')
             : null,
     );
+
+    // Union across roles defensively, even though roleCode's comment above notes the current
+    // convention is one Vendure Role per Administrator. This is the ground truth for "can this
+    // user do X" UI gates — check permissions directly (mirrors the backend's own @Allow(...)
+    // checks), never a role-code allowlist duplicated per component, which drifts from what the
+    // native Vendure admin UI actually grants a role.
+    const permissions = computed(
+        () => administrator.value?.user.roles.flatMap(r => r.permissions) ?? [],
+    );
+
+    function hasPermission(name: string): boolean {
+        return permissions.value.includes(name);
+    }
 
     function init(): Promise<void> {
         if (!initPromise) {
@@ -130,6 +144,8 @@ export const useAuthStore = defineStore('auth', () => {
         fullName,
         roleLabel,
         roleCode,
+        permissions,
+        hasPermission,
         init,
         login,
         logout,

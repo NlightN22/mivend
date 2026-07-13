@@ -43,26 +43,13 @@ const notFound = ref(false);
 const reassigning = ref(false);
 const reassignError = ref('');
 
-// Mirrors CustomPermission.ReassignCounterpartyManager's grant list in
-// infrastructure/scripts/seed-access-roles.mjs (department-head, portal-admin) — a technical
-// UI-visibility key, not a hardcoded business enum (role codes stay DB-driven), same pattern as
-// dashboard-config.ts's APPROVER_ROLE_CODES. The mutation itself is the real enforcement; this
-// only avoids showing a control that would just be rejected.
-const CAN_REASSIGN_ROLE_CODES = new Set(['department-head', 'portal-admin']);
-const canReassign = computed(() => !!authStore.roleCode && CAN_REASSIGN_ROLE_CODES.has(authStore.roleCode));
-
-// Mirrors CustomPermission.ReadEntityHistory's grant list in seed-access-roles.mjs (leadership
-// roles only) — same "avoid showing a control the mutation would reject anyway" rationale as
-// CAN_REASSIGN_ROLE_CODES above.
-const CAN_VIEW_HISTORY_ROLE_CODES = new Set([
-    'department-head',
-    'general-director',
-    'security-officer',
-    'portal-admin',
-]);
-const canViewHistory = computed(
-    () => !!authStore.roleCode && CAN_VIEW_HISTORY_ROLE_CODES.has(authStore.roleCode),
-);
+// Gate directly on the same permission the backend mutation/queries themselves check
+// (CustomPermission.ReassignCounterpartyManager / ReadEntityHistory) — not a role-code
+// allowlist. Whoever the native Vendure admin UI grants this permission to sees the control;
+// the mutation/query is still the real enforcement, this only avoids showing a control that
+// would just be rejected.
+const canReassign = computed(() => authStore.hasPermission('ReassignCounterpartyManager'));
+const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory'));
 
 const activeTab = ref<'overview' | 'orders' | 'discounts' | 'documents' | 'history'>('overview');
 const history = ref<EntityVersionRow[]>([]);

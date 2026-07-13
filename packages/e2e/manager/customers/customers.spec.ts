@@ -182,7 +182,13 @@ test('History tab is visible for department-head and lists the edit/reactivate e
 });
 
 test('History tab is absent for non-leadership roles (negative)', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name === 'manager-department-head', 'Covered by the positive case');
+    // department-head and portal-admin both hold ReadEntityHistory (leadership roles) — see
+    // seed-access-roles.mjs — so the History tab correctly appears for them; this negative case
+    // only applies to operator/manager.
+    test.skip(
+        ['manager-department-head', 'manager-portal-admin'].includes(testInfo.project.name),
+        'Covered by the positive case',
+    );
 
     await openE2eCustomerDetail(page);
     await page.waitForLoadState('networkidle');

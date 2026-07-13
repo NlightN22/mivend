@@ -79,6 +79,8 @@ export type { AppSidebarItem } from './components/MvAppSidebar/MvAppSidebar.vue'
 export { default as MvSelect } from './components/MvSelect/MvSelect.vue';
 export type { SelectOption } from './components/MvSelect/MvSelect.vue';
 
+export { default as MvCheckbox } from './components/MvCheckbox/MvCheckbox.vue';
+
 export { default as MvMultiSelect } from './components/MvMultiSelect/MvMultiSelect.vue';
 
 export { default as MvFilterBar } from './components/MvFilterBar/MvFilterBar.vue';

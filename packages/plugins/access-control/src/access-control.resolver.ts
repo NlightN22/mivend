@@ -76,6 +76,16 @@ export class AccessControlResolver {
 
     @Query()
     @Allow(CustomPermission.ManageAccessControl.Permission)
+    async roleAccessScopeConfig(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { roleCode: string },
+    ): Promise<string | null> {
+        const config = await this.roleScopeConfigService.getScopeFor(ctx, args.roleCode);
+        return config ? JSON.stringify(config) : null;
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageAccessControl.Permission)
     async creditTermLimit(
         @Ctx() ctx: RequestContext,
         @Args() args: { roleCode: string },
