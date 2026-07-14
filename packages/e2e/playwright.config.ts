@@ -33,9 +33,18 @@ export default defineConfig({
             },
         },
         {
+            name: 'manager-noauth',
+            testDir: './manager/auth',
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
+            },
+        },
+        {
             name: 'manager-operator',
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
+            testIgnore: ['**/auth/**'],
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
@@ -46,6 +55,7 @@ export default defineConfig({
             name: 'manager-manager',
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
+            testIgnore: ['**/auth/**'],
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
@@ -56,6 +66,7 @@ export default defineConfig({
             name: 'manager-department-head',
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
+            testIgnore: ['**/auth/**'],
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
@@ -66,6 +77,7 @@ export default defineConfig({
             name: 'manager-portal-admin',
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
+            testIgnore: ['**/auth/**'],
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
