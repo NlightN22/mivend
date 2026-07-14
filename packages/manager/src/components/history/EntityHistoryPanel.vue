@@ -276,10 +276,11 @@ function handleRowClick({ rowData }: { rowData: TableRow }): void {
         </MvFilterBar>
 
         <div v-if="rawRows.length" class="entity-history__table">
+            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
             <MvTable
                 :columns="columns"
                 :data="rows"
-                :height="Math.min(Math.max(rows.length, 1) * 52 + 40, 520)"
+                :height="Math.min(Math.max(rows.length, PAGE_SIZE) * 52 + 40, 520)"
                 empty-text="No changes match these filters"
                 @row-click="handleRowClick"
             />

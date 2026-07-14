@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import { shopApi } from '../../api/client';
 import type { DocData } from './DocumentRow.vue';
 
@@ -15,9 +15,16 @@ export interface DocumentSummary {
     asset: { source: string } | null;
 }
 
+export interface MyDocumentsOptions {
+    take: number;
+    skip: number;
+    type?: string;
+    search?: string;
+}
+
 const MY_DOCUMENTS_QUERY = `
-    query MyDocuments {
-        myDocuments(options: { take: 100 }) {
+    query MyDocuments($options: DocumentListOptions) {
+        myDocuments(options: $options) {
             items {
                 id type number issueDate amount currencyCode status orderId
                 fileUrl
@@ -95,21 +102,21 @@ export function toDocData(doc: DocumentSummary): DocData {
 }
 
 export function useDocuments(): {
-    documents: ReturnType<typeof ref<DocumentSummary[]>>;
-    totalItems: ReturnType<typeof ref<number>>;
-    loading: ReturnType<typeof ref<boolean>>;
-    load: () => Promise<void>;
+    documents: Ref<DocumentSummary[]>;
+    totalItems: Ref<number>;
+    loading: Ref<boolean>;
+    load: (options: MyDocumentsOptions) => Promise<void>;
 } {
     const documents = ref<DocumentSummary[]>([]);
     const totalItems = ref(0);
     const loading = ref(false);
 
-    async function load(): Promise<void> {
+    async function load(options: MyDocumentsOptions): Promise<void> {
         loading.value = true;
         try {
             const result = await shopApi<{
                 myDocuments: { items: DocumentSummary[]; totalItems: number };
-            }>(MY_DOCUMENTS_QUERY);
+            }>(MY_DOCUMENTS_QUERY, { options });
             documents.value = result.myDocuments.items;
             totalItems.value = result.myDocuments.totalItems;
         } catch (e) {

@@ -199,12 +199,14 @@ const todayAmountFormatted = computed(() => {
                     @update:filters="Object.assign(filters, $event)"
                     @reset="resetFilters"
                 />
+                <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
                 <OrdersTable
                     :orders="orders"
                     :managers="managers"
                     :branches="branches"
                     :show-manager-column="showManagerColumn"
                     :pending-approval-order-ids="summary?.pendingApprovalOrderIds ?? new Set()"
+                    :page-size="pageSize"
                 />
                 <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
             </MvPanel>

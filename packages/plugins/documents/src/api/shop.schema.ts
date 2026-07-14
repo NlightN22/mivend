@@ -27,6 +27,8 @@ export const shopApiExtensions = gql`
     input DocumentListOptions {
         take: Int
         skip: Int
+        type: String
+        search: String
     }
 
     extend type Query {

@@ -10,7 +10,8 @@ import { REQUEST_TYPE_LABEL } from '../../api/approvals';
 // resolved by buildApprovalRows() in approvalRows.ts, the single source of truth also used by
 // ApprovalsInboxPage.vue for generic per-column filtering. This component only owns column
 // widths/cell rendering (icons, badges, the action button) and row-click navigation.
-const props = defineProps<{ rows: TableRow[] }>();
+// pageSize: see OrdersTable's pageSize prop comment — stabilizes table height across page changes.
+const props = defineProps<{ rows: TableRow[]; pageSize?: number }>();
 const router = useRouter();
 
 function statusVariant(status: string): 'success' | 'danger' | 'warning' {
@@ -82,7 +83,7 @@ function openRequest(payload: { rowData: TableRow }): void {
     <MvTable
         :columns="columns"
         :data="props.rows"
-        :height="Math.max(props.rows.length, 1) * 52 + 40"
+        :height="Math.max(props.rows.length, props.pageSize ?? 1) * 52 + 40"
         empty-text="No requests awaiting your decision"
         @row-click="openRequest"
     />

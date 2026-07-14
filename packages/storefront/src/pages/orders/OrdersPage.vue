@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, watch, onMounted } from 'vue';
+import { MvPagination } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import OrderCard from './OrderCard.vue';
 import OrdersAside from './OrdersAside.vue';
 import { useOrders } from './useOrders';
 import type { ErpStatus } from './useOrders';
 
-const { orders, loading, load } = useOrders();
+const { orders, totalItems, loading, load } = useOrders();
+
+const PAGE_SIZE = 20;
 
 const activeFilter = ref('all');
 const searchQuery = ref('');
+const page = ref(1);
 
 const FILTER_GROUPS: Record<string, ErpStatus[]> = {
     pending:   ['PENDING', 'SENT_TO_ERP', 'RESERVED'],
@@ -26,30 +30,22 @@ const filters = [
     { key: 'closed',     label: 'Closed' },
 ];
 
-const filteredOrders = computed(() => {
-    let result = orders.value;
+function reload(): void {
+    void load({
+        take: PAGE_SIZE,
+        skip: (page.value - 1) * PAGE_SIZE,
+        search: searchQuery.value.trim() || undefined,
+        erpStatuses: activeFilter.value === 'all' ? undefined : FILTER_GROUPS[activeFilter.value],
+    });
+}
 
-    if (activeFilter.value !== 'all') {
-        const allowed = FILTER_GROUPS[activeFilter.value] ?? [];
-        result = result.filter(o => {
-            const s = o.customFields.erpStatus ?? 'PENDING';
-            return allowed.includes(s as ErpStatus);
-        });
-    }
-
-    if (searchQuery.value.trim()) {
-        const q = searchQuery.value.toLowerCase();
-        result = result.filter(o =>
-            o.code.toLowerCase().includes(q) ||
-            o.lines.some(l => l.productVariant.product.name.toLowerCase().includes(q)) ||
-            (o.shippingAddress?.streetLine1?.toLowerCase().includes(q) ?? false),
-        );
-    }
-
-    return result;
+watch([activeFilter, searchQuery], () => {
+    page.value = 1;
+    reload();
 });
+watch(page, reload);
 
-onMounted(() => { void load(); });
+onMounted(reload);
 </script>
 
 <template>
@@ -83,13 +79,15 @@ onMounted(() => { void load(); });
 
             <div v-if="loading" class="orders-state">Loading orders...</div>
 
-            <div v-else-if="filteredOrders.length === 0" class="orders-state">
+            <div v-else-if="orders.length === 0" class="orders-state">
                 No orders found.
             </div>
 
             <div v-else class="orders-page-grid">
                 <div class="orders-page-list">
-                    <OrderCard v-for="order in filteredOrders" :key="order.id" :order="order" />
+                    <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+                    <OrderCard v-for="order in orders" :key="order.id" :order="order" />
+                    <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
                 </div>
                 <OrdersAside />
             </div>

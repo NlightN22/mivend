@@ -2,7 +2,6 @@
 export interface TypeFilterOption {
     key: string;
     label: string;
-    count: number;
 }
 
 defineProps<{ activeFilter: string; search: string; typeFilters: TypeFilterOption[] }>();
@@ -31,7 +30,7 @@ defineEmits<{
         :class="{ 'docs-toolbar__chip--active': activeFilter === f.key }"
         @click="$emit('update:activeFilter', f.key)"
       >
-        {{ f.label }} <span class="docs-toolbar__count">{{ f.count }}</span>
+        {{ f.label }}
       </button>
     </div>
   </div>
@@ -98,19 +97,4 @@ defineEmits<{
   color: #fff;
 }
 
-.docs-toolbar__count {
-  min-width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.25);
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.docs-toolbar__chip:not(.docs-toolbar__chip--active) .docs-toolbar__count {
-  background: #eef4f1;
-  color: #66736e;
-}
 </style>

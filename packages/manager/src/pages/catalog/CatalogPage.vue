@@ -157,6 +157,7 @@ loadAll();
             />
 
             <MvPanel class="catalog-page__results">
+                <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
                 <div v-if="!loading" class="catalog-page__rows">
                     <div v-for="item in items" :key="item.productVariantId" class="catalog-page__row">
                         <MvProductRow

@@ -12,6 +12,11 @@ const props = defineProps<{
     branches: BranchOption[];
     showManagerColumn: boolean;
     pendingApprovalOrderIds: Set<string>;
+    // Keeps the table height stable across page changes — sizing it off the current page's
+    // actual row count means the last (partial) page renders a much shorter table, which
+    // shrinks total page height enough that the browser clamps window.scrollY to the new
+    // (smaller) max, snapping the whole page to the top. See MvPagination's e2e test.
+    pageSize?: number;
 }>();
 const router = useRouter();
 
@@ -123,7 +128,7 @@ const rows = computed<TableRow[]>(() =>
     <MvTable
         :columns="columns"
         :data="rows"
-        :height="Math.max(rows.length, 1) * 52 + 40"
+        :height="Math.max(rows.length, props.pageSize ?? 1) * 52 + 40"
         empty-text="No orders match your filters"
         @row-click="openOrder"
     />

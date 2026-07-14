@@ -2,12 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
 import { DocumentsService } from '../../documents.service';
 
+const mockQb = {
+    where: vi.fn(),
+    andWhere: vi.fn(),
+    orderBy: vi.fn(),
+    take: vi.fn(),
+    skip: vi.fn(),
+    getManyAndCount: vi.fn(),
+};
+mockQb.where.mockReturnValue(mockQb);
+mockQb.andWhere.mockReturnValue(mockQb);
+mockQb.orderBy.mockReturnValue(mockQb);
+mockQb.take.mockReturnValue(mockQb);
+mockQb.skip.mockReturnValue(mockQb);
+
 const mockRepo = {
     findOne: vi.fn(),
     findAndCount: vi.fn(),
     create: vi.fn((input: unknown) => input),
     save: vi.fn((entity: unknown) => entity),
     update: vi.fn(),
+    createQueryBuilder: vi.fn(() => mockQb),
 };
 
 const mockConnection = {
@@ -103,12 +118,30 @@ describe('DocumentsService', () => {
 
     describe('findForCounterparty', () => {
         it('filters by counterpartyId and paginates', async () => {
-            mockRepo.findAndCount.mockResolvedValue([[{ id: '1' }], 1]);
+            mockQb.getManyAndCount.mockResolvedValue([[{ id: '1' }], 1]);
             const result = await service.findForCounterparty(mockCtx, '1', { take: 10, skip: 0 });
-            expect(mockRepo.findAndCount).toHaveBeenCalledWith(
-                expect.objectContaining({ where: { counterpartyId: '1' }, take: 10, skip: 0 }),
-            );
+            expect(mockQb.where).toHaveBeenCalledWith('document.counterpartyId = :counterpartyId', {
+                counterpartyId: '1',
+            });
+            expect(mockQb.take).toHaveBeenCalledWith(10);
+            expect(mockQb.skip).toHaveBeenCalledWith(0);
             expect(result).toEqual({ items: [{ id: '1' }], totalItems: 1 });
+        });
+
+        it('applies type and search filters when provided', async () => {
+            mockQb.getManyAndCount.mockResolvedValue([[], 0]);
+            await service.findForCounterparty(mockCtx, '1', {
+                take: 10,
+                skip: 0,
+                type: 'invoice',
+                search: 'INV-1',
+            });
+            expect(mockQb.andWhere).toHaveBeenCalledWith('document.type = :type', {
+                type: 'invoice',
+            });
+            expect(mockQb.andWhere).toHaveBeenCalledWith('document.number ILIKE :term', {
+                term: '%INV-1%',
+            });
         });
     });
 

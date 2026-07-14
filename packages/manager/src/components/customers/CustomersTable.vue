@@ -13,6 +13,8 @@ const props = defineProps<{
     discountCounts: Map<string, number>;
     lastOrderDates: Map<string, string>;
     branches: BranchOption[];
+    // See OrdersTable's pageSize prop comment — stabilizes table height across page changes.
+    pageSize?: number;
 }>();
 const router = useRouter();
 
@@ -121,7 +123,7 @@ function handleRowClick({ rowData }: { rowData: TableRow }): void {
     <MvTable
         :columns="columns"
         :data="rows"
-        :height="Math.max(rows.length, 1) * 60 + 40"
+        :height="Math.max(rows.length, props.pageSize ?? 1) * 60 + 40"
         :row-height="60"
         empty-text="You don't have any assigned clients yet"
         @row-click="handleRowClick"

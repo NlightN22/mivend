@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import { shopApi } from '../../api/client';
 
 export type ErpStatus =
@@ -43,9 +43,16 @@ export interface OrderSummary {
     };
 }
 
+export interface MyOrdersOptions {
+    take: number;
+    skip: number;
+    search?: string;
+    erpStatuses?: ErpStatus[];
+}
+
 const MY_ORDERS_QUERY = `
-    query MyOrders {
-        myOrders(options: { take: 50, sort: { createdAt: DESC } }) {
+    query MyOrders($options: MyOrdersListOptions) {
+        myOrders(options: $options) {
             items {
                 id code state createdAt totalWithTax currencyCode
                 lines {
@@ -86,21 +93,21 @@ export const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'muted' | 'e
 };
 
 export function useOrders(): {
-    orders: ReturnType<typeof ref<OrderSummary[]>>;
-    totalItems: ReturnType<typeof ref<number>>;
-    loading: ReturnType<typeof ref<boolean>>;
-    load: () => Promise<void>;
+    orders: Ref<OrderSummary[]>;
+    totalItems: Ref<number>;
+    loading: Ref<boolean>;
+    load: (options: MyOrdersOptions) => Promise<void>;
 } {
     const orders = ref<OrderSummary[]>([]);
     const totalItems = ref(0);
     const loading = ref(false);
 
-    async function load(): Promise<void> {
+    async function load(options: MyOrdersOptions): Promise<void> {
         loading.value = true;
         try {
             const result = await shopApi<{
                 myOrders: { items: OrderSummary[]; totalItems: number };
-            }>(MY_ORDERS_QUERY);
+            }>(MY_ORDERS_QUERY, { options });
             orders.value = result.myOrders.items;
             totalItems.value = result.myOrders.totalItems;
         } catch (e) {

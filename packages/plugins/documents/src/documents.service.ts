@@ -19,6 +19,8 @@ import { DocumentRecord, OrganizationRequisitesRecord } from './types';
 export interface DocumentListOptions {
     take?: number;
     skip?: number;
+    type?: string;
+    search?: string;
 }
 
 @Injectable()
@@ -35,14 +37,25 @@ export class DocumentsService {
     ): Promise<PaginatedList<Document>> {
         const take = options?.take ?? 50;
         const skip = options?.skip ?? 0;
-        const [items, totalItems] = await this.connection
+
+        const qb = this.connection
             .getRepository(ctx, Document)
-            .findAndCount({
-                where: { counterpartyId: String(counterpartyId) },
-                order: { issueDate: 'DESC' },
-                take,
-                skip,
-            });
+            .createQueryBuilder('document')
+            .where('document.counterpartyId = :counterpartyId', {
+                counterpartyId: String(counterpartyId),
+            })
+            .orderBy('document.issueDate', 'DESC')
+            .take(take)
+            .skip(skip);
+
+        if (options?.type) {
+            qb.andWhere('document.type = :type', { type: options.type });
+        }
+        if (options?.search) {
+            qb.andWhere('document.number ILIKE :term', { term: `%${options.search}%` });
+        }
+
+        const [items, totalItems] = await qb.getManyAndCount();
         return { items, totalItems };
     }
 

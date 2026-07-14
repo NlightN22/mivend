@@ -1,51 +1,44 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { MvPagination } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import DocumentsToolbar from './DocumentsToolbar.vue';
 import DocumentRow from './DocumentRow.vue';
 import { useDocuments, toDocData, DOCUMENT_TYPE_LABEL } from './useDocuments';
 import type { TypeFilterOption } from './DocumentsToolbar.vue';
 
-const { documents, loading, load } = useDocuments();
+const { documents, totalItems, loading, load } = useDocuments();
+
+const PAGE_SIZE = 20;
 
 const activeFilter = ref('all');
 const search = ref('');
+const page = ref(1);
 
-onMounted(load);
+const typeFilters: TypeFilterOption[] = [
+    { key: 'all', label: 'All documents' },
+    ...Object.entries(DOCUMENT_TYPE_LABEL).map(([key, label]) => ({ key, label })),
+];
 
-const typeFilters = computed<TypeFilterOption[]>(() => {
-    const counts = new Map<string, number>();
-    for (const doc of documents.value) {
-        counts.set(doc.type, (counts.get(doc.type) ?? 0) + 1);
-    }
-    return [
-        { key: 'all', label: 'All documents', count: documents.value.length },
-        ...Object.entries(DOCUMENT_TYPE_LABEL)
-            .filter(([key]) => counts.has(key))
-            .map(([key, label]) => ({ key, label, count: counts.get(key) ?? 0 })),
-    ];
-});
-
-const filteredDocs = computed(() => {
-    return documents.value.filter(doc => {
-        if (activeFilter.value !== 'all' && doc.type !== activeFilter.value) return false;
-        if (search.value && !doc.number.toLowerCase().includes(search.value.toLowerCase())) return false;
-        return true;
+function reload(): void {
+    void load({
+        take: PAGE_SIZE,
+        skip: (page.value - 1) * PAGE_SIZE,
+        type: activeFilter.value === 'all' ? undefined : activeFilter.value,
+        search: search.value.trim() || undefined,
     });
+}
+
+watch([activeFilter, search], () => {
+    page.value = 1;
+    reload();
 });
+watch(page, reload);
+
+onMounted(reload);
 
 const stats = computed(() => [
-    { title: 'Total documents', value: String(documents.value.length), note: 'All types' },
-    {
-        title: 'Ready to download',
-        value: String(documents.value.filter(d => d.status === 'ready').length),
-        note: 'Available now',
-    },
-    {
-        title: 'Generating',
-        value: String(documents.value.filter(d => d.status === 'pending' || d.status === 'generating').length),
-        note: 'In progress',
-    },
+    { title: 'Total documents', value: String(totalItems.value), note: 'All types' },
 ]);
 </script>
 
@@ -79,10 +72,14 @@ const stats = computed(() => [
           />
 
           <div v-if="loading" class="documents-page__state">Loading...</div>
-          <div v-else-if="!filteredDocs.length" class="documents-page__state">No documents found.</div>
-          <div v-else class="documents-page__list">
-            <DocumentRow v-for="doc in filteredDocs" :key="doc.id" :doc="toDocData(doc)" />
-          </div>
+          <div v-else-if="!documents.length" class="documents-page__state">No documents found.</div>
+          <template v-else>
+            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+            <div class="documents-page__list">
+              <DocumentRow v-for="doc in documents" :key="doc.id" :doc="toDocData(doc)" />
+            </div>
+            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+          </template>
       </div>
     </section>
   </div>
@@ -121,7 +118,7 @@ const stats = computed(() => [
 
 .documents-page__stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
   margin-bottom: 20px;
 }

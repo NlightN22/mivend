@@ -211,6 +211,7 @@ onMounted(async () => {
                     </MvFilterField>
                 </MvFilterBar>
 
+                <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
                 <CustomersTable
                     v-if="!loading"
                     :customers="filtered"
@@ -218,6 +219,7 @@ onMounted(async () => {
                     :discount-counts="discountCounts"
                     :last-order-dates="lastOrderDates"
                     :branches="branches"
+                    :page-size="PAGE_SIZE"
                 />
                 <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
             </MvPanel>

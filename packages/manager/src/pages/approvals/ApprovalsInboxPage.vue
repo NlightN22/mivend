@@ -137,7 +137,8 @@ onMounted(load);
                 @reset="resetFilters"
             />
 
-            <ApprovalsTable :rows="rows" />
+            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+            <ApprovalsTable :rows="rows" :page-size="PAGE_SIZE" />
             <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
         </MvPanel>
     </div>

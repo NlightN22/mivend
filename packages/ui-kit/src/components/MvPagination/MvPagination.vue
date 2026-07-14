@@ -7,6 +7,17 @@ const emit = defineEmits<{ 'update:page': [page: number] }>();
 const pageCount = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)));
 const rangeStart = computed(() => (props.total === 0 ? 0 : (props.page - 1) * props.pageSize + 1));
 const rangeEnd = computed(() => Math.min(props.page * props.pageSize, props.total));
+
+// A click that lands on the last/first page makes this same button `disabled` on the next
+// render tick. Chrome un-focuses a control the instant it goes disabled and hands focus to
+// <body>, which sits at the top of the document — the browser then scrolls the whole page to
+// bring <body> into view, which reads as "pagination jumps to the top". Blurring before the
+// state change removes the focused element before Vue disables it, so there's nothing for the
+// browser to re-target focus away from.
+function goTo(target: number, event: MouseEvent): void {
+    (event.currentTarget as HTMLButtonElement).blur();
+    emit('update:page', target);
+}
 </script>
 
 <template>
@@ -19,7 +30,7 @@ const rangeEnd = computed(() => Math.min(props.page * props.pageSize, props.tota
                 type="button"
                 class="mv-pagination__btn"
                 :disabled="page <= 1"
-                @click="emit('update:page', page - 1)"
+                @click="goTo(page - 1, $event)"
             >
                 Previous
             </button>
@@ -28,7 +39,7 @@ const rangeEnd = computed(() => Math.min(props.page * props.pageSize, props.tota
                 type="button"
                 class="mv-pagination__btn"
                 :disabled="page >= pageCount"
-                @click="emit('update:page', page + 1)"
+                @click="goTo(page + 1, $event)"
             >
                 Next
             </button>
