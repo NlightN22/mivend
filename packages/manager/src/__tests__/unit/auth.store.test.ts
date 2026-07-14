@@ -146,6 +146,36 @@ describe('useAuthStore', () => {
         expect(store.isReconnecting).toBe(false);
     });
 
+    it('a non-network error (e.g. a transient GraphQL/DB error) also stays "unknown", never "unauthenticated"', async () => {
+        const { useAuthStore } = await import('../../stores/auth');
+        // Vendure's activeAdministrator query never throws for "not logged in" — a genuine
+        // logout always comes back as a clean, successful `null`. Any thrown error, even one
+        // that isn't ApiNetworkError, is therefore ambiguous and must not force a logout.
+        adminApiMock.mockRejectedValueOnce(new Error('Internal server error'));
+
+        const store = useAuthStore();
+        await store.fetchActiveAdministrator();
+
+        expect(store.authStatus).toBe('unknown');
+        expect(store.isReconnecting).toBe(true);
+        expect(store.administrator).toBeNull();
+
+        adminApiMock.mockResolvedValueOnce({
+            activeAdministrator: {
+                id: '1',
+                firstName: 'A',
+                lastName: 'B',
+                emailAddress: 'a@b.com',
+                customFields: { departmentId: null, branchId: null },
+                user: { roles: [] },
+            },
+        });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(store.authStatus).toBe('authenticated');
+        expect(store.isReconnecting).toBe(false);
+    });
+
     it('a stale background retry does not revive administrator after an explicit logout', async () => {
         const { useAuthStore } = await import('../../stores/auth');
         adminApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));

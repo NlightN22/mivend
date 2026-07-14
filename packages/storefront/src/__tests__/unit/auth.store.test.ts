@@ -145,6 +145,37 @@ describe('useAuthStore (storefront)', () => {
         expect(store.isReconnecting).toBe(false);
     });
 
+    it('a non-network error (e.g. a transient GraphQL/DB error) also stays "unknown", never "unauthenticated"', async () => {
+        const { useAuthStore } = await import('../../stores/auth');
+        // Vendure's activeCustomer query never throws for "not logged in" — a genuine logout
+        // always comes back as a clean, successful `null`. Any thrown error, even one that
+        // isn't ApiNetworkError, is therefore ambiguous and must not force a logout.
+        shopApiMock.mockRejectedValueOnce(new Error('Internal server error'));
+
+        const store = useAuthStore();
+        await store.fetchCurrentCustomer();
+
+        expect(store.authStatus).toBe('unknown');
+        expect(store.isReconnecting).toBe(true);
+        expect(store.customer).toBeNull();
+
+        shopApiMock.mockResolvedValueOnce({
+            activeCustomer: {
+                id: '1',
+                firstName: 'A',
+                lastName: 'B',
+                emailAddress: 'a@b.com',
+                customFields: { portalRole: null, preferredTradingPointId: null },
+                counterparty: null,
+                preferredTradingPoint: null,
+            },
+        });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(store.authStatus).toBe('authenticated');
+        expect(store.isReconnecting).toBe(false);
+    });
+
     it('a stale background retry does not revive customer after an explicit logout', async () => {
         const { useAuthStore } = await import('../../stores/auth');
         shopApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { adminApi, ApiNetworkError } from '../api/client';
+import { adminApi } from '../api/client';
 
 interface AdministratorRole {
     code: string;
@@ -179,18 +179,17 @@ export const useAuthStore = defineStore('auth', () => {
                     if (myGeneration !== generation) return;
                     applyResult(myGeneration, result);
                 })
-                .catch((e: unknown) => {
+                .catch(() => {
                     if (myGeneration !== generation) return;
-                    if (e instanceof ApiNetworkError) {
-                        scheduleBackgroundRetry(
-                            myGeneration,
-                            Math.min(delayMs * 2, BACKGROUND_RETRY_MAX_MS),
-                        );
-                    } else {
-                        administrator.value = null;
-                        authStatus.value = 'unauthenticated';
-                        isReconnecting.value = false;
-                    }
+                    // Vendure's activeAdministrator query never throws for "not logged in" — it
+                    // returns a clean `null`, handled by applyResult above. ANY thrown error here
+                    // (network failure, a transient GraphQL/DB error, anything) is therefore
+                    // ambiguous, not a confirmed logout — keep retrying rather than assuming the
+                    // caller is unauthenticated just because this one attempt errored.
+                    scheduleBackgroundRetry(
+                        myGeneration,
+                        Math.min(delayMs * 2, BACKGROUND_RETRY_MAX_MS),
+                    );
                 });
         }, delayMs);
     }
@@ -210,21 +209,18 @@ export const useAuthStore = defineStore('auth', () => {
                 ACTIVE_ADMINISTRATOR_QUERY,
             );
             applyResult(myGeneration, result);
-        } catch (e) {
-            // A network failure (adminApi already retried a couple of times — see
-            // ApiNetworkError's doc comment) means we simply don't know the session's real
-            // state, not that the user is logged out. Vendure sessions last a year by default,
-            // so the cookie is almost certainly still valid — clearing `administrator` here
-            // would force a real, logged-in user back to the login screen just because the
-            // server was briefly unreachable (e.g. a dev restart). Only a real response —
-            // `activeAdministrator: null` — means "confirmed not logged in". A network failure
-            // instead keeps status 'unknown' and hands off to an indefinite background retry
-            // rather than blocking this call (and whatever awaits it, e.g. the router guard).
-            if (!(e instanceof ApiNetworkError)) {
-                administrator.value = null;
-                authStatus.value = 'unauthenticated';
-                return;
-            }
+        } catch {
+            // Vendure's activeAdministrator query never throws for "not logged in" — a genuine
+            // logout always comes back as a clean, successful `null` response, handled by
+            // applyResult above. ANY thrown error here — a network failure (adminApi already
+            // retried a couple of times, see ApiNetworkError's doc comment), a transient
+            // GraphQL/DB error, anything — means we simply don't know the session's real state,
+            // not that the user is logged out. Vendure sessions last a year by default, so the
+            // cookie is almost certainly still valid — clearing `administrator` here would force
+            // a real, logged-in user back to the login screen just because one request errored
+            // (e.g. a dev restart, or a DB hiccup right as the server resumes from one). Status
+            // stays 'unknown' and hands off to an indefinite background retry rather than
+            // blocking this call (and whatever awaits it, e.g. the router guard).
             isReconnecting.value = true;
             scheduleBackgroundRetry(myGeneration, BACKGROUND_RETRY_INITIAL_MS);
         }

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { shopApi, ApiNetworkError } from '../api/client';
+import { shopApi } from '../api/client';
 
 interface CustomerCounterparty {
     id: string;
@@ -171,18 +171,17 @@ export const useAuthStore = defineStore('auth', () => {
                     if (myGeneration !== generation) return;
                     applyResult(myGeneration, result);
                 })
-                .catch((e: unknown) => {
+                .catch(() => {
                     if (myGeneration !== generation) return;
-                    if (e instanceof ApiNetworkError) {
-                        scheduleBackgroundRetry(
-                            myGeneration,
-                            Math.min(delayMs * 2, BACKGROUND_RETRY_MAX_MS),
-                        );
-                    } else {
-                        customer.value = null;
-                        authStatus.value = 'unauthenticated';
-                        isReconnecting.value = false;
-                    }
+                    // Vendure's activeCustomer query never throws for "not logged in" — it
+                    // returns a clean `null`, handled by applyResult above. ANY thrown error here
+                    // (network failure, a transient GraphQL/DB error, anything) is therefore
+                    // ambiguous, not a confirmed logout — keep retrying rather than assuming the
+                    // caller is unauthenticated just because this one attempt errored.
+                    scheduleBackgroundRetry(
+                        myGeneration,
+                        Math.min(delayMs * 2, BACKGROUND_RETRY_MAX_MS),
+                    );
                 });
         }, delayMs);
     }
@@ -203,18 +202,15 @@ export const useAuthStore = defineStore('auth', () => {
                 ACTIVE_CUSTOMER_QUERY,
             );
             applyResult(myGeneration, result);
-        } catch (e) {
-            // See the manager portal's identical fetchActiveAdministrator comment — a network
-            // failure (shopApi already retried) doesn't mean the customer is logged out, only
-            // that we couldn't confirm either way. Vendure sessions last a year by default. A
-            // network failure keeps status 'unknown' and hands off to an indefinite background
-            // retry rather than blocking this call (and whatever awaits it, e.g. App.vue/the
-            // route guard).
-            if (!(e instanceof ApiNetworkError)) {
-                customer.value = null;
-                authStatus.value = 'unauthenticated';
-                return;
-            }
+        } catch {
+            // See the manager portal's identical fetchActiveAdministrator comment — Vendure's
+            // activeCustomer query never throws for "not logged in", it comes back as a clean
+            // successful `null`, handled by applyResult above. ANY thrown error here — a network
+            // failure (shopApi already retried), a transient GraphQL/DB error, anything — means
+            // we simply couldn't confirm the session's state either way, not that the customer is
+            // logged out. Vendure sessions last a year by default. Status stays 'unknown' and
+            // hands off to an indefinite background retry rather than blocking this call (and
+            // whatever awaits it, e.g. App.vue/the route guard).
             isReconnecting.value = true;
             scheduleBackgroundRetry(myGeneration, BACKGROUND_RETRY_INITIAL_MS);
         }
