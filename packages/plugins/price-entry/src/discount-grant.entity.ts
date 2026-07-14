@@ -30,6 +30,15 @@ export class DiscountGrant extends VendureEntity {
     @Column({ type: 'varchar' })
     sourceApprovalRequestId!: string;
 
+    // Copied from the source ApprovalRequest's payload at materialization time (see
+    // DiscountGrantService.decideAndApply) — kept as its own column rather than re-parsed from
+    // ApprovalRequest.payload (plain text, not jsonb) on every /discounts read. Nullable: rows
+    // created before this column existed have no value — `synchronize` cannot backfill a NOT
+    // NULL column on an existing table with rows, and there's no real justification to recover
+    // for those anyway.
+    @Column({ type: 'varchar', nullable: true })
+    justification!: string | null;
+
     @ManyToMany(() => Counterparty)
     @JoinTable({ name: 'discount_grant_counterparty' })
     counterparties!: Counterparty[];

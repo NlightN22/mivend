@@ -410,7 +410,11 @@ export class ApprovalRequestService {
                 filterRequestType: options.requestType,
             });
         }
-        if (options.status) {
+        if (options.statuses && options.statuses.length > 0) {
+            qb.andWhere('request.status IN (:...filterStatuses)', {
+                filterStatuses: options.statuses,
+            });
+        } else if (options.status) {
             qb.andWhere('request.status = :filterStatus', { filterStatus: options.status });
         }
         if (options.search) {

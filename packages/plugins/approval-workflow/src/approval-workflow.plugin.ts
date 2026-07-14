@@ -56,6 +56,7 @@ const adminApiSchema = gql`
         search: String
         requestType: String
         status: String
+        statuses: [String!]
     }
 
     type ApprovalsInbox {

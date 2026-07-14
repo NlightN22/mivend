@@ -29,6 +29,44 @@ export async function fetchAllDiscountRules(): Promise<DiscountRuleRow[]> {
     return result.discountRules;
 }
 
+export type DiscountRuleFilterStatus = 'active' | 'expiring-soon' | 'expired';
+
+export interface DiscountRuleListOptions {
+    take?: number;
+    skip?: number;
+    search?: string;
+    priceTypeCode?: string;
+    status?: DiscountRuleFilterStatus;
+}
+
+// Real server-side pagination + filtering for the /discounts registry's materialized-grants
+// section (issue #39) — see DiscountRuleService.findAllPaginated on the backend.
+export async function fetchDiscountRulesPage(
+    options: DiscountRuleListOptions,
+): Promise<{ items: DiscountRuleRow[]; totalItems: number }> {
+    const result = await adminApi<{
+        discountRulesPage: { items: DiscountRuleRow[]; totalItems: number };
+    }>(
+        `query($options: DiscountRuleListOptions) {
+            discountRulesPage(options: $options) {
+                items {
+                    id
+                    erpId
+                    priceTypeCode
+                    facetCode
+                    facetValueCode
+                    percent
+                    validFrom
+                    validTo
+                }
+                totalItems
+            }
+        }`,
+        { options },
+    );
+    return result.discountRulesPage;
+}
+
 export interface DiscountGrantPayload {
     priceTypeCode: string;
     facetCode: string | null;
@@ -49,23 +87,34 @@ export interface DiscountGrantRequestRow {
     decidedAt: string | null;
 }
 
-// discountGrantApproval requests, any status — DiscountRule rows only exist once approved (see
+export interface DiscountRequestListOptions {
+    take?: number;
+    skip?: number;
+    search?: string;
+    statuses?: string[];
+}
+
+// discountGrantApproval requests — DiscountRule rows only exist once approved (see
 // DiscountGrantService.decideAndApply), so this is the only source for "Pending approval" /
-// "Rejected" rows in the list (docs/ai/manager-portal-pages/09-discounts.md).
-// Bounded at 200 (matches fetchAllDiscountRules/fetchAllDiscountGrants) — see
-// DiscountRuleService.findByPriceType's comment on the backend for why a true paginated fix of
-// the merged /discounts view wasn't attempted this session (issue #39).
-export async function fetchDiscountGrantRequests(): Promise<DiscountGrantRequestRow[]> {
+// "Rejected" rows (docs/ai/manager-portal-pages/09-discounts.md). Real server-side pagination
+// (issue #39) — `search` only matches the request id server-side (same documented limitation as
+// Approvals' own search, see ApprovalListOptions), since the customer/price-type/facet fields
+// live inside the request's plain-text payload, not a queryable column.
+export async function fetchDiscountRequestsPage(
+    options: DiscountRequestListOptions,
+): Promise<{ items: DiscountGrantRequestRow[]; totalItems: number }> {
     const result = await adminApi<{
-        approvalRequestsByType: { items: DiscountGrantRequestRow[] };
+        approvalRequestsByType: { items: DiscountGrantRequestRow[]; totalItems: number };
     }>(
-        `query {
-            approvalRequestsByType(requestType: "discountGrantApproval", options: { take: 200 }) {
+        `query($options: ApprovalListOptions) {
+            approvalRequestsByType(requestType: "discountGrantApproval", options: $options) {
                 items { id status payload createdAt decidedAt }
+                totalItems
             }
         }`,
+        { options },
     );
-    return result.approvalRequestsByType.items;
+    return result.approvalRequestsByType;
 }
 
 export interface DiscountGrantInput {
@@ -100,21 +149,30 @@ export interface DiscountGrantRow {
     id: string;
     discountRuleId: string;
     scopeType: string;
+    justification: string | null;
     counterparties: { id: string; legalName: string }[];
 }
 
-export async function fetchAllDiscountGrants(): Promise<DiscountGrantRow[]> {
-    const result = await adminApi<{ discountGrants: DiscountGrantRow[] }>(
-        `query {
-            discountGrants {
+// Scoped to exactly the rule ids on the current paginated page (issue #39) — the real,
+// bounded-by-construction replacement for the old fetchAllDiscountGrants (unbounded, capped at
+// 200 as an interim stopgap).
+export async function fetchDiscountGrantsForRuleIds(
+    ruleIds: string[],
+): Promise<DiscountGrantRow[]> {
+    if (ruleIds.length === 0) return [];
+    const result = await adminApi<{ discountGrantsForRuleIds: DiscountGrantRow[] }>(
+        `query($ruleIds: [ID!]!) {
+            discountGrantsForRuleIds(ruleIds: $ruleIds) {
                 id
                 discountRuleId
                 scopeType
+                justification
                 counterparties { id legalName }
             }
         }`,
+        { ruleIds },
     );
-    return result.discountGrants;
+    return result.discountGrantsForRuleIds;
 }
 
 const ALL_CUSTOMERS_LABEL = 'All customers';
@@ -139,37 +197,18 @@ function ruleStatus(validTo: string): 'active' | 'expiring-soon' | 'expired' {
     return 'active';
 }
 
-// Merges three real sources this list draws from: DiscountRule (materialized once a grant is
-// approved), discountGrantApproval ApprovalRequests (the only place "Pending approval" /
-// "Rejected" rows — and the original justification, which DiscountRule doesn't store — come
-// from), and DiscountGrant (the only place the actual customer(s) a grant applies to come
-// from — see DiscountGrantService.decideAndApply). A portal-created rule's erpId is always
-// `portal-${requestId}` (how rule <-> request are cross-referenced); DiscountGrant.discountRuleId
-// is the rule's internal id (how rule <-> grant are cross-referenced).
-export function buildDiscountRows(
+// Materialized grants (DiscountRule + its DiscountGrant, once a request is approved — see
+// DiscountGrantService.decideAndApply). A portal-created rule's erpId is always
+// `portal-${requestId}`, which is how the row links back to its approval request without a
+// second fetch. DiscountGrant now carries `justification` directly (copied at materialization
+// time) — no need to re-parse the source ApprovalRequest's payload just to display it.
+export function buildMaterializedRows(
     rules: DiscountRuleRow[],
-    requests: DiscountGrantRequestRow[],
     grants: DiscountGrantRow[],
-    counterpartyNamesById: Map<string, string>,
 ): DiscountRow[] {
-    const approvedByErpId = new Map<
-        string,
-        { row: DiscountGrantRequestRow; payload: DiscountGrantPayload }
-    >();
-    for (const request of requests) {
-        if (request.status !== 'approved') continue;
-        try {
-            const payload = JSON.parse(request.payload) as DiscountGrantPayload;
-            approvedByErpId.set(`portal-${request.id}`, { row: request, payload });
-        } catch {
-            // malformed payload — this request just won't contribute a justification/link
-        }
-    }
-
     const grantByRuleId = new Map(grants.map(g => [g.discountRuleId, g]));
 
-    const ruleRows: DiscountRow[] = rules.map(rule => {
-        const matched = approvedByErpId.get(rule.erpId);
+    return rules.map(rule => {
         const grant = grantByRuleId.get(rule.id);
         const customer = grant
             ? grant.scopeType === 'all'
@@ -185,39 +224,40 @@ export function buildDiscountRows(
             validFrom: rule.validFrom,
             validTo: rule.validTo,
             status: ruleStatus(rule.validTo),
-            justification: matched?.payload.justification ?? null,
+            justification: grant?.justification ?? null,
             ruleErpId: rule.erpId,
-            approvalRequestId: matched?.row.id ?? null,
+            approvalRequestId: rule.erpId.startsWith('portal-') ? rule.erpId.slice(7) : null,
         };
     });
+}
 
-    const pendingOrRejectedRows: DiscountRow[] = requests
-        .filter(r => r.status === 'pending' || r.status === 'rejected')
-        .map(request => {
-            let payload: DiscountGrantPayload | null = null;
-            try {
-                payload = JSON.parse(request.payload) as DiscountGrantPayload;
-            } catch {
-                payload = null;
-            }
-            return {
-                key: `request-${request.id}`,
-                customer: customerLabel(payload?.counterpartyIds, counterpartyNamesById),
-                priceType: payload?.priceTypeCode ?? '—',
-                facet: payload?.facetValueCode ?? 'All products',
-                percent: payload?.percent ?? 0,
-                validFrom: payload?.validFrom ?? request.createdAt,
-                validTo: payload?.validTo ?? request.createdAt,
-                status: request.status as 'pending' | 'rejected',
-                justification: payload?.justification ?? null,
-                ruleErpId: null,
-                approvalRequestId: request.id,
-            };
-        });
-
-    return [...ruleRows, ...pendingOrRejectedRows].sort(
-        (a, b) => new Date(b.validTo).getTime() - new Date(a.validTo).getTime(),
-    );
+// Pending/rejected discountGrantApproval requests — the only source for these rows, since
+// DiscountRule only exists once a request is approved.
+export function buildRequestRows(
+    requests: DiscountGrantRequestRow[],
+    counterpartyNamesById: Map<string, string>,
+): DiscountRow[] {
+    return requests.map(request => {
+        let payload: DiscountGrantPayload | null = null;
+        try {
+            payload = JSON.parse(request.payload) as DiscountGrantPayload;
+        } catch {
+            payload = null;
+        }
+        return {
+            key: `request-${request.id}`,
+            customer: customerLabel(payload?.counterpartyIds, counterpartyNamesById),
+            priceType: payload?.priceTypeCode ?? '—',
+            facet: payload?.facetValueCode ?? 'All products',
+            percent: payload?.percent ?? 0,
+            validFrom: payload?.validFrom ?? request.createdAt,
+            validTo: payload?.validTo ?? request.createdAt,
+            status: request.status as 'pending' | 'rejected',
+            justification: payload?.justification ?? null,
+            ruleErpId: null,
+            approvalRequestId: request.id,
+        };
+    });
 }
 
 export async function fetchPriceTypeCodes(): Promise<string[]> {

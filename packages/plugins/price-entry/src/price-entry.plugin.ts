@@ -105,6 +105,19 @@ const adminApiSchema = gql`
         minAmount: Int
     }
 
+    type DiscountRuleList {
+        items: [DiscountRule!]!
+        totalItems: Int!
+    }
+
+    input DiscountRuleListOptions {
+        take: Int
+        skip: Int
+        search: String
+        priceTypeCode: String
+        status: String
+    }
+
     type PriceAdjustmentResult {
         decision: String!
         approvalRequestId: ID
@@ -139,6 +152,7 @@ const adminApiSchema = gql`
         discountRuleId: ID!
         scopeType: String!
         validTo: DateTime!
+        justification: String
         counterparties: [DiscountGrantCounterparty!]!
     }
 
@@ -154,8 +168,13 @@ const adminApiSchema = gql`
         # Restricted to ReadFloorPrice — see PriceAdjustmentResolver.
         floorPrice(variantId: ID!): Int
         discountRules(priceTypeCode: String): [DiscountRule!]!
+        # Real server-side pagination + filtering for the /discounts registry (issue #39).
+        discountRulesPage(options: DiscountRuleListOptions): DiscountRuleList!
         # All materialized grants, not just expiring ones — powers /discounts's Customer column.
         discountGrants: [DiscountGrant!]!
+        # Scoped to exactly these rule ids (a single paginated page's worth) — the real,
+        # bounded-by-construction replacement for discountGrants on /discounts.
+        discountGrantsForRuleIds(ruleIds: [ID!]!): [DiscountGrant!]!
         expiringDiscountGrants(withinDays: Int!): [DiscountGrant!]!
         # Only grants that actually apply to this counterparty (company-wide or scoped to it) —
         # see DiscountGrantService.findForCounterparty.

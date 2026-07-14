@@ -159,6 +159,7 @@ describe('DiscountGrantService', () => {
                     scopeType: 'all',
                     discountRuleId: 'rule-1',
                     counterparties: [],
+                    justification: validInput.justification,
                 }),
             );
         });
@@ -198,6 +199,27 @@ describe('DiscountGrantService', () => {
                     where: expect.objectContaining({ scopeType: 'customer' }),
                     relations: ['counterparties'],
                     order: { validTo: 'ASC' },
+                }),
+            );
+        });
+    });
+
+    describe('findForRuleIds', () => {
+        it('returns [] without querying when no rule ids are given', async () => {
+            const ctx = mockCtx([]);
+            const result = await service.findForRuleIds(ctx, []);
+
+            expect(result).toEqual([]);
+            expect(grantRepo.find).not.toHaveBeenCalled();
+        });
+
+        it('scopes the query to exactly the given rule ids', async () => {
+            const ctx = mockCtx([]);
+            await service.findForRuleIds(ctx, ['rule-1', 'rule-2']);
+
+            expect(grantRepo.find).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    relations: ['counterparties'],
                 }),
             );
         });

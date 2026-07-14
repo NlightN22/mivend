@@ -133,6 +133,7 @@ export class DiscountGrantService {
                 scopeType: counterparties.length ? 'customer' : 'all',
                 validTo: new Date(payload.validTo),
                 sourceApprovalRequestId: String(request.id),
+                justification: payload.justification,
                 counterparties,
             });
             await grantRepo.save(grant);
@@ -190,12 +191,25 @@ export class DiscountGrantService {
     // who a discount actually belongs to instead of only the price-type/facet policy.
     // Bounded at 200 as an interim stopgap (issue #39) — see DiscountRuleService.findByPriceType's
     // comment for why a true paginated fix of the merged /discounts view wasn't attempted this
-    // session.
+    // session. Superseded by findForRuleIds for /discounts' now-real-paginated view — kept for
+    // any other caller that genuinely wants "all" (there is none left as of this fix, but the
+    // 200 cap is a safe fallback rather than a silent full unbounded load).
     async findAll(ctx: RequestContext, take = 200): Promise<DiscountGrant[]> {
         return this.connection.getRepository(ctx, DiscountGrant).find({
             relations: ['counterparties'],
             order: { validTo: 'DESC' },
             take,
+        });
+    }
+
+    // Real fix for /discounts' Customer column (issue #39): scoped to exactly the rule ids on
+    // the current paginated page (DiscountRuleService.findAllPaginated), so this stays bounded
+    // by `take` (e.g. 20) instead of the old blanket 200-row cap.
+    async findForRuleIds(ctx: RequestContext, ruleIds: ID[]): Promise<DiscountGrant[]> {
+        if (ruleIds.length === 0) return [];
+        return this.connection.getRepository(ctx, DiscountGrant).find({
+            where: { discountRuleId: In(ruleIds.map(String)) },
+            relations: ['counterparties'],
         });
     }
 

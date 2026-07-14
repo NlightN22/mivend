@@ -19,6 +19,13 @@ const mockQb = {
     where: vi.fn(),
     andWhere: vi.fn(),
     getMany: vi.fn(),
+    orderBy: vi.fn(),
+    take: vi.fn(),
+    skip: vi.fn(),
+    getManyAndCount: vi.fn(),
+    select: vi.fn(),
+    innerJoin: vi.fn(),
+    getQuery: vi.fn(),
 };
 mockQb.insert.mockReturnValue(mockQb);
 mockQb.into.mockReturnValue(mockQb);
@@ -26,6 +33,12 @@ mockQb.values.mockReturnValue(mockQb);
 mockQb.orUpdate.mockReturnValue(mockQb);
 mockQb.where.mockReturnValue(mockQb);
 mockQb.andWhere.mockReturnValue(mockQb);
+mockQb.orderBy.mockReturnValue(mockQb);
+mockQb.take.mockReturnValue(mockQb);
+mockQb.skip.mockReturnValue(mockQb);
+mockQb.select.mockReturnValue(mockQb);
+mockQb.innerJoin.mockReturnValue(mockQb);
+mockQb.getQuery.mockReturnValue('SELECT 1');
 
 const mockConnection = {
     getRepository: vi.fn(() => mockRepo),
@@ -431,6 +444,63 @@ describe('DiscountRuleService', () => {
                 order: { validTo: 'DESC' },
                 take: 50,
             });
+        });
+    });
+
+    describe('findAllPaginated', () => {
+        beforeEach(() => {
+            mockQb.getManyAndCount.mockResolvedValue([[rule()], 1]);
+        });
+
+        it('paginates with defaults when no options are given', async () => {
+            const result = await service.findAllPaginated(mockCtx);
+
+            expect(mockQb.take).toHaveBeenCalledWith(20);
+            expect(mockQb.skip).toHaveBeenCalledWith(0);
+            expect(result).toEqual({ items: [rule()], totalItems: 1 });
+        });
+
+        it('filters by priceTypeCode', async () => {
+            await service.findAllPaginated(mockCtx, { priceTypeCode: 'WHOLESALE' });
+            expect(mockQb.andWhere).toHaveBeenCalledWith('rule.priceTypeCode = :priceTypeCode', {
+                priceTypeCode: 'WHOLESALE',
+            });
+        });
+
+        it('pushes the expired status filter into SQL', async () => {
+            await service.findAllPaginated(mockCtx, { status: 'expired' });
+            expect(mockQb.andWhere).toHaveBeenCalledWith(
+                'rule.validTo < :now',
+                expect.objectContaining({ now: expect.any(Date) }),
+            );
+        });
+
+        it('pushes the expiring-soon status filter into SQL', async () => {
+            await service.findAllPaginated(mockCtx, { status: 'expiring-soon' });
+            expect(mockQb.andWhere).toHaveBeenCalledWith(
+                'rule.validTo >= :now AND rule.validTo < :soon',
+                expect.objectContaining({ now: expect.any(Date), soon: expect.any(Date) }),
+            );
+        });
+
+        it('pushes the active status filter into SQL', async () => {
+            await service.findAllPaginated(mockCtx, { status: 'active' });
+            expect(mockQb.andWhere).toHaveBeenCalledWith(
+                'rule.validTo >= :soon',
+                expect.objectContaining({ soon: expect.any(Date) }),
+            );
+        });
+
+        it('respects an explicit take/skip', async () => {
+            await service.findAllPaginated(mockCtx, { take: 5, skip: 10 });
+            expect(mockQb.take).toHaveBeenCalledWith(5);
+            expect(mockQb.skip).toHaveBeenCalledWith(10);
+        });
+
+        it('builds a search filter across rule columns and matching customers', async () => {
+            await service.findAllPaginated(mockCtx, { search: 'acme' });
+            expect(mockQb.innerJoin).toHaveBeenCalledWith('dgrant.counterparties', 'counterparty');
+            expect(mockQb.andWhere).toHaveBeenCalledWith(expect.any(Object)); // Brackets instance
         });
     });
 });

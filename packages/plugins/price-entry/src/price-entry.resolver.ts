@@ -5,6 +5,7 @@ import {
     Ctx,
     ForbiddenError,
     OrderLine,
+    PaginatedList,
     RequestContext,
     Transaction,
     TransactionalConnection,
@@ -14,7 +15,12 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { PriceEntryInput, PriceEntryService } from './price-entry.service';
 import { DiscountRule } from './discount-rule.entity';
-import { DiscountRuleInput, DiscountRuleService, DiscountTierVM } from './discount-rule.service';
+import {
+    DiscountRuleInput,
+    DiscountRuleListOptions,
+    DiscountRuleService,
+    DiscountTierVM,
+} from './discount-rule.service';
 import { PriceResolutionService, TierProgressVM } from './price-resolution.service';
 import { FLOOR_PRICE_TYPE_CODE } from './types';
 
@@ -163,6 +169,18 @@ export class DiscountRuleAdminResolver {
         @Args() args: { priceTypeCode?: string },
     ): Promise<DiscountRule[]> {
         return this.discountRuleService.findByPriceType(ctx, args.priceTypeCode);
+    }
+
+    // Real server-side pagination for the /discounts registry (issue #39) — see
+    // DiscountRuleService.findAllPaginated's comment for why pending/rejected discountGrant
+    // requests are fetched as a separate paginated section rather than unioned into this query.
+    @Query()
+    @Allow(Permission.ReadCatalog)
+    async discountRulesPage(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: DiscountRuleListOptions },
+    ): Promise<PaginatedList<DiscountRule>> {
+        return this.discountRuleService.findAllPaginated(ctx, args.options ?? {});
     }
 
     @Transaction()

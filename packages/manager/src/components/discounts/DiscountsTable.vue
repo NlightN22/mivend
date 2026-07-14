@@ -6,7 +6,9 @@ import { MvTable, MvStatusBadge, MvTooltip } from '@mivend/ui-kit';
 import type { TableRow } from '@mivend/ui-kit';
 import type { DiscountRow, DiscountRowStatus } from '../../api/discounts';
 
-const props = defineProps<{ rows: DiscountRow[] }>();
+// pageSize: see manager OrdersTable's pageSize prop comment — stabilizes table height across
+// page changes instead of sizing off the current page's actual row count.
+const props = defineProps<{ rows: DiscountRow[]; pageSize?: number }>();
 const emit = defineEmits<{ renew: [row: DiscountRow] }>();
 const router = useRouter();
 
@@ -115,7 +117,7 @@ const rows = computed<TableRow[]>(() =>
     <MvTable
         :columns="columns"
         :data="rows"
-        :height="Math.max(rows.length, 1) * 52 + 40"
+        :height="Math.max(rows.length, props.pageSize ?? 1) * 52 + 40"
         empty-text="No discount grants yet"
     />
 </template>

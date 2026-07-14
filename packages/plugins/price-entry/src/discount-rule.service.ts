@@ -1,7 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+import { Logger, PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
+import { Brackets, WhereExpressionBuilder } from 'typeorm';
 
 import { DiscountRule } from './discount-rule.entity';
+import { DiscountGrant } from './discount-grant.entity';
+
+export type DiscountRuleStatus = 'active' | 'expiring-soon' | 'expired';
+
+export interface DiscountRuleListOptions {
+    take?: number;
+    skip?: number;
+    search?: string;
+    priceTypeCode?: string;
+    status?: DiscountRuleStatus;
+}
+
+// Same threshold as the frontend's ruleStatus() classifier (api/discounts.ts) — kept in sync by
+// hand since one lives in SQL and the other in a computed display column.
+const EXPIRING_SOON_DAYS = 14;
 
 const loggerCtx = 'DiscountRulePlugin';
 
@@ -78,6 +94,79 @@ export class DiscountRuleService {
             order: { validTo: 'DESC' },
             take: priceTypeCode ? undefined : take,
         });
+    }
+
+    // Real server-side pagination for the /discounts registry's materialized-grants section —
+    // this is the part of that page that genuinely grows over the business's lifetime (issue
+    // #39). Deliberately does NOT try to also union in discountGrantApproval ApprovalRequests
+    // (pending/rejected rows) into this same query — ApprovalRequest.payload is plain text, not
+    // jsonb, so extracting priceTypeCode/facetValueCode from it in SQL would be fragile. The
+    // manager portal instead fetches those via the already-paginated
+    // ApprovalRequestService.findByRequestType as a second, separate paginated section — see
+    // DiscountsPage.vue.
+    async findAllPaginated(
+        ctx: RequestContext,
+        options: DiscountRuleListOptions = {},
+    ): Promise<PaginatedList<DiscountRule>> {
+        const qb = this.connection.getRepository(ctx, DiscountRule).createQueryBuilder('rule');
+
+        if (options.priceTypeCode) {
+            qb.andWhere('rule.priceTypeCode = :priceTypeCode', {
+                priceTypeCode: options.priceTypeCode,
+            });
+        }
+
+        if (options.status) {
+            const now = new Date();
+            const soon = new Date(now.getTime() + EXPIRING_SOON_DAYS * 24 * 60 * 60 * 1000);
+            if (options.status === 'expired') {
+                qb.andWhere('rule.validTo < :now', { now });
+            } else if (options.status === 'expiring-soon') {
+                qb.andWhere('rule.validTo >= :now AND rule.validTo < :soon', { now, soon });
+            } else {
+                qb.andWhere('rule.validTo >= :soon', { soon });
+            }
+        }
+
+        if (options.search) {
+            const term = `%${options.search}%`;
+            // Matches the rule's own columns, plus the customer(s) a materialized grant applies
+            // to — via the real ORM relation (DiscountGrant.counterparties), not a raw table
+            // join, so this stays substitutable in integration tests the same way every other
+            // query in this codebase is (see approval-request.service.ts's subquery gotcha).
+            // Alias intentionally not "grant" — GRANT is a reserved SQL keyword in Postgres and
+            // produces a raw syntax error when used unquoted as a table alias.
+            const grantMatch = this.connection
+                .getRepository(ctx, DiscountGrant)
+                .createQueryBuilder('dgrant')
+                .innerJoin('dgrant.counterparties', 'counterparty')
+                .select('1')
+                .where('dgrant."discountRuleId" = CAST(rule.id AS TEXT)')
+                .andWhere(
+                    new Brackets((bqb: WhereExpressionBuilder) => {
+                        bqb.where('counterparty.legalName ILIKE :term', { term }).orWhere(
+                            'counterparty.shortName ILIKE :term',
+                            { term },
+                        );
+                    }),
+                )
+                .getQuery();
+            qb.andWhere(
+                new Brackets((bqb: WhereExpressionBuilder) => {
+                    bqb.where('rule.priceTypeCode ILIKE :term', { term })
+                        .orWhere('rule.facetValueCode ILIKE :term', { term })
+                        .orWhere('rule.facetCode ILIKE :term', { term })
+                        .orWhere(`EXISTS (${grantMatch})`, { term });
+                }),
+            );
+        }
+
+        qb.orderBy('rule.validTo', 'DESC')
+            .take(options.take ?? 20)
+            .skip(options.skip ?? 0);
+
+        const [items, totalItems] = await qb.getManyAndCount();
+        return { items, totalItems };
     }
 
     async bulkUpsert(ctx: RequestContext, entries: DiscountRuleInput[]): Promise<number> {
