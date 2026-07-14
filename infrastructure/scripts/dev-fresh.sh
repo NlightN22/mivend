@@ -33,6 +33,9 @@ node infrastructure/scripts/seed-access-roles.mjs
 echo "==> Seeding database via ERP import..."
 ERP_IMPORT_TOKEN="${ERP_IMPORT_TOKEN:-dev-token}" node infrastructure/scripts/seed-erp.mjs
 
+echo "==> Seeding approval workflow requests..."
+node infrastructure/scripts/seed-approvals.mjs
+
 echo "==> Stopping temporary server..."
 trap - EXIT
 kill $SERVER_PID 2>/dev/null || true

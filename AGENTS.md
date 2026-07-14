@@ -442,6 +442,8 @@ See `docs/frontend.md` for the full architecture. Critical rules:
 
 - **`MvCatalogDropdown` must be registered globally in `main.ts`** — it is used inside `AppHeader` which is outside Vue app scope for dynamic imports.
 
+- **`[ID!]`/`ID!` GraphQL _input_ args are coerced to the entity id strategy's native type (a `number`, under this project's default auto-increment strategy) — but `id` fields on _output_ types are always serialized back to `string`.** Concretely: a mutation argument typed `counterpartyIds: [ID!]` arrives at the resolver as `number[]`, even though a `counterparties { items { id } }` query returns `id` as `string`. If an id from input args is persisted (e.g. into an `ApprovalRequest.payload` JSON blob) and later compared against an id from a query response (e.g. `Map.get(id)` keyed by query-returned ids), the comparison silently fails — a `number` and the `string` that looks identical are never `===`, and `JSON.stringify`/`Map` don't coerce. Real incident: `DiscountGrantService.requestGrant` stored `counterpartyIds` straight from `input.counterpartyIds` (typed `string[]` in TS, but actually `number[]` at runtime); `api/discounts.ts`'s `customerLabel()` then did `namesById.get(id)` against string-keyed data and always missed, silently falling back to printing the raw id instead of the customer's name. **Rule: any id captured from GraphQL input args and persisted or compared elsewhere must be explicitly `String()`-coerced at the point of capture** — don't trust the input type annotation, and don't assume it matches the shape of the same id coming back from a query.
+
 ---
 
 ## Dev seed rules
@@ -457,9 +459,11 @@ The seed script sends data **only through the `erp-import` plugin REST endpoint*
 - TypeORM repositories called outside the plugin
 - Any other bypass of `erp-import`
 
-The only exception: data that structurally cannot be expressed as an import record (e.g. Vendure system configuration, channel setup, tax zones). In that case, document the reason inline in the seed script with a comment explaining why the plugin cannot handle it.
+The only exception: data that structurally cannot be expressed as an import record (e.g. Vendure system configuration, channel setup, tax zones). In that case, document the reason inline in the seed script with a comment explaining why the plugin cannot handle it. Existing exceptions: `seed-access-roles.mjs` (RBAC roles/scope config), `seed-erp.mjs`'s `ensureOrgStructureAdmins` (demo Administrator logins), `seed-approvals.mjs` (`ApprovalRequest` rows — a real workflow state machine, not ERP master data; goes through the real Admin GraphQL mutations, same as a manager would use).
 
 If a new data type needs seeding — **add a record type to `erp-import` first**, then use it from the seed script.
+
+Full local seeding order (also what `dev-fresh.sh` runs): `make seed-access-roles` → `make seed` → `make seed-approvals`. The last one depends on roles/administrators/counterparty `cnt-001` already existing, so it must run last.
 
 ---
 

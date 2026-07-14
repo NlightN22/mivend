@@ -83,7 +83,12 @@ export class DiscountGrantService {
             minWeightKg: input.minWeightKg ?? null,
             minAmount: input.minAmount ?? null,
             supersedesDiscountRuleId: input.supersedesDiscountRuleId ?? null,
-            counterpartyIds: input.counterpartyIds ?? null,
+            // Vendure's ID scalar coerces GraphQL `[ID!]` input to the entity id strategy's
+            // native type (a number, under the default auto-increment strategy) — stringified
+            // explicitly so the persisted payload always matches what `counterparties()` /
+            // `discountGrantsForRuleIds()` return (real string ids), which every consumer of
+            // this payload (customerLabel() in api/discounts.ts) compares against directly.
+            counterpartyIds: input.counterpartyIds?.map(String) ?? null,
             requestedByJustification: input.justification,
         };
         return this.approvalRequestService.createRequest(

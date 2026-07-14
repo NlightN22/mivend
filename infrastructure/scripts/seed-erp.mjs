@@ -233,6 +233,9 @@ async function ensureOrgStructureAdmins() {
         // ManageAccessControl — needed to exercise the manager portal's Settings > Roles &
         // Access page (see seed-access-roles.mjs's portal-admin permissions).
         { email: 'anna.portaladmin@mivend.dev', firstName: 'Anna', lastName: 'PortalAdmin', roleCode: 'portal-admin' },
+        // ApproveSecurityLimit — the only seeded role that can decide the first step of an
+        // escalated credit-term-extension request (see seed-approvals.mjs / CreditTermGateService).
+        { email: 'svetlana.security@mivend.dev', firstName: 'Svetlana', lastName: 'Security', roleCode: 'security-officer' },
     ];
 
     let created = 0;

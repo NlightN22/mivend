@@ -88,6 +88,23 @@ describe('DiscountGrantService', () => {
             ).rejects.toThrow(UserInputError);
             expect(approvalRequestService.createRequest).not.toHaveBeenCalled();
         });
+
+        it("stores counterpartyIds as strings even if Vendure's ID scalar coerced them to numbers", async () => {
+            const ctx = mockCtx(['RequestDiscountGrantApproval']);
+            // Vendure's ID scalar coerces `[ID!]` GraphQL input to the entity id strategy's
+            // native type (a number, under the default auto-increment strategy) — this simulates
+            // what actually arrives at the resolver, not what the TS type declares.
+            await service.requestGrant(ctx, {
+                ...validInput,
+                counterpartyIds: [1, 2] as unknown as string[],
+            });
+
+            expect(approvalRequestService.createRequest).toHaveBeenCalledWith(
+                ctx,
+                'discountGrantApproval',
+                expect.objectContaining({ counterpartyIds: ['1', '2'] }),
+            );
+        });
     });
 
     describe('decideAndApply', () => {
