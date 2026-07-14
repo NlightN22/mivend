@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { adminApi } from '../api/client';
+import { adminApi, ApiNetworkError } from '../api/client';
 
 interface AdministratorRole {
     code: string;
@@ -88,18 +88,18 @@ export const useAuthStore = defineStore('auth', () => {
 
     const LOGGED_OUT_KEY = 'mv_manager_logged_out';
 
-    async function login(username: string, password: string): Promise<boolean> {
+    async function login(username: string, password: string, rememberMe = false): Promise<boolean> {
         const result = await adminApi<{
             login: { __typename: string; errorCode?: string; id?: string };
         }>(
-            `mutation Login($username: String!, $password: String!) {
-                login(username: $username, password: $password) {
+            `mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
+                login(username: $username, password: $password, rememberMe: $rememberMe) {
                     __typename
                     ... on CurrentUser { id }
                     ... on InvalidCredentialsError { errorCode }
                 }
             }`,
-            { username, password },
+            { username, password, rememberMe },
         );
 
         if (result.login.__typename === 'CurrentUser') {
@@ -132,8 +132,17 @@ export const useAuthStore = defineStore('auth', () => {
                 ACTIVE_ADMINISTRATOR_QUERY,
             );
             administrator.value = result.activeAdministrator;
-        } catch {
-            administrator.value = null;
+        } catch (e) {
+            // A network failure (adminApi already retried a couple of times — see
+            // ApiNetworkError's doc comment) means we simply don't know the session's real
+            // state, not that the user is logged out. Vendure sessions last a year by default,
+            // so the cookie is almost certainly still valid — clearing `administrator` here
+            // would force a real, logged-in user back to the login screen just because the
+            // server was briefly unreachable (e.g. a dev restart). Only a real response —
+            // `activeAdministrator: null` — means "confirmed not logged in".
+            if (!(e instanceof ApiNetworkError)) {
+                administrator.value = null;
+            }
         }
     }
 

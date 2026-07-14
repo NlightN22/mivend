@@ -8,7 +8,7 @@ const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 
-const form = reactive({ username: '', password: '' });
+const form = reactive({ username: '', password: '', remember: false });
 const loading = ref(false);
 const error = ref('');
 
@@ -16,7 +16,7 @@ async function handleSubmit(): Promise<void> {
     loading.value = true;
     error.value = '';
     try {
-        const ok = await authStore.login(form.username, form.password);
+        const ok = await authStore.login(form.username, form.password, form.remember);
         if (ok) {
             await router.push((route.query.redirect as string) ?? '/');
         } else {
@@ -59,6 +59,11 @@ async function handleSubmit(): Promise<void> {
                             :error="!!error"
                         />
                     </MvFormField>
+
+                    <label class="login-form__remember">
+                        <input v-model="form.remember" type="checkbox" />
+                        <span>Remember me</span>
+                    </label>
 
                     <MvButton
                         variant="primary"
@@ -112,6 +117,16 @@ async function handleSubmit(): Promise<void> {
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+.login-form__remember {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4b5563;
+    cursor: pointer;
 }
 
 .login-form__submit {

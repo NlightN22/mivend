@@ -428,6 +428,8 @@ See `docs/frontend.md` for the full architecture. Critical rules:
 
 - **GraphQL schema requires server restart.** Vendure builds the GraphQL schema once at startup. Any change to `customFields`, plugin schemas, or resolvers requires a server restart — hot reload does not apply.
 
+- **A `fetch()` network failure is not the same as "logged out" — never conflate them.** Vendure's default `sessionDuration` is `'1y'`; a session cookie stays valid across ordinary server restarts (sessions are DB-backed, not held in memory). Real incident: both `useAuthStore`s (`packages/manager/src/stores/auth.ts`, `packages/storefront/src/stores/auth.ts`) had a bare `catch { customer.value = null }` around their "who am I" query — a transient network error (e.g. the dev server mid-restart) was indistinguishable from a real `activeCustomer: null` response, so a momentary blip force-logged-out an otherwise-still-valid session and bounced the user to `/login`. Fixed by having `adminApi`/`shopApi` (`packages/*/src/api/client.ts`) retry a few times with backoff on a genuine `fetch()`-level failure and throw a distinguishable `ApiNetworkError` only once retries are exhausted; the auth stores only clear their user state on a real, successful response confirming "not logged in" — an `ApiNetworkError` leaves the previous state alone. Apply the same pattern (retry + distinguish network failure from a real auth response) to any other code that decides "am I logged in" from an API call's success/failure.
+
 - **Custom fields in Shop API filters are flat, not nested.** When filtering products by a custom field (e.g. `onSale`), it appears directly in `ProductFilterParameter`, not under `customFields`:
 
     ```graphql

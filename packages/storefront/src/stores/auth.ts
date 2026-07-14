@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { shopApi } from '../api/client';
+import { shopApi, ApiNetworkError } from '../api/client';
 
 interface CustomerCounterparty {
     id: string;
@@ -123,8 +123,13 @@ export const useAuthStore = defineStore('auth', () => {
                 }`,
             );
             customer.value = result.activeCustomer;
-        } catch {
-            customer.value = null;
+        } catch (e) {
+            // See the manager portal's identical fetchActiveAdministrator comment — a network
+            // failure (shopApi already retried) doesn't mean the customer is logged out, only
+            // that we couldn't confirm either way. Vendure sessions last a year by default.
+            if (!(e instanceof ApiNetworkError)) {
+                customer.value = null;
+            }
         }
     }
 
