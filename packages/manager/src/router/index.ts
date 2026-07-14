@@ -101,6 +101,12 @@ export const router = createRouter({
                     component: () => import('../pages/settings/TeamPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'settings/security',
+                    name: 'settings-security',
+                    component: () => import('../pages/settings/SecurityPage.vue'),
+                    meta: { requiresAuth: true },
+                },
                 ...[
                     { path: 'customers/new', title: 'New client' },
                     { path: 'documents', title: 'Documents' },

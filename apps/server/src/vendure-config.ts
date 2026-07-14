@@ -20,6 +20,7 @@ import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-con
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
+import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 
@@ -135,6 +136,7 @@ export const config: VendureConfig = {
         }),
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
+        SessionManagementPlugin,
         ApprovalWorkflowPlugin,
         VersioningPlugin,
         CounterpartyPlugin,

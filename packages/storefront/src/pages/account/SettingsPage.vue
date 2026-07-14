@@ -1,13 +1,41 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import { endAllSessions, endSession, fetchMySessions, type SessionSummary } from '../../api/sessions';
 import AccountSidebar from './AccountSidebar.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
 
+const sessions = ref<SessionSummary[]>([]);
+const sessionsLoading = ref(true);
+const sessionsError = ref('');
+
+async function loadSessions() {
+    sessionsLoading.value = true;
+    sessionsError.value = '';
+    try {
+        sessions.value = await fetchMySessions();
+    } catch (e) {
+        sessionsError.value = e instanceof Error ? e.message : 'Could not load sessions';
+    } finally {
+        sessionsLoading.value = false;
+    }
+}
+
+onMounted(loadSessions);
+
+async function handleEndSession(id: string) {
+    await endSession(id);
+    await loadSessions();
+}
+
 async function signOutAll() {
+    // Ends every session for this user, including the current one — matches
+    // this button's own copy ("Sign out everywhere"), so the local logout
+    // guard (mv_logged_out) is set the same way a normal logout sets it.
+    await endAllSessions();
     await authStore.logout();
     window.location.href = '/login';
 }
@@ -38,11 +66,6 @@ const notifications = ref({
 });
 
 const catalogView = ref<'grid' | 'list'>('grid');
-
-const sessions = [
-    { icon: '💻', title: 'Windows · Chrome', note: 'Current session · signed in today at 13:48', current: true },
-    { icon: '📱', title: 'Android · Chrome', note: 'Last sign-in yesterday at 18:22', current: false },
-];
 
 const showPasswordForm = ref(false);
 const passwordForm = ref({ current: '', next: '', confirm: '' });
@@ -231,14 +254,17 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
         </div>
 
         <div class="set-sessions" :class="{ 'set-sessions--spaced': showPasswordForm }">
-          <div v-for="s in sessions" :key="s.title" class="set-session">
-            <span class="set-session__icon">{{ s.icon }}</span>
+          <div v-if="sessionsError" class="set-session__note">{{ sessionsError }}</div>
+          <div v-for="s in sessions" :key="s.id" class="set-session">
+            <span class="set-session__icon">{{ s.deviceLabel.includes('Android') || s.deviceLabel.includes('iOS') ? '📱' : '💻' }}</span>
             <div class="set-session__info">
-              <div class="set-session__title">{{ s.title }}</div>
-              <div class="set-session__note">{{ s.note }}</div>
+              <div class="set-session__title">{{ s.deviceLabel }}</div>
+              <div class="set-session__note">
+                {{ s.current ? 'Current session' : 'Signed in' }} · since {{ new Date(s.createdAt).toLocaleString() }}
+              </div>
             </div>
             <span v-if="s.current" class="set-pill">Current</span>
-            <button v-else class="set-btn">End session</button>
+            <button v-else class="set-btn" @click="handleEndSession(s.id)">End session</button>
           </div>
         </div>
       </div>
