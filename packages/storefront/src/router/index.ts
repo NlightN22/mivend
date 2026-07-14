@@ -115,7 +115,10 @@ export const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
     const authStore = useAuthStore();
     await authStore.init();
-    if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    // Only a *confirmed* 'unauthenticated' redirects to /login — 'unknown' (still checking, or
+    // retrying after a network blip that outlasted the bounded retry) lets navigation proceed,
+    // so a prolonged server outage never bounces a still-valid session to the login screen.
+    if (to.meta.requiresAuth && authStore.authStatus === 'unauthenticated') {
         next({ path: '/login', query: { redirect: to.fullPath } });
     } else {
         next();

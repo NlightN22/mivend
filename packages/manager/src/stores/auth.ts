@@ -35,10 +35,29 @@ const ACTIVE_ADMINISTRATOR_QUERY = `
     }
 `;
 
+type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
+
+// Background retry tuning for a network outage that outlasts adminApi's own bounded ~4.2s
+// retry (see api/client.ts) — capped exponential backoff, retried indefinitely rather than
+// ever concluding "logged out" from a network failure alone. See AGENTS.md's "A fetch()
+// network failure is not the same as 'logged out'" gotcha.
+const BACKGROUND_RETRY_INITIAL_MS = 2_000;
+const BACKGROUND_RETRY_MAX_MS = 20_000;
+
 export const useAuthStore = defineStore('auth', () => {
     const administrator = ref<ActiveAdministrator | null>(null);
     const initialized = ref(false);
+    // Tri-state, distinct from `administrator`/`isLoggedIn`: 'unknown' covers both "not yet
+    // checked" and "currently retrying after a network failure" — the router guard only
+    // redirects to /login on a *confirmed* 'unauthenticated', never on 'unknown', so a prolonged
+    // outage never force-logs-out a still-valid session.
+    const authStatus = ref<AuthStatus>('unknown');
+    const isReconnecting = ref(false);
     let initPromise: Promise<void> | null = null;
+    // Bumped on every fetchActiveAdministrator()/login()/logout() call so a stale background
+    // retry loop from an earlier call can detect it's been superseded and stop touching state.
+    let generation = 0;
+    let backgroundRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
     const isLoggedIn = computed(() => administrator.value !== null);
 
@@ -105,6 +124,8 @@ export const useAuthStore = defineStore('auth', () => {
         if (result.login.__typename === 'CurrentUser') {
             sessionStorage.removeItem(LOGGED_OUT_KEY);
             initPromise = null;
+            generation++;
+            stopBackgroundRetry();
             await fetchActiveAdministrator();
             return true;
         }
@@ -117,21 +138,78 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (e) {
             console.warn('[auth] logout mutation failed:', e);
         }
+        generation++;
+        stopBackgroundRetry();
         administrator.value = null;
+        authStatus.value = 'unauthenticated';
+        isReconnecting.value = false;
         initPromise = null;
         sessionStorage.setItem(LOGGED_OUT_KEY, '1');
     }
 
+    function stopBackgroundRetry(): void {
+        if (backgroundRetryTimer !== null) {
+            clearTimeout(backgroundRetryTimer);
+            backgroundRetryTimer = null;
+        }
+        isReconnecting.value = false;
+    }
+
+    function applyResult(
+        myGeneration: number,
+        result: { activeAdministrator: ActiveAdministrator | null },
+    ): void {
+        if (myGeneration !== generation) return; // superseded by a later call
+        administrator.value = result.activeAdministrator;
+        authStatus.value = result.activeAdministrator ? 'authenticated' : 'unauthenticated';
+        isReconnecting.value = false;
+    }
+
+    // Keeps retrying indefinitely (capped backoff) after adminApi's own bounded ~4.2s retry is
+    // exhausted — a prolonged outage must never be mistaken for "logged out". Only a real HTTP
+    // response (success or a confirmed-null activeAdministrator) ends the loop; a superseded
+    // generation (login/logout/a fresh fetchActiveAdministrator call) also stops it silently.
+    function scheduleBackgroundRetry(myGeneration: number, delayMs: number): void {
+        backgroundRetryTimer = setTimeout(() => {
+            if (myGeneration !== generation) return;
+            adminApi<{ activeAdministrator: ActiveAdministrator | null }>(
+                ACTIVE_ADMINISTRATOR_QUERY,
+            )
+                .then(result => {
+                    if (myGeneration !== generation) return;
+                    applyResult(myGeneration, result);
+                })
+                .catch((e: unknown) => {
+                    if (myGeneration !== generation) return;
+                    if (e instanceof ApiNetworkError) {
+                        scheduleBackgroundRetry(
+                            myGeneration,
+                            Math.min(delayMs * 2, BACKGROUND_RETRY_MAX_MS),
+                        );
+                    } else {
+                        administrator.value = null;
+                        authStatus.value = 'unauthenticated';
+                        isReconnecting.value = false;
+                    }
+                });
+        }, delayMs);
+    }
+
     async function fetchActiveAdministrator(): Promise<void> {
+        generation++;
+        const myGeneration = generation;
+        stopBackgroundRetry();
+
         if (sessionStorage.getItem(LOGGED_OUT_KEY)) {
             administrator.value = null;
+            authStatus.value = 'unauthenticated';
             return;
         }
         try {
             const result = await adminApi<{ activeAdministrator: ActiveAdministrator | null }>(
                 ACTIVE_ADMINISTRATOR_QUERY,
             );
-            administrator.value = result.activeAdministrator;
+            applyResult(myGeneration, result);
         } catch (e) {
             // A network failure (adminApi already retried a couple of times — see
             // ApiNetworkError's doc comment) means we simply don't know the session's real
@@ -139,10 +217,16 @@ export const useAuthStore = defineStore('auth', () => {
             // so the cookie is almost certainly still valid — clearing `administrator` here
             // would force a real, logged-in user back to the login screen just because the
             // server was briefly unreachable (e.g. a dev restart). Only a real response —
-            // `activeAdministrator: null` — means "confirmed not logged in".
+            // `activeAdministrator: null` — means "confirmed not logged in". A network failure
+            // instead keeps status 'unknown' and hands off to an indefinite background retry
+            // rather than blocking this call (and whatever awaits it, e.g. the router guard).
             if (!(e instanceof ApiNetworkError)) {
                 administrator.value = null;
+                authStatus.value = 'unauthenticated';
+                return;
             }
+            isReconnecting.value = true;
+            scheduleBackgroundRetry(myGeneration, BACKGROUND_RETRY_INITIAL_MS);
         }
     }
 
@@ -150,6 +234,8 @@ export const useAuthStore = defineStore('auth', () => {
         administrator,
         initialized,
         isLoggedIn,
+        authStatus,
+        isReconnecting,
         fullName,
         roleLabel,
         roleCode,

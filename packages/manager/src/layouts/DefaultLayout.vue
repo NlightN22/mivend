@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { MvAppTopbar, MvAppSidebar, type AppSidebarItem } from '@mivend/ui-kit';
+import { MvAppTopbar, MvAppSidebar, MvNotice, type AppSidebarItem } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
 import { adminApi } from '../api/client';
 
@@ -26,7 +26,6 @@ const menuItems = computed<AppSidebarItem[]>(() => {
         { label: 'Catalog', path: '/catalog' },
         { label: 'Discounts', path: '/discounts' },
         { label: 'Approvals', path: '/approvals', badgeCount: approvalsBadgeCount.value },
-        { label: 'Documents', path: '/documents' },
         { label: 'Team', path: '/team' },
     ];
     // Gated on the same ManageAccessControl permission the Settings > Roles & Access page
@@ -71,6 +70,9 @@ async function handleLogout(): Promise<void> {
         <div class="layout__body">
             <MvAppSidebar :items="menuItems" section-title="Workspace" />
             <main class="layout__content">
+                <MvNotice v-if="authStore.isReconnecting" variant="warning" class="layout__reconnecting">
+                    Reconnecting to the server… your session is still active.
+                </MvNotice>
                 <RouterView />
             </main>
         </div>
@@ -112,5 +114,9 @@ async function handleLogout(): Promise<void> {
 
 .layout__new-order:hover {
     filter: brightness(1.05);
+}
+
+.layout__reconnecting {
+    margin-bottom: 16px;
 }
 </style>

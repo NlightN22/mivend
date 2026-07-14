@@ -107,10 +107,14 @@ export const router = createRouter({
                     component: () => import('../pages/settings/SecurityPage.vue'),
                     meta: { requiresAuth: true },
                 },
+                {
+                    path: 'team',
+                    name: 'team',
+                    component: () => import('../pages/team/TeamPage.vue'),
+                    meta: { requiresAuth: true, title: 'Team' },
+                },
                 ...[
                     { path: 'customers/new', title: 'New client' },
-                    { path: 'documents', title: 'Documents' },
-                    { path: 'team', title: 'Team' },
                     { path: 'profile', title: 'Profile' },
                 ].map(({ path, title }) => ({
                     path,
@@ -129,7 +133,10 @@ export const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
     const authStore = useAuthStore();
     await authStore.init();
-    if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    // Only a *confirmed* 'unauthenticated' redirects to /login — 'unknown' (still checking, or
+    // retrying after a network blip that outlasted the bounded retry) lets navigation proceed,
+    // so a prolonged server outage never bounces a still-valid session to the login screen.
+    if (to.meta.requiresAuth && authStore.authStatus === 'unauthenticated') {
         next({ path: '/login', query: { redirect: to.fullPath } });
     } else {
         next();

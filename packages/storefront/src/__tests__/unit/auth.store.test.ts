@@ -19,16 +19,16 @@ const sessionStorageMock = (() => {
 })();
 vi.stubGlobal('sessionStorage', sessionStorageMock);
 
-const adminApiMock = vi.fn();
+const shopApiMock = vi.fn();
 vi.mock('../../api/client', async () => {
     const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
-    return { ...actual, adminApi: (...args: unknown[]) => adminApiMock(...args) };
+    return { ...actual, shopApi: (...args: unknown[]) => shopApiMock(...args) };
 });
 
-describe('useAuthStore', () => {
+describe('useAuthStore (storefront)', () => {
     beforeEach(() => {
         setActivePinia(createPinia());
-        adminApiMock.mockReset();
+        shopApiMock.mockReset();
         sessionStorageMock.clear();
         vi.useFakeTimers();
     });
@@ -37,90 +37,89 @@ describe('useAuthStore', () => {
         vi.useRealTimers();
     });
 
-    it('clears the administrator on a confirmed "not logged in" response', async () => {
+    it('clears the customer on a confirmed "not logged in" response', async () => {
         const { useAuthStore } = await import('../../stores/auth');
-        adminApiMock.mockResolvedValue({ activeAdministrator: null });
+        shopApiMock.mockResolvedValue({ activeCustomer: null });
 
         const store = useAuthStore();
-        await store.fetchActiveAdministrator();
+        await store.fetchCurrentCustomer();
 
-        expect(store.administrator).toBeNull();
+        expect(store.customer).toBeNull();
         expect(store.isLoggedIn).toBe(false);
+        expect(store.authStatus).toBe('unauthenticated');
     });
 
-    it('does not clear an already-known administrator on a transient network failure', async () => {
+    it('does not clear an already-known customer on a transient network failure', async () => {
         const { useAuthStore } = await import('../../stores/auth');
         const store = useAuthStore();
 
-        adminApiMock.mockResolvedValueOnce({
-            activeAdministrator: {
+        shopApiMock.mockResolvedValueOnce({
+            activeCustomer: {
                 id: '1',
                 firstName: 'A',
                 lastName: 'B',
                 emailAddress: 'a@b.com',
-                customFields: { departmentId: null, branchId: null },
-                user: { roles: [] },
+                customFields: { portalRole: null, preferredTradingPointId: null },
+                counterparty: null,
+                preferredTradingPoint: null,
             },
         });
-        await store.fetchActiveAdministrator();
+        await store.fetchCurrentCustomer();
         expect(store.isLoggedIn).toBe(true);
+        expect(store.authStatus).toBe('authenticated');
 
-        // A later re-check fails only because the server is momentarily unreachable.
-        adminApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
-        await store.fetchActiveAdministrator();
+        shopApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
+        await store.fetchCurrentCustomer();
 
         expect(store.isLoggedIn).toBe(true);
+        expect(store.authStatus).toBe('authenticated');
     });
 
-    it('does not populate the administrator from a network failure on first load either', async () => {
+    it('does not populate the customer from a network failure on first load, stays "unknown"', async () => {
         const { useAuthStore } = await import('../../stores/auth');
-        adminApiMock.mockRejectedValue(new ApiNetworkError('Failed to fetch'));
+        shopApiMock.mockRejectedValue(new ApiNetworkError('Failed to fetch'));
 
         const store = useAuthStore();
-        await store.fetchActiveAdministrator();
+        await store.fetchCurrentCustomer();
 
-        // Nothing was ever confirmed either way — stays in the initial "unknown" state, not
-        // force-logged-out, but also not incorrectly marked as logged in.
-        expect(store.administrator).toBeNull();
+        expect(store.customer).toBeNull();
         expect(store.authStatus).toBe('unknown');
         expect(store.isReconnecting).toBe(true);
     });
 
-    it('starts a background retry after a network failure and stays "unknown", never "unauthenticated"', async () => {
+    it('keeps retrying in the background and stays "unknown" while the outage continues', async () => {
         const { useAuthStore } = await import('../../stores/auth');
-        adminApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
+        shopApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
 
         const store = useAuthStore();
-        await store.fetchActiveAdministrator();
-
-        expect(store.authStatus).toBe('unknown');
+        await store.fetchCurrentCustomer();
         expect(store.isReconnecting).toBe(true);
 
-        // Still failing on the first background attempt.
-        adminApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
+        shopApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
         await vi.advanceTimersByTimeAsync(2_000);
 
         expect(store.authStatus).toBe('unknown');
         expect(store.isReconnecting).toBe(true);
-        expect(store.administrator).toBeNull();
+        expect(store.customer).toBeNull();
     });
 
     it('resolves to "authenticated" once a background retry finally succeeds', async () => {
         const { useAuthStore } = await import('../../stores/auth');
-        adminApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
+        shopApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
 
         const store = useAuthStore();
-        await store.fetchActiveAdministrator();
+        await store.fetchCurrentCustomer();
         expect(store.isReconnecting).toBe(true);
 
-        adminApiMock.mockResolvedValueOnce({
-            activeAdministrator: {
+        shopApiMock.mockResolvedValueOnce({
+            activeCustomer: {
                 id: '1',
                 firstName: 'A',
                 lastName: 'B',
                 emailAddress: 'a@b.com',
-                customFields: { departmentId: null, branchId: null },
-                user: { roles: [] },
+                customFields: { portalRole: null, preferredTradingPointId: null },
+                counterparty: null,
+                preferredTradingPoint: null,
             },
         });
         await vi.advanceTimersByTimeAsync(2_000);
@@ -132,13 +131,13 @@ describe('useAuthStore', () => {
 
     it('resolves to "unauthenticated" once a background retry gets a confirmed-null response', async () => {
         const { useAuthStore } = await import('../../stores/auth');
-        adminApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
+        shopApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
 
         const store = useAuthStore();
-        await store.fetchActiveAdministrator();
+        await store.fetchCurrentCustomer();
         expect(store.isReconnecting).toBe(true);
 
-        adminApiMock.mockResolvedValueOnce({ activeAdministrator: null });
+        shopApiMock.mockResolvedValueOnce({ activeCustomer: null });
         await vi.advanceTimersByTimeAsync(2_000);
 
         expect(store.authStatus).toBe('unauthenticated');
@@ -146,21 +145,20 @@ describe('useAuthStore', () => {
         expect(store.isReconnecting).toBe(false);
     });
 
-    it('a stale background retry does not revive administrator after an explicit logout', async () => {
+    it('a stale background retry does not revive customer after an explicit logout', async () => {
         const { useAuthStore } = await import('../../stores/auth');
-        adminApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
+        shopApiMock.mockRejectedValueOnce(new ApiNetworkError('Failed to fetch'));
 
         const store = useAuthStore();
-        await store.fetchActiveAdministrator();
+        await store.fetchCurrentCustomer();
         expect(store.isReconnecting).toBe(true);
 
-        adminApiMock.mockResolvedValue({ logout: { success: true } });
+        shopApiMock.mockResolvedValue({ logout: { success: true } });
         await store.logout();
         expect(store.isReconnecting).toBe(false);
 
-        // If the stale timer somehow still fired, it must be a no-op (generation superseded).
         await vi.advanceTimersByTimeAsync(5_000);
-        expect(store.administrator).toBeNull();
+        expect(store.customer).toBeNull();
         expect(store.authStatus).toBe('unauthenticated');
     });
 });

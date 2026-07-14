@@ -74,4 +74,39 @@ test.describe('Login page', () => {
         expect(page.url()).not.toContain('/login');
         await expect(page.getByRole('link', { name: 'Account' })).toBeVisible();
     });
+
+    // Regression coverage for the tri-state auth-status fix: an outage that OUTLASTS shopApi's
+    // own bounded ~4.2s retry must never be misclassified as "logged out" — the route guard
+    // (and App.vue's DEV auto-relogin fallback) only treat a *confirmed* 'unauthenticated' as
+    // logged-out, never 'unknown' (still retrying in the background). Failing requests for ~6s
+    // exhausts the bounded retry and forces at least one background-retry attempt (2s initial
+    // interval) before the outage ends.
+    test('an outage longer than the bounded retry never redirects to /login and recovers on its own', async ({
+        page,
+    }) => {
+        await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
+        await page.locator('input[type="password"]').fill(E2E_CUSTOMER.password);
+        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.waitForURL(url => !url.pathname.includes('/login'));
+
+        const outageStart = Date.now();
+        const OUTAGE_MS = 6_000;
+        await page.route('**/shop-api', route => {
+            if (Date.now() - outageStart < OUTAGE_MS) {
+                return route.abort('connectionrefused');
+            }
+            return route.continue();
+        });
+
+        await page.reload();
+
+        // Must never navigate to /login while the outage is ongoing or resolving.
+        await page.waitForTimeout(OUTAGE_MS - 1000);
+        expect(page.url()).not.toContain('/login');
+
+        // Once the outage ends, the background retry (re-armed at up to 20s) eventually
+        // succeeds and the page reflects the still-valid session without any re-login.
+        await expect(page.getByRole('link', { name: 'Account' })).toBeVisible({ timeout: 15_000 });
+        expect(page.url()).not.toContain('/login');
+    });
 });
