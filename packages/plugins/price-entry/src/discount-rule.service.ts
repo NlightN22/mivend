@@ -57,11 +57,26 @@ export class DiscountRuleService {
     // count/list) via the customer's own priceType, and by /discounts.
     // priceTypeCode omitted lists every discount rule across all price types — the manager
     // portal's /discounts page (docs/ai/manager-portal-pages/09-discounts.md); provided, it's
-    // the customer-detail page's per-customer-price-type view.
-    async findByPriceType(ctx: RequestContext, priceTypeCode?: string): Promise<DiscountRule[]> {
+    // the customer-detail page's per-customer-price-type view (inherently small, exempt from
+    // issue #39's pagination rule — a handful of rules per single price type).
+    //
+    // The unfiltered (no priceTypeCode) case IS in scope for issue #39 — bounded here at 200 as
+    // an interim stopgap, same pattern as fetchAllCustomersCapped/fetchCustomerOptions in
+    // api/customers.ts/api/orderCreate.ts. NOT a true fix: the /discounts page merges this with
+    // DiscountGrant and discountGrantApproval ApprovalRequest rows client-side
+    // (buildDiscountRows in api/discounts.ts) into one sorted table — a real paginated fix would
+    // need a single backend query unioning all three sources server-side, which wasn't
+    // attempted this session (ApprovalRequest.payload is stored as plain text, not jsonb, so a
+    // SQL-side UNION would need fragile JSON-in-SQL parsing; deferred, see issue #39).
+    async findByPriceType(
+        ctx: RequestContext,
+        priceTypeCode?: string,
+        take = 200,
+    ): Promise<DiscountRule[]> {
         return this.connection.getRepository(ctx, DiscountRule).find({
             where: priceTypeCode ? { priceTypeCode } : {},
             order: { validTo: 'DESC' },
+            take: priceTypeCode ? undefined : take,
         });
     }
 

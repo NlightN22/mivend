@@ -34,9 +34,7 @@ restart:
 
 dev:
 	@bash infrastructure/scripts/dev-kill.sh
-	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d
-	@echo "Waiting for postgres-central to accept connections..."
-	@until docker exec docker-postgres-central-1 pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait
 	@docker exec docker-postgres-central-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_central'" | grep -q 1 \
 		|| docker exec docker-postgres-central-1 psql -U postgres -c "CREATE DATABASE mivend_central"
 	pnpm dev:all

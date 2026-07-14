@@ -12,7 +12,7 @@ import {
     type RelatedDocument,
 } from '../../api/orderDetail';
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
-import { fetchCreditByCounterpartyId, type CustomerCredit } from '../../api/customers';
+import { fetchCreditForCounterparty, type CustomerCredit } from '../../api/customers';
 import { fetchOrderReservations, type OrderReservation } from '../../api/reservation';
 import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
@@ -27,7 +27,7 @@ const adjustmentRequests = ref<PriceAdjustmentRequestSummary[]>([]);
 const documents = ref<RelatedDocument[]>([]);
 const loading = ref(true);
 const notFound = ref(false);
-const creditByCounterpartyId = ref<Map<string, CustomerCredit>>(new Map());
+const credit = ref<CustomerCredit | null>(null);
 const reservations = ref<OrderReservation[]>([]);
 
 // Mirrors DEFAULT_RESERVATION_DAYS in packages/plugins/reservation/src/types.ts — used only as
@@ -41,13 +41,6 @@ const managerName = computed(() => {
     const managerId = order.value?.customer?.counterparty?.assignedManagerId;
     if (!managerId) return null;
     return managers.value.find(m => m.id === managerId)?.name ?? null;
-});
-
-// Null for a caller without ReadCounterpartyCredit — see fetchCreditByCounterpartyId.
-const credit = computed(() => {
-    const counterpartyId = order.value?.customer?.counterparty?.id;
-    if (!counterpartyId) return null;
-    return creditByCounterpartyId.value.get(counterpartyId) ?? null;
 });
 
 const editable = computed(() => !!order.value && !NON_EDITABLE_ORDER_STATES.includes(order.value.state));
@@ -65,22 +58,22 @@ async function load(): Promise<void> {
     notFound.value = false;
     try {
         const code = route.params.code as string;
-        const [detail, managerOptions, creditMap] = await Promise.all([
+        const [detail, managerOptions] = await Promise.all([
             fetchOrderDetail(code),
             managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
-            fetchCreditByCounterpartyId(),
         ]);
         managers.value = managerOptions;
-        creditByCounterpartyId.value = creditMap;
         if (!detail) {
             notFound.value = true;
             return;
         }
         order.value = detail;
-        [adjustmentRequests.value, documents.value, reservations.value] = await Promise.all([
+        const counterpartyId = detail.customer?.counterparty?.id;
+        [adjustmentRequests.value, documents.value, reservations.value, credit.value] = await Promise.all([
             fetchPriceAdjustmentRequestsForOrder(detail.id),
             fetchRelatedDocuments(detail.id),
             fetchOrderReservations(detail.id),
+            counterpartyId ? fetchCreditForCounterparty(counterpartyId) : Promise.resolve(null),
         ]);
     } finally {
         loading.value = false;

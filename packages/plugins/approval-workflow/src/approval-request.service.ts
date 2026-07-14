@@ -5,11 +5,12 @@ import {
     AdministratorService,
     ForbiddenError,
     Logger,
+    PaginatedList,
     RequestContext,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { In } from 'typeorm';
+import { Brackets, SelectQueryBuilder } from 'typeorm';
 import { createActor } from 'xstate';
 
 import { buildApprovalMachine, stepIndexFromStateValue } from './approval-machine';
@@ -17,6 +18,7 @@ import { ApprovalRequest } from './entities/approval-request.entity';
 import { ApprovalStep } from './entities/approval-step.entity';
 import {
     ApprovalConcurrencyError,
+    ApprovalListOptions,
     ApprovalStepDecision,
     WorkflowStepDefinition,
     loggerCtx,
@@ -306,76 +308,199 @@ export class ApprovalRequestService {
     // DiscountGrantService.decideAndApply), so "Pending approval"/"Rejected" rows in that list
     // come from here, not from DiscountRule. Not scoped by department/branch: discount grants
     // are company-wide policy by price type, same visibility as `discountRules` itself.
-    async findByRequestType(ctx: RequestContext, requestType: string): Promise<ApprovalRequest[]> {
-        return this.connection
+    async findByRequestType(
+        ctx: RequestContext,
+        requestType: string,
+        options: ApprovalListOptions = {},
+    ): Promise<PaginatedList<ApprovalRequest>> {
+        const qb = this.connection
             .getRepository(ctx, ApprovalRequest)
-            .find({ where: { requestType }, order: { createdAt: 'DESC' } });
+            .createQueryBuilder('request')
+            .where('request.requestType = :requestType', { requestType });
+        this.applyListFilters(qb, options);
+        qb.orderBy('request.createdAt', 'DESC');
+
+        const totalItems = await qb.getCount();
+        const items = await qb
+            .take(options.take ?? 50)
+            .skip(options.skip ?? 0)
+            .getMany();
+        return { items, totalItems };
+    }
+
+    // "Which requestType+stepIndex combinations can the CALLING admin decide" — computed once
+    // from the (small, fixed) set of WorkflowDefinitions, not from the (unbounded, growing) set
+    // of ApprovalRequest rows. canDecideStep()'s core check (ctx.userHasPermissions) only ever
+    // depends on the *caller* and the step's requiredPermission, never on anything belonging to
+    // another admin or to the request's payload — so it's safe to precompute this list ahead of
+    // the query and push it into SQL as a plain OR of (requestType, stepIndex) equality checks,
+    // instead of loading every pending request and evaluating each one in application code (see
+    // docs/ai/PROJECT_CONTEXT.md, "Approvals inbox: real server-side pagination", for why the
+    // naive fetch-then-filter version was rejected).
+    private async getEligibleStepPairs(
+        ctx: RequestContext,
+    ): Promise<{ requestType: string; stepIndex: number }[]> {
+        const definitions = await this.workflowDefinitionService.getAllDefinitions(ctx);
+        const pairs: { requestType: string; stepIndex: number }[] = [];
+        for (const definition of definitions) {
+            definition.steps.forEach((step, stepIndex) => {
+                if (ctx.userHasPermissions([step.requiredPermission as Permission])) {
+                    pairs.push({ requestType: definition.requestType, stepIndex });
+                }
+            });
+        }
+        return pairs;
+    }
+
+    // Mirrors canDecideStep()'s two ways in: current-step permission (via getEligibleStepPairs,
+    // pushed into SQL as requestType+stepIndex pairs) OR escalated-to-me on the current step
+    // (a correlated subquery against ApprovalStep) — so "can I see it in my inbox" and "can I
+    // actually decide it" can never drift apart, same guarantee the old in-memory version made.
+    private buildAwaitingDecisionBracket(
+        ctx: RequestContext,
+        pairs: { requestType: string; stepIndex: number }[],
+        adminId: string | null,
+    ): Brackets {
+        return new Brackets(outer => {
+            outer.where('request.status = :awaitingStatus', { awaitingStatus: 'pending' });
+            outer.andWhere(
+                new Brackets(eligible => {
+                    let hasAny = false;
+                    pairs.forEach((pair, i) => {
+                        const clause = `(request.requestType = :eligibleType${i} AND request.currentStepIndex = :eligibleStep${i})`;
+                        const params = {
+                            [`eligibleType${i}`]: pair.requestType,
+                            [`eligibleStep${i}`]: pair.stepIndex,
+                        };
+                        if (hasAny) eligible.orWhere(clause, params);
+                        else eligible.where(clause, params);
+                        hasAny = true;
+                    });
+                    if (adminId) {
+                        // Goes through connection.getRepository(), same as everywhere else in
+                        // this service — NOT qb.subQuery().from(ApprovalStep, ...), which
+                        // references the real (VendureEntity-based) ApprovalStep class directly
+                        // and therefore cannot be swapped for a test double the way
+                        // TransactionalConnection.getRepository() can (see
+                        // approval-request.pagination.test.ts's connectionShim).
+                        const escalatedToMeSubQuery = this.connection
+                            .getRepository(ctx, ApprovalStep)
+                            .createQueryBuilder('step')
+                            .select('step.approvalRequestId')
+                            .where('step.stepIndex = request.currentStepIndex')
+                            .andWhere('step.escalatedToAdministratorId = :escalatedAdminId')
+                            .getQuery();
+                        const clause = `CAST(request.id AS TEXT) IN (${escalatedToMeSubQuery})`;
+                        if (hasAny) eligible.orWhere(clause, { escalatedAdminId: adminId });
+                        else eligible.where(clause, { escalatedAdminId: adminId });
+                        hasAny = true;
+                    }
+                    if (!hasAny) eligible.where('1 = 0');
+                }),
+            );
+        });
+    }
+
+    private applyListFilters(
+        qb: SelectQueryBuilder<ApprovalRequest>,
+        options: ApprovalListOptions,
+    ): void {
+        if (options.requestType) {
+            qb.andWhere('request.requestType = :filterRequestType', {
+                filterRequestType: options.requestType,
+            });
+        }
+        if (options.status) {
+            qb.andWhere('request.status = :filterStatus', { filterStatus: options.status });
+        }
+        if (options.search) {
+            qb.andWhere('CAST(request.id AS TEXT) ILIKE :filterSearch', {
+                filterSearch: `%${options.search}%`,
+            });
+        }
     }
 
     // Approvals inbox (docs/ai/manager-portal-pages/10-approvals-inbox.md, "Awaiting my
-    // decision") — reuses the exact same canDecideStep() gate that decide() itself enforces, so
-    // "can I see it in my inbox" and "can I actually decide it" can never drift apart.
-    async findAwaitingMyDecision(ctx: RequestContext): Promise<ApprovalRequest[]> {
+    // decision") — reuses the exact same eligibility rule decide() itself enforces (see
+    // getEligibleStepPairs/buildAwaitingDecisionBracket above), now pushed into SQL so the query
+    // cost no longer grows with the total number of pending requests company-wide.
+    async findAwaitingMyDecision(
+        ctx: RequestContext,
+        options: ApprovalListOptions = {},
+    ): Promise<PaginatedList<ApprovalRequest>> {
         const adminId = await this.getAdministratorId(ctx);
-        const repo = this.connection.getRepository(ctx, ApprovalRequest);
-        const stepRepo = this.connection.getRepository(ctx, ApprovalStep);
-        const pending = await repo.find({
-            where: { status: 'pending' },
-            order: { createdAt: 'DESC' },
-        });
+        const pairs = await this.getEligibleStepPairs(ctx);
+        const qb = this.connection
+            .getRepository(ctx, ApprovalRequest)
+            .createQueryBuilder('request');
+        qb.where(this.buildAwaitingDecisionBracket(ctx, pairs, adminId));
+        this.applyListFilters(qb, options);
+        qb.orderBy('request.createdAt', 'DESC');
 
-        const result: ApprovalRequest[] = [];
-        for (const request of pending) {
-            const definition = await this.workflowDefinitionService.getDefinition(
-                ctx,
-                request.requestType,
-            );
-            const stepDef = definition.steps[request.currentStepIndex];
-            if (!stepDef) continue;
-            const stepRow = await stepRepo.findOne({
-                where: {
-                    approvalRequestId: String(request.id),
-                    stepIndex: request.currentStepIndex,
-                },
-            });
-            if (this.canDecideStep(ctx, stepDef, stepRow, adminId)) {
-                result.push(request);
-            }
-        }
-        return result;
+        const totalItems = await qb.getCount();
+        const items = await qb
+            .take(options.take ?? 50)
+            .skip(options.skip ?? 0)
+            .getMany();
+        return { items, totalItems };
     }
 
     // "All requests I'm involved in" tab — union of: requests I submitted, requests where I
     // decided or was escalated to on any step, and requests currently awaiting my decision.
-    // History, not a to-do list — every status is included.
-    async findAllInvolving(ctx: RequestContext): Promise<ApprovalRequest[]> {
+    // History, not a to-do list — every status is included. Same SQL-pushdown reasoning as
+    // findAwaitingMyDecision above.
+    async findAllInvolving(
+        ctx: RequestContext,
+        options: ApprovalListOptions = {},
+    ): Promise<PaginatedList<ApprovalRequest>> {
         const adminId = await this.getAdministratorId(ctx);
-        if (!adminId) return [];
+        if (!adminId) return { items: [], totalItems: 0 };
 
-        const requestRepo = this.connection.getRepository(ctx, ApprovalRequest);
+        const pairs = await this.getEligibleStepPairs(ctx);
+        const qb = this.connection
+            .getRepository(ctx, ApprovalRequest)
+            .createQueryBuilder('request');
+
         const stepRepo = this.connection.getRepository(ctx, ApprovalStep);
-
-        const [submitted, decidedSteps, escalatedSteps, awaitingMyDecision] = await Promise.all([
-            requestRepo.find({ where: { requestedByAdministratorId: adminId } }),
-            stepRepo.find({ where: { approverAdministratorId: adminId } }),
-            stepRepo.find({ where: { escalatedToAdministratorId: adminId } }),
-            this.findAwaitingMyDecision(ctx),
-        ]);
-
-        const stepRequestIds = [
-            ...new Set([...decidedSteps, ...escalatedSteps].map(s => s.approvalRequestId)),
-        ];
-        const stepRequests = stepRequestIds.length
-            ? await requestRepo.find({ where: { id: In(stepRequestIds) } })
-            : [];
-
-        const byId = new Map<string, ApprovalRequest>();
-        for (const request of [...submitted, ...stepRequests, ...awaitingMyDecision]) {
-            byId.set(String(request.id), request);
-        }
-        return [...byId.values()].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        qb.where(
+            new Brackets(outer => {
+                outer.where('request.requestedByAdministratorId = :involvedAdminId', {
+                    involvedAdminId: adminId,
+                });
+                const decidedByMeSubQuery = stepRepo
+                    .createQueryBuilder('step')
+                    .select('step.approvalRequestId')
+                    .where('step.approverAdministratorId = :involvedAdminId')
+                    .getQuery();
+                outer.orWhere(`CAST(request.id AS TEXT) IN (${decidedByMeSubQuery})`, {
+                    involvedAdminId: adminId,
+                });
+                // Escalated TO me on ANY step, regardless of the request's current status or
+                // stepIndex — matches the original in-memory semantics exactly (a request I was
+                // once escalated stays visible in "All requests I'm involved in" even after it's
+                // since been decided and moved past that step). Not the same as
+                // buildAwaitingDecisionBracket's escalation check below, which is scoped to the
+                // CURRENT pending step only.
+                const escalatedToMeAnyStepSubQuery = stepRepo
+                    .createQueryBuilder('step')
+                    .select('step.approvalRequestId')
+                    .where('step.escalatedToAdministratorId = :involvedAdminId')
+                    .getQuery();
+                outer.orWhere(`CAST(request.id AS TEXT) IN (${escalatedToMeAnyStepSubQuery})`, {
+                    involvedAdminId: adminId,
+                });
+                outer.orWhere(this.buildAwaitingDecisionBracket(ctx, pairs, adminId));
+            }),
         );
+        this.applyListFilters(qb, options);
+        qb.orderBy('request.createdAt', 'DESC');
+
+        const totalItems = await qb.getCount();
+        const items = await qb
+            .take(options.take ?? 50)
+            .skip(options.skip ?? 0)
+            .getMany();
+        return { items, totalItems };
     }
 
     // Current step's definition for a request — used by the ApprovalRequest.escalatesTo/

@@ -27,8 +27,11 @@ until curl -sf http://localhost:3000/health >/dev/null 2>&1; do
     sleep 2
 done
 
-echo "==> Seeding database..."
-node infrastructure/scripts/seed.mjs
+echo "==> Seeding access-control roles..."
+node infrastructure/scripts/seed-access-roles.mjs
+
+echo "==> Seeding database via ERP import..."
+ERP_IMPORT_TOKEN="${ERP_IMPORT_TOKEN:-dev-token}" node infrastructure/scripts/seed-erp.mjs
 
 echo "==> Stopping temporary server..."
 trap - EXIT

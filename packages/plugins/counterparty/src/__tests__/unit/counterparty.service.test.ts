@@ -137,6 +137,7 @@ describe('CounterpartyService', () => {
             const qb: Record<string, ReturnType<typeof vi.fn>> = {};
             qb.orderBy = vi.fn(() => qb);
             qb.where = vi.fn(() => qb);
+            qb.andWhere = vi.fn(() => qb);
             qb.getMany = vi.fn(async () => []);
             return qb;
         }
@@ -156,7 +157,9 @@ describe('CounterpartyService', () => {
 
             await service.findVisible(mockCtx);
 
-            expect(qb.where).toHaveBeenCalledWith('c.assignedManagerId = :id', { id: 'admin-1' });
+            expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId = :scopeAdminId', {
+                scopeAdminId: 'admin-1',
+            });
         });
 
         it('filters by department/branch for "department" scope', async () => {
@@ -174,10 +177,10 @@ describe('CounterpartyService', () => {
 
             await service.findVisible(mockCtx);
 
-            expect(qb.where).toHaveBeenCalledWith('c.departmentId = :d AND c.branchId = :b', {
-                d: 'dept-1',
-                b: 'branch-a',
-            });
+            expect(qb.andWhere).toHaveBeenCalledWith(
+                'c.departmentId = :scopeDept AND c.branchId = :scopeBranch',
+                { scopeDept: 'dept-1', scopeBranch: 'branch-a' },
+            );
         });
 
         it('applies no filter for "all" scope', async () => {
@@ -193,7 +196,7 @@ describe('CounterpartyService', () => {
 
             await service.findVisible(mockCtx);
 
-            expect(qb.where).not.toHaveBeenCalled();
+            expect(qb.andWhere).not.toHaveBeenCalled();
         });
     });
 

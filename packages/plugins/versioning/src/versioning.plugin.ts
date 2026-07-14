@@ -23,9 +23,28 @@ const adminApiSchema = gql`
         entityId: ID!
     }
 
+    type EntityVersionList {
+        items: [EntityVersion!]!
+        totalItems: Int!
+    }
+
+    input EntityVersionListOptions {
+        take: Int
+        skip: Int
+        action: String
+        entityName: String
+        administratorId: ID
+        "True to filter to system-initiated changes only (administratorId IS NULL) — mutually exclusive with administratorId."
+        system: Boolean
+        createdAfter: DateTime
+    }
+
     extend type Query {
         entityVersions(entityName: String!, entityId: ID!): [EntityVersion!]!
-        entityVersionsForEntities(refs: [EntityRefInput!]!): [EntityVersion!]!
+        entityVersionsForEntities(
+            refs: [EntityRefInput!]!
+            options: EntityVersionListOptions
+        ): EntityVersionList!
     }
 `;
 

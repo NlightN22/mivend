@@ -52,19 +52,20 @@ export interface DiscountGrantRequestRow {
 // discountGrantApproval requests, any status — DiscountRule rows only exist once approved (see
 // DiscountGrantService.decideAndApply), so this is the only source for "Pending approval" /
 // "Rejected" rows in the list (docs/ai/manager-portal-pages/09-discounts.md).
+// Bounded at 200 (matches fetchAllDiscountRules/fetchAllDiscountGrants) — see
+// DiscountRuleService.findByPriceType's comment on the backend for why a true paginated fix of
+// the merged /discounts view wasn't attempted this session (issue #39).
 export async function fetchDiscountGrantRequests(): Promise<DiscountGrantRequestRow[]> {
-    const result = await adminApi<{ approvalRequestsByType: DiscountGrantRequestRow[] }>(
+    const result = await adminApi<{
+        approvalRequestsByType: { items: DiscountGrantRequestRow[] };
+    }>(
         `query {
-            approvalRequestsByType(requestType: "discountGrantApproval") {
-                id
-                status
-                payload
-                createdAt
-                decidedAt
+            approvalRequestsByType(requestType: "discountGrantApproval", options: { take: 200 }) {
+                items { id status payload createdAt decidedAt }
             }
         }`,
     );
-    return result.approvalRequestsByType;
+    return result.approvalRequestsByType.items;
 }
 
 export interface DiscountGrantInput {

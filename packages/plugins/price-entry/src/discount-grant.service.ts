@@ -188,10 +188,14 @@ export class DiscountGrantService {
     // Powers the /discounts registry's Customer column — the full list of materialized grants
     // (not just expiring ones), each with its counterparties, so the manager portal can show
     // who a discount actually belongs to instead of only the price-type/facet policy.
-    async findAll(ctx: RequestContext): Promise<DiscountGrant[]> {
+    // Bounded at 200 as an interim stopgap (issue #39) — see DiscountRuleService.findByPriceType's
+    // comment for why a true paginated fix of the merged /discounts view wasn't attempted this
+    // session.
+    async findAll(ctx: RequestContext, take = 200): Promise<DiscountGrant[]> {
         return this.connection.getRepository(ctx, DiscountGrant).find({
             relations: ['counterparties'],
             order: { validTo: 'DESC' },
+            take,
         });
     }
 

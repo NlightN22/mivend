@@ -140,8 +140,31 @@ const adminApiSchema = gql`
         preferredTradingPoint: TradingPoint
     }
 
+    type CounterpartyList {
+        items: [Counterparty!]!
+        totalItems: Int!
+    }
+
+    input CounterpartyListOptions {
+        take: Int
+        skip: Int
+        search: String
+    }
+
+    type CounterpartySummary {
+        totalCount: Int!
+        activeCount: Int!
+        "Null for a caller without ReadCounterpartyCredit — see CounterpartyResolver.counterpartySummary"
+        totalCreditBalance: Int
+        "Null for a caller without ReadCounterpartyCredit — see CounterpartyResolver.counterpartySummary"
+        highUsageCount: Int
+    }
+
     extend type Query {
-        counterparties: [Counterparty!]!
+        counterparties(options: CounterpartyListOptions): CounterpartyList!
+        counterparty(id: ID!): Counterparty
+        counterpartySummary: CounterpartySummary!
+        highUsageCounterparties(limit: Int!): [Counterparty!]!
         tradingPoint(id: ID!): TradingPoint
     }
 

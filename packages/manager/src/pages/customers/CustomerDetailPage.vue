@@ -5,7 +5,7 @@ import { MvPanel, MvStatusBadge, MvSelect } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
     fetchCustomerById,
-    fetchCreditByCounterpartyId,
+    fetchCreditForCounterparty,
     fetchCustomerIdForCounterparty,
     fetchOrdersForCustomer,
     fetchDiscountGrantsForCounterparty,
@@ -18,7 +18,7 @@ import {
     type CustomerDocument,
 } from '../../api/customers';
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
-import { fetchEntityVersionsForRefs, type EntityVersionRow } from '../../api/history';
+import type { EntityRef } from '../../api/history';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
 import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
@@ -52,7 +52,9 @@ const canReassign = computed(() => authStore.hasPermission('ReassignCounterparty
 const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory'));
 
 const activeTab = ref<'overview' | 'orders' | 'discounts' | 'documents' | 'history'>('overview');
-const history = ref<EntityVersionRow[]>([]);
+// EntityHistoryPanel now owns its own fetching/pagination (issue #39) — this page only supplies
+// the refs to fetch for, not a pre-loaded array.
+const historyRefs = ref<EntityRef[]>([]);
 
 // Terminal states orders no longer need attention in — mirrors the 'Delivered'/'Cancelled'
 // options in api/orders.ts's ORDER_STATE_OPTIONS.
@@ -78,9 +80,9 @@ async function load(): Promise<void> {
     notFound.value = false;
     try {
         const counterpartyId = route.params.id as string;
-        const [detail, creditMap, managerOptions] = await Promise.all([
+        const [detail, creditResult, managerOptions] = await Promise.all([
             fetchCustomerById(counterpartyId),
-            fetchCreditByCounterpartyId(),
+            fetchCreditForCounterparty(counterpartyId),
             managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
         ]);
         managers.value = managerOptions;
@@ -89,7 +91,7 @@ async function load(): Promise<void> {
             return;
         }
         customer.value = detail;
-        credit.value = creditMap.get(counterpartyId) ?? null;
+        credit.value = creditResult;
 
         const [customerId, grants, docs] = await Promise.all([
             fetchCustomerIdForCounterparty(counterpartyId),
@@ -101,10 +103,10 @@ async function load(): Promise<void> {
         orders.value = customerId ? await fetchOrdersForCustomer(customerId) : [];
 
         if (canViewHistory.value) {
-            history.value = await fetchEntityVersionsForRefs([
+            historyRefs.value = [
                 { entityName: 'Counterparty', entityId: counterpartyId },
                 ...detail.tradingPoints.map(tp => ({ entityName: 'TradingPoint', entityId: tp.id })),
-            ]);
+            ];
         }
     } finally {
         loading.value = false;
@@ -216,7 +218,7 @@ async function handleReassign(administratorId: string): Promise<void> {
             <CustomerDocumentsTab v-else-if="activeTab === 'documents'" :documents="documents" />
             <EntityHistoryPanel
                 v-else
-                :history="history"
+                :refs="historyRefs"
                 :managers="managers"
                 :entity-labels="HISTORY_ENTITY_LABELS"
             />

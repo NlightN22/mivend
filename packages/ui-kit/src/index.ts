@@ -85,6 +85,12 @@ export { default as MvMultiSelect } from './components/MvMultiSelect/MvMultiSele
 
 export { default as MvFilterBar } from './components/MvFilterBar/MvFilterBar.vue';
 export { default as MvFilterField } from './components/MvFilterBar/MvFilterField.vue';
+export { default as MvTableFilters } from './components/MvFilterBar/MvTableFilters.vue';
+export type { TableFilterFieldDef } from './components/MvFilterBar/MvTableFilters.vue';
+export {
+    matchesTableFilters,
+    deriveFilterSuggestions,
+} from './components/MvFilterBar/tableFilterMatch';
 
 export { default as MvPagination } from './components/MvPagination/MvPagination.vue';
 

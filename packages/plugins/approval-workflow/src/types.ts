@@ -7,6 +7,18 @@ export interface WorkflowStepDefinition {
 
 export type ApprovalStepDecision = 'approved' | 'rejected';
 
+// Pushed all the way into the SQL query in ApprovalRequestService — see getEligibleStepPairs().
+// `search` only matches the request id (no server-side text index over resolved customer/order
+// names exists yet — those are resolved client-side by joining orders/counterparties, so cannot
+// be filtered server-side without a further join here too).
+export interface ApprovalListOptions {
+    take?: number;
+    skip?: number;
+    search?: string;
+    requestType?: string;
+    status?: string;
+}
+
 export const loggerCtx = 'ApprovalWorkflowPlugin';
 
 // Thrown when a decide() call loses the race against a concurrent decision on the same

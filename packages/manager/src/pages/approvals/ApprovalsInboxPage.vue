@@ -1,49 +1,68 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { MvPanel, MvFilterBar, MvFilterField, MvSelect } from '@mivend/ui-kit';
+import { onMounted, ref, watch } from 'vue';
+import { MvPanel, MvPagination, MvTableFilters, deriveFilterSuggestions } from '@mivend/ui-kit';
+import type { TableRow } from '@mivend/ui-kit';
 import {
     fetchApprovalsInbox,
     fetchOrderReferences,
     fetchCounterpartyReferencesByErpId,
-    REQUEST_TYPE_LABEL,
-    type ApprovalsInbox,
     type OrderReference,
     type CounterpartyReference,
+    type ApprovalListOptions,
 } from '../../api/approvals';
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
 import ApprovalsTable from '../../components/approvals/ApprovalsTable.vue';
+import { APPROVAL_FILTER_FIELDS, buildApprovalRows } from '../../components/approvals/approvalRows';
 
-const inbox = ref<ApprovalsInbox | null>(null);
-const managers = ref<ManagerOption[]>([]);
-const orderReferences = ref<Map<string, OrderReference>>(new Map());
-const counterpartyReferences = ref<Map<string, CounterpartyReference>>(new Map());
-const loading = ref(true);
+const PAGE_SIZE = 10;
 
 const activeTab = ref<'awaiting' | 'all'>('awaiting');
-const typeFilter = ref('');
+const page = ref(1);
+const filterValues = ref<Record<string, string>>({});
 
-const TYPE_OPTIONS = [
-    { value: '', label: 'All types' },
-    ...Object.entries(REQUEST_TYPE_LABEL).map(([value, label]) => ({ value, label })),
-];
+const rows = ref<TableRow[]>([]);
+const totalItems = ref(0);
+const awaitingBadgeCount = ref(0);
+const managers = ref<ManagerOption[]>([]);
+const loading = ref(true);
 
-const currentList = computed(() => {
-    if (!inbox.value) return [];
-    const list = activeTab.value === 'awaiting' ? inbox.value.awaitingMyDecision : inbox.value.allInvolved;
-    return typeFilter.value ? list.filter(r => r.requestType === typeFilter.value) : list;
-});
+function resetFilters(): void {
+    filterValues.value = {};
+}
 
-onMounted(async () => {
+function buildOptions(forActiveTab: boolean): ApprovalListOptions {
+    if (!forActiveTab) return { take: 0 };
+    return {
+        take: PAGE_SIZE,
+        skip: (page.value - 1) * PAGE_SIZE,
+        search: filterValues.value.id || undefined,
+        requestType: filterValues.value.type || undefined,
+        status: filterValues.value.status || undefined,
+    };
+}
+
+async function load(): Promise<void> {
+    loading.value = true;
     try {
-        const [inboxResult, managerOptions] = await Promise.all([
-            fetchApprovalsInbox(),
-            fetchManagerOptions(),
+        const [managerOptions, inbox] = await Promise.all([
+            managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
+            fetchApprovalsInbox(
+                buildOptions(activeTab.value === 'awaiting'),
+                buildOptions(activeTab.value === 'all'),
+            ),
         ]);
-        inbox.value = inboxResult;
         managers.value = managerOptions;
+        awaitingBadgeCount.value = inbox.awaitingMyDecision.totalItems;
 
+        const activePage =
+            activeTab.value === 'awaiting' ? inbox.awaitingMyDecision : inbox.allInvolved;
+        totalItems.value = activePage.totalItems;
+
+        // Reference resolution is necessarily page-scoped now (server-side pagination — see
+        // api/approvals.ts) — a customer/order name search across the FULL inbox would need the
+        // backend to resolve those names itself, not just this page's ~10 rows.
         const orderIds = new Set<string>();
-        for (const request of [...inboxResult.awaitingMyDecision, ...inboxResult.allInvolved]) {
+        for (const request of activePage.items) {
             if (request.requestType !== 'priceAdjustmentApproval') continue;
             try {
                 const payload = JSON.parse(request.payload) as { orderId?: string };
@@ -52,14 +71,32 @@ onMounted(async () => {
                 // ignore malformed payload — reference just won't resolve for this row
             }
         }
-        [orderReferences.value, counterpartyReferences.value] = await Promise.all([
+        const [orderReferences, counterpartyReferences]: [
+            Map<string, OrderReference>,
+            Map<string, CounterpartyReference>,
+        ] = await Promise.all([
             fetchOrderReferences([...orderIds]),
             fetchCounterpartyReferencesByErpId(),
         ]);
+
+        rows.value = buildApprovalRows(activePage.items, managers.value, orderReferences, counterpartyReferences);
     } finally {
         loading.value = false;
     }
+}
+
+const filterSuggestions = ref<Record<string, string[]>>({});
+watch(rows, newRows => {
+    filterSuggestions.value = deriveFilterSuggestions(newRows, APPROVAL_FILTER_FIELDS);
 });
+
+watch([activeTab, filterValues], () => {
+    page.value = 1;
+    void load();
+});
+watch(page, () => void load());
+
+onMounted(load);
 </script>
 
 <template>
@@ -77,8 +114,8 @@ onMounted(async () => {
                 @click="activeTab = 'awaiting'"
             >
                 Awaiting my decision
-                <span v-if="inbox?.awaitingMyDecision.length" class="approvals-page__tab-count">
-                    {{ inbox.awaitingMyDecision.length }}
+                <span v-if="awaitingBadgeCount" class="approvals-page__tab-count">
+                    {{ awaitingBadgeCount }}
                 </span>
             </button>
             <button
@@ -91,20 +128,17 @@ onMounted(async () => {
             </button>
         </div>
 
-        <MvPanel>
-            <MvFilterBar @reset="typeFilter = ''">
-                <MvFilterField label="Type">
-                    <MvSelect :model-value="typeFilter" :options="TYPE_OPTIONS" @update:model-value="typeFilter = $event" />
-                </MvFilterField>
-            </MvFilterBar>
-
-            <ApprovalsTable
-                v-if="!loading"
-                :requests="currentList"
-                :managers="managers"
-                :order-references="orderReferences"
-                :counterparty-references="counterpartyReferences"
+        <MvPanel class="approvals-page__main">
+            <MvTableFilters
+                :fields="APPROVAL_FILTER_FIELDS"
+                :model-value="filterValues"
+                :suggestions="filterSuggestions"
+                @update:model-value="filterValues = $event"
+                @reset="resetFilters"
             />
+
+            <ApprovalsTable :rows="rows" />
+            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
         </MvPanel>
     </div>
 </template>

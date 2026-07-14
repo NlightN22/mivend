@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { MvPanel, MvFilterBar, MvFilterField, MvInput, MvSelect, MvKpiCard, MvButton } from '@mivend/ui-kit';
+import { computed, onMounted, ref, watch } from 'vue';
+import { MvPanel, MvFilterBar, MvFilterField, MvInput, MvSelect, MvKpiCard, MvButton, MvPagination } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
-    fetchCustomersList,
+    fetchCustomersPage,
+    fetchCustomersSummary,
+    fetchHighUsageCustomers,
     fetchCreditByCounterpartyId,
     fetchActiveDiscountCountsByPriceType,
     fetchLastOrderDatesByCounterpartyId,
     type CustomerListItem,
     type CustomerCredit,
+    type CustomersSummary,
+    type HighUsageCustomer,
 } from '../../api/customers';
 import { fetchBranchOptions, type BranchOption } from '../../api/orders';
 import { fetchExpiringDiscountGrants } from '../../api/discounts';
@@ -22,18 +26,28 @@ const authStore = useAuthStore();
 // docs/ai/manager-portal-pages/04-customers-list.md).
 const title = computed(() => (authStore.roleCode === 'manager' ? 'My Clients' : 'Customers'));
 
+const PAGE_SIZE = 20;
+
+// `customers` now holds only the current page (see issue #39 — server-side pagination via
+// fetchCustomersPage/CounterpartyService.findVisiblePage). KPIs and "Needs attention" no longer
+// derive from this — they come from dedicated summary/top-N backend queries below, since they
+// must reflect the FULL visible set, not just the page on screen.
 const customers = ref<CustomerListItem[]>([]);
+const totalItems = ref(0);
+const page = ref(1);
 const credit = ref<Map<string, CustomerCredit>>(new Map());
 const discountCounts = ref<Map<string, number>>(new Map());
 const lastOrderDates = ref<Map<string, string>>(new Map());
 const branches = ref<BranchOption[]>([]);
 const expiringGrantsByCustomerId = ref<Map<string, string>>(new Map());
+const summary = ref<CustomersSummary | null>(null);
+const highUsageCustomers = ref<HighUsageCustomer[]>([]);
 const loading = ref(true);
 
 // Same window used by the dashboard's discount banner (docs/ai/manager-portal-concept.md §8.2 —
 // no exact threshold has been decided).
 const EXPIRING_SOON_DAYS = 14;
-const HIGH_USAGE_PERCENT = 80;
+const ATTENTION_TOP_N = 5;
 
 const search = ref('');
 const statusFilter = ref('');
@@ -43,40 +57,28 @@ const STATUS_OPTIONS = [
     { value: 'inactive', label: 'Inactive' },
 ];
 
+// Status filtering still happens client-side over the current page only — the backend doesn't
+// take a status filter arg yet (search is the only pushed-down filter). Acceptable for now since
+// it only narrows what's already loaded, doesn't hide rows that should have been fetched.
 const filtered = computed(() => {
-    const term = search.value.trim().toLowerCase();
-    return customers.value.filter(c => {
-        if (statusFilter.value === 'active' && !c.isActive) return false;
-        if (statusFilter.value === 'inactive' && c.isActive) return false;
-        if (!term) return true;
-        return (
-            c.shortName.toLowerCase().includes(term) ||
-            c.legalName.toLowerCase().includes(term) ||
-            (c.inn ?? '').includes(term)
-        );
-    });
+    if (!statusFilter.value) return customers.value;
+    return customers.value.filter(c =>
+        statusFilter.value === 'active' ? c.isActive : !c.isActive,
+    );
 });
 
-const activeClientsCount = computed(() => customers.value.filter(c => c.isActive).length);
-
-const highUsageCustomers = computed(() =>
-    customers.value.filter(c => {
-        const row = credit.value.get(c.id);
-        if (!row || row.creditLimit <= 0) return false;
-        return (row.creditBalance / row.creditLimit) * 100 >= HIGH_USAGE_PERCENT;
-    }),
-);
-
-const totalCreditBalance = computed(() =>
-    customers.value.reduce((sum, c) => sum + (credit.value.get(c.id)?.creditBalance ?? 0), 0),
-);
-
+const activeClientsCount = computed(() => summary.value?.activeCount ?? 0);
+// Null (not 0) means "no ReadCounterpartyCredit" — see CounterpartyResolver.counterpartySummary.
+// Distinguished from a real zero so the KPI card can be hidden rather than showing a misleading
+// "$0.00 used".
+const canReadCredit = computed(() => summary.value?.totalCreditBalance != null);
+const totalCreditBalance = computed(() => summary.value?.totalCreditBalance ?? 0);
+const highUsageCount = computed(() => summary.value?.highUsageCount ?? 0);
 const expiringGrantsCount = computed(() => expiringGrantsByCustomerId.value.size);
 
 const attentionItems = computed<AttentionEntry[]>(() => {
-    const highUsage: AttentionEntry[] = highUsageCustomers.value.slice(0, 5).map(c => {
-        const row = credit.value.get(c.id)!;
-        const percent = Math.round((row.creditBalance / row.creditLimit) * 100);
+    const highUsage: AttentionEntry[] = highUsageCustomers.value.map(c => {
+        const percent = c.creditLimit > 0 ? Math.round((c.creditBalance / c.creditLimit) * 100) : 0;
         return {
             customerId: c.id,
             title: c.shortName,
@@ -86,7 +88,7 @@ const attentionItems = computed<AttentionEntry[]>(() => {
         };
     });
     const expiring: AttentionEntry[] = [...expiringGrantsByCustomerId.value.entries()]
-        .slice(0, 5)
+        .slice(0, ATTENTION_TOP_N)
         .map(([customerId, validTo]) => ({
             customerId,
             title: customers.value.find(c => c.id === customerId)?.shortName ?? '—',
@@ -100,6 +102,7 @@ const attentionItems = computed<AttentionEntry[]>(() => {
 function resetFilters(): void {
     search.value = '';
     statusFilter.value = '';
+    page.value = 1;
 }
 
 function exportCsv(): void {
@@ -122,31 +125,54 @@ function exportCsv(): void {
     );
 }
 
-onMounted(async () => {
+async function loadPage(): Promise<void> {
+    loading.value = true;
     try {
-        const list = await fetchCustomersList();
-        customers.value = list;
-        const [creditMap, discountCountsMap, lastOrderMap, branchOptions, expiringGrants] = await Promise.all([
-            fetchCreditByCounterpartyId(),
-            fetchActiveDiscountCountsByPriceType(list.map(c => c.priceType)),
-            fetchLastOrderDatesByCounterpartyId(),
-            fetchBranchOptions(),
-            fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
+        const listOptions = {
+            take: PAGE_SIZE,
+            skip: (page.value - 1) * PAGE_SIZE,
+            search: search.value.trim() || undefined,
+        };
+        const [pageResult, creditMap] = await Promise.all([
+            fetchCustomersPage(listOptions),
+            fetchCreditByCounterpartyId(listOptions),
         ]);
+        customers.value = pageResult.items;
+        totalItems.value = pageResult.totalItems;
         credit.value = creditMap;
-        discountCounts.value = discountCountsMap;
-        lastOrderDates.value = lastOrderMap;
-        branches.value = branchOptions;
-        const grantsMap = new Map<string, string>();
-        for (const grant of expiringGrants) {
-            for (const cp of grant.counterparties) {
-                if (!grantsMap.has(cp.id)) grantsMap.set(cp.id, grant.validTo);
-            }
-        }
-        expiringGrantsByCustomerId.value = grantsMap;
+        discountCounts.value = await fetchActiveDiscountCountsByPriceType(
+            pageResult.items.map(c => c.priceType),
+        );
     } finally {
         loading.value = false;
     }
+}
+
+watch([search, page], () => void loadPage());
+watch(search, () => {
+    page.value = 1;
+});
+
+onMounted(async () => {
+    await loadPage();
+    const [lastOrderMap, branchOptions, expiringGrants, summaryResult, highUsage] = await Promise.all([
+        fetchLastOrderDatesByCounterpartyId(),
+        fetchBranchOptions(),
+        fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
+        fetchCustomersSummary(),
+        fetchHighUsageCustomers(ATTENTION_TOP_N),
+    ]);
+    lastOrderDates.value = lastOrderMap;
+    branches.value = branchOptions;
+    summary.value = summaryResult;
+    highUsageCustomers.value = highUsage;
+    const grantsMap = new Map<string, string>();
+    for (const grant of expiringGrants) {
+        for (const cp of grant.counterparties) {
+            if (!grantsMap.has(cp.id)) grantsMap.set(cp.id, grant.validTo);
+        }
+    }
+    expiringGrantsByCustomerId.value = grantsMap;
 });
 </script>
 
@@ -162,9 +188,10 @@ onMounted(async () => {
         <div v-if="!loading" class="customers-page__kpis">
             <MvKpiCard label="Active clients" :value="activeClientsCount" />
             <MvKpiCard
+                v-if="canReadCredit"
                 label="Credit balance used"
                 :value="new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalCreditBalance / 100)"
-                :caption="`${highUsageCustomers.length} clients above ${HIGH_USAGE_PERCENT}%`"
+                :caption="`${highUsageCount} clients above 80%`"
                 accent
             />
             <MvKpiCard label="Discounts expiring soon" :value="expiringGrantsCount" accent to="/discounts" />
@@ -192,6 +219,7 @@ onMounted(async () => {
                     :last-order-dates="lastOrderDates"
                     :branches="branches"
                 />
+                <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
             </MvPanel>
 
             <aside class="customers-page__right-stack">

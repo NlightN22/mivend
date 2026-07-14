@@ -8,6 +8,14 @@ const SUPERADMIN = {
     password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
 };
 
+// superadmin has no RoleAccessScope config (never seeded for Vendure's built-in SuperAdmin role
+// — see docs/ai/PROJECT_CONTEXT.md's "Issue #39" writeup), so it resolves to the most restrictive
+// 'own' scope and sees zero counterparties via the scoped `counterparties` query — same reason
+// global-setup.ts deliberately uses department-head's token, not superadmin's, for this exact
+// lookup. `generateContract` itself still needs superadmin (requires Permission.UpdateCustomer,
+// which no custom role has), so only the counterparty-id lookup below switches tokens.
+const DEPARTMENT_HEAD = { identifier: 'olga.depthead@mivend.dev', password: 'Password123!' };
+
 interface DocumentListItem {
     id: string;
     type: string;
@@ -156,12 +164,20 @@ test.describe('Documents page — all document types', () => {
         );
         const token = login.token!;
 
-        const counterparties = await adminGql<{ counterparties: { id: string; erpId: string }[] }>(
-            `{ counterparties { id erpId } }`,
-            undefined,
-            token,
+        const deptHeadLogin = await adminGql<{ login: { __typename: string } }>(
+            `mutation($u: String!, $p: String!) { login(username: $u, password: $p) { __typename } }`,
+            { u: DEPARTMENT_HEAD.identifier, p: DEPARTMENT_HEAD.password },
         );
-        const counterparty = counterparties.data.counterparties.find(
+        const deptHeadToken = deptHeadLogin.token!;
+
+        const counterparties = await adminGql<{
+            counterparties: { items: { id: string; erpId: string }[] };
+        }>(
+            `{ counterparties(options: { take: 200 }) { items { id erpId } } }`,
+            undefined,
+            deptHeadToken,
+        );
+        const counterparty = counterparties.data.counterparties.items.find(
             c => c.erpId === E2E_COUNTERPARTY_ID,
         );
         expect(counterparty).toBeTruthy();

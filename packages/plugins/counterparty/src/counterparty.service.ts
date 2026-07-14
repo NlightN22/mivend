@@ -5,10 +5,12 @@ import {
     CustomerService,
     ForbiddenError,
     Logger,
+    PaginatedList,
     RequestContext,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import type { SelectQueryBuilder } from 'typeorm';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { VersioningService } from '@mivend/plugin-versioning';
@@ -71,26 +73,141 @@ export class CounterpartyService {
      * Row-level visibility for the admin `counterparties` query — resolves the caller's scope
      * via AccessScopeService and filters accordingly. See docs/access-control.md, layer 3.
      */
+    // Full scoped id-set — used internally by callers that need the complete visible-counterparty
+    // set to scope a DIFFERENT query (e.g. DocumentsService.findVisible()'s `IN (ids)` filter,
+    // see docs/access-control.md "resources whose visibility is derived from another resource").
+    // Not for direct display/pagination — see findVisiblePage() below for the manager-portal
+    // Customers list, which is the one that actually needs take/skip (see issue #39).
     async findVisible(ctx: RequestContext): Promise<Counterparty[]> {
-        const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
-        const qb = this.connection
+        return this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx)).then(qb => qb.getMany());
+    }
+
+    // Manager portal Customers list (docs/ai/manager-portal-pages/05-customers.md) — same scope
+    // resolution as findVisible() above, but paginated for direct display instead of returning
+    // every visible counterparty unbounded. See issue #39 ("Audit: unbounded/unpaginated list
+    // queries...") — this was flagged as company-wide unbounded for portal-admin/general-director
+    // (scope 'all').
+    async findVisiblePage(
+        ctx: RequestContext,
+        options: { take?: number; skip?: number; search?: string } = {},
+    ): Promise<PaginatedList<Counterparty>> {
+        let qb = this.baseVisibleQb(ctx);
+        qb = await this.applyVisibilityScope(ctx, qb);
+        if (options.search) {
+            qb = qb.andWhere(
+                '(c.shortName ILIKE :search OR c.legalName ILIKE :search OR c.inn ILIKE :search)',
+                { search: `%${options.search}%` },
+            );
+        }
+        const totalItems = await qb.getCount();
+        const items = await qb
+            .take(options.take ?? 50)
+            .skip(options.skip ?? 0)
+            .getMany();
+        return { items, totalItems };
+    }
+
+    // Single counterparty, visibility-checked the same way as the list — returns null (not
+    // ForbiddenError) if the id exists but is outside the caller's scope, same "hide, don't leak
+    // existence" convention as Vendure's own entity resolvers.
+    async findOneVisible(ctx: RequestContext, id: ID): Promise<Counterparty | null> {
+        let qb = this.baseVisibleQb(ctx).andWhere('c.id = :id', { id: String(id) });
+        qb = await this.applyVisibilityScope(ctx, qb);
+        return qb.getOne();
+    }
+
+    // Manager portal Customers list KPI cards (activeCount/totalCreditBalance/highUsageCount) —
+    // real SQL aggregates over the scoped set, not "load everything and reduce() in JS" (which
+    // was the original antipattern this whole audit started from, see issue #39). Mirrors the
+    // reference pattern in `fetchOrdersSummary` (packages/manager/src/api/orders.ts) of one
+    // dedicated summary query alongside the paginated list query.
+    async getSummary(
+        ctx: RequestContext,
+    ): Promise<{
+        totalCount: number;
+        activeCount: number;
+        totalCreditBalance: number;
+        highUsageCount: number;
+    }> {
+        let qb = this.baseVisibleQb(ctx);
+        qb = await this.applyVisibilityScope(ctx, qb);
+        // Aggregate-only query, no GROUP BY — baseVisibleQb's ORDER BY shortName would be invalid
+        // here (Postgres requires an ORDER BY column to be aggregated or grouped), so clear it.
+        const raw = await qb
+            .orderBy()
+            .select('COUNT(*)', 'totalCount')
+            .addSelect('COUNT(*) FILTER (WHERE c.isActive)', 'activeCount')
+            .addSelect('COALESCE(SUM(c.creditBalance), 0)', 'totalCreditBalance')
+            .addSelect(
+                // Explicit double-quoted column names, not TypeORM's `c.creditBalance` alias
+                // syntax — its regex-based alias replacement silently fails to rewrite
+                // `c.creditBalance::float` (the `::` cast breaks the match), sending the raw
+                // unquoted `c.creditbalance` to Postgres, which then 42703s (camelCase columns
+                // need quoting). Caught by the integration test below, not by any mock.
+                'COUNT(*) FILTER (WHERE c."creditLimit" > 0 AND c."creditBalance"::float / c."creditLimit" >= 0.8)',
+                'highUsageCount',
+            )
+            .getRawOne<{
+                totalCount: string;
+                activeCount: string;
+                totalCreditBalance: string;
+                highUsageCount: string;
+            }>();
+        return {
+            totalCount: Number(raw?.totalCount ?? 0),
+            activeCount: Number(raw?.activeCount ?? 0),
+            totalCreditBalance: Number(raw?.totalCreditBalance ?? 0),
+            highUsageCount: Number(raw?.highUsageCount ?? 0),
+        };
+    }
+
+    // "Needs attention" panel on the Customers list (docs/ai/manager-portal-pages/05-customers.md)
+    // — a small, explicitly bounded top-N query (LIMIT, not an unbounded fetch-everything-then-
+    // slice(0,5) in JS, which was the original antipattern). Same shape as
+    // `popularProductIds(take)` elsewhere in this codebase.
+    async findHighUsage(ctx: RequestContext, limit: number): Promise<Counterparty[]> {
+        let qb = this.baseVisibleQb(ctx);
+        qb = await this.applyVisibilityScope(ctx, qb);
+        // Explicit double-quoted column names — see getSummary()'s comment for why
+        // `c.creditBalance::float` (unquoted alias syntax) silently breaks TypeORM's column
+        // replacement here.
+        return qb
+            .orderBy()
+            .andWhere('c."creditLimit" > 0')
+            .andWhere('c."creditBalance"::float / c."creditLimit" >= 0.8')
+            .orderBy('c."creditBalance"::float / c."creditLimit"', 'DESC')
+            .take(limit)
+            .getMany();
+    }
+
+    private baseVisibleQb(ctx: RequestContext): SelectQueryBuilder<Counterparty> {
+        return this.connection
             .getRepository(ctx, Counterparty)
             .createQueryBuilder('c')
             .orderBy('c.shortName', 'ASC');
+    }
+
+    private async applyVisibilityScope(
+        ctx: RequestContext,
+        qb: SelectQueryBuilder<Counterparty>,
+    ): Promise<SelectQueryBuilder<Counterparty>> {
+        const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
         switch (scope.kind) {
             case 'own':
-                qb.where('c.assignedManagerId = :id', { id: scope.administratorId ?? null });
+                qb.andWhere('c.assignedManagerId = :scopeAdminId', {
+                    scopeAdminId: scope.administratorId ?? null,
+                });
                 break;
             case 'department':
-                qb.where('c.departmentId = :d AND c.branchId = :b', {
-                    d: scope.departmentId ?? null,
-                    b: scope.branchId ?? null,
+                qb.andWhere('c.departmentId = :scopeDept AND c.branchId = :scopeBranch', {
+                    scopeDept: scope.departmentId ?? null,
+                    scopeBranch: scope.branchId ?? null,
                 });
                 break;
             case 'all':
                 break;
         }
-        return qb.getMany();
+        return qb;
     }
 
     async getForCustomer(ctx: RequestContext, customerId: ID): Promise<Counterparty | null> {

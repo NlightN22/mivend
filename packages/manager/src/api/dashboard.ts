@@ -130,8 +130,8 @@ const DASHBOARD_QUERY = `
                 customer { firstName lastName }
             }
         }
-        counterparties {
-            id
+        counterpartySummary {
+            totalCount
         }
         myApprovalRequestsSummary(recentLimit: 10) {
             pendingCount
@@ -144,9 +144,9 @@ const DASHBOARD_QUERY = `
                 decidedAt
             }
         }
-        myApprovalsInbox {
+        myApprovalsInbox(awaitingOptions: { take: 0 }, allInvolvedOptions: { take: 0 }) {
             awaitingMyDecision {
-                id
+                totalItems
             }
         }
     }
@@ -165,9 +165,9 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         awaitingShipment: { totalItems: number };
         overdue: { totalItems: number };
         recentOrdersList: { items: RecentOrder[] };
-        counterparties: { id: string }[];
+        counterpartySummary: { totalCount: number };
         myApprovalRequestsSummary: { pendingCount: number; recent: SubmittedApproval[] };
-        myApprovalsInbox: { awaitingMyDecision: { id: string }[] };
+        myApprovalsInbox: { awaitingMyDecision: { totalItems: number } };
     }>(DASHBOARD_QUERY, {
         excludedStates: IN_PROGRESS_STATES_EXCLUDED,
         since24h,
@@ -179,10 +179,10 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         activeOrdersPlacedLast24h: result.activeOrdersLast24h.totalItems,
         awaitingShipmentCount: result.awaitingShipment.totalItems,
         overdueCount: result.overdue.totalItems,
-        myClientsCount: result.counterparties.length,
+        myClientsCount: result.counterpartySummary.totalCount,
         recentOrders: result.recentOrdersList.items,
         pendingApprovalsCount: result.myApprovalRequestsSummary.pendingCount,
         recentApprovals: result.myApprovalRequestsSummary.recent,
-        awaitingMyDecisionCount: result.myApprovalsInbox.awaitingMyDecision.length,
+        awaitingMyDecisionCount: result.myApprovalsInbox.awaitingMyDecision.totalItems,
     };
 }

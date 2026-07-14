@@ -142,3 +142,129 @@ describe('CounterpartyService.findVisible (integration, real Postgres)', () => {
         ]);
     });
 });
+
+// New for issue #39 (Customers list pagination) — same scope resolution as findVisible above,
+// exercised against real Postgres since applyVisibilityScope's SQL (andWhere/ILIKE/aggregates)
+// can't be meaningfully verified with a mocked repository.
+describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHighUsage (integration, real Postgres)', () => {
+    beforeEach(() => {
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({ kind: 'all' });
+    });
+
+    it('findVisiblePage paginates with take/skip and reports totalItems independent of page size', async () => {
+        await seedCounterparties();
+
+        const page1 = await service.findVisiblePage(mockCtx, { take: 2, skip: 0 });
+        const page2 = await service.findVisiblePage(mockCtx, { take: 2, skip: 2 });
+
+        expect(page1.totalItems).toBe(3);
+        expect(page2.totalItems).toBe(3);
+        expect(page1.items).toHaveLength(2);
+        expect(page2.items).toHaveLength(1);
+    });
+
+    it('findVisiblePage search filters by shortName/legalName/inn substring', async () => {
+        await seedCounterparties();
+
+        const result = await service.findVisiblePage(mockCtx, { search: 'Own Mine' });
+
+        expect(result.items.map(c => c.erpId)).toEqual(['cp-own-mine']);
+    });
+
+    it('findVisiblePage still respects scope (own sees only their own row)', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'own',
+            administratorId: 'admin-2',
+        });
+
+        const result = await service.findVisiblePage(mockCtx, {});
+
+        expect(result.items.map(c => c.erpId)).toEqual(['cp-own-other']);
+        expect(result.totalItems).toBe(1);
+    });
+
+    it('findOneVisible returns the entity when in scope, null when outside scope', async () => {
+        await seedCounterparties();
+        const all = await dataSource.getRepository(TestCounterparty).find();
+        const ownMine = all.find(c => c.erpId === 'cp-own-mine')!;
+        const otherDept = all.find(c => c.erpId === 'cp-other-dept')!;
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'department',
+            departmentId: 'dept-1',
+            branchId: 'branch-a',
+        });
+
+        const inScope = await service.findOneVisible(mockCtx, ownMine.id);
+        const outOfScope = await service.findOneVisible(mockCtx, otherDept.id);
+
+        expect(inScope?.erpId).toBe('cp-own-mine');
+        expect(outOfScope).toBeNull();
+    });
+
+    it('getSummary computes real SQL aggregates (count/active/creditBalance/highUsage), not a full-list reduce', async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            {
+                erpId: 'cp-a',
+                legalName: 'A',
+                shortName: 'A',
+                isActive: true,
+                creditLimit: 1000,
+                creditBalance: 900,
+            },
+            {
+                erpId: 'cp-b',
+                legalName: 'B',
+                shortName: 'B',
+                isActive: true,
+                creditLimit: 1000,
+                creditBalance: 100,
+            },
+            {
+                erpId: 'cp-c',
+                legalName: 'C',
+                shortName: 'C',
+                isActive: false,
+                creditLimit: 0,
+                creditBalance: 0,
+            },
+        ]);
+
+        const summary = await service.getSummary(mockCtx);
+
+        expect(summary.totalCount).toBe(3);
+        expect(summary.activeCount).toBe(2);
+        expect(summary.totalCreditBalance).toBe(1000);
+        expect(summary.highUsageCount).toBe(1); // only cp-a is >= 80% (900/1000)
+    });
+
+    it('findHighUsage returns only counterparties at/above 80% usage, ordered, limited', async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            {
+                erpId: 'cp-low',
+                legalName: 'Low',
+                shortName: 'Low',
+                creditLimit: 1000,
+                creditBalance: 100,
+            },
+            {
+                erpId: 'cp-high',
+                legalName: 'High',
+                shortName: 'High',
+                creditLimit: 1000,
+                creditBalance: 950,
+            },
+            {
+                erpId: 'cp-mid-high',
+                legalName: 'MidHigh',
+                shortName: 'MidHigh',
+                creditLimit: 1000,
+                creditBalance: 800,
+            },
+        ]);
+
+        const result = await service.findHighUsage(mockCtx, 5);
+
+        expect(result.map(c => c.erpId)).toEqual(['cp-high', 'cp-mid-high']);
+    });
+});

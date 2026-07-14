@@ -403,21 +403,33 @@ describe('DiscountRuleService', () => {
     });
 
     describe('findByPriceType', () => {
-        it('filters by priceTypeCode when provided', async () => {
+        it('filters by priceTypeCode when provided, unbounded (inherently small set)', async () => {
             mockRepo.find.mockResolvedValue([]);
             await service.findByPriceType(mockCtx, 'WHOLESALE');
             expect(mockRepo.find).toHaveBeenCalledWith({
                 where: { priceTypeCode: 'WHOLESALE' },
                 order: { validTo: 'DESC' },
+                take: undefined,
             });
         });
 
-        it('returns every rule across all price types when omitted', async () => {
+        it('returns every rule across all price types when omitted, bounded at 200 by default (issue #39)', async () => {
             mockRepo.find.mockResolvedValue([]);
             await service.findByPriceType(mockCtx);
             expect(mockRepo.find).toHaveBeenCalledWith({
                 where: {},
                 order: { validTo: 'DESC' },
+                take: 200,
+            });
+        });
+
+        it('respects an explicit take override', async () => {
+            mockRepo.find.mockResolvedValue([]);
+            await service.findByPriceType(mockCtx, undefined, 50);
+            expect(mockRepo.find).toHaveBeenCalledWith({
+                where: {},
+                order: { validTo: 'DESC' },
+                take: 50,
             });
         });
     });

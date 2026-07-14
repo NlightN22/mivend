@@ -1,6 +1,14 @@
 import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, ForbiddenError, Permission, RequestContext, Transaction } from '@vendure/core';
+import {
+    Allow,
+    Ctx,
+    ForbiddenError,
+    PaginatedList,
+    Permission,
+    RequestContext,
+    Transaction,
+} from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { ApprovalRequest } from './entities/approval-request.entity';
@@ -8,7 +16,7 @@ import { ApprovalStep } from './entities/approval-step.entity';
 import { WorkflowDefinition } from './entities/workflow-definition.entity';
 import { ApprovalRequestService } from './approval-request.service';
 import { WorkflowDefinitionService, ParsedWorkflowDefinition } from './workflow-definition.service';
-import { ApprovalStepDecision, WorkflowStepDefinition } from './types';
+import { ApprovalListOptions, ApprovalStepDecision, WorkflowStepDefinition } from './types';
 import { ApprovalStepService } from './approval-step.service';
 
 // A requestType is an internal technical identifier fixed by the workflow engine, not
@@ -90,9 +98,13 @@ export class ApprovalRequestResolver {
     @Allow(Permission.ReadCatalog)
     async approvalRequestsByType(
         @Ctx() ctx: RequestContext,
-        @Args() args: { requestType: string },
-    ): Promise<ApprovalRequest[]> {
-        return this.approvalRequestService.findByRequestType(ctx, args.requestType);
+        @Args() args: { requestType: string; options?: ApprovalListOptions },
+    ): Promise<PaginatedList<ApprovalRequest>> {
+        return this.approvalRequestService.findByRequestType(
+            ctx,
+            args.requestType,
+            args.options ?? {},
+        );
     }
 
     // Approvals inbox (docs/ai/manager-portal-pages/10-approvals-inbox.md) — one call for both
@@ -101,10 +113,15 @@ export class ApprovalRequestResolver {
     @Allow(Permission.Authenticated)
     async myApprovalsInbox(
         @Ctx() ctx: RequestContext,
-    ): Promise<{ awaitingMyDecision: ApprovalRequest[]; allInvolved: ApprovalRequest[] }> {
+        @Args()
+        args: { awaitingOptions?: ApprovalListOptions; allInvolvedOptions?: ApprovalListOptions },
+    ): Promise<{
+        awaitingMyDecision: PaginatedList<ApprovalRequest>;
+        allInvolved: PaginatedList<ApprovalRequest>;
+    }> {
         const [awaitingMyDecision, allInvolved] = await Promise.all([
-            this.approvalRequestService.findAwaitingMyDecision(ctx),
-            this.approvalRequestService.findAllInvolving(ctx),
+            this.approvalRequestService.findAwaitingMyDecision(ctx, args.awaitingOptions ?? {}),
+            this.approvalRequestService.findAllInvolving(ctx, args.allInvolvedOptions ?? {}),
         ]);
         return { awaitingMyDecision, allInvolved };
     }

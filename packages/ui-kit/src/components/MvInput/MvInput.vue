@@ -10,6 +10,7 @@ withDefaults(
     error?: boolean;
     autocomplete?: string;
     size?: InputSize;
+    list?: string;
   }>(),
   { size: 'md' },
 );
@@ -31,6 +32,7 @@ defineEmits<{
     :placeholder="placeholder"
     :disabled="disabled"
     :autocomplete="autocomplete"
+    :list="list"
     @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
   />
 </template>

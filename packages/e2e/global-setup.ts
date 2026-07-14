@@ -166,10 +166,17 @@ export default async function globalSetup(): Promise<void> {
     if (!deptHeadToken)
         throw new Error('Could not log in as department-head to assign the e2e manager');
 
+    // `counterparties` returns a paginated { items, totalItems } shape (see issue #39) —
+    // take:200 here is a deliberate bound matching the same stopgap used elsewhere in the app
+    // (fetchAllCustomersCapped etc.), not a real pagination need for this one-off setup lookup.
     const counterpartiesResult = await adminGql<{
-        counterparties: { id: string; erpId: string }[];
-    }>(`query { counterparties { id erpId } }`, undefined, deptHeadToken);
-    const e2eCounterpartyId = counterpartiesResult.data.counterparties.find(
+        counterparties: { items: { id: string; erpId: string }[] };
+    }>(
+        `query { counterparties(options: { take: 200 }) { items { id erpId } } }`,
+        undefined,
+        deptHeadToken,
+    );
+    const e2eCounterpartyId = counterpartiesResult.data.counterparties.items.find(
         c => c.erpId === 'e2e-cnt-001',
     )?.id;
 
@@ -223,7 +230,7 @@ export default async function globalSetup(): Promise<void> {
     );
     const managerToken = managerLogin.token;
 
-    const otherCounterpartyId = counterpartiesResult.data.counterparties.find(
+    const otherCounterpartyId = counterpartiesResult.data.counterparties.items.find(
         c => c.erpId === E2E_OTHER_COUNTERPARTY_ID,
     )?.id;
 

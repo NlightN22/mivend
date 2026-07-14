@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { MvFilterBar, MvFilterField, MvInput, MvSelect } from '@mivend/ui-kit';
+import { computed } from 'vue';
+import { MvTableFilters, type TableFilterFieldDef } from '@mivend/ui-kit';
 import {
     ORDER_STATE_OPTIONS,
     DATE_RANGE_OPTIONS,
@@ -7,44 +8,33 @@ import {
     type ManagerOption,
 } from '../../api/orders';
 
-defineProps<{ filters: OrdersFilters; managers: ManagerOption[]; showManagerFilter: boolean }>();
+const props = defineProps<{ filters: OrdersFilters; managers: ManagerOption[]; showManagerFilter: boolean }>();
 const emit = defineEmits<{ 'update:filters': [filters: OrdersFilters]; reset: [] }>();
 
-function update(patch: Partial<OrdersFilters>, filters: OrdersFilters): void {
-    emit('update:filters', { ...filters, ...patch });
+const fields = computed<TableFilterFieldDef[]>(() => {
+    const defs: TableFilterFieldDef[] = [
+        { key: 'search', label: 'Search', type: 'search', placeholder: 'Order number, customer...' },
+        { key: 'state', label: 'Status', type: 'select', options: [...ORDER_STATE_OPTIONS] },
+        { key: 'dateRange', label: 'Date range', type: 'select', options: [...DATE_RANGE_OPTIONS] },
+    ];
+    if (props.showManagerFilter) {
+        defs.push({
+            key: 'managerId',
+            label: 'Manager',
+            type: 'select',
+            options: [{ value: '', label: 'All managers' }, ...props.managers.map(m => ({ value: m.id, label: m.name }))],
+        });
+    }
+    return defs;
+});
+
+const filterValues = computed<Record<string, string>>(() => ({ ...props.filters }));
+
+function handleUpdate(value: Record<string, string>): void {
+    emit('update:filters', { ...props.filters, ...value } as OrdersFilters);
 }
 </script>
 
 <template>
-    <MvFilterBar @reset="emit('reset')">
-        <MvFilterField label="Search">
-            <MvInput
-                size="sm"
-                :model-value="filters.search"
-                placeholder="Order number, customer..."
-                @update:model-value="update({ search: $event }, filters)"
-            />
-        </MvFilterField>
-        <MvFilterField label="Status">
-            <MvSelect
-                :model-value="filters.state"
-                :options="[...ORDER_STATE_OPTIONS]"
-                @update:model-value="update({ state: $event }, filters)"
-            />
-        </MvFilterField>
-        <MvFilterField label="Date range">
-            <MvSelect
-                :model-value="filters.dateRange"
-                :options="[...DATE_RANGE_OPTIONS]"
-                @update:model-value="update({ dateRange: $event }, filters)"
-            />
-        </MvFilterField>
-        <MvFilterField v-if="showManagerFilter" label="Manager">
-            <MvSelect
-                :model-value="filters.managerId"
-                :options="[{ value: '', label: 'All managers' }, ...managers.map(m => ({ value: m.id, label: m.name }))]"
-                @update:model-value="update({ managerId: $event }, filters)"
-            />
-        </MvFilterField>
-    </MvFilterBar>
+    <MvTableFilters :fields="fields" :model-value="filterValues" @update:model-value="handleUpdate" @reset="emit('reset')" />
 </template>

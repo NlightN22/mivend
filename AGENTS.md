@@ -313,6 +313,28 @@ Define TypeScript union types or `as const` arrays **only** for internal technic
 
 ---
 
+## Pagination
+
+**Every list that can grow unboundedly over time must be paginated server-side from day one.** "Fetch everything, then filter/paginate in application code or on the frontend" is a recognized antipattern, not a defer-until-scale concern — see `docs/ai/PROJECT_CONTEXT.md`'s "Approvals inbox: real server-side pagination" (2026-07-14) for the real incident this rule comes from: `myApprovalsInbox` had no pagination at all, loaded every pending `ApprovalRequest` company-wide on every call, and filtered in JS.
+
+**A list is exempt only if it is genuinely, structurally bounded** — not "small today." Judgement call at planning time, not a blanket rule:
+
+- Exempt: a fixed small set (e.g. the 6 seeded manager-portal roles, a customer's own trading points, localStorage-backed favorites).
+- Not exempt: anything keyed by orders, customers, documents, approval requests, audit/version history, or any other row that accumulates over the business's lifetime — even if the seed/demo dataset is small today.
+
+**What "paginated server-side" means concretely:**
+
+- The GraphQL query takes `take`/`skip` (or cursor) args and returns a real paginated shape (`{ items, totalItems }` — see Vendure's own `PaginatedList<T>`), never a bare `[T!]!` for an unbounded list.
+- The backend query itself is bounded (`LIMIT`/`OFFSET` or equivalent) — not "the resolver returns everything and the frontend slices it," and not "the resolver loads everything into memory to compute something, then returns the full list anyway."
+- If filtering requires per-row business logic that can't trivially be a SQL `WHERE` (e.g. a permission check, a computed eligibility rule), do not default to "load everything and filter in JS." First check whether the rule can be restated as a property of the **caller** (cheap, computable once, pushable into SQL as a bounded `OR`/`IN` list — see `ApprovalRequestService.getEligibleStepPairs`/`buildAwaitingDecisionBracket` for a worked example) before reaching for a new denormalized/materialized table.
+- Search/filter fields exposed to the frontend must only cover what the backend query can actually push down. Don't let the frontend imply a search capability (e.g. "search by customer name") that the backend can't honor without loading everything — either make the backend resolve it too, or scope the filter UI to what's real.
+
+**Reference implementations**: `OrdersFilterBar.vue`/`fetchOrdersPage` (`packages/manager/src/api/orders.ts`) for straightforward filter-arg pagination; `ApprovalRequestService.findAwaitingMyDecision`/`findAllInvolving` (`packages/plugins/approval-workflow/src/approval-request.service.ts`) for the harder case of per-row eligibility pushed into SQL via TypeORM `Brackets`/correlated subqueries.
+
+**When adding or reviewing any list-rendering page or the query behind it**, check this rule explicitly — it is not automatically covered by lint/type-check/tests. See **[#39](https://github.com/NlightN22/mivend/issues/39)** for the current inventory of tables still needing this fix (audited 2026-07-14).
+
+---
+
 ## License
 
 This project is licensed under **GPL-3.0-or-later**, required by Vendure core (GPL-3.0-or-later) which this project directly depends on.

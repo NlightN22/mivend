@@ -11,8 +11,12 @@ const mockRepo = {
 function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
     const qb: Record<string, ReturnType<typeof vi.fn>> = {};
     qb.where = vi.fn(() => qb);
+    qb.andWhere = vi.fn(() => qb);
     qb.orderBy = vi.fn(() => qb);
+    qb.take = vi.fn(() => qb);
+    qb.skip = vi.fn(() => qb);
     qb.getMany = vi.fn(async () => []);
+    qb.getCount = vi.fn(async () => 0);
     return qb;
 }
 
@@ -93,9 +97,9 @@ describe('VersioningService', () => {
     });
 
     describe('findForEntities', () => {
-        it('returns an empty array without querying when given no refs', async () => {
+        it('returns an empty page without querying when given no refs', async () => {
             const result = await service.findForEntities(mockCtx, []);
-            expect(result).toEqual([]);
+            expect(result).toEqual({ items: [], totalItems: 0 });
             expect(mockConnection.getRepository).not.toHaveBeenCalled();
         });
 
@@ -121,6 +125,105 @@ describe('VersioningService', () => {
                 },
             );
             expect(qb.orderBy).toHaveBeenCalledWith('v.createdAt', 'DESC');
+        });
+
+        it('bounds the query at 50 by default', async () => {
+            const qb = mockQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findForEntities(mockCtx, [
+                { entityName: 'Counterparty', entityId: 'cp-1' },
+            ]);
+
+            expect(qb.take).toHaveBeenCalledWith(50);
+        });
+
+        it('respects an explicit take/skip override', async () => {
+            const qb = mockQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findForEntities(
+                mockCtx,
+                [{ entityName: 'Counterparty', entityId: 'cp-1' }],
+                { take: 25, skip: 10 },
+            );
+
+            expect(qb.take).toHaveBeenCalledWith(25);
+            expect(qb.skip).toHaveBeenCalledWith(10);
+        });
+
+        it('pushes action/entityName/administratorId/createdAfter filters into SQL', async () => {
+            const qb = mockQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findForEntities(
+                mockCtx,
+                [{ entityName: 'Counterparty', entityId: 'cp-1' }],
+                {
+                    action: 'update',
+                    entityName: 'TradingPoint',
+                    administratorId: 'admin-2',
+                    createdAfter: '2026-01-01T00:00:00.000Z',
+                },
+            );
+
+            expect(qb.andWhere).toHaveBeenCalledWith('v.entityName = :entityNameFilter', {
+                entityNameFilter: 'TradingPoint',
+            });
+            expect(qb.andWhere).toHaveBeenCalledWith('v.action = :actionFilter', {
+                actionFilter: 'update',
+            });
+            expect(qb.andWhere).toHaveBeenCalledWith('v.administratorId = :adminFilter', {
+                adminFilter: 'admin-2',
+            });
+            expect(qb.andWhere).toHaveBeenCalledWith('v.createdAt >= :createdAfter', {
+                createdAfter: '2026-01-01T00:00:00.000Z',
+            });
+        });
+
+        it('filters to system-initiated changes only when system:true', async () => {
+            const qb = mockQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findForEntities(
+                mockCtx,
+                [{ entityName: 'Counterparty', entityId: 'cp-1' }],
+                {
+                    system: true,
+                },
+            );
+
+            expect(qb.andWhere).toHaveBeenCalledWith('v.administratorId IS NULL');
+        });
+    });
+
+    describe('findForEntity', () => {
+        it('bounds the query at 300 by default (issue #39 — was previously unbounded)', async () => {
+            await service.findForEntity(mockCtx, 'Counterparty', 'cp-1');
+
+            expect(mockRepo.find).toHaveBeenCalledWith({
+                where: { entityName: 'Counterparty', entityId: 'cp-1' },
+                order: { createdAt: 'DESC' },
+                take: 300,
+            });
+        });
+
+        it('respects an explicit take override', async () => {
+            await service.findForEntity(mockCtx, 'Counterparty', 'cp-1', 25);
+
+            expect(mockRepo.find).toHaveBeenCalledWith({
+                where: { entityName: 'Counterparty', entityId: 'cp-1' },
+                order: { createdAt: 'DESC' },
+                take: 25,
+            });
         });
     });
 });

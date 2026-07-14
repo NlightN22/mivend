@@ -15,28 +15,32 @@ export interface CustomerCredit {
     creditBalance: number;
 }
 
-// One list fetch for the whole scoped book of clients — small enough (own/department scope)
-// that client-side substring filtering is simpler and just as correct as a server-side search
-// endpoint would be; avoids adding a new query just for this.
+// One list fetch for the whole scoped book of clients — bounded at 500 (see issue #39; a real
+// fix would be a search-as-you-type picker querying `counterparties(options:{search})` instead
+// of fetching everything, same stopgap as `fetchAllCustomersCapped` in api/customers.ts).
 export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
     const result = await adminApi<{
         counterparties: {
-            id: string;
-            shortName: string;
-            legalName: string;
-            inn: string | null;
-            priceType: string;
-            tradingPoints: { id: string; name: string; address: string }[];
-        }[];
+            items: {
+                id: string;
+                shortName: string;
+                legalName: string;
+                inn: string | null;
+                priceType: string;
+                tradingPoints: { id: string; name: string; address: string }[];
+            }[];
+        };
     }>(
         `query {
-            counterparties {
-                id
-                shortName
-                legalName
-                inn
-                priceType
-                tradingPoints { id name address }
+            counterparties(options: { take: 500 }) {
+                items {
+                    id
+                    shortName
+                    legalName
+                    inn
+                    priceType
+                    tradingPoints { id name address }
+                }
             }
         }`,
     );
@@ -52,7 +56,7 @@ export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
             .map(c => [c.counterparty?.id as string, c.id]),
     );
 
-    return result.counterparties
+    return result.counterparties.items
         .filter(c => customerIdByCounterpartyId.has(c.id))
         .map(c => ({
             counterpartyId: c.id,
@@ -69,20 +73,9 @@ export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
 // ReadCounterpartyCredit (Operator/Manager don't have it, only Dept Head/Director/SB/Portal
 // Admin do — see docs/access-control.md layer 4). A ForbiddenError on a non-null field nulls
 // the entire GraphQL response, so this must never share a request with data the page can't do
-// without.
-export async function fetchCustomerCredit(counterpartyId: string): Promise<CustomerCredit | null> {
-    try {
-        const result = await adminApi<{
-            counterparties: { id: string; creditLimit: number; creditBalance: number }[];
-        }>(`query { counterparties { id creditLimit creditBalance } }`);
-        const match = result.counterparties.find(c => c.id === counterpartyId);
-        return match
-            ? { creditLimit: match.creditLimit, creditBalance: match.creditBalance }
-            : null;
-    } catch {
-        return null;
-    }
-}
+// without. Delegates to the shared single-counterparty lookup (api/customers.ts) instead of
+// duplicating it.
+export { fetchCreditForCounterparty as fetchCustomerCredit } from './customers';
 
 export interface ProductSearchResult {
     productVariantId: string;

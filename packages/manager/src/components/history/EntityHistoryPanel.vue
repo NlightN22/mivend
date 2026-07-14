@@ -1,23 +1,33 @@
 <script setup lang="ts">
-import { computed, h, ref } from 'vue';
+import { computed, h, onMounted, ref, watch } from 'vue';
 import type { Column } from 'element-plus';
-import { MvFilterBar, MvFilterField, MvInput, MvModal, MvSelect, MvStatusBadge, MvTable } from '@mivend/ui-kit';
+import { MvFilterBar, MvFilterField, MvInput, MvModal, MvPagination, MvSelect, MvStatusBadge, MvTable } from '@mivend/ui-kit';
 import type { TableRow } from '@mivend/ui-kit';
-import type { EntityVersionRow } from '../../api/history';
+import { fetchEntityVersionsForRefs, type EntityRef, type EntityVersionRow } from '../../api/history';
 import type { ManagerOption } from '../../api/orders';
 
 // Generic audit-trail widget — not Customer-specific. Any page that owns one or more
 // EntityVersion-tracked objects (Counterparty+TradingPoints today, Order/OrderLine later) can
-// drop this in with just `history` + `managers`. `entityLabels` lets the caller give each
-// entityName a human label without this component hardcoding business entity names.
+// drop this in with `refs` + `managers`. `entityLabels` lets the caller give each entityName a
+// human label without this component hardcoding business entity names.
+//
+// Server-side paginated + filtered (issue #39) — action/object-type/changed-by/date-range are
+// real EntityVersion columns, pushed into the `entityVersionsForEntities` query directly. This
+// was the actual root cause of the "History-tab virtualization e2e flakiness" note: an unbounded
+// client-side-filtered fetch grew forever over a long dev session. `search` is the one exception
+// — it matches the JS-derived changed-fields summary/comment/joined display names, which aren't
+// SQL columns, so it only filters within the currently-loaded page (same documented limitation
+// as Approvals' search).
 const props = withDefaults(
     defineProps<{
-        history: EntityVersionRow[];
+        refs: EntityRef[];
         managers: ManagerOption[];
         entityLabels?: Record<string, string>;
     }>(),
     { entityLabels: () => ({}) },
 );
+
+const PAGE_SIZE = 20;
 
 const ACTION_LABEL: Record<string, string> = {
     create: 'Created',
@@ -98,28 +108,27 @@ function diffLines(row: EntityVersionRow): DiffLine[] {
 // diff usable for scanning many entries in a row when hunting for who broke what.
 const selectedRow = ref<EntityVersionRow | null>(null);
 
-// Filters
+// Filters — all except `search` trigger a server refetch (see load()).
 const search = ref('');
 const actionFilter = ref('');
 const entityFilter = ref('');
 const changedByFilter = ref('');
 const dateRangeFilter = ref('');
+const page = ref(1);
 
+// Known upfront from `refs` — doesn't need loaded data, unlike the old fully-client-side version.
 const entityTypeOptions = computed(() => {
-    const names = Array.from(new Set(props.history.map(row => row.entityName)));
+    const names = Array.from(new Set(props.refs.map(ref => ref.entityName)));
     return [
         { value: '', label: 'All objects' },
         ...names.map(name => ({ value: name, label: entityLabel(name) })),
     ];
 });
 
-const actionOptions = computed(() => {
-    const actions = Array.from(new Set(props.history.map(row => row.action)));
-    return [
-        { value: '', label: 'All actions' },
-        ...actions.map(action => ({ value: action, label: ACTION_LABEL[action] ?? action })),
-    ];
-});
+const actionOptions = [
+    { value: '', label: 'All actions' },
+    ...Object.entries(ACTION_LABEL).map(([value, label]) => ({ value, label })),
+];
 
 const changedByOptions = computed(() => [
     { value: '', label: 'Anyone' },
@@ -127,46 +136,19 @@ const changedByOptions = computed(() => [
     ...props.managers.map(m => ({ value: m.id, label: m.name })),
 ]);
 
-function withinDateRange(row: EntityVersionRow): boolean {
-    if (!dateRangeFilter.value) return true;
-    const created = new Date(row.createdAt).getTime();
-    const now = Date.now();
-    const startOfToday = new Date().setHours(0, 0, 0, 0);
-    switch (dateRangeFilter.value) {
+function dateRangeToCreatedAfter(range: string): string | undefined {
+    const now = new Date();
+    switch (range) {
         case 'today':
-            return created >= startOfToday;
+            return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
         case '7d':
-            return created >= now - 7 * 24 * 60 * 60 * 1000;
+            return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
         case '30d':
-            return created >= now - 30 * 24 * 60 * 60 * 1000;
+            return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
         default:
-            return true;
+            return undefined;
     }
 }
-
-const filtered = computed(() => {
-    const term = search.value.trim().toLowerCase();
-    return props.history.filter(row => {
-        if (actionFilter.value && row.action !== actionFilter.value) return false;
-        if (entityFilter.value && row.entityName !== entityFilter.value) return false;
-        if (changedByFilter.value === 'system' && row.administratorId) return false;
-        if (
-            changedByFilter.value &&
-            changedByFilter.value !== 'system' &&
-            row.administratorId !== changedByFilter.value
-        ) {
-            return false;
-        }
-        if (!withinDateRange(row)) return false;
-        if (!term) return true;
-        return (
-            summary(row).toLowerCase().includes(term) ||
-            (row.comment ?? '').toLowerCase().includes(term) ||
-            entityLabel(row.entityName).toLowerCase().includes(term) ||
-            adminName(row.administratorId).toLowerCase().includes(term)
-        );
-    });
-});
 
 function resetFilters(): void {
     search.value = '';
@@ -174,7 +156,58 @@ function resetFilters(): void {
     entityFilter.value = '';
     changedByFilter.value = '';
     dateRangeFilter.value = '';
+    page.value = 1;
 }
+
+const rawRows = ref<EntityVersionRow[]>([]);
+const totalItems = ref(0);
+const loading = ref(true);
+
+async function load(): Promise<void> {
+    loading.value = true;
+    try {
+        const result = await fetchEntityVersionsForRefs(props.refs, {
+            take: PAGE_SIZE,
+            skip: (page.value - 1) * PAGE_SIZE,
+            action: actionFilter.value || undefined,
+            entityName: entityFilter.value || undefined,
+            system: changedByFilter.value === 'system' ? true : undefined,
+            administratorId:
+                changedByFilter.value && changedByFilter.value !== 'system'
+                    ? changedByFilter.value
+                    : undefined,
+            createdAfter: dateRangeToCreatedAfter(dateRangeFilter.value),
+        });
+        rawRows.value = result.items;
+        totalItems.value = result.totalItems;
+    } finally {
+        loading.value = false;
+    }
+}
+
+watch([actionFilter, entityFilter, changedByFilter, dateRangeFilter], () => {
+    page.value = 1;
+    void load();
+});
+watch(page, () => void load());
+watch(() => props.refs, () => {
+    page.value = 1;
+    void load();
+});
+
+onMounted(load);
+
+// `search` only narrows the already-loaded page — see the component-level comment above.
+const filtered = computed(() => {
+    const term = search.value.trim().toLowerCase();
+    if (!term) return rawRows.value;
+    return rawRows.value.filter(row =>
+        summary(row).toLowerCase().includes(term) ||
+        (row.comment ?? '').toLowerCase().includes(term) ||
+        entityLabel(row.entityName).toLowerCase().includes(term) ||
+        adminName(row.administratorId).toLowerCase().includes(term),
+    );
+});
 
 const columns = computed<Column<TableRow>[]>(() => [
     {
@@ -218,7 +251,7 @@ const rows = computed<TableRow[]>(() =>
 );
 
 function handleRowClick({ rowData }: { rowData: TableRow }): void {
-    selectedRow.value = props.history.find(row => row.id === rowData._key) ?? null;
+    selectedRow.value = rawRows.value.find(row => row.id === rowData._key) ?? null;
 }
 </script>
 
@@ -242,7 +275,7 @@ function handleRowClick({ rowData }: { rowData: TableRow }): void {
             </MvFilterField>
         </MvFilterBar>
 
-        <div v-if="history.length" class="entity-history__table">
+        <div v-if="rawRows.length" class="entity-history__table">
             <MvTable
                 :columns="columns"
                 :data="rows"
@@ -250,8 +283,9 @@ function handleRowClick({ rowData }: { rowData: TableRow }): void {
                 empty-text="No changes match these filters"
                 @row-click="handleRowClick"
             />
+            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
         </div>
-        <p v-else class="entity-history__empty">No changes recorded yet</p>
+        <p v-else-if="!loading" class="entity-history__empty">No changes recorded yet</p>
 
         <MvModal v-if="selectedRow" title="Change details" @close="selectedRow = null">
             <div class="entity-history__detail">

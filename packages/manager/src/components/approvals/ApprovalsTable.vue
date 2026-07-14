@@ -4,62 +4,19 @@ import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
 import { MvTable, MvStatusBadge, MvButton, MvTooltip } from '@mivend/ui-kit';
 import type { TableRow } from '@mivend/ui-kit';
-import {
-    REQUEST_TYPE_LABEL,
-    type ApprovalRequestSummary,
-    type OrderReference,
-    type CounterpartyReference,
-} from '../../api/approvals';
-import type { ManagerOption } from '../../api/orders';
+import { REQUEST_TYPE_LABEL } from '../../api/approvals';
 
-const props = defineProps<{
-    requests: ApprovalRequestSummary[];
-    managers: ManagerOption[];
-    orderReferences: Map<string, OrderReference>;
-    counterpartyReferences: Map<string, CounterpartyReference>;
-}>();
+// Purely presentational — row values (including reference/requestedBy/status text) are already
+// resolved by buildApprovalRows() in approvalRows.ts, the single source of truth also used by
+// ApprovalsInboxPage.vue for generic per-column filtering. This component only owns column
+// widths/cell rendering (icons, badges, the action button) and row-click navigation.
+const props = defineProps<{ rows: TableRow[] }>();
 const router = useRouter();
-
-function requesterName(id: string | null): string {
-    if (!id) return '—';
-    return props.managers.find(m => m.id === id)?.name ?? '—';
-}
-
-function referenceText(request: ApprovalRequestSummary): string {
-    let payload: Record<string, unknown>;
-    try {
-        payload = JSON.parse(request.payload) as Record<string, unknown>;
-    } catch {
-        return '—';
-    }
-    if (request.requestType === 'priceAdjustmentApproval') {
-        const ref = props.orderReferences.get(String(payload.orderId));
-        return ref ? `${ref.code} · ${ref.customerName}` : `Order ${payload.orderId as string}`;
-    }
-    if (request.requestType === 'discountGrantApproval') {
-        return `${payload.priceTypeCode as string} · ${(payload.facetValueCode as string | null) ?? 'all products'}`;
-    }
-    if (request.requestType.startsWith('creditTermApproval')) {
-        const ref = props.counterpartyReferences.get(String(payload.counterpartyErpId));
-        return ref ? ref.shortName : (payload.counterpartyErpId as string);
-    }
-    return '—';
-}
 
 function statusVariant(status: string): 'success' | 'danger' | 'warning' {
     if (status === 'approved') return 'success';
     if (status === 'rejected') return 'danger';
     return 'warning';
-}
-
-function isEscalated(request: ApprovalRequestSummary): boolean {
-    const currentStep = request.steps.find(s => s.stepIndex === request.currentStepIndex);
-    return !!currentStep?.wasEscalated;
-}
-
-function escalatedByName(request: ApprovalRequestSummary): string {
-    const currentStep = request.steps.find(s => s.stepIndex === request.currentStepIndex);
-    return requesterName(currentStep?.escalatedByAdministratorId ?? null);
 }
 
 const columns = computed<Column<TableRow>[]>(() => [
@@ -72,7 +29,7 @@ const columns = computed<Column<TableRow>[]>(() => [
         cellRenderer: ({ rowData }) => {
             const row = rowData as TableRow;
             return h('span', { style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
-                row.type as string,
+                REQUEST_TYPE_LABEL[row.type as string] ?? (row.type as string),
                 row.escalated
                     ? h(MvTooltip, {}, {
                           default: () => `Escalated by ${row.escalatedBy as string}`,
@@ -104,35 +61,29 @@ const columns = computed<Column<TableRow>[]>(() => [
         cellRenderer: ({ rowData }) =>
             h(
                 MvButton,
-                { size: 'sm', onClick: () => router.push(`/approvals/${(rowData as TableRow).id as string}`) },
+                {
+                    size: 'sm',
+                    onClick: (e: MouseEvent) => {
+                        e.stopPropagation();
+                        router.push(`/approvals/${(rowData as TableRow).id as string}`);
+                    },
+                },
                 () => 'Review',
             ),
     },
 ]);
 
-const rows = computed<TableRow[]>(() =>
-    props.requests.map(request => ({
-        id: request.id,
-        type: REQUEST_TYPE_LABEL[request.requestType] ?? request.requestType,
-        reference: referenceText(request),
-        requestedBy: requesterName(request.requestedByAdministratorId),
-        currentStep:
-            request.status === 'pending'
-                ? `Step ${request.currentStepIndex + 1} of ${request.totalSteps} — ${request.currentStepRole ?? ''}`
-                : '—',
-        submittedDate: new Date(request.createdAt).toLocaleDateString('en-US'),
-        status: request.status,
-        escalated: isEscalated(request),
-        escalatedBy: escalatedByName(request),
-    })),
-);
+function openRequest(payload: { rowData: TableRow }): void {
+    router.push(`/approvals/${payload.rowData.id as string}`);
+}
 </script>
 
 <template>
     <MvTable
         :columns="columns"
-        :data="rows"
-        :height="Math.max(rows.length, 1) * 52 + 40"
+        :data="props.rows"
+        :height="Math.max(props.rows.length, 1) * 52 + 40"
         empty-text="No requests awaiting your decision"
+        @row-click="openRequest"
     />
 </template>

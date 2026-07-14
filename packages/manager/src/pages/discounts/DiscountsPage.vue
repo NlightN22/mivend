@@ -9,7 +9,7 @@ import {
     type DiscountRow,
     type DiscountRowStatus,
 } from '../../api/discounts';
-import { fetchCustomersList } from '../../api/customers';
+import { fetchAllCustomersCapped } from '../../api/customers';
 import DiscountsTable from '../../components/discounts/DiscountsTable.vue';
 import DiscountGrantForm from '../../components/discounts/DiscountGrantForm.vue';
 
@@ -47,7 +47,7 @@ async function load(): Promise<void> {
             fetchAllDiscountRules(),
             fetchDiscountGrantRequests(),
             fetchAllDiscountGrants(),
-            fetchCustomersList(),
+            fetchAllCustomersCapped(),
         ]);
         const namesById = new Map(customers.map(c => [c.id, c.legalName]));
         rows.value = buildDiscountRows(rules, requests, grants, namesById);

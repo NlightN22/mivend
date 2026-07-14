@@ -8,7 +8,7 @@ import {
     type DiscountRow,
     type FacetOption,
 } from '../../api/discounts';
-import { fetchCustomersList, type CustomerListItem } from '../../api/customers';
+import { fetchAllCustomersCapped, type CustomerListItem } from '../../api/customers';
 
 const props = defineProps<{ renewFrom: DiscountRow | null }>();
 const emit = defineEmits<{ submitted: []; cancel: [] }>();
@@ -50,7 +50,7 @@ onMounted(async () => {
     [priceTypes.value, facets.value, customers.value] = await Promise.all([
         fetchPriceTypeCodes(),
         fetchFacets(),
-        fetchCustomersList(),
+        fetchAllCustomersCapped(),
     ]);
     if (props.renewFrom) {
         form.priceTypeCode = props.renewFrom.priceType;

@@ -45,9 +45,22 @@ const adminApiSchema = gql`
         recent: [ApprovalRequest!]!
     }
 
+    type ApprovalRequestList {
+        items: [ApprovalRequest!]!
+        totalItems: Int!
+    }
+
+    input ApprovalListOptions {
+        take: Int
+        skip: Int
+        search: String
+        requestType: String
+        status: String
+    }
+
     type ApprovalsInbox {
-        awaitingMyDecision: [ApprovalRequest!]!
-        allInvolved: [ApprovalRequest!]!
+        awaitingMyDecision: ApprovalRequestList!
+        allInvolved: ApprovalRequestList!
     }
 
     type WorkflowDefinition {
@@ -69,8 +82,14 @@ const adminApiSchema = gql`
         myApprovalRequestsSummary(recentLimit: Int): ApprovalRequestsSummary!
         pendingPriceAdjustmentOrderIds: [String!]!
         priceAdjustmentRequestsForOrder(orderId: ID!): [ApprovalRequest!]!
-        approvalRequestsByType(requestType: String!): [ApprovalRequest!]!
-        myApprovalsInbox: ApprovalsInbox!
+        approvalRequestsByType(
+            requestType: String!
+            options: ApprovalListOptions
+        ): ApprovalRequestList!
+        myApprovalsInbox(
+            awaitingOptions: ApprovalListOptions
+            allInvolvedOptions: ApprovalListOptions
+        ): ApprovalsInbox!
     }
 
     extend type Mutation {

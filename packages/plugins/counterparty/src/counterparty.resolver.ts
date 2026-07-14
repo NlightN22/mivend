@@ -1,6 +1,13 @@
 import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { Permission } from '@vendure/common/lib/generated-types';
-import { Allow, Ctx, ForbiddenError, RequestContext, Transaction } from '@vendure/core';
+import {
+    Allow,
+    Ctx,
+    ForbiddenError,
+    PaginatedList,
+    RequestContext,
+    Transaction,
+} from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { Counterparty } from './entities/counterparty.entity';
@@ -60,8 +67,67 @@ export class CounterpartyResolver {
 
     @Query()
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
-    async counterparties(@Ctx() ctx: RequestContext): Promise<Counterparty[]> {
-        return this.counterpartyService.findVisible(ctx);
+    async counterparties(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: { take?: number; skip?: number; search?: string } },
+    ): Promise<PaginatedList<Counterparty>> {
+        return this.counterpartyService.findVisiblePage(ctx, args.options ?? {});
+    }
+
+    // Customer Detail page (docs/ai/manager-portal-pages/06-customer-detail.md) — a dedicated
+    // single-entity lookup so the detail page no longer depends on fetching the full (now
+    // paginated) `counterparties` list and filtering client-side by id, see issue #39.
+    @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    async counterparty(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string },
+    ): Promise<Counterparty | null> {
+        return this.counterpartyService.findOneVisible(ctx, args.id);
+    }
+
+    // totalCount/activeCount are visible to any caller with ReadCounterparty (same as the list
+    // itself); totalCreditBalance/highUsageCount are credit-derived and must stay behind
+    // ReadCounterpartyCredit — same field-gating convention as CounterpartyCreditResolver above.
+    // Computing them via a plain SQL aggregate here (instead of the Counterparty.creditLimit/
+    // creditBalance @ResolveField) would otherwise silently bypass that gate entirely: a caller
+    // without ReadCounterpartyCredit could read the company-wide credit total even though they
+    // can't read any single customer's credit fields. Caught by
+    // counterparty.access-scope.test.ts's permission test, not by any type-level check.
+    @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    async counterpartySummary(@Ctx() ctx: RequestContext): Promise<{
+        totalCount: number;
+        activeCount: number;
+        totalCreditBalance: number | null;
+        highUsageCount: number | null;
+    }> {
+        const summary = await this.counterpartyService.getSummary(ctx);
+        const canReadCredit = ctx.userHasPermissions([
+            CustomPermission.ReadCounterpartyCredit.Permission,
+        ]);
+        return {
+            totalCount: summary.totalCount,
+            activeCount: summary.activeCount,
+            totalCreditBalance: canReadCredit ? summary.totalCreditBalance : null,
+            highUsageCount: canReadCredit ? summary.highUsageCount : null,
+        };
+    }
+
+    // Membership in this list is itself credit-derived information ("this named customer is at
+    // high credit risk") even without exposing the numeric creditLimit/creditBalance fields — so
+    // the whole query is gated, not just those two fields, same "hide, don't leak" reasoning as
+    // findOneVisible.
+    @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    async highUsageCounterparties(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { limit: number },
+    ): Promise<Counterparty[]> {
+        if (!ctx.userHasPermissions([CustomPermission.ReadCounterpartyCredit.Permission])) {
+            return [];
+        }
+        return this.counterpartyService.findHighUsage(ctx, args.limit);
     }
 
     @Transaction()

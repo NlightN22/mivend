@@ -29,9 +29,12 @@ async function adminApiViaPage<T>(
 // for the same "shared backend across projects" issue with discount grants).
 async function forceInactiveTradingPoint(page: import('@playwright/test').Page): Promise<void> {
     const data = await adminApiViaPage<{
-        counterparties: { tradingPoints: { id: string; erpId: string }[] }[];
-    }>(page, `query { counterparties { tradingPoints { id erpId } } }`);
-    const tp = data.counterparties
+        counterparties: { items: { tradingPoints: { id: string; erpId: string }[] }[] };
+    }>(
+        page,
+        `query { counterparties(options: { take: 200 }) { items { tradingPoints { id erpId } } } }`,
+    );
+    const tp = data.counterparties.items
         .flatMap(c => c.tradingPoints)
         .find(t => t.erpId === 'e2e-tp-004');
     if (!tp) throw new Error('e2e-tp-004 not found');
@@ -276,9 +279,14 @@ test('reassigning the counterparty manager records a Counterparty version entry 
     );
 
     const cpData = await adminApiViaPage<{
-        counterparties: { id: string; erpId: string; assignedManagerId: string | null }[];
-    }>(page, `query { counterparties { id erpId assignedManagerId } }`);
-    const counterparty = cpData.counterparties.find(c => c.erpId === 'e2e-cnt-001');
+        counterparties: {
+            items: { id: string; erpId: string; assignedManagerId: string | null }[];
+        };
+    }>(
+        page,
+        `query { counterparties(options: { take: 200 }) { items { id erpId assignedManagerId } } }`,
+    );
+    const counterparty = cpData.counterparties.items.find(c => c.erpId === 'e2e-cnt-001');
     if (!counterparty) throw new Error('e2e-cnt-001 not found');
     const originalManagerId = counterparty.assignedManagerId;
 
@@ -335,11 +343,10 @@ test('a rejected out-of-department reassignment records no Counterparty version 
         'Needs ReassignCounterpartyManager + ReadEntityHistory',
     );
 
-    const cpData = await adminApiViaPage<{ counterparties: { id: string; erpId: string }[] }>(
-        page,
-        `query { counterparties { id erpId } }`,
-    );
-    const counterparty = cpData.counterparties.find(c => c.erpId === 'e2e-cnt-001');
+    const cpData = await adminApiViaPage<{
+        counterparties: { items: { id: string; erpId: string }[] };
+    }>(page, `query { counterparties(options: { take: 200 }) { items { id erpId } } }`);
+    const counterparty = cpData.counterparties.items.find(c => c.erpId === 'e2e-cnt-001');
     if (!counterparty) throw new Error('e2e-cnt-001 not found');
 
     const before = await adminApiViaPage<{ entityVersions: { id: string }[] }>(

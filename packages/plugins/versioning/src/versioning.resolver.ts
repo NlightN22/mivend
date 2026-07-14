@@ -1,10 +1,20 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, RequestContext } from '@vendure/core';
+import { Allow, Ctx, PaginatedList, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { EntityVersion } from './entities/entity-version.entity';
 import { VersioningService } from './versioning.service';
+
+interface EntityVersionListOptions {
+    take?: number;
+    skip?: number;
+    action?: string;
+    entityName?: string;
+    administratorId?: string;
+    system?: boolean;
+    createdAfter?: string;
+}
 
 @Resolver()
 export class VersioningResolver {
@@ -25,8 +35,12 @@ export class VersioningResolver {
     @Allow(CustomPermission.ReadEntityHistory.Permission)
     async entityVersionsForEntities(
         @Ctx() ctx: RequestContext,
-        @Args() args: { refs: { entityName: string; entityId: ID }[] },
-    ): Promise<EntityVersion[]> {
-        return this.versioningService.findForEntities(ctx, args.refs);
+        @Args()
+        args: {
+            refs: { entityName: string; entityId: ID }[];
+            options?: EntityVersionListOptions;
+        },
+    ): Promise<PaginatedList<EntityVersion>> {
+        return this.versioningService.findForEntities(ctx, args.refs, args.options ?? {});
     }
 }

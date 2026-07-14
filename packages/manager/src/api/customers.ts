@@ -30,43 +30,44 @@ export interface CustomerListItem {
     tradingPoints: TradingPointInfo[];
 }
 
-export async function fetchCustomersList(): Promise<CustomerListItem[]> {
-    const result = await adminApi<{
-        counterparties: {
-            id: string;
-            shortName: string;
-            legalName: string;
-            inn: string | null;
-            isActive: boolean;
-            priceType: string;
-            assignedManagerId: string | null;
-            branchId: string | null;
-            tradingPoints: TradingPointInfo[];
-        }[];
-    }>(
-        `query {
-            counterparties {
-                id
-                shortName
-                legalName
-                inn
-                isActive
-                priceType
-                assignedManagerId
-                branchId
-                tradingPoints {
-                    id
-                    name
-                    address
-                    workingHours
-                    deliveryComment
-                    isActive
-                    contacts { name phone email isPrimary }
-                }
-            }
-        }`,
-    );
-    return result.counterparties.map(c => ({
+export interface CustomersListOptions {
+    take?: number;
+    skip?: number;
+    search?: string;
+}
+
+const CUSTOMER_LIST_FIELDS = `
+    id
+    shortName
+    legalName
+    inn
+    isActive
+    priceType
+    assignedManagerId
+    branchId
+    tradingPoints {
+        id
+        name
+        address
+        workingHours
+        deliveryComment
+        isActive
+        contacts { name phone email isPrimary }
+    }
+`;
+
+function toCustomerListItem(c: {
+    id: string;
+    shortName: string;
+    legalName: string;
+    inn: string | null;
+    isActive: boolean;
+    priceType: string;
+    assignedManagerId: string | null;
+    branchId: string | null;
+    tradingPoints: TradingPointInfo[];
+}): CustomerListItem {
+    return {
         id: c.id,
         shortName: c.shortName,
         legalName: c.legalName,
@@ -77,12 +78,108 @@ export async function fetchCustomersList(): Promise<CustomerListItem[]> {
         branchId: c.branchId,
         contacts: c.tradingPoints.flatMap(tp => tp.contacts),
         tradingPoints: c.tradingPoints,
-    }));
+    };
 }
 
+// Server-side paginated (see issue #39) — status filtering (active/inactive) still happens
+// client-side in CustomersPage.vue since it's not exposed as a backend filter arg yet; only
+// `search` (shortName/legalName/inn) is pushed down.
+export async function fetchCustomersPage(
+    options: CustomersListOptions,
+): Promise<{ items: CustomerListItem[]; totalItems: number }> {
+    const result = await adminApi<{
+        counterparties: {
+            items: Parameters<typeof toCustomerListItem>[0][];
+            totalItems: number;
+        };
+    }>(
+        `query($options: CounterpartyListOptions) {
+            counterparties(options: $options) {
+                items { ${CUSTOMER_LIST_FIELDS} }
+                totalItems
+            }
+        }`,
+        { options },
+    );
+    return {
+        items: result.counterparties.items.map(toCustomerListItem),
+        totalItems: result.counterparties.totalItems,
+    };
+}
+
+export interface CustomersSummary {
+    totalCount: number;
+    activeCount: number;
+    // Null for a caller without ReadCounterpartyCredit — see CounterpartyResolver.counterpartySummary.
+    totalCreditBalance: number | null;
+    highUsageCount: number | null;
+}
+
+export async function fetchCustomersSummary(): Promise<CustomersSummary> {
+    const result = await adminApi<{ counterpartySummary: CustomersSummary }>(
+        `query {
+            counterpartySummary { totalCount activeCount totalCreditBalance highUsageCount }
+        }`,
+    );
+    return result.counterpartySummary;
+}
+
+export interface HighUsageCustomer extends CustomerListItem {
+    creditLimit: number;
+    creditBalance: number;
+}
+
+// Includes creditLimit/creditBalance inline — unlike the main list, this is already its own
+// isolated request (small, ReadCounterpartyCredit-gated, top-N only), so it doesn't risk nulling
+// out unrelated page data the way sharing a request with the main list would (see
+// fetchCreditByCounterpartyId's comment). Wrapped in try/catch for callers without the permission.
+export async function fetchHighUsageCustomers(limit: number): Promise<HighUsageCustomer[]> {
+    try {
+        const result = await adminApi<{
+            highUsageCounterparties: (Parameters<typeof toCustomerListItem>[0] & {
+                creditLimit: number;
+                creditBalance: number;
+            })[];
+        }>(
+            `query($limit: Int!) {
+                highUsageCounterparties(limit: $limit) { ${CUSTOMER_LIST_FIELDS} creditLimit creditBalance }
+            }`,
+            { limit },
+        );
+        return result.highUsageCounterparties.map(c => ({
+            ...toCustomerListItem(c),
+            creditLimit: c.creditLimit,
+            creditBalance: c.creditBalance,
+        }));
+    } catch {
+        return [];
+    }
+}
+
+// Bounded stopgap for callers that need a name-lookup/picker over "all" customers (discount
+// grant form, discounts-page name join) rather than a paginated display list — same accepted
+// pattern as `visibleOrders(options: { take: 500 })` elsewhere in this codebase (see
+// api/orders.ts's fetchLastOrderDatesByCounterpartyId). Not a true fix for issue #39's concern
+// (still silently truncates past 500), but replaces a literal fetch-everything call with an
+// explicit bound; a real fix would need a search-as-you-type picker querying `counterparties`
+// with `search`, not a full list.
+export async function fetchAllCustomersCapped(): Promise<CustomerListItem[]> {
+    const { items } = await fetchCustomersPage({ take: 500 });
+    return items;
+}
+
+// Dedicated single-entity lookup (see counterparty.resolver.ts's `counterparty(id)`) — no longer
+// depends on fetching the (now paginated) full list and filtering client-side by id.
 export async function fetchCustomerById(counterpartyId: string): Promise<CustomerListItem | null> {
-    const all = await fetchCustomersList();
-    return all.find(c => c.id === counterpartyId) ?? null;
+    const result = await adminApi<{
+        counterparty: Parameters<typeof toCustomerListItem>[0] | null;
+    }>(
+        `query($id: ID!) {
+            counterparty(id: $id) { ${CUSTOMER_LIST_FIELDS} }
+        }`,
+        { id: counterpartyId },
+    );
+    return result.counterparty ? toCustomerListItem(result.counterparty) : null;
 }
 
 // Gated on CustomPermission.ReassignCounterpartyManager (department-head within their own
@@ -202,20 +299,55 @@ export interface CustomerCredit {
 
 // Isolated on purpose — see api/orderCreate.ts's fetchCustomerCredit for why creditLimit/
 // creditBalance must never share a request with data the page can't do without
-// (ReadCounterpartyCredit is Dept-Head/Director/SB/Portal-Admin only).
-export async function fetchCreditByCounterpartyId(): Promise<Map<string, CustomerCredit>> {
+// (ReadCounterpartyCredit is Dept-Head/Director/SB/Portal-Admin only). Scoped to the same
+// `options` as the paginated list query it's enriching (see issue #39) — this used to fetch
+// credit info for every visible counterparty unbounded, which is exactly the antipattern that
+// prompted the audit.
+export async function fetchCreditByCounterpartyId(
+    options: CustomersListOptions,
+): Promise<Map<string, CustomerCredit>> {
     try {
         const result = await adminApi<{
-            counterparties: { id: string; creditLimit: number; creditBalance: number }[];
-        }>(`query { counterparties { id creditLimit creditBalance } }`);
+            counterparties: { items: { id: string; creditLimit: number; creditBalance: number }[] };
+        }>(
+            `query($options: CounterpartyListOptions) {
+                counterparties(options: $options) { items { id creditLimit creditBalance } }
+            }`,
+            { options },
+        );
         return new Map(
-            result.counterparties.map(c => [
+            result.counterparties.items.map(c => [
                 c.id,
                 { creditLimit: c.creditLimit, creditBalance: c.creditBalance },
             ]),
         );
     } catch {
         return new Map();
+    }
+}
+
+// Detail-page variant (Customer Detail, Order Detail) — needs credit for exactly one
+// counterparty, not a page of them. Same isolation reasoning as fetchCreditByCounterpartyId.
+export async function fetchCreditForCounterparty(
+    counterpartyId: string,
+): Promise<CustomerCredit | null> {
+    try {
+        const result = await adminApi<{
+            counterparty: { creditLimit: number; creditBalance: number } | null;
+        }>(
+            `query($id: ID!) {
+                counterparty(id: $id) { creditLimit creditBalance }
+            }`,
+            { id: counterpartyId },
+        );
+        return result.counterparty
+            ? {
+                  creditLimit: result.counterparty.creditLimit,
+                  creditBalance: result.counterparty.creditBalance,
+              }
+            : null;
+    } catch {
+        return null;
     }
 }
 
