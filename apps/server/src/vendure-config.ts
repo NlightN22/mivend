@@ -136,7 +136,12 @@ export const config: VendureConfig = {
         }),
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
-        SessionManagementPlugin,
+        SessionManagementPlugin.init({
+            redis: {
+                host: process.env.REDIS_HOST ?? 'localhost',
+                port: parseInt(process.env.REDIS_PORT ?? '6379'),
+            },
+        }),
         ApprovalWorkflowPlugin,
         VersioningPlugin,
         CounterpartyPlugin,

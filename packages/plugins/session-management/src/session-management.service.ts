@@ -3,10 +3,12 @@ import {
     AuthenticatedSession,
     ConfigService,
     RequestContext,
+    Session,
     SessionService,
     TransactionalConnection,
     UserService,
 } from '@vendure/core';
+import { DataSource } from 'typeorm';
 
 import { labelForUserAgent, SessionSummary } from './session.types';
 
@@ -17,6 +19,7 @@ export class SessionManagementService {
         private configService: ConfigService,
         private userService: UserService,
         private sessionService: SessionService,
+        private dataSource: DataSource,
     ) {}
 
     async getMySessions(ctx: RequestContext): Promise<SessionSummary[]> {
@@ -77,6 +80,22 @@ export class SessionManagementService {
         }
         await this.sessionService.deleteSessionsByUser(ctx, user);
         return true;
+    }
+
+    // DB hygiene, not a security control — runs outside any request, so there's no ctx to
+    // build; hits the raw DataSource directly (same pattern as
+    // reservation.service.ts's expireDueReservations()). Targets the base `Session` entity
+    // (not just AuthenticatedSession) so expired anonymous cart sessions are swept too — both
+    // subtypes share the same `session` table via TypeORM single-table inheritance.
+    async deleteExpiredSessions(): Promise<number> {
+        const result = await this.dataSource
+            .getRepository(Session)
+            .createQueryBuilder()
+            .delete()
+            .from(Session)
+            .where('expires <= :now', { now: new Date() })
+            .execute();
+        return result.affected ?? 0;
     }
 
     private async invalidate(ctx: RequestContext, session: AuthenticatedSession): Promise<void> {

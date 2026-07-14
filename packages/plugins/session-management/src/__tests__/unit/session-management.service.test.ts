@@ -6,6 +6,7 @@ import type {
     UserService,
     SessionService,
 } from '@vendure/core';
+import type { DataSource } from 'typeorm';
 
 import { SessionManagementService } from '../../session-management.service';
 
@@ -41,6 +42,13 @@ describe('SessionManagementService', () => {
     let configService: ConfigService;
     let userService: { getUserById: ReturnType<typeof vi.fn> };
     let sessionService: { deleteSessionsByUser: ReturnType<typeof vi.fn> };
+    let queryBuilder: {
+        delete: ReturnType<typeof vi.fn>;
+        from: ReturnType<typeof vi.fn>;
+        where: ReturnType<typeof vi.fn>;
+        execute: ReturnType<typeof vi.fn>;
+    };
+    let dataSource: { getRepository: ReturnType<typeof vi.fn> };
     let service: SessionManagementService;
 
     function ctxFor(userId: string | undefined, currentToken?: string): RequestContext {
@@ -60,11 +68,25 @@ describe('SessionManagementService', () => {
         userService = { getUserById: vi.fn() };
         sessionService = { deleteSessionsByUser: vi.fn() };
 
+        queryBuilder = {
+            delete: vi.fn(),
+            from: vi.fn(),
+            where: vi.fn(),
+            execute: vi.fn(),
+        };
+        queryBuilder.delete.mockReturnValue(queryBuilder);
+        queryBuilder.from.mockReturnValue(queryBuilder);
+        queryBuilder.where.mockReturnValue(queryBuilder);
+        dataSource = {
+            getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => queryBuilder) })),
+        };
+
         service = new SessionManagementService(
             connection as unknown as TransactionalConnection,
             configService,
             userService as unknown as UserService,
             sessionService as unknown as SessionService,
+            dataSource as unknown as DataSource,
         );
     });
 
@@ -145,5 +167,24 @@ describe('SessionManagementService', () => {
 
         expect(ok).toBe(false);
         expect(sessionService.deleteSessionsByUser).not.toHaveBeenCalled();
+    });
+
+    it('deleteExpiredSessions returns the number of rows deleted', async () => {
+        queryBuilder.execute.mockResolvedValue({ affected: 3 });
+
+        const deleted = await service.deleteExpiredSessions();
+
+        expect(deleted).toBe(3);
+        expect(queryBuilder.where).toHaveBeenCalledWith('expires <= :now', {
+            now: expect.any(Date),
+        });
+    });
+
+    it('deleteExpiredSessions returns 0 when nothing was affected', async () => {
+        queryBuilder.execute.mockResolvedValue({ affected: undefined });
+
+        const deleted = await service.deleteExpiredSessions();
+
+        expect(deleted).toBe(0);
     });
 });

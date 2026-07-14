@@ -1,3 +1,20 @@
+export const loggerCtx = 'SessionManagementPlugin';
+
+export const SESSION_MANAGEMENT_PLUGIN_OPTIONS = Symbol('SESSION_MANAGEMENT_PLUGIN_OPTIONS');
+
+// DB hygiene only, not a security control — Vendure already gates access via the `expires`
+// check at auth time (see SessionService.findSessionByToken()). An hourly sweep is plenty.
+export const CLEANUP_POLL_INTERVAL_DEFAULT = 60 * 60_000;
+
+export interface SessionManagementPluginOptions {
+    redis: {
+        host: string;
+        port: number;
+        password?: string;
+    };
+    cleanupPollIntervalMs?: number;
+}
+
 export interface SessionSummary {
     id: string;
     userAgent: string | null;

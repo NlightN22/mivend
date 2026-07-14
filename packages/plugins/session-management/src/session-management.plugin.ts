@@ -5,17 +5,29 @@ import {
     LoginEvent,
     PluginCommonModule,
     RuntimeVendureConfig,
+    Type,
     VendurePlugin,
 } from '@vendure/core';
 
 import { SessionManagementResolver } from './api/session-management.resolver';
 import { sessionManagementSchema } from './api/session-management.schema';
+import { SessionCleanupWorker } from './session-cleanup.worker';
 import { SessionLoginListenerService } from './session-login-listener.service';
 import { SessionManagementService } from './session-management.service';
+import { SESSION_MANAGEMENT_PLUGIN_OPTIONS } from './session.types';
+import type { SessionManagementPluginOptions } from './session.types';
 
 @VendurePlugin({
     imports: [PluginCommonModule],
-    providers: [SessionManagementService, SessionLoginListenerService],
+    providers: [
+        SessionManagementService,
+        SessionLoginListenerService,
+        SessionCleanupWorker,
+        {
+            provide: SESSION_MANAGEMENT_PLUGIN_OPTIONS,
+            useFactory: (): SessionManagementPluginOptions => SessionManagementPlugin.options,
+        },
+    ],
     exports: [SessionManagementService],
     shopApiExtensions: {
         schema: sessionManagementSchema,
@@ -40,6 +52,13 @@ import { SessionManagementService } from './session-management.service';
     compatibility: '>0.0.0',
 })
 export class SessionManagementPlugin implements OnApplicationBootstrap {
+    static options: SessionManagementPluginOptions;
+
+    static init(options: SessionManagementPluginOptions): Type<SessionManagementPlugin> {
+        this.options = options;
+        return SessionManagementPlugin;
+    }
+
     constructor(
         private readonly eventBus: EventBus,
         private readonly loginListenerService: SessionLoginListenerService,

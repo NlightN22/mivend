@@ -85,11 +85,18 @@ beforeAll(async () => {
     userService = { getUserById: vi.fn() };
     sessionService = { deleteSessionsByUser: vi.fn() };
 
+    // deleteExpiredSessions() queries the real `Session` entity from @vendure/core directly
+    // (not through the shimmed TransactionalConnection above), which needs a bootstrap-time
+    // EntityIdStrategy this standalone DataSource doesn't have — the same constraint documented
+    // at the top of this file. It's covered by a unit test with a mocked DataSource instead
+    // (matching reservation.service.ts's expireDueReservations(), which has no integration test
+    // for the same reason). Not exercised here.
     service = new SessionManagementService(
         connectionShim,
         configService,
         userService as unknown as UserService,
         sessionService as unknown as SessionService,
+        {} as unknown as DataSource,
     );
 });
 
