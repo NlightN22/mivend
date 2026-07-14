@@ -34,9 +34,12 @@ const adminApiSchema = gql`
 
     type TeamMember {
         id: ID!
-        firstName: String!
-        lastName: String!
+        firstName: String
+        lastName: String
         roleCodes: [String!]!
+        departmentId: String
+        branchId: String
+        position: String
     }
 
     type CreditTermLimit {
@@ -96,6 +99,12 @@ const adminApiSchema = gql`
                 type: 'string' as const,
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Branch ID' }],
+            },
+            {
+                name: 'position',
+                type: 'string' as const,
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Job position' }],
             },
         ];
         return config;

@@ -56,6 +56,7 @@ export class EmployeeService {
             customFields: {
                 departmentId: record.departmentErpId,
                 branchId: record.branchId ?? null,
+                position: record.position ?? null,
             },
         };
 

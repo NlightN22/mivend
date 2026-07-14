@@ -3,6 +3,7 @@ import { Permission } from '@vendure/common/lib/generated-types';
 import { Allow, AdministratorService, Ctx, RequestContext, Transaction } from '@vendure/core';
 
 import { CustomPermission } from './custom-permission';
+import { AccessScopeService } from './access-scope.service';
 import { BranchService } from './branch.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
@@ -13,9 +14,12 @@ import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.s
 
 interface TeamMember {
     id: string;
-    firstName: string;
-    lastName: string;
+    firstName: string | null;
+    lastName: string | null;
     roleCodes: string[];
+    departmentId: string | null;
+    branchId: string | null;
+    position: string | null;
 }
 
 @Resolver()
@@ -26,25 +30,47 @@ export class AccessControlResolver {
         private branchService: BranchService,
         private creditTermLimitService: CreditTermLimitService,
         private administratorService: AdministratorService,
+        private accessScopeService: AccessScopeService,
     ) {}
 
-    // Names + role codes only (no email/customFields) — used to label the "Manager" filter/
-    // column on the Orders list (see docs/ai/manager-portal-pages/02-orders-list.md) and to
-    // populate the "Escalate to..." picker on the approval detail page (filtered client-side to
-    // administrators whose role is in the current step's escalatesTo list — see
-    // 11-approval-detail.md). Same visibility rule as `departments` below: view-only
-    // org-structure data, no dedicated permission — role codes are already shown everywhere as
-    // badges, not sensitive.
+    // Role codes + org-structure fields — used to label the "Manager" filter/column on the
+    // Orders list (see docs/ai/manager-portal-pages/02-orders-list.md), to populate the
+    // "Escalate to..." picker on the approval detail page (see 11-approval-detail.md), and to
+    // power the /team org-structure directory (docs/ai/manager-portal-pages/13-team.md). No
+    // dedicated permission — view-only org-structure data, same as `departments` below — but
+    // `firstName`/`lastName` are anonymized to null for members outside the caller's own
+    // department when the caller's 'teamVisibility' access scope isn't 'all' (see
+    // AccessScopeService.resolveTeamVisibilityScope) — this is the one field pair on this query
+    // that IS sensitive (an employee not wanting to be identified by name company-wide).
     @Query()
     @Allow(Permission.Authenticated)
     async teamMembers(@Ctx() ctx: RequestContext): Promise<TeamMember[]> {
         const result = await this.administratorService.findAll(ctx, { take: 200 }, ['user.roles']);
-        return result.items.map(a => ({
-            id: String(a.id),
-            firstName: a.firstName,
-            lastName: a.lastName,
-            roleCodes: a.user?.roles?.map(r => r.code) ?? [],
-        }));
+        const [ownDepartmentId, visibilityScope] = await Promise.all([
+            this.accessScopeService.getOwnDepartmentId(ctx),
+            this.accessScopeService.resolveTeamVisibilityScope(ctx),
+        ]);
+        return result.items.map(a => {
+            const customFields = a.customFields as
+                | {
+                      departmentId?: string | null;
+                      branchId?: string | null;
+                      position?: string | null;
+                  }
+                | undefined;
+            const departmentId = customFields?.departmentId ?? null;
+            const sameDepartment = ownDepartmentId != null && departmentId === ownDepartmentId;
+            const nameVisible = visibilityScope.kind === 'all' || sameDepartment;
+            return {
+                id: String(a.id),
+                firstName: nameVisible ? a.firstName : null,
+                lastName: nameVisible ? a.lastName : null,
+                roleCodes: a.user?.roles?.map(r => r.code) ?? [],
+                departmentId,
+                branchId: customFields?.branchId ?? null,
+                position: customFields?.position ?? null,
+            };
+        });
     }
 
     // Org structure is ERP master data, view-only in the portal for every authenticated

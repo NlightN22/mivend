@@ -65,4 +65,29 @@ describe('AccessScopeService', () => {
         expect(administratorService.findOneByUserId).not.toHaveBeenCalled();
         expect(roleScopeConfigService.maxScopeFor).not.toHaveBeenCalled();
     });
+
+    it('resolveTeamVisibilityScope resolves against the "teamVisibility" resource', async () => {
+        administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-4'));
+        roleScopeConfigService.maxScopeFor.mockResolvedValue('all');
+        const scope = await service.resolveTeamVisibilityScope(ctx);
+        expect(scope).toEqual({ kind: 'all' });
+        expect(roleScopeConfigService.maxScopeFor).toHaveBeenCalledWith(
+            ctx,
+            expect.anything(),
+            'teamVisibility',
+        );
+    });
+
+    it("getOwnDepartmentId returns the caller's departmentId custom field", async () => {
+        administratorService.findOneByUserId.mockResolvedValue(
+            mockAdmin('admin-5', { departmentId: 'dept-sales' }),
+        );
+        expect(await service.getOwnDepartmentId(ctx)).toBe('dept-sales');
+    });
+
+    it('getOwnDepartmentId returns null when there is no active user', async () => {
+        const anonymousCtx = { activeUserId: undefined } as unknown as RequestContext;
+        expect(await service.getOwnDepartmentId(anonymousCtx)).toBeNull();
+        expect(administratorService.findOneByUserId).not.toHaveBeenCalled();
+    });
 });

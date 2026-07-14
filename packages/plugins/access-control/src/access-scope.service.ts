@@ -25,6 +25,21 @@ export class AccessScopeService {
         return this.resolveScope(ctx, 'order');
     }
 
+    async resolveTeamVisibilityScope(ctx: RequestContext): Promise<AccessScope> {
+        return this.resolveScope(ctx, 'teamVisibility');
+    }
+
+    // The caller's own departmentId, independent of any resource's scope resolution — needed
+    // by teamMembers() to decide "same department as me" even when the caller's teamVisibility
+    // scope is 'all' (resolveScope's 'all' branch doesn't carry a departmentId, since scope
+    // 'all' means "no filtering needed", but the Team page still needs to know the viewer's own
+    // department to always show real names for colleagues in it).
+    async getOwnDepartmentId(ctx: RequestContext): Promise<string | null> {
+        const admin = await this.getAdministrator(ctx);
+        const customFields = admin?.customFields as { departmentId?: string | null } | undefined;
+        return customFields?.departmentId ?? null;
+    }
+
     // Throws ForbiddenError unless the caller's counterparty scope covers the given
     // counterparty — same own/department/all logic CounterpartyService.findVisible uses to
     // filter a list, but as an assertion for a single record ahead of a write. Shared by any

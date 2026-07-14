@@ -102,7 +102,7 @@ describe('EmployeeService', () => {
             systemCtx,
             expect.objectContaining({
                 id: 'admin-1',
-                customFields: { departmentId: 'dept-sales', branchId: 'branch-a' },
+                customFields: { departmentId: 'dept-sales', branchId: 'branch-a', position: null },
             }),
         );
     });

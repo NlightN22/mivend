@@ -104,13 +104,17 @@ export const SCOPE_OPTIONS: SelectOption[] = [
     { value: 'all', label: 'All' },
 ];
 
-// The only two resources RoleScopeConfigService/AccessScopeService currently resolve scope
-// for (see packages/plugins/access-control/src/access-scope.service.ts).
-export const SCOPE_RESOURCES = ['counterparty', 'order'] as const;
+// The resources RoleScopeConfigService/AccessScopeService currently resolve scope for (see
+// packages/plugins/access-control/src/access-scope.service.ts). 'teamVisibility' controls
+// whether the /team directory shows colleagues' real names outside the viewer's own
+// department ('own'/'department' = anonymized, 'all' = always shown) — it reuses this same
+// generic resource-scope mechanism rather than a dedicated permission/flag.
+export const SCOPE_RESOURCES = ['counterparty', 'order', 'teamVisibility'] as const;
 
 export const SCOPE_RESOURCE_LABELS: Record<(typeof SCOPE_RESOURCES)[number], string> = {
     counterparty: 'Counterparty visibility',
     order: 'Order visibility',
+    teamVisibility: 'Team directory name visibility',
 };
 
 export async function fetchRoles(): Promise<RoleSummary[]> {
