@@ -2,14 +2,11 @@
 import { onMounted, reactive, ref, watch } from 'vue';
 import { MvPanel, MvFilterBar, MvFilterField, MvInput, MvSelect, MvButton, MvPagination } from '@mivend/ui-kit';
 import {
-    fetchDiscountRulesPage,
-    fetchDiscountGrantsForRuleIds,
-    fetchDiscountRequestsPage,
+    fetchDiscountRegistryPage,
     fetchPriceTypeCodes,
-    buildMaterializedRows,
-    buildRequestRows,
+    buildDiscountRegistryRows,
     type DiscountRow,
-    type DiscountRuleFilterStatus,
+    type DiscountRegistryFilterStatus,
 } from '../../api/discounts';
 import { fetchAllCustomersCapped } from '../../api/customers';
 import DiscountsTable from '../../components/discounts/DiscountsTable.vue';
@@ -17,103 +14,59 @@ import DiscountGrantForm from '../../components/discounts/DiscountGrantForm.vue'
 
 const PAGE_SIZE = 10;
 
-// --- Materialized grants (real server-side pagination + filters, issue #39) ---
-const rules = ref<DiscountRow[]>([]);
-const rulesTotal = ref(0);
-const rulesLoading = ref(true);
-const rulesPage = ref(1);
-const rulesSearch = ref('');
-const rulesStatus = ref<'' | DiscountRuleFilterStatus>('');
+const rows = ref<DiscountRow[]>([]);
+const totalItems = ref(0);
+const loading = ref(true);
+const page = ref(1);
+const search = ref('');
+const statusFilter = ref<'' | DiscountRegistryFilterStatus>('');
 const priceTypeFilter = ref('');
 const priceTypeOptions = ref<{ value: string; label: string }[]>([]);
-
-async function loadRules(): Promise<void> {
-    rulesLoading.value = true;
-    try {
-        const page = await fetchDiscountRulesPage({
-            take: PAGE_SIZE,
-            skip: (rulesPage.value - 1) * PAGE_SIZE,
-            search: rulesSearch.value.trim() || undefined,
-            priceTypeCode: priceTypeFilter.value || undefined,
-            status: rulesStatus.value || undefined,
-        });
-        rulesTotal.value = page.totalItems;
-        const grants = await fetchDiscountGrantsForRuleIds(page.items.map(r => r.id));
-        rules.value = buildMaterializedRows(page.items, grants);
-    } finally {
-        rulesLoading.value = false;
-    }
-}
-
-watch([rulesSearch, rulesStatus, priceTypeFilter], () => {
-    rulesPage.value = 1;
-    loadRules();
-});
-watch(rulesPage, loadRules);
-
-function resetRuleFilters(): void {
-    rulesSearch.value = '';
-    rulesStatus.value = '';
-    priceTypeFilter.value = '';
-}
-
-// --- Pending / rejected requests (also real server-side pagination) ---
-const requests = ref<DiscountRow[]>([]);
-const requestsTotal = ref(0);
-const requestsLoading = ref(true);
-const requestsPage = ref(1);
-const requestsSearch = ref('');
-const requestsStatus = ref<'' | 'pending' | 'rejected'>('');
 const namesById = ref(new Map<string, string>());
-
-async function loadRequests(): Promise<void> {
-    requestsLoading.value = true;
-    try {
-        const page = await fetchDiscountRequestsPage({
-            take: PAGE_SIZE,
-            skip: (requestsPage.value - 1) * PAGE_SIZE,
-            search: requestsSearch.value.trim() || undefined,
-            statuses: requestsStatus.value ? [requestsStatus.value] : ['pending', 'rejected'],
-        });
-        requestsTotal.value = page.totalItems;
-        requests.value = buildRequestRows(page.items, namesById.value);
-    } finally {
-        requestsLoading.value = false;
-    }
-}
-
-watch([requestsSearch, requestsStatus], () => {
-    requestsPage.value = 1;
-    loadRequests();
-});
-watch(requestsPage, loadRequests);
-
-function resetRequestFilters(): void {
-    requestsSearch.value = '';
-    requestsStatus.value = '';
-}
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
     { value: '', label: 'All statuses' },
     { value: 'active', label: 'Active' },
     { value: 'expiring-soon', label: 'Expiring soon' },
     { value: 'expired', label: 'Expired' },
-];
-const REQUEST_STATUS_OPTIONS: { value: string; label: string }[] = [
-    { value: '', label: 'Pending & rejected' },
     { value: 'pending', label: 'Pending approval' },
     { value: 'rejected', label: 'Rejected' },
 ];
 
-// --- KPI counters — each a cheap take:0 count query, not a full-list scan (issue #39) ---
+// Quick-filter chips, mirroring the design concept's "saved filters" row above the table.
+const CHIPS: { key: '' | DiscountRegistryFilterStatus; label: string }[] = [
+    { key: '', label: 'All' },
+    { key: 'active', label: 'Active' },
+    { key: 'expiring-soon', label: 'Expiring soon' },
+    { key: 'pending', label: 'Pending approval' },
+    { key: 'rejected', label: 'Rejected' },
+];
+
 const kpis = reactive({ active: 0, expiringSoon: 0, pending: 0, rejected: 0 });
+
+async function loadRows(): Promise<void> {
+    loading.value = true;
+    try {
+        const result = await fetchDiscountRegistryPage({
+            take: PAGE_SIZE,
+            skip: (page.value - 1) * PAGE_SIZE,
+            search: search.value.trim() || undefined,
+            priceTypeCode: priceTypeFilter.value || undefined,
+            status: statusFilter.value || undefined,
+        });
+        totalItems.value = result.totalItems;
+        rows.value = buildDiscountRegistryRows(result.items, namesById.value);
+    } finally {
+        loading.value = false;
+    }
+}
 
 async function loadKpis(): Promise<void> {
     const [active, expiringSoon, pending, rejected] = await Promise.all([
-        fetchDiscountRulesPage({ take: 0, status: 'active' }),
-        fetchDiscountRulesPage({ take: 0, status: 'expiring-soon' }),
-        fetchDiscountRequestsPage({ take: 0, statuses: ['pending'] }),
-        fetchDiscountRequestsPage({ take: 0, statuses: ['rejected'] }),
+        fetchDiscountRegistryPage({ take: 0, status: 'active' }),
+        fetchDiscountRegistryPage({ take: 0, status: 'expiring-soon' }),
+        fetchDiscountRegistryPage({ take: 0, status: 'pending' }),
+        fetchDiscountRegistryPage({ take: 0, status: 'rejected' }),
     ]);
     kpis.active = active.totalItems;
     kpis.expiringSoon = expiringSoon.totalItems;
@@ -121,12 +74,20 @@ async function loadKpis(): Promise<void> {
     kpis.rejected = rejected.totalItems;
 }
 
-function filterByKpi(kpi: 'active' | 'expiringSoon' | 'pending' | 'rejected'): void {
-    if (kpi === 'active' || kpi === 'expiringSoon') {
-        rulesStatus.value = kpi === 'active' ? 'active' : 'expiring-soon';
-    } else {
-        requestsStatus.value = kpi;
-    }
+watch([search, statusFilter, priceTypeFilter], () => {
+    page.value = 1;
+    loadRows();
+});
+watch(page, loadRows);
+
+function resetFilters(): void {
+    search.value = '';
+    statusFilter.value = '';
+    priceTypeFilter.value = '';
+}
+
+function selectChip(key: '' | DiscountRegistryFilterStatus): void {
+    statusFilter.value = key;
 }
 
 const showForm = ref(false);
@@ -144,7 +105,7 @@ function openRenewForm(row: DiscountRow): void {
 
 async function handleSubmitted(): Promise<void> {
     showForm.value = false;
-    await Promise.all([loadRules(), loadRequests(), loadKpis()]);
+    await Promise.all([loadRows(), loadKpis()]);
 }
 
 onMounted(async () => {
@@ -157,7 +118,7 @@ onMounted(async () => {
         { value: '', label: 'All price types' },
         ...priceTypeCodes.map(p => ({ value: p, label: p })),
     ];
-    await Promise.all([loadRules(), loadRequests(), loadKpis()]);
+    await Promise.all([loadRows(), loadKpis()]);
 });
 </script>
 
@@ -176,55 +137,53 @@ onMounted(async () => {
         </MvPanel>
 
         <div class="discounts-page__kpis">
-            <button type="button" class="discounts-page__kpi" @click="filterByKpi('active')">
+            <button type="button" class="discounts-page__kpi" @click="selectChip('active')">
                 <span class="discounts-page__kpi-label">Active grants</span>
                 <span class="discounts-page__kpi-value">{{ kpis.active }}</span>
             </button>
-            <button type="button" class="discounts-page__kpi" @click="filterByKpi('expiringSoon')">
+            <button type="button" class="discounts-page__kpi" @click="selectChip('expiring-soon')">
                 <span class="discounts-page__kpi-label">Expiring soon</span>
                 <span class="discounts-page__kpi-value">{{ kpis.expiringSoon }}</span>
             </button>
-            <button type="button" class="discounts-page__kpi" @click="filterByKpi('pending')">
+            <button type="button" class="discounts-page__kpi" @click="selectChip('pending')">
                 <span class="discounts-page__kpi-label">Pending approval</span>
                 <span class="discounts-page__kpi-value">{{ kpis.pending }}</span>
             </button>
-            <button type="button" class="discounts-page__kpi" @click="filterByKpi('rejected')">
+            <button type="button" class="discounts-page__kpi" @click="selectChip('rejected')">
                 <span class="discounts-page__kpi-label">Rejected</span>
                 <span class="discounts-page__kpi-value">{{ kpis.rejected }}</span>
             </button>
         </div>
 
-        <MvPanel title="Materialized grants">
-            <MvFilterBar @reset="resetRuleFilters">
+        <MvPanel title="Grant registry">
+            <MvFilterBar @reset="resetFilters">
                 <MvFilterField label="Search">
-                    <MvInput size="sm" :model-value="rulesSearch" placeholder="Price type, product group or customer..." @update:model-value="rulesSearch = $event" />
+                    <MvInput size="sm" :model-value="search" placeholder="Price type, product group or customer..." @update:model-value="search = $event" />
                 </MvFilterField>
                 <MvFilterField label="Price type">
                     <MvSelect :model-value="priceTypeFilter" :options="priceTypeOptions" @update:model-value="priceTypeFilter = ($event as string)" />
                 </MvFilterField>
                 <MvFilterField label="Status">
-                    <MvSelect :model-value="rulesStatus" :options="STATUS_OPTIONS" @update:model-value="rulesStatus = ($event as typeof rulesStatus)" />
+                    <MvSelect :model-value="statusFilter" :options="STATUS_OPTIONS" @update:model-value="statusFilter = ($event as typeof statusFilter)" />
                 </MvFilterField>
             </MvFilterBar>
 
-            <MvPagination :page="rulesPage" :page-size="PAGE_SIZE" :total="rulesTotal" @update:page="rulesPage = $event" />
-            <DiscountsTable v-if="!rulesLoading" :rows="rules" :page-size="PAGE_SIZE" @renew="openRenewForm" />
-            <MvPagination :page="rulesPage" :page-size="PAGE_SIZE" :total="rulesTotal" @update:page="rulesPage = $event" />
-        </MvPanel>
+            <div class="discounts-page__chips">
+                <button
+                    v-for="chip in CHIPS"
+                    :key="chip.key"
+                    type="button"
+                    class="discounts-page__chip"
+                    :class="{ 'discounts-page__chip--active': statusFilter === chip.key }"
+                    @click="selectChip(chip.key)"
+                >
+                    {{ chip.label }}
+                </button>
+            </div>
 
-        <MvPanel title="Pending / rejected requests">
-            <MvFilterBar @reset="resetRequestFilters">
-                <MvFilterField label="Search">
-                    <MvInput size="sm" :model-value="requestsSearch" placeholder="Request #..." @update:model-value="requestsSearch = $event" />
-                </MvFilterField>
-                <MvFilterField label="Status">
-                    <MvSelect :model-value="requestsStatus" :options="REQUEST_STATUS_OPTIONS" @update:model-value="requestsStatus = ($event as typeof requestsStatus)" />
-                </MvFilterField>
-            </MvFilterBar>
-
-            <MvPagination :page="requestsPage" :page-size="PAGE_SIZE" :total="requestsTotal" @update:page="requestsPage = $event" />
-            <DiscountsTable v-if="!requestsLoading" :rows="requests" :page-size="PAGE_SIZE" @renew="openRenewForm" />
-            <MvPagination :page="requestsPage" :page-size="PAGE_SIZE" :total="requestsTotal" @update:page="requestsPage = $event" />
+            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+            <DiscountsTable v-if="!loading" :rows="rows" :page-size="PAGE_SIZE" @renew="openRenewForm" />
+            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
         </MvPanel>
     </div>
 </template>
@@ -288,4 +247,32 @@ onMounted(async () => {
     letter-spacing: -0.03em;
 }
 
+.discounts-page__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.discounts-page__chip {
+    min-height: 32px;
+    padding: 0 13px;
+    border-radius: 999px;
+    border: 1px solid var(--el-border-color, #e4e7ec);
+    background: #fff;
+    color: var(--el-text-color-primary, #17212b);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.discounts-page__chip:hover {
+    background: var(--el-fill-color-light, #f8fafc);
+}
+
+.discounts-page__chip--active {
+    background: var(--el-color-primary, #00b894);
+    border-color: var(--el-color-primary, #00b894);
+    color: #fff;
+}
 </style>

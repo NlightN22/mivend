@@ -26,22 +26,6 @@ export class DiscountGrantResolver {
 
     @Query()
     @Allow(Permission.ReadCatalog)
-    async discountGrants(@Ctx() ctx: RequestContext): Promise<DiscountGrant[]> {
-        return this.discountGrantService.findAll(ctx);
-    }
-
-    // Real fix for /discounts (issue #39) — see DiscountGrantService.findForRuleIds.
-    @Query()
-    @Allow(Permission.ReadCatalog)
-    async discountGrantsForRuleIds(
-        @Ctx() ctx: RequestContext,
-        @Args() args: { ruleIds: ID[] },
-    ): Promise<DiscountGrant[]> {
-        return this.discountGrantService.findForRuleIds(ctx, args.ruleIds);
-    }
-
-    @Query()
-    @Allow(Permission.ReadCatalog)
     async discountGrantsForCounterparty(
         @Ctx() ctx: RequestContext,
         @Args() args: { counterpartyId: ID },

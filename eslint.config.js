@@ -27,6 +27,70 @@ export default [
             'no-undef': 'off',
         },
     },
+    // "One entity, one owning service" — any entity documented as having a single designated
+    // writer/reader (read-model/projection tables, see AGENTS.md "Pagination"; generic
+    // shared-infrastructure tables like the audit trail below) must only ever be imported by
+    // that owning file, so it can't silently drift out of sync via a one-off write or an
+    // unscoped query from somewhere else. Add a block here whenever a new such entity is
+    // introduced; `ignores` lists every file allowed to import it (usually the owning service,
+    // plus its resolver if the resolver only uses the entity for return-type annotations).
+    {
+        files: ['packages/plugins/price-entry/src/**/*.ts'],
+        ignores: [
+            'packages/plugins/price-entry/src/discount-registry.service.ts',
+            // Only imports DiscountRegistryEntry for return-type annotations, never
+            // queries/writes it directly — all access goes through DiscountRegistryService.
+            'packages/plugins/price-entry/src/discount-registry.resolver.ts',
+            // @VendurePlugin's `entities: [...]` array requires the class reference itself.
+            'packages/plugins/price-entry/src/price-entry.plugin.ts',
+        ],
+        languageOptions: { parser: tsParser },
+        plugins: { '@typescript-eslint': tsPlugin },
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['**/discount-registry-entry.entity'],
+                            message:
+                                'DiscountRegistryEntry is a read-model/projection — only discount-registry.service.ts may import it. Add a method to DiscountRegistryService instead.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    // EntityVersion (the generic audit-trail table any plugin can write to via
+    // VersioningService.recordChange()) — same "one owning service" shape as above, already
+    // documented as a convention in AGENTS.md; now also enforced.
+    {
+        files: ['packages/plugins/versioning/src/**/*.ts'],
+        ignores: [
+            'packages/plugins/versioning/src/versioning.service.ts',
+            // Only imports EntityVersion for return-type annotations, never queries/writes it
+            // directly — all access goes through VersioningService.
+            'packages/plugins/versioning/src/versioning.resolver.ts',
+            // @VendurePlugin's `entities: [...]` array requires the class reference itself.
+            'packages/plugins/versioning/src/versioning.plugin.ts',
+        ],
+        languageOptions: { parser: tsParser },
+        plugins: { '@typescript-eslint': tsPlugin },
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['**/entity-version.entity'],
+                            message:
+                                'EntityVersion is shared audit-trail infrastructure — only VersioningService may import it. Call VersioningService.recordChange()/findForEntities() instead.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
     prettierConfig, // must be last — disables rules that conflict with prettier
     {
         ignores: ['**/dist/**', '**/node_modules/**', '**/storybook-static/**', 'infrastructure/scripts/**'],

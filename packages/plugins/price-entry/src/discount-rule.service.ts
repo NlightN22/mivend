@@ -1,25 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { Logger, PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { Brackets, WhereExpressionBuilder } from 'typeorm';
+import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+import { In } from 'typeorm';
 
 import { DiscountRule } from './discount-rule.entity';
-import { DiscountGrant } from './discount-grant.entity';
-
-export type DiscountRuleStatus = 'active' | 'expiring-soon' | 'expired';
-
-export interface DiscountRuleListOptions {
-    take?: number;
-    skip?: number;
-    search?: string;
-    priceTypeCode?: string;
-    status?: DiscountRuleStatus;
-}
-
-// Same threshold as the frontend's ruleStatus() classifier (api/discounts.ts) — kept in sync by
-// hand since one lives in SQL and the other in a computed display column.
-const EXPIRING_SOON_DAYS = 14;
+import { DiscountRegistryService } from './discount-registry.service';
 
 const loggerCtx = 'DiscountRulePlugin';
+
+// Portal-created rules (erpId `portal-<requestId>`) are approval-driven — their registry entry
+// already exists via DiscountGrantService.requestGrant/decideAndApply, so upsert()/bulkUpsert()
+// below must not also sync them via DiscountRegistryService.upsertFromRule (would create a
+// duplicate, approvalRequestId-less entry alongside the real one).
+function isPortalOrigin(erpId: string): boolean {
+    return erpId.startsWith('portal-');
+}
 
 export interface DiscountRuleInput {
     erpId: string;
@@ -55,7 +49,10 @@ function facetKey(facetCode: string, valueCode: string): string {
 
 @Injectable()
 export class DiscountRuleService {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private discountRegistryService: DiscountRegistryService,
+    ) {}
 
     async upsert(ctx: RequestContext, input: DiscountRuleInput): Promise<DiscountRule> {
         const repo = this.connection.getRepository(ctx, DiscountRule);
@@ -65,25 +62,20 @@ export class DiscountRuleService {
         } else {
             record = repo.create(input);
         }
-        return repo.save(record);
+        const saved = await repo.save(record);
+        if (!isPortalOrigin(saved.erpId)) {
+            await this.discountRegistryService.upsertFromRule(ctx, saved);
+        }
+        return saved;
     }
 
     // Discounts are scoped by price type, not by an individual customer (see DiscountRule —
     // no customerId column). Used by the manager portal's Customers page ("Active discounts"
-    // count/list) via the customer's own priceType, and by /discounts.
-    // priceTypeCode omitted lists every discount rule across all price types — the manager
-    // portal's /discounts page (docs/ai/manager-portal-pages/09-discounts.md); provided, it's
-    // the customer-detail page's per-customer-price-type view (inherently small, exempt from
-    // issue #39's pagination rule — a handful of rules per single price type).
-    //
-    // The unfiltered (no priceTypeCode) case IS in scope for issue #39 — bounded here at 200 as
-    // an interim stopgap, same pattern as fetchAllCustomersCapped/fetchCustomerOptions in
-    // api/customers.ts/api/orderCreate.ts. NOT a true fix: the /discounts page merges this with
-    // DiscountGrant and discountGrantApproval ApprovalRequest rows client-side
-    // (buildDiscountRows in api/discounts.ts) into one sorted table — a real paginated fix would
-    // need a single backend query unioning all three sources server-side, which wasn't
-    // attempted this session (ApprovalRequest.payload is stored as plain text, not jsonb, so a
-    // SQL-side UNION would need fragile JSON-in-SQL parsing; deferred, see issue #39).
+    // count/list) via the customer's own priceType, and by DiscountGrantForm's renewal lookup.
+    // priceTypeCode omitted lists every discount rule across all price types, bounded at 200 —
+    // the /discounts registry itself no longer calls this unfiltered (see
+    // DiscountRegistryService.findAllPaginated), so the 200 cap only bounds this method's other,
+    // narrower callers now.
     async findByPriceType(
         ctx: RequestContext,
         priceTypeCode?: string,
@@ -94,79 +86,6 @@ export class DiscountRuleService {
             order: { validTo: 'DESC' },
             take: priceTypeCode ? undefined : take,
         });
-    }
-
-    // Real server-side pagination for the /discounts registry's materialized-grants section —
-    // this is the part of that page that genuinely grows over the business's lifetime (issue
-    // #39). Deliberately does NOT try to also union in discountGrantApproval ApprovalRequests
-    // (pending/rejected rows) into this same query — ApprovalRequest.payload is plain text, not
-    // jsonb, so extracting priceTypeCode/facetValueCode from it in SQL would be fragile. The
-    // manager portal instead fetches those via the already-paginated
-    // ApprovalRequestService.findByRequestType as a second, separate paginated section — see
-    // DiscountsPage.vue.
-    async findAllPaginated(
-        ctx: RequestContext,
-        options: DiscountRuleListOptions = {},
-    ): Promise<PaginatedList<DiscountRule>> {
-        const qb = this.connection.getRepository(ctx, DiscountRule).createQueryBuilder('rule');
-
-        if (options.priceTypeCode) {
-            qb.andWhere('rule.priceTypeCode = :priceTypeCode', {
-                priceTypeCode: options.priceTypeCode,
-            });
-        }
-
-        if (options.status) {
-            const now = new Date();
-            const soon = new Date(now.getTime() + EXPIRING_SOON_DAYS * 24 * 60 * 60 * 1000);
-            if (options.status === 'expired') {
-                qb.andWhere('rule.validTo < :now', { now });
-            } else if (options.status === 'expiring-soon') {
-                qb.andWhere('rule.validTo >= :now AND rule.validTo < :soon', { now, soon });
-            } else {
-                qb.andWhere('rule.validTo >= :soon', { soon });
-            }
-        }
-
-        if (options.search) {
-            const term = `%${options.search}%`;
-            // Matches the rule's own columns, plus the customer(s) a materialized grant applies
-            // to — via the real ORM relation (DiscountGrant.counterparties), not a raw table
-            // join, so this stays substitutable in integration tests the same way every other
-            // query in this codebase is (see approval-request.service.ts's subquery gotcha).
-            // Alias intentionally not "grant" — GRANT is a reserved SQL keyword in Postgres and
-            // produces a raw syntax error when used unquoted as a table alias.
-            const grantMatch = this.connection
-                .getRepository(ctx, DiscountGrant)
-                .createQueryBuilder('dgrant')
-                .innerJoin('dgrant.counterparties', 'counterparty')
-                .select('1')
-                .where('dgrant."discountRuleId" = CAST(rule.id AS TEXT)')
-                .andWhere(
-                    new Brackets((bqb: WhereExpressionBuilder) => {
-                        bqb.where('counterparty.legalName ILIKE :term', { term }).orWhere(
-                            'counterparty.shortName ILIKE :term',
-                            { term },
-                        );
-                    }),
-                )
-                .getQuery();
-            qb.andWhere(
-                new Brackets((bqb: WhereExpressionBuilder) => {
-                    bqb.where('rule.priceTypeCode ILIKE :term', { term })
-                        .orWhere('rule.facetValueCode ILIKE :term', { term })
-                        .orWhere('rule.facetCode ILIKE :term', { term })
-                        .orWhere(`EXISTS (${grantMatch})`, { term });
-                }),
-            );
-        }
-
-        qb.orderBy('rule.validTo', 'DESC')
-            .take(options.take ?? 20)
-            .skip(options.skip ?? 0);
-
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
     }
 
     async bulkUpsert(ctx: RequestContext, entries: DiscountRuleInput[]): Promise<number> {
@@ -191,6 +110,19 @@ export class DiscountRuleService {
                 ['erpId'],
             )
             .execute();
+
+        // `INSERT ... ON CONFLICT` doesn't return the affected rows in a driver-portable way
+        // through the query builder, so re-fetch by erpId to sync the registry — bulkUpsert is
+        // only called from erp-import batches (moderate size, not a hot path), so the extra
+        // query is cheap relative to correctness.
+        const nonPortalErpIds = entries.map(e => e.erpId).filter(erpId => !isPortalOrigin(erpId));
+        if (nonPortalErpIds.length > 0) {
+            const saved = await repo.find({ where: { erpId: In(nonPortalErpIds) } });
+            for (const rule of saved) {
+                await this.discountRegistryService.upsertFromRule(ctx, rule);
+            }
+        }
+
         Logger.verbose(`Bulk upserted ${entries.length} discount rules`, loggerCtx);
         return entries.length;
     }

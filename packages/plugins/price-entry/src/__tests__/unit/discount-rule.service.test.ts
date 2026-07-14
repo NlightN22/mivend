@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { DiscountRuleService } from '../../discount-rule.service';
+import type { DiscountRegistryService } from '../../discount-registry.service';
 
 const mockRepo = {
     findOne: vi.fn(),
@@ -19,13 +20,6 @@ const mockQb = {
     where: vi.fn(),
     andWhere: vi.fn(),
     getMany: vi.fn(),
-    orderBy: vi.fn(),
-    take: vi.fn(),
-    skip: vi.fn(),
-    getManyAndCount: vi.fn(),
-    select: vi.fn(),
-    innerJoin: vi.fn(),
-    getQuery: vi.fn(),
 };
 mockQb.insert.mockReturnValue(mockQb);
 mockQb.into.mockReturnValue(mockQb);
@@ -33,12 +27,6 @@ mockQb.values.mockReturnValue(mockQb);
 mockQb.orUpdate.mockReturnValue(mockQb);
 mockQb.where.mockReturnValue(mockQb);
 mockQb.andWhere.mockReturnValue(mockQb);
-mockQb.orderBy.mockReturnValue(mockQb);
-mockQb.take.mockReturnValue(mockQb);
-mockQb.skip.mockReturnValue(mockQb);
-mockQb.select.mockReturnValue(mockQb);
-mockQb.innerJoin.mockReturnValue(mockQb);
-mockQb.getQuery.mockReturnValue('SELECT 1');
 
 const mockConnection = {
     getRepository: vi.fn(() => mockRepo),
@@ -64,11 +52,16 @@ function rule(overrides: Partial<Record<string, unknown>> = {}): Record<string, 
 
 describe('DiscountRuleService', () => {
     let service: DiscountRuleService;
+    let discountRegistryService: { upsertFromRule: ReturnType<typeof vi.fn> };
 
     beforeEach(() => {
         vi.clearAllMocks();
         mockRepo.createQueryBuilder.mockReturnValue(mockQb);
-        service = new DiscountRuleService(mockConnection as unknown as TransactionalConnection);
+        discountRegistryService = { upsertFromRule: vi.fn(async () => undefined) };
+        service = new DiscountRuleService(
+            mockConnection as unknown as TransactionalConnection,
+            discountRegistryService as unknown as DiscountRegistryService,
+        );
     });
 
     describe('upsert', () => {
@@ -94,6 +87,28 @@ describe('DiscountRuleService', () => {
             expect(existing.percent).toBe(15);
             expect(mockRepo.create).not.toHaveBeenCalled();
         });
+
+        it('syncs the registry for an ERP-origin rule', async () => {
+            const input = rule({ erpId: 'erp-1' });
+            mockRepo.findOne.mockResolvedValue(null);
+            mockRepo.create.mockReturnValue(input);
+            mockRepo.save.mockResolvedValue(input);
+
+            await service.upsert(mockCtx, input as never);
+
+            expect(discountRegistryService.upsertFromRule).toHaveBeenCalledWith(mockCtx, input);
+        });
+
+        it('does not sync the registry for a portal-origin rule (already synced by DiscountGrantService)', async () => {
+            const input = rule({ erpId: 'portal-42' });
+            mockRepo.findOne.mockResolvedValue(null);
+            mockRepo.create.mockReturnValue(input);
+            mockRepo.save.mockResolvedValue(input);
+
+            await service.upsert(mockCtx, input as never);
+
+            expect(discountRegistryService.upsertFromRule).not.toHaveBeenCalled();
+        });
     });
 
     describe('bulkUpsert', () => {
@@ -101,6 +116,22 @@ describe('DiscountRuleService', () => {
             const result = await service.bulkUpsert(mockCtx, []);
             expect(result).toBe(0);
             expect(mockRepo.createQueryBuilder).not.toHaveBeenCalled();
+        });
+
+        it('syncs the registry for every ERP-origin rule in the batch, skipping portal-origin ones', async () => {
+            const savedRules = [rule({ erpId: 'erp-1' }), rule({ erpId: 'erp-2' })];
+            mockRepo.find.mockResolvedValue(savedRules);
+
+            await service.bulkUpsert(mockCtx, [
+                rule({ erpId: 'erp-1' }) as never,
+                rule({ erpId: 'erp-2' }) as never,
+                rule({ erpId: 'portal-1' }) as never,
+            ]);
+
+            expect(mockRepo.find).toHaveBeenCalledWith({
+                where: { erpId: expect.anything() },
+            });
+            expect(discountRegistryService.upsertFromRule).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -444,63 +475,6 @@ describe('DiscountRuleService', () => {
                 order: { validTo: 'DESC' },
                 take: 50,
             });
-        });
-    });
-
-    describe('findAllPaginated', () => {
-        beforeEach(() => {
-            mockQb.getManyAndCount.mockResolvedValue([[rule()], 1]);
-        });
-
-        it('paginates with defaults when no options are given', async () => {
-            const result = await service.findAllPaginated(mockCtx);
-
-            expect(mockQb.take).toHaveBeenCalledWith(20);
-            expect(mockQb.skip).toHaveBeenCalledWith(0);
-            expect(result).toEqual({ items: [rule()], totalItems: 1 });
-        });
-
-        it('filters by priceTypeCode', async () => {
-            await service.findAllPaginated(mockCtx, { priceTypeCode: 'WHOLESALE' });
-            expect(mockQb.andWhere).toHaveBeenCalledWith('rule.priceTypeCode = :priceTypeCode', {
-                priceTypeCode: 'WHOLESALE',
-            });
-        });
-
-        it('pushes the expired status filter into SQL', async () => {
-            await service.findAllPaginated(mockCtx, { status: 'expired' });
-            expect(mockQb.andWhere).toHaveBeenCalledWith(
-                'rule.validTo < :now',
-                expect.objectContaining({ now: expect.any(Date) }),
-            );
-        });
-
-        it('pushes the expiring-soon status filter into SQL', async () => {
-            await service.findAllPaginated(mockCtx, { status: 'expiring-soon' });
-            expect(mockQb.andWhere).toHaveBeenCalledWith(
-                'rule.validTo >= :now AND rule.validTo < :soon',
-                expect.objectContaining({ now: expect.any(Date), soon: expect.any(Date) }),
-            );
-        });
-
-        it('pushes the active status filter into SQL', async () => {
-            await service.findAllPaginated(mockCtx, { status: 'active' });
-            expect(mockQb.andWhere).toHaveBeenCalledWith(
-                'rule.validTo >= :soon',
-                expect.objectContaining({ soon: expect.any(Date) }),
-            );
-        });
-
-        it('respects an explicit take/skip', async () => {
-            await service.findAllPaginated(mockCtx, { take: 5, skip: 10 });
-            expect(mockQb.take).toHaveBeenCalledWith(5);
-            expect(mockQb.skip).toHaveBeenCalledWith(10);
-        });
-
-        it('builds a search filter across rule columns and matching customers', async () => {
-            await service.findAllPaginated(mockCtx, { search: 'acme' });
-            expect(mockQb.innerJoin).toHaveBeenCalledWith('dgrant.counterparties', 'counterparty');
-            expect(mockQb.andWhere).toHaveBeenCalledWith(expect.any(Object)); // Brackets instance
         });
     });
 });

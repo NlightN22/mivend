@@ -18,6 +18,7 @@ import { Counterparty } from '@mivend/plugin-counterparty';
 import { DiscountRuleService } from './discount-rule.service';
 import { DiscountGrant, DiscountGrantScopeType } from './discount-grant.entity';
 import { DiscountRule } from './discount-rule.entity';
+import { DiscountRegistryService } from './discount-registry.service';
 
 export interface DiscountGrantForCustomer {
     id: ID;
@@ -61,6 +62,7 @@ export class DiscountGrantService {
         private discountRuleService: DiscountRuleService,
         private approvalRequestService: ApprovalRequestService,
         private connection: TransactionalConnection,
+        private discountRegistryService: DiscountRegistryService,
     ) {}
 
     async requestGrant(ctx: RequestContext, input: DiscountGrantInput): Promise<ApprovalRequest> {
@@ -76,6 +78,12 @@ export class DiscountGrantService {
             throw new UserInputError('justification is required to request a discount grant');
         }
 
+        // Vendure's ID scalar coerces GraphQL `[ID!]` input to the entity id strategy's native
+        // type (a number, under the default auto-increment strategy) — stringified explicitly
+        // so it always matches what `counterparties()` returns (real string ids). See AGENTS.md
+        // "Vendure-specific gotchas".
+        const counterpartyIds = input.counterpartyIds?.map(String) ?? null;
+
         const payload: DiscountGrantPayload = {
             ...input,
             facetCode: input.facetCode ?? null,
@@ -83,19 +91,28 @@ export class DiscountGrantService {
             minWeightKg: input.minWeightKg ?? null,
             minAmount: input.minAmount ?? null,
             supersedesDiscountRuleId: input.supersedesDiscountRuleId ?? null,
-            // Vendure's ID scalar coerces GraphQL `[ID!]` input to the entity id strategy's
-            // native type (a number, under the default auto-increment strategy) — stringified
-            // explicitly so the persisted payload always matches what `counterparties()` /
-            // `discountGrantsForRuleIds()` return (real string ids), which every consumer of
-            // this payload (customerLabel() in api/discounts.ts) compares against directly.
-            counterpartyIds: input.counterpartyIds?.map(String) ?? null,
+            counterpartyIds,
             requestedByJustification: input.justification,
         };
-        return this.approvalRequestService.createRequest(
+        const request = await this.approvalRequestService.createRequest(
             ctx,
             DISCOUNT_GRANT_REQUEST_TYPE,
             payload as unknown as Record<string, unknown>,
         );
+
+        await this.discountRegistryService.createFromRequest(ctx, {
+            approvalRequestId: request.id,
+            priceTypeCode: input.priceTypeCode,
+            facetCode: input.facetCode ?? null,
+            facetValueCode: input.facetValueCode ?? null,
+            percent: input.percent,
+            validFrom: new Date(input.validFrom),
+            validTo: new Date(input.validTo),
+            justification: input.justification,
+            counterpartyIds,
+        });
+
+        return request;
     }
 
     // Once approved, materializes the DiscountRule (the price-type/facet policy) and a
@@ -109,7 +126,9 @@ export class DiscountGrantService {
         comment?: string,
     ): Promise<ApprovalRequest> {
         const request = await this.approvalRequestService.decide(ctx, requestId, decision, comment);
-        if (request.status === 'approved' && request.requestType === DISCOUNT_GRANT_REQUEST_TYPE) {
+        if (request.requestType !== DISCOUNT_GRANT_REQUEST_TYPE) return request;
+
+        if (request.status === 'approved') {
             const payload = JSON.parse(request.payload) as DiscountGrantPayload;
             const rule = await this.discountRuleService.upsert(ctx, {
                 // Portal-created rules aren't ERP master data — a stable synthetic id keyed to
@@ -138,10 +157,18 @@ export class DiscountGrantService {
                 scopeType: counterparties.length ? 'customer' : 'all',
                 validTo: new Date(payload.validTo),
                 sourceApprovalRequestId: String(request.id),
-                justification: payload.justification,
                 counterparties,
             });
             await grantRepo.save(grant);
+
+            await this.discountRegistryService.markDecided(
+                ctx,
+                request.id,
+                'materialized',
+                rule.id,
+            );
+        } else if (request.status === 'rejected') {
+            await this.discountRegistryService.markDecided(ctx, request.id, 'rejected');
         }
         return request;
     }
@@ -189,33 +216,6 @@ export class DiscountGrantService {
                 };
             })
             .filter((g): g is DiscountGrantForCustomer => g !== null);
-    }
-
-    // Powers the /discounts registry's Customer column — the full list of materialized grants
-    // (not just expiring ones), each with its counterparties, so the manager portal can show
-    // who a discount actually belongs to instead of only the price-type/facet policy.
-    // Bounded at 200 as an interim stopgap (issue #39) — see DiscountRuleService.findByPriceType's
-    // comment for why a true paginated fix of the merged /discounts view wasn't attempted this
-    // session. Superseded by findForRuleIds for /discounts' now-real-paginated view — kept for
-    // any other caller that genuinely wants "all" (there is none left as of this fix, but the
-    // 200 cap is a safe fallback rather than a silent full unbounded load).
-    async findAll(ctx: RequestContext, take = 200): Promise<DiscountGrant[]> {
-        return this.connection.getRepository(ctx, DiscountGrant).find({
-            relations: ['counterparties'],
-            order: { validTo: 'DESC' },
-            take,
-        });
-    }
-
-    // Real fix for /discounts' Customer column (issue #39): scoped to exactly the rule ids on
-    // the current paginated page (DiscountRuleService.findAllPaginated), so this stays bounded
-    // by `take` (e.g. 20) instead of the old blanket 200-row cap.
-    async findForRuleIds(ctx: RequestContext, ruleIds: ID[]): Promise<DiscountGrant[]> {
-        if (ruleIds.length === 0) return [];
-        return this.connection.getRepository(ctx, DiscountGrant).find({
-            where: { discountRuleId: In(ruleIds.map(String)) },
-            relations: ['counterparties'],
-        });
     }
 
     // Feeds the manager portal dashboard's "discount grants expiring soon" banner — only

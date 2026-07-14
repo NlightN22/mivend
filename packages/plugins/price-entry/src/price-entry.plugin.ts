@@ -12,6 +12,7 @@ import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountGrant } from './discount-grant.entity';
+import { DiscountRegistryEntry } from './discount-registry-entry.entity';
 import {
     DiscountRuleAdminResolver,
     OrderLineDiscountResolver,
@@ -20,6 +21,7 @@ import {
 } from './price-entry.resolver';
 import { PriceAdjustmentResolver } from './price-adjustment.resolver';
 import { DiscountGrantResolver } from './discount-grant.resolver';
+import { DiscountRegistryResolver } from './discount-registry.resolver';
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService } from './discount-rule.service';
 import { PriceResolutionService } from './price-resolution.service';
@@ -27,6 +29,7 @@ import { TierRebalanceService } from './tier-rebalance.service';
 import { PriceAdjustmentGateService } from './price-adjustment-gate.service';
 import { PriceAdjustmentService } from './price-adjustment.service';
 import { DiscountGrantService } from './discount-grant.service';
+import { DiscountRegistryService } from './discount-registry.service';
 
 const shopApiSchema = gql`
     type DiscountTier {
@@ -105,19 +108,6 @@ const adminApiSchema = gql`
         minAmount: Int
     }
 
-    type DiscountRuleList {
-        items: [DiscountRule!]!
-        totalItems: Int!
-    }
-
-    input DiscountRuleListOptions {
-        take: Int
-        skip: Int
-        search: String
-        priceTypeCode: String
-        status: String
-    }
-
     type PriceAdjustmentResult {
         decision: String!
         approvalRequestId: ID
@@ -152,7 +142,6 @@ const adminApiSchema = gql`
         discountRuleId: ID!
         scopeType: String!
         validTo: DateTime!
-        justification: String
         counterparties: [DiscountGrantCounterparty!]!
     }
 
@@ -164,17 +153,43 @@ const adminApiSchema = gql`
         scopeType: String!
     }
 
+    # Read-model/projection row for the /discounts registry — see DiscountRegistryEntry /
+    # DiscountRegistryService. One row per discount-grant attempt through its whole lifecycle
+    # (pending -> materialized or rejected), never joined at query time from DiscountRule +
+    # ApprovalRequest.
+    type DiscountRegistryEntry {
+        id: ID!
+        approvalRequestId: ID
+        discountRuleId: ID
+        status: String!
+        priceTypeCode: String!
+        facetCode: String
+        facetValueCode: String
+        percent: Int!
+        validFrom: DateTime!
+        validTo: DateTime!
+        justification: String
+        counterpartyIds: [String!]
+    }
+
+    type DiscountRegistryEntryList {
+        items: [DiscountRegistryEntry!]!
+        totalItems: Int!
+    }
+
+    input DiscountRegistryListOptions {
+        take: Int
+        skip: Int
+        search: String
+        priceTypeCode: String
+        # active | expiring-soon | expired | pending | rejected
+        status: String
+    }
+
     extend type Query {
         # Restricted to ReadFloorPrice — see PriceAdjustmentResolver.
         floorPrice(variantId: ID!): Int
         discountRules(priceTypeCode: String): [DiscountRule!]!
-        # Real server-side pagination + filtering for the /discounts registry (issue #39).
-        discountRulesPage(options: DiscountRuleListOptions): DiscountRuleList!
-        # All materialized grants, not just expiring ones — powers /discounts's Customer column.
-        discountGrants: [DiscountGrant!]!
-        # Scoped to exactly these rule ids (a single paginated page's worth) — the real,
-        # bounded-by-construction replacement for discountGrants on /discounts.
-        discountGrantsForRuleIds(ruleIds: [ID!]!): [DiscountGrant!]!
         expiringDiscountGrants(withinDays: Int!): [DiscountGrant!]!
         # Only grants that actually apply to this counterparty (company-wide or scoped to it) —
         # see DiscountGrantService.findForCounterparty.
@@ -184,6 +199,10 @@ const adminApiSchema = gql`
         # priceTypeCode is the floor price type, which requires ReadFloorPrice instead —
         # see PriceEntryAdminResolver.priceEntriesForVariants.
         priceEntriesForVariants(variantIds: [ID!]!, priceTypeCode: String!): [VariantPriceEntry!]!
+        # Real server-side pagination + filtering for the /discounts registry (issue #39) — the
+        # single unified list, replacing the earlier two-table split (discountRulesPage +
+        # approvalRequestsByType) that didn't match the design concept.
+        discountRegistryPage(options: DiscountRegistryListOptions): DiscountRegistryEntryList!
     }
 
     extend type Mutation {
@@ -210,12 +229,17 @@ const adminApiSchema = gql`
             decision: String!
             comment: String
         ): ApprovalRequest!
+        # One-off, idempotent backfill for DiscountRule/ApprovalRequest rows that existed before
+        # DiscountRegistryEntry did — see DiscountRegistryService.backfill. Not part of any
+        # regular seed/dev flow; run manually once per environment that already had discount
+        # grant data before this migration.
+        backfillDiscountRegistry: Int!
     }
 `;
 
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin, ApprovalWorkflowPlugin, CounterpartyPlugin],
-    entities: [ProductVariantPriceEntry, DiscountRule, DiscountGrant],
+    entities: [ProductVariantPriceEntry, DiscountRule, DiscountGrant, DiscountRegistryEntry],
     shopApiExtensions: {
         schema: shopApiSchema,
         resolvers: [ProductVariantPriceResolver, OrderLineDiscountResolver],
@@ -227,6 +251,7 @@ const adminApiSchema = gql`
             DiscountRuleAdminResolver,
             PriceAdjustmentResolver,
             DiscountGrantResolver,
+            DiscountRegistryResolver,
         ],
     },
     providers: [
@@ -237,6 +262,7 @@ const adminApiSchema = gql`
         PriceAdjustmentGateService,
         PriceAdjustmentService,
         DiscountGrantService,
+        DiscountRegistryService,
     ],
     exports: [DiscountRuleService, PriceResolutionService],
     configuration: (config: RuntimeVendureConfig) => {

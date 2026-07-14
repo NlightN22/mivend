@@ -5,6 +5,7 @@ import type { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
 
 import { DiscountGrantService } from '../../discount-grant.service';
 import { DiscountRuleService } from '../../discount-rule.service';
+import type { DiscountRegistryService } from '../../discount-registry.service';
 
 function mockCtx(permissions: string[]): RequestContext {
     return {
@@ -35,6 +36,10 @@ describe('DiscountGrantService', () => {
     };
     let counterpartyRepo: { findBy: ReturnType<typeof vi.fn> };
     let connection: { getRepository: ReturnType<typeof vi.fn> };
+    let discountRegistryService: {
+        createFromRequest: ReturnType<typeof vi.fn>;
+        markDecided: ReturnType<typeof vi.fn>;
+    };
     let service: DiscountGrantService;
 
     beforeEach(() => {
@@ -54,10 +59,15 @@ describe('DiscountGrantService', () => {
                 entity?.name === 'Counterparty' ? counterpartyRepo : grantRepo,
             ),
         };
+        discountRegistryService = {
+            createFromRequest: vi.fn(async () => undefined),
+            markDecided: vi.fn(async () => undefined),
+        };
         service = new DiscountGrantService(
             discountRuleService as unknown as DiscountRuleService,
             approvalRequestService as unknown as ApprovalRequestService,
             connection as unknown as TransactionalConnection,
+            discountRegistryService as unknown as DiscountRegistryService,
         );
     });
 
@@ -176,7 +186,6 @@ describe('DiscountGrantService', () => {
                     scopeType: 'all',
                     discountRuleId: 'rule-1',
                     counterparties: [],
-                    justification: validInput.justification,
                 }),
             );
         });
@@ -221,23 +230,51 @@ describe('DiscountGrantService', () => {
         });
     });
 
-    describe('findForRuleIds', () => {
-        it('returns [] without querying when no rule ids are given', async () => {
-            const ctx = mockCtx([]);
-            const result = await service.findForRuleIds(ctx, []);
+    describe('DiscountRegistryService integration', () => {
+        it('creates a registry entry when a grant is requested', async () => {
+            const ctx = mockCtx(['RequestDiscountGrantApproval']);
+            await service.requestGrant(ctx, validInput);
 
-            expect(result).toEqual([]);
-            expect(grantRepo.find).not.toHaveBeenCalled();
+            expect(discountRegistryService.createFromRequest).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({ approvalRequestId: 'req-1', priceTypeCode: 'WHOLESALE' }),
+            );
         });
 
-        it('scopes the query to exactly the given rule ids', async () => {
-            const ctx = mockCtx([]);
-            await service.findForRuleIds(ctx, ['rule-1', 'rule-2']);
+        it('marks the registry entry materialized when approved', async () => {
+            approvalRequestService.decide.mockResolvedValue({
+                id: 'req-1',
+                status: 'approved',
+                requestType: 'discountGrantApproval',
+                payload: JSON.stringify({ ...validInput, supersedesDiscountRuleId: null }),
+            });
+            const ctx = mockCtx(['ApproveDiscountRequest']);
 
-            expect(grantRepo.find).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    relations: ['counterparties'],
-                }),
+            await service.decideAndApply(ctx, 'req-1', 'approved', 'ok');
+
+            expect(discountRegistryService.markDecided).toHaveBeenCalledWith(
+                ctx,
+                'req-1',
+                'materialized',
+                'rule-1',
+            );
+        });
+
+        it('marks the registry entry rejected when rejected', async () => {
+            approvalRequestService.decide.mockResolvedValue({
+                id: 'req-1',
+                status: 'rejected',
+                requestType: 'discountGrantApproval',
+                payload: '{}',
+            });
+            const ctx = mockCtx(['ApproveDiscountRequest']);
+
+            await service.decideAndApply(ctx, 'req-1', 'rejected');
+
+            expect(discountRegistryService.markDecided).toHaveBeenCalledWith(
+                ctx,
+                'req-1',
+                'rejected',
             );
         });
     });
