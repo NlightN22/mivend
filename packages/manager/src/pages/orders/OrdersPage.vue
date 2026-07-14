@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { MvKpiCard, MvPanel, MvWarningBanner, MvPagination, MvStatusBadge } from '@mivend/ui-kit';
+import {
+    MvKpiCard,
+    MvPanel,
+    MvWarningBanner,
+    MvPagination,
+    MvStatusBadge,
+    MvFilterChips,
+    type FilterChip,
+} from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { adminApi } from '../../api/client';
 import {
@@ -20,7 +28,6 @@ import OrdersTable from '../../components/orders/OrdersTable.vue';
 import AttentionList from '../../components/orders/AttentionList.vue';
 import OperationalPanel from '../../components/orders/OperationalPanel.vue';
 import SavedViewsPanel, { type SavedView } from '../../components/orders/SavedViewsPanel.vue';
-import SavedFilterChips, { type FilterChip } from '../../components/SavedFilterChips.vue';
 
 const authStore = useAuthStore();
 
@@ -185,13 +192,11 @@ const todayAmountFormatted = computed(() => {
         <div v-if="summary" class="orders-page__kpis">
             <MvKpiCard label="Open orders" :value="summary.openCount" />
             <MvKpiCard label="Waiting approval" :value="summary.waitingApprovalCount" accent />
-            <MvKpiCard label="Overdue" :value="summary.overdueCount" accent />
             <MvKpiCard label="Today's amount" :value="todayAmountFormatted" :caption="`${summary.todayCount} orders today`" />
         </div>
 
         <div class="orders-page__grid">
             <MvPanel title="Orders list">
-                <SavedFilterChips :chips="CHIPS" :active="activeChip" @select="applyChip" />
                 <OrdersFilterBar
                     :filters="filters"
                     :managers="managers"
@@ -199,6 +204,7 @@ const todayAmountFormatted = computed(() => {
                     @update:filters="Object.assign(filters, $event)"
                     @reset="resetFilters"
                 />
+                <MvFilterChips :chips="CHIPS" :active="activeChip" @select="applyChip" />
                 <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
                 <OrdersTable
                     :orders="orders"

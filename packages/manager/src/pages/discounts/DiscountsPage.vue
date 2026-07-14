@@ -1,6 +1,16 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue';
-import { MvPanel, MvFilterBar, MvFilterField, MvInput, MvSelect, MvButton, MvPagination } from '@mivend/ui-kit';
+import { onMounted, ref, watch } from 'vue';
+import {
+    MvPanel,
+    MvFilterBar,
+    MvFilterField,
+    MvInput,
+    MvSelect,
+    MvButton,
+    MvPagination,
+    MvFilterChips,
+    type FilterChip,
+} from '@mivend/ui-kit';
 import {
     fetchDiscountRegistryPage,
     fetchPriceTypeCodes,
@@ -34,15 +44,13 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 ];
 
 // Quick-filter chips, mirroring the design concept's "saved filters" row above the table.
-const CHIPS: { key: '' | DiscountRegistryFilterStatus; label: string }[] = [
+const CHIPS: FilterChip[] = [
     { key: '', label: 'All' },
     { key: 'active', label: 'Active' },
     { key: 'expiring-soon', label: 'Expiring soon' },
     { key: 'pending', label: 'Pending approval' },
     { key: 'rejected', label: 'Rejected' },
 ];
-
-const kpis = reactive({ active: 0, expiringSoon: 0, pending: 0, rejected: 0 });
 
 async function loadRows(): Promise<void> {
     loading.value = true;
@@ -61,19 +69,6 @@ async function loadRows(): Promise<void> {
     }
 }
 
-async function loadKpis(): Promise<void> {
-    const [active, expiringSoon, pending, rejected] = await Promise.all([
-        fetchDiscountRegistryPage({ take: 0, status: 'active' }),
-        fetchDiscountRegistryPage({ take: 0, status: 'expiring-soon' }),
-        fetchDiscountRegistryPage({ take: 0, status: 'pending' }),
-        fetchDiscountRegistryPage({ take: 0, status: 'rejected' }),
-    ]);
-    kpis.active = active.totalItems;
-    kpis.expiringSoon = expiringSoon.totalItems;
-    kpis.pending = pending.totalItems;
-    kpis.rejected = rejected.totalItems;
-}
-
 watch([search, statusFilter, priceTypeFilter], () => {
     page.value = 1;
     loadRows();
@@ -86,8 +81,8 @@ function resetFilters(): void {
     priceTypeFilter.value = '';
 }
 
-function selectChip(key: '' | DiscountRegistryFilterStatus): void {
-    statusFilter.value = key;
+function selectChip(key: string): void {
+    statusFilter.value = key as '' | DiscountRegistryFilterStatus;
 }
 
 const showForm = ref(false);
@@ -105,7 +100,7 @@ function openRenewForm(row: DiscountRow): void {
 
 async function handleSubmitted(): Promise<void> {
     showForm.value = false;
-    await Promise.all([loadRows(), loadKpis()]);
+    await loadRows();
 }
 
 onMounted(async () => {
@@ -118,7 +113,7 @@ onMounted(async () => {
         { value: '', label: 'All price types' },
         ...priceTypeCodes.map(p => ({ value: p, label: p })),
     ];
-    await Promise.all([loadRows(), loadKpis()]);
+    await loadRows();
 });
 </script>
 
@@ -136,25 +131,6 @@ onMounted(async () => {
             <DiscountGrantForm :renew-from="renewFrom" @submitted="handleSubmitted" @cancel="showForm = false" />
         </MvPanel>
 
-        <div class="discounts-page__kpis">
-            <button type="button" class="discounts-page__kpi" @click="selectChip('active')">
-                <span class="discounts-page__kpi-label">Active grants</span>
-                <span class="discounts-page__kpi-value">{{ kpis.active }}</span>
-            </button>
-            <button type="button" class="discounts-page__kpi" @click="selectChip('expiring-soon')">
-                <span class="discounts-page__kpi-label">Expiring soon</span>
-                <span class="discounts-page__kpi-value">{{ kpis.expiringSoon }}</span>
-            </button>
-            <button type="button" class="discounts-page__kpi" @click="selectChip('pending')">
-                <span class="discounts-page__kpi-label">Pending approval</span>
-                <span class="discounts-page__kpi-value">{{ kpis.pending }}</span>
-            </button>
-            <button type="button" class="discounts-page__kpi" @click="selectChip('rejected')">
-                <span class="discounts-page__kpi-label">Rejected</span>
-                <span class="discounts-page__kpi-value">{{ kpis.rejected }}</span>
-            </button>
-        </div>
-
         <MvPanel title="Grant registry">
             <MvFilterBar @reset="resetFilters">
                 <MvFilterField label="Search">
@@ -168,18 +144,7 @@ onMounted(async () => {
                 </MvFilterField>
             </MvFilterBar>
 
-            <div class="discounts-page__chips">
-                <button
-                    v-for="chip in CHIPS"
-                    :key="chip.key"
-                    type="button"
-                    class="discounts-page__chip"
-                    :class="{ 'discounts-page__chip--active': statusFilter === chip.key }"
-                    @click="selectChip(chip.key)"
-                >
-                    {{ chip.label }}
-                </button>
-            </div>
+            <MvFilterChips :chips="CHIPS" :active="statusFilter" @select="selectChip" />
 
             <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
             <DiscountsTable v-if="!loading" :rows="rows" :page-size="PAGE_SIZE" @renew="openRenewForm" />
@@ -213,66 +178,4 @@ onMounted(async () => {
     letter-spacing: -0.03em;
 }
 
-.discounts-page__kpis {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.discounts-page__kpi {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 14px 16px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    border-radius: 14px;
-    background: var(--el-bg-color, #fff);
-    text-align: left;
-    cursor: pointer;
-}
-
-.discounts-page__kpi:hover {
-    border-color: var(--el-color-primary, #00b894);
-}
-
-.discounts-page__kpi-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--el-text-color-secondary, #6b7280);
-}
-
-.discounts-page__kpi-value {
-    font-size: 26px;
-    font-weight: 850;
-    letter-spacing: -0.03em;
-}
-
-.discounts-page__chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 14px 0;
-}
-
-.discounts-page__chip {
-    min-height: 32px;
-    padding: 0 13px;
-    border-radius: 999px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    background: #fff;
-    color: var(--el-text-color-primary, #17212b);
-    font-weight: 700;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.discounts-page__chip:hover {
-    background: var(--el-fill-color-light, #f8fafc);
-}
-
-.discounts-page__chip--active {
-    background: var(--el-color-primary, #00b894);
-    border-color: var(--el-color-primary, #00b894);
-    color: #fff;
-}
 </style>

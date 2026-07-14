@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Quick-filter chip row — reused across manager portal pages (Dashboard, Orders, Discounts)
+// wherever a saved/quick filter selector sits above a table, below the main filter widget.
 export interface FilterChip {
     key: string;
     label: string;
@@ -9,13 +11,13 @@ const emit = defineEmits<{ select: [key: string] }>();
 </script>
 
 <template>
-    <div class="filter-chips">
+    <div class="mv-filter-chips">
         <button
             v-for="chip in chips"
             :key="chip.key"
             type="button"
-            class="filter-chips__chip"
-            :class="{ 'filter-chips__chip--active': chip.key === active }"
+            class="mv-filter-chip"
+            :class="{ 'mv-filter-chip--active': chip.key === active }"
             @click="emit('select', chip.key)"
         >
             {{ chip.label }}
@@ -24,14 +26,14 @@ const emit = defineEmits<{ select: [key: string] }>();
 </template>
 
 <style scoped>
-.filter-chips {
+.mv-filter-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 12px;
 }
 
-.filter-chips__chip {
+.mv-filter-chip {
     height: 30px;
     padding: 0 12px;
     border: 1px solid var(--el-border-color, #e4e7ec);
@@ -43,11 +45,20 @@ const emit = defineEmits<{ select: [key: string] }>();
     cursor: pointer;
 }
 
-.filter-chips__chip:hover {
+.mv-filter-chip:hover {
     background: var(--el-fill-color-light, #f8fafc);
 }
 
-.filter-chips__chip--active {
+.mv-filter-chip--active {
+    background: var(--el-color-primary-light-9, #f0fffa);
+    color: var(--el-color-primary-dark-2, #008a70);
+    border-color: var(--el-color-primary-light-7, #c8f7ec);
+}
+
+/* Higher specificity than .mv-filter-chip:hover (two classes vs one class + pseudo-class) so
+   hovering an already-active chip stays in its active appearance instead of falling back to
+   the plain hover background. */
+.mv-filter-chip--active:hover {
     background: var(--el-color-primary-light-9, #f0fffa);
     color: var(--el-color-primary-dark-2, #008a70);
     border-color: var(--el-color-primary-light-7, #c8f7ec);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { MvKpiCard, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
+import { MvKpiCard, MvPanel, MvStatusBadge, MvFilterChips, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { adminApi } from '../../api/client';
 import { fetchDashboardData, buildActivityFeed, type DashboardData } from '../../api/dashboard';
@@ -13,7 +13,6 @@ import ExpiringDiscountsBanner, {
 } from '../../components/dashboard/ExpiringDiscountsBanner.vue';
 import QuickActionsPanel from '../../components/dashboard/QuickActionsPanel.vue';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.vue';
-import SavedFilterChips, { type FilterChip } from '../../components/SavedFilterChips.vue';
 
 const authStore = useAuthStore();
 const data = ref<DashboardData | null>(null);
@@ -140,7 +139,7 @@ onMounted(async () => {
                         <RouterLink to="/orders">View all</RouterLink>
                     </template>
                     <template #subheader>
-                        <SavedFilterChips
+                        <MvFilterChips
                             :chips="FILTER_CHIPS"
                             :active="activeFilter"
                             @select="activeFilter = $event"

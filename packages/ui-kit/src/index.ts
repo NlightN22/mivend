@@ -70,6 +70,8 @@ export { default as MvProgressBar } from './components/MvProgressBar/MvProgressB
 export type { ProgressBarVariant } from './components/MvProgressBar/MvProgressBar.vue';
 
 export { default as MvKpiCard } from './components/MvKpiCard/MvKpiCard.vue';
+export { default as MvFilterChips } from './components/MvFilterChips/MvFilterChips.vue';
+export type { FilterChip } from './components/MvFilterChips/MvFilterChips.vue';
 export { default as MvPanel } from './components/MvPanel/MvPanel.vue';
 export { default as MvCountBadge } from './components/MvCountBadge/MvCountBadge.vue';
 export { default as MvAppTopbar } from './components/MvAppTopbar/MvAppTopbar.vue';
