@@ -87,10 +87,12 @@ const ReservationCreatedPayload = z.object({
     branchId: z.string(),
     quantity: z.number().int().positive(),
     expiresAt: z.string().datetime(),
+    orderCode: z.string(),
 });
 
 const ReservationReleasedPayload = z.object({
     reservationId: z.string(),
+    orderCode: z.string(),
 });
 
 // ─── Discriminated union — THE CONTRACT ──────────────────────────────────────

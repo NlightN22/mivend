@@ -7,6 +7,7 @@ export interface OrderListItem {
     totalWithTax: number;
     currencyCode: string;
     orderPlacedAt: string | null;
+    customFields: { reservationState: string } | null;
     customer: {
         firstName: string;
         lastName: string;
@@ -21,10 +22,15 @@ export interface OrderListItem {
 }
 
 export interface OrdersFilters {
+    // Index signature lets OrdersFilters satisfy useUrlSyncedState's generic Record<string,
+    // string> constraint — all fields here are already flat strings, this doesn't loosen
+    // anything real.
+    [key: string]: string;
     search: string;
     state: string;
     dateRange: string;
     managerId: string;
+    reservationState: string;
 }
 
 export const DEFAULT_FILTERS: OrdersFilters = {
@@ -32,7 +38,19 @@ export const DEFAULT_FILTERS: OrdersFilters = {
     state: '',
     dateRange: '',
     managerId: '',
+    reservationState: '',
 };
+
+// Order.customFields.reservationState — an internal technical enum fixed by app logic (see
+// plugin-reservation/src/types.ts), not ERP business data, same carve-out as ORDER_STATE_OPTIONS.
+export const ORDER_RESERVATION_STATE_OPTIONS = [
+    { value: '', label: 'Any reservation state' },
+    { value: 'AWAITING_CONFIRMATION', label: 'Awaiting confirmation' },
+    { value: 'RESERVED', label: 'Reserved' },
+    { value: 'EXPIRED', label: 'Expired' },
+    { value: 'RELEASED', label: 'Released' },
+    { value: 'FAILED', label: 'Failed' },
+] as const;
 
 // Order states are Vendure's own OrderProcess state machine — fixed by application logic, not
 // ERP-sourced business data, so a const list is the documented carve-out in AGENTS.md ("internal
@@ -80,6 +98,9 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
         orderPlacedAt: { after: dateRangeToAfter(filters.dateRange) },
     };
     if (filters.state) filter.state = { eq: filters.state };
+    if (filters.reservationState) {
+        filter.customFields = { reservationState: { eq: filters.reservationState } };
+    }
     return filter;
 }
 
@@ -90,6 +111,7 @@ const ORDER_ITEM_FIELDS = `
     totalWithTax
     currencyCode
     orderPlacedAt
+    customFields { reservationState }
     customer {
         firstName
         lastName

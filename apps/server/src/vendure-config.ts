@@ -19,6 +19,7 @@ import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
 import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
+import { MoqPlugin } from '@mivend/plugin-moq';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 
@@ -171,6 +172,7 @@ export const config: VendureConfig = {
                 port: parseInt(process.env.REDIS_PORT ?? '6379'),
             },
         }),
+        MoqPlugin,
         ...instancePlugins,
     ],
 };

@@ -2,7 +2,7 @@ import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { Logger } from '@vendure/core';
 import { Queue, Worker } from 'bullmq';
 
-import { ReservationService } from './reservation.service';
+import { ReservationExpiryService } from './reservation-expiry.service';
 import { EXPIRY_POLL_INTERVAL_DEFAULT, RESERVATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ReservationPluginOptions } from './types';
 
@@ -17,7 +17,7 @@ export class ReservationExpiryWorker implements OnModuleInit, OnModuleDestroy {
     private worker!: Worker;
 
     constructor(
-        private readonly reservationService: ReservationService,
+        private readonly reservationExpiryService: ReservationExpiryService,
         @Inject(RESERVATION_PLUGIN_OPTIONS) private readonly options: ReservationPluginOptions,
     ) {}
 
@@ -32,7 +32,7 @@ export class ReservationExpiryWorker implements OnModuleInit, OnModuleDestroy {
         this.worker = new Worker(
             QUEUE_NAME,
             async () => {
-                const expired = await this.reservationService.expireDueReservations();
+                const expired = await this.reservationExpiryService.expireDueReservations();
                 if (expired > 0) {
                     Logger.verbose(`Expired ${expired} due reservation(s)`, loggerCtx);
                 }

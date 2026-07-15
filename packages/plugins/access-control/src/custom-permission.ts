@@ -63,4 +63,9 @@ export const CustomPermission = {
         description:
             'Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves',
     }),
+    ConfirmOrder: new PermissionDefinition({
+        name: 'ConfirmOrder',
+        description:
+            'Confirm or release a manual order reservation (order-confirmation flow, see docs/order-flow.md)',
+    }),
 } as const;

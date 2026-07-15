@@ -6,5 +6,9 @@
         "rootDir": "."
     },
     "include": ["src/**/*", "index.ts"],
-    "references": [{ "path": "../erp-order" }, { "path": "../../shared" }]
+    "references": [
+        { "path": "../erp-order" },
+        { "path": "../reservation" },
+        { "path": "../../shared" }
+    ]
 }

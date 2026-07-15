@@ -1,8 +1,10 @@
 import { PluginCommonModule, Type, VendurePlugin } from '@vendure/core';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
+import { ReservationPlugin } from '@mivend/plugin-reservation';
 
 import { ProductConsumer } from './consumers/product.consumer';
 import { OrderConsumer } from './consumers/order.consumer';
+import { ReservationConsumer } from './consumers/reservation.consumer';
 import { ErpCallbackController } from './erp-callback.controller';
 import { ErpOrderStatusController } from './erp-order-status.controller';
 import { SyncOutboxEntry } from './entities/sync-outbox.entity';
@@ -15,7 +17,7 @@ import { SYNC_PLUGIN_OPTIONS } from './types';
 import type { SyncPluginOptions } from './types';
 
 @VendurePlugin({
-    imports: [PluginCommonModule, ErpOrderPlugin],
+    imports: [PluginCommonModule, ErpOrderPlugin, ReservationPlugin],
     entities: [SyncOutboxEntry, SyncProcessedEvent],
     providers: [
         SyncLogger,
@@ -24,6 +26,7 @@ import type { SyncPluginOptions } from './types';
         OutboxWorker,
         ProductConsumer,
         OrderConsumer,
+        ReservationConsumer,
         {
             provide: SYNC_PLUGIN_OPTIONS,
             useFactory: (): SyncPluginOptions => SyncPlugin.options,

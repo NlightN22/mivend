@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { MvTableFilters, type TableFilterFieldDef } from '@mivend/ui-kit';
 import {
     ORDER_STATE_OPTIONS,
+    ORDER_RESERVATION_STATE_OPTIONS,
     DATE_RANGE_OPTIONS,
     type OrdersFilters,
     type ManagerOption,
@@ -15,6 +16,12 @@ const fields = computed<TableFilterFieldDef[]>(() => {
     const defs: TableFilterFieldDef[] = [
         { key: 'search', label: 'Search', type: 'search', placeholder: 'Order number, customer...' },
         { key: 'state', label: 'Status', type: 'select', options: [...ORDER_STATE_OPTIONS] },
+        {
+            key: 'reservationState',
+            label: 'Reservation',
+            type: 'select',
+            options: [...ORDER_RESERVATION_STATE_OPTIONS],
+        },
         { key: 'dateRange', label: 'Date range', type: 'select', options: [...DATE_RANGE_OPTIONS] },
     ];
     if (props.showManagerFilter) {

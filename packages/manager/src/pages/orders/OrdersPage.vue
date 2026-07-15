@@ -11,6 +11,7 @@ import {
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { adminApi } from '../../api/client';
+import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import {
     DEFAULT_FILTERS,
     fetchOrdersPage,
@@ -51,6 +52,7 @@ const CHIPS: FilterChip[] = [
     { key: 'all', label: 'All' },
     { key: 'processing', label: 'Processing' },
     { key: 'awaiting-shipment', label: 'Awaiting shipment' },
+    { key: 'awaiting-confirmation', label: 'Awaiting confirmation' },
     { key: 'overdue', label: 'Overdue' },
 ];
 const activeChip = ref('all');
@@ -58,8 +60,27 @@ const activeChip = ref('all');
 function applyChip(key: string): void {
     activeChip.value = key;
     filters.state = key === 'processing' ? 'PaymentAuthorized' : key === 'awaiting-shipment' ? 'PaymentSettled' : '';
+    filters.reservationState = key === 'awaiting-confirmation' ? 'AWAITING_CONFIRMATION' : '';
     page.value = 1;
 }
+
+// Chip is UI sugar over the filters themselves — derive it back from a restored filter set (e.g.
+// after loading a shared URL) so the highlighted chip matches what's actually being filtered.
+// 'overdue' has no filter value of its own (it's a summary-derived view, not a server filter),
+// so it can't be round-tripped and always falls back to 'all'.
+function chipFromFilters(f: OrdersFilters): string {
+    if (f.reservationState === 'AWAITING_CONFIRMATION') return 'awaiting-confirmation';
+    if (f.state === 'PaymentAuthorized') return 'processing';
+    if (f.state === 'PaymentSettled') return 'awaiting-shipment';
+    return 'all';
+}
+
+// Manager portal rule (AGENTS.md): every filtered/sorted/paginated view must be a shareable
+// URL. useUrlSyncedState reads on mount (below, before the watchers are set up) and writes back
+// on every filter/page change via router.replace.
+const { fromQuery, toQuery } = useUrlSyncedState(DEFAULT_FILTERS);
+fromQuery(filters, page);
+activeChip.value = chipFromFilters(filters);
 
 const savedViews = computed<SavedView[]>(() => [
     { key: 'processing', label: 'My processing', count: summary.value?.processingCount ?? 0 },
@@ -124,10 +145,14 @@ function resetFilters(): void {
     page.value = 1;
 }
 
-watch(page, () => loadOrders());
+watch(page, () => {
+    loadOrders();
+    toQuery(filters, page);
+});
 watch(filters, () => {
     page.value = 1;
     loadOrders();
+    toQuery(filters, page);
 });
 
 onMounted(loadAll);

@@ -1,67 +1,129 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserInputError } from '@vendure/core';
-import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
-import type { DataSource } from 'typeorm';
+import type { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ReservationService } from '../../reservation.service';
-import type { ReservationExtensionLimitService } from '../../reservation-extension-limit.service';
-
-const mockAdministratorService = {} as unknown as AdministratorService;
-const mockExtensionLimitService = {} as unknown as ReservationExtensionLimitService;
+import {
+    InsufficientStockError,
+    InvalidMultiplicityError,
+    OrderNotEligibleError,
+} from '../../reservation-errors';
+import { ReservationConfirmedEvent, ReservationReleasedEvent } from '../../reservation.events';
 
 function createMockReservationRepo(): {
-    count: ReturnType<typeof vi.fn>;
+    find: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-    find: ReturnType<typeof vi.fn>;
+    createQueryBuilder: ReturnType<typeof vi.fn>;
 } {
     return {
-        count: vi.fn(async () => 0),
+        find: vi.fn(async () => [] as unknown[]),
         create: vi.fn((x: unknown) => x),
         save: vi.fn(async (x: unknown) => x),
-        update: vi.fn(async () => ({ affected: 1 })),
-        find: vi.fn(async () => [] as unknown[]),
+        createQueryBuilder: vi.fn(() => ({
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            andWhere: vi.fn().mockReturnThis(),
+            getRawOne: vi.fn(async () => ({ max: null })),
+        })),
     };
 }
 
-function createMockOrderRepo(order: unknown): { findOne: ReturnType<typeof vi.fn> } {
-    return { findOne: vi.fn(async () => order) };
+function createMockOrderRepo(order: unknown): {
+    findOne: ReturnType<typeof vi.fn>;
+    save: ReturnType<typeof vi.fn>;
+} {
+    return { findOne: vi.fn(async () => order), save: vi.fn(async (x: unknown) => x) };
+}
+
+function createMockStockLevelRepo(
+    stockOnHand: number,
+    stockAllocated = 0,
+): {
+    createQueryBuilder: ReturnType<typeof vi.fn>;
+} {
+    return {
+        createQueryBuilder: vi.fn(() => ({
+            setLock: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            andWhere: vi.fn().mockReturnThis(),
+            getOne: vi.fn(async () => ({ stockOnHand, stockAllocated })),
+        })),
+    };
+}
+
+function createMockStockLocationRepo(): { createQueryBuilder: ReturnType<typeof vi.fn> } {
+    return {
+        createQueryBuilder: vi.fn(() => ({
+            getOne: vi.fn(async () => ({ id: 'location-1' })),
+        })),
+    };
 }
 
 describe('ReservationService', () => {
     let reservationRepo: ReturnType<typeof createMockReservationRepo>;
     let orderRepo: ReturnType<typeof createMockOrderRepo>;
-    let connection: { getRepository: ReturnType<typeof vi.fn> };
+    let stockLevelRepo: ReturnType<typeof createMockStockLevelRepo>;
+    let stockLocationRepo: ReturnType<typeof createMockStockLocationRepo>;
+    let connection: {
+        getRepository: ReturnType<typeof vi.fn>;
+        withTransaction: ReturnType<typeof vi.fn>;
+    };
+    let eventBus: { publish: ReturnType<typeof vi.fn> };
     let service: ReservationService;
-    const ctx = {} as unknown as RequestContext;
+    const ctx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
     const order = {
         id: 'order-1',
+        code: 'ORD-1',
+        customFields: {},
         lines: [
-            { id: 'line-1', productVariantId: 'variant-1', quantity: 2 },
-            { id: 'line-2', productVariantId: 'variant-2', quantity: 5 },
+            {
+                id: 'line-1',
+                productVariantId: 'variant-1',
+                quantity: 2,
+                productVariant: { customFields: {} },
+            },
+            {
+                id: 'line-2',
+                productVariantId: 'variant-2',
+                quantity: 5,
+                productVariant: { customFields: {} },
+            },
         ],
     };
 
     beforeEach(() => {
         reservationRepo = createMockReservationRepo();
         orderRepo = createMockOrderRepo(order);
+        stockLevelRepo = createMockStockLevelRepo(20);
+        stockLocationRepo = createMockStockLocationRepo();
+        eventBus = { publish: vi.fn() };
         connection = {
-            getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
-                entity?.name === 'Order' ? orderRepo : reservationRepo,
+            getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) => {
+                switch (entity?.name) {
+                    case 'Order':
+                        return orderRepo;
+                    case 'StockLevel':
+                        return stockLevelRepo;
+                    case 'StockLocation':
+                        return stockLocationRepo;
+                    default:
+                        return reservationRepo;
+                }
+            }),
+            withTransaction: vi.fn(async (txCtx: unknown, work: (c: unknown) => unknown) =>
+                work(txCtx),
             ),
         };
         service = new ReservationService(
             connection as unknown as TransactionalConnection,
-            {} as unknown as DataSource,
-            mockAdministratorService,
-            mockExtensionLimitService,
+            eventBus as unknown as EventBus,
         );
     });
 
-    describe('confirmOrder', () => {
-        it('creates one reservation per order line with a shared expiry', async () => {
+    describe('reserveOrder / confirmOrder', () => {
+        it('creates one reservation per order line with a shared expiry and publishes ReservationConfirmedEvent', async () => {
             await service.confirmOrder(ctx, 'order-1', 3);
 
             expect(reservationRepo.save).toHaveBeenCalledWith([
@@ -70,6 +132,10 @@ describe('ReservationService', () => {
                     productVariantId: 'variant-1',
                     quantity: 2,
                     status: 'active',
+                    stockLocationId: 'location-1',
+                    creationMethod: 'manual',
+                    confirmedByAdministratorId: 'user-1',
+                    erpOperationId: expect.any(String),
                 }),
                 expect.objectContaining({
                     orderLineId: 'line-2',
@@ -78,12 +144,22 @@ describe('ReservationService', () => {
                     status: 'active',
                 }),
             ]);
+            expect(orderRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({ customFields: { reservationState: 'RESERVED' } }),
+            );
+            expect(eventBus.publish).toHaveBeenCalledTimes(2);
+            expect(eventBus.publish.mock.calls[0][0]).toBeInstanceOf(ReservationConfirmedEvent);
         });
 
-        it('rejects a second confirm while an active reservation already exists', async () => {
-            reservationRepo.count.mockResolvedValue(1);
-            await expect(service.confirmOrder(ctx, 'order-1', 3)).rejects.toThrow(UserInputError);
+        it('is idempotent — a second call while an active reservation already exists is a no-op', async () => {
+            const existing = [{ id: 'res-1', status: 'active' }];
+            reservationRepo.find.mockResolvedValue(existing);
+
+            const result = await service.confirmOrder(ctx, 'order-1', 3);
+
+            expect(result).toBe(existing);
             expect(reservationRepo.save).not.toHaveBeenCalled();
+            expect(eventBus.publish).not.toHaveBeenCalled();
         });
 
         it('rejects a non-positive reservationDays', async () => {
@@ -93,111 +169,111 @@ describe('ReservationService', () => {
 
         it('rejects when the order does not exist', async () => {
             orderRepo.findOne.mockResolvedValue(null);
-            await expect(service.confirmOrder(ctx, 'missing', 3)).rejects.toThrow(UserInputError);
+            await expect(service.confirmOrder(ctx, 'missing', 3)).rejects.toThrow(
+                OrderNotEligibleError,
+            );
+        });
+
+        it('is full-order-only: rolls back and marks the order FAILED when any line is short', async () => {
+            stockLevelRepo.createQueryBuilder = vi.fn(() => ({
+                setLock: vi.fn().mockReturnThis(),
+                where: vi.fn().mockReturnThis(),
+                andWhere: vi.fn().mockReturnThis(),
+                getOne: vi.fn(async () => ({ stockOnHand: 1, stockAllocated: 0 })),
+            }));
+
+            const error = await service
+                .confirmOrder(ctx, 'order-1', 3)
+                .catch((e: unknown) => e as InsufficientStockError);
+
+            expect(error).toBeInstanceOf(InsufficientStockError);
+            expect((error as InsufficientStockError).lines).toHaveLength(2);
+            expect(reservationRepo.save).not.toHaveBeenCalled();
+            expect(orderRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({ customFields: { reservationState: 'FAILED' } }),
+            );
+        });
+
+        it('rejects a quantity that is not a multiple of the variant multiplicity, before checking stock', async () => {
+            const orderWithMultiplicity = {
+                ...order,
+                lines: [
+                    {
+                        id: 'line-1',
+                        productVariantId: 'variant-1',
+                        quantity: 5,
+                        productVariant: { customFields: { multiplicity: 4 } },
+                    },
+                ],
+            };
+            orderRepo.findOne.mockResolvedValue(orderWithMultiplicity);
+
+            const error = await service
+                .confirmOrder(ctx, 'order-1', 3)
+                .catch((e: unknown) => e as InvalidMultiplicityError);
+
+            expect(error).toBeInstanceOf(InvalidMultiplicityError);
+            expect((error as InvalidMultiplicityError).lines).toEqual([
+                {
+                    orderLineId: 'line-1',
+                    productVariantId: 'variant-1',
+                    quantity: 5,
+                    multiplicity: 4,
+                },
+            ]);
+            expect(stockLevelRepo.createQueryBuilder).not.toHaveBeenCalled();
+        });
+
+        it('treats null/0/negative multiplicity as no constraint', async () => {
+            const orderWithBadData = {
+                ...order,
+                lines: [
+                    {
+                        id: 'line-1',
+                        productVariantId: 'variant-1',
+                        quantity: 3,
+                        productVariant: { customFields: { multiplicity: -1 } },
+                    },
+                ],
+            };
+            orderRepo.findOne.mockResolvedValue(orderWithBadData);
+
+            await expect(service.confirmOrder(ctx, 'order-1', 3)).resolves.toBeDefined();
         });
     });
 
     describe('releaseReservations', () => {
-        it('marks active reservations for the order as released', async () => {
-            await service.releaseReservations(ctx, 'order-1');
-            expect(reservationRepo.update).toHaveBeenCalledWith(
-                { orderId: 'order-1', status: 'active' },
-                expect.objectContaining({ status: 'released' }),
-            );
-        });
-    });
-
-    describe('getReservedQuantity', () => {
-        it('sums quantity across active reservations for a variant', async () => {
-            reservationRepo.find.mockResolvedValue([{ quantity: 2 }, { quantity: 5 }]);
-            const total = await service.getReservedQuantity(ctx, 'variant-1');
-            expect(total).toBe(7);
-        });
-    });
-
-    describe('getAvailableQuantity', () => {
-        it('subtracts active reservations from summed stockOnHand across stock levels', async () => {
-            const stockLevelRepo = {
-                find: vi.fn(async () => [{ stockOnHand: 10 }, { stockOnHand: 5 }]),
-            };
-            connection.getRepository.mockImplementation(
-                (_ctx: unknown, entity: { name?: string }) =>
-                    entity?.name === 'StockLevel' ? stockLevelRepo : reservationRepo,
-            );
-            reservationRepo.find.mockResolvedValue([{ quantity: 4 }]);
-
-            const available = await service.getAvailableQuantity(ctx, 'variant-1');
-            expect(available).toBe(11);
-        });
-    });
-
-    describe('extendReservation', () => {
-        let extensionLimitService: { getLimit: ReturnType<typeof vi.fn> };
-        let administratorService: { findOneByUserId: ReturnType<typeof vi.fn> };
-        let ctxWithUser: RequestContext;
-
-        beforeEach(() => {
-            extensionLimitService = {
-                getLimit: vi.fn(async () => ({ roleCode: 'manager', maxExtraDays: 3 })),
-            };
-            administratorService = {
-                findOneByUserId: vi.fn(async () => ({ user: { roles: [{ code: 'manager' }] } })),
-            };
-            ctxWithUser = { activeUserId: 'user-1' } as unknown as RequestContext;
-            service = new ReservationService(
-                connection as unknown as TransactionalConnection,
-                {} as unknown as DataSource,
-                administratorService as unknown as AdministratorService,
-                extensionLimitService as unknown as ReservationExtensionLimitService,
-            );
-        });
-
-        it('extends expiry on active reservations within the role limit', async () => {
-            const activeRow = { expiresAt: new Date('2026-01-01T00:00:00.000Z') };
+        it('releases active reservations, assigns a release operation id, and publishes ReservationReleasedEvent', async () => {
+            const activeRow = { id: 'res-1', status: 'active', expiresAt: new Date() };
             reservationRepo.find.mockResolvedValue([activeRow]);
 
-            await service.extendReservation(ctxWithUser, 'order-1', 2);
+            const count = await service.releaseReservations(ctx, 'order-1');
 
-            expect(activeRow.expiresAt).toEqual(new Date('2026-01-03T00:00:00.000Z'));
-            expect(reservationRepo.save).toHaveBeenCalledWith([activeRow]);
+            expect(count).toBe(1);
+            expect(reservationRepo.save).toHaveBeenCalledWith([
+                expect.objectContaining({
+                    status: 'released',
+                    erpReleaseOperationId: expect.any(String),
+                }),
+            ]);
+            expect(eventBus.publish).toHaveBeenCalledTimes(1);
+            expect(eventBus.publish.mock.calls[0][0]).toBeInstanceOf(ReservationReleasedEvent);
         });
 
-        it('rejects an extension beyond the role limit', async () => {
-            reservationRepo.find.mockResolvedValue([{ expiresAt: new Date() }]);
-            await expect(service.extendReservation(ctxWithUser, 'order-1', 10)).rejects.toThrow();
-        });
-
-        it('rejects when the role has no configured limit', async () => {
-            extensionLimitService.getLimit.mockResolvedValue(null);
-            await expect(service.extendReservation(ctxWithUser, 'order-1', 1)).rejects.toThrow();
+        it('is a no-op when there is nothing active to release', async () => {
+            reservationRepo.find.mockResolvedValue([]);
+            const count = await service.releaseReservations(ctx, 'order-1');
+            expect(count).toBe(0);
+            expect(eventBus.publish).not.toHaveBeenCalled();
         });
     });
 
-    describe('expireDueReservations', () => {
-        it('bulk-updates active, past-due reservations to expired', async () => {
-            const execute = vi.fn(async () => ({ affected: 3 }));
-            const qb = {
-                update: vi.fn().mockReturnThis(),
-                set: vi.fn().mockReturnThis(),
-                where: vi.fn().mockReturnThis(),
-                andWhere: vi.fn().mockReturnThis(),
-                execute,
-            };
-            const dataSource = {
-                getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
-            } as unknown as DataSource;
-            const svc = new ReservationService(
-                connection as unknown as TransactionalConnection,
-                dataSource,
-                mockAdministratorService,
-                mockExtensionLimitService,
+    describe('findForOrder', () => {
+        it('delegates to the repository ordered by reservedAt desc', async () => {
+            await service.findForOrder(ctx, 'order-1');
+            expect(reservationRepo.find).toHaveBeenCalledWith(
+                expect.objectContaining({ where: { orderId: 'order-1' } }),
             );
-
-            const count = await svc.expireDueReservations();
-
-            expect(qb.set).toHaveBeenCalledWith({ status: 'expired' });
-            expect(execute).toHaveBeenCalled();
-            expect(count).toBe(3);
         });
     });
 });

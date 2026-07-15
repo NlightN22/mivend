@@ -15,6 +15,7 @@
         { "path": "./sync" },
         { "path": "./erp-import" },
         { "path": "./reservation" },
+        { "path": "./moq" },
         { "path": "./versioning" },
         { "path": "./session-management" }
     ]

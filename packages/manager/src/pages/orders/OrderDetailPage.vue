@@ -32,7 +32,7 @@ const reservations = ref<OrderReservation[]>([]);
 
 // Mirrors DEFAULT_RESERVATION_DAYS in packages/plugins/reservation/src/types.ts — used only as
 // the form's initial value before an order's own customFields.reservationDays default loads.
-const FALLBACK_RESERVATION_DAYS = 3;
+const FALLBACK_RESERVATION_DAYS = 7;
 const defaultReservationDays = computed(
     () => order.value?.customFields.reservationDays ?? FALLBACK_RESERVATION_DAYS,
 );

@@ -30,6 +30,9 @@ const expiresAt = computed(() => activeReservations.value[0]?.expiresAt ?? null)
 // Hide the extend action entirely for a role with no configured limit — see
 // fetchReservationExtensionLimit's "absence-is-strict" convention.
 const canExtend = computed(() => extensionMaxDays.value !== null);
+// UI-level gate additive to the resolver's @Allow(ConfirmOrder) — see AGENTS.md, permission
+// checks belong in the UI, resolver, and service layer, never the button alone.
+const canConfirm = computed(() => authStore.hasPermission('ConfirmOrder'));
 
 onMounted(async () => {
     const roleCode = authStore.roleCode;
@@ -101,7 +104,7 @@ async function handleExtend(): Promise<void> {
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
-        <div v-if="!isConfirmed" class="reservation-panel__form">
+        <div v-if="!isConfirmed && canConfirm" class="reservation-panel__form">
             <label class="reservation-panel__label">
                 Reservation period (days)
                 <MvInput size="sm" type="number" :model-value="form.days" @update:model-value="form.days = $event" />
@@ -109,7 +112,7 @@ async function handleExtend(): Promise<void> {
             <MvButton :loading="submitting" @click="handleConfirm">Confirm order</MvButton>
         </div>
 
-        <template v-else>
+        <template v-else-if="isConfirmed">
             <div v-if="canExtend" class="reservation-panel__form">
                 <label class="reservation-panel__label">
                     Extend by (days, up to {{ extensionMaxDays }})
@@ -124,7 +127,7 @@ async function handleExtend(): Promise<void> {
                     Extend reservation
                 </MvButton>
             </div>
-            <MvButton variant="secondary" :loading="submitting" @click="handleRelease">
+            <MvButton v-if="canConfirm" variant="secondary" :loading="submitting" @click="handleRelease">
                 Release reservation
             </MvButton>
         </template>

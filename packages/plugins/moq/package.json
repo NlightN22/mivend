@@ -1,0 +1,22 @@
+{
+    "name": "@mivend/plugin-moq",
+    "version": "0.0.1",
+    "private": true,
+    "license": "GPL-3.0-or-later",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@nestjs/common": "^11.0.0",
+        "@vendure/core": "^3.6.4"
+    },
+    "devDependencies": {
+        "@vendure/common": "^3.6.4",
+        "typescript": "^5.4.0",
+        "vitest": "^4.1.9"
+    }
+}

@@ -5,6 +5,5 @@
         "outDir": "./dist",
         "rootDir": "."
     },
-    "include": ["src/**/*", "index.ts"],
-    "references": [{ "path": "../access-control" }, { "path": "../erp-order" }]
+    "include": ["src/**/*", "index.ts"]
 }

@@ -5,13 +5,17 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
+import { ReservationAvailabilityService } from './reservation-availability.service';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
+import { ReservationExtensionService } from './reservation-extension.service';
 import { ReservationService } from './reservation.service';
 
 @Resolver()
 export class ReservationResolver {
     constructor(
         private reservationService: ReservationService,
+        private availabilityService: ReservationAvailabilityService,
+        private extensionService: ReservationExtensionService,
         private extensionLimitService: ReservationExtensionLimitService,
     ) {}
 
@@ -30,7 +34,7 @@ export class ReservationResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { productVariantId: ID },
     ): Promise<number> {
-        return this.reservationService.getAvailableQuantity(ctx, args.productVariantId);
+        return this.availabilityService.getAvailableToPromise(ctx, args.productVariantId);
     }
 
     @Query()
@@ -42,13 +46,12 @@ export class ReservationResolver {
         return this.extensionLimitService.getLimit(ctx, args.roleCode);
     }
 
-    // Gated on UpdateOrder — same permission that already lets a role edit order lines
-    // (operator/manager, see infrastructure/scripts/seed-access-roles.mjs), not a new
-    // dedicated permission — confirming/releasing a reservation is part of order handling,
-    // not a separate approval-gated capability.
+    // ConfirmOrder covers both confirm and release — one staff action from the operator's
+    // perspective (see docs/order-flow.md "Permissions"). Extend stays on UpdateOrder — the
+    // doc only scopes ConfirmOrder to "confirm + release".
     @Transaction()
     @Mutation()
-    @Allow(Permission.UpdateOrder)
+    @Allow(CustomPermission.ConfirmOrder.Permission)
     async confirmOrder(
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: ID; reservationDays: number },
@@ -58,7 +61,7 @@ export class ReservationResolver {
 
     @Transaction()
     @Mutation()
-    @Allow(Permission.UpdateOrder)
+    @Allow(CustomPermission.ConfirmOrder.Permission)
     async releaseOrderReservation(
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: ID },
@@ -73,7 +76,7 @@ export class ReservationResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: ID; additionalDays: number },
     ): Promise<Reservation[]> {
-        return this.reservationService.extendReservation(ctx, args.orderId, args.additionalDays);
+        return this.extensionService.extendReservation(ctx, args.orderId, args.additionalDays);
     }
 
     @Transaction()

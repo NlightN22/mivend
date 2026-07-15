@@ -68,7 +68,10 @@ export class ProductHandler {
                         id: variants.items[0].id,
                         enabled,
                         price: priceInCents,
-                        customFields: { weight: record.weight ?? null },
+                        customFields: {
+                            weight: record.weight ?? null,
+                            multiplicity: record.multiplicity ?? null,
+                        },
                     },
                 ]);
             }

@@ -47,4 +47,17 @@ export class ProductRecordDto {
 
     @ApiPropertyOptional({ description: 'Kilograms — used by weight-tiered discount rules.' })
     weight?: number;
+
+    @ApiPropertyOptional({
+        description:
+            'Required order-quantity step (pack size) — omit entirely for products with no ' +
+            'package constraint (most SKUs). Only send this when the 1C item has a default ' +
+            'sales unit of measure set to a package ("Ед. изм. для продажи по умолчанию" = ' +
+            'упаковка) — send the RESOLVED package coefficient as a single number (e.g. 20 for ' +
+            'a 20-pack), not the two raw 1C fields (default sales UoM + package coefficient) ' +
+            'separately. Unset/0/negative on our side = no constraint (treated as a data error, ' +
+            'not enforced); 1 = no constraint; >1 = required step. See docs/order-flow.md ' +
+            '"Pack-size / MOQ".',
+    })
+    multiplicity?: number;
 }

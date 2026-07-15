@@ -70,6 +70,9 @@ importers:
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../../packages/plugins/erp-order
+            '@mivend/plugin-moq':
+                specifier: workspace:*
+                version: link:../../packages/plugins/moq
             '@mivend/plugin-popular-products':
                 specifier: workspace:*
                 version: link:../../packages/plugins/popular-products
@@ -483,6 +486,25 @@ importers:
                 specifier: ^5.4.0
                 version: 5.9.3
 
+    packages/plugins/moq:
+        dependencies:
+            '@nestjs/common':
+                specifier: ^11.0.0
+                version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)
+            '@vendure/core':
+                specifier: ^3.6.4
+                version: 3.6.4(@types/express@4.17.25)(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+        devDependencies:
+            '@vendure/common':
+                specifier: ^3.6.4
+                version: 3.6.4
+            typescript:
+                specifier: ^5.4.0
+                version: 5.9.3
+            vitest:
+                specifier: ^4.1.9
+                version: 4.1.9(@types/node@20.19.43)(vite@8.1.0(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.0))
+
     packages/plugins/popular-products:
         dependencies:
             '@nestjs/common':
@@ -562,6 +584,9 @@ importers:
             '@mivend/plugin-access-control':
                 specifier: workspace:*
                 version: link:../access-control
+            '@mivend/plugin-erp-order':
+                specifier: workspace:*
+                version: link:../erp-order
             bullmq:
                 specifier: ^5.0.0
                 version: 5.79.1
@@ -590,6 +615,9 @@ importers:
             typescript:
                 specifier: ^5.4.0
                 version: 5.9.3
+            vitest:
+                specifier: ^4.1.9
+                version: 4.1.9(@types/node@20.19.43)(vite@8.1.0(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.0))
 
     packages/plugins/search:
         dependencies:
@@ -670,6 +698,9 @@ importers:
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../erp-order
+            '@mivend/plugin-reservation':
+                specifier: workspace:*
+                version: link:../reservation
             '@nestjs/swagger':
                 specifier: ^11.0.0
                 version: 11.4.5(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.27)(reflect-metadata@0.2.2)

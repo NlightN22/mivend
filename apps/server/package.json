@@ -32,6 +32,7 @@
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
+        "@mivend/plugin-moq": "workspace:*",
         "@mivend/plugin-versioning": "workspace:*",
         "@mivend/plugin-session-management": "workspace:*"
     },

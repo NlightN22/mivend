@@ -19,6 +19,7 @@ export interface ProductRecord {
     onSale?: boolean;
     enabled?: boolean;
     weight?: number;
+    multiplicity?: number;
 }
 
 export interface CrossReferenceRecord {
