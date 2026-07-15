@@ -101,7 +101,12 @@ export class SyncService {
                 payload: entry.payload,
             });
 
-            await this.rabbitmq.publish(entry.eventType, event);
+            // Routing key = `<eventType>.<target>` — `target` was previously advisory-only
+            // metadata (never enforced at the messaging layer, every queue bound `#` and
+            // filtered in application code). Now it's the actual routing mechanism: each
+            // consumer binds only to the target patterns it cares about. See
+            // RabbitMQService.subscribe's comment for why.
+            await this.rabbitmq.publish(`${entry.eventType}.${entry.target}`, event);
             await this.dataSource.getRepository(SyncOutboxEntry).update(entry.id, {
                 deliveredAt: new Date(),
                 status: 'delivered',

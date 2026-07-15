@@ -83,13 +83,28 @@ Background worker (BullMQ)
 ### RabbitMQ routing
 
 - One **topic exchange** (`mivend.sync`).
-- Each branch has its own **durable queue** (`sync.branch-a`, `sync.branch-b`, …).
-- Routing key: `<entity>.<event>` — e.g. `product.updated`, `customer.created`.
-- The hub publishes with routing key; branches bind queues to the patterns they care about.
+- Each branch has its own **durable queue** (`sync.branch-a`, `sync.branch-b`, …); Central has its
+  own (`sync.central`) for the Branch → Central direction.
+- **Routing key: `<eventType>.<target>`** — e.g. `product.updated.all-branches`,
+  `order.created.branch-a`, `order.created.central`. `target` is the same value already stored on
+  the `sync_outbox` row, not separate metadata.
+- **Every queue binds with a specific pattern, never a bare `#`.** A branch binds to
+  `#.<own-branch-id>` and `#.all-branches`; Central binds to `#.central`. (A leading `#`, not `*`
+  — `eventType` itself already contains a dot, e.g. `order.created`, so the routing key has a
+  variable number of segments before the target suffix; `*` only matches exactly one word.)
+  "Bind everything with `#` and filter in application code" was tried first and rejected as a
+  recognized RabbitMQ anti-pattern — the broker should do the filtering it's designed for, not
+  push a hand-maintained "skip if not for me" branch into every consumer for every event type it
+  was never meant to receive (including its own self-published broadcasts, if a queue's binding
+  were wide enough to catch them).
 
 ### Branch consumer
 
 - Each branch runs a RabbitMQ consumer via `plugin-sync`.
+- Central runs its own separate consumer for the Branch → Central direction (see "Orders:
+  direction follows the instance of origin" in `docs/architecture.md`).
+- Every consumer defensively skips a message whose `sourceInstanceId` equals its own — not
+  load-bearing given the routing-key scheme above, but cheap insurance.
 - Messages are acked only after the local DB write commits successfully.
 - On failure: message is nacked with requeue; exponential backoff via dead-letter exchange.
 

@@ -3,6 +3,7 @@ import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
 
 import { ProductConsumer } from './consumers/product.consumer';
+import { CentralConsumer } from './consumers/central.consumer';
 import { OrderConsumer } from './consumers/order.consumer';
 import { ReservationConsumer } from './consumers/reservation.consumer';
 import { AdministratorSyncProducer } from './consumers/administrator-sync.producer';
@@ -28,6 +29,7 @@ import type { SyncPluginOptions } from './types';
         SyncService,
         OutboxWorker,
         ProductConsumer,
+        CentralConsumer,
         OrderConsumer,
         ReservationConsumer,
         AdministratorSyncProducer,

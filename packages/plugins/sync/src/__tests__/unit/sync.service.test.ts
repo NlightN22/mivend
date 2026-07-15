@@ -85,6 +85,7 @@ describe('SyncService', () => {
                 eventId: randomUUID(),
                 eventType: 'product.updated',
                 payload: { productId: 'p-1' },
+                target: 'all-branches',
                 createdAt: new Date(),
                 retryCount: 0,
             };
@@ -102,7 +103,7 @@ describe('SyncService', () => {
             await service.processOutbox();
 
             expect(publishMock).toHaveBeenCalledWith(
-                'product.updated',
+                'product.updated.all-branches',
                 expect.objectContaining({ eventId: entry.eventId }),
             );
             expect(mockOutboxRepo.update).toHaveBeenCalledWith(
@@ -117,6 +118,7 @@ describe('SyncService', () => {
                 eventId: randomUUID(),
                 eventType: 'product.updated',
                 payload: { productId: 'p-2' },
+                target: 'all-branches',
                 createdAt: new Date(),
                 retryCount: 0,
             };
@@ -150,6 +152,7 @@ describe('SyncService', () => {
                 eventId: randomUUID(),
                 eventType: 'product.updated',
                 payload: { productId: 'p-3' },
+                target: 'all-branches',
                 createdAt: new Date(),
                 retryCount: MAX_RETRY_DEFAULT - 1,
             };

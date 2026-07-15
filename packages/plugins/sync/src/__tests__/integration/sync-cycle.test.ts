@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { DataSource } from 'typeorm';
 
 import { ProductConsumer } from '../../consumers/product.consumer';
+import { CentralConsumer } from '../../consumers/central.consumer';
 import { SyncOutboxEntry } from '../../entities/sync-outbox.entity';
 import { SyncProcessedEvent } from '../../entities/sync-processed-event.entity';
 import { RabbitMQService } from '../../rabbitmq.service';
@@ -45,7 +46,13 @@ let dataSource: DataSource;
 let hubRabbitMQ: RabbitMQService;
 let branchRabbitMQ: RabbitMQService;
 let syncService: SyncService;
+let branchSyncService: SyncService;
 let consumer: ProductConsumer;
+let centralConsumer: CentralConsumer;
+let centralOrderSyncMock: {
+    applyCreate: ReturnType<typeof vi.fn>;
+    applyUpdate: ReturnType<typeof vi.fn>;
+};
 
 beforeAll(async () => {
     dataSource = new DataSource({
@@ -77,6 +84,16 @@ beforeAll(async () => {
     await branchRabbitMQ.connect();
 
     syncService = new SyncService(dataSource, hubRabbitMQ, HUB_OPTIONS, mockLogger as never);
+    // Publishes as if from branch-a (sourceInstanceId='branch-a') — used to simulate a
+    // branch-originated event reaching Central. Using `syncService` (sourceInstanceId='hub')
+    // for that would make the event look like Central's own echo of itself, since
+    // CentralConsumer's self-echo guard compares sourceInstanceId against its own instanceId.
+    branchSyncService = new SyncService(
+        dataSource,
+        branchRabbitMQ,
+        BRANCH_OPTIONS,
+        mockLogger as never,
+    );
 
     consumer = new ProductConsumer(
         branchRabbitMQ,
@@ -87,6 +104,19 @@ beforeAll(async () => {
         { applyCreate: vi.fn(), applyUpdate: vi.fn() } as never,
     );
     await consumer.onModuleInit();
+
+    centralOrderSyncMock = {
+        applyCreate: vi.fn(async () => undefined),
+        applyUpdate: vi.fn(async () => undefined),
+    };
+    centralConsumer = new CentralConsumer(
+        hubRabbitMQ,
+        dataSource,
+        HUB_OPTIONS,
+        mockLogger as never,
+        centralOrderSyncMock as never,
+    );
+    await centralConsumer.onModuleInit();
 });
 
 afterEach(async () => {
@@ -95,6 +125,7 @@ afterEach(async () => {
     await dataSource.query(`DELETE FROM product`);
     await branchRabbitMQ.requireChannel().purgeQueue('sync.branch-a');
     await branchRabbitMQ.requireChannel().purgeQueue('sync.dead-letters');
+    await hubRabbitMQ.requireChannel().purgeQueue('sync.hub');
     await hubRabbitMQ
         .requireChannel()
         .deleteQueue('test.poison-message')
@@ -228,8 +259,8 @@ describe('branch consumer', () => {
 
         const ch = hubRabbitMQ.requireChannel();
         const content = Buffer.from(JSON.stringify(event));
-        ch.publish(EXCHANGE, 'product.updated', content, { persistent: true });
-        ch.publish(EXCHANGE, 'product.updated', content, { persistent: true });
+        ch.publish(EXCHANGE, 'product.updated.all-branches', content, { persistent: true });
+        ch.publish(EXCHANGE, 'product.updated.all-branches', content, { persistent: true });
 
         await waitFor(async () => {
             const count = await dataSource.getRepository(SyncProcessedEvent).countBy({ eventId });
@@ -243,7 +274,7 @@ describe('branch consumer', () => {
     it('invalid schema message goes to dead-letters without requeue', async () => {
         const ch = hubRabbitMQ.requireChannel();
         const invalid = Buffer.from(JSON.stringify({ not: 'a valid sync event' }));
-        ch.publish(EXCHANGE, 'product.updated', invalid, { persistent: true });
+        ch.publish(EXCHANGE, 'product.updated.all-branches', invalid, { persistent: true });
 
         await waitFor(async () => {
             const q = await branchRabbitMQ.requireChannel().checkQueue('sync.dead-letters');
@@ -341,5 +372,81 @@ describe('batch processing', () => {
             .getRepository(SyncOutboxEntry)
             .countBy({ status: 'delivered' });
         expect(delivered).toBe(3);
+    });
+});
+
+// ─── Central consumer (Branch → Central) ─────────────────────────────────────
+// Central previously never subscribed to RabbitMQ at all (only published) — a branch-originated
+// event had nowhere to land. These tests exercise the routing-key redesign this was built on:
+// each queue binds only to the target patterns it actually needs, not a bare `#` — see
+// RabbitMQService.subscribe's comment for why "bind everything and filter in code" was rejected.
+describe('central consumer', () => {
+    it('applies an order.created event targeted at "central" (a branch-originated order)', async () => {
+        const eventId = randomUUID();
+        await dataSource.transaction(em =>
+            branchSyncService.writeToOutbox(
+                em,
+                {
+                    eventId,
+                    eventType: 'order.created',
+                    payload: {
+                        sourceOrderId: 'branch-order-1',
+                        orderCode: 'ORD-BRANCH-1',
+                        customerEmail: 'ivan@example.com',
+                        branchId: 'branch-a',
+                        lines: [{ sku: 'SKU-1', quantity: 1, unitPrice: 500 }],
+                    },
+                },
+                'central',
+            ),
+        );
+
+        await branchSyncService.processOutbox();
+
+        await waitFor(async () => {
+            const count = await dataSource.getRepository(SyncProcessedEvent).countBy({ eventId });
+            return count === 1;
+        });
+
+        expect(centralOrderSyncMock.applyCreate).toHaveBeenCalledWith(
+            expect.objectContaining({
+                payload: expect.objectContaining({ sourceOrderId: 'branch-order-1' }),
+            }),
+        );
+    });
+
+    it('never receives an administrator.created broadcast — bound only to *.central, not #', async () => {
+        const ch = hubRabbitMQ.requireChannel();
+        const event = {
+            eventId: randomUUID(),
+            eventType: 'administrator.created' as const,
+            sourceInstanceId: 'hub',
+            timestamp: new Date().toISOString(),
+            payload: {
+                administratorId: 'a1',
+                emailAddress: 'a@example.com',
+                firstName: 'A',
+                lastName: 'B',
+                roleCodes: ['operator'],
+                passwordHash: 'hash',
+                branchId: null,
+            },
+        };
+        ch.publish(
+            EXCHANGE,
+            'administrator.created.all-branches',
+            Buffer.from(JSON.stringify(event)),
+            {
+                persistent: true,
+            },
+        );
+
+        // Give it a moment to (not) arrive — there's no positive event to waitFor here, so a
+        // short fixed wait is the only option; the real assertion is the queue's message count.
+        await new Promise(r => setTimeout(r, 500));
+
+        expect(centralOrderSyncMock.applyCreate).not.toHaveBeenCalled();
+        const centralQ = await hubRabbitMQ.requireChannel().checkQueue('sync.hub');
+        expect(centralQ.messageCount).toBe(0);
     });
 });

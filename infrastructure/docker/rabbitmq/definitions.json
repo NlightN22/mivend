@@ -43,6 +43,13 @@
             "arguments": { "x-dead-letter-exchange": "mivend.sync.dlx" }
         },
         {
+            "name": "sync.central",
+            "vhost": "/",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": { "x-dead-letter-exchange": "mivend.sync.dlx" }
+        },
+        {
             "name": "sync.dead-letters",
             "vhost": "/",
             "durable": true,
@@ -76,7 +83,23 @@
             "vhost": "/",
             "destination": "sync.branch-a",
             "destination_type": "queue",
-            "routing_key": "#",
+            "routing_key": "#.branch-a",
+            "arguments": {}
+        },
+        {
+            "source": "mivend.sync",
+            "vhost": "/",
+            "destination": "sync.branch-a",
+            "destination_type": "queue",
+            "routing_key": "#.all-branches",
+            "arguments": {}
+        },
+        {
+            "source": "mivend.sync",
+            "vhost": "/",
+            "destination": "sync.central",
+            "destination_type": "queue",
+            "routing_key": "#.central",
             "arguments": {}
         },
         {

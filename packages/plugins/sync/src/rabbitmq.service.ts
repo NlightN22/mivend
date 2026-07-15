@@ -66,9 +66,21 @@ export class RabbitMQService implements OnModuleDestroy {
         ch.publish(this.exchange, routingKey, content, { persistent: true });
     }
 
+    // bindingKeys: one or more topic patterns (e.g. `#.branch-a`, `#.all-branches`) — a leading
+    // `#` (zero-or-more words), not `*` (exactly one word): eventType itself already contains a
+    // dot (e.g. `order.created`), so the full routing key `<eventType>.<target>` (see
+    // SyncService.publishEntry) has a variable number of segments before the target suffix.
+    // Never a bare `#` on its own — each queue binds only to the target patterns it actually
+    // cares about. This is deliberate:
+    // "bind everything with # and filter in application code" is a recognized RabbitMQ
+    // anti-pattern (the broker should do the filtering it's designed for), and at this scale
+    // the real cost isn't throughput — it's every consumer needing a hand-maintained "skip if
+    // not for me" branch for event types it was never meant to receive, including its own
+    // self-published broadcasts (a central instance binding `#` would receive back every event
+    // it just published to its branches).
     async subscribe(
         queueName: string,
-        bindingKey: string,
+        bindingKeys: string | string[],
         handler: (raw: unknown) => Promise<void>,
     ): Promise<void> {
         await this.ready;
@@ -77,7 +89,9 @@ export class RabbitMQService implements OnModuleDestroy {
             durable: true,
             arguments: { 'x-dead-letter-exchange': this.dlx },
         });
-        await ch.bindQueue(queueName, this.exchange, bindingKey);
+        for (const bindingKey of Array.isArray(bindingKeys) ? bindingKeys : [bindingKeys]) {
+            await ch.bindQueue(queueName, this.exchange, bindingKey);
+        }
         await ch.consume(queueName, async msg => {
             if (!msg) return;
 

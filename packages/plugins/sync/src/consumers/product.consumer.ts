@@ -25,12 +25,24 @@ export class ProductConsumer implements OnModuleInit {
     async onModuleInit(): Promise<void> {
         if (this.options.instanceType !== 'branch') return;
         const queueName = `sync.${this.options.instanceId}`;
-        await this.rabbitmq.subscribe(queueName, '#', raw => this.handleRaw(raw));
+        // Bind only to events actually targeted at this branch specifically or at all branches
+        // broadcast — never a bare `#` (see RabbitMQService.subscribe's comment on why).
+        await this.rabbitmq.subscribe(
+            queueName,
+            [`#.${this.options.instanceId}`, '#.all-branches'],
+            raw => this.handleRaw(raw),
+        );
         this.logger.info(`ProductConsumer subscribed to ${queueName}`);
     }
 
     private async handleRaw(raw: unknown): Promise<void> {
         const event = SyncEventSchema.parse(raw);
+
+        // Defense-in-depth, not load-bearing: correct routing-key binding already makes this
+        // instance receiving its own published event structurally impossible for every event
+        // type today. Kept as a cheap guard in case a future event type's target ever equals
+        // the publishing instance's own id.
+        if (event.sourceInstanceId === this.options.instanceId) return;
 
         switch (event.eventType) {
             case 'product.created':
