@@ -490,7 +490,7 @@ The only exception: data that structurally cannot be expressed as an import reco
 
 If a new data type needs seeding — **add a record type to `erp-import` first**, then use it from the seed script.
 
-Full local seeding order (also what `dev-fresh.sh` runs): `make seed-access-roles` → `make seed` → `make seed-approvals`. The last one depends on roles/administrators/counterparty `cnt-001` already existing, so it must run last.
+Use **`make seed-all`** to run the full local seeding order in one command: `seed-access-roles` → `seed` → `seed-approvals` (also what `dev-fresh.sh` runs). The three targets stay separate (and order-dependent — `seed-approvals` needs roles/administrators/counterparty `cnt-001` already existing) only for the occasional case of re-running just one without wiping the others.
 
 ---
 

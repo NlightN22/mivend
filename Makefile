@@ -10,7 +10,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
         e2e e2e-ui e2e-report \
         docker-build docker-push \
         prod-up prod-down \
-        dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals \
+        dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals seed-all \
         storybook storefront storefront-dev
 
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
@@ -79,6 +79,12 @@ seed-approvals:
 	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
 	@echo "Server ready. Seeding approval workflow requests..."
 	node infrastructure/scripts/seed-approvals.mjs
+
+# One command for the full local seeding order (roles → ERP data → approval requests — this
+# exact order matters, see seed-approvals' own comment above). This is what you want by default;
+# the three targets above stay separate only because occasionally you need to re-run just one
+# (e.g. re-seeding ERP data without wiping roles/administrators).
+seed-all: seed-access-roles seed seed-approvals
 
 # ── UI development ─────────────────────────────────────────────────────────────
 
