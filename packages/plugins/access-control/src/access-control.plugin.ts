@@ -114,6 +114,18 @@ const adminApiSchema = gql`
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Job position' }],
             },
+            {
+                // Owned by @mivend/plugin-sync (registered here since this is where
+                // Administrator's customFields array already lives — see AGENTS.md's
+                // declaration-merging precedent for reading a field without a package
+                // dependency). Branch-only: correlates a branch's read-only Administrator
+                // replica with its Central source record. Always null on Central itself.
+                // See docs/architecture.md's "User identity: Central is master, not federated".
+                name: 'sourceAdministratorId',
+                type: 'string' as const,
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Source Administrator ID' }],
+            },
         ];
         return config;
     },

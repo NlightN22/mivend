@@ -95,6 +95,23 @@ const ReservationReleasedPayload = z.object({
     orderCode: z.string(),
 });
 
+// Central is the master for Administrator identity — branches hold a read-only replica
+// (including the password hash, so branch login works fully offline). See
+// docs/architecture.md's "User identity: Central is master, not federated".
+const AdministratorSyncPayload = z.object({
+    administratorId: z.string(),
+    emailAddress: z.string().email(),
+    firstName: z.string(),
+    lastName: z.string(),
+    roleCodes: z.array(z.string()),
+    passwordHash: z.string(),
+    branchId: z.string().nullable(),
+});
+
+const AdministratorDeactivatedPayload = z.object({
+    administratorId: z.string(),
+});
+
 // ─── Discriminated union — THE CONTRACT ──────────────────────────────────────
 // This is the single source of truth for all sync event types.
 // Every consumer MUST handle every variant — enforced at compile time via exhaustive switch.
@@ -123,6 +140,18 @@ export const SyncEventSchema = z.discriminatedUnion('eventType', [
     Envelope.extend({
         eventType: z.literal('reservation.released'),
         payload: ReservationReleasedPayload,
+    }),
+    Envelope.extend({
+        eventType: z.literal('administrator.created'),
+        payload: AdministratorSyncPayload,
+    }),
+    Envelope.extend({
+        eventType: z.literal('administrator.updated'),
+        payload: AdministratorSyncPayload,
+    }),
+    Envelope.extend({
+        eventType: z.literal('administrator.deactivated'),
+        payload: AdministratorDeactivatedPayload,
     }),
 ]);
 

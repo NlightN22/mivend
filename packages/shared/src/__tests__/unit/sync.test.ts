@@ -120,6 +120,12 @@ function _exhaustiveConsumerExample(event: SyncEvent): string {
             return 'ok';
         case 'reservation.released':
             return 'ok';
+        case 'administrator.created':
+            return 'ok';
+        case 'administrator.updated':
+            return 'ok';
+        case 'administrator.deactivated':
+            return 'ok';
         default:
             return assertNever(event);
     }

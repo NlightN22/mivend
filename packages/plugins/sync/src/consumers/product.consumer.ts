@@ -3,6 +3,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { SyncEventSchema, assertNever } from 'shared';
 import type { SyncEventByType } from 'shared';
 
+import { AdministratorSyncService } from '../administrator-sync.service';
 import { SyncProcessedEvent } from '../entities/sync-processed-event.entity';
 import { RabbitMQService } from '../rabbitmq.service';
 import { SyncLogger } from '../sync-logger';
@@ -16,6 +17,7 @@ export class ProductConsumer implements OnModuleInit {
         private readonly dataSource: DataSource,
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
         private readonly logger: SyncLogger,
+        private readonly administratorSyncService: AdministratorSyncService,
     ) {}
 
     async onModuleInit(): Promise<void> {
@@ -37,6 +39,13 @@ export class ProductConsumer implements OnModuleInit {
                 break;
             case 'product.deleted':
                 await this.handleProductDeleted(event);
+                break;
+            case 'administrator.created':
+            case 'administrator.updated':
+                await this.handleAdministratorUpsert(event);
+                break;
+            case 'administrator.deactivated':
+                await this.handleAdministratorDeactivated(event);
                 break;
             case 'price.updated':
             case 'customer.created':
@@ -97,5 +106,25 @@ export class ProductConsumer implements OnModuleInit {
             ]);
         });
         this.logger.info(`Applied product.deleted [${event.payload.productId}]`);
+    }
+
+    private async handleAdministratorUpsert(
+        event: SyncEventByType<'administrator.created'> | SyncEventByType<'administrator.updated'>,
+    ): Promise<void> {
+        await this.dataSource.transaction(async em => {
+            if (!(await this.tryMarkProcessed(em, event.eventId))) return;
+            await this.administratorSyncService.applyUpsert(em, event);
+        });
+        this.logger.info(`Applied ${event.eventType} [${event.payload.administratorId}]`);
+    }
+
+    private async handleAdministratorDeactivated(
+        event: SyncEventByType<'administrator.deactivated'>,
+    ): Promise<void> {
+        await this.dataSource.transaction(async em => {
+            if (!(await this.tryMarkProcessed(em, event.eventId))) return;
+            await this.administratorSyncService.applyDeactivation(em, event);
+        });
+        this.logger.info(`Applied administrator.deactivated [${event.payload.administratorId}]`);
     }
 }

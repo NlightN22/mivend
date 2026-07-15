@@ -5,6 +5,8 @@ import { ReservationPlugin } from '@mivend/plugin-reservation';
 import { ProductConsumer } from './consumers/product.consumer';
 import { OrderConsumer } from './consumers/order.consumer';
 import { ReservationConsumer } from './consumers/reservation.consumer';
+import { AdministratorSyncProducer } from './consumers/administrator-sync.producer';
+import { AdministratorSyncService } from './administrator-sync.service';
 import { ErpCallbackController } from './erp-callback.controller';
 import { ErpOrderStatusController } from './erp-order-status.controller';
 import { SyncOutboxEntry } from './entities/sync-outbox.entity';
@@ -27,6 +29,8 @@ import type { SyncPluginOptions } from './types';
         ProductConsumer,
         OrderConsumer,
         ReservationConsumer,
+        AdministratorSyncProducer,
+        AdministratorSyncService,
         {
             provide: SYNC_PLUGIN_OPTIONS,
             useFactory: (): SyncPluginOptions => SyncPlugin.options,

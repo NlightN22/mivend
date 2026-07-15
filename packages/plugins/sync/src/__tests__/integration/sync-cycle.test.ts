@@ -78,7 +78,13 @@ beforeAll(async () => {
 
     syncService = new SyncService(dataSource, hubRabbitMQ, HUB_OPTIONS, mockLogger as never);
 
-    consumer = new ProductConsumer(branchRabbitMQ, dataSource, BRANCH_OPTIONS, mockLogger as never);
+    consumer = new ProductConsumer(
+        branchRabbitMQ,
+        dataSource,
+        BRANCH_OPTIONS,
+        mockLogger as never,
+        { applyUpsert: vi.fn(), applyDeactivation: vi.fn() } as never,
+    );
     await consumer.onModuleInit();
 });
 
