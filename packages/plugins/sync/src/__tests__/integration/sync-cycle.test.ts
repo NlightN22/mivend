@@ -84,6 +84,7 @@ beforeAll(async () => {
         BRANCH_OPTIONS,
         mockLogger as never,
         { applyUpsert: vi.fn(), applyDeactivation: vi.fn() } as never,
+        { applyCreate: vi.fn(), applyUpdate: vi.fn() } as never,
     );
     await consumer.onModuleInit();
 });

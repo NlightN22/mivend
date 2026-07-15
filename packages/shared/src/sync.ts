@@ -56,13 +56,22 @@ const CreditTermsUpdatedPayload = z.object({
     paymentDeferralDays: z.number().int().nonnegative(),
 });
 
+// Correlation keys are stable, cross-instance identifiers — never the sending instance's native
+// auto-increment ids, which are per-instance and meaningless on the other side (same class of
+// gotcha as Administrator.id, see AGENTS.md). Customer is correlated by emailAddress and
+// ProductVariant by sku — both already globally unique, ERP-sourced identifiers used as the
+// correlation key elsewhere in this codebase (CustomerHandler, PriceHandler) — no new field
+// needed for either. The order itself has no such natural key, so `sourceOrderId` (the
+// originating instance's native Order id) is carried explicitly and stored on the receiving
+// side's local Order.customFields.sourceOrderId for idempotent upsert.
 const OrderCreatedPayload = z.object({
-    orderId: z.string(),
-    customerId: z.string(),
+    sourceOrderId: z.string(),
+    orderCode: z.string(),
+    customerEmail: z.string().email(),
     branchId: z.string(),
     lines: z.array(
         z.object({
-            variantId: z.string(),
+            sku: z.string(),
             quantity: z.number().int().positive(),
             unitPrice: z.number().int().nonnegative(),
         }),
@@ -70,7 +79,7 @@ const OrderCreatedPayload = z.object({
 });
 
 const OrderUpdatedPayload = z.object({
-    orderId: z.string(),
+    sourceOrderId: z.string(),
     state: z.string(),
 });
 

@@ -1,5 +1,18 @@
 import type { ErpAdapter } from './erp-adapter.interface';
 
+declare module '@vendure/core' {
+    interface CustomOrderFields {
+        // Owned by @mivend/plugin-erp-order (declaration merging) — read here without taking a
+        // package dependency on erp-order, same established pattern as plugin-moq's
+        // multiplicity field (see plugin-reservation/src/types.ts).
+        branchId?: string | null;
+        // Owned by this plugin — see order.consumer.ts / administrator-sync.service.ts's
+        // sibling pattern (sourceAdministratorId) and docs/architecture.md's "receiving instance
+        // gets a full local Order copy".
+        sourceOrderId?: string | null;
+    }
+}
+
 export interface RabbitMQConfig {
     url: string;
     exchange?: string;

@@ -4,6 +4,7 @@ import { SyncEventSchema, assertNever } from 'shared';
 import type { SyncEventByType } from 'shared';
 
 import { AdministratorSyncService } from '../administrator-sync.service';
+import { OrderSyncService } from '../order-sync.service';
 import { SyncProcessedEvent } from '../entities/sync-processed-event.entity';
 import { RabbitMQService } from '../rabbitmq.service';
 import { SyncLogger } from '../sync-logger';
@@ -18,6 +19,7 @@ export class ProductConsumer implements OnModuleInit {
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
         private readonly logger: SyncLogger,
         private readonly administratorSyncService: AdministratorSyncService,
+        private readonly orderSyncService: OrderSyncService,
     ) {}
 
     async onModuleInit(): Promise<void> {
@@ -47,12 +49,16 @@ export class ProductConsumer implements OnModuleInit {
             case 'administrator.deactivated':
                 await this.handleAdministratorDeactivated(event);
                 break;
+            case 'order.created':
+                await this.handleOrderCreated(event);
+                break;
+            case 'order.updated':
+                await this.handleOrderUpdated(event);
+                break;
             case 'price.updated':
             case 'customer.created':
             case 'customer.updated':
             case 'credit-terms.updated':
-            case 'order.created':
-            case 'order.updated':
             case 'inventory.updated':
             case 'reservation.created':
             case 'reservation.released':
@@ -126,5 +132,27 @@ export class ProductConsumer implements OnModuleInit {
             await this.administratorSyncService.applyDeactivation(em, event);
         });
         this.logger.info(`Applied administrator.deactivated [${event.payload.administratorId}]`);
+    }
+
+    // OrderSyncService goes through Vendure's real OrderService (create/addItemToOrder/
+    // transitionToState), which manages its own persistence via the RequestContext it builds —
+    // it does not participate in the raw `em` used elsewhere in this file. The idempotency
+    // marker still gets its own small transaction first, same guarantee as every other handler.
+    private async handleOrderCreated(event: SyncEventByType<'order.created'>): Promise<void> {
+        const isNew = await this.dataSource.transaction(em =>
+            this.tryMarkProcessed(em, event.eventId),
+        );
+        if (!isNew) return;
+        await this.orderSyncService.applyCreate(event);
+        this.logger.info(`Applied order.created [${event.payload.sourceOrderId}]`);
+    }
+
+    private async handleOrderUpdated(event: SyncEventByType<'order.updated'>): Promise<void> {
+        const isNew = await this.dataSource.transaction(em =>
+            this.tryMarkProcessed(em, event.eventId),
+        );
+        if (!isNew) return;
+        await this.orderSyncService.applyUpdate(event);
+        this.logger.info(`Applied order.updated [${event.payload.sourceOrderId}]`);
     }
 }

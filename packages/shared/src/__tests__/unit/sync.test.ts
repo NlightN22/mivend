@@ -74,10 +74,11 @@ describe('SyncEventByType', () => {
             sourceInstanceId: 'branch-a',
             timestamp: '2026-01-01T00:00:00.000Z',
             payload: {
-                orderId: 'o1',
-                customerId: 'c1',
+                sourceOrderId: 'o1',
+                orderCode: 'ORD-1',
+                customerEmail: 'c1@example.com',
                 branchId: 'branch-a',
-                lines: [{ variantId: 'v1', quantity: 2, unitPrice: 5000 }],
+                lines: [{ sku: 'v1', quantity: 2, unitPrice: 5000 }],
             },
         };
         expect(event.payload.lines).toHaveLength(1);

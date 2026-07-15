@@ -120,6 +120,17 @@ narrower and already enforceable today: **whichever instance receives the write 
 outbox row and is the conflict owner for that order** — direction is a per-row fact
 (`sourceInstanceId`), not a per-data-type constant.
 
+**The receiving instance gets a full local `Order` copy, not a lighter fulfillment-only
+projection.** The point of syncing an order at all is so the receiving side (a branch fulfilling
+a Central-originated order, or Central aggregating a branch-originated one) interacts with it
+through the exact same Vendure `Order` APIs as any locally-placed order — order status
+transitions, reservations, everything — rather than a special-cased read-only summary object.
+Status changes are themselves synced afterward as `order.updated` events against the same
+object, following the same origin-owns-the-write rule as creation. (`OrderConsumer` in
+`packages/plugins/sync` implements the producer side of this — writing `order.created` to the
+outbox with the correct target per the rule above; actually applying the event on the receiving
+side, i.e. writing the local `Order` copy, is not implemented yet.)
+
 ### Storefront hosting: Central-only, not per-branch
 
 The customer-facing Storefront (`packages/storefront`) runs as a **single Central-hosted

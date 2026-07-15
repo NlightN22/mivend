@@ -17,11 +17,14 @@ import type { SyncPluginOptions } from '../types';
 //   - Placed on a Branch (a local operator, including fully offline) → target is 'central' for
 //     aggregation/reporting, matching the pre-existing Branch → Central → ERP flow.
 //
-// What this does NOT do yet: apply the event on the receiving side (create a local record a
-// branch or Central would act on). That's a genuine open design question — does a branch need a
-// full local copy of the Order, or a lighter fulfillment-only projection (order code, lines,
-// branchId)? — not yet decided, tracked alongside issue #43 (most SyncEventSchema event types
-// still have no real outbound producer). This closes the producer half only.
+// What this does NOT do yet: apply the event on the receiving side. Decided: the receiving
+// instance gets a FULL local Order copy (not a lighter fulfillment-only projection) — the whole
+// point is that a branch (or Central) interacts with a synced order exactly like any other
+// local order, through the same Vendure Order APIs. Status changes are themselves synced as
+// order.updated events on the same object (same sourceInstanceId-owns-the-write-until-acked
+// rule as creation). Applying this — actually writing the local Order — is not implemented yet;
+// tracked alongside issue #43 (most SyncEventSchema event types still have no real outbound
+// producer). This closes the producer half only.
 @Injectable()
 export class OrderConsumer implements OnApplicationBootstrap {
     private readonly logger = new Logger(OrderConsumer.name);
@@ -40,13 +43,18 @@ export class OrderConsumer implements OnApplicationBootstrap {
     private async handle(event: OrderReadyForErpEvent): Promise<void> {
         const order = await this.dataSource.getRepository(Order).findOne({
             where: { id: event.orderId },
-            relations: ['lines'],
+            relations: ['lines', 'lines.productVariant', 'customer'],
         });
         if (!order) {
             this.logger.warn(`OrderReadyForErpEvent for missing order id=${event.orderId}`);
             return;
         }
-        if (!order.customerId) {
+        // This order is itself a replica received via sync (OrderSyncService stamps
+        // sourceOrderId on write) — never re-publish it, or a Central↔Branch order would
+        // ping-pong forever between the two instances.
+        if (order.customFields.sourceOrderId) return;
+        const customer = order.customer;
+        if (!customer) {
             this.logger.warn(`Order ${order.code} has no customer — skipping sync`);
             return;
         }
@@ -62,11 +70,12 @@ export class OrderConsumer implements OnApplicationBootstrap {
                 {
                     eventType: 'order.created',
                     payload: {
-                        orderId: String(order.id),
-                        customerId: String(order.customerId),
+                        sourceOrderId: String(order.id),
+                        orderCode: order.code,
+                        customerEmail: customer.emailAddress,
                         branchId: order.customFields.branchId ?? this.options.instanceId,
                         lines: order.lines.map(line => ({
-                            variantId: String(line.productVariantId),
+                            sku: line.productVariant.sku,
                             quantity: line.quantity,
                             unitPrice: line.proratedUnitPriceWithTax,
                         })),

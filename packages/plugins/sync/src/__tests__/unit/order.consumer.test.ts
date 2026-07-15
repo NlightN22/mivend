@@ -22,9 +22,15 @@ function makeOrder(overrides: Partial<Record<string, unknown>> = {}): Record<str
     return {
         id: 'order-1',
         code: 'ORD-1',
-        customerId: 'customer-1',
+        customer: { emailAddress: 'ivan@example.com' },
         customFields: { branchId: 'branch-a' },
-        lines: [{ productVariantId: 'variant-1', quantity: 2, proratedUnitPriceWithTax: 1000 }],
+        lines: [
+            {
+                quantity: 2,
+                proratedUnitPriceWithTax: 1000,
+                productVariant: { sku: 'SKU-1' },
+            },
+        ],
         ...overrides,
     };
 }
@@ -77,10 +83,11 @@ describe('OrderConsumer', () => {
             expect.objectContaining({
                 eventType: 'order.created',
                 payload: expect.objectContaining({
-                    orderId: 'order-1',
-                    customerId: 'customer-1',
+                    sourceOrderId: 'order-1',
+                    orderCode: 'ORD-1',
+                    customerEmail: 'ivan@example.com',
                     branchId: 'branch-a',
-                    lines: [{ variantId: 'variant-1', quantity: 2, unitPrice: 1000 }],
+                    lines: [{ sku: 'SKU-1', quantity: 2, unitPrice: 1000 }],
                 }),
             }),
             'branch-a',
@@ -116,7 +123,7 @@ describe('OrderConsumer', () => {
     });
 
     it('skips an order with no customer', async () => {
-        findOne.mockResolvedValue(makeOrder({ customerId: null }));
+        findOne.mockResolvedValue(makeOrder({ customer: undefined }));
         makeConsumer(CENTRAL_OPTIONS);
         const handler = subscribers.get(OrderReadyForErpEvent)!;
 
@@ -133,6 +140,18 @@ describe('OrderConsumer', () => {
         await expect(
             handler(new OrderReadyForErpEvent({} as never, 'order-1', 'ORD-1')),
         ).resolves.toBeUndefined();
+        expect(syncService.writeToOutbox).not.toHaveBeenCalled();
+    });
+
+    it('never re-publishes an order that is itself a sync replica (has sourceOrderId set)', async () => {
+        findOne.mockResolvedValue(
+            makeOrder({ customFields: { branchId: 'branch-a', sourceOrderId: 'central-order-9' } }),
+        );
+        makeConsumer(BRANCH_OPTIONS);
+        const handler = subscribers.get(OrderReadyForErpEvent)!;
+
+        await handler(new OrderReadyForErpEvent({} as never, 'order-1', 'ORD-1'));
+
         expect(syncService.writeToOutbox).not.toHaveBeenCalled();
     });
 });

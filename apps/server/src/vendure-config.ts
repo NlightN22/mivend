@@ -90,6 +90,16 @@ export const config: VendureConfig = {
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Servicing Branch' }],
             },
+            {
+                // Correlates a synced order's local copy with its origin instance's native
+                // Order id — set only on the RECEIVING side (the instance this order was
+                // replicated onto), never on the originating instance itself. See
+                // docs/architecture.md's "receiving instance gets a full local Order copy".
+                name: 'sourceOrderId',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Source Order ID' }],
+            },
         ],
         Product: [
             {
