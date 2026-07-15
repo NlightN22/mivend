@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-// Manager-only info that MvProductRow itself has no concept of — additional price-type
-// columns beyond the single "base" price already shown by the row, and the confidential
-// floor price (present only for callers with ReadFloorPrice — see api/catalog.ts
-// fetchPriceEntriesForVariants, which returns null on a forbidden lookup).
+// Manager-only info that MvProductRow itself has no first-class concept of — additional
+// price-type columns beyond the single "base" price already shown by the row. Floor price
+// is a dedicated MvProductRow column now (showFloorPrice/floorPrice props), not rendered
+// here — see CatalogPage.vue.
 const props = defineProps<{
     variantId: string;
     extraPriceColumns: { priceTypeCode: string; label: string; prices: Map<string, number> }[];
-    floorPrices: Map<string, number> | null;
 }>();
 
 function money(amount: number): string {
@@ -22,10 +21,6 @@ const rows = computed(() => {
     for (const col of props.extraPriceColumns) {
         const price = col.prices.get(props.variantId);
         if (price !== undefined) out.push({ label: col.label, value: money(price) });
-    }
-    if (props.floorPrices) {
-        const floor = props.floorPrices.get(props.variantId);
-        out.push({ label: 'Floor price', value: floor !== undefined ? money(floor) : '—' });
     }
     return out;
 });

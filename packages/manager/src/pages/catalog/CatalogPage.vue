@@ -170,6 +170,8 @@ loadAll();
                             currency="USD"
                             :show-favorite="false"
                             :show-actions="false"
+                            :show-floor-price="floorPrices !== null"
+                            :floor-price="floorPrices?.get(item.productVariantId)"
                         >
                             <template #image>
                                 <img
@@ -184,7 +186,6 @@ loadAll();
                         <CatalogRowExtras
                             :variant-id="item.productVariantId"
                             :extra-price-columns="extraPriceColumns"
-                            :floor-prices="floorPrices"
                         />
                     </div>
                     <p v-if="!items.length" class="catalog-page__empty">No products match your filters</p>

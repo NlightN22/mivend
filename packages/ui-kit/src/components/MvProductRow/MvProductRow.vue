@@ -13,6 +13,13 @@ interface Props {
   price?: number;
   customerPrice?: number;
   oldPrice?: number;
+  // Internal staff-only field (manager portal Catalog) — never passed by the storefront.
+  // showFloorPrice controls whether the column exists at all (a permission check, the same
+  // for every row in a list — set once by the caller, not per-row), so the column stays
+  // aligned across rows even when a given SKU has no floor price yet (renders "—" for that
+  // row instead of the column disappearing/reappearing). floorPrice is just this row's value.
+  showFloorPrice?: boolean;
+  floorPrice?: number;
   discountTiers?: DiscountTier[];
   discountTitle?: string;
   currency?: string;
@@ -37,6 +44,8 @@ const props = withDefaults(defineProps<Props>(), {
   price: undefined,
   customerPrice: undefined,
   oldPrice: undefined,
+  showFloorPrice: false,
+  floorPrice: undefined,
   discountTiers: () => [],
   currency: 'RUB',
   stock: undefined,
@@ -77,7 +86,7 @@ function onStepperChange(qty: number): void {
 </script>
 
 <template>
-  <article class="mv-product-row">
+  <article class="mv-product-row" :class="{ 'mv-product-row--with-floor-price': showFloorPrice }">
     <div class="mv-product-row__media">
       <div class="mv-product-row__img-wrap">
         <slot name="image"><div class="mv-product-row__img-placeholder">&#9744;</div></slot>
@@ -139,6 +148,18 @@ function onStepperChange(qty: number): void {
       <div v-else class="mv-product-row__price-hint">—</div>
     </div>
 
+    <div v-if="showFloorPrice" class="mv-product-row__cell">
+      <div class="mv-product-row__cell-label">Floor price</div>
+      <MvAmountDisplay
+        v-if="floorPrice !== undefined"
+        :amount="floorPrice"
+        :currency="currency"
+        size="sm"
+        class="mv-product-row__floor-price"
+      />
+      <span v-else class="mv-product-row__price-hint">—</span>
+    </div>
+
     <div v-if="showFavorite || showActions" class="mv-product-row__actions">
       <MvFavoriteButton
         v-if="showFavorite"
@@ -187,6 +208,11 @@ function onStepperChange(qty: number): void {
 }
 .mv-product-row:hover { background: #f7fbfa; }
 
+/* Extra track for the staff-only "Floor price" cell — see hasFloorPrice/props.floorPrice. */
+.mv-product-row--with-floor-price {
+  grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 90px 110px 110px 140px;
+}
+
 .mv-product-row__media { display: flex; align-items: center; justify-content: center; }
 .mv-product-row__img-wrap {
   width: 48px; height: 48px; border-radius: 10px; overflow: hidden;
@@ -214,6 +240,7 @@ function onStepperChange(qty: number): void {
 .mv-product-row__price--customer { color: #00a878; }
 .mv-product-row__old-price { font-size: 12px !important; color: #a8b8b2; text-decoration: line-through; }
 .mv-product-row__price-hint { font-size: 12px; color: #a8b8b2; }
+.mv-product-row__floor-price { font-weight: 700; letter-spacing: -0.02em; color: #66736e; }
 
 .mv-product-row__actions {
   display: grid;
