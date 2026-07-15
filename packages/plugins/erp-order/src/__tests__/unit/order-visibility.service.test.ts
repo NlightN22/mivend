@@ -45,7 +45,7 @@ describe('OrderVisibilityService', () => {
         });
     });
 
-    it('filters by department/branch for "department" scope', async () => {
+    it('filters by department + the order\'s own servicing branch for "department" scope', async () => {
         accessScopeService.resolveOrderScope.mockResolvedValue({
             kind: 'department',
             departmentId: 'dept-1',
@@ -54,8 +54,11 @@ describe('OrderVisibilityService', () => {
 
         await service.findVisible(mockCtx);
 
+        // Filters by the order's own denormalized branchId (customFieldsBranchid), not
+        // Counterparty.branchId — a chain account's orders can be serviced by a different
+        // branch than the customer's nominal "home" branch, see order-visibility.service.ts.
         expect(qb.andWhere).toHaveBeenCalledWith(
-            'counterparty.departmentId = :departmentId AND counterparty.branchId = :branchId',
+            'counterparty.departmentId = :departmentId AND order."customFieldsBranchid" = :branchId',
             { departmentId: 'dept-1', branchId: 'branch-1' },
         );
     });

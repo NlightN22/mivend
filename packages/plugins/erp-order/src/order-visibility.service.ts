@@ -66,13 +66,27 @@ export class OrderVisibilityService {
 
         switch (scope.kind) {
             case 'own':
+                // No branch restriction here — this is the key-account-manager read exception
+                // from docs/access-control.md: an administrator scoped to their own assigned
+                // accounts must see every order for those accounts regardless of which branch
+                // actually serviced it (a chain customer's locations can span branches). Adding
+                // `AND order.branchId = mine` here would silently hide a manager's own orders
+                // placed against an out-of-branch trading point — don't add it.
                 qb.andWhere('counterparty.assignedManagerId = :managerId', {
                     managerId: scope.administratorId ?? null,
                 });
                 break;
             case 'department':
+                // Filtered by the order's own denormalized servicing branch
+                // (`${qb.alias}."customFieldsBranchid"`, set at placement time from the
+                // customer's preferred TradingPoint — see ErpOrderService.onOrderPlaced), not
+                // Counterparty.branchId. A chain account's "home" branch and the branch that
+                // actually services a given order can differ; department-scoped roles (e.g.
+                // branch-office-director) must see orders their own branch handles, not orders
+                // for customers nominally "based" there. See docs/access-control.md's "Branch
+                // scope is a separate axis" section.
                 qb.andWhere(
-                    'counterparty.departmentId = :departmentId AND counterparty.branchId = :branchId',
+                    `counterparty.departmentId = :departmentId AND ${qb.alias}."customFieldsBranchid" = :branchId`,
                     { departmentId: scope.departmentId ?? null, branchId: scope.branchId ?? null },
                 );
                 break;
