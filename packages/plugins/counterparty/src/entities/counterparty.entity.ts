@@ -45,6 +45,13 @@ export class Counterparty extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     branchId!: string | null;
 
+    // Free-text group/segment label from the ERP — display and filtering only, never used
+    // for access control or business rules. 1C's own "group" concept is inconsistent
+    // (sometimes aligns with department, sometimes with a manager, sometimes a functional
+    // label like "Accounting") — modeled as an opaque string, not a new hierarchy/entity.
+    @Column({ type: 'varchar', nullable: true })
+    erpGroupLabel!: string | null;
+
     // Portal-approved extension on top of the ERP-sourced paymentDelayDays — never written
     // by erp-import, never mutates paymentDelayDays itself (that field stays ERP master
     // data, per AGENTS.md sync rules). Set only by CreditTermService once a

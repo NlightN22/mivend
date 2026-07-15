@@ -89,7 +89,16 @@ export class CounterpartyService {
     // (scope 'all').
     async findVisiblePage(
         ctx: RequestContext,
-        options: { take?: number; skip?: number; search?: string } = {},
+        options: {
+            take?: number;
+            skip?: number;
+            search?: string;
+            status?: string;
+            managerId?: ID;
+            branchId?: string;
+            groupLabel?: string;
+            unassignedOnly?: boolean;
+        } = {},
     ): Promise<PaginatedList<Counterparty>> {
         let qb = this.baseVisibleQb(ctx);
         qb = await this.applyVisibilityScope(ctx, qb);
@@ -98,6 +107,32 @@ export class CounterpartyService {
                 '(c.shortName ILIKE :search OR c.legalName ILIKE :search OR c.inn ILIKE :search)',
                 { search: `%${options.search}%` },
             );
+        }
+        // User-chosen narrowing filters, applied on TOP of the access-scope restriction above —
+        // never a replacement for it (a manager's own 'own'/'department' scope still bounds what
+        // they can filter to, this only narrows further within that already-visible set).
+        if (options.status === 'active') {
+            qb = qb.andWhere('c.isActive = true');
+        } else if (options.status === 'inactive') {
+            qb = qb.andWhere('c.isActive = false');
+        }
+        // Separate boolean, not `managerId: null`, since GraphQL/TypeORM would need to
+        // distinguish "field omitted" from "field explicitly null" to express IS NULL safely —
+        // a dedicated flag avoids that ambiguity entirely. Takes precedence over `managerId`
+        // (mutually exclusive from the UI's perspective — the Manager select's "Unassigned"
+        // option sends only `unassignedOnly: true`, never both).
+        if (options.unassignedOnly) {
+            qb = qb.andWhere('c.assignedManagerId IS NULL');
+        } else if (options.managerId) {
+            qb = qb.andWhere('c.assignedManagerId = :managerId', {
+                managerId: String(options.managerId),
+            });
+        }
+        if (options.branchId) {
+            qb = qb.andWhere('c.branchId = :branchId', { branchId: options.branchId });
+        }
+        if (options.groupLabel) {
+            qb = qb.andWhere('c.erpGroupLabel = :groupLabel', { groupLabel: options.groupLabel });
         }
         const totalItems = await qb.getCount();
         const items = await qb
@@ -121,9 +156,7 @@ export class CounterpartyService {
     // was the original antipattern this whole audit started from, see issue #39). Mirrors the
     // reference pattern in `fetchOrdersSummary` (packages/manager/src/api/orders.ts) of one
     // dedicated summary query alongside the paginated list query.
-    async getSummary(
-        ctx: RequestContext,
-    ): Promise<{
+    async getSummary(ctx: RequestContext): Promise<{
         totalCount: number;
         activeCount: number;
         totalCreditBalance: number;
@@ -159,6 +192,14 @@ export class CounterpartyService {
             totalCreditBalance: Number(raw?.totalCreditBalance ?? 0),
             highUsageCount: Number(raw?.highUsageCount ?? 0),
         };
+    }
+
+    // Dashboard "Unassigned clients" KPI — a real COUNT scoped by the caller's visibility, not
+    // a fetch-everything-then-count in JS.
+    async countUnassigned(ctx: RequestContext): Promise<number> {
+        let qb = this.baseVisibleQb(ctx);
+        qb = await this.applyVisibilityScope(ctx, qb);
+        return qb.orderBy().andWhere('c.assignedManagerId IS NULL').getCount();
     }
 
     // "Needs attention" panel on the Customers list (docs/ai/manager-portal-pages/05-customers.md)

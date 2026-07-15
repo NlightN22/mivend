@@ -26,6 +26,7 @@ export interface CustomerListItem {
     priceType: string;
     assignedManagerId: string | null;
     branchId: string | null;
+    erpGroupLabel: string | null;
     contacts: ContactPersonInfo[];
     tradingPoints: TradingPointInfo[];
 }
@@ -34,6 +35,14 @@ export interface CustomersListOptions {
     take?: number;
     skip?: number;
     search?: string;
+    status?: 'active' | 'inactive';
+    managerId?: string;
+    branchId?: string;
+    // Free-text, exact match against the ERP-sourced group/segment label — see
+    // Counterparty.erpGroupLabel's doc comment for why this isn't a fixed enum/dropdown.
+    groupLabel?: string;
+    // Overrides managerId — see CounterpartyService.findVisiblePage's doc comment.
+    unassignedOnly?: boolean;
 }
 
 const CUSTOMER_LIST_FIELDS = `
@@ -45,6 +54,7 @@ const CUSTOMER_LIST_FIELDS = `
     priceType
     assignedManagerId
     branchId
+    erpGroupLabel
     tradingPoints {
         id
         name
@@ -65,6 +75,7 @@ function toCustomerListItem(c: {
     priceType: string;
     assignedManagerId: string | null;
     branchId: string | null;
+    erpGroupLabel: string | null;
     tradingPoints: TradingPointInfo[];
 }): CustomerListItem {
     return {
@@ -76,14 +87,14 @@ function toCustomerListItem(c: {
         priceType: c.priceType,
         assignedManagerId: c.assignedManagerId,
         branchId: c.branchId,
+        erpGroupLabel: c.erpGroupLabel,
         contacts: c.tradingPoints.flatMap(tp => tp.contacts),
         tradingPoints: c.tradingPoints,
     };
 }
 
-// Server-side paginated (see issue #39) — status filtering (active/inactive) still happens
-// client-side in CustomersPage.vue since it's not exposed as a backend filter arg yet; only
-// `search` (shortName/legalName/inn) is pushed down.
+// Server-side paginated (see issue #39) — search/status/manager/branch/group/unassigned are all
+// pushed down to CounterpartyListOptions, never filtered client-side over a partial page.
 export async function fetchCustomersPage(
     options: CustomersListOptions,
 ): Promise<{ items: CustomerListItem[]; totalItems: number }> {
@@ -105,6 +116,13 @@ export async function fetchCustomersPage(
         items: result.counterparties.items.map(toCustomerListItem),
         totalItems: result.counterparties.totalItems,
     };
+}
+
+export async function fetchUnassignedCounterpartyCount(): Promise<number> {
+    const result = await adminApi<{ unassignedCounterpartyCount: number }>(
+        `query { unassignedCounterpartyCount }`,
+    );
+    return result.unassignedCounterpartyCount;
 }
 
 export interface CustomersSummary {
@@ -351,27 +369,29 @@ export async function fetchCreditForCounterparty(
     }
 }
 
-// Discounts apply by price type, not per customer (DiscountRule has no customerId — see
-// discount-rule.entity.ts) — "active discounts for this customer" really means "active
-// discounts for this customer's price type".
-export async function fetchActiveDiscountCountsByPriceType(
-    priceTypes: string[],
+// Genuinely per-customer — uses discountGrantsForCounterparty (company-wide OR scoped to this
+// counterparty, see DiscountGrantService.findForCounterparty), not the per-price-type
+// discountRules query. The previous implementation counted discountRules by priceTypeCode and
+// bound the result to every customer sharing that price type, which showed the identical number
+// for every row whenever customers shared a price type (real bug, fixed here — see
+// docs/ai/manager-portal-pages/04-customers-list.md's "Active discounts" column spec, which
+// calls for a per-customer, click-through-to-/discounts count).
+export async function fetchActiveDiscountCountsByCustomer(
+    counterpartyIds: string[],
 ): Promise<Map<string, number>> {
     const now = Date.now();
     const entries = await Promise.all(
-        [...new Set(priceTypes)].map(async priceTypeCode => {
+        [...new Set(counterpartyIds)].map(async counterpartyId => {
             const result = await adminApi<{
-                discountRules: { validFrom: string; validTo: string }[];
+                discountGrantsForCounterparty: { validTo: string }[];
             }>(
-                `query($priceTypeCode: String!) { discountRules(priceTypeCode: $priceTypeCode) { validFrom validTo } }`,
-                {
-                    priceTypeCode,
-                },
+                `query($counterpartyId: ID!) { discountGrantsForCounterparty(counterpartyId: $counterpartyId) { validTo } }`,
+                { counterpartyId },
             );
-            const activeCount = result.discountRules.filter(
-                r => new Date(r.validFrom).getTime() <= now && new Date(r.validTo).getTime() >= now,
+            const activeCount = result.discountGrantsForCounterparty.filter(
+                g => new Date(g.validTo).getTime() >= now,
             ).length;
-            return [priceTypeCode, activeCount] as const;
+            return [counterpartyId, activeCount] as const;
         }),
     );
     return new Map(entries);

@@ -1,5 +1,6 @@
 import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { Permission } from '@vendure/common/lib/generated-types';
+import { ID } from '@vendure/common/lib/shared-types';
 import {
     Allow,
     Ctx,
@@ -69,9 +70,28 @@ export class CounterpartyResolver {
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     async counterparties(
         @Ctx() ctx: RequestContext,
-        @Args() args: { options?: { take?: number; skip?: number; search?: string } },
+        @Args()
+        args: {
+            options?: {
+                take?: number;
+                skip?: number;
+                search?: string;
+                status?: string;
+                managerId?: ID;
+                branchId?: string;
+                groupLabel?: string;
+                unassignedOnly?: boolean;
+            };
+        },
     ): Promise<PaginatedList<Counterparty>> {
         return this.counterpartyService.findVisiblePage(ctx, args.options ?? {});
+    }
+
+    // Dashboard "Unassigned clients" KPI tile.
+    @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    async unassignedCounterpartyCount(@Ctx() ctx: RequestContext): Promise<number> {
+        return this.counterpartyService.countUnassigned(ctx);
     }
 
     // Customer Detail page (docs/ai/manager-portal-pages/06-customer-detail.md) — a dedicated
@@ -148,6 +168,7 @@ export class CounterpartyResolver {
             isActive: boolean;
             departmentId?: string;
             branchId?: string;
+            erpGroupLabel?: string;
         },
     ): Promise<Counterparty> {
         return this.counterpartyService.upsert(ctx, args);

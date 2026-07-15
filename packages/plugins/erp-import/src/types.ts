@@ -59,6 +59,10 @@ export interface CounterpartyRecord {
     // against the caller's own department/branch.
     departmentId?: string | null;
     branchId?: string | null;
+    // Free-text group/segment label from the ERP — display and filtering only, never used for
+    // access control or business rules (1C's own grouping concept is inconsistent). See
+    // Counterparty.erpGroupLabel's doc comment.
+    erpGroupLabel?: string | null;
 }
 
 export interface CustomerCounterpartyRecord {

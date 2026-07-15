@@ -132,6 +132,8 @@ const adminApiSchema = gql`
         departmentId: String
         branchId: String
         creditTermOverrideExtraDays: Int
+        "Free-text group/segment label from the ERP — display and filtering only."
+        erpGroupLabel: String
         tradingPoints: [TradingPoint!]!
     }
 
@@ -149,6 +151,14 @@ const adminApiSchema = gql`
         take: Int
         skip: Int
         search: String
+        "active | inactive"
+        status: String
+        managerId: ID
+        branchId: String
+        "Exact match against Counterparty.erpGroupLabel"
+        groupLabel: String
+        "When true, overrides managerId and filters to counterparties with no assigned manager"
+        unassignedOnly: Boolean
     }
 
     type CounterpartySummary {
@@ -164,6 +174,7 @@ const adminApiSchema = gql`
         counterparties(options: CounterpartyListOptions): CounterpartyList!
         counterparty(id: ID!): Counterparty
         counterpartySummary: CounterpartySummary!
+        unassignedCounterpartyCount: Int!
         highUsageCounterparties(limit: Int!): [Counterparty!]!
         tradingPoint(id: ID!): TradingPoint
     }
@@ -181,6 +192,7 @@ const adminApiSchema = gql`
             isActive: Boolean!
             departmentId: String
             branchId: String
+            erpGroupLabel: String
         ): Counterparty!
 
         assignCustomerToCounterparty(customerId: ID!, erpId: String!, role: String!): Boolean!

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { MvPanel, MvFilterBar, MvFilterField, MvInput, MvSelect, MvKpiCard, MvButton, MvPagination } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
@@ -7,20 +8,21 @@ import {
     fetchCustomersSummary,
     fetchHighUsageCustomers,
     fetchCreditByCounterpartyId,
-    fetchActiveDiscountCountsByPriceType,
+    fetchActiveDiscountCountsByCustomer,
     fetchLastOrderDatesByCounterpartyId,
     type CustomerListItem,
     type CustomerCredit,
     type CustomersSummary,
     type HighUsageCustomer,
 } from '../../api/customers';
-import { fetchBranchOptions, type BranchOption } from '../../api/orders';
+import { fetchBranchOptions, fetchManagerOptions, type BranchOption, type ManagerOption } from '../../api/orders';
 import { fetchExpiringDiscountGrants } from '../../api/discounts';
 import { downloadCsv } from '../../utils/csv';
 import CustomersTable from '../../components/customers/CustomersTable.vue';
 import NeedsAttentionPanel, { type AttentionEntry } from '../../components/customers/NeedsAttentionPanel.vue';
 
 const authStore = useAuthStore();
+const route = useRoute();
 // "My Clients" only makes sense for Manager, whose list is their own assigned book — every
 // other role sees a department/company-wide list, so the generic title fits better there (see
 // docs/ai/manager-portal-pages/04-customers-list.md).
@@ -39,6 +41,7 @@ const credit = ref<Map<string, CustomerCredit>>(new Map());
 const discountCounts = ref<Map<string, number>>(new Map());
 const lastOrderDates = ref<Map<string, string>>(new Map());
 const branches = ref<BranchOption[]>([]);
+const managers = ref<ManagerOption[]>([]);
 const expiringGrantsByCustomerId = ref<Map<string, string>>(new Map());
 const summary = ref<CustomersSummary | null>(null);
 const highUsageCustomers = ref<HighUsageCustomer[]>([]);
@@ -50,22 +53,28 @@ const EXPIRING_SOON_DAYS = 14;
 const ATTENTION_TOP_N = 5;
 
 const search = ref('');
-const statusFilter = ref('');
+const statusFilter = ref<'' | 'active' | 'inactive'>('');
+// Sentinel value for the Manager select's "Unassigned" option — distinct from '' (no filter) and
+// from any real manager id. See CounterpartyService.findVisiblePage's `unassignedOnly` doc
+// comment for why this is a dedicated flag, not `managerId: null`.
+const UNASSIGNED_SENTINEL = '__unassigned__';
+const managerFilter = ref(route.query.unassigned === 'true' ? UNASSIGNED_SENTINEL : '');
+const branchFilter = ref('');
+const groupFilter = ref('');
 const STATUS_OPTIONS = [
     { value: '', label: 'All statuses' },
     { value: 'active', label: 'Active' },
     { value: 'inactive', label: 'Inactive' },
 ];
-
-// Status filtering still happens client-side over the current page only — the backend doesn't
-// take a status filter arg yet (search is the only pushed-down filter). Acceptable for now since
-// it only narrows what's already loaded, doesn't hide rows that should have been fetched.
-const filtered = computed(() => {
-    if (!statusFilter.value) return customers.value;
-    return customers.value.filter(c =>
-        statusFilter.value === 'active' ? c.isActive : !c.isActive,
-    );
-});
+const managerOptions = computed(() => [
+    { value: '', label: 'All managers' },
+    { value: UNASSIGNED_SENTINEL, label: 'Unassigned' },
+    ...managers.value.map(m => ({ value: m.id, label: m.name })),
+]);
+const branchOptions = computed(() => [
+    { value: '', label: 'All branches' },
+    ...branches.value.map(b => ({ value: b.erpId, label: b.name })),
+]);
 
 const activeClientsCount = computed(() => summary.value?.activeCount ?? 0);
 // Null (not 0) means "no ReadCounterpartyCredit" — see CounterpartyResolver.counterpartySummary.
@@ -102,6 +111,9 @@ const attentionItems = computed<AttentionEntry[]>(() => {
 function resetFilters(): void {
     search.value = '';
     statusFilter.value = '';
+    managerFilter.value = '';
+    branchFilter.value = '';
+    groupFilter.value = '';
     page.value = 1;
 }
 
@@ -109,7 +121,7 @@ function exportCsv(): void {
     downloadCsv(
         'customers.csv',
         ['Company name', 'INN', 'Credit limit', 'Credit balance', 'Active discounts', 'Last order', 'Status'],
-        filtered.value.map(c => {
+        customers.value.map(c => {
             const row = credit.value.get(c.id);
             const lastOrder = lastOrderDates.value.get(c.id);
             return [
@@ -117,7 +129,7 @@ function exportCsv(): void {
                 c.inn ?? '',
                 row?.creditLimit ?? '',
                 row?.creditBalance ?? '',
-                discountCounts.value.get(c.priceType) ?? 0,
+                discountCounts.value.get(c.id) ?? 0,
                 lastOrder ? new Date(lastOrder).toLocaleDateString('en-US') : '',
                 c.isActive ? 'Active' : 'Inactive',
             ];
@@ -128,10 +140,16 @@ function exportCsv(): void {
 async function loadPage(): Promise<void> {
     loading.value = true;
     try {
+        const isUnassignedFilter = managerFilter.value === UNASSIGNED_SENTINEL;
         const listOptions = {
             take: PAGE_SIZE,
             skip: (page.value - 1) * PAGE_SIZE,
             search: search.value.trim() || undefined,
+            status: statusFilter.value || undefined,
+            managerId: !isUnassignedFilter && managerFilter.value ? managerFilter.value : undefined,
+            branchId: branchFilter.value || undefined,
+            groupLabel: groupFilter.value.trim() || undefined,
+            unassignedOnly: isUnassignedFilter || undefined,
         };
         const [pageResult, creditMap] = await Promise.all([
             fetchCustomersPage(listOptions),
@@ -140,30 +158,33 @@ async function loadPage(): Promise<void> {
         customers.value = pageResult.items;
         totalItems.value = pageResult.totalItems;
         credit.value = creditMap;
-        discountCounts.value = await fetchActiveDiscountCountsByPriceType(
-            pageResult.items.map(c => c.priceType),
+        discountCounts.value = await fetchActiveDiscountCountsByCustomer(
+            pageResult.items.map(c => c.id),
         );
     } finally {
         loading.value = false;
     }
 }
 
-watch([search, page], () => void loadPage());
-watch(search, () => {
+watch([search, statusFilter, managerFilter, branchFilter, groupFilter, page], () => void loadPage());
+watch([search, statusFilter, managerFilter, branchFilter, groupFilter], () => {
     page.value = 1;
 });
 
 onMounted(async () => {
     await loadPage();
-    const [lastOrderMap, branchOptions, expiringGrants, summaryResult, highUsage] = await Promise.all([
-        fetchLastOrderDatesByCounterpartyId(),
-        fetchBranchOptions(),
-        fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
-        fetchCustomersSummary(),
-        fetchHighUsageCustomers(ATTENTION_TOP_N),
-    ]);
+    const [lastOrderMap, branchOptionsResult, managerOptionsResult, expiringGrants, summaryResult, highUsage] =
+        await Promise.all([
+            fetchLastOrderDatesByCounterpartyId(),
+            fetchBranchOptions(),
+            fetchManagerOptions(),
+            fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
+            fetchCustomersSummary(),
+            fetchHighUsageCustomers(ATTENTION_TOP_N),
+        ]);
     lastOrderDates.value = lastOrderMap;
-    branches.value = branchOptions;
+    branches.value = branchOptionsResult;
+    managers.value = managerOptionsResult;
     summary.value = summaryResult;
     highUsageCustomers.value = highUsage;
     const grantsMap = new Map<string, string>();
@@ -207,14 +228,23 @@ onMounted(async () => {
                         <MvInput size="sm" :model-value="search" placeholder="Company name or INN..." @update:model-value="search = $event" />
                     </MvFilterField>
                     <MvFilterField label="Status">
-                        <MvSelect :model-value="statusFilter" :options="STATUS_OPTIONS" @update:model-value="statusFilter = $event" />
+                        <MvSelect :model-value="statusFilter" :options="STATUS_OPTIONS" @update:model-value="statusFilter = ($event as typeof statusFilter)" />
+                    </MvFilterField>
+                    <MvFilterField v-if="authStore.roleCode !== 'manager'" label="Manager">
+                        <MvSelect :model-value="managerFilter" :options="managerOptions" @update:model-value="managerFilter = ($event as string)" />
+                    </MvFilterField>
+                    <MvFilterField label="Branch">
+                        <MvSelect :model-value="branchFilter" :options="branchOptions" @update:model-value="branchFilter = ($event as string)" />
+                    </MvFilterField>
+                    <MvFilterField label="Group">
+                        <MvInput size="sm" :model-value="groupFilter" placeholder="ERP group label..." @update:model-value="groupFilter = $event" />
                     </MvFilterField>
                 </MvFilterBar>
 
                 <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
                 <CustomersTable
                     v-if="!loading"
-                    :customers="filtered"
+                    :customers="customers"
                     :credit="credit"
                     :discount-counts="discountCounts"
                     :last-order-dates="lastOrderDates"

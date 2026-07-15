@@ -424,6 +424,7 @@ async function main() {
             isActive: true,
             departmentId: 'dept-sales',
             branchId: 'branch-central',
+            erpGroupLabel: 'Accounting',
         },
     ];
     console.log(`Sending ${counterparties.length} counterparties...`);

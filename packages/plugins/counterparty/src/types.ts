@@ -19,4 +19,7 @@ export interface CounterpartyUpsertPayload {
     // scope visibility.
     departmentId?: string | null;
     branchId?: string | null;
+    // Free-text group/segment label from the ERP — display and filtering only, see
+    // Counterparty.erpGroupLabel's doc comment for why this is opaque, not a new hierarchy.
+    erpGroupLabel?: string | null;
 }

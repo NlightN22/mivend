@@ -27,6 +27,7 @@ class TestCounterparty {
     @Column({ type: 'varchar', nullable: true }) assignedManagerId!: string | null;
     @Column({ type: 'varchar', nullable: true }) departmentId!: string | null;
     @Column({ type: 'varchar', nullable: true }) branchId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpGroupLabel!: string | null;
 }
 
 let dataSource: DataSource;
@@ -266,5 +267,82 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         const result = await service.findHighUsage(mockCtx, 5);
 
         expect(result.map(c => c.erpId)).toEqual(['cp-high', 'cp-mid-high']);
+    });
+
+    it('findVisiblePage filters by groupLabel (exact match)', async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            { erpId: 'cp-acct-1', legalName: 'A1', shortName: 'A1', erpGroupLabel: 'Accounting' },
+            { erpId: 'cp-acct-2', legalName: 'A2', shortName: 'A2', erpGroupLabel: 'Accounting' },
+            { erpId: 'cp-sales-1', legalName: 'S1', shortName: 'S1', erpGroupLabel: 'Sales' },
+        ]);
+
+        const result = await service.findVisiblePage(mockCtx, { groupLabel: 'Accounting' });
+
+        expect(result.items.map(c => c.erpId).sort()).toEqual(['cp-acct-1', 'cp-acct-2']);
+        expect(result.totalItems).toBe(2);
+    });
+
+    it('findVisiblePage groupLabel filter with no matches returns an empty page', async () => {
+        await seedCounterparties();
+
+        const result = await service.findVisiblePage(mockCtx, { groupLabel: 'Nonexistent' });
+
+        expect(result.items).toEqual([]);
+        expect(result.totalItems).toBe(0);
+    });
+
+    it('findVisiblePage unassignedOnly returns only counterparties with no assigned manager', async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            { erpId: 'cp-assigned', legalName: 'X', shortName: 'X', assignedManagerId: 'admin-1' },
+            { erpId: 'cp-orphan-1', legalName: 'Y', shortName: 'Y', assignedManagerId: null },
+            { erpId: 'cp-orphan-2', legalName: 'Z', shortName: 'Z', assignedManagerId: null },
+        ]);
+
+        const result = await service.findVisiblePage(mockCtx, { unassignedOnly: true });
+
+        expect(result.items.map(c => c.erpId).sort()).toEqual(['cp-orphan-1', 'cp-orphan-2']);
+        expect(result.totalItems).toBe(2);
+    });
+
+    it('findVisiblePage unassignedOnly still respects the access scope (department sees only its own orphans)', async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            {
+                erpId: 'cp-orphan-dept1',
+                legalName: 'D1',
+                shortName: 'D1',
+                assignedManagerId: null,
+                departmentId: 'dept-1',
+                branchId: 'branch-a',
+            },
+            {
+                erpId: 'cp-orphan-dept2',
+                legalName: 'D2',
+                shortName: 'D2',
+                assignedManagerId: null,
+                departmentId: 'dept-2',
+                branchId: 'branch-b',
+            },
+        ]);
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'department',
+            departmentId: 'dept-1',
+            branchId: 'branch-a',
+        });
+
+        const result = await service.findVisiblePage(mockCtx, { unassignedOnly: true });
+
+        expect(result.items.map(c => c.erpId)).toEqual(['cp-orphan-dept1']);
+    });
+
+    it("countUnassigned counts real orphan rows within the caller's access scope", async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            { erpId: 'cp-assigned', legalName: 'X', shortName: 'X', assignedManagerId: 'admin-1' },
+            { erpId: 'cp-orphan-1', legalName: 'Y', shortName: 'Y', assignedManagerId: null },
+            { erpId: 'cp-orphan-2', legalName: 'Z', shortName: 'Z', assignedManagerId: null },
+        ]);
+
+        const count = await service.countUnassigned(mockCtx);
+
+        expect(count).toBe(2);
     });
 });

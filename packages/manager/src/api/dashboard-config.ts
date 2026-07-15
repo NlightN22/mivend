@@ -101,6 +101,13 @@ const APPROVER_CARDS: KpiCardConfig[] = [
         to: '/customers',
         value: data => data.myClientsCount,
     },
+    {
+        key: 'unassigned-clients',
+        label: 'Unassigned clients',
+        to: '/customers?unassigned=true',
+        accent: true,
+        value: data => data.unassignedClientsCount,
+    },
 ];
 
 // Roles that hold ApproveDiscountRequest (or an equivalent approval permission) per

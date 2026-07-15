@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import {
     MvPanel,
     MvFilterBar,
@@ -24,11 +25,16 @@ import DiscountGrantForm from '../../components/discounts/DiscountGrantForm.vue'
 
 const PAGE_SIZE = 10;
 
+// Prefills the search box when arriving via the Customers page's "Active discounts" badge
+// click-through (see CustomersTable.vue) — `?search=<customer short name>` matches this
+// registry's existing customerNamesForSearch ILIKE, no dedicated customerId filter needed.
+const route = useRoute();
+
 const rows = ref<DiscountRow[]>([]);
 const totalItems = ref(0);
 const loading = ref(true);
 const page = ref(1);
-const search = ref('');
+const search = ref(typeof route.query.search === 'string' ? route.query.search : '');
 const statusFilter = ref<'' | DiscountRegistryFilterStatus>('');
 const priceTypeFilter = ref('');
 const priceTypeOptions = ref<{ value: string; label: string }[]>([]);

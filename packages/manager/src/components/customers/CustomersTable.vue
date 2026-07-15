@@ -74,10 +74,22 @@ const columns = computed<Column<TableRow>[]>(() => [
         title: 'Active discounts',
         dataKey: 'discounts',
         width: 150,
-        cellRenderer: ({ cellData }) => {
-            const count = cellData as unknown as number;
+        cellRenderer: ({ rowData }) => {
+            const row = rowData as TableRow;
+            const count = row.discounts as number;
             if (!count) return h('span', '—');
-            return h(MvStatusBadge, { variant: 'info' }, () => `${count} active`);
+            return h(
+                MvStatusBadge,
+                {
+                    variant: 'info',
+                    style: { cursor: 'pointer' },
+                    onClick: (e: MouseEvent) => {
+                        e.stopPropagation();
+                        router.push({ path: '/discounts', query: { search: row.name as string } });
+                    },
+                },
+                () => `${count} active`,
+            );
         },
     },
     { key: 'lastOrder', title: 'Last order', dataKey: 'lastOrder', width: 130 },
@@ -101,12 +113,14 @@ const rows = computed<TableRow[]>(() =>
         const branch = branchName(c.branchId);
         return {
             name: c.shortName,
-            companyMeta: [c.inn ? `INN ${c.inn}` : null, branch].filter(Boolean).join(' · '),
+            companyMeta: [c.inn ? `INN ${c.inn}` : null, branch, c.erpGroupLabel]
+                .filter(Boolean)
+                .join(' · '),
             contact: primaryContact?.name ?? '—',
             creditLimit: credit ? money(credit.creditLimit) : '—',
             creditBalance: credit ? money(credit.creditBalance) : '—',
             creditUsagePercent: usagePercent,
-            discounts: props.discountCounts.get(c.priceType) ?? 0,
+            discounts: props.discountCounts.get(c.id) ?? 0,
             lastOrder: lastOrder ? new Date(lastOrder).toLocaleDateString('en-US') : '—',
             status: c.isActive,
             _customerId: c.id,

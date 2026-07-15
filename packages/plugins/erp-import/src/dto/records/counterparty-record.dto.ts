@@ -48,4 +48,12 @@ export class CounterpartyRecordDto {
         description: 'erpId of the branch this counterparty belongs to (see Branch).',
     })
     branchId?: string | null;
+
+    @ApiPropertyOptional({
+        type: String,
+        nullable: true,
+        description:
+            'Free-text group/segment label from the ERP — display and filtering only, not used for access control or business rules.',
+    })
+    erpGroupLabel?: string | null;
 }

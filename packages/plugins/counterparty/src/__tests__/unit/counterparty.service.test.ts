@@ -200,6 +200,187 @@ describe('CounterpartyService', () => {
         });
     });
 
+    describe('findVisiblePage', () => {
+        function mockPageQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
+            const qb: Record<string, ReturnType<typeof vi.fn>> = {};
+            qb.orderBy = vi.fn(() => qb);
+            qb.where = vi.fn(() => qb);
+            qb.andWhere = vi.fn(() => qb);
+            qb.take = vi.fn(() => qb);
+            qb.skip = vi.fn(() => qb);
+            qb.getCount = vi.fn(async () => 0);
+            qb.getMany = vi.fn(async () => []);
+            return qb;
+        }
+
+        beforeEach(() => {
+            (
+                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
+            ).mockResolvedValue({ kind: 'all' });
+        });
+
+        it('applies an additional status=active filter on top of the access scope', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, { status: 'active' });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.isActive = true');
+        });
+
+        it('applies an additional status=inactive filter', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, { status: 'inactive' });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.isActive = false');
+        });
+
+        it('applies a managerId filter', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, { managerId: 'admin-2' });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId = :managerId', {
+                managerId: 'admin-2',
+            });
+        });
+
+        it('applies a branchId filter', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, { branchId: 'branch-a' });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.branchId = :branchId', {
+                branchId: 'branch-a',
+            });
+        });
+
+        it('composes status, managerId and branchId filters together', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, {
+                status: 'active',
+                managerId: 'admin-2',
+                branchId: 'branch-a',
+            });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.isActive = true');
+            expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId = :managerId', {
+                managerId: 'admin-2',
+            });
+            expect(qb.andWhere).toHaveBeenCalledWith('c.branchId = :branchId', {
+                branchId: 'branch-a',
+            });
+        });
+
+        it('applies no extra filter when no status/manager/branch options are given', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, {});
+
+            expect(qb.andWhere).not.toHaveBeenCalled();
+        });
+
+        it('applies a groupLabel filter', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, { groupLabel: 'Accounting' });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.erpGroupLabel = :groupLabel', {
+                groupLabel: 'Accounting',
+            });
+        });
+
+        it('applies an unassignedOnly filter (assignedManagerId IS NULL)', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, { unassignedOnly: true });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId IS NULL');
+        });
+
+        it('unassignedOnly takes precedence over managerId when both are given', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, { unassignedOnly: true, managerId: 'admin-2' });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId IS NULL');
+            expect(qb.andWhere).not.toHaveBeenCalledWith('c.assignedManagerId = :managerId', {
+                managerId: 'admin-2',
+            });
+        });
+
+        it('composes groupLabel and unassignedOnly with the existing status/branch filters', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, {
+                status: 'active',
+                branchId: 'branch-a',
+                groupLabel: 'Accounting',
+                unassignedOnly: true,
+            });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.isActive = true');
+            expect(qb.andWhere).toHaveBeenCalledWith('c.branchId = :branchId', {
+                branchId: 'branch-a',
+            });
+            expect(qb.andWhere).toHaveBeenCalledWith('c.erpGroupLabel = :groupLabel', {
+                groupLabel: 'Accounting',
+            });
+            expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId IS NULL');
+        });
+    });
+
+    describe('countUnassigned', () => {
+        it("counts unassigned counterparties within the caller's access scope", async () => {
+            const qb: Record<string, ReturnType<typeof vi.fn>> = {};
+            qb.orderBy = vi.fn(() => qb);
+            qb.andWhere = vi.fn(() => qb);
+            qb.getCount = vi.fn(async () => 3);
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+            (
+                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
+            ).mockResolvedValue({ kind: 'all' });
+
+            const result = await service.countUnassigned(mockCtx);
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId IS NULL');
+            expect(result).toBe(3);
+        });
+    });
+
     describe('reassignManager', () => {
         it('reassigns unconditionally for "all" scope', async () => {
             mockRepo.findOne.mockResolvedValue({

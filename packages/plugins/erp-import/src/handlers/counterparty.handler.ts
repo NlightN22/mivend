@@ -20,6 +20,7 @@ export class CounterpartyHandler {
             isActive: record.isActive,
             departmentId: record.departmentId ?? null,
             branchId: record.branchId ?? null,
+            erpGroupLabel: record.erpGroupLabel ?? null,
         });
     }
 }

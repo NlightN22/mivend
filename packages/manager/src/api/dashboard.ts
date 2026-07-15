@@ -73,6 +73,7 @@ export interface DashboardData {
     awaitingShipmentCount: number;
     overdueCount: number;
     myClientsCount: number;
+    unassignedClientsCount: number;
     recentOrders: RecentOrder[];
     pendingApprovalsCount: number;
     recentApprovals: SubmittedApproval[];
@@ -133,6 +134,7 @@ const DASHBOARD_QUERY = `
         counterpartySummary {
             totalCount
         }
+        unassignedCounterpartyCount
         myApprovalRequestsSummary(recentLimit: 10) {
             pendingCount
             recent {
@@ -166,6 +168,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         overdue: { totalItems: number };
         recentOrdersList: { items: RecentOrder[] };
         counterpartySummary: { totalCount: number };
+        unassignedCounterpartyCount: number;
         myApprovalRequestsSummary: { pendingCount: number; recent: SubmittedApproval[] };
         myApprovalsInbox: { awaitingMyDecision: { totalItems: number } };
     }>(DASHBOARD_QUERY, {
@@ -180,6 +183,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         awaitingShipmentCount: result.awaitingShipment.totalItems,
         overdueCount: result.overdue.totalItems,
         myClientsCount: result.counterpartySummary.totalCount,
+        unassignedClientsCount: result.unassignedCounterpartyCount,
         recentOrders: result.recentOrdersList.items,
         pendingApprovalsCount: result.myApprovalRequestsSummary.pendingCount,
         recentApprovals: result.myApprovalRequestsSummary.recent,
