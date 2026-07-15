@@ -11,6 +11,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
         docker-build docker-push \
         prod-up prod-down \
         dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals seed-all \
+        verify-branch-scope \
         storybook storefront storefront-dev
 
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
@@ -85,6 +86,14 @@ seed-approvals:
 # the three targets above stay separate only because occasionally you need to re-run just one
 # (e.g. re-seeding ERP data without wiping roles/administrators).
 seed-all: seed-access-roles seed seed-approvals
+
+# E2E verification of branch-scope access control against an already-running, already-seeded
+# central instance (make dev + make seed-all first). Safe to run repeatedly — creates its own
+# disposable test data and cleans it up.
+verify-branch-scope:
+	@echo "Waiting for server on :3000..."
+	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
+	node infrastructure/scripts/verify-branch-scope.mjs
 
 # ── UI development ─────────────────────────────────────────────────────────────
 
