@@ -3,6 +3,10 @@ declare module '@vendure/core' {
         erpOrderId?: string | null;
         erpStatus?: string | null;
         erpStatusAt?: Date | null;
+        // Denormalized at placement time from the customer's preferred TradingPoint — see
+        // ErpOrderService.onOrderPlaced and docs/access-control.md's branch-scope axis.
+        tradingPointId?: string | null;
+        branchId?: string | null;
     }
 }
 

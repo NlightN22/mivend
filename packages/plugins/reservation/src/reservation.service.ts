@@ -155,6 +155,7 @@ export class ReservationService {
                             orderLineId: String(line.id),
                             productVariantId: String(line.productVariantId),
                             stockLocationId,
+                            branchId: order.customFields.branchId ?? null,
                             quantity: line.quantity,
                             status: 'active' as const,
                             reservedAt: now,

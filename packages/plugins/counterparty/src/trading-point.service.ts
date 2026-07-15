@@ -21,6 +21,9 @@ export interface TradingPointDetailsPatch {
     address?: string;
     workingHours?: string | null;
     deliveryComment?: string | null;
+    // Explicit staff override for a chain account whose locations span multiple branches — see
+    // TradingPoint.servicingBranchId. Not set by ERP sync; only by a staff edit through this patch.
+    servicingBranchId?: string | null;
     contacts?: Array<{
         name: string;
         phone?: string | null;
@@ -111,6 +114,16 @@ export class TradingPointService {
             };
             record.deliveryComment = patch.deliveryComment;
         }
+        if (
+            patch.servicingBranchId !== undefined &&
+            patch.servicingBranchId !== record.servicingBranchId
+        ) {
+            changedFields.servicingBranchId = {
+                from: record.servicingBranchId,
+                to: patch.servicingBranchId,
+            };
+            record.servicingBranchId = patch.servicingBranchId;
+        }
         if (patch.contacts !== undefined) {
             // Compare actual contact values, not just counts — the edit form always submits
             // the full contacts array (even when the caller only touched the address), so a
@@ -177,7 +190,7 @@ export class TradingPointService {
         const repo = this.connection.getRepository(ctx, TradingPoint);
 
         const counterpartyRow = await this.connection.rawConnection.query(
-            `SELECT id FROM counterparty WHERE "erpId" = $1 LIMIT 1`,
+            `SELECT id, "branchId" FROM counterparty WHERE "erpId" = $1 LIMIT 1`,
             [payload.counterpartyErpId],
         );
         if (!counterpartyRow[0]) {
@@ -186,6 +199,7 @@ export class TradingPointService {
             );
         }
         const counterpartyId: string = counterpartyRow[0].id;
+        const counterpartyBranchId: string | null = counterpartyRow[0].branchId ?? null;
 
         let record = await repo.findOne({
             where: { erpId: payload.erpId },
@@ -199,10 +213,14 @@ export class TradingPointService {
             record.workingHours = payload.workingHours ?? null;
             record.isActive = payload.isActive;
             record.counterpartyId = counterpartyId;
+            // servicingBranchId is intentionally left untouched on re-sync — ERP doesn't know
+            // about this concept, and a staff override (chain account split across branches)
+            // must survive repeated ERP upserts of the same point.
         } else {
             record = repo.create({
                 erpId: payload.erpId,
                 counterpartyId,
+                servicingBranchId: counterpartyBranchId,
                 name: payload.name,
                 address: payload.address,
                 latitude: payload.latitude ?? null,
@@ -342,6 +360,9 @@ export class TradingPointService {
     ): Promise<TradingPoint> {
         const repo = this.connection.getRepository(ctx, TradingPoint);
         const cpRepo = this.connection.getRepository(ctx, ContactPerson);
+        const counterparty = await this.connection
+            .getRepository(ctx, Counterparty)
+            .findOne({ where: { id: counterpartyId } });
         const contact = input.contactName
             ? cpRepo.create({
                   name: input.contactName,
@@ -353,6 +374,7 @@ export class TradingPointService {
         const record = repo.create({
             erpId: `cust_${randomUUID()}`,
             counterpartyId,
+            servicingBranchId: counterparty?.branchId ?? null,
             name: input.name,
             address: input.address,
             workingHours: input.workingHours ?? null,

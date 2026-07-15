@@ -2,6 +2,10 @@ declare module '@vendure/core' {
     interface CustomOrderFields {
         reservationDays?: number | null;
         reservationState?: OrderReservationState;
+        // Owned by @mivend/plugin-erp-order (declaration merging) — reserveOrder() reads this to
+        // denormalize onto Reservation.branchId without taking a package dependency on
+        // erp-order, see docs/access-control.md's branch-scope axis.
+        branchId?: string | null;
     }
     interface CustomPaymentMethodFields {
         paymentClassification?: string | null;

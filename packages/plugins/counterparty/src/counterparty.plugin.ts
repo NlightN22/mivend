@@ -55,6 +55,7 @@ const tradingPointFields = gql`
         isActive: Boolean!
         customerStatus: String!
         customerOwned: Boolean!
+        servicingBranchId: String
         contacts: [ContactPerson!]!
     }
 `;
@@ -247,6 +248,7 @@ const adminApiSchema = gql`
         address: String
         workingHours: String
         deliveryComment: String
+        servicingBranchId: String
         contacts: [ContactPersonInput!]
     }
 `;

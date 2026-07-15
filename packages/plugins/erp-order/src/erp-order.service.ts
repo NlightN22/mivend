@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventBus, Order, RequestContext, TransactionalConnection } from '@vendure/core';
+import { TradingPointService } from '@mivend/plugin-counterparty';
 import { OrderReadyForErpEvent } from './erp-order.events';
 import './types';
 import type { ErpOrderStatus, ErpStatusUpdatePayload, OrderErpStatusInfo } from './types';
@@ -11,11 +12,29 @@ export class ErpOrderService {
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly eventBus: EventBus,
+        private readonly tradingPointService: TradingPointService,
     ) {}
 
     async onOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
         order.customFields.erpStatus = 'PENDING';
         order.customFields.erpStatusAt = new Date();
+
+        // Denormalize the servicing branch onto the order at placement time — see
+        // docs/access-control.md's branch-scope axis. A missing preferred trading point (no
+        // trading points yet, or a placement path that never went through checkout's selector)
+        // is not an error: the order simply has no branch scope, same as any other optional
+        // custom field.
+        if (order.customerId) {
+            const tradingPoint = await this.tradingPointService.getPreferredForCustomer(
+                ctx,
+                order.customerId,
+            );
+            if (tradingPoint) {
+                order.customFields.tradingPointId = String(tradingPoint.id);
+                order.customFields.branchId = tradingPoint.servicingBranchId;
+            }
+        }
+
         await this.connection.getRepository(ctx, Order).save(order);
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
     }

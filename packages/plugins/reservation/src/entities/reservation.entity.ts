@@ -55,6 +55,13 @@ export class Reservation extends VendureEntity {
     @Column({ type: 'varchar' })
     stockLocationId!: string;
 
+    // Denormalized from the order's customFields.branchId at reserveOrder() time (itself
+    // denormalized from the customer's preferred TradingPoint — see ErpOrderService and
+    // docs/access-control.md's branch-scope axis). Nullable: an order with no resolved trading
+    // point simply has no branch scope, same as any other optional custom field.
+    @Column({ type: 'varchar', nullable: true })
+    branchId!: string | null;
+
     // Bumped each time a line is re-reserved after a prior hold on it was released/expired —
     // part of the idempotency key docs/order-flow.md describes
     // (orderId + orderLineId + stockLocationId + reservationGeneration).

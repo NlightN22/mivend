@@ -74,6 +74,22 @@ export const config: VendureConfig = {
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Status Updated At' }],
             },
+            {
+                // Denormalized at OrderPlacedEvent time from the customer's preferred
+                // TradingPoint (see ErpOrderService.onOrderPlaced) — same pattern as
+                // Reservation.stockLocationId, filtering without a join. See
+                // docs/access-control.md "Branch scope is a separate axis".
+                name: 'tradingPointId',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Trading Point' }],
+            },
+            {
+                name: 'branchId',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Servicing Branch' }],
+            },
         ],
         Product: [
             {
