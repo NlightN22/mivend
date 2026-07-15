@@ -24,6 +24,7 @@ import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
+const redisDb = parseInt(process.env.REDIS_DB ?? '0');
 
 // Plugin sets diverge here as sync and ERP-integration plugins are added in Phase 4
 const instancePlugins = instanceType === 'central' ? [] : [];
@@ -124,6 +125,7 @@ export const config: VendureConfig = {
             connection: {
                 host: process.env.REDIS_HOST ?? 'localhost',
                 port: parseInt(process.env.REDIS_PORT ?? '6379'),
+                db: redisDb,
                 maxRetriesPerRequest: null,
             },
         }),
@@ -141,6 +143,7 @@ export const config: VendureConfig = {
             redis: {
                 host: process.env.REDIS_HOST ?? 'localhost',
                 port: parseInt(process.env.REDIS_PORT ?? '6379'),
+                db: redisDb,
             },
         }),
         ApprovalWorkflowPlugin,
@@ -160,6 +163,7 @@ export const config: VendureConfig = {
             redis: {
                 host: process.env.REDIS_HOST ?? 'localhost',
                 port: parseInt(process.env.REDIS_PORT ?? '6379'),
+                db: redisDb,
             },
             rabbitmq: {
                 url: process.env.RABBITMQ_URL ?? 'amqp://mivend:mivend@localhost:5672',
@@ -170,6 +174,7 @@ export const config: VendureConfig = {
             redis: {
                 host: process.env.REDIS_HOST ?? 'localhost',
                 port: parseInt(process.env.REDIS_PORT ?? '6379'),
+                db: redisDb,
             },
         }),
         MoqPlugin,

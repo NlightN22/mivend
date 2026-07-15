@@ -1,16 +1,33 @@
 import * as amqplib from 'amqplib';
-import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 
-import { DLX, EXCHANGE, SYNC_PLUGIN_OPTIONS } from './types';
+import { DLX, EXCHANGE, MAX_RETRY_DEFAULT, SYNC_PLUGIN_OPTIONS } from './types';
 import type { SyncPluginOptions } from './types';
 import { SyncLogger } from './sync-logger';
 
 @Injectable()
-export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
+export class RabbitMQService implements OnModuleDestroy {
     private connection: amqplib.ChannelModel | null = null;
     private channel: amqplib.Channel | null = null;
     private readonly exchange: string;
     private readonly dlx: string;
+    // Started eagerly in the constructor — i.e. before any provider's onModuleInit hook runs —
+    // and awaited by publish()/subscribe() rather than relying on onModuleInit ordering. Nest
+    // runs onModuleInit hooks within a module concurrently, not sequentially by provider array
+    // order; a consumer's onModuleInit calling subscribe() while this service's own
+    // onModuleInit was still mid-connect() raced and threw "RabbitMQ channel not initialized".
+    // This only ever surfaced on a branch instance (ProductConsumer/OrderConsumer/
+    // ReservationConsumer.onModuleInit no-ops on central), so it stayed latent until the first
+    // real branch boot.
+    private readonly ready: Promise<void>;
+    // In-memory, per-process retry counter keyed by eventId — not durable across a restart,
+    // but that's an acceptable gap here: its only job is to stop a still-failing message from
+    // being nack(requeue=true)'d in a tight, delay-free loop. A real incident traced to exactly
+    // that: a poison message (see erp-adapter.stub.ts's productId fix) with no retry cap and no
+    // backoff generated an unbounded flood of redeliveries fast enough to OOM the whole host.
+    // AGENTS.md's sync rules already require "retried with backoff and eventually routed to a
+    // dead-letter queue" — this was never actually implemented, only documented.
+    private readonly retryCounts = new Map<string, number>();
 
     constructor(
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
@@ -18,10 +35,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     ) {
         this.exchange = options.rabbitmq.exchange ?? EXCHANGE;
         this.dlx = options.rabbitmq.dlx ?? DLX;
-    }
-
-    async onModuleInit(): Promise<void> {
-        await this.connect();
+        this.ready = this.connect();
     }
 
     async onModuleDestroy(): Promise<void> {
@@ -46,6 +60,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
 
     async publish(routingKey: string, event: unknown): Promise<void> {
+        await this.ready;
         const ch = this.requireChannel();
         const content = Buffer.from(JSON.stringify(event));
         ch.publish(this.exchange, routingKey, content, { persistent: true });
@@ -56,6 +71,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         bindingKey: string,
         handler: (raw: unknown) => Promise<void>,
     ): Promise<void> {
+        await this.ready;
         const ch = this.requireChannel();
         await ch.assertQueue(queueName, {
             durable: true,
@@ -64,17 +80,66 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         await ch.bindQueue(queueName, this.exchange, bindingKey);
         await ch.consume(queueName, async msg => {
             if (!msg) return;
+
+            let raw: unknown;
             try {
-                const raw: unknown = JSON.parse(msg.content.toString());
+                raw = JSON.parse(msg.content.toString());
+            } catch (err) {
+                this.logger.error(`Malformed (non-JSON) message on ${queueName}`, err);
+                ch.nack(msg, false, false);
+                return;
+            }
+
+            const retryKey = this.retryKeyFor(raw);
+            try {
                 await handler(raw);
                 ch.ack(msg);
+                if (retryKey) this.retryCounts.delete(retryKey);
             } catch (err) {
                 this.logger.error(`Consumer error on ${queueName}`, err);
-                // ZodError = schema mismatch — requeueing would loop forever, go to DLQ immediately
+                // ZodError = schema mismatch — retrying can never succeed, go to DLQ immediately.
                 const isSchemaError = err instanceof Error && err.name === 'ZodError';
-                ch.nack(msg, false, !isSchemaError);
+                if (isSchemaError) {
+                    ch.nack(msg, false, false);
+                    return;
+                }
+
+                const key = retryKey ?? 'unknown';
+                const attempts = (this.retryCounts.get(key) ?? 0) + 1;
+                const maxRetry = this.options.maxRetry ?? MAX_RETRY_DEFAULT;
+                if (attempts >= maxRetry) {
+                    this.logger.error(
+                        `Giving up on ${queueName} after ${attempts} attempts — routing to DLQ`,
+                        err,
+                    );
+                    this.retryCounts.delete(key);
+                    ch.nack(msg, false, false);
+                    return;
+                }
+                this.retryCounts.set(key, attempts);
+
+                // Exponential backoff before requeueing — never nack(requeue=true) instantly.
+                // A still-failing message redelivered with zero delay is a tight loop, not a
+                // retry: it can flood the process fast enough to exhaust host memory (this is
+                // exactly what happened before this fix existed).
+                const delayMs = Math.min(500 * 2 ** (attempts - 1), 10_000);
+                setTimeout(() => {
+                    try {
+                        ch.nack(msg, false, true);
+                    } catch {
+                        // Channel may already be closed (module shutting down) — nothing to do.
+                    }
+                }, delayMs);
             }
         });
+    }
+
+    private retryKeyFor(raw: unknown): string | undefined {
+        if (raw && typeof raw === 'object' && 'eventId' in raw) {
+            const eventId = (raw as { eventId?: unknown }).eventId;
+            if (typeof eventId === 'string') return eventId;
+        }
+        return undefined;
     }
 
     requireChannel(): amqplib.Channel {

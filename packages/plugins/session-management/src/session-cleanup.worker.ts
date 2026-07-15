@@ -32,6 +32,7 @@ export class SessionCleanupWorker implements OnModuleInit, OnModuleDestroy {
             host: this.options.redis.host,
             port: this.options.redis.port,
             password: this.options.redis.password,
+            db: this.options.redis.db,
         };
 
         this.queue = new Queue(QUEUE_NAME, { connection });

@@ -10,7 +10,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
         e2e e2e-ui e2e-report \
         docker-build docker-push \
         prod-up prod-down \
-        dev dev-fresh dev-reset seed seed-access-roles seed-approvals \
+        dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals \
         storybook storefront storefront-dev
 
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
@@ -46,6 +46,19 @@ dev-fresh:
 # Tear down infra containers AND volumes — next up gets a clean DB
 dev-reset:
 	$(COMPOSE_DEV) down -v
+
+# Minimal branch-instance test stack: server + worker only (no separate storefront/manager dev
+# servers — see docs/architecture.md's branch-identity/scope design). Safe to run alongside an
+# already-running `make dev` central stack: only kills branch-tagged processes (see
+# dev-kill-branch.sh), reuses the shared postgres-branch/redis/rabbitmq/elasticsearch containers,
+# and is isolated from central's BullMQ queues via REDIS_DB (see apps/server/.env.branch).
+dev-branch:
+	@bash infrastructure/scripts/dev-kill-branch.sh
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait postgres-branch redis rabbitmq elasticsearch
+	@docker exec docker-postgres-branch-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_branch'" | grep -q 1 \
+		|| docker exec docker-postgres-branch-1 psql -U postgres -c "CREATE DATABASE mivend_branch"
+	pnpm build:plugins
+	pnpm dev:branch-all
 
 seed:
 	@echo "Waiting for server on :3000..."

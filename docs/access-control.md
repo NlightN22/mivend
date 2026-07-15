@@ -159,6 +159,53 @@ Resources whose visibility is derived from another resource (e.g. `/documents` i
 counterparty visibility) call `resolveCounterpartyScope` directly — they do not get their own
 `resolve<Resource>Scope` method duplicating the same logic.
 
+### Branch scope is a separate axis from own/department/all, and lives on different entities per resource
+
+`branchId` is a hard, additive filter — orthogonal to the `own`/`department`/`all` scope above,
+not a fourth value in that enum. When an administrator's `customFields.branchId` is set, it is
+always applied as `AND branchId = :branchId` before the own/department/all logic narrows further
+within that branch. Central-only roles (`general-director`, `portal-admin`) have `branchId = null`
+— no branch filter is applied, they see every branch.
+
+**Where `branchId` actually lives is not the same field for every resource — this was a real
+design decision, not an oversight:**
+
+- **`Counterparty.branchId`** is the customer's _home/reporting_ branch — display and default
+  assignment only, **never used as an access-scope filter**. A chain/network customer (e.g. a
+  multi-location fuel station chain) can have trading points served by several different
+  branches; filtering the parent `Counterparty` record itself by branch would incorrectly hide it
+  from — or wrongly show all of it to — a branch that only services part of it.
+- **`TradingPoint.servicingBranchId`** is the real access-scope filter for a customer's locations
+  and everything derived from them (`Order`, `Reservation` inherit `branchId` from the
+  `TradingPoint` selected at creation time, denormalized onto the row for filtering without a
+  join — same pattern as `Reservation.stockLocationId`). Defaults to the parent `Counterparty`'s
+  `branchId` at `TradingPoint` creation time (covers the ~90–95% single-branch case with zero
+  manual work); explicitly overridable per point for chain accounts.
+
+This is the standard **Key Account Management vs. Territory Management** split used in mature B2B
+CRM/ERP systems (Salesforce territory model, SAP Account/Territory): one axis owns the commercial
+relationship and commission ("зачёт" always goes to `Counterparty.assignedManagerId`, regardless
+of which branch's trading point closed the sale), a separate axis owns local operational
+execution (visits, logistics, fulfillment) per location. Do not collapse these into one field —
+that collapse is exactly the failure mode this split prevents.
+
+**Key account manager read exception:** `Counterparty.assignedManagerId` must always grant that
+manager read access to their account's trading points/orders/reservations **regardless of
+`branchId` scope** — this is a read exception layered on top of the normal branch filter, not a
+widening of that manager's own `branchId`. Implement it as an explicit `OR assignedManagerId =
+:id` alongside the branch filter in `findVisible`-style queries, never by setting the manager's
+own `branchId` to `null`/`all` — that would over-grant visibility into unrelated customers in
+every other branch too.
+
+Commission/credit-limit ownership always follows `Counterparty.assignedManagerId`. Do not attempt
+to split commission by trading point when a chain account's locations span branches — this was a
+deliberate business decision, not a modeling gap.
+
+`TradingPoint.servicingManagerId` (per-point operational assignment, distinct from
+`servicingBranchId`) is explicitly **not modeled yet** — today's scope is branch-level
+distribution control only, not per-outlet. Add it only if per-point visit/audit assignment
+becomes a real requirement, not preemptively.
+
 ---
 
 ## Layer 4: field-level redaction
