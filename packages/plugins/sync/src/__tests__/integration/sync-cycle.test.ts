@@ -95,6 +95,10 @@ afterEach(async () => {
     await dataSource.query(`DELETE FROM product`);
     await branchRabbitMQ.requireChannel().purgeQueue('sync.branch-a');
     await branchRabbitMQ.requireChannel().purgeQueue('sync.dead-letters');
+    await hubRabbitMQ
+        .requireChannel()
+        .deleteQueue('test.poison-message')
+        .catch(() => undefined);
     vi.clearAllMocks();
 });
 
@@ -252,6 +256,48 @@ describe('branch consumer', () => {
         const mainQ = await branchRabbitMQ.requireChannel().checkQueue('sync.branch-a');
         expect(mainQ.messageCount).toBe(0);
     });
+
+    // Real incident this test guards against: a schema-valid message whose business logic
+    // keeps failing (see erp-adapter.stub.ts's productId fix) was nack(requeue=true)'d
+    // instantly and indefinitely — a tight loop with no delay and no cap, fast enough to
+    // exhaust host memory. Retries must be backed off and capped at maxRetry, landing in
+    // dead-letters afterward — never looping forever.
+    it('a still-failing (non-schema) message retries with backoff, then lands in dead-letters — never loops forever', async () => {
+        const queueName = 'test.poison-message';
+        let attempts = 0;
+        await hubRabbitMQ.subscribe(queueName, 'poison.test', async () => {
+            attempts++;
+            throw new Error('simulated persistent failure — not a ZodError');
+        });
+
+        const event = {
+            eventId: randomUUID(),
+            eventType: 'product.updated' as const,
+            sourceInstanceId: 'hub',
+            timestamp: new Date().toISOString(),
+            payload: { productId: randomUUID(), enabled: true },
+        };
+        hubRabbitMQ
+            .requireChannel()
+            .publish(EXCHANGE, 'poison.test', Buffer.from(JSON.stringify(event)), {
+                persistent: true,
+            });
+
+        await waitFor(
+            async () => {
+                const q = await hubRabbitMQ.requireChannel().checkQueue('sync.dead-letters');
+                return q.messageCount > 0;
+            },
+            15_000,
+            300,
+        );
+
+        // Exactly maxRetry (3) attempts — not more (would mean the cap didn't hold) and not
+        // fewer (would mean it gave up early or never retried at all).
+        expect(attempts).toBe(HUB_OPTIONS.maxRetry);
+        const mainQ = await hubRabbitMQ.requireChannel().checkQueue(queueName);
+        expect(mainQ.messageCount).toBe(0);
+    }, 20_000);
 });
 
 // ─── Batch processing ─────────────────────────────────────────────────────────
