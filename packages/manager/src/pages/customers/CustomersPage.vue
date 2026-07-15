@@ -206,7 +206,7 @@ onMounted(async () => {
             </div>
         </div>
 
-        <div v-if="!loading" class="customers-page__kpis">
+        <div v-if="summary" class="customers-page__kpis">
             <MvKpiCard label="Active clients" :value="activeClientsCount" />
             <MvKpiCard
                 v-if="canReadCredit"
@@ -243,12 +243,13 @@ onMounted(async () => {
 
                 <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
                 <CustomersTable
-                    v-if="!loading"
                     :customers="customers"
                     :credit="credit"
                     :discount-counts="discountCounts"
                     :last-order-dates="lastOrderDates"
                     :branches="branches"
+                    :managers="managers"
+                    :loading="loading"
                     :page-size="PAGE_SIZE"
                 />
                 <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />

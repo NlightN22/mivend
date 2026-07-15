@@ -5,7 +5,7 @@ import type { Column } from 'element-plus';
 import { MvTable, MvStatusBadge, MvProgressBar } from '@mivend/ui-kit';
 import type { TableRow, ProgressBarVariant } from '@mivend/ui-kit';
 import type { CustomerListItem, CustomerCredit } from '../../api/customers';
-import type { BranchOption } from '../../api/orders';
+import type { BranchOption, ManagerOption } from '../../api/orders';
 
 const props = defineProps<{
     customers: CustomerListItem[];
@@ -13,10 +13,17 @@ const props = defineProps<{
     discountCounts: Map<string, number>;
     lastOrderDates: Map<string, string>;
     branches: BranchOption[];
+    managers: ManagerOption[];
     // See OrdersTable's pageSize prop comment — stabilizes table height across page changes.
     pageSize?: number;
+    loading?: boolean;
 }>();
 const router = useRouter();
+
+function managerName(id: string | null): string {
+    if (!id) return '—';
+    return props.managers.find(m => m.id === id)?.name ?? '—';
+}
 
 function money(amount: number): string {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount / 100);
@@ -50,6 +57,7 @@ const columns = computed<Column<TableRow>[]>(() => [
         },
     },
     { key: 'contact', title: 'Contact person', dataKey: 'contact', width: 170 },
+    { key: 'manager', title: 'Manager', dataKey: 'manager', width: 150 },
     { key: 'creditLimit', title: 'Credit limit', dataKey: 'creditLimit', width: 130, align: 'right' },
     {
         key: 'creditBalance',
@@ -117,6 +125,7 @@ const rows = computed<TableRow[]>(() =>
                 .filter(Boolean)
                 .join(' · '),
             contact: primaryContact?.name ?? '—',
+            manager: managerName(c.assignedManagerId),
             creditLimit: credit ? money(credit.creditLimit) : '—',
             creditBalance: credit ? money(credit.creditBalance) : '—',
             creditUsagePercent: usagePercent,
@@ -139,6 +148,7 @@ function handleRowClick({ rowData }: { rowData: TableRow }): void {
         :data="rows"
         :height="Math.max(rows.length, props.pageSize ?? 1) * 60 + 40"
         :row-height="60"
+        :loading="loading"
         empty-text="You don't have any assigned clients yet"
         @row-click="handleRowClick"
     />
