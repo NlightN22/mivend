@@ -14,6 +14,13 @@ import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.s
 
 interface TeamMember {
     id: string;
+    firstName: string;
+    lastName: string;
+    roleCodes: string[];
+}
+
+interface TeamDirectoryMember {
+    id: string;
     firstName: string | null;
     lastName: string | null;
     roleCodes: string[];
@@ -33,18 +40,38 @@ export class AccessControlResolver {
         private accessScopeService: AccessScopeService,
     ) {}
 
-    // Role codes + org-structure fields — used to label the "Manager" filter/column on the
-    // Orders list (see docs/ai/manager-portal-pages/02-orders-list.md), to populate the
-    // "Escalate to..." picker on the approval detail page (see 11-approval-detail.md), and to
-    // power the /team org-structure directory (docs/ai/manager-portal-pages/13-team.md). No
-    // dedicated permission — view-only org-structure data, same as `departments` below — but
-    // `firstName`/`lastName` are anonymized to null for members outside the caller's own
-    // department when the caller's 'teamVisibility' access scope isn't 'all' (see
-    // AccessScopeService.resolveTeamVisibilityScope) — this is the one field pair on this query
-    // that IS sensitive (an employee not wanting to be identified by name company-wide).
+    // Names + role codes only — used to label the "Manager" filter/column on the Orders and
+    // Customers lists (see docs/ai/manager-portal-pages/02-orders-list.md,
+    // 04-customers-list.md) and to populate the "Escalate to..." picker on the approval detail
+    // page (see 11-approval-detail.md). These are all picker/assignment use cases where the
+    // caller already has (or is choosing) a working relationship with the named administrator
+    // — real names are required for the picker to be usable, so this query is deliberately NOT
+    // subject to the teamVisibility anonymization that `teamDirectory` below applies. No
+    // dedicated permission — view-only org-structure data, same as `departments` below; role
+    // codes are already shown everywhere as badges, not sensitive.
     @Query()
     @Allow(Permission.Authenticated)
     async teamMembers(@Ctx() ctx: RequestContext): Promise<TeamMember[]> {
+        const result = await this.administratorService.findAll(ctx, { take: 200 }, ['user.roles']);
+        return result.items.map(a => ({
+            id: String(a.id),
+            firstName: a.firstName,
+            lastName: a.lastName,
+            roleCodes: a.user?.roles?.map(r => r.code) ?? [],
+        }));
+    }
+
+    // Powers the /team org-structure directory (docs/ai/manager-portal-pages/13-team.md) only
+    // — unlike `teamMembers` above, `firstName`/`lastName` are anonymized to null for members
+    // outside the caller's own department when the caller's 'teamVisibility' access scope isn't
+    // 'all' (see AccessScopeService.resolveTeamVisibilityScope). This is the one field pair on
+    // this query that IS sensitive (an employee not wanting to be identified by name
+    // company-wide) — kept as a separate query from `teamMembers` so picker/assignment call
+    // sites (Orders/Customers manager filter, approval escalation) always get real names
+    // regardless of the viewer's teamVisibility scope.
+    @Query()
+    @Allow(Permission.Authenticated)
+    async teamDirectory(@Ctx() ctx: RequestContext): Promise<TeamDirectoryMember[]> {
         const result = await this.administratorService.findAll(ctx, { take: 200 }, ['user.roles']);
         const [ownDepartmentId, visibilityScope] = await Promise.all([
             this.accessScopeService.getOwnDepartmentId(ctx),

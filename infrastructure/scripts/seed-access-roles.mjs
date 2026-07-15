@@ -121,7 +121,7 @@ const ROLES = [
             'ManageApprovalWorkflows',
             'ReassignCounterpartyManager',
         ],
-        accessScopeConfig: { counterparty: 'all', order: 'all' },
+        accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all' },
     },
     {
         code: 'security-officer',
@@ -136,7 +136,7 @@ const ROLES = [
             'ApproveSecurityLimit',
             'ReadEntityHistory',
         ],
-        accessScopeConfig: { counterparty: 'all', order: 'all' },
+        accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all' },
     },
     {
         code: 'portal-admin',
@@ -173,7 +173,7 @@ const ROLES = [
             'ApproveDiscountRequest',
             'ApproveSecurityLimit',
         ],
-        accessScopeConfig: { counterparty: 'all', order: 'all' },
+        accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all' },
     },
 ];
 

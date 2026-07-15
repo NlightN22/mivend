@@ -34,6 +34,13 @@ const adminApiSchema = gql`
 
     type TeamMember {
         id: ID!
+        firstName: String!
+        lastName: String!
+        roleCodes: [String!]!
+    }
+
+    type TeamDirectoryMember {
+        id: ID!
         firstName: String
         lastName: String
         roleCodes: [String!]!
@@ -52,6 +59,7 @@ const adminApiSchema = gql`
         departments: [Department!]!
         branches: [Branch!]!
         teamMembers: [TeamMember!]!
+        teamDirectory: [TeamDirectoryMember!]!
         creditTermLimit(roleCode: String!): CreditTermLimit
         roleAccessScopeConfig(roleCode: String!): String
     }

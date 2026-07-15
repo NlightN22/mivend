@@ -29,11 +29,13 @@ export type { BranchOption };
 
 // firstName/lastName come back null for members outside the caller's own department when
 // their role's 'teamVisibility' access scope isn't 'all' — see
-// packages/plugins/access-control/src/access-control.resolver.ts's teamMembers resolver.
+// packages/plugins/access-control/src/access-control.resolver.ts's teamDirectory resolver.
+// Deliberately a separate query from teamMembers (used by manager pickers/filters elsewhere,
+// e.g. Orders/Customers), which always returns real names — see that resolver's doc comment.
 export async function fetchTeamDirectory(): Promise<TeamDirectoryMember[]> {
-    const result = await adminApi<{ teamMembers: TeamDirectoryMember[] }>(
+    const result = await adminApi<{ teamDirectory: TeamDirectoryMember[] }>(
         `query {
-            teamMembers {
+            teamDirectory {
                 id
                 firstName
                 lastName
@@ -44,5 +46,5 @@ export async function fetchTeamDirectory(): Promise<TeamDirectoryMember[]> {
             }
         }`,
     );
-    return result.teamMembers;
+    return result.teamDirectory;
 }

@@ -31,6 +31,35 @@ function mockAdministrator(
 }
 
 describe('AccessControlResolver.teamMembers', () => {
+    it('always returns real names, regardless of department or teamVisibility scope — used by manager pickers/filters, not the org directory', async () => {
+        const administratorService = { findAll: vi.fn() };
+        const resolver = new AccessControlResolver(
+            {} as RoleScopeConfigService,
+            {} as DepartmentService,
+            {} as BranchService,
+            {} as CreditTermLimitService,
+            administratorService as unknown as AdministratorService,
+            {} as AccessScopeService,
+        );
+        administratorService.findAll.mockResolvedValue({
+            items: [
+                mockAdministrator('5', 'Petr', 'Manager', { departmentId: 'dept-purchasing' }, [
+                    'manager',
+                ]),
+            ],
+        });
+
+        const [member] = await resolver.teamMembers({} as RequestContext);
+        expect(member).toEqual({
+            id: '5',
+            firstName: 'Petr',
+            lastName: 'Manager',
+            roleCodes: ['manager'],
+        });
+    });
+});
+
+describe('AccessControlResolver.teamDirectory', () => {
     let administratorService: { findAll: ReturnType<typeof vi.fn> };
     let accessScopeService: {
         getOwnDepartmentId: ReturnType<typeof vi.fn>;
@@ -66,7 +95,7 @@ describe('AccessControlResolver.teamMembers', () => {
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'own' });
 
-        const result = await resolver.teamMembers(ctx);
+        const result = await resolver.teamDirectory(ctx);
         expect(result).toEqual([
             {
                 id: '1',
@@ -87,7 +116,7 @@ describe('AccessControlResolver.teamMembers', () => {
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'department' });
 
-        const [member] = await resolver.teamMembers(ctx);
+        const [member] = await resolver.teamDirectory(ctx);
         expect(member.firstName).toBeNull();
         expect(member.lastName).toBeNull();
         expect(member.departmentId).toBe('dept-purchasing');
@@ -102,7 +131,7 @@ describe('AccessControlResolver.teamMembers', () => {
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'all' });
 
-        const [member] = await resolver.teamMembers(ctx);
+        const [member] = await resolver.teamDirectory(ctx);
         expect(member.firstName).toBe('Nikolai');
         expect(member.lastName).toBe('Director');
     });
@@ -120,7 +149,7 @@ describe('AccessControlResolver.teamMembers', () => {
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'own' });
 
-        const [member] = await resolver.teamMembers(ctx);
+        const [member] = await resolver.teamDirectory(ctx);
         expect(member.branchId).toBe('branch-central');
         expect(member.position).toBe('Sales operator');
     });
