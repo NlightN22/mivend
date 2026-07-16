@@ -57,6 +57,9 @@ describe('DiscountRuleService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockRepo.createQueryBuilder.mockReturnValue(mockQb);
+        // No grant metadata for the candidate rules unless a test overrides this — matches
+        // prior behavior where DiscountGrant/counterparty scoping didn't exist yet.
+        mockRepo.find.mockResolvedValue([]);
         discountRegistryService = { upsertFromRule: vi.fn(async () => undefined) };
         service = new DiscountRuleService(
             mockConnection as unknown as TransactionalConnection,
@@ -375,6 +378,110 @@ describe('DiscountRuleService', () => {
             );
 
             expect(result).toBe(22);
+        });
+
+        describe('grant scope', () => {
+            it('excludes a customer-scoped grant rule when counterpartyId does not match', async () => {
+                mockQb.getMany.mockResolvedValue([rule({ id: 9, percent: 99 })]);
+                mockRepo.find.mockResolvedValue([
+                    {
+                        discountRuleId: '9',
+                        scopeType: 'customer',
+                        counterparties: [{ id: '3' }],
+                    },
+                ]);
+
+                const result = await service.getBestPercent(
+                    mockCtx,
+                    'WHOLESALE',
+                    [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                    now,
+                    new Map(),
+                    new Map(),
+                    '2',
+                );
+
+                expect(result).toBeNull();
+            });
+
+            it('includes a customer-scoped grant rule when counterpartyId matches', async () => {
+                mockQb.getMany.mockResolvedValue([rule({ id: 9, percent: 99 })]);
+                mockRepo.find.mockResolvedValue([
+                    {
+                        discountRuleId: '9',
+                        scopeType: 'customer',
+                        counterparties: [{ id: '2' }],
+                    },
+                ]);
+
+                const result = await service.getBestPercent(
+                    mockCtx,
+                    'WHOLESALE',
+                    [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                    now,
+                    new Map(),
+                    new Map(),
+                    '2',
+                );
+
+                expect(result).toBe(99);
+            });
+
+            it('excludes a customer-scoped grant rule when counterpartyId is unknown (null)', async () => {
+                mockQb.getMany.mockResolvedValue([rule({ id: 9, percent: 99 })]);
+                mockRepo.find.mockResolvedValue([
+                    {
+                        discountRuleId: '9',
+                        scopeType: 'customer',
+                        counterparties: [{ id: '2' }],
+                    },
+                ]);
+
+                const result = await service.getBestPercent(
+                    mockCtx,
+                    'WHOLESALE',
+                    [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                    now,
+                );
+
+                expect(result).toBeNull();
+            });
+
+            it('includes a scopeType "all" grant rule regardless of counterpartyId', async () => {
+                mockQb.getMany.mockResolvedValue([rule({ id: 9, percent: 12 })]);
+                mockRepo.find.mockResolvedValue([
+                    { discountRuleId: '9', scopeType: 'all', counterparties: [] },
+                ]);
+
+                const result = await service.getBestPercent(
+                    mockCtx,
+                    'WHOLESALE',
+                    [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                    now,
+                    new Map(),
+                    new Map(),
+                    '999',
+                );
+
+                expect(result).toBe(12);
+            });
+
+            it('a rule with no associated grant stays global (plain ERP-sourced rule)', async () => {
+                mockQb.getMany.mockResolvedValue([rule({ id: 9, percent: 10 })]);
+                mockRepo.find.mockResolvedValue([]);
+
+                const result = await service.getBestPercent(
+                    mockCtx,
+                    'WHOLESALE',
+                    [{ facetCode: 'brand', valueCode: 'lukoil' }],
+                    now,
+                    new Map(),
+                    new Map(),
+                    'some-unrelated-counterparty',
+                );
+
+                expect(result).toBe(10);
+            });
         });
     });
 

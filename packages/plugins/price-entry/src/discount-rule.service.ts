@@ -3,6 +3,7 @@ import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { In } from 'typeorm';
 
 import { DiscountRule } from './discount-rule.entity';
+import { DiscountGrant } from './discount-grant.entity';
 import { DiscountRegistryService } from './discount-registry.service';
 
 const loggerCtx = 'DiscountRulePlugin';
@@ -143,6 +144,7 @@ export class DiscountRuleService {
         now: Date,
         weightByFacet: Map<string, number> = new Map(),
         amountByFacet: Map<string, number> = new Map(),
+        counterpartyId: string | null = null,
     ): Promise<number | null> {
         const rules = await this.connection
             .getRepository(ctx, DiscountRule)
@@ -168,7 +170,41 @@ export class DiscountRuleService {
         });
 
         if (matching.length === 0) return null;
-        return Math.max(...matching.map(r => r.percent));
+        const scoped = await this.filterByGrantScope(ctx, matching, counterpartyId);
+        if (scoped.length === 0) return null;
+        return Math.max(...scoped.map(r => r.percent));
+    }
+
+    // A DiscountRule materialized from a counterparty-scoped DiscountGrant (see
+    // DiscountGrantService.decideAndApply) must only ever discount the counterparties it was
+    // actually granted to. Real incident: DiscountRule itself carries no counterparty column
+    // (it's priceType/facet-scoped ERP-style policy) — the DiscountGrant/counterparties join was
+    // materialized purely for display (dashboard/Customer Detail tab) and never consulted here,
+    // so a 99%-off grant made to one counterparty (e.g. a discount-grant-leak *display* test
+    // fixture) silently discounted every other customer sharing the same price type. Rules with
+    // no associated grant (plain ERP-sourced DiscountRule rows) or scopeType 'all' remain global,
+    // matching prior behavior exactly.
+    private async filterByGrantScope(
+        ctx: RequestContext,
+        rules: DiscountRule[],
+        counterpartyId: string | null,
+    ): Promise<DiscountRule[]> {
+        if (rules.length === 0) return rules;
+        const ruleIds = rules.map(r => String(r.id));
+        const grants = await this.connection.getRepository(ctx, DiscountGrant).find({
+            where: { discountRuleId: In(ruleIds) },
+            relations: ['counterparties'],
+        });
+        const grantByRuleId = new Map<string, DiscountGrant>();
+        for (const grant of grants ?? []) {
+            grantByRuleId.set(grant.discountRuleId, grant);
+        }
+        return rules.filter(rule => {
+            const grant = grantByRuleId.get(String(rule.id));
+            if (!grant || grant.scopeType === 'all') return true;
+            if (!counterpartyId) return false;
+            return grant.counterparties.some(c => String(c.id) === counterpartyId);
+        });
     }
 
     /**

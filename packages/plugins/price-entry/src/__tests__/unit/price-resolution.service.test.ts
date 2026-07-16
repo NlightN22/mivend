@@ -68,6 +68,8 @@ describe('PriceResolutionService', () => {
         getBestPercent: ReturnType<typeof vi.fn>;
         getTiers: ReturnType<typeof vi.fn>;
     };
+    let customerService: { findOneByUserId: ReturnType<typeof vi.fn> };
+    let counterpartyService: { getForCustomer: ReturnType<typeof vi.fn> };
     let service: PriceResolutionService;
 
     beforeEach(() => {
@@ -86,14 +88,18 @@ describe('PriceResolutionService', () => {
             getBestPercent: vi.fn(async () => null),
             getTiers: vi.fn(async () => []),
         };
+        customerService = { findOneByUserId: vi.fn(async () => null) };
+        counterpartyService = { getForCustomer: vi.fn(async () => null) };
         service = new PriceResolutionService(
             priceEntryService as unknown as PriceEntryService,
             discountRuleService as unknown as DiscountRuleService,
             mockConnection,
+            customerService as unknown as import('@vendure/core').CustomerService,
+            counterpartyService as unknown as import('@mivend/plugin-counterparty').CounterpartyService,
         );
     });
 
-    it('passes empty weight/amount Maps when no orderContext is given (catalog display)', async () => {
+    it('passes empty weight/amount Maps and a null counterpartyId when no orderContext is given (catalog display, no active user)', async () => {
         variantsById.v1 = brandVariant('v1', 'lukoil', 100);
 
         await service.resolve(mockCtx, 'v1');
@@ -105,6 +111,26 @@ describe('PriceResolutionService', () => {
             expect.any(Date),
             new Map(),
             new Map(),
+            null,
+        );
+    });
+
+    it('resolves counterpartyId from order.customerId and scopes the discount to it', async () => {
+        variantsById.v1 = brandVariant('v1', 'lukoil', 100);
+        counterpartyService.getForCustomer.mockResolvedValue({ id: '7' });
+        const order = { customerId: 'cust-42', lines: [] } as unknown as Order;
+
+        await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+        expect(counterpartyService.getForCustomer).toHaveBeenCalledWith(mockCtx, 'cust-42');
+        expect(discountRuleService.getBestPercent).toHaveBeenCalledWith(
+            mockCtx,
+            'RETAIL',
+            expect.anything(),
+            expect.any(Date),
+            expect.anything(),
+            expect.anything(),
+            '7',
         );
     });
 
@@ -187,6 +213,7 @@ describe('PriceResolutionService', () => {
             expect.any(Date),
             expect.anything(),
             expect.anything(),
+            null,
         );
     });
 

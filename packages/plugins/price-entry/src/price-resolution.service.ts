@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import {
+    CustomerService,
     Order,
     ProductVariant,
     RequestContext,
     TransactionalConnection,
     translateEntity,
 } from '@vendure/core';
+import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService, DiscountTierVM, VariantFacetValue } from './discount-rule.service';
@@ -54,6 +56,8 @@ export class PriceResolutionService {
         private priceEntryService: PriceEntryService,
         private discountRuleService: DiscountRuleService,
         private connection: TransactionalConnection,
+        private customerService: CustomerService,
+        private counterpartyService: CounterpartyService,
     ) {}
 
     async resolve(
@@ -75,6 +79,13 @@ export class PriceResolutionService {
 
         const basePrice = await this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode);
         if (basePrice === null) return { customerPrice: null, compareAtPrice: null };
+
+        // A customer-scoped DiscountGrant (approval-workflow) must only ever discount the
+        // counterparties it was actually granted to — see DiscountRuleService.getBestPercent's
+        // grant-scope filter. Resolved the same way `priceTypeCode` is above: order.customerId
+        // is authoritative when pricing a real order line, ctx.activeUserId otherwise (catalog
+        // display).
+        const counterpartyId = await this.resolveCounterpartyId(ctx, orderContext);
 
         const { facetValues, weight } = await this.getVariantFacetsAndWeight(ctx, variantId);
         const { weightByFacet, amountByFacet } = orderContext
@@ -99,6 +110,7 @@ export class PriceResolutionService {
             new Date(),
             weightByFacet,
             amountByFacet,
+            counterpartyId,
         );
 
         if (percent === null) return { customerPrice: basePrice, compareAtPrice: null };
@@ -106,6 +118,22 @@ export class PriceResolutionService {
             customerPrice: Math.round(basePrice * (1 - percent / 100)),
             compareAtPrice: basePrice,
         };
+    }
+
+    private async resolveCounterpartyId(
+        ctx: RequestContext,
+        orderContext?: OrderPricingContext,
+    ): Promise<string | null> {
+        let customerId: string | undefined;
+        if (orderContext?.order.customerId) {
+            customerId = String(orderContext.order.customerId);
+        } else if (ctx.activeUserId) {
+            const customer = await this.customerService.findOneByUserId(ctx, ctx.activeUserId);
+            customerId = customer ? String(customer.id) : undefined;
+        }
+        if (!customerId) return null;
+        const counterparty = await this.counterpartyService.getForCustomer(ctx, customerId);
+        return counterparty ? String(counterparty.id) : null;
     }
 
     /**
