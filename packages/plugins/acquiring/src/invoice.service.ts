@@ -78,4 +78,8 @@ export class InvoiceService {
         );
         return repo.save(invoices);
     }
+
+    async findByOrderId(ctx: RequestContext, orderId: number): Promise<Invoice[]> {
+        return this.connection.getRepository(ctx, Invoice).find({ where: { orderId } });
+    }
 }

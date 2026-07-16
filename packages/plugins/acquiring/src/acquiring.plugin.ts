@@ -13,6 +13,9 @@ import { SettlementEntry } from './entities/settlement-entry.entity';
 import { IdempotencyService } from './idempotency.service';
 import { InboxService } from './inbox.service';
 import { InvoiceService } from './invoice.service';
+import { InvoiceAdminResolver, InvoiceShopResolver } from './invoice.resolver';
+import { adminApiExtensions } from './api/admin.schema';
+import { shopApiExtensions } from './api/shop.schema';
 
 @VendurePlugin({
     imports: [PluginCommonModule, CounterpartyPlugin],
@@ -29,6 +32,14 @@ import { InvoiceService } from './invoice.service';
     ],
     providers: [IdempotencyService, InboxService, InvoiceService],
     exports: [IdempotencyService, InboxService, InvoiceService],
+    adminApiExtensions: {
+        schema: adminApiExtensions,
+        resolvers: [InvoiceAdminResolver],
+    },
+    shopApiExtensions: {
+        schema: shopApiExtensions,
+        resolvers: [InvoiceShopResolver],
+    },
     compatibility: '>0.0.0',
 })
 export class AcquiringPlugin {}
