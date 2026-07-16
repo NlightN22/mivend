@@ -59,7 +59,10 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
         const brk1 = await findVariantId(page, 'E2E-BRK-001'); // 1080₽
         const brk2 = await findVariantId(page, 'E2E-BRK-002'); // 720₽
 
-        // brk1 alone: 1080₽ spent — below the 2000₽ threshold, no discount.
+        // brk1 alone: 1080₽ spent — below the 2000₽ amount-tier threshold, so the brand-specific
+        // amount rule doesn't apply yet. The e2e customer's own account-wide 8% grant
+        // (facet-less by design, see global-setup.ts's grantInput) still does, though — expect
+        // the final discounted price, not the undiscounted base.
         const add1 = await gql(
             page,
             `mutation($id: ID!) {
@@ -72,9 +75,10 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
         );
         expect(
             lineFor((add1.addItemToOrder as { lines: OrderLine[] }).lines, 'E2E-BRK-001').unitPrice,
-        ).toBe(108000);
+        ).toBe(Math.round(108000 * 0.92));
 
-        // Add brk2 at qty 1: aggregate spend 1080 + 720 = 1800₽ — still under 2000₽.
+        // Add brk2 at qty 1: aggregate spend 1080 + 720 = 1800₽ — still under 2000₽, same 8%
+        // account-wide grant applies to both lines.
         const add2 = await gql(
             page,
             `mutation($id: ID!) {
@@ -86,8 +90,8 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
             { id: brk2 },
         );
         let lines = (add2.addItemToOrder as { lines: OrderLine[] }).lines;
-        expect(lineFor(lines, 'E2E-BRK-002').unitPrice).toBe(72000);
-        expect(lineFor(lines, 'E2E-BRK-001').unitPrice).toBe(108000);
+        expect(lineFor(lines, 'E2E-BRK-002').unitPrice).toBe(Math.round(72000 * 0.92));
+        expect(lineFor(lines, 'E2E-BRK-001').unitPrice).toBe(Math.round(108000 * 0.92));
 
         // Bump brk2 to qty 2: aggregate spend 1080 + 720*2 = 2520₽ — crosses the 2000₽
         // tier (30%). brk1 — untouched by this mutation — must also drop to the tier.

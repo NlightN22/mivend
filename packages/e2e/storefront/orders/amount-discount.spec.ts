@@ -31,7 +31,10 @@ test.describe('Spend-amount-tiered discount', () => {
         await clearCart(page);
         const variantId = await findVariantId(page, 'E2E-BRK-001');
 
-        // First unit: 1080₽ spent, below the 2000₽ threshold — no discount at all.
+        // First unit: 1080₽ spent, below the 2000₽ amount-tier threshold — the brand-specific
+        // amount rule doesn't apply yet, but the e2e customer's own account-wide 8% grant
+        // (facet-less by design, see global-setup.ts's grantInput) still does — expect the
+        // final discounted price (108000 * 0.92 = 99360), not the undiscounted base.
         const firstAdd = await gql(
             page,
             `mutation($id: ID!) {
@@ -46,7 +49,7 @@ test.describe('Spend-amount-tiered discount', () => {
             (firstAdd.addItemToOrder as { lines: OrderLine[] }).lines,
             'E2E-BRK-001',
         );
-        expect(firstLine.unitPrice).toBe(108000);
+        expect(firstLine.unitPrice).toBe(Math.round(108000 * 0.92));
 
         // Second unit: 2160₽ spent, crosses the 2000₽ threshold — 30% tier kicks in.
         const secondAdd = await gql(
