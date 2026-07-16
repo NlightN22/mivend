@@ -168,10 +168,11 @@ See `docs/sync.md` for the full design. These rules must never be broken:
 11. **A payment touches four independent sources of truth — never conflate them, never let one
     silently overwrite another.** The payment provider/branch kassa/bank owns the real state of
     the money movement (`paymentStatus`); this platform owns the business process and event
-    routing only; 1C owns the accounting/management reflection, but only for postings it has
-    actually accepted (`erpPostingStatus`) — 1C being unreachable does not make an
-    already-captured payment "unconfirmed"; ККТ/ОФД owns the fiscal receipt
-    (`fiscalizationStatus`), which completes asynchronously and independently of the other two.
+    routing only; the ERP owns the accounting/management reflection, but only for postings it
+    has actually accepted (`erpPostingStatus`) — the ERP being unreachable does not make an
+    already-captured payment "unconfirmed"; the fiscal registrar/operator owns the fiscal
+    receipt (`fiscalizationStatus`), which completes asynchronously and independently of the
+    other two.
     Track these as separate fields, never one combined status. Refunds and disputes/chargebacks
     are their own entities with their own lifecycles — never a negative payment record, never
     folded into each other. Never invent a synthetic Vendure `Payment` to make an order's state

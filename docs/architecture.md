@@ -173,8 +173,8 @@ already present in three places, just not previously named as one principle:
   its own aggregate with its own state machine; an approved decision is _applied_ to the order
   (e.g. a price adjustment) as a downstream effect, never by the approval engine reaching in and
   mutating the order as a co-owner.
-- **ERP status** — `ErpOrderStatusEvent` is 1C's own fact stream; `Order.customFields.erpStatus`
-  is a projection, and this project's own explicit rule is "1C wins on conflict" (a fixed
+- **ERP status** — `ErpOrderStatusEvent` is the ERP's own fact stream; `Order.customFields.erpStatus`
+  is a projection, and this project's own explicit rule is "the ERP wins on conflict" (a fixed
   authority, the same shape as "origin always wins" above, not a timestamp comparison).
 
 **Payment follows the same shape** — a `payment.recorded` sync event (implemented, live-verified
@@ -188,8 +188,9 @@ signal — it is not, by itself, a general ledger.** A customer's real payment m
 one order (a lump sum covering several orders, an advance, a partial payment) — see
 `docs/payments.md` for the fuller design: four independent sources of truth (money movement
 owned by the provider/kassa, business process owned by this platform, accounting reflection
-owned by 1C only once accepted, fiscal receipt owned by ККТ/ОФД — never conflated into one
-status), a separate append-only `SettlementEntry` ledger per counterparty, refunds/disputes as
+owned by the ERP only once accepted, fiscal receipt owned by the fiscal registrar/operator —
+never conflated into one status), a separate append-only `SettlementEntry` ledger per
+counterparty, refunds/disputes as
 their own entities, and three-level idempotency (command/inbound-dedup/business-uniqueness) —
 never a synthetic Vendure `Payment` invented to force-fit a real-world payment onto one order.
 
