@@ -10,6 +10,7 @@ import {
 } from '@vendure/core';
 import { In } from 'typeorm';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { Invoice } from '@mivend/plugin-acquiring';
 
 import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
@@ -159,6 +160,23 @@ export class DocumentsService {
         return this.connection.getRepository(ctx, OrganizationRequisites).find();
     }
 
+    // Used to render an invoice for one specific organization (plugin-acquiring's Invoice
+    // .organizationId) — as opposed to getActiveRequisites(), which is a single-organization
+    // fallback for documents that predate per-organization splitting (contracts, legacy
+    // whole-order invoices). See docs/payments.md "Organizations".
+    async getRequisitesById(
+        ctx: RequestContext,
+        organizationId: number,
+    ): Promise<OrganizationRequisites> {
+        const requisites = await this.connection
+            .getRepository(ctx, OrganizationRequisites)
+            .findOne({ where: { id: organizationId } });
+        if (!requisites) {
+            throw new Error(`OrganizationRequisites ${organizationId} not found`);
+        }
+        return requisites;
+    }
+
     async getActiveRequisites(ctx: RequestContext): Promise<OrganizationRequisites> {
         const requisites = await this.connection
             .getRepository(ctx, OrganizationRequisites)
@@ -176,17 +194,22 @@ export class DocumentsService {
     async createInvoicePlaceholder(
         ctx: RequestContext,
         order: Order,
-        counterpartyId: ID,
+        invoice: Invoice,
     ): Promise<Document> {
         const repo = this.connection.getRepository(ctx, Document);
+        // A document number must stay unique per organization-split invoice, not just per
+        // order — one order can now have several invoices (docs/payments.md "Organizations").
+        const documentNumber =
+            invoice.organizationId != null ? `${order.code}-${invoice.organizationId}` : order.code;
         const entity = repo.create({
             type: 'invoice',
-            counterpartyId: String(counterpartyId),
+            counterpartyId: String(invoice.counterpartyId),
             orderId: String(order.id),
-            number: order.code,
+            invoiceId: String(invoice.id),
+            number: documentNumber,
             issueDate: new Date(),
-            amount: order.totalWithTax,
-            currencyCode: order.currencyCode,
+            amount: invoice.amount,
+            currencyCode: invoice.currencyCode,
             status: 'pending' as const,
             source: 'generated' as const,
             erpId: null,

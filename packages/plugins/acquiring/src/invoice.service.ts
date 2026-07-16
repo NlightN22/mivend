@@ -82,4 +82,8 @@ export class InvoiceService {
     async findByOrderId(ctx: RequestContext, orderId: number): Promise<Invoice[]> {
         return this.connection.getRepository(ctx, Invoice).find({ where: { orderId } });
     }
+
+    async findOne(ctx: RequestContext, invoiceId: number): Promise<Invoice | null> {
+        return this.connection.getRepository(ctx, Invoice).findOne({ where: { id: invoiceId } });
+    }
 }

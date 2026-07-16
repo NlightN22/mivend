@@ -1,4 +1,3 @@
-import { Order } from '@vendure/core';
 import { OrganizationRequisites } from '../entities/organization-requisites.entity';
 
 export interface InvoiceLineData {
@@ -7,6 +6,24 @@ export interface InvoiceLineData {
     quantity: number;
     unitPrice: string;
     lineTotal: string;
+}
+
+export interface InvoiceSourceLine {
+    quantity: number;
+    unitPriceWithTax: number;
+    linePriceWithTax: number;
+    productVariant: { name: string; sku: string };
+}
+
+// Decoupled from a raw Vendure `Order` — a document can now be one of several
+// organization-split invoices for an order (docs/payments.md "Organizations"), each with its
+// own document number, total, and (usually filtered) line subset — not the whole order.
+export interface InvoiceSource {
+    documentNumber: string;
+    issueDate: Date;
+    currencyCode: string | null;
+    totalAmount: number;
+    lines: InvoiceSourceLine[];
 }
 
 export interface InvoiceTemplateData {
@@ -40,12 +57,12 @@ function formatMoney(minorUnits: number, currencySymbol: string): string {
 }
 
 export function buildInvoiceTemplateData(
-    order: Order,
+    source: InvoiceSource,
     requisites: OrganizationRequisites,
     buyerLegalName: string,
     logoDataUri: string | null = null,
 ): InvoiceTemplateData {
-    const currencySymbol = order.currencyCode ?? '';
+    const currencySymbol = source.currencyCode ?? '';
     const bankDetails = requisites.bankName
         ? [requisites.bankName, requisites.bankAccount, requisites.bankBik]
               .filter(Boolean)
@@ -53,8 +70,8 @@ export function buildInvoiceTemplateData(
         : null;
 
     return {
-        documentNumber: order.code,
-        issueDate: new Date(order.orderPlacedAt ?? order.createdAt).toISOString().slice(0, 10),
+        documentNumber: source.documentNumber,
+        issueDate: source.issueDate.toISOString().slice(0, 10),
         seller: {
             legalName: requisites.legalName,
             address: requisites.legalAddress,
@@ -65,7 +82,7 @@ export function buildInvoiceTemplateData(
         buyer: {
             legalName: buyerLegalName,
         },
-        lines: order.lines.map(line => ({
+        lines: source.lines.map(line => ({
             name: line.productVariant.name,
             sku: line.productVariant.sku,
             quantity: line.quantity,
@@ -73,7 +90,7 @@ export function buildInvoiceTemplateData(
             lineTotal: formatMoney(line.linePriceWithTax, currencySymbol),
         })),
         currencySymbol,
-        totalAmount: formatMoney(order.totalWithTax, currencySymbol),
+        totalAmount: formatMoney(source.totalAmount, currencySymbol),
         logoDataUri,
     };
 }

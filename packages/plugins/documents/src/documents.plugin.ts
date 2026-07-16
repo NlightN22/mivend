@@ -9,6 +9,7 @@ import {
 } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { AcquiringPlugin, InvoiceService } from '@mivend/plugin-acquiring';
 import { subscribeAndLog } from 'shared';
 
 import { loggerCtx } from './constants';
@@ -36,7 +37,7 @@ const OFFLINE_TERMS_METHOD = 'offline-terms';
 const INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CounterpartyPlugin, AccessControlPlugin],
+    imports: [PluginCommonModule, CounterpartyPlugin, AccessControlPlugin, AcquiringPlugin],
     entities: [Document, OrganizationRequisites],
     shopApiExtensions: {
         schema: shopApiExtensions,
@@ -56,6 +57,7 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
         private connection: TransactionalConnection,
         private documentsService: DocumentsService,
         private pdfGeneratorService: PdfGeneratorService,
+        private invoiceService: InvoiceService,
     ) {}
 
     onApplicationBootstrap(): void {
@@ -83,16 +85,18 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
         const isOfflineTerms = order.payments?.some(p => p.method === OFFLINE_TERMS_METHOD);
         if (!isOfflineTerms) return;
 
-        const counterpartyId = (
-            order.customer?.customFields as { counterpartyId?: string } | undefined
-        )?.counterpartyId;
-        if (!counterpartyId) return;
-
-        const document = await this.documentsService.createInvoicePlaceholder(
-            event.ctx,
-            order,
-            counterpartyId,
-        );
-        await this.pdfGeneratorService.enqueue(document.id);
+        // One invoice document per organization-split Invoice (docs/payments.md
+        // "Organizations"), not one per order — offlineTermsPaymentHandler already
+        // materialized the real Invoice split in createPayment(), before this transition
+        // fires, so this is just reading it back (idempotent, no re-computation).
+        const invoices = await this.invoiceService.findByOrderId(event.ctx, Number(order.id));
+        for (const invoice of invoices) {
+            const document = await this.documentsService.createInvoicePlaceholder(
+                event.ctx,
+                order,
+                invoice,
+            );
+            await this.pdfGeneratorService.enqueue(document.id);
+        }
     }
 }

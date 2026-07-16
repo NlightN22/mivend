@@ -21,6 +21,13 @@ export class Document extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     orderId!: string | null;
 
+    // Which plugin-acquiring Invoice (one per organization within the order) this document
+    // is for — see docs/payments.md "Organizations". Null for documents that predate
+    // per-organization invoice splitting (ERP-pushed/legacy) or aren't invoices at all
+    // (contracts).
+    @Column({ type: 'varchar', nullable: true })
+    invoiceId!: string | null;
+
     @Column({ type: 'varchar' })
     number!: string;
 

@@ -396,6 +396,9 @@ importers:
             '@mivend/plugin-access-control':
                 specifier: workspace:*
                 version: link:../access-control
+            '@mivend/plugin-acquiring':
+                specifier: workspace:*
+                version: link:../acquiring
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../counterparty

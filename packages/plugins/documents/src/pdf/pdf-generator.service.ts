@@ -13,11 +13,12 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { Counterparty } from '@mivend/plugin-counterparty';
+import { InvoiceService } from '@mivend/plugin-acquiring';
 
 import { GENERATE_DOCUMENT_QUEUE, loggerCtx } from '../constants';
 import { Document } from '../entities/document.entity';
 import { DocumentsService } from '../documents.service';
-import { buildInvoiceTemplateData, renderInvoiceHtml } from './invoice-template';
+import { buildInvoiceTemplateData, renderInvoiceHtml, InvoiceSource } from './invoice-template';
 import { buildContractTemplateData, renderContractHtml } from './contract-template';
 import { PdfBrowserService } from './pdf-browser.service';
 
@@ -42,6 +43,7 @@ export class PdfGeneratorService implements OnModuleInit {
         private configService: ConfigService,
         private documentsService: DocumentsService,
         private pdfBrowserService: PdfBrowserService,
+        private invoiceService: InvoiceService,
     ) {}
 
     async onModuleInit(): Promise<void> {
@@ -129,11 +131,46 @@ export class PdfGeneratorService implements OnModuleInit {
         if (!order) {
             throw new Error(`Order ${document.orderId} not found for document ${document.id}`);
         }
-        const requisites = await this.documentsService.getActiveRequisites(ctx);
+
+        // One document per organization-split Invoice (docs/payments.md "Organizations") —
+        // render only that organization's lines/requisites/total, not the whole order. Legacy
+        // documents with no invoiceId (predate splitting) fall back to the whole order against
+        // the single "active" organization, same as before.
+        let requisites;
+        let source: InvoiceSource;
+        if (document.invoiceId) {
+            const invoice = await this.invoiceService.findOne(ctx, Number(document.invoiceId));
+            if (!invoice) {
+                throw new Error(
+                    `Invoice ${document.invoiceId} not found for document ${document.id}`,
+                );
+            }
+            requisites = await this.documentsService.getRequisitesById(ctx, invoice.organizationId);
+            const orgLines = order.lines.filter(
+                line => line.productVariant.customFields?.organizationId === invoice.organizationId,
+            );
+            source = {
+                documentNumber: document.number,
+                issueDate: document.issueDate,
+                currencyCode: invoice.currencyCode,
+                totalAmount: invoice.amount,
+                lines: orgLines,
+            };
+        } else {
+            requisites = await this.documentsService.getActiveRequisites(ctx);
+            source = {
+                documentNumber: order.code,
+                issueDate: new Date(order.orderPlacedAt ?? order.createdAt),
+                currencyCode: order.currencyCode,
+                totalAmount: order.totalWithTax,
+                lines: order.lines,
+            };
+        }
+
         const buyerLegalName = await this.getBuyerLegalName(ctx, document.counterpartyId);
         const logoDataUri = await this.getLogoDataUri(ctx, requisites);
         return renderInvoiceHtml(
-            buildInvoiceTemplateData(order, requisites, buyerLegalName, logoDataUri),
+            buildInvoiceTemplateData(source, requisites, buyerLegalName, logoDataUri),
         );
     }
 

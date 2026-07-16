@@ -181,6 +181,51 @@ describe('DocumentsService', () => {
         });
     });
 
+    describe('getRequisitesById', () => {
+        it('throws when no requisites exist for that organizationId', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            await expect(service.getRequisitesById(mockCtx, 99)).rejects.toThrow(
+                /OrganizationRequisites 99 not found/,
+            );
+        });
+
+        it('returns the requisites row for that organizationId', async () => {
+            const requisites = { id: '2', legalName: 'North Co' };
+            mockRepo.findOne.mockResolvedValue(requisites);
+            const result = await service.getRequisitesById(mockCtx, 2);
+            expect(mockRepo.findOne).toHaveBeenCalledWith({ where: { id: 2 } });
+            expect(result).toBe(requisites);
+        });
+    });
+
+    describe('createInvoicePlaceholder', () => {
+        it('derives counterpartyId/amount/currency/invoiceId from the given Invoice, not the order', async () => {
+            const order = { id: 42, code: 'ORD-1' } as never;
+            const invoice = {
+                id: 7,
+                organizationId: 2,
+                counterpartyId: 5,
+                amount: 12345,
+                currencyCode: 'RUB',
+            } as never;
+
+            const result = await service.createInvoicePlaceholder(mockCtx, order, invoice);
+
+            expect(mockRepo.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'invoice',
+                    counterpartyId: '5',
+                    orderId: '42',
+                    invoiceId: '7',
+                    number: 'ORD-1-2',
+                    amount: 12345,
+                    currencyCode: 'RUB',
+                }),
+            );
+            expect(result).toEqual(expect.objectContaining({ invoiceId: '7', number: 'ORD-1-2' }));
+        });
+    });
+
     describe('findVisible', () => {
         it('returns no rows without querying documents when no counterparty is visible', async () => {
             mockCounterpartyService.findVisible.mockResolvedValue([]);

@@ -1,15 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { buildInvoiceTemplateData, renderInvoiceHtml } from '../../pdf/invoice-template';
-import type { Order } from '@vendure/core';
+import {
+    buildInvoiceTemplateData,
+    renderInvoiceHtml,
+    InvoiceSource,
+} from '../../pdf/invoice-template';
 import type { OrganizationRequisites } from '../../entities/organization-requisites.entity';
 
-function makeOrder(overrides: Partial<Record<string, unknown>> = {}): Order {
+function makeSource(overrides: Partial<InvoiceSource> = {}): InvoiceSource {
     return {
-        code: 'ORD-202607-TEST',
+        documentNumber: 'ORD-202607-TEST',
+        issueDate: new Date('2026-07-01T10:00:00.000Z'),
         currencyCode: 'RUB',
-        orderPlacedAt: new Date('2026-07-01T10:00:00.000Z'),
-        createdAt: new Date('2026-07-01T09:00:00.000Z'),
-        totalWithTax: 25000,
+        totalAmount: 25000,
         lines: [
             {
                 quantity: 2,
@@ -19,7 +21,7 @@ function makeOrder(overrides: Partial<Record<string, unknown>> = {}): Order {
             },
         ],
         ...overrides,
-    } as unknown as Order;
+    };
 }
 
 function makeRequisites(overrides: Partial<OrganizationRequisites> = {}): OrganizationRequisites {
@@ -38,7 +40,7 @@ function makeRequisites(overrides: Partial<OrganizationRequisites> = {}): Organi
 
 describe('buildInvoiceTemplateData', () => {
     it('maps order lines, amounts and requisites correctly', () => {
-        const data = buildInvoiceTemplateData(makeOrder(), makeRequisites(), 'Buyer LLC');
+        const data = buildInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
 
         expect(data.documentNumber).toBe('ORD-202607-TEST');
         expect(data.issueDate).toBe('2026-07-01');
@@ -58,14 +60,14 @@ describe('buildInvoiceTemplateData', () => {
 
     it('falls back to ogrn when kpp is null for registrationNumber, and to a dash when both are null', () => {
         const withOgrn = buildInvoiceTemplateData(
-            makeOrder(),
+            makeSource(),
             makeRequisites({ kpp: null, ogrn: '1234567890123' }),
             'Buyer LLC',
         );
         expect(withOgrn.seller.registrationNumber).toBe('1234567890123');
 
         const withNeither = buildInvoiceTemplateData(
-            makeOrder(),
+            makeSource(),
             makeRequisites({ kpp: null, ogrn: null }),
             'Buyer LLC',
         );
@@ -74,7 +76,7 @@ describe('buildInvoiceTemplateData', () => {
 
     it('omits bank details when no bank is configured', () => {
         const data = buildInvoiceTemplateData(
-            makeOrder(),
+            makeSource(),
             makeRequisites({ bankName: null, bankAccount: null, bankBik: null }),
             'Buyer LLC',
         );
@@ -84,7 +86,7 @@ describe('buildInvoiceTemplateData', () => {
 
 describe('renderInvoiceHtml', () => {
     it('embeds the seller, buyer, line items and total into the HTML output', () => {
-        const data = buildInvoiceTemplateData(makeOrder(), makeRequisites(), 'Buyer LLC');
+        const data = buildInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
         const html = renderInvoiceHtml(data);
 
         expect(html).toContain('ORD-202607-TEST');
@@ -95,7 +97,7 @@ describe('renderInvoiceHtml', () => {
     });
 
     it('renders a generic initial-letter badge when no logo has been set', () => {
-        const data = buildInvoiceTemplateData(makeOrder(), makeRequisites(), 'Buyer LLC');
+        const data = buildInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
         expect(data.logoDataUri).toBeNull();
         const html = renderInvoiceHtml(data);
         expect(html).toContain('logo--fallback');
@@ -106,7 +108,7 @@ describe('renderInvoiceHtml', () => {
     it('renders the real logo image when a logo data URI is provided', () => {
         const logoDataUri = 'data:image/png;base64,iVBORw0KGgo=';
         const data = buildInvoiceTemplateData(
-            makeOrder(),
+            makeSource(),
             makeRequisites(),
             'Buyer LLC',
             logoDataUri,
