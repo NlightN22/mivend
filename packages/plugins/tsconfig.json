@@ -3,6 +3,7 @@
     "references": [
         { "path": "../shared" },
         { "path": "./access-control" },
+        { "path": "./acquiring" },
         { "path": "./approval-workflow" },
         { "path": "./customer-pricing" },
         { "path": "./cross-reference" },

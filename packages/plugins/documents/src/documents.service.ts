@@ -152,6 +152,13 @@ export class DocumentsService {
         return repo.save(entity);
     }
 
+    // Used by seed scripts/admin tooling to resolve an ERP-side org erpId to the platform's
+    // own auto-increment id — e.g. to populate ProductVariant.customFields.organizationId
+    // before the real 1C export exists (see docs/payments.md "Organizations").
+    async findAllRequisites(ctx: RequestContext): Promise<OrganizationRequisites[]> {
+        return this.connection.getRepository(ctx, OrganizationRequisites).find();
+    }
+
     async getActiveRequisites(ctx: RequestContext): Promise<OrganizationRequisites> {
         const requisites = await this.connection
             .getRepository(ctx, OrganizationRequisites)

@@ -500,6 +500,8 @@ See `docs/frontend.md` for the full architecture. Critical rules:
 
 - **`GlobalFlag` is not exported from `@vendure/core`.** Use `'TRUE' as const` for `trackInventory` on variant create/update.
 
+- **A plugin entity whose class name collides with a `@vendure/core` built-in entity name crashes bootstrap** with `error.entity-name-conflict` (e.g. `Refund` — Vendure core already registers its own `Refund`, tied 1:1 to a Vendure `Payment`) — regardless of which plugin/module the name comes from. Check for a collision before naming a new entity after a common domain noun; prefix with the plugin's own concept instead (e.g. `PaymentRefund` in `plugin-acquiring`).
+
 - **Collections in Shop API** have no `isTopLevel` filter — identify top-level collections by `breadcrumbs.length === 2`.
 
 - **`MvCatalogDropdown` must be registered globally in `main.ts`** — it is used inside `AppHeader` which is outside Vue app scope for dynamic imports.

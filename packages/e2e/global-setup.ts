@@ -83,8 +83,31 @@ export default async function globalSetup(): Promise<void> {
         await ensureShippingMethod(adminToken);
     }
 
+    // GlobalSettings.organizationSplitEnabled is on (make seed turns it on before this runs —
+    // see docs/payments.md "Organizations") — erp-import rejects any product record without an
+    // organizationId. Reuse the organizations `make seed` already created (queried, not
+    // hardcoded/duplicated) rather than seeding e2e's own — e2e runs against the same dev stack.
+    const organizationsResult = await adminGql<{
+        organizationRequisites: { id: string }[];
+    }>(`query { organizationRequisites { id } }`, undefined, adminToken);
+    const organizationIds = organizationsResult.data.organizationRequisites.map(o => Number(o.id));
+    if (organizationIds.length === 0) {
+        throw new Error(
+            'No OrganizationRequisites found — run `make seed` before the e2e suite so ' +
+                'product fixtures can be assigned a real organizationId (organizationSplitEnabled ' +
+                'is on, see docs/payments.md "Organizations")',
+        );
+    }
+    let nextOrganizationIndex = 0;
+    const seedRecordsWithOrganization = seedRecords.map(record => {
+        if (record.type !== 'product') return record;
+        const organizationId = organizationIds[nextOrganizationIndex % organizationIds.length];
+        nextOrganizationIndex++;
+        return { ...record, data: { ...record.data, organizationId } };
+    });
+
     const exchangeId = `e2e-seed-${Date.now()}`;
-    await postBatch(exchangeId, seedRecords);
+    await postBatch(exchangeId, seedRecordsWithOrganization);
     await waitForRun(exchangeId);
 
     // A real, deterministic order for the manager-portal Orders/Order Detail specs — operator

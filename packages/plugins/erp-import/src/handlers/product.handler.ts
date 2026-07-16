@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
     FacetService,
     FacetValueService,
+    GlobalSettingsService,
     LanguageCode,
     ProductService,
     ProductVariantService,
@@ -22,9 +23,21 @@ export class ProductHandler {
         private readonly productVariantService: ProductVariantService,
         private readonly facetService: FacetService,
         private readonly facetValueService: FacetValueService,
+        private readonly globalSettingsService: GlobalSettingsService,
     ) {}
 
     async upsert(ctx: RequestContext, record: ProductRecord): Promise<void> {
+        // See docs/payments.md "Organizations" — once the admin-controlled
+        // organizationSplitEnabled toggle is on, every product must carry a real
+        // organizationId; a missing one is a rejected import record, not a silent null.
+        const settings = await this.globalSettingsService.getSettings(ctx);
+        if (settings.customFields?.organizationSplitEnabled && record.organizationId == null) {
+            throw new Error(
+                `Product externalId=${record.externalId} (sku=${record.sku}) has no ` +
+                    `organizationId — required while organizationSplitEnabled is on`,
+            );
+        }
+
         const existing = await this.connection.rawConnection
             .createQueryBuilder()
             .select('p.id', 'id')
@@ -71,6 +84,7 @@ export class ProductHandler {
                         customFields: {
                             weight: record.weight ?? null,
                             multiplicity: record.multiplicity ?? null,
+                            organizationId: record.organizationId ?? null,
                         },
                     },
                 ]);
@@ -101,7 +115,10 @@ export class ProductHandler {
                     price: priceInCents,
                     stockOnHand: record.stockOnHand,
                     enabled,
-                    customFields: { weight: record.weight ?? null },
+                    customFields: {
+                        weight: record.weight ?? null,
+                        organizationId: record.organizationId ?? null,
+                    },
                     translations: [{ languageCode: LanguageCode.en, name: record.name }],
                 },
             ]);

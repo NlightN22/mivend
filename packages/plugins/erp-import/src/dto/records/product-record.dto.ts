@@ -60,4 +60,12 @@ export class ProductRecordDto {
             '"Pack-size / MOQ".',
     })
     multiplicity?: number;
+
+    @ApiPropertyOptional({
+        description:
+            'Which of our own legal entities (OrganizationRequisites.id) owns the stock this ' +
+            'product is fulfilled from — driven by 1C warehouse storage-location assignment. ' +
+            'Not yet sourced from a real 1C export.',
+    })
+    organizationId?: number;
 }

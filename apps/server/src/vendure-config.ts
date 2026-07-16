@@ -22,12 +22,13 @@ import { ReservationPlugin } from '@mivend/plugin-reservation';
 import { MoqPlugin } from '@mivend/plugin-moq';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
+import { AcquiringPlugin } from '@mivend/plugin-acquiring';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
 
-// Plugin sets diverge here as sync and ERP-integration plugins are added in Phase 4
-const instancePlugins = instanceType === 'central' ? [] : [];
+// Only central talks to the ERP/payment providers (AGENTS.md sync rule #6)
+const instancePlugins = instanceType === 'central' ? [AcquiringPlugin] : [];
 
 export const config: VendureConfig = {
     apiOptions: {
@@ -133,6 +134,39 @@ export const config: VendureConfig = {
                 type: 'float',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Weight (kg)' }],
+            },
+            {
+                // Which of our own legal entities (OrganizationRequisites, plugin-documents)
+                // owns the stock this variant is fulfilled from — driven by 1C's warehouse
+                // storage-location assignment (one storage location = one product = one
+                // organization). See docs/payments.md "Organizations".
+                name: 'organizationId',
+                type: 'int',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Organization' }],
+            },
+        ],
+        GlobalSettings: [
+            {
+                // Admin-controlled toggle (Settings screen in Admin UI — customFields on
+                // GlobalSettings show up there automatically) for docs/payments.md
+                // "Organizations": once enabled, every product/variant MUST carry
+                // organizationId (erp-import rejects records without one) and online payment
+                // MUST compute a real per-organization split (no silent single-payment
+                // fallback) — see ProductHandler and payment-method-handlers.ts.
+                name: 'organizationSplitEnabled',
+                type: 'boolean',
+                defaultValue: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Split sales by organization' }],
+                description: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value:
+                            'When enabled, every product must be assigned to one of our own ' +
+                            'legal entities (organization), and online payment splits into ' +
+                            'one invoice per organization before charging the customer.',
+                    },
+                ],
             },
         ],
     },

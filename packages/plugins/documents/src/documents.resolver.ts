@@ -13,6 +13,7 @@ import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { Document } from './entities/document.entity';
+import { OrganizationRequisites } from './entities/organization-requisites.entity';
 import { DocumentsService, DocumentListOptions } from './documents.service';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
 
@@ -59,6 +60,12 @@ export class DocumentsAdminResolver {
         @Args() args: { options?: DocumentListOptions },
     ): Promise<PaginatedList<Document>> {
         return this.documentsService.findVisible(ctx, args.options);
+    }
+
+    @Query()
+    @Allow(Permission.ReadCustomer)
+    async organizationRequisites(@Ctx() ctx: RequestContext): Promise<OrganizationRequisites[]> {
+        return this.documentsService.findAllRequisites(ctx);
     }
 
     @Mutation()

@@ -307,6 +307,50 @@ async function postBatch(exchangeId, records) {
     return res.json();
 }
 
+// Resolves erpId -> platform auto-increment id for OrganizationRequisites, so product records
+// can carry a real organizationId. No real 1C export for this exists yet (see docs/payments.md
+// "Organizations") — organizationRequisites are seeded directly below and looked up here.
+async function resolveOrganizationIds() {
+    let session = await adminGraphqlWithSession(`
+        mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
+            ... on CurrentUser { id }
+            ... on InvalidCredentialsError { message }
+        }}
+    `);
+    if (session.data.login.message) throw new Error(`Admin login failed: ${session.data.login.message}`);
+    const res = await adminGraphqlWithSession(
+        `{ organizationRequisites { id erpId legalName } }`,
+        undefined, session.cookie,
+    );
+    const byErpId = {};
+    for (const org of res.data.organizationRequisites) {
+        byErpId[org.erpId] = Number(org.id);
+    }
+    return byErpId;
+}
+
+// Explicitly turns on the admin-controlled organizationSplitEnabled toggle (default is already
+// true, but seeding it explicitly documents intent and survives a future default change) — see
+// docs/payments.md "Organizations". Must run before product seeding: ProductHandler rejects any
+// product record without organizationId while this is on.
+async function ensureOrganizationSplitEnabled() {
+    let session = await adminGraphqlWithSession(`
+        mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
+            ... on CurrentUser { id }
+            ... on InvalidCredentialsError { message }
+        }}
+    `);
+    if (session.data.login.message) throw new Error(`Admin login failed: ${session.data.login.message}`);
+    await adminGraphqlWithSession(`
+        mutation {
+            updateGlobalSettings(input: { customFields: { organizationSplitEnabled: true } }) {
+                ... on GlobalSettings { id }
+                ... on ErrorResult { message }
+            }
+        }
+    `, undefined, session.cookie);
+}
+
 async function main() {
     const categories = loadFixture('categories');
     const products = loadFixture('products');
@@ -327,6 +371,9 @@ async function main() {
     console.log('Ensuring demo org-structure administrators...');
     await ensureOrgStructureAdmins();
 
+    console.log('Ensuring organization split is enabled...');
+    await ensureOrganizationSplitEnabled();
+
     console.log(`Sending ${categories.length} categories...`);
     const categoryResult = await postBatch(`seed-categories-${run}`, categories.map(data => ({ type: 'category', data })));
     console.log(`  → status=${categoryResult.status} processed=${categoryResult.processed} failed=${categoryResult.failed}`);
@@ -334,8 +381,73 @@ async function main() {
         for (const e of categoryResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
-    console.log(`Sending ${products.length} products...`);
-    const productResult = await postBatch(`seed-products-${run}`, products.map(data => ({ type: 'product', data })));
+    // Seeded before products so their platform ids can be assigned to
+    // ProductVariant.customFields.organizationId below — no real 1C export for this exists yet
+    // (see docs/payments.md "Organizations"; 3 synthetic organizations unblock building/testing
+    // the real order-split flow without waiting for it).
+    const organizationRequisites = [
+        {
+            erpId: 'org-001',
+            legalName: 'Mivend Demo Trading Co.',
+            inn: '000000000000',
+            kpp: '000000000',
+            ogrn: '0000000000000',
+            legalAddress: '1 Demo Avenue, Sample City',
+            bankName: 'Demo Bank',
+            bankAccount: '00000000000000000000',
+            bankBik: '000000000',
+            correspondentAccount: '00000000000000000000',
+            signatoryName: 'A. Sample',
+            signatoryTitle: 'General Director',
+        },
+        {
+            erpId: 'org-002',
+            legalName: 'Mivend North Trading Co.',
+            inn: '000000000001',
+            kpp: '000000001',
+            ogrn: '0000000000001',
+            legalAddress: '2 Demo Avenue, Sample City',
+            bankName: 'Demo Bank',
+            bankAccount: '00000000000000000001',
+            bankBik: '000000000',
+            correspondentAccount: '00000000000000000000',
+            signatoryName: 'B. Sample',
+            signatoryTitle: 'General Director',
+        },
+        {
+            erpId: 'org-003',
+            legalName: 'Mivend South Trading Co.',
+            inn: '000000000002',
+            kpp: '000000002',
+            ogrn: '0000000000002',
+            legalAddress: '3 Demo Avenue, Sample City',
+            bankName: 'Demo Bank',
+            bankAccount: '00000000000000000002',
+            bankBik: '000000000',
+            correspondentAccount: '00000000000000000000',
+            signatoryName: 'C. Sample',
+            signatoryTitle: 'General Director',
+        },
+    ];
+    console.log(`Sending ${organizationRequisites.length} organization requisites...`);
+    const requisitesResult = await postBatch(`seed-requisites-${run}`, organizationRequisites.map(data => ({ type: 'organizationRequisites', data })));
+    console.log(`  → status=${requisitesResult.status} processed=${requisitesResult.processed} failed=${requisitesResult.failed}`);
+    if (requisitesResult.errors?.length > 0) {
+        for (const e of requisitesResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    console.log('Resolving organization ids...');
+    const organizationIdByErpId = await resolveOrganizationIds();
+    const organizationErpIds = organizationRequisites.map(org => org.erpId);
+    // Round-robin across the 3 seeded organizations so the seeded catalog actually exercises a
+    // multi-organization split, instead of every product landing on the same one.
+    const productsWithOrganization = products.map((product, index) => ({
+        ...product,
+        organizationId: organizationIdByErpId[organizationErpIds[index % organizationErpIds.length]],
+    }));
+
+    console.log(`Sending ${productsWithOrganization.length} products...`);
+    const productResult = await postBatch(`seed-products-${run}`, productsWithOrganization.map(data => ({ type: 'product', data })));
     console.log(`  → status=${productResult.status} processed=${productResult.processed} failed=${productResult.failed}`);
     if (productResult.errors?.length > 0) {
         for (const e of productResult.errors) console.warn(`    [${e.index}] ${e.message}`);
@@ -475,29 +587,6 @@ async function main() {
     console.log(`  → status=${tpResult.status} processed=${tpResult.processed} failed=${tpResult.failed}`);
     if (tpResult.errors?.length > 0) {
         for (const e of tpResult.errors) console.warn(`    [${e.index}] ${e.message}`);
-    }
-
-    const organizationRequisites = [
-        {
-            erpId: 'org-001',
-            legalName: 'Mivend Demo Trading Co.',
-            inn: '000000000000',
-            kpp: '000000000',
-            ogrn: '0000000000000',
-            legalAddress: '1 Demo Avenue, Sample City',
-            bankName: 'Demo Bank',
-            bankAccount: '00000000000000000000',
-            bankBik: '000000000',
-            correspondentAccount: '00000000000000000000',
-            signatoryName: 'A. Sample',
-            signatoryTitle: 'General Director',
-        },
-    ];
-    console.log(`Sending ${organizationRequisites.length} organization requisites...`);
-    const requisitesResult = await postBatch(`seed-requisites-${run}`, organizationRequisites.map(data => ({ type: 'organizationRequisites', data })));
-    console.log(`  → status=${requisitesResult.status} processed=${requisitesResult.processed} failed=${requisitesResult.failed}`);
-    if (requisitesResult.errors?.length > 0) {
-        for (const e of requisitesResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
     // fileUrl is root-relative (not an absolute https://... URL) so it resolves

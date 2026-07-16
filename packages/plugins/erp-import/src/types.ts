@@ -20,6 +20,11 @@ export interface ProductRecord {
     enabled?: boolean;
     weight?: number;
     multiplicity?: number;
+    // Which of our own legal entities (OrganizationRequisites.id) owns the stock this product
+    // is fulfilled from — driven by 1C's warehouse storage-location assignment. See
+    // docs/payments.md "Organizations". Not yet sourced from a real 1C export — seeded directly
+    // for now (infrastructure/scripts/seed-erp.mjs).
+    organizationId?: number;
 }
 
 export interface CrossReferenceRecord {

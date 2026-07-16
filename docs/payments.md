@@ -217,32 +217,45 @@ redeliver.
 
 ## Entities
 
+- **`Invoice`** (new — see "Organizations" below) — one per our organization within an aggregate
+  `Order`: `orderId`, `organizationId` (references `OrganizationRequisites`, `plugin-documents`),
+  `counterpartyId`, `amount`, `currencyCode`, `status`
+  (`pending`/`issued`/`paid`/`cancelled`). The object a payment actually settles — not `Order`
+  directly, once real splitting is wired.
 - **`PaymentAttempt`** (the platform's own record of a payment) — `paymentId`, `channel`
-  (`online-acquiring` | `branch-kassa` | `bank-transfer-erp`), `orderId` (nullable — a lump
-  payment may not be allocated to an order yet, see "Cash application" below), `amount`,
-  `currencyCode` (was missing from the original `payment.recorded` payload — add it; don't
-  assume a single implicit currency), `providerPaymentId`, `paymentStatus`, `erpPostingStatus`.
+  (`online-acquiring` | `branch-kassa` | `bank-transfer-erp`), `invoiceId` (which `Invoice` — and
+  therefore which of our organizations — this payment settles; nullable today, see "Organizations"
+  below), `orderId` (nullable — a lump payment may not be allocated to an order yet, see "Cash
+  application" below), `amount`, `currencyCode` (was missing from the original `payment.recorded`
+  payload — add it; don't assume a single implicit currency), `providerPaymentId`,
+  `paymentStatus`, `erpPostingStatus`.
 - **`FiscalReceipt`** — see above. One-to-one (or one-to-few, for partial captures) with a
   `PaymentAttempt`.
-- **`Refund`** — `refundId`, `paymentId`, `amount`, `status`, `providerRefundId`, `reason`. Its
-  own entity, never a mutation of `PaymentAttempt`.
+- **`PaymentRefund`** (named `PaymentRefund`, not `Refund` — `@vendure/core` already registers its
+  own `Refund` entity tied 1:1 to a Vendure `Payment`, and two entities sharing a class name
+  crashes bootstrap with `error.entity-name-conflict` regardless of which plugin they come from)
+  — `refundId`, `paymentId`, `amount`, `status`, `providerRefundId`, `reason`. Its own entity,
+  never a mutation of `PaymentAttempt`.
 - **`Dispute`** — `disputeId`, `paymentId`, `type` (`dispute` | `chargeback`), `status`
   (`opened`/`won`/`lost`/`reversed`), `amount`, `openedAt`. Its own lifecycle, not folded into
-  `Refund`.
-- **`SettlementEntry`** — an append-only, per-counterparty ledger row (not per-order), the local
-  provisional reflection of a movement (`sourceType`: `payment.captured` | `refund.succeeded` |
-  `chargeback.created` | `order.created` | `erp-reconciliation`), `reconciled: boolean`, plus
-  `allocatedOrderId`/`allocationAmount` (see "Cash application" — one `SettlementEntry` can spawn
-  several allocation rows if a single payment covers several orders). **Never mutate or delete a
-  row** — corrections are offsetting entries, same accounting-ledger discipline as before.
+  `PaymentRefund`.
+- **`SettlementEntry`** — an append-only, per-counterparty **and per-organization** ledger row
+  (not per-order — see "Organizations" below for why organization is a required second axis, not
+  optional), referencing `invoiceId`, the local provisional reflection of a movement
+  (`sourceType`: `payment.captured` | `refund.succeeded` | `chargeback.created` | `order.created` |
+  `erp-reconciliation`), `reconciled: boolean`, plus `allocatedOrderId`/`allocationAmount` (see
+  "Cash application" — one `SettlementEntry` can spawn several allocation rows if a single payment
+  covers several orders). **Never mutate or delete a row** — corrections are offsetting entries,
+  same accounting-ledger discipline as before.
 - **`PaymentReconciliationIssue`** — raised, never silently auto-resolved, whenever something
   doesn't cleanly match:
 
     ```
     issueType: DUPLICATE_OPERATION | AMOUNT_MISMATCH | CURRENCY_MISMATCH | ORDER_MISMATCH
-             | ERP_DOCUMENT_MISSING | PLATFORM_PAYMENT_MISSING | UNKNOWN_PROVIDER_OPERATION
-             | INVALID_STATE_TRANSITION | REFUND_EXCEEDS_CAPTURED_AMOUNT
-    paymentId, providerPaymentId, erpDocumentId
+             | ORGANIZATION_MISMATCH | ERP_DOCUMENT_MISSING | PLATFORM_PAYMENT_MISSING
+             | UNKNOWN_PROVIDER_OPERATION | INVALID_STATE_TRANSITION
+             | REFUND_EXCEEDS_CAPTURED_AMOUNT
+    paymentId, invoiceId, providerPaymentId, erpDocumentId
     expectedAmount, actualAmount, expectedCurrency, actualCurrency
     detectedAt, status, resolution
     ```
@@ -279,6 +292,97 @@ remainder sitting on the payment document itself counts as an advance; one payme
 across several settlement-object lines. `SettlementEntry`'s allocation rows are the platform-side
 mirror of that same shape — this is what lets ERP reconciliation match cleanly (see below) rather
 than requiring a translation layer between two different allocation models.
+
+---
+
+## Organizations (our own legal entities) — a payment cannot be captured without this
+
+`OrganizationRequisites` (`plugin-documents`) already models one of **our own** legal entities
+(the seller side — requisites/bank details for document rendering), sourced from the ERP. Today
+it's used for exactly one purpose: `DocumentsService.getActiveRequisites()` picks "the" single
+active organization for PDF templates. **Nothing else in the platform is organization-aware** —
+`Order` itself carries no `organizationId`. This project genuinely has several such organizations:
+which one owns a given product/SKU is driven by warehouse address-based storage (one storage
+location = one product = one organization — a deliberate constraint for scanning marked-goods
+unit/package codes cleanly, not an accident; this is a stricter instance of the generally
+recommended "bind marked goods to specific storage cells/batches" practice, not an anti-pattern).
+So **one storefront checkout can legitimately span several of our organizations** — e.g. 3 order
+lines, 3 organizations, 3 invoices, 3 payments.
+
+**This is not optional and not deferrable to "after payment."** A split-payment acquirer (the
+correct primitive here — see below) requires the full recipient/amount breakdown **at
+payment-creation time**, before the customer pays, with no documented way to add or restructure
+recipients afterward (confirmed against ЮKassa's split-payments API: the `transfers` array — which
+organization gets how much — is a required parameter of the payment-creation request itself; only
+already-listed transfers' amounts can be adjusted later, during two-stage capture). So an online
+payment cannot be requested until the order's organization split is already known — waiting for an
+async ERP acknowledgement is not compatible with this.
+
+**Decided direction:**
+
+- **`Invoice`** (new entity, `plugin-acquiring`) — one aggregate `Order` splits into one `Invoice`
+  per organization it touches: `orderId`, `organizationId`, `counterpartyId`, `amount`,
+  `currencyCode`, `status`. `PaymentAttempt`/`SettlementEntry`/`PaymentReconciliationIssue`
+  reference `invoiceId` (nullable today — see "Not yet designed" below), not a bare
+  `organizationId` — `Invoice` is the single source of truth for which organization a payment
+  belongs to.
+- The organization-per-product mapping (today only known inside 1C's warehouse/storage-location
+  data) is imported into the platform as **catalog master data**, the same way `PriceEntry` is
+  (AGENTS.md sync rule #7 — ERP is master; the platform holds a local read replica so checkout
+  doesn't need a synchronous round-trip to 1C): `ProductVariant.customFields.organizationId`, set
+  by `erp-import`'s product record. `OrderLine.customFields.organizationId` is derived from it at
+  add-to-cart time.
+- **Split mechanism (decided): lightweight `customFields`, not Vendure's full `Seller`/`Channel`
+  marketplace machinery.** Vendure's own multi-vendor primitives (`Seller`, one `Channel` per
+  seller, `OrderSellerStrategy.setOrderLineSellerChannel()`/`.splitOrder()` — see
+  `docs.vendure.io/guides/how-to/multi-vendor-marketplaces`) are the right reference shape
+  conceptually ("tag each `OrderLine` with an owner at add-to-cart time, split the aggregate
+  `Order` into per-owner orders at the payment step") but real overkill for our own legal
+  entities today (per-channel pricing, `ShippingLineAssignmentStrategy`, separate admin
+  logins/stock locations — none of which apply here). Deliberately chosen so the migration path
+  to real `Seller`/`Channel` stays open later without a rewrite — there's real potential demand
+  for external sellers using this platform, tracked as a deferred, low-priority idea:
+  [#47](https://github.com/NlightN22/mivend/issues/47).
+- **Split-payment acquirer (decided): Robokassa.** ЮKassa "Сплитование платежей" and Т-Банк
+  "Мультирасчёты" are the same category of product and were considered, but Robokassa is the
+  integration target for `plugin-acquiring`'s online-acquiring flow.
+- **Bootstrapping without a real 1C export**: don't wait for 1C to actually expose
+  `organizationId` per storage location — 3 synthetic organizations are seeded directly
+  (`OrganizationRequisites` via `make seed`) and `erp-import`'s product record carries an
+  `organizationId` field now, so the real split can be built and exercised end-to-end today. Swap
+  in the real 1C export later without changing the platform-side contract shape.
+- **Enforcement (decided): a hard requirement gated by an admin-controlled toggle, not a silent
+  fallback.** `GlobalSettings.customFields.organizationSplitEnabled` (boolean, defaults `true`,
+  shows up automatically in Admin UI's Settings screen since it's a `GlobalSettings` customField)
+  — while on: `erp-import`'s `ProductHandler` **rejects** any product record with no
+  `organizationId` (a real import error, not `null`); `onlineStubPaymentHandler` (the
+  stand-in payment handler used until Robokassa is integrated) **fails the payment** if the split
+  can't be computed, rather than silently falling back to a single unsplit payment. There is no
+  "grandfathered" exemption — every product must carry a real organization once the toggle is on.
+  `make seed` explicitly turns the toggle on (`ensureOrganizationSplitEnabled` in
+  `seed-erp.mjs`) before seeding any products. **Known gap**: `packages/e2e/fixtures/seed.ts`'s
+  product fixtures don't carry `organizationId` yet — e2e runs against the same dev stack `make
+seed` configures, so those fixtures will now fail import unless updated; not yet fixed, flagged
+  here rather than silently left broken.
+
+**Counterparty-side note (does not need modeling yet):** a counterparty can itself belong to a
+"holding" grouping in 1C, but that's purely an analytical tag — one `Counterparty` is always
+exactly one legal entity on the buyer side. Not a design gap; no action needed here.
+
+**Deferred (decided to postpone, not blocking online payment):**
+
+- Per-organization `creditLimit`/`paymentDelayDays` on `Counterparty`, or contracts/agreements
+  (`TODO.md`: "Добавить организации и лимиты в разрезе организаций. Добавить договоры и лимиты в
+  разрезе договоров.") — touches `plugin-counterparty`, `plugin-erp-order`, order creation,
+  credit-terms approval, and the manager portal's finance views. `Invoice`/`SettlementEntry`
+  already carry `organizationId`, which is enough for correct payment allocation without this.
+  UI direction for when it does land: aggregate totals in dashboard KPI tiles, per-organization
+  breakdown lower on the page/in tabs —
+  [#48](https://github.com/NlightN22/mivend/issues/48) (needs a real design pass later).
+- Refund/dispute/document (invoice PDF) generation per-`Invoice` rather than per-`Order`.
+- Cash-application FIFO ("open obligations") must, once wired, scope by
+  **`(counterpartyId, organizationId)` together** — a debt owed to organization A must never be
+  silently offset by a payment made to organization B.
 
 ---
 

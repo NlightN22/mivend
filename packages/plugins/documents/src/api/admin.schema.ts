@@ -25,10 +25,19 @@ export const adminApiExtensions = gql`
         skip: Int
     }
 
+    type OrganizationRequisites {
+        id: ID!
+        erpId: String!
+        legalName: String!
+        isActive: Boolean!
+    }
+
     extend type Query {
         # Visibility inherits counterparty visibility — no dedicated permission, filtered by
         # the same counterpartyId (see docs/ai/manager-portal-concept.md §3.3 "/documents").
         documents(options: DocumentListOptions): DocumentList!
+        # id/erpId lookup for our own legal entities — see docs/payments.md "Organizations".
+        organizationRequisites: [OrganizationRequisites!]!
     }
 
     extend type Mutation {
