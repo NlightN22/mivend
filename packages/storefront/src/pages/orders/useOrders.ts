@@ -50,9 +50,14 @@ export interface MyOrdersOptions {
     erpStatuses?: ErpStatus[];
 }
 
+// myOrders uses Vendure's own generated OrderListOptions/OrderList (not a bespoke type) — see
+// packages/plugins/erp-order/src/api/shop.schema.ts and AGENTS.md's generateListOptions gotcha.
+// erpStatuses filters via the real, auto-generated OrderFilterParameter.erpStatus (Order
+// customFields are exposed flat); search is a separate sibling arg, not part of `options`, since
+// it spans a joined table and isn't a real Order column.
 const MY_ORDERS_QUERY = `
-    query MyOrders($options: MyOrdersListOptions) {
-        myOrders(options: $options) {
+    query MyOrders($options: OrderListOptions, $search: String) {
+        myOrders(options: $options, search: $search) {
             items {
                 id code state createdAt totalWithTax currencyCode
                 lines {
@@ -107,7 +112,17 @@ export function useOrders(): {
         try {
             const result = await shopApi<{
                 myOrders: { items: OrderSummary[]; totalItems: number };
-            }>(MY_ORDERS_QUERY, { options });
+            }>(MY_ORDERS_QUERY, {
+                options: {
+                    take: options.take,
+                    skip: options.skip,
+                    filter:
+                        options.erpStatuses && options.erpStatuses.length > 0
+                            ? { erpStatus: { in: options.erpStatuses } }
+                            : undefined,
+                },
+                search: options.search,
+            });
             orders.value = result.myOrders.items;
             totalItems.value = result.myOrders.totalItems;
         } catch (e) {

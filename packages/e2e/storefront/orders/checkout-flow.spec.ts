@@ -18,9 +18,12 @@ async function addOneItemToCart(page: Page): Promise<void> {
 }
 
 async function latestOrderState(page: Page): Promise<string | undefined> {
+    // myOrders(options: OrderListOptions) — Vendure's own generated type (see
+    // packages/plugins/erp-order/src/api/shop.schema.ts). No `sort` needed: ErpOrderResolver
+    // always orders by createdAt DESC internally regardless.
     const result = (await gql(
         page,
-        `{ myOrders(options: { take: 1, sort: { createdAt: DESC } }) { items { code state } } }`,
+        `{ myOrders(options: { take: 1 }) { items { code state } } }`,
     )) as unknown as OrderState;
     return result.myOrders.items[0]?.state;
 }
