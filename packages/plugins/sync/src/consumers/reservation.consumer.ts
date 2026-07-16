@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { EventBus } from '@vendure/core';
 import { ReservationConfirmedEvent, ReservationReleasedEvent } from '@mivend/plugin-reservation';
 
+import { registerOutboxProducer } from '../producer-registry';
 import { SyncService } from '../sync.service';
 import { SYNC_PLUGIN_OPTIONS } from '../types';
 import type { SyncPluginOptions } from '../types';
@@ -23,44 +24,41 @@ export class ReservationConsumer implements OnApplicationBootstrap {
     ) {}
 
     onApplicationBootstrap(): void {
-        this.eventBus.ofType(ReservationConfirmedEvent).subscribe(event => {
-            void this.dataSource.transaction(em =>
-                this.syncService.writeToOutbox(
-                    em,
-                    {
-                        eventId: event.reservation.erpOperationId,
-                        eventType: 'reservation.created',
-                        payload: {
-                            reservationId: String(event.reservation.id),
-                            variantId: event.reservation.productVariantId,
-                            branchId: this.options.instanceId,
-                            quantity: event.reservation.quantity,
-                            expiresAt: event.reservation.expiresAt.toISOString(),
-                            orderCode: event.orderCode,
-                        },
-                    },
-                    'erp',
-                ),
-            );
-        });
+        registerOutboxProducer(
+            this.eventBus,
+            this.dataSource,
+            this.syncService,
+            ReservationConfirmedEvent,
+            event => ({
+                eventId: event.reservation.erpOperationId,
+                eventType: 'reservation.created',
+                payload: {
+                    reservationId: String(event.reservation.id),
+                    variantId: event.reservation.productVariantId,
+                    branchId: this.options.instanceId,
+                    quantity: event.reservation.quantity,
+                    expiresAt: event.reservation.expiresAt.toISOString(),
+                    orderCode: event.orderCode,
+                },
+                target: 'erp',
+            }),
+        );
 
-        this.eventBus.ofType(ReservationReleasedEvent).subscribe(event => {
-            void this.dataSource.transaction(em =>
-                this.syncService.writeToOutbox(
-                    em,
-                    {
-                        eventId:
-                            event.reservation.erpReleaseOperationId ??
-                            event.reservation.erpOperationId,
-                        eventType: 'reservation.released',
-                        payload: {
-                            reservationId: String(event.reservation.id),
-                            orderCode: event.orderCode,
-                        },
-                    },
-                    'erp',
-                ),
-            );
-        });
+        registerOutboxProducer(
+            this.eventBus,
+            this.dataSource,
+            this.syncService,
+            ReservationReleasedEvent,
+            event => ({
+                eventId:
+                    event.reservation.erpReleaseOperationId ?? event.reservation.erpOperationId,
+                eventType: 'reservation.released',
+                payload: {
+                    reservationId: String(event.reservation.id),
+                    orderCode: event.orderCode,
+                },
+                target: 'erp',
+            }),
+        );
     }
 }

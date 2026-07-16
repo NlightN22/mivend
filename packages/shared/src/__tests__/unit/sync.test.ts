@@ -115,6 +115,8 @@ function _exhaustiveConsumerExample(event: SyncEvent): string {
             return 'ok';
         case 'order.updated':
             return 'ok';
+        case 'payment.recorded':
+            return 'ok';
         case 'inventory.updated':
             return 'ok';
         case 'reservation.created':

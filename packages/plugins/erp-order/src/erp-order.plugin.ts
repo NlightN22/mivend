@@ -1,6 +1,13 @@
 import { OnApplicationBootstrap } from '@nestjs/common';
-import { EventBus, OrderPlacedEvent, PluginCommonModule, VendurePlugin } from '@vendure/core';
+import {
+    EventBus,
+    OrderPlacedEvent,
+    OrderStateTransitionEvent,
+    PluginCommonModule,
+    VendurePlugin,
+} from '@vendure/core';
 import gql from 'graphql-tag';
+import { subscribeAndLog } from 'shared';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderStatusEvent } from './erp-order.events';
@@ -42,16 +49,45 @@ export class ErpOrderPlugin implements OnApplicationBootstrap {
     ) {}
 
     onApplicationBootstrap(): void {
-        this.eventBus.ofType(OrderPlacedEvent).subscribe(event => {
-            void this.erpOrderService.onOrderPlaced(event.ctx, event.order);
-        });
+        // Branches must see "their" customers' orders regardless of payment status (decided
+        // 2026-07-16, see docs/architecture.md) — Vendure's own `OrderPlacedEvent` only fires
+        // once a payment has already been authorized/settled
+        // (`DefaultOrderPlacedStrategy.shouldSetAsPlaced` requires
+        // `ArrangingPayment→PaymentAuthorized/PaymentSettled`), which is too late for that. This
+        // now ALSO fires on the earlier, payment-independent `AddingItems→*` transition (the
+        // first time an order leaves the cart), which is when a customer/address/trading-point
+        // are normally already attached. `OrderPlacedEvent` is kept as a second, later trigger —
+        // `onOrderPlaced` is idempotent-safe to call twice (denormalizes the same fields, and
+        // downstream `order.created` sync absorbs a duplicate via its own sourceOrderId check),
+        // and covers stragglers (e.g. a guest customer only attached to the order later in
+        // checkout than `ArrangingPayment`).
+        subscribeAndLog(
+            this.eventBus,
+            OrderStateTransitionEvent,
+            event => {
+                if (event.fromState !== 'AddingItems') return Promise.resolve();
+                return this.erpOrderService.onOrderPlaced(event.ctx, event.order);
+            },
+            'ErpOrderPlugin',
+        );
 
-        this.eventBus.ofType(ErpOrderStatusEvent).subscribe(event => {
-            void this.erpOrderService.updateStatus(event.ctx, {
-                orderCode: event.orderCode,
-                status: event.status,
-                erpOrderId: event.erpOrderId,
-            });
-        });
+        subscribeAndLog(
+            this.eventBus,
+            OrderPlacedEvent,
+            event => this.erpOrderService.onOrderPlaced(event.ctx, event.order),
+            'ErpOrderPlugin',
+        );
+
+        subscribeAndLog(
+            this.eventBus,
+            ErpOrderStatusEvent,
+            event =>
+                this.erpOrderService.updateStatus(event.ctx, {
+                    orderCode: event.orderCode,
+                    status: event.status,
+                    erpOrderId: event.erpOrderId,
+                }),
+            'ErpOrderPlugin',
+        );
     }
 }

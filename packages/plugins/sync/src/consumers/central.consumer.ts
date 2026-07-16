@@ -13,9 +13,11 @@ import type { SyncPluginOptions } from '../types';
 // The Central-side counterpart to ProductConsumer (the sole RabbitMQ subscriber for a branch's
 // queue) — Central previously only ever published, never subscribed, so a branch-originated
 // event (a branch-local operator's order, target='central') had nowhere to land. Binds only to
-// `#.central` — never a bare `#` alone (see RabbitMQService.subscribe's comment on why); Central never
-// legitimately receives administrator.*/product.* etc. from a branch (branches don't produce
-// them), so this only ever needs to handle order events.
+// `#.central` — never a bare `#` alone (see RabbitMQService.subscribe's comment on why); Central
+// never legitimately receives administrator.*/product.* etc. from a branch (branches don't
+// produce them), so this only ever needs to handle order + payment events (the latter e.g. a
+// branch till/kassa witnessing cash paid for a Central-origin order it only holds a replica of
+// — see docs/architecture.md's "Order as a read-model" section).
 @Injectable()
 export class CentralConsumer implements OnModuleInit {
     constructor(
@@ -50,6 +52,9 @@ export class CentralConsumer implements OnModuleInit {
             case 'order.updated':
                 await this.handleOrderUpdated(event);
                 break;
+            case 'payment.recorded':
+                await this.handlePaymentRecorded(event);
+                break;
             case 'product.created':
             case 'product.updated':
             case 'product.deleted':
@@ -81,21 +86,36 @@ export class CentralConsumer implements OnModuleInit {
         return result.identifiers.length > 0;
     }
 
+    // Same reasoning as ProductConsumer's identical pair — a plain existence check, not the
+    // atomic insert tryMarkProcessed does, since apply happens before mark here (see below).
+    private async isAlreadyProcessed(eventId: string): Promise<boolean> {
+        const existing = await this.dataSource
+            .getRepository(SyncProcessedEvent)
+            .findOne({ where: { eventId } });
+        return !!existing;
+    }
+
+    // Apply-then-mark — see ProductConsumer's identical pair for why: applyUpdate can throw
+    // deliberately on "no local replica found yet" to get a real backoff-then-retry instead of
+    // silently dropping an update that raced order.created's delivery.
     private async handleOrderCreated(event: SyncEventByType<'order.created'>): Promise<void> {
-        const isNew = await this.dataSource.transaction(em =>
-            this.tryMarkProcessed(em, event.eventId),
-        );
-        if (!isNew) return;
+        if (await this.isAlreadyProcessed(event.eventId)) return;
         await this.orderSyncService.applyCreate(event);
+        await this.dataSource.transaction(em => this.tryMarkProcessed(em, event.eventId));
         this.logger.info(`Applied order.created [${event.payload.sourceOrderId}]`);
     }
 
     private async handleOrderUpdated(event: SyncEventByType<'order.updated'>): Promise<void> {
-        const isNew = await this.dataSource.transaction(em =>
-            this.tryMarkProcessed(em, event.eventId),
-        );
-        if (!isNew) return;
+        if (await this.isAlreadyProcessed(event.eventId)) return;
         await this.orderSyncService.applyUpdate(event);
+        await this.dataSource.transaction(em => this.tryMarkProcessed(em, event.eventId));
         this.logger.info(`Applied order.updated [${event.payload.sourceOrderId}]`);
+    }
+
+    private async handlePaymentRecorded(event: SyncEventByType<'payment.recorded'>): Promise<void> {
+        if (await this.isAlreadyProcessed(event.eventId)) return;
+        await this.orderSyncService.applyPaymentRecorded(event);
+        await this.dataSource.transaction(em => this.tryMarkProcessed(em, event.eventId));
+        this.logger.info(`Applied payment.recorded [${event.payload.sourceOrderId}]`);
     }
 }

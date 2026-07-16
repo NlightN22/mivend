@@ -8,6 +8,7 @@ import {
     Type,
     VendurePlugin,
 } from '@vendure/core';
+import { subscribeAndLog } from 'shared';
 
 import { SessionManagementResolver } from './api/session-management.resolver';
 import { sessionManagementSchema } from './api/session-management.schema';
@@ -65,8 +66,11 @@ export class SessionManagementPlugin implements OnApplicationBootstrap {
     ) {}
 
     onApplicationBootstrap(): void {
-        this.eventBus.ofType(LoginEvent).subscribe(event => {
-            void this.loginListenerService.tagLatestSessionWithUserAgent(event.ctx, event.user);
-        });
+        subscribeAndLog(
+            this.eventBus,
+            LoginEvent,
+            event => this.loginListenerService.tagLatestSessionWithUserAgent(event.ctx, event.user),
+            'SessionManagementPlugin',
+        );
     }
 }

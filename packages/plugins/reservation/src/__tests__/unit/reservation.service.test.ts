@@ -32,8 +32,13 @@ function createMockReservationRepo(): {
 function createMockOrderRepo(order: unknown): {
     findOne: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
 } {
-    return { findOne: vi.fn(async () => order), save: vi.fn(async (x: unknown) => x) };
+    return {
+        findOne: vi.fn(async () => order),
+        save: vi.fn(async (x: unknown) => x),
+        update: vi.fn(async () => undefined),
+    };
 }
 
 function createMockStockLevelRepo(
@@ -68,6 +73,7 @@ describe('ReservationService', () => {
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
         withTransaction: ReturnType<typeof vi.fn>;
+        rawConnection: { query: ReturnType<typeof vi.fn> };
     };
     let eventBus: { publish: ReturnType<typeof vi.fn> };
     let service: ReservationService;
@@ -115,6 +121,17 @@ describe('ReservationService', () => {
             withTransaction: vi.fn(async (txCtx: unknown, work: (c: unknown) => unknown) =>
                 work(txCtx),
             ),
+            // setOrderReservationState's self-verifying retry loop reads this back — echo the
+            // most recent update() call's target state so it always matches on the first
+            // attempt and the test doesn't pay the real setTimeout delay.
+            rawConnection: {
+                query: vi.fn(async () => {
+                    const lastCall = orderRepo.update.mock.calls.at(-1) as
+                        | [unknown, { customFields?: { reservationState?: string } }]
+                        | undefined;
+                    return [{ state: lastCall?.[1]?.customFields?.reservationState }];
+                }),
+            },
         };
         service = new ReservationService(
             connection as unknown as TransactionalConnection,
@@ -144,7 +161,8 @@ describe('ReservationService', () => {
                     status: 'active',
                 }),
             ]);
-            expect(orderRepo.save).toHaveBeenCalledWith(
+            expect(orderRepo.update).toHaveBeenCalledWith(
+                order.id,
                 expect.objectContaining({ customFields: { reservationState: 'RESERVED' } }),
             );
             expect(eventBus.publish).toHaveBeenCalledTimes(2);
@@ -189,7 +207,8 @@ describe('ReservationService', () => {
             expect(error).toBeInstanceOf(InsufficientStockError);
             expect((error as InsufficientStockError).lines).toHaveLength(2);
             expect(reservationRepo.save).not.toHaveBeenCalled();
-            expect(orderRepo.save).toHaveBeenCalledWith(
+            expect(orderRepo.update).toHaveBeenCalledWith(
+                order.id,
                 expect.objectContaining({ customFields: { reservationState: 'FAILED' } }),
             );
         });

@@ -100,6 +100,17 @@ export const config: VendureConfig = {
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Source Order ID' }],
             },
+            {
+                // Informational projection of a `payment.recorded` sync fact — set only on an
+                // instance that does NOT own this order (a replica); the owning instance's real
+                // payment status lives on its actual `Payment` records instead. See
+                // docs/architecture.md's "Order as a read-model: independent event streams per
+                // concern (CQRS)".
+                name: 'paymentStatus',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Payment Status (synced)' }],
+            },
         ],
         Product: [
             {

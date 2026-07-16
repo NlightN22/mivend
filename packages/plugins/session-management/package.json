@@ -15,7 +15,8 @@
     },
     "dependencies": {
         "bullmq": "^5.0.0",
-        "graphql-tag": "^2.12.6"
+        "graphql-tag": "^2.12.6",
+        "shared": "workspace:*"
     },
     "devDependencies": {
         "@nestjs/common": "^11.0.0",

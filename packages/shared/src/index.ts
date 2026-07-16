@@ -1,4 +1,7 @@
 export * from './sync';
+// vendure-events.ts is backend-only (imports @vendure/core) — same "never touched by Vite"
+// carve-out as sync.ts above, see that comment.
+export * from './vendure-events';
 
 // Named (not `export *`) so tsc's CommonJS output produces static `exports.foo = ...`
 // assignments — Vite/Rollup's CJS interop can't statically detect re-exports that only

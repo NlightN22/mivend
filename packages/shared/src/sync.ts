@@ -69,6 +69,12 @@ const OrderCreatedPayload = z.object({
     orderCode: z.string(),
     customerEmail: z.string().email(),
     branchId: z.string(),
+    // The order's own state at the moment it became sync-worthy (e.g. 'ArrangingPayment' or
+    // 'PaymentAuthorized', never 'AddingItems' since that's what triggers this event in the
+    // first place) — lets the receiving instance's replica start in the right state instead of
+    // being stuck in 'AddingItems' forever. Optional only for backward compatibility with
+    // already-queued outbox entries from before this field existed.
+    state: z.string().optional(),
     lines: z.array(
         z.object({
             sku: z.string(),
@@ -81,6 +87,21 @@ const OrderCreatedPayload = z.object({
 const OrderUpdatedPayload = z.object({
     sourceOrderId: z.string(),
     state: z.string(),
+});
+
+// A payment fact — see docs/architecture.md's "Order as a read-model: independent event
+// streams per concern (CQRS)". Published by whichever instance actually witnessed the payment
+// (a real Vendure `PaymentStateTransitionEvent` on that instance's own order, or an operator
+// explicitly reporting one for an order they don't own via `recordWitnessedPayment`). The
+// order's real owner applies it for real (a real `addPaymentToOrder`); every other instance
+// holding only a replica applies it as an informational `customFields.paymentStatus` projection
+// — never a direct mutation of an order it doesn't own (see AGENTS.md sync rule #10).
+const PaymentRecordedPayload = z.object({
+    sourceOrderId: z.string(),
+    method: z.string(),
+    amount: z.number().int().nonnegative(),
+    state: z.enum(['Authorized', 'Settled']),
+    witnessedBy: z.string(),
 });
 
 const InventoryUpdatedPayload = z.object({
@@ -138,6 +159,10 @@ export const SyncEventSchema = z.discriminatedUnion('eventType', [
     }),
     Envelope.extend({ eventType: z.literal('order.created'), payload: OrderCreatedPayload }),
     Envelope.extend({ eventType: z.literal('order.updated'), payload: OrderUpdatedPayload }),
+    Envelope.extend({
+        eventType: z.literal('payment.recorded'),
+        payload: PaymentRecordedPayload,
+    }),
     Envelope.extend({
         eventType: z.literal('inventory.updated'),
         payload: InventoryUpdatedPayload,

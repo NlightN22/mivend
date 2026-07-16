@@ -148,6 +148,40 @@ See `docs/sync.md` for the full design. These rules must never be broken:
 
 8. **Reservations sync Branch → Central only.** Branch is the source of truth; the hub aggregates for reporting. Reservations never flow from hub back to branches.
 
+9. **An order's originating instance always wins — a replica is read-only for real users.**
+   Never resolve an order conflict by last-write-wins/timestamp comparison (real delivery delay
+   under backoff means "arrived last" ≠ "happened last", and `Order.state` is an FSM, not an
+   independently-mergeable field — see `docs/architecture.md`'s "Orders: direction follows the
+   instance of origin" for the full reasoning). `ReplicaOrderInterceptor`/`ReplicaOrderProcess`
+   (`packages/plugins/sync/src/replica-order.guard.ts`) enforce this — do not bypass or weaken
+   them to let a non-owning instance mutate an order directly.
+
+10. **A cross-instance fact about an order that can legitimately be witnessed by a non-owning
+    instance (payment, reservation, approval, ERP status, and any future one) is its own
+    independent event stream — never a direct mutation of another instance's order, and never
+    folded into `order.updated`'s payload.** See `docs/architecture.md`'s "Order as a read-model:
+    independent event streams per concern (CQRS)" for the full principle and worked examples
+    (`ReservationConfirmedEvent`, `ApprovalRequest`, `ErpOrderStatusEvent`, planned
+    `payment.recorded`). The owning instance applies a fact for real, through the normal Vendure
+    APIs; every other instance applies it as an informational `customFields` projection only.
+
+11. **A payment touches four independent sources of truth — never conflate them, never let one
+    silently overwrite another.** The payment provider/branch kassa/bank owns the real state of
+    the money movement (`paymentStatus`); this platform owns the business process and event
+    routing only; 1C owns the accounting/management reflection, but only for postings it has
+    actually accepted (`erpPostingStatus`) — 1C being unreachable does not make an
+    already-captured payment "unconfirmed"; ККТ/ОФД owns the fiscal receipt
+    (`fiscalizationStatus`), which completes asynchronously and independently of the other two.
+    Track these as separate fields, never one combined status. Refunds and disputes/chargebacks
+    are their own entities with their own lifecycles — never a negative payment record, never
+    folded into each other. Never invent a synthetic Vendure `Payment` to make an order's state
+    machine match a real-world payment that doesn't map 1:1 to that order. Any mismatch between
+    systems becomes a `PaymentReconciliationIssue` for a human to resolve — never an automatic
+    pick of whichever number looks right. Full design, including the three-level idempotency
+    requirement (command idempotency, inbound event dedup, business-level uniqueness) and why
+    it's needed even with one integration owner per channel: `docs/payments.md`
+    (`tasks/payments-ru.md` for the Russian translation).
+
 ---
 
 ## Vendure rules

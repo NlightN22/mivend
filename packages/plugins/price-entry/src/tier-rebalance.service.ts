@@ -2,13 +2,13 @@ import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import {
     EventBus,
     ID,
-    Logger,
     Order,
     OrderLineEvent,
     OrderService,
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
+import { subscribeAndLog } from 'shared';
 
 const loggerCtx = 'TierRebalanceService';
 
@@ -46,15 +46,15 @@ export class TierRebalanceService implements OnApplicationBootstrap {
     ) {}
 
     onApplicationBootstrap(): void {
-        this.eventBus.ofType(OrderLineEvent).subscribe(event => {
-            if (event.type === 'cancelled') return;
-            this.rebalanceSiblingLines(event.ctx, event.order, event.orderLine.id).catch(e => {
-                Logger.error(
-                    `Tier rebalance failed for order ${event.order.id}: ${e instanceof Error ? e.message : String(e)}`,
-                    loggerCtx,
-                );
-            });
-        });
+        subscribeAndLog(
+            this.eventBus,
+            OrderLineEvent,
+            async event => {
+                if (event.type === 'cancelled') return;
+                await this.rebalanceSiblingLines(event.ctx, event.order, event.orderLine.id);
+            },
+            loggerCtx,
+        );
     }
 
     private async rebalanceSiblingLines(

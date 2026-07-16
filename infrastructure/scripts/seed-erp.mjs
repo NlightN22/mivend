@@ -71,6 +71,27 @@ async function ensureTaxSetup() {
     if (session.data.login.message) throw new Error(`Admin login failed: ${session.data.login.message}`);
     const cookie = session.cookie;
 
+    // Country is Vendure system config, same carve-out as tax zone/shipping/payment methods
+    // below — cannot go through erp-import. Checked independently of the tax-zone gate right
+    // below (not nested inside it) because a fresh instance can genuinely have zero Country
+    // rows even when tax zones were already configured on an earlier run (found live
+    // 2026-07-15 on a fresh `make dev-branch` instance: setOrderShippingAddress failed with
+    // error.country-code-not-valid). Vendure's own default seed data normally provides these;
+    // this project's instances are bootstrapped without it, so they must be seeded explicitly.
+    const countriesRes = await adminGraphqlWithSession(`{ countries { items { id code } } }`, undefined, cookie);
+    if (countriesRes.data.countries.items.length === 0) {
+        await adminGraphqlWithSession(`
+            mutation {
+                createCountry(input: {
+                    code: "RU"
+                    enabled: true
+                    translations: [{ languageCode: en, name: "Russia" }]
+                }) { id }
+            }
+        `, undefined, cookie);
+        console.log('  Created country RU.');
+    }
+
     // Check if default channel already has a tax zone assigned
     const channelCheckRes = await adminGraphqlWithSession(
         `{ channels { items { id defaultTaxZone { id } } } }`,

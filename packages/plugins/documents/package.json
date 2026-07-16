@@ -21,6 +21,7 @@
         "graphql": "^16.0.0",
         "graphql-tag": "^2.12.6",
         "puppeteer": "^25.0.0",
+        "shared": "workspace:*",
         "typeorm": "^0.3.20"
     },
     "devDependencies": {

@@ -233,8 +233,43 @@ export class ReservationService {
         order: Order,
         state: OrderReservationState,
     ): Promise<void> {
-        order.customFields = { ...order.customFields, reservationState: state };
-        await this.connection.getRepository(ctx, Order).save(order);
+        // `repo.update()`, not `.save(order)` — same gotcha as ErpOrderService.updateStatus:
+        // `order` here is frequently loaded with a narrow relation set (e.g. reserveOrder()'s own
+        // `['lines', 'lines.productVariant']`), and `.save()` recomputes calculated fields
+        // (discounts, taxSummary) that require `lines`/`surcharges` to be joined — throwing
+        // "The property 'taxSummary' ... requires the Order.surcharges relation to be joined"
+        // and, because every caller of this method is itself fire-and-forget from an EventBus
+        // subscriber, silently swallowing the whole reservation write with no reservation ever
+        // created. Found live 2026-07-15: a real PREPAID order stayed `reservationState:
+        // 'NOT_REQUIRED'` with no error visible anywhere until a temporary debug log surfaced
+        // this exact GraphQLError.
+        const repo = this.connection.getRepository(ctx, Order);
+        await repo.update(order.id, {
+            customFields: { ...order.customFields, reservationState: state },
+        });
+
+        // Second real bug found live 2026-07-15, alongside the one above: when this method is
+        // called from the auto-prepaid path (an OrderStateTransitionEvent subscriber, see
+        // reservation.plugin.ts), the update above can still get silently clobbered back to its
+        // old value — @vendure/core's OrderService.transitionToState() does one more
+        // unconditional `.save(order, {reload: false})` of its OWN stale in-memory `order` object
+        // *after* publishing the event that triggers this call (see
+        // reservation.plugin.ts's subscriber comment for the full mechanism). That trailing save
+        // isn't visible or awaitable from here, so instead of guessing a "safe" delay, verify the
+        // write actually stuck and retry a bounded number of times if it didn't — self-corrects
+        // regardless of how long the clobbering save takes, at the cost of a real subsequent
+        // reservationState no-op update also (harmlessly) recovering, e.g., a manual-confirm race.
+        for (let attempt = 0; attempt < 3; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const current: Array<{ state: string }> = await this.connection.rawConnection.query(
+                `SELECT "customFieldsReservationstate" AS state FROM "order" WHERE id = $1`,
+                [order.id],
+            );
+            if (current[0]?.state === state) return;
+            await repo.update(order.id, {
+                customFields: { ...order.customFields, reservationState: state },
+            });
+        }
     }
 
     private async sumActiveReservations(

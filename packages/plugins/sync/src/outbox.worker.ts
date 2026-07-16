@@ -20,8 +20,14 @@ export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
     ) {}
 
     async onModuleInit(): Promise<void> {
-        if (this.options.instanceType !== 'central') return;
-
+        // Draining `sync_outbox` → RabbitMQ (the 'scan' job) must run on EVERY instance, not
+        // just central — a branch-placed order's `order.created` (target: 'central', see
+        // OrderConsumer) is written to the *branch's own* outbox and needs the branch's own
+        // OutboxWorker to publish it. This was previously gated on `instanceType === 'central'`
+        // entirely (a real, live-verified bug found 2026-07-15: every branch-origin outbox
+        // entry sat at status='pending' forever, since nothing ever drained it) — only the
+        // ERP-polling job ('scan-erp', real 1C integration) is genuinely central-only, per
+        // AGENTS.md's "Branches never call the ERP".
         const connection = {
             host: this.options.redis.host,
             port: this.options.redis.port,
@@ -47,12 +53,20 @@ export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
         });
 
         const outboxMs = this.options.outboxPollIntervalMs ?? POLL_INTERVAL_DEFAULT;
-        const erpMs = this.options.erpPollIntervalMs ?? ERP_POLL_INTERVAL_DEFAULT;
-
         await this.queue.upsertJobScheduler('scan', { every: outboxMs });
-        await this.queue.upsertJobScheduler('scan-erp', { every: erpMs });
 
-        this.logger.info(`OutboxWorker started (outbox=${outboxMs}ms, erp=${erpMs}ms)`);
+        if (this.options.instanceType === 'central') {
+            const erpMs = this.options.erpPollIntervalMs ?? ERP_POLL_INTERVAL_DEFAULT;
+            await this.queue.upsertJobScheduler('scan-erp', { every: erpMs });
+        }
+
+        this.logger.info(
+            `OutboxWorker started (outbox=${outboxMs}ms${
+                this.options.instanceType === 'central'
+                    ? `, erp=${this.options.erpPollIntervalMs ?? ERP_POLL_INTERVAL_DEFAULT}ms`
+                    : ''
+            })`,
+        );
     }
 
     async onModuleDestroy(): Promise<void> {

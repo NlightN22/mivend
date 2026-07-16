@@ -25,6 +25,7 @@
         "graphql-tag": "^2.12.6",
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
-        "@mivend/plugin-counterparty": "workspace:*"
+        "@mivend/plugin-counterparty": "workspace:*",
+        "shared": "workspace:*"
     }
 }

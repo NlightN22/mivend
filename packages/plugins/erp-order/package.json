@@ -17,7 +17,8 @@
         "@vendure/core": "^3.6.4",
         "graphql": "^16.0.0",
         "graphql-tag": "^2.12.6",
-        "@nestjs/graphql": "^13.0.0"
+        "@nestjs/graphql": "^13.0.0",
+        "shared": "workspace:*"
     },
     "devDependencies": {
         "@types/express": "^4.17.0",

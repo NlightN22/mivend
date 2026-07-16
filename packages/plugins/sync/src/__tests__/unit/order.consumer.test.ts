@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EventBus } from '@vendure/core';
+import { OrderStateTransitionEvent, PaymentStateTransitionEvent } from '@vendure/core';
 import { OrderReadyForErpEvent } from '@mivend/plugin-erp-order';
 
 import { OrderConsumer } from '../../consumers/order.consumer';
@@ -153,5 +154,163 @@ describe('OrderConsumer', () => {
         await handler(new OrderReadyForErpEvent({} as never, 'order-1', 'ORD-1'));
 
         expect(syncService.writeToOutbox).not.toHaveBeenCalled();
+    });
+
+    describe('order.updated (status transitions)', () => {
+        function makeTransitionEvent(
+            overrides: Partial<Record<string, unknown>> = {},
+        ): OrderStateTransitionEvent {
+            return new OrderStateTransitionEvent(
+                'ArrangingPayment',
+                'PaymentAuthorized',
+                {} as never,
+                makeOrder(overrides) as never,
+            );
+        }
+
+        it('publishes order.updated for a non-initial transition on a non-replica order', async () => {
+            makeConsumer(CENTRAL_OPTIONS);
+            const handler = subscribers.get(OrderStateTransitionEvent)!;
+
+            await handler(makeTransitionEvent());
+
+            expect(syncService.writeToOutbox).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({
+                    eventType: 'order.updated',
+                    payload: { sourceOrderId: 'order-1', state: 'PaymentAuthorized' },
+                }),
+                'branch-a',
+            );
+        });
+
+        it('skips the internal Created → AddingItems transition fired on every order instantiation', async () => {
+            makeConsumer(CENTRAL_OPTIONS);
+            const handler = subscribers.get(OrderStateTransitionEvent)!;
+
+            const event = new OrderStateTransitionEvent(
+                'Created',
+                'AddingItems',
+                {} as never,
+                makeOrder() as never,
+            );
+            await handler(event);
+
+            expect(syncService.writeToOutbox).not.toHaveBeenCalled();
+        });
+
+        it('skips the initial AddingItems → * transition (order.created carries the state instead)', async () => {
+            makeConsumer(CENTRAL_OPTIONS);
+            const handler = subscribers.get(OrderStateTransitionEvent)!;
+
+            const event = new OrderStateTransitionEvent(
+                'AddingItems',
+                'ArrangingPayment',
+                {} as never,
+                makeOrder() as never,
+            );
+            await handler(event);
+
+            expect(syncService.writeToOutbox).not.toHaveBeenCalled();
+        });
+
+        it('never re-publishes a transition on a replica order (would ping-pong)', async () => {
+            makeConsumer(BRANCH_OPTIONS);
+            const handler = subscribers.get(OrderStateTransitionEvent)!;
+
+            await handler(
+                makeTransitionEvent({
+                    customFields: { branchId: 'branch-a', sourceOrderId: 'central-order-9' },
+                }),
+            );
+
+            expect(syncService.writeToOutbox).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('payment.recorded (real payments)', () => {
+        function makePaymentEvent(
+            toState: string,
+            overrides: {
+                ctx?: Partial<Record<string, unknown>>;
+                order?: Partial<Record<string, unknown>>;
+            } = {},
+        ): PaymentStateTransitionEvent {
+            return new PaymentStateTransitionEvent(
+                'Created',
+                toState as never,
+                { apiType: 'shop', activeUserId: undefined, ...overrides.ctx } as never,
+                { method: 'online-stub', amount: 5000 } as never,
+                makeOrder(overrides.order) as never,
+            );
+        }
+
+        it('publishes payment.recorded for a genuine Settled payment', async () => {
+            makeConsumer(CENTRAL_OPTIONS);
+            const handler = subscribers.get(PaymentStateTransitionEvent)!;
+
+            await handler(makePaymentEvent('Settled'));
+
+            expect(syncService.writeToOutbox).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({
+                    eventType: 'payment.recorded',
+                    payload: expect.objectContaining({
+                        sourceOrderId: 'order-1',
+                        method: 'online-stub',
+                        amount: 5000,
+                        state: 'Settled',
+                        witnessedBy: 'hub',
+                    }),
+                }),
+                'branch-a',
+            );
+        });
+
+        it('ignores a transition to a non-payment-final state (e.g. Cancelled)', async () => {
+            makeConsumer(CENTRAL_OPTIONS);
+            const handler = subscribers.get(PaymentStateTransitionEvent)!;
+
+            await handler(makePaymentEvent('Cancelled'));
+
+            expect(syncService.writeToOutbox).not.toHaveBeenCalled();
+        });
+
+        it('skips a replica order (a real Payment should never exist on one)', async () => {
+            makeConsumer(CENTRAL_OPTIONS);
+            const handler = subscribers.get(PaymentStateTransitionEvent)!;
+
+            await handler(
+                makePaymentEvent('Settled', {
+                    order: {
+                        customFields: { branchId: 'branch-a', sourceOrderId: 'central-order-9' },
+                    },
+                }),
+            );
+
+            expect(syncService.writeToOutbox).not.toHaveBeenCalled();
+        });
+
+        it('skips its own sync-applied fact (system context, no activeUserId) to avoid an echo', async () => {
+            makeConsumer(CENTRAL_OPTIONS);
+            const handler = subscribers.get(PaymentStateTransitionEvent)!;
+
+            await handler(
+                makePaymentEvent('Settled', { ctx: { apiType: 'admin', activeUserId: undefined } }),
+            );
+
+            expect(syncService.writeToOutbox).not.toHaveBeenCalled();
+        });
+
+        it('still publishes an admin-context payment when a real operator triggered it', async () => {
+            makeConsumer(CENTRAL_OPTIONS);
+            const handler = subscribers.get(PaymentStateTransitionEvent)!;
+
+            await handler(
+                makePaymentEvent('Settled', { ctx: { apiType: 'admin', activeUserId: 'user-1' } }),
+            );
+
+            expect(syncService.writeToOutbox).toHaveBeenCalled();
+        });
     });
 });

@@ -9,6 +9,8 @@ import {
     NativeAuthenticationMethod,
 } from '@vendure/core';
 
+import { registerOutboxProducer } from '../producer-registry';
+import type { OutboxEntry } from '../producer-registry';
 import { SyncService } from '../sync.service';
 import { SYNC_PLUGIN_OPTIONS } from '../types';
 import type { SyncPluginOptions } from '../types';
@@ -31,30 +33,30 @@ export class AdministratorSyncProducer implements OnApplicationBootstrap {
     onApplicationBootstrap(): void {
         if (this.options.instanceType !== 'central') return;
 
-        this.eventBus.ofType(AdministratorEvent).subscribe(event => this.handle(event));
+        registerOutboxProducer(
+            this.eventBus,
+            this.dataSource,
+            this.syncService,
+            AdministratorEvent,
+            event => this.toOutboxEntry(event),
+        );
     }
 
-    private async handle(event: AdministratorEvent): Promise<void> {
+    private async toOutboxEntry(event: AdministratorEvent): Promise<OutboxEntry | null> {
         if (event.type === 'deleted') {
-            await this.dataSource.transaction(em =>
-                this.syncService.writeToOutbox(
-                    em,
-                    {
-                        eventId: randomUUID(),
-                        eventType: 'administrator.deactivated',
-                        payload: { administratorId: String(event.entity.id) },
-                    },
-                    'all-branches',
-                ),
-            );
-            return;
+            return {
+                eventId: randomUUID(),
+                eventType: 'administrator.deactivated',
+                payload: { administratorId: String(event.entity.id) },
+                target: 'all-branches',
+            };
         }
 
         const admin = await this.dataSource.getRepository(Administrator).findOne({
             where: { id: event.entity.id },
             relations: ['user', 'user.roles'],
         });
-        if (!admin) return;
+        if (!admin) return null;
 
         // NativeAuthenticationMethod.passwordHash is declared `select: false` in Vendure core
         // (never returned by a normal find/relation load, for good reason) — must be fetched
@@ -71,31 +73,23 @@ export class AdministratorSyncProducer implements OnApplicationBootstrap {
             .getOne();
         // No native (password) credentials to replicate — e.g. an SSO-only account. Nothing a
         // branch could authenticate against offline anyway, so there's nothing to sync.
-        if (!native) return;
+        if (!native) return null;
 
         const customFields = admin.customFields as { branchId?: string | null } | undefined;
 
-        await this.dataSource.transaction(em =>
-            this.syncService.writeToOutbox(
-                em,
-                {
-                    eventId: randomUUID(),
-                    eventType:
-                        event.type === 'created'
-                            ? 'administrator.created'
-                            : 'administrator.updated',
-                    payload: {
-                        administratorId: String(admin.id),
-                        emailAddress: admin.emailAddress,
-                        firstName: admin.firstName,
-                        lastName: admin.lastName,
-                        roleCodes: admin.user.roles.map(r => r.code),
-                        passwordHash: native.passwordHash,
-                        branchId: customFields?.branchId ?? null,
-                    },
-                },
-                'all-branches',
-            ),
-        );
+        return {
+            eventId: randomUUID(),
+            eventType: event.type === 'created' ? 'administrator.created' : 'administrator.updated',
+            payload: {
+                administratorId: String(admin.id),
+                emailAddress: admin.emailAddress,
+                firstName: admin.firstName,
+                lastName: admin.lastName,
+                roleCodes: admin.user.roles.map(r => r.code),
+                passwordHash: native.passwordHash,
+                branchId: customFields?.branchId ?? null,
+            },
+            target: 'all-branches',
+        };
     }
 }

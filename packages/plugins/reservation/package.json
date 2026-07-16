@@ -27,6 +27,7 @@
         "graphql-tag": "^2.12.6",
         "bullmq": "^5.0.0",
         "@mivend/plugin-access-control": "workspace:*",
-        "@mivend/plugin-erp-order": "workspace:*"
+        "@mivend/plugin-erp-order": "workspace:*",
+        "shared": "workspace:*"
     }
 }

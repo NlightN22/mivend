@@ -9,7 +9,9 @@ import {
 } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { subscribeAndLog } from 'shared';
 
+import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
 import { DocumentsService } from './documents.service';
@@ -57,10 +59,15 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
     ) {}
 
     onApplicationBootstrap(): void {
-        this.eventBus.ofType(OrderStateTransitionEvent).subscribe(event => {
-            if (event.toState !== INVOICE_TRIGGER_STATE) return;
-            void this.onOfflineTermsPaymentAuthorized(event);
-        });
+        subscribeAndLog(
+            this.eventBus,
+            OrderStateTransitionEvent,
+            async event => {
+                if (event.toState !== INVOICE_TRIGGER_STATE) return;
+                await this.onOfflineTermsPaymentAuthorized(event);
+            },
+            loggerCtx,
+        );
     }
 
     private async onOfflineTermsPaymentAuthorized(event: OrderStateTransitionEvent): Promise<void> {

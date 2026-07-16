@@ -27,6 +27,37 @@ export default [
             'no-undef': 'off',
         },
     },
+    // Every Vendure `EventBus.ofType(X).subscribe(fn)` call in backend code must go through
+    // `subscribeAndLog()` (packages/shared/src/vendure-events.ts) or `registerOutboxProducer()`
+    // (packages/plugins/sync/src/producer-registry.ts, itself built on subscribeAndLog) —
+    // never called directly. A bare `.subscribe(event => { void handler(event); })` makes any
+    // rejection inside `handler` completely invisible (EventBus.publish() never awaits a
+    // non-blocking subscriber), which is exactly how a real bug
+    // (`ReservationService.setOrderReservationState` throwing on every call) went unnoticed
+    // through multiple sessions — see docs/ai/PROJECT_CONTEXT.md, 2026-07-15. An audit that day
+    // found the same gap in 4 more places across the codebase, all fixed the same way.
+    {
+        files: ['packages/plugins/**/*.ts', 'apps/server/**/*.ts'],
+        ignores: [
+            '**/*.test.ts',
+            '**/__tests__/**',
+            // The implementation itself is the one place allowed to call the real chain.
+            'packages/shared/src/vendure-events.ts',
+        ],
+        languageOptions: { parser: tsParser },
+        plugins: { '@typescript-eslint': tsPlugin },
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector:
+                        "CallExpression[callee.property.name='subscribe'][callee.object.callee.property.name='ofType']",
+                    message:
+                        "Don't call eventBus.ofType(X).subscribe(fn) directly — an error inside fn is silently swallowed (EventBus.publish() never awaits non-blocking subscribers). Use subscribeAndLog() from 'shared' (or registerOutboxProducer() in plugin-sync) instead.",
+                },
+            ],
+        },
+    },
     // "One entity, one owning service" — any entity documented as having a single designated
     // writer/reader (read-model/projection tables, see AGENTS.md "Pagination"; generic
     // shared-infrastructure tables like the audit trail below) must only ever be imported by

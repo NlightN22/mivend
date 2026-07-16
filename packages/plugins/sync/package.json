@@ -16,6 +16,7 @@
     "dependencies": {
         "amqplib": "^0.10.4",
         "bullmq": "^5.0.0",
+        "graphql-tag": "^2.12.6",
         "shared": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
@@ -23,10 +24,12 @@
     },
     "devDependencies": {
         "@nestjs/common": "^11.0.0",
+        "@nestjs/graphql": "^13.0.0",
         "@types/amqplib": "^0.10.0",
         "@types/express": "^4.17.0",
         "@vendure/common": "^3.0.0",
         "@vendure/core": "^3.0.0",
+        "graphql": "^16.0.0",
         "typeorm": "^0.3.0",
         "typescript": "^5.4.0",
         "vitest": "^4.1.9"

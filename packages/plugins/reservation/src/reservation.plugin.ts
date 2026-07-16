@@ -5,11 +5,13 @@ import {
     OrderPlacedEvent,
     OrderStateTransitionEvent,
     PluginCommonModule,
+    RequestContextService,
     RuntimeVendureConfig,
     Type,
     VendurePlugin,
 } from '@vendure/core';
 import gql from 'graphql-tag';
+import { subscribeAndLog } from 'shared';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
 
@@ -27,7 +29,10 @@ import { ReservationService } from './reservation.service';
 import {
     DEFAULT_ORDER_RESERVATION_STATE,
     DEFAULT_RESERVATION_DAYS,
+    PAYMENT_CLASSIFICATIONS,
+    PAYMENT_CLASSIFICATION_LABELS,
     RESERVATION_PLUGIN_OPTIONS,
+    loggerCtx,
 } from './types';
 import type { ReservationPluginOptions } from './types';
 
@@ -136,20 +141,18 @@ const adminApiSchema = gql`
                 name: 'paymentClassification',
                 type: 'string' as const,
                 nullable: true,
-                options: [
-                    {
-                        value: 'PREPAID',
-                        label: [{ languageCode: LanguageCode.en, value: 'Prepaid' }],
-                    },
-                    {
-                        value: 'CREDIT',
-                        label: [{ languageCode: LanguageCode.en, value: 'Credit terms' }],
-                    },
-                    {
-                        value: 'OFFLINE_TERMS',
-                        label: [{ languageCode: LanguageCode.en, value: 'Offline terms' }],
-                    },
-                ],
+                // Built from PAYMENT_CLASSIFICATIONS (types.ts), the single source of truth for
+                // this fixed set — never list a value here that isn't in that array, or the
+                // Admin UI dropdown and the code's `=== 'PREPAID'` checks can drift apart.
+                options: PAYMENT_CLASSIFICATIONS.map(value => ({
+                    value,
+                    label: [
+                        {
+                            languageCode: LanguageCode.en,
+                            value: PAYMENT_CLASSIFICATION_LABELS[value],
+                        },
+                    ],
+                })),
                 public: false,
                 label: [{ languageCode: LanguageCode.en, value: 'Payment classification' }],
                 // Configured per payment method in the native Vendure Admin UI (port 3000) — see
@@ -197,29 +200,67 @@ export class ReservationPlugin implements OnApplicationBootstrap {
         private eventBus: EventBus,
         private paymentService: ReservationPaymentService,
         private erpSyncService: ReservationErpSyncService,
+        private requestContextService: RequestContextService,
     ) {}
 
     onApplicationBootstrap(): void {
-        this.eventBus.ofType(OrderPlacedEvent).subscribe(event => {
-            void this.paymentService.handleOrderPlaced(event.ctx, event.order);
-        });
+        // All three subscribers below go through `subscribeAndLog` (packages/shared) so a
+        // failure is always logged, never silently swallowed — see that helper's doc comment
+        // for why a bare fire-and-forget `.subscribe()` is uniquely dangerous here (a real,
+        // previously-hidden bug, 2026-07-15).
+        //
+        // The first two also use a FRESH RequestContext (`requestContextService.create()`),
+        // never `event.ctx` — root-caused live 2026-07-15 alongside the bug above: `event.ctx`
+        // is the *same still-open transaction* as the `OrderService.transitionToState()` call
+        // that published this event. That outer call does one more unconditional
+        // `.save(order, {reload: false})` of its OWN in-memory `order` object *after* publishing
+        // (see @vendure/core's order.service.js) — using the stale `customFields` that object
+        // was loaded with. Since this subscriber isn't awaited by that outer call, its write can
+        // land before that trailing save, which then silently clobbers it back (last write via
+        // that shared connection wins) — the `Reservation` row itself was created successfully
+        // (different table), but `Order.customFields.reservationState` kept reverting to
+        // 'NOT_REQUIRED' no matter what. A fresh ctx runs on its own connection/transaction,
+        // sidestepping both the clobber and the underlying single-client concurrent-query hazard
+        // (`pg`'s "Calling client.query() when the client is already executing a query" warning,
+        // also observed live). See OrderSyncService (`packages/plugins/sync`) for the same
+        // established pattern.
+        subscribeAndLog(
+            this.eventBus,
+            OrderPlacedEvent,
+            async event => {
+                const ctx = await this.requestContextService.create({ apiType: 'admin' });
+                await this.paymentService.handleOrderPlaced(ctx, event.order);
+            },
+            loggerCtx,
+        );
 
         // Mirrors Vendure's own DefaultStockAllocationStrategy.shouldAllocateStock guard — same
         // signal, so the auto-prepaid reservation path fires exactly when Vendure's own stock
         // allocation would (see docs/order-flow.md "Prepaid — an EventBus listener...").
-        this.eventBus.ofType(OrderStateTransitionEvent).subscribe(event => {
-            if (
-                event.fromState === 'ArrangingPayment' &&
-                (event.toState === 'PaymentAuthorized' || event.toState === 'PaymentSettled')
-            ) {
-                void this.paymentService.handlePaymentStateReached(event.ctx, event.order);
-            }
-        });
+        subscribeAndLog(
+            this.eventBus,
+            OrderStateTransitionEvent,
+            async event => {
+                if (
+                    event.fromState !== 'ArrangingPayment' ||
+                    (event.toState !== 'PaymentAuthorized' && event.toState !== 'PaymentSettled')
+                ) {
+                    return;
+                }
+                const ctx = await this.requestContextService.create({ apiType: 'admin' });
+                await this.paymentService.handlePaymentStateReached(ctx, event.order);
+            },
+            loggerCtx,
+        );
 
         // 1C's own order-status callback is authoritative — see docs/order-flow.md "1C
         // integration" and this project's explicit decision that 1C wins in conflicts.
-        this.eventBus.ofType(ErpOrderStatusEvent).subscribe(event => {
-            void this.erpSyncService.handleErpOrderStatus(event.ctx, event.orderCode, event.status);
-        });
+        subscribeAndLog(
+            this.eventBus,
+            ErpOrderStatusEvent,
+            event =>
+                this.erpSyncService.handleErpOrderStatus(event.ctx, event.orderCode, event.status),
+            loggerCtx,
+        );
     }
 }

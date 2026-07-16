@@ -383,6 +383,9 @@ importers:
             puppeteer:
                 specifier: ^25.0.0
                 version: 25.3.0
+            shared:
+                specifier: workspace:*
+                version: link:../../shared
             typeorm:
                 specifier: ^0.3.20
                 version: 0.3.30(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
@@ -472,6 +475,9 @@ importers:
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)
+            shared:
+                specifier: workspace:*
+                version: link:../../shared
         devDependencies:
             '@types/express':
                 specifier: ^4.17.0
@@ -556,6 +562,9 @@ importers:
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)
+            shared:
+                specifier: workspace:*
+                version: link:../../shared
         devDependencies:
             '@nestjs/common':
                 specifier: ^11.0.0
@@ -593,6 +602,9 @@ importers:
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)
+            shared:
+                specifier: workspace:*
+                version: link:../../shared
         devDependencies:
             '@nestjs/common':
                 specifier: ^11.0.0
@@ -667,6 +679,9 @@ importers:
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)
+            shared:
+                specifier: workspace:*
+                version: link:../../shared
         devDependencies:
             '@nestjs/common':
                 specifier: ^11.0.0
@@ -710,6 +725,9 @@ importers:
             bullmq:
                 specifier: ^5.0.0
                 version: 5.79.1
+            graphql-tag:
+                specifier: ^2.12.6
+                version: 2.12.7(graphql@16.14.2)
             shared:
                 specifier: workspace:*
                 version: link:../../shared
@@ -717,6 +735,9 @@ importers:
             '@nestjs/common':
                 specifier: ^11.0.0
                 version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)
+            '@nestjs/graphql':
+                specifier: ^13.0.0
+                version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@types/amqplib':
                 specifier: ^0.10.0
                 version: 0.10.8
@@ -729,6 +750,9 @@ importers:
             '@vendure/core':
                 specifier: ^3.0.0
                 version: 3.6.4(@types/express@4.17.25)(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+            graphql:
+                specifier: ^16.0.0
+                version: 16.14.2
             typeorm:
                 specifier: ^0.3.0
                 version: 0.3.30(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
@@ -776,6 +800,9 @@ importers:
                 specifier: ^3.23.0
                 version: 3.25.76
         devDependencies:
+            '@vendure/core':
+                specifier: ^3.0.0
+                version: 3.6.4(@types/express@4.17.25)(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
             typescript:
                 specifier: ^5.4.0
                 version: 5.9.3

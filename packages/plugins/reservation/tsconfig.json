@@ -6,5 +6,9 @@
         "rootDir": "."
     },
     "include": ["src/**/*", "index.ts"],
-    "references": [{ "path": "../access-control" }, { "path": "../erp-order" }]
+    "references": [
+        { "path": "../access-control" },
+        { "path": "../erp-order" },
+        { "path": "../../shared" }
+    ]
 }

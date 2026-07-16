@@ -120,16 +120,87 @@ narrower and already enforceable today: **whichever instance receives the write 
 outbox row and is the conflict owner for that order** — direction is a per-row fact
 (`sourceInstanceId`), not a per-data-type constant.
 
-**The receiving instance gets a full local `Order` copy, not a lighter fulfillment-only
-projection.** The point of syncing an order at all is so the receiving side (a branch fulfilling
-a Central-originated order, or Central aggregating a branch-originated one) interacts with it
-through the exact same Vendure `Order` APIs as any locally-placed order — order status
-transitions, reservations, everything — rather than a special-cased read-only summary object.
-Status changes are themselves synced afterward as `order.updated` events against the same
-object, following the same origin-owns-the-write rule as creation. (`OrderConsumer` in
-`packages/plugins/sync` implements the producer side of this — writing `order.created` to the
-outbox with the correct target per the rule above; actually applying the event on the receiving
-side, i.e. writing the local `Order` copy, is not implemented yet.)
+**The receiving instance gets a full local `Order` copy** (`OrderSyncService.applyCreate`,
+implemented and live-verified — see `docs/ai/PROJECT_CONTEXT.md`), not a lighter
+fulfillment-only projection — so the receiving side (a branch fulfilling a Central-originated
+order, or Central aggregating a branch-originated one) can query/report on it exactly like a
+local order. **Known, deliberate limitation**: the replica cannot be driven into a
+Payment/Shipping-gated Vendure order state (`ArrangingPayment`/`PaymentAuthorized`/
+`PaymentSettled`) because `Payment`/`ShippingLine` records aren't synced — see "Order as a
+read-model" below for why this is by design, not a gap to close by syncing those entities too.
+
+**Conflict rule (decided 2026-07-15): the originating instance always wins.** A replica
+(`Order.customFields.sourceOrderId` set) is enforced **read-only for any real user** —
+`ReplicaOrderInterceptor`/`ReplicaOrderProcess` (`packages/plugins/sync/src/replica-order.guard.ts`)
+block `addItemToOrder`/`adjustOrderLine`/`removeItemFromOrder` and every state transition when
+`ctx.activeUserId` is set, allowing only the sync-internal system context
+(`OrderSyncService`'s own `requestContextService.create({apiType:'admin'})` calls, which never
+carry a logged-in user) to write to it. **Explicitly not last-write-wins by timestamp** — real
+RabbitMQ delivery delay (seconds to tens of seconds under backoff) means "arrived last" and
+"happened last" routinely disagree, and `Order.state` is an FSM, not an independently-mergeable
+field, so a naive timestamp comparison can silently produce a business-nonsensical state (e.g.
+`Shipped` and `Cancelled` both "winning" different fields). Making the conflict structurally
+impossible — only one side can ever legitimately write — was chosen over detecting and
+resolving it after the fact.
+
+### Order as a read-model: independent event streams per concern (CQRS)
+
+**Decided 2026-07-15.** A concrete case exposed a gap in the conflict rule above: a customer's
+online card payment happens on Central (the order's origin), but a walk-in customer paying cash
+at a branch's till happens _locally_, against what that branch only holds as a **replica** of a
+Central-originated order. The read-only-replica rule alone would wrongly block this — it's not
+an attempt to override the order's real status, it's a legitimate fact witnessed somewhere other
+than the origin.
+
+The resolution generalizes beyond payment: **`Order`, as seen by any one instance, is a
+CQRS-style read-model — a projection built by consuming independent event streams, one per
+concern, never a single entity multiple sides fight to own.** A stream's _producer_ is whichever
+instance actually witnessed the fact (Central for an online payment, a branch for a till
+payment, either for a stock reservation, the approval-workflow engine for a sign-off); every
+instance interested in the order applies each fact to its **own** local copy — the true owner
+applies it for real (through the normal, already-guarded Vendure APIs, e.g. a real
+`addPaymentToOrder`), everyone else applies it as an **informational projection** (a
+`customFields` display value, not a real Vendure state transition). No instance ever reaches
+into another instance's order directly — a fact always flows through the event stream, never as
+a direct mutation request. This is not a new idea for this codebase — it formalizes a pattern
+already present in three places, just not previously named as one principle:
+
+- **Reservation** — `ReservationConfirmedEvent`/`ReservationReleasedEvent` (`plugin-reservation`)
+  are their own stream, consumed by `plugin-sync`'s `ReservationConsumer` and written to the
+  outbox independently of `order.*` events; `Order.customFields.reservationState` is a
+  projection of it, never written to directly by another concern.
+- **Approval/confirmation** — `ApprovalRequest`/`ApprovalStep` (`plugin-approval-workflow`) is
+  its own aggregate with its own state machine; an approved decision is _applied_ to the order
+  (e.g. a price adjustment) as a downstream effect, never by the approval engine reaching in and
+  mutating the order as a co-owner.
+- **ERP status** — `ErpOrderStatusEvent` is 1C's own fact stream; `Order.customFields.erpStatus`
+  is a projection, and this project's own explicit rule is "1C wins on conflict" (a fixed
+  authority, the same shape as "origin always wins" above, not a timestamp comparison).
+
+**Payment follows the same shape** — a `payment.recorded` sync event (implemented, live-verified
+2026-07-15), produced by whichever instance witnessed the payment (Central's real payment gateway
+event, or a branch till/kassa integration), carrying `sourceOrderId`/method/amount/state/
+`witnessedBy`. The instance that owns the order applies it for real; every other instance holding
+only a replica applies it as a `customFields.paymentStatus`-style projection for staff visibility
+(branch operators need to _see_ payment status — e.g. a customer calling in to check — without
+being able to _set_ it). **`payment.recorded` only captures the "did this order get paid"
+signal — it is not, by itself, a general ledger.** A customer's real payment may not map 1:1 to
+one order (a lump sum covering several orders, an advance, a partial payment) — see
+`docs/payments.md` for the fuller design: four independent sources of truth (money movement
+owned by the provider/kassa, business process owned by this platform, accounting reflection
+owned by 1C only once accepted, fiscal receipt owned by ККТ/ОФД — never conflated into one
+status), a separate append-only `SettlementEntry` ledger per counterparty, refunds/disputes as
+their own entities, and three-level idempotency (command/inbound-dedup/business-uniqueness) —
+never a synthetic Vendure `Payment` invented to force-fit a real-world payment onto one order.
+
+**Rule for any future cross-instance signal about an order** (new to this list — apply this
+before inventing a new mechanism): if a fact can legitimately be witnessed by more than one
+instance, or by an instance that doesn't own the order, model it as its **own** independent
+event stream with its own producer/consumer pair, correlated by `sourceOrderId`/`orderCode` —
+never by extending `order.updated`'s payload or by relaxing the read-only-replica guard to let
+that concern mutate the order directly. Applying a fact to a non-owning instance's copy of the
+order is always a projection (`customFields`), never a real Vendure state transition, unless
+that instance is the order's actual origin.
 
 ### Storefront hosting: Central-only, not per-branch
 

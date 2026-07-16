@@ -10,6 +10,10 @@ declare module '@vendure/core' {
         // sibling pattern (sourceAdministratorId) and docs/architecture.md's "receiving instance
         // gets a full local Order copy".
         sourceOrderId?: string | null;
+        // Owned by this plugin — informational projection of a `payment.recorded` fact on a
+        // non-owning instance, see OrderSyncService.applyPaymentRecorded and
+        // docs/architecture.md's "Order as a read-model" section.
+        paymentStatus?: string | null;
     }
 }
 

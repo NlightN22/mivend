@@ -6,6 +6,7 @@ import { ProductConsumer } from '../../consumers/product.consumer';
 import { CentralConsumer } from '../../consumers/central.consumer';
 import { SyncOutboxEntry } from '../../entities/sync-outbox.entity';
 import { SyncProcessedEvent } from '../../entities/sync-processed-event.entity';
+import { OutboxWorker } from '../../outbox.worker';
 import { RabbitMQService } from '../../rabbitmq.service';
 import { SyncService } from '../../sync.service';
 import { EXCHANGE } from '../../types';
@@ -211,6 +212,60 @@ describe('outbox publishing', () => {
         await repo.save(make());
         await expect(repo.save(make())).rejects.toThrow();
     });
+});
+
+// ─── OutboxWorker (the scheduler that actually drains the outbox above) ─────────
+
+describe('OutboxWorker', () => {
+    // Real regression test for a real, previously-live bug (found 2026-07-15):
+    // OutboxWorker.onModuleInit() started with `if (instanceType !== 'central') return`, so no
+    // branch instance ever scheduled the outbox-draining job at all — every branch→central sync
+    // event sat at status='pending' forever, silently (see docs/ai/PROJECT_CONTEXT.md). This
+    // exercises the REAL scheduled job (via real BullMQ + Redis), not `syncService.processOutbox()`
+    // called directly (which the 'outbox publishing' tests above already cover and would NOT
+    // have caught this bug — the bug was in whether the job ever gets scheduled at all). Uses a
+    // dedicated Redis DB (15) so it can never collide with a live `make dev`/`make dev-branch`
+    // stack's own BullMQ queues (central defaults to db 0, branch to db 1 — see apps/server/.env*).
+    it.each([['central'], ['branch']] as const)(
+        'schedules and runs its outbox-draining job for instanceType=%s',
+        async instanceType => {
+            const options: SyncPluginOptions = {
+                instanceType,
+                instanceId: instanceType === 'central' ? 'hub' : 'branch-a',
+                redis: { host: 'localhost', port: 6379, db: 15 },
+                rabbitmq: { url: RABBITMQ_URL },
+                outboxPollIntervalMs: 300,
+            };
+            const rabbitmq = instanceType === 'central' ? hubRabbitMQ : branchRabbitMQ;
+            const svc = new SyncService(dataSource, rabbitmq, options, mockLogger as never);
+            const worker = new OutboxWorker(svc, mockLogger as never, options);
+
+            const eventId = randomUUID();
+            await dataSource.transaction(em =>
+                svc.writeToOutbox(
+                    em,
+                    {
+                        eventId,
+                        eventType: 'product.updated',
+                        payload: { productId: `p-worker-${instanceType}` },
+                    } as never,
+                    'all-branches',
+                ),
+            );
+
+            await worker.onModuleInit();
+            try {
+                await waitFor(async () => {
+                    const entry = await dataSource
+                        .getRepository(SyncOutboxEntry)
+                        .findOneBy({ eventId });
+                    return entry?.status === 'delivered';
+                }, 5000);
+            } finally {
+                await worker.onModuleDestroy();
+            }
+        },
+    );
 });
 
 // ─── RabbitMQ → consumer → DB ────────────────────────────────────────────────
