@@ -110,6 +110,46 @@ export default async function globalSetup(): Promise<void> {
     await postBatch(exchangeId, seedRecordsWithOrganization);
     await waitForRun(exchangeId);
 
+    // erp-import's `tradingPoint` record type has no `servicingBranchId` field — it's
+    // intentionally staff-managed only (see TradingPointService.upsert's comment: "ERP doesn't
+    // know about this concept, a staff override must survive repeated ERP upserts"), defaulted
+    // from the counterparty's own branchId only on a trading point's FIRST-ever creation. This
+    // e2e fixture's trading points were first created before `make seed` reliably assigned the
+    // counterparty a branchId, so they've been stuck at `servicingBranchId: null` ever since
+    // (upserts never touch it, by design) — every department-scoped manager-portal viewer has
+    // therefore never been able to see any order for this counterparty
+    // (OrderVisibilityService's 'department' scope filters by the order's own denormalized
+    // branchId, sourced from here). Patch it once via the real staff-editing mutation so it's
+    // no longer permanently wrong regardless of how many times seeding re-runs.
+    const tradingPointFixResult = await adminGql<{
+        counterparties: {
+            items: {
+                id: string;
+                erpId: string;
+                tradingPoints: { id: string; servicingBranchId: string | null }[];
+            }[];
+        };
+    }>(
+        `query { counterparties(options: { take: 100 }) { items { id erpId tradingPoints { id servicingBranchId } } } }`,
+        undefined,
+        adminToken,
+    );
+    const e2eCounterpartyForBranchFix = tradingPointFixResult.data.counterparties.items.find(
+        c => c.erpId === 'e2e-cnt-001',
+    );
+    if (e2eCounterpartyForBranchFix) {
+        for (const tp of e2eCounterpartyForBranchFix.tradingPoints) {
+            if (tp.servicingBranchId === 'branch-central') continue;
+            await adminGql(
+                `mutation($id: ID!, $input: TradingPointDetailsInput!) {
+                    updateTradingPointDetails(id: $id, input: $input) { id }
+                }`,
+                { id: tp.id, input: { servicingBranchId: 'branch-central' } },
+                adminToken,
+            );
+        }
+    }
+
     // A real, deterministic order for the manager-portal Orders/Order Detail specs — operator
     // has department-wide visibility (see infrastructure/scripts/seed-access-roles.mjs), so an
     // order for the e2e counterparty's customer is visible to all three manager-portal test

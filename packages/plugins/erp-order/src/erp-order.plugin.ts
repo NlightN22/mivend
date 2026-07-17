@@ -61,11 +61,21 @@ export class ErpOrderPlugin implements OnApplicationBootstrap {
         // downstream `order.created` sync absorbs a duplicate via its own sourceOrderId check),
         // and covers stragglers (e.g. a guest customer only attached to the order later in
         // checkout than `ArrangingPayment`).
+        //
+        // `Draft` must trigger the same denormalization as `AddingItems`: an admin-created draft
+        // order (manager portal's /orders/new, or any admin API `createDraftOrder` flow) never
+        // passes through `AddingItems` at all — it starts in `Draft` and transitions straight to
+        // `ArrangingPayment`. Missing this meant every admin-created order left
+        // `customFields.branchId` null forever, silently hiding it from every department-scoped
+        // viewer (confirmed real incident: e2e's `createConfirmedOrder` helper, which uses this
+        // exact admin draft-order path, produced orders invisible to department-scoped roles).
         subscribeAndLog(
             this.eventBus,
             OrderStateTransitionEvent,
             event => {
-                if (event.fromState !== 'AddingItems') return Promise.resolve();
+                if (event.fromState !== 'AddingItems' && event.fromState !== 'Draft') {
+                    return Promise.resolve();
+                }
                 return this.erpOrderService.onOrderPlaced(event.ctx, event.order);
             },
             'ErpOrderPlugin',

@@ -111,6 +111,31 @@ test.describe('Recent orders filter chips', () => {
         const order = await createConfirmedOrder(token, customerId, productVariantId);
         orderId = order.id;
         orderCode = order.code;
+
+        // erp-order's branch-denormalization (Order.customFields.branchId, used by
+        // department-scoped visibleOrders) runs in a fire-and-forget EventBus subscriber —
+        // EventBus.publish() does not await non-blocking subscribers, so the
+        // transitionOrderToState/addManualPaymentToOrder mutations above can return before
+        // that handler finishes. Querying visibleOrders immediately afterward (as every test
+        // below does on page load) can race it and see branchId still null for a
+        // department-scoped viewer. Poll until it settles instead of assuming any fixed delay
+        // is long enough — this is the real fix for a flake that looked like "some tests pass,
+        // some don't" depending on how much wall-clock time happened to elapse beforehand.
+        for (let attempt = 0; attempt < 20; attempt++) {
+            const check = await adminGql<{
+                visibleOrders: { items: { customFields: { branchId: string | null } }[] };
+            }>(
+                `query($code: String!) {
+                    visibleOrders(options: { filter: { code: { eq: $code } } }) {
+                        items { customFields { branchId } }
+                    }
+                }`,
+                { code: orderCode },
+                token,
+            );
+            if (check.data.visibleOrders.items[0]?.customFields.branchId) break;
+            await new Promise(resolve => setTimeout(resolve, 250));
+        }
     });
 
     test.afterAll(async () => {

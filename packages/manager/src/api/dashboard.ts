@@ -119,7 +119,7 @@ const DASHBOARD_QUERY = `
             options: {
                 take: 20
                 sort: { orderPlacedAt: DESC }
-                filter: { state: { notIn: ["AddingItems", "Draft"] } }
+                filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled"] } }
             }
         ) {
             items {
