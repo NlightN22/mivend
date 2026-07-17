@@ -18,11 +18,15 @@ import {
     type CustomerDocument,
 } from '../../api/customers';
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
+import { fetchInvoicesForCounterparty, type InvoiceListItem } from '../../api/invoices';
+import { fetchPaymentsForCounterparty, type PaymentListItem } from '../../api/payments';
 import type { EntityRef } from '../../api/history';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
 import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
 import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTab.vue';
+import CustomerInvoicesTab from '../../components/customers/CustomerInvoicesTab.vue';
+import CustomerPaymentsTab from '../../components/customers/CustomerPaymentsTab.vue';
 import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue';
 
 // Human labels for the generic EntityHistoryPanel widget — only the entity types this page
@@ -38,6 +42,8 @@ const managers = ref<ManagerOption[]>([]);
 const orders = ref<CustomerOrderItem[]>([]);
 const discounts = ref<DiscountRuleItem[]>([]);
 const documents = ref<CustomerDocument[]>([]);
+const invoices = ref<InvoiceListItem[]>([]);
+const payments = ref<PaymentListItem[]>([]);
 const loading = ref(true);
 const notFound = ref(false);
 const reassigning = ref(false);
@@ -51,7 +57,9 @@ const reassignError = ref('');
 const canReassign = computed(() => authStore.hasPermission('ReassignCounterpartyManager'));
 const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory'));
 
-const activeTab = ref<'overview' | 'orders' | 'discounts' | 'documents' | 'history'>('overview');
+const activeTab = ref<'overview' | 'orders' | 'invoices' | 'payments' | 'discounts' | 'documents' | 'history'>(
+    'overview',
+);
 // EntityHistoryPanel now owns its own fetching/pagination (issue #39) — this page only supplies
 // the refs to fetch for, not a pre-loaded array.
 const historyRefs = ref<EntityRef[]>([]);
@@ -101,6 +109,12 @@ async function load(): Promise<void> {
         discounts.value = grants;
         documents.value = docs;
         orders.value = customerId ? await fetchOrdersForCustomer(customerId) : [];
+        // Invoice.counterpartyId ties directly to the counterparty (unlike Order, which needs
+        // the customerId lookup above) — no equivalent indirection needed here.
+        [invoices.value, payments.value] = await Promise.all([
+            fetchInvoicesForCounterparty(counterpartyId),
+            fetchPaymentsForCounterparty(counterpartyId),
+        ]);
 
         if (canViewHistory.value) {
             historyRefs.value = [
@@ -190,6 +204,12 @@ async function handleReassign(administratorId: string): Promise<void> {
             <button type="button" :class="{ active: activeTab === 'orders' }" @click="activeTab = 'orders'">
                 Orders
             </button>
+            <button type="button" :class="{ active: activeTab === 'invoices' }" @click="activeTab = 'invoices'">
+                Invoices
+            </button>
+            <button type="button" :class="{ active: activeTab === 'payments' }" @click="activeTab = 'payments'">
+                Payments
+            </button>
             <button type="button" :class="{ active: activeTab === 'discounts' }" @click="activeTab = 'discounts'">
                 Discounts
             </button>
@@ -214,6 +234,16 @@ async function handleReassign(administratorId: string): Promise<void> {
                 @changed="load"
             />
             <CustomerOrdersTab v-else-if="activeTab === 'orders'" :orders="orders" />
+            <CustomerInvoicesTab
+                v-else-if="activeTab === 'invoices'"
+                :invoices="invoices"
+                :counterparty-id="customer.id"
+            />
+            <CustomerPaymentsTab
+                v-else-if="activeTab === 'payments'"
+                :payments="payments"
+                :counterparty-id="customer.id"
+            />
             <CustomerDiscountsTab v-else-if="activeTab === 'discounts'" :discounts="discounts" />
             <CustomerDocumentsTab v-else-if="activeTab === 'documents'" :documents="documents" />
             <EntityHistoryPanel

@@ -16,8 +16,8 @@ export class AdminPaymentVisibilityResolver {
     @Allow(CustomPermission.ReadPayment.Permission)
     async visiblePayments(
         @Ctx() ctx: RequestContext,
-        @Args() args: { options?: PaymentListOptions },
+        @Args() args: { options?: PaymentListOptions; counterpartyId?: string },
     ): Promise<PaginatedList<PaymentAttempt>> {
-        return this.paymentVisibilityService.findVisible(ctx, args.options);
+        return this.paymentVisibilityService.findVisible(ctx, args.options, args.counterpartyId);
     }
 }

@@ -19,15 +19,19 @@ const approvalsBadgeCount = ref(0);
 // real page so far, the rest route to a shared "coming soon" placeholder (see router/index.ts)
 // until they're built out one at a time.
 const menuItems = computed<AppSidebarItem[]>(() => {
-    const items: AppSidebarItem[] = [
-        { label: 'Dashboard', path: '/' },
-        { label: 'Orders', path: '/orders' },
+    const items: AppSidebarItem[] = [{ label: 'Dashboard', path: '/' }, { label: 'Orders', path: '/orders' }];
+    // Gated on the same CustomPermission.ReadInvoice/ReadPayment the visibleInvoices/
+    // visiblePayments queries themselves check — see AdminInvoiceVisibilityResolver/
+    // AdminPaymentVisibilityResolver.
+    if (authStore.hasPermission('ReadInvoice')) items.push({ label: 'Invoices', path: '/invoices' });
+    if (authStore.hasPermission('ReadPayment')) items.push({ label: 'Payments', path: '/payments' });
+    items.push(
         { label: 'Customers', path: '/customers' },
         { label: 'Catalog', path: '/catalog' },
         { label: 'Discounts', path: '/discounts' },
         { label: 'Approvals', path: '/approvals', badgeCount: approvalsBadgeCount.value },
         { label: 'Team', path: '/team' },
-    ];
+    );
     // Gated on the same ManageAccessControl permission the Settings > Roles & Access page
     // itself checks — not a role-code allowlist, so granting/revoking this via the native
     // Vendure admin UI (any role) is enough, no manager-portal code change needed.

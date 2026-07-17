@@ -35,7 +35,10 @@ export const adminApiExtensions = gql`
     extend type Query {
         # Visibility inherits counterparty visibility — no dedicated permission, filtered by
         # the same counterpartyId (see docs/ai/manager-portal-concept.md §3.3 "/documents").
-        documents(options: DocumentListOptions): DocumentList!
+        # counterpartyId/orderId narrow server-side (still intersected with the caller's
+        # visible-counterparty scope) — a caller must never fetch an unbounded page and filter
+        # client-side (see AGENTS.md's pagination rule).
+        documents(options: DocumentListOptions, counterpartyId: ID, orderId: ID): DocumentList!
         # id/erpId lookup for our own legal entities — see docs/payments.md "Organizations".
         organizationRequisites: [OrganizationRequisites!]!
     }

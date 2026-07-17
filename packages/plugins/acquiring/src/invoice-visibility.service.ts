@@ -21,12 +21,16 @@ export class InvoiceVisibilityService {
     async findVisible(
         ctx: RequestContext,
         options?: InvoiceListOptions,
+        counterpartyId?: string,
     ): Promise<PaginatedList<Invoice>> {
         const scope = await this.accessScopeService.resolveInvoiceScope(ctx);
         const take = options?.take ?? 50;
         const skip = options?.skip ?? 0;
 
         const qb = this.buildScopedQuery(ctx, scope, options);
+        if (counterpartyId) {
+            qb.andWhere('invoice.counterpartyId = :counterpartyId', { counterpartyId });
+        }
         const [items, totalItems] = await qb
             .orderBy('invoice.createdAt', 'DESC')
             .addOrderBy('invoice.id', 'DESC')
@@ -85,7 +89,12 @@ export class InvoiceVisibilityService {
             .leftJoin(
                 Counterparty,
                 'counterparty',
-                'counterparty.id::text = invoice.counterpartyId::text',
+                // Raw ON-clause string, not .where()/.andWhere() — TypeORM's alias.property
+                // auto-quoting replacement doesn't run here (only inside actual where clauses),
+                // so the camelCase column must be quoted by hand or Postgres lowercases it to
+                // the nonexistent "counterpartyid" (real bug, caught by a live query — the mock-
+                // based unit tests for this service never exercise real SQL).
+                'counterparty.id::text = invoice."counterpartyId"::text',
             );
         if (options?.status) {
             qb.andWhere('invoice.status = :status', { status: options.status });

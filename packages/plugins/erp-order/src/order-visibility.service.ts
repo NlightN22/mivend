@@ -85,8 +85,15 @@ export class OrderVisibilityService {
                 // branch-office-director) must see orders their own branch handles, not orders
                 // for customers nominally "based" there. See docs/access-control.md's "Branch
                 // scope is a separate axis" section.
+                // `order` is a reserved SQL keyword — TypeORM's alias.property auto-quoting
+                // only fires for a bare `alias.propertyName` it can resolve against entity
+                // metadata; mixing the raw alias with an already-quoted raw column name here
+                // bypasses that pass entirely, so the alias itself must be quoted explicitly or
+                // this becomes `syntax error at or near "order"` at query time (same class of
+                // bug as AGENTS.md's documented Brackets-alias gotcha, but here it hit even
+                // outside a Brackets callback because of the raw-column mixing).
                 qb.andWhere(
-                    `counterparty.departmentId = :departmentId AND ${qb.alias}."customFieldsBranchid" = :branchId`,
+                    `counterparty.departmentId = :departmentId AND "${qb.alias}"."customFieldsBranchid" = :branchId`,
                     { departmentId: scope.departmentId ?? null, branchId: scope.branchId ?? null },
                 );
                 break;

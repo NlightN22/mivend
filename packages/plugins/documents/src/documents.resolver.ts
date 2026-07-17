@@ -57,9 +57,15 @@ export class DocumentsAdminResolver {
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     async documents(
         @Ctx() ctx: RequestContext,
-        @Args() args: { options?: DocumentListOptions },
+        @Args()
+        args: { options?: DocumentListOptions; counterpartyId?: string; orderId?: string },
     ): Promise<PaginatedList<Document>> {
-        return this.documentsService.findVisible(ctx, args.options);
+        return this.documentsService.findVisible(
+            ctx,
+            args.options,
+            args.counterpartyId,
+            args.orderId,
+        );
     }
 
     @Query()

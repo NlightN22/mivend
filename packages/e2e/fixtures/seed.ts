@@ -261,6 +261,30 @@ export const seedRecords = [
         },
     },
     {
+        // customers.spec.ts's Documents tab test asserts on this — no 'contract'-type document
+        // was ever seeded for E2E_COUNTERPARTY_ID (seed-erp.mjs only seeds 'return'/
+        // 'reconciliation' docs for the unrelated 'cnt-001'), so the assertion had nothing real
+        // to find. Not an accumulation/pagination bug — a plain seed gap.
+        // issueDate is re-stamped to "now" on every seed run (upsert by erpId) rather than a
+        // fixed past date: the Documents tab's server-side query has no type filter, only
+        // take/skip sorted by issueDate DESC, and this counterparty accumulates real invoice
+        // documents from every e2e run with no cleanup (documents are immutable financial
+        // records, never deleted) — a stale issueDate would eventually sort behind however many
+        // invoice documents piled up across all past sessions, not just this run's.
+        type: 'document' as const,
+        data: {
+            erpId: 'e2e-doc-contract-001',
+            type: 'contract',
+            counterpartyErpId: E2E_COUNTERPARTY_ID,
+            number: 'E2E-CONTRACT-001',
+            issueDate: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+            amount: 1000000,
+            currencyCode: 'RUB',
+            fileUrl: '/documents/sample-document.pdf',
+            metadata: {},
+        },
+    },
+    {
         type: 'counterparty' as const,
         data: {
             erpId: E2E_OTHER_COUNTERPARTY_ID,

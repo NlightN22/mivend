@@ -152,23 +152,40 @@ export default async function globalSetup(): Promise<void> {
     // addItemToOrder starts failing with InsufficientStockError. Cancelling prior orders here
     // is the actual idempotent fix — it's the real Vendure mechanism that releases allocated
     // stock, not a stock-table workaround.
-    const priorOrdersResult = await adminGql<{
-        customer: { orders: { items: { id: string; state: string }[] } } | null;
-    }>(
-        `query($id: ID!) { customer(id: $id) { orders(options: { take: 100 }) { items { id state } } } }`,
-        { id: customerId },
-        operatorToken,
-    );
-    const cancellableStates = new Set(['Cancelled']);
-    for (const priorOrder of priorOrdersResult.data.customer?.orders.items ?? []) {
-        if (cancellableStates.has(priorOrder.state)) continue;
-        await adminGql(
-            `mutation($input: CancelOrderInput!) {
-                cancelOrder(input: $input) { __typename }
+    // `take: 100` alone silently only ever covered this customer's OLDEST 100 orders (Vendure's
+    // default order-list sort) — once this customer accumulated more than 100 orders across a
+    // long session, every order past that first page was never reached, so its allocated stock
+    // was never released and stockAllocated silently crept up to stockOnHand run over run. Filter
+    // server-side to non-cancelled orders and page through ALL of them, not just the first 100.
+    const pageSize = 100;
+    for (;;) {
+        // Always re-query from skip: 0 — cancelling an order removes it from this
+        // state-filtered result set, so the next page of "still not cancelled" orders
+        // naturally shifts into view; advancing skip here would skip over them instead.
+        const priorOrdersResult = await adminGql<{
+            customer: { orders: { items: { id: string; state: string }[] } } | null;
+        }>(
+            `query($id: ID!, $take: Int!) {
+                customer(id: $id) {
+                    orders(options: { skip: 0, take: $take, filter: { state: { notEq: "Cancelled" } } }) {
+                        items { id state }
+                    }
+                }
             }`,
-            { input: { orderId: priorOrder.id } },
+            { id: customerId, take: pageSize },
             operatorToken,
         );
+        const orders = priorOrdersResult.data.customer?.orders.items ?? [];
+        if (orders.length === 0) break;
+        for (const priorOrder of orders) {
+            await adminGql(
+                `mutation($input: CancelOrderInput!) {
+                    cancelOrder(input: $input) { __typename }
+                }`,
+                { input: { orderId: priorOrder.id } },
+                operatorToken,
+            );
+        }
     }
 
     const order = await createConfirmedOrder(operatorToken, customerId, productVariantId);

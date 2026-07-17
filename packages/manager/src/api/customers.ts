@@ -200,6 +200,28 @@ export async function fetchCustomerById(counterpartyId: string): Promise<Custome
     return result.counterparty ? toCustomerListItem(result.counterparty) : null;
 }
 
+// Lightweight name-only lookup for rendering a "Customer" column against a bounded set of ids
+// (one page of Invoices/Payments, never the full counterparty table) — shared by
+// pages/invoices/InvoicesPage.vue and pages/payments/PaymentsPage.vue instead of each
+// duplicating this fetch-per-id pattern (mirrors OrdersTable's managerName/branchName lookup
+// shape, but resolved per-page here since counterparties aren't a small preloadable set).
+export async function fetchCounterpartyNames(ids: string[]): Promise<Map<string, string>> {
+    const uniqueIds = [...new Set(ids)];
+    const results = await Promise.all(
+        uniqueIds.map(id =>
+            adminApi<{ counterparty: { shortName: string } | null }>(
+                `query($id: ID!) { counterparty(id: $id) { shortName } }`,
+                { id },
+            ),
+        ),
+    );
+    return new Map(
+        uniqueIds
+            .map((id, i) => [id, results[i].counterparty?.shortName] as const)
+            .filter((entry): entry is [string, string] => !!entry[1]),
+    );
+}
+
 // Gated on CustomPermission.ReassignCounterpartyManager (department-head within their own
 // department, portal-admin unrestricted) — throws for any other caller, see
 // CounterpartyService.reassignManager.
@@ -303,11 +325,16 @@ export async function fetchDocumentsForCounterparty(
     counterpartyId: string,
 ): Promise<CustomerDocument[]> {
     const result = await adminApi<{
-        documents: { items: (CustomerDocument & { counterpartyId: string })[] };
+        documents: { items: CustomerDocument[] };
     }>(
-        `query { documents(options: { take: 200 }) { items { id type number status issueDate counterpartyId } } }`,
+        `query($counterpartyId: ID!) {
+            documents(options: { take: 100 }, counterpartyId: $counterpartyId) {
+                items { id type number status issueDate }
+            }
+        }`,
+        { counterpartyId },
     );
-    return result.documents.items.filter(d => d.counterpartyId === counterpartyId);
+    return result.documents.items;
 }
 
 export interface CustomerCredit {

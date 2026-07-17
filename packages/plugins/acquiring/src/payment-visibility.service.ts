@@ -21,6 +21,7 @@ export class PaymentVisibilityService {
     async findVisible(
         ctx: RequestContext,
         options?: PaymentListOptions,
+        counterpartyId?: string,
     ): Promise<PaginatedList<PaymentAttempt>> {
         const scope = await this.invoiceVisibilityService.resolveScope(ctx);
         const take = options?.take ?? 50;
@@ -29,13 +30,21 @@ export class PaymentVisibilityService {
         const qb = this.connection
             .getRepository(ctx, PaymentAttempt)
             .createQueryBuilder('payment')
-            .innerJoin(Invoice, 'invoice', 'invoice.id = payment.invoiceId')
+            // Raw ON-clause strings, not .where()/.andWhere() — TypeORM's alias.property
+            // auto-quoting replacement doesn't run here, so camelCase columns must be quoted by
+            // hand or Postgres lowercases them to nonexistent columns (real bug, only caught by
+            // a live query against real Postgres — see invoice-visibility.service.ts's identical
+            // fix).
+            .innerJoin(Invoice, 'invoice', 'invoice.id = payment."invoiceId"')
             .leftJoin(
                 Counterparty,
                 'counterparty',
-                'counterparty.id::text = invoice.counterpartyId::text',
+                'counterparty.id::text = invoice."counterpartyId"::text',
             );
 
+        if (counterpartyId) {
+            qb.andWhere('invoice.counterpartyId = :counterpartyId', { counterpartyId });
+        }
         if (options?.status) {
             qb.andWhere('payment.paymentStatus = :paymentStatus', {
                 paymentStatus: options.status,
@@ -46,12 +55,21 @@ export class PaymentVisibilityService {
         }
         this.invoiceVisibilityService.applyScope(qb, scope, 'invoice', 'counterparty');
 
-        const [items, totalItems] = await qb
+        const totalItems = await qb.getCount();
+        // getRawAndEntities (not getManyAndCount) — invoice.counterpartyId isn't a PaymentAttempt
+        // column, so it only comes back via the raw row; attached below as a transient property
+        // so PaymentAttempt.counterpartyId (admin.schema.ts) can resolve it without a second,
+        // per-row invoice lookup from the manager-portal Payments list (see api/payments.ts).
+        const { entities, raw } = await qb
+            .addSelect('invoice.counterpartyId', 'invoice_counterpartyId')
             .orderBy('payment.createdAt', 'DESC')
             .addOrderBy('payment.id', 'DESC')
             .skip(skip)
             .take(take)
-            .getManyAndCount();
+            .getRawAndEntities();
+        const items = entities.map((item, i) =>
+            Object.assign(item, { counterpartyId: String(raw[i].invoice_counterpartyId) }),
+        );
         return { items, totalItems };
     }
 }

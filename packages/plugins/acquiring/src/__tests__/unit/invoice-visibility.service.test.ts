@@ -3,29 +3,41 @@ import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
 import { InvoiceVisibilityService } from '../../invoice-visibility.service';
 
-function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
-    const qb: Record<string, ReturnType<typeof vi.fn>> = {};
-    qb.leftJoin = vi.fn(() => qb);
-    qb.andWhere = vi.fn(() => qb);
-    qb.orderBy = vi.fn(() => qb);
-    qb.addOrderBy = vi.fn(() => qb);
-    qb.skip = vi.fn(() => qb);
-    qb.take = vi.fn(() => qb);
-    qb.getManyAndCount = vi.fn(async () => [[], 0]);
+// Deliberately un-annotated (not `Record<string, ReturnType<typeof vi.fn>>`) — an explicit
+// annotation here defeats TS's own inference of each mock's real call signature and produces
+// spurious "Mock<...> not assignable to Mock<any[], unknown>" errors (same fix as this
+// session's other query-builder mocks).
+function mockQueryBuilder() {
+    const qb = {
+        leftJoin: vi.fn(),
+        andWhere: vi.fn(),
+        orderBy: vi.fn(),
+        addOrderBy: vi.fn(),
+        skip: vi.fn(),
+        take: vi.fn(),
+        getManyAndCount: vi.fn(async () => [[], 0]),
+    };
+    qb.leftJoin.mockReturnValue(qb);
+    qb.andWhere.mockReturnValue(qb);
+    qb.orderBy.mockReturnValue(qb);
+    qb.addOrderBy.mockReturnValue(qb);
+    qb.skip.mockReturnValue(qb);
+    qb.take.mockReturnValue(qb);
     return qb;
 }
 
 const mockCtx = {} as unknown as RequestContext;
 
 describe('InvoiceVisibilityService', () => {
-    let connection: { getRepository: ReturnType<typeof vi.fn> };
-    let accessScopeService: { resolveInvoiceScope: ReturnType<typeof vi.fn> };
     let service: InvoiceVisibilityService;
     let qb: ReturnType<typeof mockQueryBuilder>;
+    let accessScopeService: { resolveInvoiceScope: ReturnType<typeof vi.fn> };
 
     beforeEach(() => {
         qb = mockQueryBuilder();
-        connection = { getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })) };
+        const connection = {
+            getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
+        };
         accessScopeService = { resolveInvoiceScope: vi.fn() };
         service = new InvoiceVisibilityService(
             connection as unknown as TransactionalConnection,
@@ -75,5 +87,15 @@ describe('InvoiceVisibilityService', () => {
         await service.findVisible(mockCtx, { status: 'paid' });
 
         expect(qb.andWhere).toHaveBeenCalledWith('invoice.status = :status', { status: 'paid' });
+    });
+
+    it('filters by counterpartyId when provided, in addition to scope', async () => {
+        accessScopeService.resolveInvoiceScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, undefined, 'cnt-1');
+
+        expect(qb.andWhere).toHaveBeenCalledWith('invoice.counterpartyId = :counterpartyId', {
+            counterpartyId: 'cnt-1',
+        });
     });
 });

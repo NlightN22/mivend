@@ -52,13 +52,15 @@ const ROLES = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadInvoice',
+            'ReadPayment',
             'CreateOrder',
             'UpdateOrder',
             'ConfirmOrder',
             'ReadCustomer',
             'ReadCounterparty',
         ],
-        accessScopeConfig: { counterparty: 'department', order: 'department' },
+        accessScopeConfig: { counterparty: 'department', order: 'department', invoice: 'department' },
     },
     {
         code: 'manager',
@@ -66,6 +68,8 @@ const ROLES = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadInvoice',
+            'ReadPayment',
             'CreateOrder',
             'UpdateOrder',
             'ConfirmOrder',
@@ -76,7 +80,7 @@ const ROLES = [
             'RequestDiscountGrantApproval',
             'RequestCreditTermApproval',
         ],
-        accessScopeConfig: { counterparty: 'own', order: 'own' },
+        accessScopeConfig: { counterparty: 'own', order: 'own', invoice: 'own' },
     },
     {
         code: 'department-head',
@@ -84,6 +88,8 @@ const ROLES = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadInvoice',
+            'ReadPayment',
             'ReadCustomer',
             'ReadCounterparty',
             'ReadFloorPrice',
@@ -91,7 +97,7 @@ const ROLES = [
             'ReassignCounterpartyManager',
             'ReadEntityHistory',
         ],
-        accessScopeConfig: { counterparty: 'department', order: 'department' },
+        accessScopeConfig: { counterparty: 'department', order: 'department', invoice: 'department' },
     },
     {
         code: 'general-director',
@@ -99,6 +105,8 @@ const ROLES = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadInvoice',
+            'ReadPayment',
             'ReadCustomer',
             'ReadCounterparty',
             'ReadCounterpartyCredit',
@@ -124,7 +132,7 @@ const ROLES = [
             'ManageApprovalWorkflows',
             'ReassignCounterpartyManager',
         ],
-        accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all' },
+        accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all', invoice: 'all' },
     },
     {
         code: 'security-officer',
@@ -132,6 +140,8 @@ const ROLES = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadInvoice',
+            'ReadPayment',
             'ReadCustomer',
             'ReadCounterparty',
             'ReadCounterpartyCredit',
@@ -139,7 +149,7 @@ const ROLES = [
             'ApproveSecurityLimit',
             'ReadEntityHistory',
         ],
-        accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all' },
+        accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all', invoice: 'all' },
     },
     {
         code: 'portal-admin',
@@ -147,6 +157,8 @@ const ROLES = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadInvoice',
+            'ReadPayment',
             'ReadCustomer',
             'ReadCounterparty',
             'ReadCounterpartyCredit',
@@ -177,7 +189,7 @@ const ROLES = [
             'ApproveDiscountRequest',
             'ApproveSecurityLimit',
         ],
-        accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all' },
+        accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all', invoice: 'all' },
     },
 ];
 

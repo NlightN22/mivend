@@ -18,8 +18,8 @@ export class AdminInvoiceVisibilityResolver {
     @Allow(CustomPermission.ReadInvoice.Permission)
     async visibleInvoices(
         @Ctx() ctx: RequestContext,
-        @Args() args: { options?: InvoiceListOptions },
+        @Args() args: { options?: InvoiceListOptions; counterpartyId?: string },
     ): Promise<PaginatedList<Invoice>> {
-        return this.invoiceVisibilityService.findVisible(ctx, args.options);
+        return this.invoiceVisibilityService.findVisible(ctx, args.options, args.counterpartyId);
     }
 }

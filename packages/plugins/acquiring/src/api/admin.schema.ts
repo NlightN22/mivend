@@ -36,6 +36,8 @@ export const adminApiExtensions: DocumentNode = gql`
         amount: Int!
         currencyCode: String!
         invoiceId: ID
+        "Only populated when returned from visiblePayments (joined from its Invoice) — null elsewhere."
+        counterpartyId: ID
     }
 
     type PaymentAttemptList {
@@ -72,9 +74,9 @@ export const adminApiExtensions: DocumentNode = gql`
         "Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (AGENTS.md Dev seed rules exception, see seed-payment-refunds.mjs)."
         capturedOnlinePayments(take: Int): [PaymentAttempt!]!
         "Manager-portal invoice list, branch-scoped via AccessScopeService.resolveInvoiceScope — see AdminInvoiceVisibilityResolver / docs/access-control.md."
-        visibleInvoices(options: InvoiceListOptions): InvoiceList!
+        visibleInvoices(options: InvoiceListOptions, counterpartyId: ID): InvoiceList!
         "Manager-portal payment list — derived-from-Invoice scoping, see PaymentVisibilityService."
-        visiblePayments(options: PaymentListOptions): PaymentAttemptList!
+        visiblePayments(options: PaymentListOptions, counterpartyId: ID): PaymentAttemptList!
     }
 
     extend type Mutation {

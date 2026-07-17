@@ -68,9 +68,16 @@ export class DocumentsService {
     async findVisible(
         ctx: RequestContext,
         options?: DocumentListOptions,
+        counterpartyId?: ID,
+        orderId?: ID,
     ): Promise<PaginatedList<Document>> {
         const visibleCounterparties = await this.counterpartyService.findVisible(ctx);
-        const counterpartyIds = visibleCounterparties.map(c => String(c.id));
+        let counterpartyIds = visibleCounterparties.map(c => String(c.id));
+        if (counterpartyId !== undefined) {
+            // Intersect, never replace, the visibility scope — a caller-supplied counterpartyId
+            // outside the caller's visible set must yield an empty result, not bypass scoping.
+            counterpartyIds = counterpartyIds.filter(id => id === String(counterpartyId));
+        }
         if (counterpartyIds.length === 0) {
             return { items: [], totalItems: 0 };
         }
@@ -79,7 +86,10 @@ export class DocumentsService {
         const [items, totalItems] = await this.connection
             .getRepository(ctx, Document)
             .findAndCount({
-                where: { counterpartyId: In(counterpartyIds) },
+                where: {
+                    counterpartyId: In(counterpartyIds),
+                    ...(orderId !== undefined ? { orderId: String(orderId) } : {}),
+                },
                 order: { issueDate: 'DESC' },
                 take,
                 skip,

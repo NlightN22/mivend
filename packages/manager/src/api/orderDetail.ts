@@ -124,12 +124,14 @@ export interface RelatedDocument {
     orderId: string | null;
 }
 
-// No server-side filter-by-orderId on the documents list yet (see DocumentsService) — this
-// scope is always small (one customer's documents), so filtering client-side over the already
-// access-scoped `documents` query is fine, same pattern as elsewhere in this portal.
 export async function fetchRelatedDocuments(orderId: string): Promise<RelatedDocument[]> {
     const result = await adminApi<{ documents: { items: RelatedDocument[] } }>(
-        `query { documents(options: { take: 100 }) { items { id type number status issueDate orderId } } }`,
+        `query($orderId: ID!) {
+            documents(options: { take: 100 }, orderId: $orderId) {
+                items { id type number status issueDate orderId }
+            }
+        }`,
+        { orderId },
     );
-    return result.documents.items.filter(d => d.orderId === orderId);
+    return result.documents.items;
 }

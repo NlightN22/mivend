@@ -51,8 +51,12 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
     const productVariantId = variantsResult.data.productVariants.items[0]?.id;
     if (!productVariantId) throw new Error('Could not find product variant E2E-OIL-001');
 
-    // Make sure there are at least PAGE_SIZE + 1 orders so a partial last page exists at all —
-    // earlier e2e runs may have already left plenty behind, this only tops up if needed.
+    // Make sure there are at least PAGE_SIZE + 1 orders so a partial last page exists at all.
+    // Orders created here are cancelled in the `finally` block below — this test must not grow
+    // the e2e customer's order count run over run (real incident: an earlier version of this
+    // test intentionally "topped up" without ever cancelling, which was the actual root cause of
+    // both a stockAllocated exhaustion bug and a dashboard "last 20 recent orders" flake, since
+    // every local rerun left its fixture orders behind for later tests/runs to trip over).
     const existingResult = await adminGql<{
         customer: { orders: { totalItems: number } } | null;
     }>(
@@ -62,59 +66,75 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
     );
     const existingCount = existingResult.data.customer?.orders.totalItems ?? 0;
     const topUp = Math.max(0, PAGE_SIZE + 1 - existingCount);
+    const createdOrderIds: string[] = [];
     for (let i = 0; i < topUp; i++) {
-        await createConfirmedOrder(token, customerId, productVariantId);
+        const created = await createConfirmedOrder(token, customerId, productVariantId);
+        createdOrderIds.push(created.id);
     }
 
-    await page.goto('/orders');
-    const rows = page.locator('.el-table-v2__row');
-    // "Saved views" is static chrome, always present — it does not mean the async orders fetch
-    // has resolved. Wait for a full first page of rows before reading totalItems below, or the
-    // read would race the loading state.
-    await expect(rows).toHaveCount(PAGE_SIZE, { timeout: 15000 });
-
-    // Read the real current total (accumulates across local e2e runs — CI starts from a fresh
-    // DB, but a repeatedly-run dev environment does not) so the last page reached below is
-    // computed against reality, not a value only valid on a first, from-scratch run. If the
-    // current total happens to be an exact multiple of PAGE_SIZE, the "last" page would be full,
-    // which wouldn't exercise the fix — top up by one more order and reload in that case.
-    const totalText = await page.getByText(/orders across your accessible scope/).textContent();
-    let totalItems = Number(totalText?.match(/(\d+)/)?.[1] ?? 0);
-    if (totalItems > 0 && totalItems % PAGE_SIZE === 0) {
-        await createConfirmedOrder(token, customerId, productVariantId);
-        await page.reload();
+    try {
+        await page.goto('/orders');
+        const rows = page.locator('.el-table-v2__row');
+        // "Saved views" is static chrome, always present — it does not mean the async orders
+        // fetch has resolved. Wait for a full first page of rows before reading totalItems
+        // below, or the read would race the loading state.
         await expect(rows).toHaveCount(PAGE_SIZE, { timeout: 15000 });
-        const reloadedTotalText = await page
-            .getByText(/orders across your accessible scope/)
-            .textContent();
-        totalItems = Number(reloadedTotalText?.match(/(\d+)/)?.[1] ?? 0);
+
+        // Read the real current total (this test cancels every order it creates in `finally`,
+        // but other e2e specs sharing this customer may have added a few of their own within
+        // this same run) so the last page reached below is computed against reality, not an
+        // assumed from-scratch count. If the current total happens to be an exact multiple of
+        // PAGE_SIZE, the "last" page would be full, which wouldn't exercise the fix — top up by
+        // one more order (also cancelled in `finally`) and reload in that case.
+        const totalText = await page.getByText(/orders across your accessible scope/).textContent();
+        let totalItems = Number(totalText?.match(/(\d+)/)?.[1] ?? 0);
+        if (totalItems > 0 && totalItems % PAGE_SIZE === 0) {
+            const extra = await createConfirmedOrder(token, customerId, productVariantId);
+            createdOrderIds.push(extra.id);
+            await page.reload();
+            await expect(rows).toHaveCount(PAGE_SIZE, { timeout: 15000 });
+            const reloadedTotalText = await page
+                .getByText(/orders across your accessible scope/)
+                .textContent();
+            totalItems = Number(reloadedTotalText?.match(/(\d+)/)?.[1] ?? 0);
+        }
+        const pageCount = Math.ceil(totalItems / PAGE_SIZE);
+        const lastPageRowCount = totalItems - (pageCount - 1) * PAGE_SIZE;
+        expect(lastPageRowCount).toBeLessThan(PAGE_SIZE); // sanity check: the last page is partial
+
+        const table = page.locator('.mv-table').first();
+        const heightOnFirstPage = (await table.boundingBox())?.height ?? 0;
+        expect(heightOnFirstPage).toBeGreaterThan(400); // a full page (10 rows) is ~560px tall
+
+        // Scroll down so a naive "reset scroll to top" bug is actually observable.
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        const scrollYBeforeClick = await page.evaluate(() => window.scrollY);
+        expect(scrollYBeforeClick).toBeGreaterThan(0);
+
+        const nextButton = page.getByRole('button', { name: 'Next' }).first();
+        for (let clicked = 1; clicked < pageCount; clicked++) {
+            await nextButton.click();
+        }
+        await expect(page.getByText(`Page ${pageCount} of`).first()).toBeVisible();
+        await expect(rows).toHaveCount(lastPageRowCount);
+
+        // The table must stay sized for a full page even though the last page has fewer rows —
+        // this is the actual fix under test, not just "did the page navigate".
+        const heightOnLastPage = (await table.boundingBox())?.height ?? 0;
+        expect(heightOnLastPage).toBeGreaterThan(400);
+
+        // The core regression: pagination must not snap the window back to the top.
+        const scrollYAfterClick = await page.evaluate(() => window.scrollY);
+        expect(scrollYAfterClick).toBeGreaterThan(0);
+    } finally {
+        // Never leave fixture orders behind — this test must not grow the e2e customer's order
+        // count run over run (see the topUp comment above for the real incident this caused).
+        for (const orderId of createdOrderIds) {
+            await adminGql(
+                `mutation($input: CancelOrderInput!) { cancelOrder(input: $input) { __typename } }`,
+                { input: { orderId } },
+                token,
+            );
+        }
     }
-    const pageCount = Math.ceil(totalItems / PAGE_SIZE);
-    const lastPageRowCount = totalItems - (pageCount - 1) * PAGE_SIZE;
-    expect(lastPageRowCount).toBeLessThan(PAGE_SIZE); // sanity check: the last page is partial
-
-    const table = page.locator('.mv-table').first();
-    const heightOnFirstPage = (await table.boundingBox())?.height ?? 0;
-    expect(heightOnFirstPage).toBeGreaterThan(400); // a full page (10 rows) is ~560px tall
-
-    // Scroll down so a naive "reset scroll to top" bug is actually observable.
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    const scrollYBeforeClick = await page.evaluate(() => window.scrollY);
-    expect(scrollYBeforeClick).toBeGreaterThan(0);
-
-    const nextButton = page.getByRole('button', { name: 'Next' }).first();
-    for (let clicked = 1; clicked < pageCount; clicked++) {
-        await nextButton.click();
-    }
-    await expect(page.getByText(`Page ${pageCount} of`).first()).toBeVisible();
-    await expect(rows).toHaveCount(lastPageRowCount);
-
-    // The table must stay sized for a full page even though the last page has fewer rows — this
-    // is the actual fix under test, not just "did the page navigate".
-    const heightOnLastPage = (await table.boundingBox())?.height ?? 0;
-    expect(heightOnLastPage).toBeGreaterThan(400);
-
-    // The core regression: pagination must not snap the window back to the top.
-    const scrollYAfterClick = await page.evaluate(() => window.scrollY);
-    expect(scrollYAfterClick).toBeGreaterThan(0);
 });

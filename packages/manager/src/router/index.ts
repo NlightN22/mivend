@@ -38,6 +38,18 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'invoices',
+                    name: 'invoices',
+                    component: () => import('../pages/invoices/InvoicesPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'payments',
+                    name: 'payments',
+                    component: () => import('../pages/payments/PaymentsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'approvals',
                     name: 'approvals',
                     component: () => import('../pages/approvals/ApprovalsInboxPage.vue'),
