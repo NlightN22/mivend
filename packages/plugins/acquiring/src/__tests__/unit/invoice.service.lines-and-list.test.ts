@@ -45,6 +45,7 @@ describe('InvoiceService.getLinesForInvoice', () => {
             mockConnection,
             {} as unknown as EntityHydrator,
             {} as unknown as CounterpartyService,
+            {} as never,
             mockTranslator as never,
         );
     });
@@ -99,6 +100,7 @@ describe('InvoiceService.findForCounterparty', () => {
             mockConnection,
             {} as unknown as EntityHydrator,
             {} as unknown as CounterpartyService,
+            {} as never,
             mockTranslator as never,
         );
     });
@@ -140,6 +142,7 @@ describe('InvoiceService.updateStatusForOrder', () => {
             } as unknown as TransactionalConnection,
             {} as unknown as EntityHydrator,
             {} as unknown as CounterpartyService,
+            {} as never,
             mockTranslator as never,
         );
     });

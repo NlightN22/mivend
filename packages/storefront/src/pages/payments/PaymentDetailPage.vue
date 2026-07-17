@@ -104,15 +104,23 @@ const refundedTotal = computed(() =>
                             <p v-else class="pd-empty">This payment was not applied to any invoice — it is held entirely as an advance.</p>
                         </section>
 
-                        <section class="pd-card">
-                            <h2 class="pd-card-title">Processing history <span class="pd-mock-tag">partly mock</span></h2>
-                            <p class="pd-card-sub">Only the creation event is tracked today — a full step-by-step lifecycle log (authorized → settled) is not implemented yet.</p>
+                        <section class="pd-card" v-if="payment.processingEvents.length">
+                            <h2 class="pd-card-title">Processing history</h2>
+                            <p class="pd-card-sub">Real transitions recorded for this payment's inbox event.</p>
                             <div class="pd-timeline">
-                                <div class="pd-event">
-                                    <div class="pd-event-title">Payment attempt created ({{ PAYMENT_STATUS_LABEL[payment.status] ?? payment.status }})</div>
-                                    <time class="pd-event-time">{{ formatDateTime(payment.createdAt) }}</time>
+                                <div class="pd-event" v-for="(e, i) in payment.processingEvents" :key="i">
+                                    <div class="pd-event-title">{{ e.stage }}<span v-if="e.note"> — {{ e.note }}</span></div>
+                                    <time class="pd-event-time">{{ formatDateTime(e.occurredAt) }}</time>
                                 </div>
                             </div>
+                        </section>
+                        <section class="pd-card" v-else>
+                            <h2 class="pd-card-title">Processing history</h2>
+                            <p class="pd-card-sub">
+                                {{ payment.channel === 'online-acquiring'
+                                    ? 'No step-by-step history available for this channel yet — the online-acquiring checkout is a demo stub with no acquirer callbacks to record.'
+                                    : 'No processing events recorded for this payment.' }}
+                            </p>
                         </section>
 
                         <section class="pd-card" v-if="payment.refunds.length || payment.disputes.length">

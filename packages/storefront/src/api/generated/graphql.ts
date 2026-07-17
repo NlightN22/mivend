@@ -2550,6 +2550,7 @@ export type PaymentAttempt = {
     invoiceId?: Maybe<Scalars['ID']['output']>;
     order?: Maybe<InvoiceOrder>;
     orderId?: Maybe<Scalars['ID']['output']>;
+    processingEvents: Array<PaymentProcessingEvent>;
     refunds: Array<PaymentRefund>;
     status: Scalars['String']['output'];
 };
@@ -2623,6 +2624,12 @@ export type PaymentMethodTranslation = {
     languageCode: LanguageCode;
     name: Scalars['String']['output'];
     updatedAt: Scalars['DateTime']['output'];
+};
+
+export type PaymentProcessingEvent = {
+    note?: Maybe<Scalars['String']['output']>;
+    occurredAt: Scalars['DateTime']['output'];
+    stage: Scalars['String']['output'];
 };
 
 export type PaymentRefund = {
@@ -4432,6 +4439,7 @@ export type PaymentDetailQuery = {
             amount: number;
             openedAt: any;
         }>;
+        processingEvents: Array<{ stage: string; occurredAt: any; note?: string | null }>;
         invoice?: { id: string; status: string } | null;
         order?: { id: string; code: string } | null;
         allocations: Array<{
@@ -5250,6 +5258,11 @@ export const PaymentDetailDocument = new TypedDocumentString(`
       status
       amount
       openedAt
+    }
+    processingEvents {
+      stage
+      occurredAt
+      note
     }
     invoice {
       id

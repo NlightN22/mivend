@@ -10,6 +10,18 @@ export const adminApiExtensions: DocumentNode = gql`
         amount: Int!
         currencyCode: String!
         status: String!
+        branchId: ID
+    }
+
+    type InvoiceList {
+        items: [Invoice!]!
+        totalItems: Int!
+    }
+
+    input InvoiceListOptions {
+        take: Int
+        skip: Int
+        status: String
     }
 
     type PaymentInboxSweepResult {
@@ -24,6 +36,18 @@ export const adminApiExtensions: DocumentNode = gql`
         amount: Int!
         currencyCode: String!
         invoiceId: ID
+    }
+
+    type PaymentAttemptList {
+        items: [PaymentAttempt!]!
+        totalItems: Int!
+    }
+
+    input PaymentListOptions {
+        take: Int
+        skip: Int
+        status: String
+        channel: String
     }
 
     type PaymentRefund {
@@ -47,6 +71,10 @@ export const adminApiExtensions: DocumentNode = gql`
         invoicesForOrder(orderId: ID!): [Invoice!]!
         "Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (AGENTS.md Dev seed rules exception, see seed-payment-refunds.mjs)."
         capturedOnlinePayments(take: Int): [PaymentAttempt!]!
+        "Manager-portal invoice list, branch-scoped via AccessScopeService.resolveInvoiceScope — see AdminInvoiceVisibilityResolver / docs/access-control.md."
+        visibleInvoices(options: InvoiceListOptions): InvoiceList!
+        "Manager-portal payment list — derived-from-Invoice scoping, see PaymentVisibilityService."
+        visiblePayments(options: PaymentListOptions): PaymentAttemptList!
     }
 
     extend type Mutation {

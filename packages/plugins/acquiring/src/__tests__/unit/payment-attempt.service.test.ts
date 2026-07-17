@@ -25,6 +25,7 @@ describe('PaymentAttemptService.payInvoice', () => {
     let service: PaymentAttemptService;
     let mockInvoiceService: ReturnType<typeof createMockInvoiceService>;
     let mockSettlementEntryService: ReturnType<typeof createMockSettlementEntryService>;
+    let mockReconciliationIssueService: ReturnType<typeof createMockReconciliationIssueService>;
     let mockPaymentAttemptRepo: ReturnType<typeof createMockPaymentAttemptRepo>;
     let mockConnection: TransactionalConnection;
 
@@ -35,6 +36,10 @@ describe('PaymentAttemptService.payInvoice', () => {
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
     function createMockSettlementEntryService() {
         return { allocate: vi.fn(async () => []) };
+    }
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    function createMockReconciliationIssueService() {
+        return { report: vi.fn(async () => ({ id: 1 })) };
     }
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
     function createMockPaymentAttemptRepo() {
@@ -54,10 +59,12 @@ describe('PaymentAttemptService.payInvoice', () => {
         } as unknown as TransactionalConnection;
         mockInvoiceService = createMockInvoiceService();
         mockSettlementEntryService = createMockSettlementEntryService();
+        mockReconciliationIssueService = createMockReconciliationIssueService();
         service = new PaymentAttemptService(
             mockConnection,
             mockInvoiceService as unknown as InvoiceService,
             mockSettlementEntryService as unknown as SettlementEntryService,
+            mockReconciliationIssueService as never,
         );
     });
 
@@ -211,6 +218,47 @@ describe('PaymentAttemptService.payInvoice', () => {
         expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
         expect(result.status).toBe('issued');
     });
+
+    it("rejects an expectedOrganizationId that does not match the invoice's real organization, reports a PaymentReconciliationIssue, and never applies the payment", async () => {
+        const invoice = makeInvoice({ organizationId: 1, status: 'issued' });
+        mockInvoiceService.findOne.mockResolvedValue(invoice);
+
+        await expect(
+            service.payInvoice(mockCtx, 1, 'success', 'bank-transfer-erp', 'ERP-EVT-1', 2),
+        ).rejects.toThrow(/organization 1.*organization 2/s);
+
+        expect(mockReconciliationIssueService.report).toHaveBeenCalledWith(
+            mockCtx,
+            'ORGANIZATION_MISMATCH',
+            expect.objectContaining({ invoiceId: 1, organizationId: 2 }),
+        );
+        expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
+        expect(mockPaymentAttemptRepo.save).not.toHaveBeenCalled();
+    });
+
+    it("applies the payment when expectedOrganizationId matches the invoice's real organization", async () => {
+        const invoice = makeInvoice({ organizationId: 1, status: 'issued' });
+        mockInvoiceService.findOne
+            .mockResolvedValueOnce(invoice)
+            .mockResolvedValueOnce({ ...invoice, status: 'paid' });
+
+        await service.payInvoice(mockCtx, 1, 'success', 'bank-transfer-erp', 'ERP-EVT-1', 1);
+
+        expect(mockReconciliationIssueService.report).not.toHaveBeenCalled();
+        expect(mockSettlementEntryService.allocate).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips organization validation entirely when expectedOrganizationId is not provided (a direct "pay now" call has no externally-claimed scope)', async () => {
+        const invoice = makeInvoice({ organizationId: 1, status: 'issued' });
+        mockInvoiceService.findOne
+            .mockResolvedValueOnce(invoice)
+            .mockResolvedValueOnce({ ...invoice, status: 'paid' });
+
+        await service.payInvoice(mockCtx, 1, 'success');
+
+        expect(mockReconciliationIssueService.report).not.toHaveBeenCalled();
+        expect(mockSettlementEntryService.allocate).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('PaymentAttemptService queries', () => {
@@ -246,6 +294,7 @@ describe('PaymentAttemptService queries', () => {
             mockConnection,
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
+            {} as never,
         );
 
         const result = await service.findForCounterparty(mockCtx, '5', { take: 10, skip: 0 });
@@ -266,6 +315,7 @@ describe('PaymentAttemptService queries', () => {
             mockConnection,
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
+            {} as never,
         );
 
         await service.findForCounterparty(mockCtx, '5', { status: 'captured' });
@@ -285,6 +335,7 @@ describe('PaymentAttemptService queries', () => {
             mockConnection,
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
+            {} as never,
         );
 
         await service.findForCounterparty(mockCtx, '5', { channel: 'bank-transfer-erp' });
@@ -302,6 +353,7 @@ describe('PaymentAttemptService queries', () => {
             mockConnection,
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
+            {} as never,
         );
 
         const owned = await service.belongsToCounterparty(mockCtx, { invoiceId: null } as never, 5);
@@ -318,6 +370,7 @@ describe('PaymentAttemptService queries', () => {
             mockConnection,
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
+            {} as never,
         );
 
         expect(await service.belongsToCounterparty(mockCtx, { invoiceId: 1 } as never, 5)).toBe(
@@ -344,6 +397,7 @@ describe('PaymentAttemptService queries', () => {
             mockConnection,
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
+            {} as never,
         );
 
         const allocations = await service.getAllocationsForPayment(mockCtx, 99);

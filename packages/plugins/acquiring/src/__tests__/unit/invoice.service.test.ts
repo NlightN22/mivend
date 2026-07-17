@@ -1,5 +1,5 @@
 import { EntityHydrator, Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Invoice } from '../../entities/invoice.entity';
@@ -17,6 +17,7 @@ const mockConnection = {
 
 const mockEntityHydrator = { hydrate: vi.fn() };
 const mockCounterpartyService = { getForCustomer: vi.fn() };
+const mockTradingPointService = { getPreferredForCustomer: vi.fn().mockResolvedValue(null) };
 const mockTranslator = { translate: vi.fn(entity => entity) };
 
 const mockCtx = {} as unknown as RequestContext;
@@ -48,6 +49,7 @@ describe('InvoiceService', () => {
             mockConnection,
             mockEntityHydrator as unknown as EntityHydrator,
             mockCounterpartyService as unknown as CounterpartyService,
+            mockTradingPointService as unknown as TradingPointService,
             mockTranslator as never,
         );
     });
@@ -102,6 +104,38 @@ describe('InvoiceService', () => {
                     }),
                     expect.objectContaining({ organizationId: 2, amount: 500, counterpartyId: 42 }),
                 ]),
+            );
+        });
+
+        it("denormalizes branchId from the customer's preferred trading point", async () => {
+            mockRepo.find.mockResolvedValue([]);
+            mockCounterpartyService.getForCustomer.mockResolvedValue({ id: '42' });
+            mockTradingPointService.getPreferredForCustomer.mockResolvedValue({
+                servicingBranchId: 'branch-9',
+            });
+            const order = makeOrder([{ organizationId: 1, linePriceWithTax: 1000 }]);
+
+            await service.createInvoicesForOrder(mockCtx, order);
+
+            expect(mockTradingPointService.getPreferredForCustomer).toHaveBeenCalledWith(
+                mockCtx,
+                'cust-1',
+            );
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.arrayContaining([expect.objectContaining({ branchId: 'branch-9' })]),
+            );
+        });
+
+        it('leaves branchId null when the customer has no preferred trading point', async () => {
+            mockRepo.find.mockResolvedValue([]);
+            mockCounterpartyService.getForCustomer.mockResolvedValue({ id: '42' });
+            mockTradingPointService.getPreferredForCustomer.mockResolvedValue(null);
+            const order = makeOrder([{ organizationId: 1, linePriceWithTax: 1000 }]);
+
+            await service.createInvoicesForOrder(mockCtx, order);
+
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.arrayContaining([expect.objectContaining({ branchId: null })]),
             );
         });
 

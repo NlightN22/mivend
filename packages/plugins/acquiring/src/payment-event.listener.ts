@@ -15,6 +15,7 @@ const loggerCtx = 'PaymentEventListener';
 // received (AGENTS.md sync rule #4), never silently omitted from the row.
 interface StoredPaymentPayload {
     invoiceId: number;
+    organizationId: number;
     outcome: string;
     channel: PaymentChannel;
     externalReference?: string;
@@ -41,6 +42,7 @@ export class PaymentEventListener implements OnModuleInit {
             async event => {
                 const payload: IncomingPaymentPayload = {
                     invoiceId: event.invoiceId,
+                    organizationId: event.organizationId,
                     outcome: event.outcome,
                     channel: 'bank-transfer-erp' satisfies PaymentChannel,
                     externalReference: event.erpEventId,
@@ -62,6 +64,7 @@ export class PaymentEventListener implements OnModuleInit {
             async event => {
                 const payload: StoredPaymentPayload = {
                     invoiceId: event.invoiceId,
+                    organizationId: event.organizationId,
                     outcome: event.outcome,
                     channel: 'branch-kassa' satisfies PaymentChannel,
                     externalReference: event.rrn ?? undefined,

@@ -78,6 +78,9 @@ export const shopApiExtensions: DocumentNode = gql`
         # channels return an empty list (see docs/payments.md's refund-feasibility note).
         refunds: [PaymentRefund!]!
         disputes: [Dispute!]!
+        # Real inbox-derived timeline for branch-kassa/bank-transfer-erp; always empty for
+        # online-acquiring (no inbox event exists for that channel's checkout-time stub).
+        processingEvents: [PaymentProcessingEvent!]!
     }
 
     type PaymentRefund {
@@ -95,6 +98,16 @@ export const shopApiExtensions: DocumentNode = gql`
         status: String!
         amount: Int!
         openedAt: DateTime!
+    }
+
+    # A real, derived timeline for payments that went through the inbox (branch-kassa,
+    # bank-transfer-erp) — built from IncomingPaymentEvent's own status/attempts/processedAt/
+    # lastError fields, never fabricated stages. online-acquiring's checkout-time stub bypasses
+    # the inbox entirely, so it has no processing events (see PaymentFieldResolver.processingEvents).
+    type PaymentProcessingEvent {
+        stage: String!
+        occurredAt: DateTime!
+        note: String
     }
 
     type PaymentAllocation {

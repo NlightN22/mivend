@@ -119,7 +119,11 @@ export class CentralConsumer implements OnModuleInit {
     private async handlePaymentRecorded(event: SyncEventByType<'payment.recorded'>): Promise<void> {
         if (await this.isAlreadyProcessed(event.eventId)) return;
         await this.orderSyncService.applyPaymentRecorded(event);
-        if (event.payload.invoiceId !== undefined && event.payload.outcome !== undefined) {
+        if (
+            event.payload.invoiceId !== undefined &&
+            event.payload.organizationId !== undefined &&
+            event.payload.outcome !== undefined
+        ) {
             // Publishes only — the risky work (payInvoice) happens later, in
             // plugin-acquiring's inbox worker (AGENTS.md sync rule #12).
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
@@ -127,6 +131,7 @@ export class CentralConsumer implements OnModuleInit {
                 new BranchKassaPaymentEvent(
                     ctx,
                     event.payload.invoiceId,
+                    event.payload.organizationId,
                     event.payload.outcome,
                     event.eventId,
                     event.payload.rrn,

@@ -11,9 +11,24 @@ import { Invoice } from './entities/invoice.entity';
 import { PaymentAttempt, PaymentChannel, PaymentStatus } from './entities/payment-attempt.entity';
 import { SettlementEntry } from './entities/settlement-entry.entity';
 import { InvoiceService } from './invoice.service';
+import { PaymentReconciliationIssueService } from './payment-reconciliation-issue.service';
 import { SettlementEntryService } from './settlement-entry.service';
 
 export type PayInvoiceOutcome = 'success' | 'pending' | 'fail' | 'cancel';
+
+// Thrown when a payment event's declared organization doesn't match the target invoice's real
+// one. Distinct from UserInputError so callers (PaymentInboxProcessorService) can dead-letter
+// immediately instead of retrying — a mismatch won't fix itself on the next sweep, the same
+// reasoning as InboxService.rejectAsInvalid for a missing external reference.
+export class PaymentOrganizationMismatchError extends Error {
+    constructor(invoiceId: number, expected: number, actual: number) {
+        super(
+            `Invoice ${invoiceId} belongs to organization ${actual}, but the payment event ` +
+                `declared organization ${expected} — refusing to apply`,
+        );
+        this.name = 'PaymentOrganizationMismatchError';
+    }
+}
 
 // Until a real acquirer (Robokassa, per docs/payments.md) is wired in, online-acquiring payments
 // still need a mandatory, reconcilable external reference — this stub is deliberately shaped so
@@ -65,14 +80,23 @@ export class PaymentAttemptService {
         private connection: TransactionalConnection,
         private invoiceService: InvoiceService,
         private settlementEntryService: SettlementEntryService,
+        private reconciliationIssueService: PaymentReconciliationIssueService,
     ) {}
 
+    // expectedOrganizationId is only ever passed by the inbox processor (an event-reported
+    // payment claims which organization it's for) — a direct "pay now" GraphQL call has no
+    // externally-claimed scope to validate against, since the caller IS the request context's own
+    // organization/counterparty already. Payment allocation is scoped by organization only, never
+    // by branch (branch governs staff visibility — see AGENTS.md sync rule #13, docs/payments.md
+    // "Organizations") — a payment can apply to any invoice within the correct organization
+    // regardless of which branch reported it.
     async payInvoice(
         ctx: RequestContext,
         invoiceId: number,
         outcome: PayInvoiceOutcome,
         channel: PaymentChannel = 'online-acquiring',
         externalReference: string = generateStubExternalReference(channel, invoiceId),
+        expectedOrganizationId?: number,
     ): Promise<Invoice> {
         const invoice = await this.invoiceService.findOne(ctx, invoiceId);
         if (!invoice) {
@@ -80,6 +104,24 @@ export class PaymentAttemptService {
         }
         if (invoice.status === 'cancelled') {
             throw new UserInputError(`Invoice ${invoiceId} is cancelled and cannot be paid`);
+        }
+        if (
+            expectedOrganizationId !== undefined &&
+            expectedOrganizationId !== invoice.organizationId
+        ) {
+            // Not necessarily bad data from the reporting side — the ERP/branch may simply hold
+            // a stale/wrong invoiceId reference. A human needs to reconcile which invoice was
+            // actually meant, so this is a PaymentReconciliationIssue, not a silent rejection.
+            await this.reconciliationIssueService.report(ctx, 'ORGANIZATION_MISMATCH', {
+                invoiceId,
+                organizationId: expectedOrganizationId,
+                providerPaymentId: externalReference,
+            });
+            throw new PaymentOrganizationMismatchError(
+                invoiceId,
+                expectedOrganizationId,
+                invoice.organizationId,
+            );
         }
 
         const paymentStatus = OUTCOME_TO_PAYMENT_STATUS[outcome];

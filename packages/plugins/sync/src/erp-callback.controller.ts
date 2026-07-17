@@ -59,11 +59,15 @@ export class ErpCallbackController {
         if (!payload.erpEventId) {
             throw new BadRequestException('erpEventId is required');
         }
+        if (!payload.organizationId) {
+            throw new BadRequestException('organizationId is required');
+        }
         const ctx = await this.requestContextService.create({ apiType: 'admin', req });
         this.eventBus.publish(
             new ErpPaymentReportedEvent(
                 ctx,
                 payload.invoiceId,
+                payload.organizationId,
                 payload.outcome,
                 payload.erpEventId,
             ),

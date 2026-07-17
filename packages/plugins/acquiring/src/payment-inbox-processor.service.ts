@@ -3,10 +3,21 @@ import { RequestContext } from '@vendure/core';
 
 import { PaymentChannel } from './entities/payment-attempt.entity';
 import { InboxService } from './inbox.service';
-import { PayInvoiceOutcome, PaymentAttemptService } from './payment-attempt.service';
+import {
+    PayInvoiceOutcome,
+    PaymentAttemptService,
+    PaymentOrganizationMismatchError,
+} from './payment-attempt.service';
 
 export interface IncomingPaymentPayload {
     invoiceId: number;
+    // The organization the reporting side (ERP/branch) believes this payment belongs to.
+    // PaymentAttemptService.payInvoice validates this against the target Invoice's real
+    // organizationId before applying — a mismatch is a genuine cross-system discrepancy
+    // (PaymentReconciliationIssue), not a rejected/dead-lettered event, since the ERP/branch
+    // isn't necessarily lying — its own invoiceId reference may simply be stale or wrong, and a
+    // human needs to reconcile which invoice was actually meant (AGENTS.md sync rule #13).
+    organizationId: number;
     outcome: PayInvoiceOutcome;
     channel: PaymentChannel;
     // The originating system's own reference for this payment fact — an ERP payment-document id
@@ -59,11 +70,20 @@ export class PaymentInboxProcessorService {
                     payload.outcome,
                     payload.channel,
                     payload.externalReference,
+                    payload.organizationId,
                 );
                 await this.inboxService.markProcessed(ctx, Number(event.id));
                 processed += 1;
             } catch (err) {
-                await this.inboxService.markFailed(ctx, Number(event.id), err as Error);
+                if (err instanceof PaymentOrganizationMismatchError) {
+                    // A PaymentReconciliationIssue was already recorded (payInvoice) — retrying
+                    // won't change which organization the invoice actually belongs to, so
+                    // dead-letter immediately rather than wasting sweep cycles (same reasoning as
+                    // InboxService.rejectAsInvalid for a missing external reference).
+                    await this.inboxService.rejectAsInvalid(ctx, Number(event.id), err.message);
+                } else {
+                    await this.inboxService.markFailed(ctx, Number(event.id), err as Error);
+                }
                 failed += 1;
             }
         }

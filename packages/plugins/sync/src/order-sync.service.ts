@@ -231,6 +231,7 @@ export class OrderSyncService {
         method: string,
         amount: number,
         invoiceId?: number,
+        organizationId?: number,
         outcome?: 'success' | 'pending' | 'fail' | 'cancel',
         rrn?: string,
     ): Promise<void> {
@@ -268,6 +269,7 @@ export class OrderSyncService {
                         state: 'Settled',
                         witnessedBy: this.options.instanceId,
                         invoiceId,
+                        organizationId,
                         outcome,
                         rrn,
                     },

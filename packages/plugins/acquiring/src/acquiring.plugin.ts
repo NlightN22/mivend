@@ -1,5 +1,6 @@
 import { PluginCommonModule, Type, VendurePlugin } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
+import { AccessControlPlugin } from '@mivend/plugin-access-control';
 
 import { Dispute } from './entities/dispute.entity';
 import { FiscalReceipt } from './entities/fiscal-receipt.entity';
@@ -18,8 +19,11 @@ import { PaymentAttemptService } from './payment-attempt.service';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
 import { PaymentInboxWorker } from './payment-inbox.worker';
 import { PaymentEventListener } from './payment-event.listener';
+import { PaymentReconciliationIssueService } from './payment-reconciliation-issue.service';
 import { PaymentRefundService } from './payment-refund.service';
 import { SettlementEntryService } from './settlement-entry.service';
+import { InvoiceVisibilityService } from './invoice-visibility.service';
+import { PaymentVisibilityService } from './payment-visibility.service';
 import {
     InvoiceAdminResolver,
     InvoiceShopResolver,
@@ -27,13 +31,15 @@ import {
 } from './invoice.resolver';
 import { PaymentAdminResolver } from './payment-admin.resolver';
 import { PaymentFieldResolver, PaymentShopResolver } from './payment.resolver';
+import { AdminInvoiceVisibilityResolver } from './admin-invoice-visibility.resolver';
+import { AdminPaymentVisibilityResolver } from './admin-payment-visibility.resolver';
 import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
 import { ACQUIRING_PLUGIN_OPTIONS } from './types';
 import type { AcquiringPluginOptions } from './types';
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CounterpartyPlugin],
+    imports: [PluginCommonModule, CounterpartyPlugin, AccessControlPlugin],
     entities: [
         Invoice,
         PaymentAttempt,
@@ -54,8 +60,11 @@ import type { AcquiringPluginOptions } from './types';
         PaymentInboxProcessorService,
         PaymentInboxWorker,
         PaymentEventListener,
+        PaymentReconciliationIssueService,
         PaymentRefundService,
         DisputeService,
+        InvoiceVisibilityService,
+        PaymentVisibilityService,
         {
             provide: ACQUIRING_PLUGIN_OPTIONS,
             useFactory: (): AcquiringPluginOptions => AcquiringPlugin.options,
@@ -70,7 +79,12 @@ import type { AcquiringPluginOptions } from './types';
     ],
     adminApiExtensions: {
         schema: adminApiExtensions,
-        resolvers: [InvoiceAdminResolver, PaymentAdminResolver],
+        resolvers: [
+            InvoiceAdminResolver,
+            PaymentAdminResolver,
+            AdminInvoiceVisibilityResolver,
+            AdminPaymentVisibilityResolver,
+        ],
     },
     shopApiExtensions: {
         schema: shopApiExtensions,

@@ -18,6 +18,7 @@ describe('ErpCallbackController', () => {
         it('publishes ErpPaymentReportedEvent when erpEventId is present', async () => {
             await controller.receivePayment({} as never, {
                 invoiceId: 1,
+                organizationId: 1,
                 outcome: 'success',
                 erpEventId: 'ERP-PMT-1',
             });
@@ -29,8 +30,22 @@ describe('ErpCallbackController', () => {
             await expect(
                 controller.receivePayment({} as never, {
                     invoiceId: 1,
+                    organizationId: 1,
                     outcome: 'success',
                     erpEventId: '',
+                }),
+            ).rejects.toBeInstanceOf(BadRequestException);
+
+            expect(eventBus.publish).not.toHaveBeenCalled();
+        });
+
+        it('rejects with 400 when organizationId is missing — payment allocation is always scoped to one organization', async () => {
+            await expect(
+                controller.receivePayment({} as never, {
+                    invoiceId: 1,
+                    organizationId: 0,
+                    outcome: 'success',
+                    erpEventId: 'ERP-PMT-2',
                 }),
             ).rejects.toBeInstanceOf(BadRequestException);
 

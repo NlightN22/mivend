@@ -34,6 +34,7 @@ const adminApiSchema = gql`
             method: String!
             amount: Int!
             invoiceId: Int
+            organizationId: Int
             outcome: String
             rrn: String
         ): Boolean!

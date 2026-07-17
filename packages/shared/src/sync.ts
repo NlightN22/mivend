@@ -106,6 +106,11 @@ const PaymentRecordedPayload = z.object({
     // Invoice (rather than only the legacy native-Order payment above) — lets
     // CentralConsumer additionally publish BranchKassaPaymentEvent for the acquiring inbox.
     invoiceId: z.number().int().positive().optional(),
+    // The organization (plugin-documents OrganizationRequisites) this payment is for — mandatory
+    // whenever invoiceId/outcome are present, validated against the target Invoice's real
+    // organizationId before the payment is applied (AGENTS.md sync rule #13). Left optional at
+    // this shared wire-format layer for the same reason rrn is, below.
+    organizationId: z.number().int().positive().optional(),
     outcome: z.enum(['success', 'pending', 'fail', 'cancel']).optional(),
     // RRN (Retrieval Reference Number) from the branch's card terminal, or the kassa's own
     // fiscal receipt/cheque number for a cash payment — mandatory whenever invoiceId/outcome are

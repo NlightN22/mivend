@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { BranchKassaPaymentEvent, ErpPaymentReportedEvent } from '@mivend/plugin-sync';
@@ -120,6 +120,11 @@ let invoiceService: InvoiceService;
 let settlementEntryService: SettlementEntryService;
 let paymentAttemptService: PaymentAttemptService;
 let inboxService: InboxService;
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
+function createMockReconciliationIssueService() {
+    return { report: vi.fn(async () => ({ id: 1 })) };
+}
+let reconciliationIssueService: ReturnType<typeof createMockReconciliationIssueService>;
 let processorService: PaymentInboxProcessorService;
 let eventBus: FakeEventBus;
 let paymentEventListener: PaymentEventListener;
@@ -212,12 +217,20 @@ beforeAll(async () => {
     await dataSource.initialize();
 
     const connectionShim = buildConnectionShim();
-    invoiceService = new InvoiceService(connectionShim, {} as never, {} as never, {} as never);
+    invoiceService = new InvoiceService(
+        connectionShim,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+    );
     settlementEntryService = new SettlementEntryService(connectionShim, invoiceService);
+    reconciliationIssueService = createMockReconciliationIssueService();
     paymentAttemptService = new PaymentAttemptService(
         connectionShim,
         invoiceService,
         settlementEntryService,
+        reconciliationIssueService as never,
     );
     inboxService = new InboxService(connectionShim);
     processorService = new PaymentInboxProcessorService(inboxService, paymentAttemptService);
@@ -261,6 +274,7 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
             'hash-1',
             {
                 invoiceId: Number(invoice.id),
+                organizationId: 1,
                 outcome: 'success',
                 channel: 'bank-transfer-erp',
                 externalReference: 'erp-evt-1',
@@ -324,6 +338,7 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
         });
         const payload = {
             invoiceId: Number(invoice.id),
+            organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
             externalReference: 'erp-evt-2',
@@ -363,6 +378,7 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
         });
         await inboxService.enqueue(mockCtx, 'bank-transfer-erp', 'erp-evt-3', 'hash-3', {
             invoiceId: Number(invoice.id),
+            organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
             externalReference: 'erp-evt-3',
@@ -403,6 +419,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
             new ErpPaymentReportedEvent(
                 mockCtx,
                 Number(invoice.id),
+                1,
                 'success',
                 'erp-evt-simulated-1',
             ),
@@ -415,6 +432,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         expect(enqueuedRow.status).toBe('pending');
         expect(JSON.parse(enqueuedRow.payload)).toEqual({
             invoiceId: Number(invoice.id),
+            organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
             externalReference: 'erp-evt-simulated-1',
@@ -427,6 +445,16 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
             .getRepository(TestInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
         expect(paidInvoice.status).toBe('paid');
+
+        // The real timeline PaymentFieldResolver.processingEvents derives its stages from —
+        // round-trips through the actual DB, not a fabricated shape.
+        const inboxRow = await inboxService.findByProviderAndEventId(
+            mockCtx,
+            'erp',
+            'erp-evt-simulated-1',
+        );
+        expect(inboxRow?.status).toBe('processed');
+        expect(inboxRow?.processedAt).not.toBeNull();
     });
 
     it('a simulated branch-kassa cash payment (BranchKassaPaymentEvent) is durably enqueued and eventually pays the invoice', async () => {
@@ -443,6 +471,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
             new BranchKassaPaymentEvent(
                 mockCtx,
                 Number(invoice.id),
+                1,
                 'success',
                 'sync-evt-simulated-1',
                 'KASSA-RECEIPT-0001',
@@ -477,6 +506,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         const event = new ErpPaymentReportedEvent(
             mockCtx,
             Number(invoice.id),
+            1,
             'success',
             'erp-evt-dup-1',
         );
@@ -503,6 +533,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
             new BranchKassaPaymentEvent(
                 mockCtx,
                 Number(invoice.id),
+                1,
                 'success',
                 'sync-evt-no-rrn-1',
             ),
@@ -521,5 +552,44 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
             .getRepository(TestInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
         expect(untouchedInvoice.status).toBe('issued');
+    });
+
+    it('a payment event declaring the wrong organization is durably enqueued, then dead-lettered on its first sweep — never applied and never retried, since a mismatch will not fix itself', async () => {
+        const invoice = await dataSource.getRepository(TestInvoice).save({
+            orderId: 14,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 600,
+            currencyCode: 'RUB',
+            status: 'issued',
+        });
+
+        await eventBus.publish(
+            new ErpPaymentReportedEvent(
+                mockCtx,
+                Number(invoice.id),
+                999, // does not match invoice.organizationId (1)
+                'success',
+                'erp-evt-org-mismatch-1',
+            ),
+        );
+
+        const sweep = await processorService.processPendingEvents(mockCtx);
+        expect(sweep).toEqual({ processed: 0, failed: 1 });
+        expect(reconciliationIssueService.report).toHaveBeenCalledWith(
+            mockCtx,
+            'ORGANIZATION_MISMATCH',
+            expect.objectContaining({ invoiceId: Number(invoice.id), organizationId: 999 }),
+        );
+
+        const row = await dataSource
+            .getRepository(TestIncomingPaymentEvent)
+            .findOneOrFail({ where: { providerEventId: 'erp-evt-org-mismatch-1' } });
+        expect(row.status).toBe('failed'); // dead-lettered immediately, not left 'pending' for retry
+
+        const untouchedInvoice = await dataSource
+            .getRepository(TestInvoice)
+            .findOneOrFail({ where: { id: Number(invoice.id) } });
+        expect(untouchedInvoice.status).toBe('issued'); // never applied
     });
 });

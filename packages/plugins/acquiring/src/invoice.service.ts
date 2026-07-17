@@ -9,7 +9,7 @@ import {
     TransactionalConnection,
     TranslatorService,
 } from '@vendure/core';
-import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 
 import { Invoice, InvoiceStatus } from './entities/invoice.entity';
 
@@ -36,6 +36,7 @@ export class InvoiceService {
         private connection: TransactionalConnection,
         private entityHydrator: EntityHydrator,
         private counterpartyService: CounterpartyService,
+        private tradingPointService: TradingPointService,
         private translator: TranslatorService,
     ) {}
 
@@ -81,6 +82,15 @@ export class InvoiceService {
             );
         }
 
+        // Denormalize the servicing branch onto each invoice at creation time — see
+        // docs/access-control.md's branch-scope axis. A missing preferred trading point is not
+        // an error: the invoice simply has no branch scope, same as Order's own field.
+        const tradingPoint = await this.tradingPointService.getPreferredForCustomer(
+            ctx,
+            order.customer.id,
+        );
+        const branchId = tradingPoint?.servicingBranchId ?? null;
+
         const split = await this.computeSplit(ctx, order);
         const invoices = split.map(({ organizationId, amount }) =>
             repo.create({
@@ -90,6 +100,7 @@ export class InvoiceService {
                 amount,
                 currencyCode: order.currencyCode,
                 status: 'pending',
+                branchId,
             }),
         );
         return repo.save(invoices);

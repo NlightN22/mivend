@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
@@ -156,12 +156,19 @@ beforeAll(async () => {
     await dataSource.initialize();
 
     const connectionShim = buildConnectionShim();
-    invoiceService = new InvoiceService(connectionShim, {} as never, {} as never, {} as never);
+    invoiceService = new InvoiceService(
+        connectionShim,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+    );
     settlementEntryService = new SettlementEntryService(connectionShim, invoiceService);
     paymentAttemptService = new PaymentAttemptService(
         connectionShim,
         invoiceService,
         settlementEntryService,
+        { report: vi.fn(async () => ({ id: 1 })) } as never,
     );
 });
 

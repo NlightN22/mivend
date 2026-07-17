@@ -24,6 +24,11 @@ query PaymentDetail($id: ID!) {
             amount
             openedAt
         }
+        processingEvents {
+            stage
+            occurredAt
+            note
+        }
         invoice {
             id
             status

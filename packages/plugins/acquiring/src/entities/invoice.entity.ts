@@ -44,4 +44,14 @@ export class Invoice extends VendureEntity {
 
     @Column({ type: 'varchar', default: 'pending' })
     status!: InvoiceStatus;
+
+    // Denormalized servicing branch, set at creation time from the customer's preferred
+    // TradingPoint (mirrors Order.customFields.branchId in plugin-erp-order) — see
+    // docs/access-control.md's "Branch scope is a separate axis" section. This is the real
+    // access-scope filter for the manager portal, never Counterparty.branchId (a chain
+    // customer's locations can span branches; filtering the parent record would be wrong).
+    // Nullable: a customer with no trading point yet has no branch scope, same as Order's.
+    @Index()
+    @Column({ type: 'varchar', nullable: true })
+    branchId!: string | null;
 }

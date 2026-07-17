@@ -49,6 +49,7 @@ beforeAll(async () => {
         {} as unknown as EntityHydrator,
         {} as never,
         {} as never,
+        {} as never,
     );
 });
 

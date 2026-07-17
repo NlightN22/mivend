@@ -68,4 +68,14 @@ export const CustomPermission = {
         description:
             'Confirm or release a manual order reservation (order-confirmation flow, see docs/order-flow.md)',
     }),
+    ReadInvoice: new PermissionDefinition({
+        name: 'ReadInvoice',
+        description:
+            'Read invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveInvoiceScope)',
+    }),
+    ReadPayment: new PermissionDefinition({
+        name: 'ReadPayment',
+        description:
+            'Read payment records for the manager portal — a resource derived from Invoice, scoped the same way (AccessScopeService.resolveInvoiceScope)',
+    }),
 } as const;

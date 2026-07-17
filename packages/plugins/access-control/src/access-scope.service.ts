@@ -29,6 +29,14 @@ export class AccessScopeService {
         return this.resolveScope(ctx, 'teamVisibility');
     }
 
+    // Invoice's own resource — PaymentAttempt (plugin-acquiring) is a resource *derived* from
+    // Invoice (joined via invoiceId), so it reuses this same scope rather than getting its own
+    // resolvePaymentScope, per docs/access-control.md's "derived resource" rule (same pattern as
+    // documents inheriting counterparty scope).
+    async resolveInvoiceScope(ctx: RequestContext): Promise<AccessScope> {
+        return this.resolveScope(ctx, 'invoice');
+    }
+
     // The caller's own departmentId, independent of any resource's scope resolution — needed
     // by teamMembers() to decide "same department as me" even when the caller's teamVisibility
     // scope is 'all' (resolveScope's 'all' branch doesn't carry a departmentId, since scope

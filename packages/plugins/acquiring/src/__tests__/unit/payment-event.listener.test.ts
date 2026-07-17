@@ -50,7 +50,7 @@ describe('PaymentEventListener', () => {
     it('enqueues an ErpPaymentReportedEvent as provider="erp", channel="bank-transfer-erp"', () => {
         eventBus.emit(
             ErpPaymentReportedEvent,
-            new ErpPaymentReportedEvent(mockCtx, 42, 'success', 'ERP-EVT-1'),
+            new ErpPaymentReportedEvent(mockCtx, 42, 1, 'success', 'ERP-EVT-1'),
         );
 
         expect(inboxService.enqueue).toHaveBeenCalledTimes(1);
@@ -60,6 +60,7 @@ describe('PaymentEventListener', () => {
         expect(providerEventId).toBe('ERP-EVT-1');
         expect(payload).toEqual({
             invoiceId: 42,
+            organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
             externalReference: 'ERP-EVT-1',
@@ -69,7 +70,7 @@ describe('PaymentEventListener', () => {
     it('enqueues a BranchKassaPaymentEvent as provider="branch-kassa", channel="branch-kassa"', () => {
         eventBus.emit(
             BranchKassaPaymentEvent,
-            new BranchKassaPaymentEvent(mockCtx, 7, 'pending', 'SYNC-EVT-9', '123456789012'),
+            new BranchKassaPaymentEvent(mockCtx, 7, 1, 'pending', 'SYNC-EVT-9', '123456789012'),
         );
 
         expect(inboxService.enqueue).toHaveBeenCalledTimes(1);
@@ -79,6 +80,7 @@ describe('PaymentEventListener', () => {
         expect(providerEventId).toBe('SYNC-EVT-9');
         expect(payload).toEqual({
             invoiceId: 7,
+            organizationId: 1,
             outcome: 'pending',
             channel: 'branch-kassa',
             externalReference: '123456789012',
@@ -88,7 +90,7 @@ describe('PaymentEventListener', () => {
     it('still durably enqueues a branch-kassa fact with no RRN (never a silent drop), then rejects it as invalid — the external reference is mandatory', async () => {
         eventBus.emit(
             BranchKassaPaymentEvent,
-            new BranchKassaPaymentEvent(mockCtx, 8, 'success', 'SYNC-EVT-10'),
+            new BranchKassaPaymentEvent(mockCtx, 8, 1, 'success', 'SYNC-EVT-10'),
         );
         await Promise.resolve();
         await Promise.resolve();
@@ -96,6 +98,7 @@ describe('PaymentEventListener', () => {
         const [, , , , payload] = inboxService.enqueue.mock.calls[0];
         expect(payload).toEqual({
             invoiceId: 8,
+            organizationId: 1,
             outcome: 'success',
             channel: 'branch-kassa',
             externalReference: undefined,
@@ -110,7 +113,7 @@ describe('PaymentEventListener', () => {
     it('does not reject a branch-kassa fact that has a real RRN', async () => {
         eventBus.emit(
             BranchKassaPaymentEvent,
-            new BranchKassaPaymentEvent(mockCtx, 7, 'pending', 'SYNC-EVT-9', '123456789012'),
+            new BranchKassaPaymentEvent(mockCtx, 7, 1, 'pending', 'SYNC-EVT-9', '123456789012'),
         );
         await Promise.resolve();
         await Promise.resolve();
@@ -121,7 +124,7 @@ describe('PaymentEventListener', () => {
     it('does not call payInvoice-adjacent processing — enqueue/rejectAsInvalid are the only side effects', () => {
         eventBus.emit(
             ErpPaymentReportedEvent,
-            new ErpPaymentReportedEvent(mockCtx, 1, 'success', 'ERP-EVT-2'),
+            new ErpPaymentReportedEvent(mockCtx, 1, 1, 'success', 'ERP-EVT-2'),
         );
         expect(Object.keys(inboxService).sort()).toEqual(['enqueue', 'rejectAsInvalid']);
     });

@@ -23,6 +23,7 @@ export class PaymentSyncResolver {
             method: string;
             amount: number;
             invoiceId?: number;
+            organizationId?: number;
             outcome?: 'success' | 'pending' | 'fail' | 'cancel';
             rrn?: string;
         },
@@ -33,6 +34,7 @@ export class PaymentSyncResolver {
             args.method,
             args.amount,
             args.invoiceId,
+            args.organizationId,
             args.outcome,
             args.rrn,
         );

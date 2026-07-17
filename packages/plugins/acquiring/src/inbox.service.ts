@@ -104,6 +104,18 @@ export class InboxService {
             .update({ id }, { status: 'failed', attempts: MAX_ATTEMPTS, lastError: reason });
     }
 
+    // Looks up the event backing an already-processed payment, to render a real (not fabricated)
+    // processing timeline — see PaymentFieldResolver.processingEvents.
+    async findByProviderAndEventId(
+        ctx: RequestContext,
+        provider: string,
+        providerEventId: string,
+    ): Promise<IncomingPaymentEvent | null> {
+        return this.connection
+            .getRepository(ctx, IncomingPaymentEvent)
+            .findOne({ where: { provider, providerEventId } });
+    }
+
     private isUniqueViolation(err: unknown): boolean {
         return (
             typeof err === 'object' &&

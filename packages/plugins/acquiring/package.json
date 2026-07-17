@@ -15,6 +15,7 @@
         "@vendure/core": "^3.0.0"
     },
     "dependencies": {
+        "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-sync": "workspace:*",
         "bullmq": "^5.0.0",

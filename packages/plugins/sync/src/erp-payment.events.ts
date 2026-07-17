@@ -9,6 +9,11 @@ export class ErpPaymentReportedEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
         public readonly invoiceId: number,
+        // The organization the reporting side (1C) believes this payment belongs to — validated
+        // against the target Invoice's real organizationId before applying (AGENTS.md sync rule
+        // #13). Payment allocation is scoped by organization only; branch is a visibility
+        // concern, never an allocation boundary — see docs/payments.md "Organizations".
+        public readonly organizationId: number,
         public readonly outcome: ErpPaymentOutcome,
         public readonly erpEventId: string,
     ) {
@@ -24,6 +29,11 @@ export class BranchKassaPaymentEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
         public readonly invoiceId: number,
+        // Same organization-scope validation as ErpPaymentReportedEvent — the branch reporting
+        // this cash payment already knows its own organization context; this is validated
+        // against the target Invoice's real organizationId, never used to restrict which
+        // branch may pay which invoice (branch governs staff visibility, not allocation scope).
+        public readonly organizationId: number,
         public readonly outcome: ErpPaymentOutcome,
         public readonly sourceEventId: string,
         // RRN (Retrieval Reference Number) — the standard 12-digit reference printed on a card
