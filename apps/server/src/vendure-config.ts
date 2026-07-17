@@ -28,7 +28,18 @@ const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'bra
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
 
 // Only central talks to the ERP/payment providers (AGENTS.md sync rule #6)
-const instancePlugins = instanceType === 'central' ? [AcquiringPlugin] : [];
+const instancePlugins =
+    instanceType === 'central'
+        ? [
+              AcquiringPlugin.init({
+                  redis: {
+                      host: process.env.REDIS_HOST ?? 'localhost',
+                      port: parseInt(process.env.REDIS_PORT ?? '6379'),
+                      db: redisDb,
+                  },
+              }),
+          ]
+        : [];
 
 export const config: VendureConfig = {
     apiOptions: {

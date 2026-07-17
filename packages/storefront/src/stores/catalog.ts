@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { shopApi } from '../api/client';
+import { CatalogCollectionsDocument } from '../api/generated/graphql';
 // Imports the TS source directly — see the comment in useProductList.ts for why 'shared''s
 // compiled package output breaks a Vite production build.
 import {
@@ -19,18 +20,8 @@ export const useCatalogStore = defineStore('catalog', () => {
         if (collections.value.length > 0) return;
         loading.value = true;
         try {
-            const result = await shopApi<{ collections: { items: RawCollection[] } }>(`
-                query CatalogCollections {
-                    collections(options: { take: 100 }) {
-                        items {
-                            id name slug
-                            breadcrumbs { id name slug }
-                            children { id name slug }
-                        }
-                    }
-                }
-            `);
-            collections.value = buildCategoryTree(result.collections.items);
+            const result = await shopApi(CatalogCollectionsDocument);
+            collections.value = buildCategoryTree(result.collections.items as RawCollection[]);
         } finally {
             loading.value = false;
         }

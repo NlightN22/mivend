@@ -2,6 +2,8 @@ import js from '@eslint/js';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import prettierConfig from 'eslint-config-prettier';
+import noRawGraphql from './eslint-rules/no-raw-graphql.js';
+import noSyncPaymentProcessing from './eslint-rules/no-sync-payment-processing.js';
 
 export default [
     js.configs.recommended,
@@ -122,8 +124,51 @@ export default [
             ],
         },
     },
+    // All storefront GraphQL operations must go through codegen (packages/storefront/codegen.ts)
+    // — a hand-written query/mutation string is invisible to the schema and can't be typed.
+    // See AGENTS.md's storefront rule and docs/frontend.md.
+    {
+        files: ['packages/storefront/src/**/*.ts'],
+        ignores: ['packages/storefront/src/api/generated/**', '**/__tests__/**'],
+        languageOptions: { parser: tsParser },
+        plugins: { local: { rules: { 'no-raw-graphql': noRawGraphql } } },
+        rules: {
+            'local/no-raw-graphql': 'error',
+        },
+    },
+    // REST controllers and EventBus listeners — the actual entry points for external, unreliable
+    // event sources (a webhook, an ERP/1C callback, a branch→central sync consumer) — must never
+    // call a risky payment-processing method directly. See AGENTS.md sync rule #12 and
+    // eslint-rules/no-sync-payment-processing.js's own header comment for the full rationale.
+    // GraphQL *resolvers* are deliberately NOT in scope here: a mutation like `payInvoice` invoked
+    // synchronously by an authenticated client (a "pay now" button waiting for a real-time
+    // result) is a normal request/response command, not the "external system fired an event and
+    // moved on" scenario rule #12 is about — an early version of this rule scoped resolvers too
+    // and immediately false-positived on exactly that legitimate mutation.
+    // `apps/server/src/payment-method-handlers.ts` is the one known, accepted exception: its
+    // `onlineStubPaymentHandler` is a synchronous checkout-time stub (no real acquirer webhook
+    // exists yet), called out explicitly in AGENTS.md as a demo stub to replace once real
+    // acquiring is wired up — excluded here rather than silently passing, so the exception stays
+    // visible.
+    {
+        files: ['packages/plugins/**/*.controller.ts', 'packages/plugins/**/*.listener.ts'],
+        ignores: ['**/*.test.ts', '**/__tests__/**'],
+        languageOptions: { parser: tsParser },
+        plugins: { local: { rules: { 'no-sync-payment-processing': noSyncPaymentProcessing } } },
+        rules: {
+            'local/no-sync-payment-processing': 'error',
+        },
+    },
     prettierConfig, // must be last — disables rules that conflict with prettier
     {
-        ignores: ['**/dist/**', '**/node_modules/**', '**/storybook-static/**', 'infrastructure/scripts/**'],
+        ignores: [
+            '**/dist/**',
+            '**/node_modules/**',
+            '**/storybook-static/**',
+            'infrastructure/scripts/**',
+            // Codegen output (packages/storefront/codegen.ts) — never hand-edited, regenerated
+            // from the schema + .graphql operation files.
+            'packages/storefront/src/api/generated/**',
+        ],
     },
 ];

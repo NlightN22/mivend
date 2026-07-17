@@ -1,0 +1,6 @@
+mutation PayInvoice($invoiceId: ID!, $status: String!) {
+    payInvoice(invoiceId: $invoiceId, status: $status) {
+        id
+        status
+    }
+}

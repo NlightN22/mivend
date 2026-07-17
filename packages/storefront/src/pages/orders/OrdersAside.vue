@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useAuthStore } from '../../stores/auth';
+import { shopApi } from '../../api/client';
+import { MyAdvanceBalanceDocument } from '../../api/generated/graphql';
+import { useInvoices } from '../invoices/useInvoices';
 
 const authStore = useAuthStore();
-
-const payAmount = ref('42 860 ₽');
 
 const availableLimit = computed(() => {
     const cp = authStore.counterparty;
@@ -17,31 +18,53 @@ const paymentDelay = computed(() => {
     const days = authStore.counterparty?.paymentDelayDays;
     return days != null ? `${days} days` : '—';
 });
+
+// Real payment obligations now live entirely on /invoices (which can independently span
+// several of our organizations per split order — see docs/payments.md "Organizations") — this
+// sidebar only surfaces an honest summary and links there, rather than duplicating a
+// pay-anything widget with no real backing.
+const { invoices, load: loadInvoices } = useInvoices();
+const advanceBalances = ref<{ amount: number; currencyCode: string }[]>([]);
+
+function formatMoney(cents: number, currency: string): string {
+    return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100)
+        + ' ' + (currency === 'RUB' ? '₽' : currency);
+}
+
+const unpaidTotal = computed(() => {
+    const byCurrency = new Map<string, number>();
+    for (const invoice of invoices.value) {
+        if (invoice.status === 'paid' || invoice.status === 'cancelled') continue;
+        byCurrency.set(invoice.currencyCode, (byCurrency.get(invoice.currencyCode) ?? 0) + invoice.amount);
+    }
+    return [...byCurrency.entries()].map(([currency, amount]) => formatMoney(amount, currency)).join(', ') || '0 ₽';
+});
+
+const advanceTotal = computed(() =>
+    advanceBalances.value.map(a => formatMoney(a.amount, a.currencyCode)).join(', '),
+);
+
+onMounted(async () => {
+    void loadInvoices({ take: 200, skip: 0 });
+    const result = await shopApi(MyAdvanceBalanceDocument, {});
+    advanceBalances.value = result.myAdvanceBalance;
+});
 </script>
 
 <template>
     <aside class="orders-aside">
         <div class="aside-card">
-            <div class="aside-title">Payment</div>
-            <div class="aside-subtitle">Pay a specific order, a remaining balance, or make an advance payment.</div>
-            <input v-model="payAmount" class="pay-input" />
-            <button class="wide-btn orange">Proceed to payment</button>
+            <div class="aside-title">Payments &amp; invoices</div>
+            <div class="aside-subtitle">Every order can split into several invoices (one per organization) — pay any of them any time from the Invoices page.</div>
+            <router-link to="/invoices" class="wide-btn orange">Go to invoices</router-link>
         </div>
 
         <div class="aside-card">
             <div class="aside-title">Balance &amp; limits</div>
             <div class="aside-line"><span>Available limit</span><strong>{{ availableLimit }}</strong></div>
             <div class="aside-line"><span>Payment delay</span><strong>{{ paymentDelay }}</strong></div>
-            <div class="aside-line"><span>Overdue</span><strong>0 ₽</strong></div>
-            <div class="aside-line"><span>Unpaid</span><strong>188 580 ₽</strong></div>
-        </div>
-
-        <div class="aside-card">
-            <div class="aside-title">How we account payments</div>
-            <div class="aside-subtitle">
-                Payments may be applied as advance. The client sees the balance due and payment history;
-                allocation across orders is handled internally.
-            </div>
+            <div class="aside-line"><span>Unpaid (all invoices)</span><strong>{{ unpaidTotal }}</strong></div>
+            <div v-if="advanceBalances.length" class="aside-line"><span>Advance balance</span><strong>{{ advanceTotal }}</strong></div>
         </div>
     </aside>
 </template>
@@ -73,25 +96,13 @@ const paymentDelay = computed(() => {
     color: #66736e;
     font-size: 13px;
     line-height: 1.45;
-    margin-bottom: 4px;
+    margin-bottom: 14px;
 }
-
-.pay-input {
-    width: 100%;
-    min-height: 48px;
-    border: 1px solid #dde7e2;
-    border-radius: 15px;
-    padding: 0 14px;
-    font-weight: 900;
-    font-family: inherit;
-    font-size: 16px;
-    outline: none;
-    margin: 10px 0;
-}
-
-.pay-input:focus { border-color: #00a878; }
 
 .wide-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     min-height: 48px;
     border: 0;
@@ -101,6 +112,7 @@ const paymentDelay = computed(() => {
     font-weight: 950;
     font-family: inherit;
     font-size: 15px;
+    text-decoration: none;
     cursor: pointer;
     transition: 0.14s ease;
 }

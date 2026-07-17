@@ -22,8 +22,17 @@ export {
     IdempotencyKey,
     type IdempotencyRequestStatus,
 } from './src/entities/idempotency-key.entity';
-export { ProcessedProviderEvent } from './src/entities/processed-provider-event.entity';
+export {
+    IncomingPaymentEvent,
+    type IncomingPaymentEventStatus,
+} from './src/entities/incoming-payment-event.entity';
 export { IdempotencyService } from './src/idempotency.service';
 export { InboxService } from './src/inbox.service';
 export { InvoiceService } from './src/invoice.service';
-export { IdempotencyConflictError } from './src/types';
+export { PaymentAttemptService, type PayInvoiceOutcome } from './src/payment-attempt.service';
+export {
+    PaymentInboxProcessorService,
+    type IncomingPaymentPayload,
+} from './src/payment-inbox-processor.service';
+export { SettlementEntryService } from './src/settlement-entry.service';
+export { IdempotencyConflictError, type AcquiringPluginOptions } from './src/types';

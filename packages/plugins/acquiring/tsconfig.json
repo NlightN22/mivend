@@ -6,5 +6,5 @@
         "rootDir": "."
     },
     "include": ["src/**/*", "index.ts"],
-    "references": [{ "path": "../counterparty" }]
+    "references": [{ "path": "../counterparty" }, { "path": "../sync" }, { "path": "../../shared" }]
 }

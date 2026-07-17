@@ -256,3 +256,34 @@ All other plugins publish domain events via Vendure's `EventBus`.
 `plugin-sync` subscribes to those events and translates them into outbox writes.
 
 No other plugin imports from `plugin-sync` or calls RabbitMQ directly.
+
+---
+
+## Cross-instance facts as independent event streams (rule #10)
+
+A cross-instance fact about an order or invoice that a **non-owning** instance can legitimately
+witness (a payment, a reservation, an approval, an ERP status) is never a direct mutation of
+another instance's record, and never folded into a general `*.updated` event's payload — it is
+its own independent event stream. `docs/architecture.md`'s "Order as a read-model" section has
+the full reasoning; this section documents the concrete payment instance of it.
+
+**Payment facts** (`plugin-acquiring`'s `Invoice`/`PaymentAttempt`) flow in from two directions,
+both landing in `plugin-acquiring`'s payment inbox rather than mutating an `Invoice` directly
+from `plugin-sync`:
+
+- **ERP → Central**: `plugin-sync`'s `ErpCallbackController` (`POST /erp/callback/payment`)
+  receives a payment document 1C already posted, and publishes `ErpPaymentReportedEvent` on the
+  `EventBus` — it does not call into `plugin-acquiring` directly, and does not touch RabbitMQ for
+  this (no branch is involved).
+- **Branch → Central**: a branch-witnessed cash payment (`recordWitnessedPayment`) travels
+  through the existing `payment.recorded` outbox/RabbitMQ transport documented above (nothing new
+  here — same envelope, same consumer). `CentralConsumer.handlePaymentRecorded` applies the
+  payment fact as it always did, and — only when the payload carries the optional `invoiceId`/
+  `outcome` fields (`PaymentRecordedPayload`, `packages/shared/src/sync.ts`) — additionally
+  publishes `BranchKassaPaymentEvent` on the `EventBus`.
+
+Both event classes live in `plugin-sync` (`erp-payment.events.ts`) and are exported from its
+public `index.ts`; `plugin-acquiring`'s `PaymentEventListener` is the only subscriber, and its
+only job is to durably enqueue the event (never to process it inline) — see AGENTS.md sync rule
+#12 and `docs/payments.md`'s "Idempotency: three independent levels" section for the full
+inbox/worker design this event stream feeds into.

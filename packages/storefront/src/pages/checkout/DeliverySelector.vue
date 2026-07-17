@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { MvModal } from '@mivend/ui-kit';
 import { useCheckoutStore } from '../../stores/checkout';
 import { useAuthStore } from '../../stores/auth';
 import { shopApi } from '../../api/client';
+import {
+    MyTradingPointsForDeliverySelectorDocument,
+    SetPreferredTradingPointForDeliverySelectorDocument,
+    type MyTradingPointsForDeliverySelectorQuery,
+} from '../../api/generated/graphql';
 
 const checkoutStore = useCheckoutStore();
 const authStore = useAuthStore();
@@ -13,11 +18,7 @@ const tradingPointAddress = computed(() => authStore.tradingPoint?.address ?? ''
 
 // ── Change point modal ──────────────────────────────────────────────────────
 
-interface PointOption {
-    id: string;
-    name: string;
-    address: string;
-}
+type PointOption = MyTradingPointsForDeliverySelectorQuery['myTradingPoints'][number];
 
 const modalOpen = ref(false);
 const points = ref<PointOption[]>([]);
@@ -29,9 +30,7 @@ async function openModal(): Promise<void> {
     if (points.value.length) return;
     loadingPoints.value = true;
     try {
-        const result = await shopApi<{ myTradingPoints: PointOption[] }>(
-            `{ myTradingPoints { id name address } }`,
-        );
+        const result = await shopApi(MyTradingPointsForDeliverySelectorDocument);
         points.value = result.myTradingPoints ?? [];
     } finally {
         loadingPoints.value = false;
@@ -42,7 +41,7 @@ async function selectPoint(id: string): Promise<void> {
     if (savingId.value) return;
     savingId.value = id;
     try {
-        await shopApi(`mutation($id: ID!) { setPreferredTradingPoint(tradingPointId: $id) }`, { id });
+        await shopApi(SetPreferredTradingPointForDeliverySelectorDocument, { id });
         await authStore.fetchCurrentCustomer();
         modalOpen.value = false;
     } finally {

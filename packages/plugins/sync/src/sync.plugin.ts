@@ -29,7 +29,14 @@ const adminApiSchema = gql`
     extend type Mutation {
         # Placeholder entry point for a branch till/kassa integration (no real hardware yet) —
         # see payment-sync.resolver.ts / docs/architecture.md's "Order as a read-model" section.
-        recordWitnessedPayment(orderId: ID!, method: String!, amount: Int!): Boolean!
+        recordWitnessedPayment(
+            orderId: ID!
+            method: String!
+            amount: Int!
+            invoiceId: Int
+            outcome: String
+            rrn: String
+        ): Boolean!
     }
 `;
 

@@ -22,7 +22,7 @@ describe('InvoiceService.findByOrderId', () => {
     it('returns invoices scoped to the given order', async () => {
         const invoices = [{ id: 1, orderId: 5 } as Invoice, { id: 2, orderId: 5 } as Invoice];
         mockRepo.find.mockResolvedValue(invoices);
-        const service = new InvoiceService(mockConnection, {} as never, {} as never);
+        const service = new InvoiceService(mockConnection, {} as never, {} as never, {} as never);
 
         const result = await service.findByOrderId(mockCtx, 5);
 

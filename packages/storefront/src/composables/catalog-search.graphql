@@ -1,0 +1,85 @@
+query CatalogProducts(
+    $term: String
+    $take: Int!
+    $skip: Int!
+    $facetValueFilters: [FacetValueFilterInput!]
+    $inStock: Boolean
+    $priceRangeWithTax: PriceRangeInput
+) {
+    search(
+        input: {
+            term: $term
+            take: $take
+            skip: $skip
+            groupByProduct: true
+            facetValueFilters: $facetValueFilters
+            inStock: $inStock
+            priceRangeWithTax: $priceRangeWithTax
+        }
+    ) {
+        totalItems
+        items {
+            productId
+            productVariantId
+            productName
+            slug
+            sku
+            priceWithTax {
+                ... on SinglePrice {
+                    value
+                }
+                ... on PriceRange {
+                    min
+                }
+            }
+            currencyCode
+            inStock
+            facetValueIds
+            customerPrice
+            compareAtPrice
+            discountTiers {
+                percent
+                minWeightKg
+                minAmount
+            }
+        }
+        facetValues {
+            facetValue {
+                id
+                code
+                name
+                facet {
+                    code
+                    name
+                }
+            }
+            count
+        }
+    }
+}
+
+query CatalogFacets($term: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+    search(
+        input: {
+            term: $term
+            take: 0
+            skip: 0
+            groupByProduct: true
+            inStock: $inStock
+            priceRangeWithTax: $priceRangeWithTax
+        }
+    ) {
+        facetValues {
+            facetValue {
+                id
+                code
+                name
+                facet {
+                    code
+                    name
+                }
+            }
+            count
+        }
+    }
+}

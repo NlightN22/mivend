@@ -1,0 +1,23 @@
+query InvoiceDetail($id: ID!) {
+    invoice(id: $id) {
+        id
+        orderId
+        organizationId
+        amount
+        currencyCode
+        status
+        order {
+            id
+            code
+        }
+        lines {
+            quantity
+            unitPriceWithTax
+            linePriceWithTax
+            productVariant {
+                name
+                sku
+            }
+        }
+    }
+}

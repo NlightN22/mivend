@@ -7,14 +7,16 @@ import {
     PaymentMetadata,
     RequestContext,
 } from '@vendure/core';
-import { InvoiceService } from '@mivend/plugin-acquiring';
+import { Invoice, InvoiceService, PaymentAttemptService } from '@mivend/plugin-acquiring';
 
 let invoiceService: InvoiceService;
 let globalSettingsService: GlobalSettingsService;
+let paymentAttemptService: PaymentAttemptService;
 
 interface SplitResult {
     metadata: PaymentMetadata;
     declineMessage?: string;
+    invoices: Invoice[];
 }
 
 // Shared by both payment methods (see docs/payments.md — issue #46's split-payment acquirer,
@@ -44,15 +46,17 @@ async function computeInvoiceSplit(ctx: RequestContext, order: Order): Promise<S
                     amount: invoice.amount,
                 })),
             },
+            invoices,
         };
     } catch (err) {
         if (splitEnabled) {
             return {
                 metadata: {},
                 declineMessage: `Organization split required but could not be computed: ${(err as Error).message}`,
+                invoices: [],
             };
         }
-        return { metadata: {} };
+        return { metadata: {}, invoices: [] };
     }
 }
 
@@ -61,6 +65,9 @@ async function computeInvoiceSplit(ctx: RequestContext, order: Order): Promise<S
 // on the "Authorized" state to move the order out of ArrangingPayment. Actual
 // money collection happens outside Vendure (per contract), tracked via the
 // existing ERP status sync (see plugin-erp-order), not via Vendure's payment flow.
+// No PaymentAttempt is recorded here — no money has actually moved yet, so there is
+// nothing for the /payments ledger to reflect until a real payInvoice/kassa/bank-transfer
+// event happens later (see plugin-acquiring's PaymentAttemptService.payInvoice).
 export const offlineTermsPaymentHandler = new PaymentMethodHandler({
     code: 'offline-terms',
     description: [
@@ -70,6 +77,7 @@ export const offlineTermsPaymentHandler = new PaymentMethodHandler({
     init(injector: Injector) {
         invoiceService = injector.get(InvoiceService);
         globalSettingsService = injector.get(GlobalSettingsService);
+        paymentAttemptService = injector.get(PaymentAttemptService);
     },
     createPayment: async (ctx, order) => {
         const { metadata, declineMessage } = await computeInvoiceSplit(ctx, order);
@@ -81,6 +89,7 @@ export const offlineTermsPaymentHandler = new PaymentMethodHandler({
                 metadata: {},
             };
         }
+        await invoiceService.updateStatusForOrder(ctx, Number(order.id), 'issued');
         return {
             amount: order.totalWithTax,
             state: 'Authorized' as const,
@@ -91,7 +100,11 @@ export const offlineTermsPaymentHandler = new PaymentMethodHandler({
 });
 
 // PaymentStubPage.vue's success/pending/fail buttons map directly to this handler's result via
-// the `status` metadata arg.
+// the `status` metadata arg. Unlike offline-terms, this represents a real (demo-stub) attempt to
+// move money right now — each invoice in the split gets its own PaymentAttempt via
+// PaymentAttemptService.payInvoice (the same recording/allocation path the standalone "Pay
+// invoice" flow uses), so /payments reflects checkout-originated payments too, not only ones
+// made later from the invoice detail page.
 export const onlineStubPaymentHandler = new PaymentMethodHandler({
     code: 'online-stub',
     description: [{ languageCode: LanguageCode.en, value: 'Online payment (demo stub)' }],
@@ -99,6 +112,7 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
     init(injector: Injector) {
         invoiceService = injector.get(InvoiceService);
         globalSettingsService = injector.get(GlobalSettingsService);
+        paymentAttemptService = injector.get(PaymentAttemptService);
     },
     createPayment: async (
         ctx,
@@ -107,7 +121,11 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         _args,
         metadata: PaymentMetadata & { status?: string },
     ) => {
-        const { metadata: invoiceMetadata, declineMessage } = await computeInvoiceSplit(ctx, order);
+        const {
+            metadata: invoiceMetadata,
+            declineMessage,
+            invoices,
+        } = await computeInvoiceSplit(ctx, order);
         if (declineMessage) {
             return {
                 amount: order.totalWithTax,
@@ -118,15 +136,35 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         }
 
         if (metadata?.status === 'fail') {
+            // Record the failed attempt against each invoice for the /payments ledger — left as
+            // 'pending' (not 'cancelled') by PaymentAttemptService: the customer can still retry
+            // payment on the same order, so the invoice's payment obligation still stands.
+            for (const invoice of invoices) {
+                await paymentAttemptService.payInvoice(
+                    ctx,
+                    Number(invoice.id),
+                    'fail',
+                    'online-acquiring',
+                );
+            }
             return {
                 amount: order.totalWithTax,
                 state: 'Declined' as const,
                 metadata: { ...metadata, ...invoiceMetadata },
             };
         }
+        const settled = metadata?.status !== 'pending';
+        for (const invoice of invoices) {
+            await paymentAttemptService.payInvoice(
+                ctx,
+                Number(invoice.id),
+                settled ? 'success' : 'pending',
+                'online-acquiring',
+            );
+        }
         return {
             amount: order.totalWithTax,
-            state: metadata?.status === 'pending' ? ('Authorized' as const) : ('Settled' as const),
+            state: settled ? ('Settled' as const) : ('Authorized' as const),
             metadata: { ...metadata, ...invoiceMetadata },
         };
     },

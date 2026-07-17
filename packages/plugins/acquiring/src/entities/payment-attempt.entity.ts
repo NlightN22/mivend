@@ -52,9 +52,14 @@ export class PaymentAttempt extends VendureEntity {
     @Column({ type: 'varchar' })
     currencyCode!: string;
 
+    // Mandatory for every channel — an RRN from a card terminal, a branch kassa's own fiscal
+    // receipt/cheque number, an ERP payment-document id, or (until a real acquirer is wired in)
+    // a clearly-marked stub value generated server-side. Without this, a payment can never be
+    // reconciled against the external system that actually witnessed it (the acquirer, the
+    // branch kassa, or 1C) — see docs/payments.md.
     @Index()
-    @Column({ type: 'varchar', nullable: true })
-    providerPaymentId!: string | null;
+    @Column({ type: 'varchar' })
+    providerPaymentId!: string;
 
     @Column({ type: 'varchar', default: 'pending' })
     paymentStatus!: PaymentStatus;

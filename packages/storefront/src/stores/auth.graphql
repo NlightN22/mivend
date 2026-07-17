@@ -1,0 +1,48 @@
+query ActiveCustomerForAuth {
+    activeCustomer {
+        id
+        firstName
+        lastName
+        emailAddress
+        customFields {
+            portalRole
+            preferredTradingPointId
+        }
+        counterparty {
+            id
+            erpId
+            legalName
+            shortName
+            inn
+            creditLimit
+            creditBalance
+            paymentDelayDays
+            priceType
+        }
+        preferredTradingPoint {
+            id
+            name
+            address
+            workingHours
+            deliveryComment
+        }
+    }
+}
+
+mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
+    login(username: $username, password: $password, rememberMe: $rememberMe) {
+        __typename
+        ... on CurrentUser {
+            id
+        }
+        ... on InvalidCredentialsError {
+            errorCode
+        }
+    }
+}
+
+mutation LogoutFromAuthStore {
+    logout {
+        success
+    }
+}

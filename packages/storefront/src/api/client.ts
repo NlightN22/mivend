@@ -31,10 +31,23 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
     throw new ApiNetworkError(lastError instanceof Error ? lastError.message : 'Network error');
 }
 
-export async function shopApi<T = unknown>(
-    query: string,
-    variables?: Record<string, unknown>,
-): Promise<T> {
+// Structurally matches the `TypedDocumentString` class emitted by @graphql-codegen/typed-document-node
+// (documentMode: 'string') into src/api/generated/graphql.ts — kept as a local structural type so
+// this module doesn't need to import the generated file. `__apiType` only exists to carry
+// TResult/TVariables at the type level; it's never assigned or read at runtime.
+interface TypedDocumentLike<TResult, TVariables> {
+    toString(): string;
+    __apiType?: (variables: TVariables) => TResult;
+}
+
+export async function shopApi<
+    TResult,
+    TVariables extends Record<string, unknown> | undefined = undefined,
+>(
+    document: TypedDocumentLike<TResult, TVariables> | string,
+    variables?: TVariables,
+): Promise<TResult> {
+    const query = typeof document === 'string' ? document : document.toString();
     const response = await fetchWithRetry(SHOP_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -46,11 +59,11 @@ export async function shopApi<T = unknown>(
         throw new Error(`Shop API error: ${response.status}`);
     }
 
-    const json = (await response.json()) as { data?: T; errors?: { message: string }[] };
+    const json = (await response.json()) as { data?: TResult; errors?: { message: string }[] };
 
     if (json.errors?.length) {
         throw new Error(json.errors.map(e => e.message).join('; '));
     }
 
-    return json.data as T;
+    return json.data as TResult;
 }

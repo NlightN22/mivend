@@ -1,0 +1,11 @@
+query MyTradingPointsForDeliverySelector {
+    myTradingPoints {
+        id
+        name
+        address
+    }
+}
+
+mutation SetPreferredTradingPointForDeliverySelector($id: ID!) {
+    setPreferredTradingPoint(tradingPointId: $id)
+}

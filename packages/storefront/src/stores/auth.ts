@@ -1,39 +1,14 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { shopApi } from '../api/client';
+import {
+    ActiveCustomerForAuthDocument,
+    LoginDocument,
+    LogoutFromAuthStoreDocument,
+    type ActiveCustomerForAuthQuery,
+} from '../api/generated/graphql';
 
-interface CustomerCounterparty {
-    id: string;
-    erpId: string;
-    legalName: string;
-    shortName: string;
-    inn: string | null;
-    creditLimit: number;
-    creditBalance: number;
-    paymentDelayDays: number;
-    priceType: string;
-}
-
-interface CustomerTradingPoint {
-    id: string;
-    name: string;
-    address: string;
-    workingHours: string | null;
-    deliveryComment: string | null;
-}
-
-interface ActiveCustomer {
-    id: string;
-    firstName: string;
-    lastName: string;
-    emailAddress: string;
-    customFields: {
-        portalRole: string | null;
-        preferredTradingPointId: string | null;
-    };
-    counterparty: CustomerCounterparty | null;
-    preferredTradingPoint: CustomerTradingPoint | null;
-}
+type ActiveCustomer = NonNullable<ActiveCustomerForAuthQuery['activeCustomer']>;
 
 type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 
@@ -43,22 +18,6 @@ type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 // network failure is not the same as 'logged out'" gotcha.
 const BACKGROUND_RETRY_INITIAL_MS = 2_000;
 const BACKGROUND_RETRY_MAX_MS = 20_000;
-
-const ACTIVE_CUSTOMER_QUERY = `
-    {
-        activeCustomer {
-            id firstName lastName emailAddress
-            customFields { portalRole preferredTradingPointId }
-            counterparty {
-                id erpId legalName shortName inn
-                creditLimit creditBalance paymentDelayDays priceType
-            }
-            preferredTradingPoint {
-                id name address workingHours deliveryComment
-            }
-        }
-    }
-`;
 
 export const useAuthStore = defineStore('auth', () => {
     const customer = ref<ActiveCustomer | null>(null);
@@ -98,22 +57,7 @@ export const useAuthStore = defineStore('auth', () => {
     const LOGGED_OUT_KEY = 'mv_logged_out';
 
     async function login(username: string, password: string, rememberMe = false): Promise<boolean> {
-        const result = await shopApi<{
-            login: {
-                __typename: string;
-                errorCode?: string;
-                id?: string;
-            };
-        }>(
-            `mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
-                login(username: $username, password: $password, rememberMe: $rememberMe) {
-                    __typename
-                    ... on CurrentUser { id }
-                    ... on InvalidCredentialsError { errorCode }
-                }
-            }`,
-            { username, password, rememberMe },
-        );
+        const result = await shopApi(LoginDocument, { username, password, rememberMe });
 
         if (result.login.__typename === 'CurrentUser') {
             sessionStorage.removeItem(LOGGED_OUT_KEY);
@@ -128,7 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function logout(): Promise<void> {
         try {
-            await shopApi<{ logout: { success: boolean } }>(`mutation { logout { success } }`);
+            await shopApi(LogoutFromAuthStoreDocument);
         } catch (e) {
             console.warn('[auth] logout mutation failed:', e);
         }
@@ -149,12 +93,9 @@ export const useAuthStore = defineStore('auth', () => {
         isReconnecting.value = false;
     }
 
-    function applyResult(
-        myGeneration: number,
-        result: { activeCustomer: ActiveCustomer | null },
-    ): void {
+    function applyResult(myGeneration: number, result: ActiveCustomerForAuthQuery): void {
         if (myGeneration !== generation) return; // superseded by a later call
-        customer.value = result.activeCustomer;
+        customer.value = result.activeCustomer ?? null;
         authStatus.value = result.activeCustomer ? 'authenticated' : 'unauthenticated';
         isReconnecting.value = false;
     }
@@ -166,7 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
     function scheduleBackgroundRetry(myGeneration: number, delayMs: number): void {
         backgroundRetryTimer = setTimeout(() => {
             if (myGeneration !== generation) return;
-            shopApi<{ activeCustomer: ActiveCustomer | null }>(ACTIVE_CUSTOMER_QUERY)
+            shopApi(ActiveCustomerForAuthDocument)
                 .then(result => {
                     if (myGeneration !== generation) return;
                     applyResult(myGeneration, result);
@@ -198,9 +139,7 @@ export const useAuthStore = defineStore('auth', () => {
             return;
         }
         try {
-            const result = await shopApi<{ activeCustomer: ActiveCustomer | null }>(
-                ACTIVE_CUSTOMER_QUERY,
-            );
+            const result = await shopApi(ActiveCustomerForAuthDocument);
             applyResult(myGeneration, result);
         } catch {
             // See the manager portal's identical fetchActiveAdministrator comment — Vendure's

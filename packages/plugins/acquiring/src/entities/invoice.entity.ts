@@ -11,7 +11,14 @@ export type InvoiceStatus = 'pending' | 'issued' | 'paid' | 'cancelled';
 // the full recipient/amount breakdown (`transfers`) at payment-creation time; there is no
 // documented way to add or restructure recipients after the payment is created. See
 // docs/payments.md "Organizations" for the full reasoning and open questions (issue TBD).
+//
+// Composite index on (counterpartyId, organizationId, status): this is exactly the filter shape
+// SettlementEntryService.getOpenInvoicesFifo runs on every successful payment (find open
+// obligations for one counterparty within one organization) — the three separate single-column
+// indexes below don't cover that combination efficiently once a counterparty accumulates many
+// invoices.
 @Entity()
+@Index(['counterpartyId', 'organizationId', 'status'])
 export class Invoice extends VendureEntity {
     constructor(input?: DeepPartial<Invoice>) {
         super(input);

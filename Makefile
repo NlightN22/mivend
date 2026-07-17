@@ -10,7 +10,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
         e2e e2e-ui e2e-report \
         docker-build docker-push \
         prod-up prod-down \
-        dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals seed-all \
+        dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals seed-payment-refunds seed-all \
         verify-branch-scope \
         storybook storefront storefront-dev
 
@@ -81,11 +81,19 @@ seed-approvals:
 	@echo "Server ready. Seeding approval workflow requests..."
 	node infrastructure/scripts/seed-approvals.mjs
 
+# Requires captured online-acquiring payments to already exist (e.g. from checkout flows or
+# e2e runs) — logs a notice and exits cleanly if none are found yet, does not fail seed-all.
+seed-payment-refunds:
+	@echo "Waiting for server on :3000..."
+	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
+	@echo "Server ready. Seeding payment refunds/disputes..."
+	node infrastructure/scripts/seed-payment-refunds.mjs
+
 # One command for the full local seeding order (roles → ERP data → approval requests — this
 # exact order matters, see seed-approvals' own comment above). This is what you want by default;
 # the three targets above stay separate only because occasionally you need to re-run just one
 # (e.g. re-seeding ERP data without wiping roles/administrators).
-seed-all: seed-access-roles seed seed-approvals
+seed-all: seed-access-roles seed seed-approvals seed-payment-refunds
 
 # E2E verification of branch-scope access control against an already-running, already-seeded
 # central instance (make dev + make seed-all first). Safe to run repeatedly — creates its own

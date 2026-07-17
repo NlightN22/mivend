@@ -1,0 +1,18 @@
+query MySessions {
+    mySessions {
+        id
+        userAgent
+        deviceLabel
+        createdAt
+        expires
+        current
+    }
+}
+
+mutation EndSession($id: ID!) {
+    endSession(id: $id)
+}
+
+mutation EndAllSessions {
+    endAllSessions
+}

@@ -1,0 +1,37 @@
+query MyOrders($options: OrderListOptions, $search: String) {
+    myOrders(options: $options, search: $search) {
+        items {
+            id
+            code
+            state
+            createdAt
+            totalWithTax
+            currencyCode
+            lines {
+                id
+                quantity
+                linePriceWithTax
+                productVariant {
+                    id
+                    sku
+                    name
+                    product {
+                        name
+                        slug
+                    }
+                }
+            }
+            shippingAddress {
+                fullName
+                streetLine1
+                city
+            }
+            customFields {
+                erpStatus
+                erpOrderId
+                erpStatusAt
+            }
+        }
+        totalItems
+    }
+}

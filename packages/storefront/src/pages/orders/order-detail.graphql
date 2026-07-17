@@ -1,0 +1,40 @@
+query OrderDetail($id: ID!) {
+    order(id: $id) {
+        id
+        code
+        state
+        createdAt
+        totalWithTax
+        subTotalWithTax
+        shippingWithTax
+        currencyCode
+        lines {
+            id
+            quantity
+            unitPriceWithTax
+            linePriceWithTax
+            productVariant {
+                id
+                sku
+                name
+                product {
+                    name
+                    slug
+                }
+            }
+        }
+        shippingAddress {
+            fullName
+            streetLine1
+            streetLine2
+            city
+            postalCode
+            country
+        }
+        customFields {
+            erpStatus
+            erpOrderId
+            erpStatusAt
+        }
+    }
+}

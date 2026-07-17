@@ -19,7 +19,7 @@ const brand = computed(() =>
 );
 
 const totalWeightKg = computed(() => {
-    const weight = props.line.productVariant.customFields.weight;
+    const weight = props.line.productVariant.customFields?.weight;
     return weight != null ? weight * props.line.quantity : null;
 });
 

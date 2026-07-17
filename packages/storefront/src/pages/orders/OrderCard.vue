@@ -5,7 +5,7 @@ import { STATUS_LABEL, STATUS_VARIANT } from './useOrders';
 
 const props = defineProps<{ order: OrderSummary }>();
 
-const statusKey = computed(() => props.order.customFields.erpStatus ?? 'PENDING');
+const statusKey = computed(() => props.order.customFields?.erpStatus ?? 'PENDING');
 const statusLabel = computed(() => STATUS_LABEL[statusKey.value] ?? statusKey.value);
 const statusVariant = computed(() => STATUS_VARIANT[statusKey.value] ?? 'default');
 

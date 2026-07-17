@@ -17,13 +17,24 @@ export class PaymentSyncResolver {
     @Allow(Permission.UpdateOrder)
     async recordWitnessedPayment(
         @Ctx() ctx: RequestContext,
-        @Args() args: { orderId: string; method: string; amount: number },
+        @Args()
+        args: {
+            orderId: string;
+            method: string;
+            amount: number;
+            invoiceId?: number;
+            outcome?: 'success' | 'pending' | 'fail' | 'cancel';
+            rrn?: string;
+        },
     ): Promise<boolean> {
         await this.orderSyncService.recordWitnessedPayment(
             ctx,
             args.orderId,
             args.method,
             args.amount,
+            args.invoiceId,
+            args.outcome,
+            args.rrn,
         );
         return true;
     }

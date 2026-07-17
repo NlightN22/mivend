@@ -1,5 +1,11 @@
 import { ref, watch, type Ref } from 'vue';
 import { shopApi } from '../api/client';
+import {
+    CatalogFacetsDocument,
+    CatalogProductsDocument,
+    type CatalogFacetsQuery,
+    type CatalogProductsQuery,
+} from '../api/generated/graphql';
 import { useViewMode } from './useViewMode';
 // Imports the TS source directly (not the 'shared' package's compiled CJS output): Vite/Rollup
 // couldn't reliably interop either the aggregator (`export *` compiled to a runtime
@@ -57,81 +63,7 @@ interface UseProductListOptions {
     filters?: Ref<FilterState>;
 }
 
-interface EsSearchItem {
-    productId: string;
-    productVariantId: string;
-    productName: string;
-    slug: string;
-    sku: string;
-    priceWithTax: { value?: number; min?: number } | null;
-    currencyCode: string;
-    inStock: boolean;
-    facetValueIds: string[];
-    customerPrice: number | null;
-    compareAtPrice: number | null;
-    discountTiers: DiscountTierVM[];
-}
-
-interface SearchResult {
-    totalItems: number;
-    items: EsSearchItem[];
-    facetValues: EsFacetValueResult[];
-}
-
-// Products query — all filters applied
-const PRODUCTS_QUERY = `
-    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
-        search(input: {
-            term: $term
-            take: $take
-            skip: $skip
-            groupByProduct: true
-            facetValueFilters: $facetValueFilters
-            inStock: $inStock
-            priceRangeWithTax: $priceRangeWithTax
-        }) {
-            totalItems
-            items {
-                productId
-                productVariantId
-                productName
-                slug
-                sku
-                priceWithTax { ... on SinglePrice { value } ... on PriceRange { min } }
-                currencyCode
-                inStock
-                facetValueIds
-                customerPrice
-                compareAtPrice
-                discountTiers { percent minWeightKg minAmount }
-            }
-            facetValues {
-                facetValue { id code name facet { code name } }
-                count
-            }
-        }
-    }
-`;
-
-// Facets query — only term + price range, NO facetValueFilters
-// This keeps the full facet panel visible regardless of active facet selections.
-const FACETS_QUERY = `
-    query CatalogFacets($term: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
-        search(input: {
-            term: $term
-            take: 0
-            skip: 0
-            groupByProduct: true
-            inStock: $inStock
-            priceRangeWithTax: $priceRangeWithTax
-        }) {
-            facetValues {
-                facetValue { id code name facet { code name } }
-                count
-            }
-        }
-    }
-`;
+type EsSearchItem = CatalogProductsQuery['search']['items'][number];
 
 function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): ProductItem[] {
     const facetMap = new Map<string, FacetValue>();
@@ -146,10 +78,15 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
             {
                 id: item.productVariantId,
                 sku: item.sku,
-                price: item.priceWithTax?.value ?? item.priceWithTax?.min ?? 0,
-                customerPrice: item.customerPrice,
-                compareAtPrice: item.compareAtPrice,
-                discountTiers: item.discountTiers,
+                price:
+                    'value' in item.priceWithTax ? item.priceWithTax.value : item.priceWithTax.min,
+                customerPrice: item.customerPrice ?? null,
+                compareAtPrice: item.compareAtPrice ?? null,
+                discountTiers: item.discountTiers.map(tier => ({
+                    percent: tier.percent,
+                    minWeightKg: tier.minWeightKg ?? null,
+                    minAmount: tier.minAmount ?? null,
+                })),
                 currencyCode: item.currencyCode,
                 stockLevel: item.inStock ? 'IN_STOCK' : 'OUT_OF_STOCK',
             },
@@ -196,10 +133,10 @@ export function useProductList(options: UseProductListOptions = {}): {
         };
     }
 
-    async function fetchProducts(skip: number): Promise<{ search: SearchResult }> {
+    async function fetchProducts(skip: number): Promise<CatalogProductsQuery> {
         const term = query?.value || undefined;
         const facetValueIds = filters?.value.facetValueIds ?? [];
-        return shopApi<{ search: SearchResult }>(PRODUCTS_QUERY, {
+        return shopApi(CatalogProductsDocument, {
             term,
             take: pageSize,
             skip,
@@ -209,9 +146,9 @@ export function useProductList(options: UseProductListOptions = {}): {
         });
     }
 
-    async function fetchFacets(): Promise<{ search: Pick<SearchResult, 'facetValues'> }> {
+    async function fetchFacets(): Promise<CatalogFacetsQuery> {
         const term = query?.value || undefined;
-        return shopApi<{ search: Pick<SearchResult, 'facetValues'> }>(FACETS_QUERY, {
+        return shopApi(CatalogFacetsDocument, {
             term,
             inStock: filters?.value.inStock ? true : undefined,
             priceRangeWithTax: buildPriceRange(),
@@ -223,8 +160,8 @@ export function useProductList(options: UseProductListOptions = {}): {
     async function load(): Promise<void> {
         const seq = ++loadSeq;
         loading.value = true;
-        let productsResult: { search: SearchResult };
-        let facetsResult: { search: Pick<SearchResult, 'facetValues'> } | null;
+        let productsResult: CatalogProductsQuery;
+        let facetsResult: CatalogFacetsQuery | null;
         try {
             [productsResult, facetsResult] = await Promise.all([
                 fetchProducts(0),

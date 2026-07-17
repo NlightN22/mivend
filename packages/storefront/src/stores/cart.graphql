@@ -1,0 +1,199 @@
+query ActiveOrder {
+    activeOrder {
+        id
+        state
+        totalWithTax
+        subTotalWithTax
+        lines {
+            id
+            quantity
+            linePrice
+            linePriceWithTax
+            unitPrice
+            compareAtPrice
+            tierProgress {
+                facetName
+                metric
+                current
+                currentPercent
+                nextThreshold
+                nextPercent
+            }
+            productVariant {
+                id
+                sku
+                name
+                price
+                currencyCode
+                stockLevel
+                customFields {
+                    weight
+                }
+                product {
+                    id
+                    name
+                    slug
+                    facetValues {
+                        name
+                        facet {
+                            code
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+mutation AddToCart($variantId: ID!, $qty: Int!) {
+    addItemToOrder(productVariantId: $variantId, quantity: $qty) {
+        __typename
+        ... on Order {
+            id
+            totalWithTax
+            lines {
+                id
+                quantity
+                unitPrice
+                compareAtPrice
+                productVariant {
+                    id
+                    product {
+                        facetValues {
+                            name
+                            facet {
+                                code
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        ... on InsufficientStockError {
+            errorCode
+            message
+            quantityAvailable
+        }
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation ResumeAddingItems {
+    transitionOrderToState(state: "AddingItems") {
+        __typename
+    }
+}
+
+mutation AdjustCartLine($lineId: ID!, $qty: Int!) {
+    adjustOrderLine(orderLineId: $lineId, quantity: $qty) {
+        __typename
+        ... on Order {
+            id
+            totalWithTax
+            lines {
+                id
+                quantity
+            }
+        }
+        ... on InsufficientStockError {
+            errorCode
+            message
+            quantityAvailable
+        }
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation RemoveCartLine($lineId: ID!) {
+    removeOrderLine(orderLineId: $lineId) {
+        __typename
+        ... on Order {
+            id
+            totalWithTax
+            lines {
+                id
+                quantity
+            }
+        }
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation RemoveAllCartLines {
+    removeAllOrderLines {
+        __typename
+        ... on Order {
+            id
+            totalWithTax
+        }
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+query EligibleShippingMethodsForCheckout {
+    eligibleShippingMethods {
+        id
+    }
+}
+
+mutation SetOrderShippingMethodForCheckout($id: [ID!]!) {
+    setOrderShippingMethod(shippingMethodId: $id) {
+        __typename
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation TransitionToArrangingPayment {
+    transitionOrderToState(state: "ArrangingPayment") {
+        __typename
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation CompleteOfflinePayment {
+    addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) {
+        __typename
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation CompleteOnlinePayment($status: JSON!) {
+    addPaymentToOrder(input: { method: "online-stub", metadata: $status }) {
+        __typename
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation RemoveCartLineInBatch($lineId: ID!) {
+    removeOrderLine(orderLineId: $lineId) {
+        __typename
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}

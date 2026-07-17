@@ -1,0 +1,17 @@
+query MyInvoices($options: InvoiceListOptions) {
+    myInvoices(options: $options) {
+        items {
+            id
+            orderId
+            organizationId
+            amount
+            currencyCode
+            status
+            order {
+                id
+                code
+            }
+        }
+        totalItems
+    }
+}

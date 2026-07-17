@@ -6,28 +6,16 @@ import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
 import { discountAddToCartHint } from '../../utils/discountMessages';
 import { shopApi } from '../../api/client';
+import {
+  ProductDetailDocument,
+  RelatedProductsDocument,
+  type ProductDetailQuery,
+  type RelatedProductsQuery,
+} from '../../api/generated/graphql';
 import ProductBuyPanel from './ProductBuyPanel.vue';
 
-interface Variant {
-  id: string;
-  sku: string;
-  price: number;
-  customerPrice: number | null;
-  compareAtPrice: number | null;
-  currencyCode: string;
-  stockLevel: string;
-}
-interface FacetValue { name: string; facet: { code: string }; }
-interface Product {
-  id: string; name: string; slug: string; description: string;
-  variants: Variant[];
-  facetValues: FacetValue[];
-}
-interface RelatedProduct {
-  id: string; name: string; slug: string;
-  variants: { price: number; currencyCode: string; stockLevel: string }[];
-  facetValues: FacetValue[];
-}
+type Product = NonNullable<ProductDetailQuery['product']>;
+type RelatedProduct = RelatedProductsQuery['products']['items'][number];
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -61,26 +49,10 @@ async function fetchData(slug: string) {
   error.value = '';
   try {
     const [detailRes, relatedRes] = await Promise.all([
-      shopApi<{ product: Product | null }>(`
-        query ProductDetail($slug: String!) {
-          product(slug: $slug) {
-            id name slug description
-            variants { id sku price customerPrice compareAtPrice currencyCode stockLevel }
-            facetValues { name facet { code } }
-          }
-        }`, { slug }),
-      shopApi<{ products: { items: RelatedProduct[] } }>(`
-        query RelatedProducts {
-          products(options: { take: 5 }) {
-            items {
-              id name slug
-              variants { price currencyCode stockLevel }
-              facetValues { name facet { code } }
-            }
-          }
-        }`),
+      shopApi(ProductDetailDocument, { slug }),
+      shopApi(RelatedProductsDocument),
     ]);
-    product.value = detailRes.product;
+    product.value = detailRes.product ?? null;
     related.value = relatedRes.products.items.filter(p => p.slug !== slug).slice(0, 3);
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Ошибка загрузки товара';

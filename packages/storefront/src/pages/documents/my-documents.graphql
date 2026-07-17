@@ -1,0 +1,19 @@
+query MyDocuments($options: DocumentListOptions) {
+    myDocuments(options: $options) {
+        items {
+            id
+            type
+            number
+            issueDate
+            amount
+            currencyCode
+            status
+            orderId
+            fileUrl
+            asset {
+                source
+            }
+        }
+        totalItems
+    }
+}

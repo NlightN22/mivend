@@ -1,12 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { EntityHydrator, Order, RequestContext, TransactionalConnection } from '@vendure/core';
+import { ID } from '@vendure/common/lib/shared-types';
+import {
+    EntityHydrator,
+    Order,
+    OrderLine,
+    PaginatedList,
+    RequestContext,
+    TransactionalConnection,
+    TranslatorService,
+} from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
-import { Invoice } from './entities/invoice.entity';
+import { Invoice, InvoiceStatus } from './entities/invoice.entity';
 
 interface OrganizationTotal {
     organizationId: number;
     amount: number;
+}
+
+export interface InvoiceListOptions {
+    take?: number;
+    skip?: number;
+    status?: string;
 }
 
 // Splits one aggregate storefront Order into one Invoice per organization it touches — decided
@@ -21,6 +36,7 @@ export class InvoiceService {
         private connection: TransactionalConnection,
         private entityHydrator: EntityHydrator,
         private counterpartyService: CounterpartyService,
+        private translator: TranslatorService,
     ) {}
 
     async computeSplit(ctx: RequestContext, order: Order): Promise<OrganizationTotal[]> {
@@ -83,7 +99,85 @@ export class InvoiceService {
         return this.connection.getRepository(ctx, Invoice).find({ where: { orderId } });
     }
 
+    // Called by the payment-method handlers (apps/server/src/payment-method-handlers.ts) right
+    // after a payment attempt resolves — there is no separate payment/ledger entity yet (see
+    // docs/payments.md), so Invoice.status is, for now, the only place this project tracks
+    // "did the money actually move" for an order's invoices.
+    async updateStatusForOrder(
+        ctx: RequestContext,
+        orderId: number,
+        status: InvoiceStatus,
+    ): Promise<void> {
+        await this.connection.getRepository(ctx, Invoice).update({ orderId }, { status });
+    }
+
+    // Used by PaymentAttemptService.payInvoice — paying a single invoice must never touch the
+    // status of any *other* invoice for the same order (unlike updateStatusForOrder, which is
+    // for the checkout-time, whole-order payment path).
+    async updateStatus(
+        ctx: RequestContext,
+        invoiceId: number,
+        status: InvoiceStatus,
+    ): Promise<void> {
+        await this.connection.getRepository(ctx, Invoice).update({ id: invoiceId }, { status });
+    }
+
     async findOne(ctx: RequestContext, invoiceId: number): Promise<Invoice | null> {
         return this.connection.getRepository(ctx, Invoice).findOne({ where: { id: invoiceId } });
+    }
+
+    async findForCounterparty(
+        ctx: RequestContext,
+        counterpartyId: ID,
+        options?: InvoiceListOptions,
+    ): Promise<PaginatedList<Invoice>> {
+        const take = options?.take ?? 50;
+        const skip = options?.skip ?? 0;
+
+        const qb = this.connection
+            .getRepository(ctx, Invoice)
+            .createQueryBuilder('invoice')
+            .where('invoice.counterpartyId = :counterpartyId', {
+                counterpartyId: Number(counterpartyId),
+            })
+            .orderBy('invoice.createdAt', 'DESC')
+            // Tiebreaker: multiple invoices from the same order split are created in the same
+            // transaction and can share an identical createdAt timestamp — without a secondary
+            // sort key, their relative order across two separate queries is undefined (real
+            // flakiness observed in e2e: refetching "the same" list after paying one invoice
+            // returned them in a different order).
+            .addOrderBy('invoice.id', 'DESC')
+            .take(take)
+            .skip(skip);
+
+        if (options?.status) {
+            qb.andWhere('invoice.status = :status', { status: options.status });
+        }
+
+        const [items, totalItems] = await qb.getManyAndCount();
+        return { items, totalItems };
+    }
+
+    // Reused by InvoiceFieldResolver.lines (shop/admin API) and PdfGeneratorService.buildInvoiceHtml
+    // — the org-scoped line filter used to be duplicated in both places.
+    async getLinesForInvoice(ctx: RequestContext, invoice: Invoice): Promise<OrderLine[]> {
+        const order = await this.connection
+            .getRepository(ctx, Order)
+            .createQueryBuilder('order')
+            .leftJoinAndSelect('order.lines', 'lines')
+            .leftJoinAndSelect('lines.productVariant', 'variant')
+            .leftJoinAndSelect('variant.translations', 'variantTranslations')
+            .where('order.id = :id', { id: invoice.orderId })
+            .getOne();
+        if (!order) {
+            throw new Error(`Order ${invoice.orderId} not found for invoice ${invoice.id}`);
+        }
+        const lines = order.lines.filter(
+            line => line.productVariant.customFields?.organizationId === invoice.organizationId,
+        );
+        for (const line of lines) {
+            line.productVariant = this.translator.translate(line.productVariant, ctx);
+        }
+        return lines;
     }
 }

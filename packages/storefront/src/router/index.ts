@@ -90,6 +90,31 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'invoices',
+                    component: () => import('../pages/invoices/InvoicesPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'invoices/:id',
+                    component: () => import('../pages/invoices/InvoiceDetailPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'invoices/:id/pay',
+                    component: () => import('../pages/invoices/InvoicePayPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'payments',
+                    component: () => import('../pages/payments/PaymentsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'payments/:id',
+                    component: () => import('../pages/payments/PaymentDetailPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'favorites',
                     component: () => import('../pages/favorites/FavoritesPage.vue'),
                     meta: { requiresAuth: true },

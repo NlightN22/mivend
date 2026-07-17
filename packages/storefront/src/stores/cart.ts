@@ -3,6 +3,23 @@ import { ref, computed } from 'vue';
 import { toast } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import {
+    AddToCartDocument,
+    AdjustCartLineDocument,
+    ActiveOrderDocument,
+    CompleteOfflinePaymentDocument,
+    CompleteOnlinePaymentDocument,
+    EligibleShippingMethodsForCheckoutDocument,
+    RemoveAllCartLinesDocument,
+    RemoveCartLineDocument,
+    RemoveCartLineInBatchDocument,
+    ResumeAddingItemsDocument,
+    SetOrderShippingMethodForCheckoutDocument,
+    TransitionToArrangingPaymentDocument,
+    type ActiveOrderQuery,
+    type AddToCartMutation,
+    type AddToCartMutationVariables,
+} from '../api/generated/graphql';
+import {
     stockAddFailed,
     stockInsufficient,
     stockInsufficientGeneric,
@@ -28,71 +45,13 @@ function mutationErrorMessage(result: MutationResult, fallback: string): string 
     return fallback;
 }
 
-interface ProductVariant {
-    id: string;
-    sku: string;
-    name: string;
-    price: number;
-    currencyCode: string;
-    stockLevel: string;
-    customFields: { weight: number | null };
-    product: {
-        id: string;
-        name: string;
-        slug: string;
-        facetValues: { name: string; facet: { code: string } }[];
-    };
-}
+export type TierProgress = NonNullable<
+    NonNullable<ActiveOrderQuery['activeOrder']>['lines'][number]['tierProgress']
+>;
 
-export interface TierProgress {
-    facetName: string;
-    metric: 'WEIGHT' | 'AMOUNT';
-    current: number;
-    currentPercent: number | null;
-    nextThreshold: number | null;
-    nextPercent: number | null;
-}
+export type CartLine = NonNullable<ActiveOrderQuery['activeOrder']>['lines'][number];
 
-export interface CartLine {
-    id: string;
-    quantity: number;
-    linePrice: number;
-    linePriceWithTax: number;
-    unitPrice: number;
-    compareAtPrice: number | null;
-    tierProgress: TierProgress | null;
-    productVariant: ProductVariant;
-}
-
-interface ActiveOrder {
-    id: string;
-    state: string;
-    totalWithTax: number;
-    subTotalWithTax: number;
-    lines: CartLine[];
-}
-
-const ACTIVE_ORDER_QUERY = `
-    query ActiveOrder {
-        activeOrder {
-            id state totalWithTax subTotalWithTax
-            lines {
-                id quantity linePrice linePriceWithTax unitPrice compareAtPrice
-                tierProgress {
-                    facetName metric current currentPercent nextThreshold nextPercent
-                }
-                productVariant {
-                    id sku name price currencyCode stockLevel
-                    customFields { weight }
-                    product {
-                        id name slug
-                        facetValues { name facet { code } }
-                    }
-                }
-            }
-        }
-    }
-`;
+type ActiveOrder = NonNullable<ActiveOrderQuery['activeOrder']>;
 
 export const useCartStore = defineStore('cart', () => {
     const order = ref<ActiveOrder | null>(null);
@@ -106,8 +65,8 @@ export const useCartStore = defineStore('cart', () => {
 
     async function fetchCart(): Promise<void> {
         try {
-            const result = await shopApi<{ activeOrder: ActiveOrder | null }>(ACTIVE_ORDER_QUERY);
-            if (pendingMutations === 0) order.value = result.activeOrder;
+            const result = await shopApi(ActiveOrderDocument);
+            if (pendingMutations === 0) order.value = result.activeOrder ?? null;
         } catch {
             if (pendingMutations === 0) order.value = null;
         }
@@ -150,45 +109,9 @@ export const useCartStore = defineStore('cart', () => {
             // caller can show an accurate discount toast — not a pre-add guess from
             // catalog-level flat compareAtPrice, which can't see a tier this add just
             // unlocked (or a tier this add crosses out of, once other lines shrink).
-            type AddToCartResult = {
-                addItemToOrder: MutationResult & {
-                    lines?: {
-                        id: string;
-                        quantity: number;
-                        unitPrice: number;
-                        compareAtPrice: number | null;
-                        productVariant: {
-                            id: string;
-                            product: {
-                                facetValues: { name: string; facet: { code: string } }[];
-                            };
-                        };
-                    }[];
-                };
-            };
-            const addToCart = (): Promise<AddToCartResult> =>
-                shopApi<AddToCartResult>(
-                    `
-                mutation AddToCart($variantId: ID!, $qty: Int!) {
-                    addItemToOrder(productVariantId: $variantId, quantity: $qty) {
-                        __typename
-                        ... on Order {
-                            id totalWithTax
-                            lines {
-                                id quantity unitPrice compareAtPrice
-                                productVariant {
-                                    id
-                                    product { facetValues { name facet { code } } }
-                                }
-                            }
-                        }
-                        ... on InsufficientStockError { errorCode message quantityAvailable }
-                        ... on ErrorResult { errorCode message }
-                    }
-                }
-            `,
-                    { variantId, qty },
-                );
+            const addToCart = (): ReturnType<
+                typeof shopApi<AddToCartMutation, AddToCartMutationVariables>
+            > => shopApi(AddToCartDocument, { variantId, qty });
             let result = await addToCart();
             if (
                 result.addItemToOrder.__typename !== 'Order' &&
@@ -199,9 +122,7 @@ export const useCartStore = defineStore('cart', () => {
                 // Vendure forbids adding items outside AddingItems; since this order was
                 // never actually paid, bringing it back to AddingItems is safe and lets
                 // the customer keep shopping instead of being permanently blocked.
-                await shopApi(
-                    `mutation { transitionOrderToState(state: "AddingItems") { __typename } }`,
-                );
+                await shopApi(ResumeAddingItemsDocument);
                 result = await addToCart();
             }
             if (result.addItemToOrder.__typename !== 'Order') {
@@ -262,19 +183,7 @@ export const useCartStore = defineStore('cart', () => {
         }
         pendingMutations++;
         try {
-            const result = await shopApi<{ adjustOrderLine: MutationResult }>(
-                `
-                mutation AdjustCartLine($lineId: ID!, $qty: Int!) {
-                    adjustOrderLine(orderLineId: $lineId, quantity: $qty) {
-                        __typename
-                        ... on Order { id totalWithTax lines { id quantity } }
-                        ... on InsufficientStockError { errorCode message quantityAvailable }
-                        ... on ErrorResult { errorCode message }
-                    }
-                }
-            `,
-                { lineId, qty },
-            );
+            const result = await shopApi(AdjustCartLineDocument, { lineId, qty });
             if (result.adjustOrderLine.__typename !== 'Order') {
                 // fetchCart() below re-syncs to whatever quantity the server actually
                 // applied (Vendure's InsufficientStockError can be a partial success) —
@@ -297,18 +206,7 @@ export const useCartStore = defineStore('cart', () => {
         }
         pendingMutations++;
         try {
-            await shopApi(
-                `
-                mutation RemoveCartLine($lineId: ID!) {
-                    removeOrderLine(orderLineId: $lineId) {
-                        __typename
-                        ... on Order { id totalWithTax lines { id quantity } }
-                        ... on ErrorResult { errorCode message }
-                    }
-                }
-            `,
-                { lineId },
-            );
+            await shopApi(RemoveCartLineDocument, { lineId });
         } finally {
             pendingMutations--;
         }
@@ -320,9 +218,7 @@ export const useCartStore = defineStore('cart', () => {
         if (order.value) order.value = { ...order.value, lines: [] };
         pendingMutations++;
         try {
-            await shopApi(
-                `mutation { removeAllOrderLines { __typename ... on Order { id totalWithTax } ... on ErrorResult { errorCode message } } }`,
-            );
+            await shopApi(RemoveAllCartLinesDocument);
         } finally {
             pendingMutations--;
         }
@@ -333,18 +229,15 @@ export const useCartStore = defineStore('cart', () => {
     // addPaymentToOrder call. Vendure refuses this transition without a shipping
     // method attached, so pick the (currently single) eligible one first.
     async function beginCheckout(): Promise<boolean> {
-        const eligible = await shopApi<{
-            eligibleShippingMethods: { id: string }[];
-        }>(`query { eligibleShippingMethods { id } }`);
+        const eligible = await shopApi(EligibleShippingMethodsForCheckoutDocument);
         const methodId = eligible.eligibleShippingMethods[0]?.id;
         if (!methodId) {
             toast('No shipping method available', 'error');
             return false;
         }
-        const setMethodResult = await shopApi<{ setOrderShippingMethod: MutationResult }>(
-            `mutation($id: [ID!]!) { setOrderShippingMethod(shippingMethodId: $id) { __typename ... on ErrorResult { errorCode message } } }`,
-            { id: [methodId] },
-        );
+        const setMethodResult = await shopApi(SetOrderShippingMethodForCheckoutDocument, {
+            id: [methodId],
+        });
         if (setMethodResult.setOrderShippingMethod.__typename !== 'Order') {
             toast(
                 setMethodResult.setOrderShippingMethod.message ?? 'Could not set shipping method',
@@ -352,14 +245,10 @@ export const useCartStore = defineStore('cart', () => {
             );
             return false;
         }
-        const transitionResult = await shopApi<{ transitionOrderToState: MutationResult }>(
-            `mutation { transitionOrderToState(state: "ArrangingPayment") { __typename ... on ErrorResult { errorCode message } } }`,
-        );
-        if (transitionResult.transitionOrderToState.__typename !== 'Order') {
-            toast(
-                transitionResult.transitionOrderToState.message ?? 'Could not proceed to payment',
-                'error',
-            );
+        const transitionResult = await shopApi(TransitionToArrangingPaymentDocument);
+        const transition = transitionResult.transitionOrderToState;
+        if (!transition || transition.__typename !== 'Order') {
+            toast(transition?.message ?? 'Could not proceed to payment', 'error');
             return false;
         }
         return true;
@@ -369,9 +258,7 @@ export const useCartStore = defineStore('cart', () => {
     // payment flow — actual money collection happens outside the system, tracked
     // via the existing ERP status sync, not via Vendure's payment state.
     async function completeOfflinePayment(): Promise<boolean> {
-        const result = await shopApi<{ addPaymentToOrder: MutationResult }>(
-            `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename ... on ErrorResult { errorCode message } } }`,
-        );
+        const result = await shopApi(CompleteOfflinePaymentDocument);
         await fetchCart();
         if (result.addPaymentToOrder.__typename !== 'Order') {
             toast(result.addPaymentToOrder.message ?? 'Could not place order', 'error');
@@ -381,10 +268,7 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     async function completeOnlinePayment(status: 'success' | 'pending' | 'fail'): Promise<boolean> {
-        const result = await shopApi<{ addPaymentToOrder: MutationResult }>(
-            `mutation($status: JSON!) { addPaymentToOrder(input: { method: "online-stub", metadata: $status }) { __typename ... on ErrorResult { errorCode message } } }`,
-            { status: { status } },
-        );
+        const result = await shopApi(CompleteOnlinePaymentDocument, { status: { status } });
         await fetchCart();
         return result.addPaymentToOrder.__typename === 'Order';
     }
@@ -403,12 +287,7 @@ export const useCartStore = defineStore('cart', () => {
         pendingMutations++;
         try {
             await Promise.all(
-                lineIds.map(lineId =>
-                    shopApi(
-                        `mutation($lineId: ID!) { removeOrderLine(orderLineId: $lineId) { __typename ... on ErrorResult { errorCode message } } }`,
-                        { lineId },
-                    ),
-                ),
+                lineIds.map(lineId => shopApi(RemoveCartLineInBatchDocument, { lineId })),
             );
         } finally {
             pendingMutations--;

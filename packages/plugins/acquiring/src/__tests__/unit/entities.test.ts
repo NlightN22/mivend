@@ -6,7 +6,7 @@ import { IdempotencyKey } from '../../entities/idempotency-key.entity';
 import { Invoice } from '../../entities/invoice.entity';
 import { PaymentAttempt } from '../../entities/payment-attempt.entity';
 import { PaymentReconciliationIssue } from '../../entities/payment-reconciliation-issue.entity';
-import { ProcessedProviderEvent } from '../../entities/processed-provider-event.entity';
+import { IncomingPaymentEvent } from '../../entities/incoming-payment-event.entity';
 import { PaymentRefund } from '../../entities/payment-refund.entity';
 import { SettlementEntry } from '../../entities/settlement-entry.entity';
 
@@ -134,12 +134,14 @@ describe('acquiring entities', () => {
         expect(key.idempotencyKey).toBe('payment:1:capture');
     });
 
-    it('constructs a ProcessedProviderEvent', () => {
-        const event = new ProcessedProviderEvent({
+    it('constructs an IncomingPaymentEvent', () => {
+        const event = new IncomingPaymentEvent({
             provider: 'stub-provider',
             providerEventId: 'evt-1',
             payloadHash: 'hash',
-            processedAt: new Date('2026-07-16'),
+            payload: '{}',
+            status: 'pending',
+            attempts: 0,
         });
 
         expect(event.provider).toBe('stub-provider');

@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue';
 import { shopApi } from '../../api/client';
+import { MyOrdersDocument, type MyOrdersQuery } from '../../api/generated/graphql';
 
 export type ErpStatus =
     | 'PENDING'
@@ -11,37 +12,7 @@ export type ErpStatus =
     | 'DELIVERED'
     | 'CANCELLED';
 
-export interface OrderLine {
-    id: string;
-    quantity: number;
-    linePriceWithTax: number;
-    productVariant: {
-        id: string;
-        sku: string;
-        name: string;
-        product: { name: string; slug: string };
-    };
-}
-
-export interface OrderSummary {
-    id: string;
-    code: string;
-    state: string;
-    createdAt: string;
-    totalWithTax: number;
-    currencyCode: string;
-    lines: OrderLine[];
-    shippingAddress: {
-        fullName?: string;
-        streetLine1?: string;
-        city?: string;
-    } | null;
-    customFields: {
-        erpStatus: ErpStatus | null;
-        erpOrderId: string | null;
-        erpStatusAt: string | null;
-    };
-}
+export type OrderSummary = MyOrdersQuery['myOrders']['items'][number];
 
 export interface MyOrdersOptions {
     take: number;
@@ -49,31 +20,6 @@ export interface MyOrdersOptions {
     search?: string;
     erpStatuses?: ErpStatus[];
 }
-
-// myOrders uses Vendure's own generated OrderListOptions/OrderList (not a bespoke type) — see
-// packages/plugins/erp-order/src/api/shop.schema.ts and AGENTS.md's generateListOptions gotcha.
-// erpStatuses filters via the real, auto-generated OrderFilterParameter.erpStatus (Order
-// customFields are exposed flat); search is a separate sibling arg, not part of `options`, since
-// it spans a joined table and isn't a real Order column.
-const MY_ORDERS_QUERY = `
-    query MyOrders($options: OrderListOptions, $search: String) {
-        myOrders(options: $options, search: $search) {
-            items {
-                id code state createdAt totalWithTax currencyCode
-                lines {
-                    id quantity linePriceWithTax
-                    productVariant {
-                        id sku name
-                        product { name slug }
-                    }
-                }
-                shippingAddress { fullName streetLine1 city }
-                customFields { erpStatus erpOrderId erpStatusAt }
-            }
-            totalItems
-        }
-    }
-`;
 
 export const STATUS_LABEL: Record<string, string> = {
     PENDING: 'Processing',
@@ -110,9 +56,7 @@ export function useOrders(): {
     async function load(options: MyOrdersOptions): Promise<void> {
         loading.value = true;
         try {
-            const result = await shopApi<{
-                myOrders: { items: OrderSummary[]; totalItems: number };
-            }>(MY_ORDERS_QUERY, {
+            const result = await shopApi(MyOrdersDocument, {
                 options: {
                     take: options.take,
                     skip: options.skip,

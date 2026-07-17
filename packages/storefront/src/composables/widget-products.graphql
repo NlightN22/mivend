@@ -1,0 +1,55 @@
+fragment ProductWidgetFields on Product {
+    id
+    name
+    slug
+    variants {
+        id
+        sku
+        price
+        customerPrice
+        compareAtPrice
+        discountTiers {
+            percent
+            minWeightKg
+            minAmount
+        }
+        currencyCode
+        stockLevel
+    }
+    facetValues {
+        id
+        name
+        facet {
+            code
+            name
+        }
+    }
+}
+
+query NewArrivals($since: DateTime!) {
+    products(options: { take: 12, sort: { createdAt: DESC }, filter: { createdAt: { after: $since } } }) {
+        items {
+            ...ProductWidgetFields
+        }
+    }
+}
+
+query SaleProducts {
+    products(options: { take: 40, filter: { onSale: { eq: true } } }) {
+        items {
+            ...ProductWidgetFields
+        }
+    }
+}
+
+query PopularProductIds {
+    popularProductIds(take: 12)
+}
+
+query PopularProducts($ids: [String!]!, $take: Int!) {
+    products(options: { take: $take, filter: { id: { in: $ids } } }) {
+        items {
+            ...ProductWidgetFields
+        }
+    }
+}

@@ -42,9 +42,9 @@ function formatDate(iso: string): string {
                     </div>
                     <span
                         class="od-status"
-                        :class="STATUS_VARIANT[order.customFields.erpStatus ?? 'PENDING']"
+                        :class="STATUS_VARIANT[order.customFields?.erpStatus ?? 'PENDING']"
                     >
-                        {{ STATUS_LABEL[order.customFields.erpStatus ?? 'PENDING'] }}
+                        {{ STATUS_LABEL[order.customFields?.erpStatus ?? 'PENDING'] }}
                     </span>
                 </div>
 
@@ -102,15 +102,15 @@ function formatDate(iso: string): string {
                             </div>
                         </div>
 
-                        <div v-if="order.customFields.erpOrderId || order.customFields.erpStatus" class="od-erp-card">
+                        <div v-if="order.customFields?.erpOrderId || order.customFields?.erpStatus" class="od-erp-card">
                             <h2 class="od-section-title">ERP</h2>
-                            <div v-if="order.customFields.erpOrderId" class="od-erp-row">
+                            <div v-if="order.customFields?.erpOrderId" class="od-erp-row">
                                 <span>ERP ID</span>
-                                <span class="od-erp-val">{{ order.customFields.erpOrderId }}</span>
+                                <span class="od-erp-val">{{ order.customFields?.erpOrderId }}</span>
                             </div>
-                            <div v-if="order.customFields.erpStatusAt" class="od-erp-row">
+                            <div v-if="order.customFields?.erpStatusAt" class="od-erp-row">
                                 <span>Updated</span>
-                                <span class="od-erp-val">{{ formatDate(order.customFields.erpStatusAt) }}</span>
+                                <span class="od-erp-val">{{ formatDate(order.customFields?.erpStatusAt) }}</span>
                             </div>
                         </div>
                     </aside>

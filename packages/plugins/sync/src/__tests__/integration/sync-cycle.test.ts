@@ -116,6 +116,8 @@ beforeAll(async () => {
         HUB_OPTIONS,
         mockLogger as never,
         centralOrderSyncMock as never,
+        { publish: vi.fn() } as never,
+        { create: vi.fn(async () => ({}) as never) } as never,
     );
     await centralConsumer.onModuleInit();
 });

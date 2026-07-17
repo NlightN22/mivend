@@ -1,19 +1,9 @@
 import { ref, type Ref } from 'vue';
 import { shopApi } from '../../api/client';
+import { MyDocumentsDocument, type MyDocumentsQuery } from '../../api/generated/graphql';
 import type { DocData } from './DocumentRow.vue';
 
-export interface DocumentSummary {
-    id: string;
-    type: string;
-    number: string;
-    issueDate: string;
-    amount: number | null;
-    currencyCode: string | null;
-    status: 'pending' | 'generating' | 'ready' | 'failed';
-    orderId: string | null;
-    fileUrl: string | null;
-    asset: { source: string } | null;
-}
+export type DocumentSummary = MyDocumentsQuery['myDocuments']['items'][number];
 
 export interface MyDocumentsOptions {
     take: number;
@@ -21,19 +11,6 @@ export interface MyDocumentsOptions {
     type?: string;
     search?: string;
 }
-
-const MY_DOCUMENTS_QUERY = `
-    query MyDocuments($options: DocumentListOptions) {
-        myDocuments(options: $options) {
-            items {
-                id type number issueDate amount currencyCode status orderId
-                fileUrl
-                asset { source }
-            }
-            totalItems
-        }
-    }
-`;
 
 // ERP-pushed documents (return/reconciliation) carry a direct fileUrl (1C
 // already hosts the file). Self-generated documents (invoice/contract) carry
@@ -57,14 +34,14 @@ const DOCUMENT_TYPE_ICON: Record<string, { icon: string; iconVariant: DocData['i
     reconciliation: { icon: '🧾', iconVariant: 'blue' },
 };
 
-const DOCUMENT_STATUS_LABEL: Record<DocumentSummary['status'], string> = {
+const DOCUMENT_STATUS_LABEL: Record<string, string> = {
     pending: 'Preparing',
     generating: 'Generating',
     ready: 'Ready',
     failed: 'Failed',
 };
 
-const DOCUMENT_STATUS_VARIANT: Record<DocumentSummary['status'], DocData['statusVariant']> = {
+const DOCUMENT_STATUS_VARIANT: Record<string, DocData['statusVariant']> = {
     pending: 'muted',
     generating: 'muted',
     ready: 'green',
@@ -94,8 +71,8 @@ export function toDocData(doc: DocumentSummary): DocData {
         meta: doc.orderId ? `Order #${doc.orderId}` : (DOCUMENT_TYPE_LABEL[doc.type] ?? doc.type),
         date,
         amount,
-        statusLabel: DOCUMENT_STATUS_LABEL[doc.status],
-        statusVariant: DOCUMENT_STATUS_VARIANT[doc.status],
+        statusLabel: DOCUMENT_STATUS_LABEL[doc.status] ?? doc.status,
+        statusVariant: DOCUMENT_STATUS_VARIANT[doc.status] ?? 'muted',
         actions: downloadUrl ? ['download'] : [],
         downloadUrl,
     };
@@ -114,9 +91,7 @@ export function useDocuments(): {
     async function load(options: MyDocumentsOptions): Promise<void> {
         loading.value = true;
         try {
-            const result = await shopApi<{
-                myDocuments: { items: DocumentSummary[]; totalItems: number };
-            }>(MY_DOCUMENTS_QUERY, { options });
+            const result = await shopApi(MyDocumentsDocument, { options });
             documents.value = result.myDocuments.items;
             totalItems.value = result.myDocuments.totalItems;
         } catch (e) {

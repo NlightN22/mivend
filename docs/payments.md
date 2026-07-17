@@ -184,6 +184,52 @@ UNIQUE(provider, providerEventId)
 
 alongside `payloadHash` and `processedAt` — this is the **inbox** half of inbox/outbox.
 
+**Implemented** (`plugin-acquiring`) as `IncomingPaymentEvent` (`entities/incoming-payment-event.entity.ts`):
+a real per-row lifecycle (`pending` → `processing` → `processed` | `failed`), not a bare "seen"
+boolean — see AGENTS.md sync rule #12, the general anti-pattern this design exists to avoid.
+`InboxService.enqueue()` is the only write path in (dedups on `(provider, providerEventId)`,
+falls back to catching the unique-index violation on a concurrent-enqueue race); `claimBatch()` /
+`markProcessed()` / `markFailed()` are used exclusively by `PaymentInboxProcessorService`'s sweep.
+An event that keeps failing is dead-lettered (`status: 'failed'`, terminal) after `MAX_ATTEMPTS =
+5` sweeps — surfaced for manual inspection, never retried forever, per sync rule #4.
+
+`PaymentInboxWorker` (BullMQ `Queue`/`Worker` + `upsertJobScheduler`, mirroring
+`ReservationExpiryWorker`/`OutboxWorker` — this codebase's established periodic-worker shape, not
+`@nestjs/schedule` or Vendure's `JobQueueService`) sweeps every `paymentInboxPollIntervalMs`
+(`AcquiringPluginOptions`, default `PAYMENT_INBOX_POLL_INTERVAL_DEFAULT` = 60s) and calls
+`PaymentInboxProcessorService.processPendingEvents()`, which is where the actual, risky
+processing (`PaymentAttemptService.payInvoice`) happens — never inline in whatever received the
+event. An ops-only admin mutation, `triggerPaymentInboxSweep` (`invoice.resolver.ts`), runs the
+exact same `processPendingEvents()` path on demand — a "run the sweep now" tool, not a bypass of
+the async contract.
+
+**Producers** (who calls `enqueue()`, i.e. who is `provider`):
+
+- `provider: 'erp'` — `POST /erp/callback/payment` (`plugin-sync`'s `ErpCallbackController`,
+  body typed as `ErpPaymentReportedDto` with Swagger docs at `/api-docs`, for 1C developers to
+  implement against) publishes `ErpPaymentReportedEvent` on the `EventBus`; `plugin-acquiring`'s
+  `PaymentEventListener` subscribes and enqueues with `providerEventId = erpEventId` (the ERP's
+  own id for the payment fact — a resend is a safe no-op). Also the simulation entry point until
+  a real ERP integration exists.
+- `provider: 'branch-kassa'` — no separate transport: a branch's existing `payment.recorded`
+  outbox event (see "Flow: branch till (kassa) payment" below) carries optional `invoiceId`/
+  `outcome` fields; Central's `CentralConsumer.handlePaymentRecorded` publishes
+  `BranchKassaPaymentEvent` (`providerEventId = ` the sync envelope's own `eventId`) once it has
+  applied the payment fact locally, and the same `PaymentEventListener` enqueues it.
+
+Both events carry a `RequestContext` (`event.ctx`) rather than the listener re-deriving one, and
+both event classes live in `plugin-sync` (`erp-payment.events.ts`) — `plugin-acquiring` imports
+them from `plugin-sync`'s public `index.ts` only, never `plugin-sync/src/...` directly. The
+listener itself (`payment-event.listener.ts`) only ever calls `inboxService.enqueue(...)` — it
+must never call `payInvoice` directly; that would silently reintroduce the exact rule-#12
+anti-pattern this whole design exists to prevent.
+
+Note: `online-acquiring` does **not** go through this inbox today — `onlineStubPaymentHandler`
+calls `payInvoice` synchronously at checkout time, which is itself an instance of the rule-#12
+anti-pattern, accepted for now only because there is no real acquirer webhook yet (see "Flow:
+online payment" below). Once Robokassa is integrated, its webhook must be routed through this
+same inbox, not left as a synchronous checkout-time call.
+
 ### 3. Business-level uniqueness
 
 The same real-world fact can sometimes arrive as more than one distinct provider event (e.g. a
@@ -451,6 +497,34 @@ Treating the provider's synchronous HTTP response as final (skipping the webhook
 common mistake this design deliberately avoids — asynchronous confirmation via webhook is the
 standard, documented pattern for essentially every major provider.
 
+## Flow: bank transfer witnessed by the ERP (`bank-transfer-erp`, implemented)
+
+Unlike the online-payment flow above (Central → provider → webhook, an outbound-initiated
+operation), a bank transfer is a fact the ERP already knows about (an accountant reconciled a
+bank statement) and needs to push **into** this platform — the reverse direction:
+
+```
+1.  1C posts a payment document against an Invoice it knows about (organizationId/counterpartyId
+    resolved on the ERP side, same as any other ERP-sourced fact).
+2.  1C calls POST /erp/callback/payment (plugin-sync's ErpCallbackController) with
+    { invoiceId, outcome, erpEventId } — see ErpPaymentReportedDto, documented at /api-docs for
+    1C developers to implement against directly.
+3.  plugin-sync publishes ErpPaymentReportedEvent on the EventBus and returns { ok: true }
+    immediately — this ack is unconditional and fast; it says "received", not "processed".
+4.  plugin-acquiring's PaymentEventListener enqueues the event into the payment inbox
+    (provider: 'erp', providerEventId: erpEventId) and returns.
+5.  PaymentInboxWorker's next sweep (or an ops-triggered triggerPaymentInboxSweep) calls
+    PaymentAttemptService.payInvoice, which does the real, transactional work: create the
+    PaymentAttempt, run FIFO cash-application via SettlementEntryService.allocate.
+6.  A resend of the same erpEventId (1C retrying after a timeout, a duplicate exchange record)
+    is a no-op at step 4 — InboxService.enqueue returns the existing row instead of creating a
+    second one.
+```
+
+This is the general rule-#12 anti-pattern applied concretely: step 3 (ack) and step 5
+(processing) are deliberately different points in time, on different triggers, so a crash or bug
+between them never loses the payment fact — the row just sits `pending` until the next sweep.
+
 ## Flow: branch till (kassa) payment
 
 **Target flow, once real kassa hardware exists:**
@@ -498,6 +572,18 @@ No real kassa server integration exists yet. Until it does, the placeholder admi
 fact — not a manual call to `recordWitnessedPayment`.** At that point, the mutation must be
 either removed outright, or kept strictly as a controlled emergency/fallback mechanism (e.g. for
 a kassa-server outage), never as a routine input path.
+
+**Implemented so far**: `recordWitnessedPayment` writes the branch-local fact and, via the
+existing `payment.recorded` outbox event (`order-sync.service.ts`), reaches Central through the
+normal branch→central sync transport (`docs/sync.md`'s "Branch → Hub" flow — no new transport was
+added for this). `PaymentRecordedPayload` (`packages/shared/src/sync.ts`) gained optional
+`invoiceId`/`outcome` fields so the same event can carry "this cash payment settles
+`plugin-acquiring`'s `Invoice` #N" when the caller knows it. `CentralConsumer.handlePaymentRecorded`
+applies the payment fact as before (unchanged) and, when those optional fields are present, also
+publishes `BranchKassaPaymentEvent` on the `EventBus` — which durably lands in the payment inbox
+exactly like the ERP path above (see the "Idempotency" section's "Producers" list). What's still
+missing is the real kassa server itself; the sync/inbox wiring downstream of
+`recordWitnessedPayment` is real, not a stub.
 
 ---
 

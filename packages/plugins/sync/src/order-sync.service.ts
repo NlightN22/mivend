@@ -230,6 +230,9 @@ export class OrderSyncService {
         orderId: ID,
         method: string,
         amount: number,
+        invoiceId?: number,
+        outcome?: 'success' | 'pending' | 'fail' | 'cancel',
+        rrn?: string,
     ): Promise<void> {
         const order = await this.dataSource
             .getRepository(Order)
@@ -264,6 +267,9 @@ export class OrderSyncService {
                         amount,
                         state: 'Settled',
                         witnessedBy: this.options.instanceId,
+                        invoiceId,
+                        outcome,
+                        rrn,
                     },
                 },
                 target,

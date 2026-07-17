@@ -1,0 +1,29 @@
+query MyPayments($options: PaymentListOptions) {
+    myPayments(options: $options) {
+        items {
+            id
+            amount
+            currencyCode
+            channel
+            status
+            createdAt
+            invoiceId
+            order {
+                id
+                code
+            }
+            allocations {
+                amount
+                isAdvance
+                invoice {
+                    id
+                }
+            }
+            refunds {
+                amount
+                status
+            }
+        }
+        totalItems
+    }
+}

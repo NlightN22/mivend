@@ -1,10 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import { useInvoices } from '../invoices/useInvoices';
+import { usePayments } from '../payments/usePayments';
 
 const authStore = useAuthStore();
 const route = useRoute();
+
+// Sidebar is always expanded on desktop; on mobile it collapses to a single toggle bar so it
+// doesn't push page content down by default (see AGENTS.md mobile-nav rules).
+const mobileOpen = ref(false);
+watch(() => route.path, () => { mobileOpen.value = false; });
+
+const { totalItems: invoiceCount, load: loadInvoices } = useInvoices();
+const { totalItems: paymentCount, load: loadPayments } = usePayments();
+onMounted(() => {
+    void loadInvoices({ take: 1, skip: 0 });
+    void loadPayments({ take: 1, skip: 0 });
+});
 
 const initials = computed(() => {
     const name = authStore.counterparty?.shortName ?? '';
@@ -25,16 +39,27 @@ const isActive = (path: string) => route.path === path;
 
 <template>
   <aside class="account-sidebar">
-    <div class="account-sidebar__user-card">
-      <div class="account-sidebar__avatar">{{ initials }}</div>
-      <div>
-        <div class="account-sidebar__name">{{ companyName }}</div>
-        <div class="account-sidebar__role">{{ authStore.counterparty?.legalName }}<br />{{ role }}</div>
-      </div>
-    </div>
+    <button
+      type="button"
+      class="account-sidebar__mobile-toggle"
+      :aria-expanded="mobileOpen"
+      @click="mobileOpen = !mobileOpen"
+    >
+      <span class="account-sidebar__mobile-toggle-icon">{{ mobileOpen ? '✕' : '☰' }}</span>
+      <span>{{ companyName }}</span>
+    </button>
 
-    <div class="account-sidebar__section-title">Customer Zone</div>
-    <nav class="account-sidebar__menu">
+    <div class="account-sidebar__body" :class="{ 'account-sidebar__body--open': mobileOpen }">
+      <div class="account-sidebar__user-card">
+        <div class="account-sidebar__avatar">{{ initials }}</div>
+        <div>
+          <div class="account-sidebar__name">{{ companyName }}</div>
+          <div class="account-sidebar__role">{{ authStore.counterparty?.legalName }}<br />{{ role }}</div>
+        </div>
+      </div>
+
+      <div class="account-sidebar__section-title">Customer Zone</div>
+      <nav class="account-sidebar__menu">
       <RouterLink to="/account" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account') }">
         <span>Home</span>
       </RouterLink>
@@ -44,29 +69,36 @@ const isActive = (path: string) => route.path === path;
       <RouterLink to="/documents" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/documents') }">
         <span>Documents</span><span class="account-sidebar__count">12</span>
       </RouterLink>
+      <RouterLink to="/invoices" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/invoices') }">
+        <span>Invoices</span><span v-if="invoiceCount > 0" class="account-sidebar__count">{{ invoiceCount }}</span>
+      </RouterLink>
+      <RouterLink to="/payments" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/payments') }">
+        <span>Payments</span><span v-if="paymentCount > 0" class="account-sidebar__count">{{ paymentCount }}</span>
+      </RouterLink>
       <RouterLink to="/favorites" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/favorites') }">
         <span>Favorites</span><span class="account-sidebar__count">34</span>
       </RouterLink>
       <RouterLink to="/requests" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/requests') }">
         <span>Requests</span><span class="account-sidebar__count">2</span>
       </RouterLink>
-    </nav>
+      </nav>
 
-    <div class="account-sidebar__section-title">Company</div>
-    <nav class="account-sidebar__menu">
-      <RouterLink to="/account/trading-points" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/trading-points') }">
-        <span>Trading points</span><span class="account-sidebar__count">4</span>
-      </RouterLink>
-      <RouterLink to="/account/balance" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/balance') }">
-        <span>Balance &amp; Limits</span>
-      </RouterLink>
-      <RouterLink to="/account/employees" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/employees') }">
-        <span>Employees</span>
-      </RouterLink>
-      <RouterLink to="/account/settings" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/settings') }">
-        <span>Settings</span>
-      </RouterLink>
-    </nav>
+      <div class="account-sidebar__section-title">Company</div>
+      <nav class="account-sidebar__menu">
+        <RouterLink to="/account/trading-points" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/trading-points') }">
+          <span>Trading points</span><span class="account-sidebar__count">4</span>
+        </RouterLink>
+        <RouterLink to="/account/balance" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/balance') }">
+          <span>Balance &amp; Limits</span>
+        </RouterLink>
+        <RouterLink to="/account/employees" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/employees') }">
+          <span>Employees</span>
+        </RouterLink>
+        <RouterLink to="/account/settings" class="account-sidebar__link" :class="{ 'account-sidebar__link--active': isActive('/account/settings') }">
+          <span>Settings</span>
+        </RouterLink>
+      </nav>
+    </div>
   </aside>
 </template>
 
@@ -166,7 +198,50 @@ const isActive = (path: string) => route.path === path;
   font-weight: 900;
 }
 
+.account-sidebar__mobile-toggle {
+  display: none;
+}
+
 @media (max-width: 960px) {
-  .account-sidebar { position: static; }
+  .account-sidebar {
+    position: static;
+    padding: 12px 16px;
+  }
+
+  .account-sidebar__mobile-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 0;
+    background: transparent;
+    padding: 6px 2px;
+    font-weight: 900;
+    font-size: 15px;
+    color: #263732;
+  }
+
+  .account-sidebar__mobile-toggle-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: #f4faf7;
+    color: #008a64;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .account-sidebar__body {
+    display: none;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #edf2ef;
+  }
+
+  .account-sidebar__body--open {
+    display: block;
+  }
 }
 </style>

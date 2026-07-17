@@ -1,0 +1,44 @@
+query ProductDetail($slug: String!) {
+    product(slug: $slug) {
+        id
+        name
+        slug
+        description
+        variants {
+            id
+            sku
+            price
+            customerPrice
+            compareAtPrice
+            currencyCode
+            stockLevel
+        }
+        facetValues {
+            name
+            facet {
+                code
+            }
+        }
+    }
+}
+
+query RelatedProducts {
+    products(options: { take: 5 }) {
+        items {
+            id
+            name
+            slug
+            variants {
+                price
+                currencyCode
+                stockLevel
+            }
+            facetValues {
+                name
+                facet {
+                    code
+                }
+            }
+        }
+    }
+}

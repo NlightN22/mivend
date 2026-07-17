@@ -1,5 +1,6 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
+import { EventBus, RequestContextService } from '@vendure/core';
 import { SyncEventSchema, assertNever } from 'shared';
 import type { SyncEventByType } from 'shared';
 
@@ -9,6 +10,7 @@ import { RabbitMQService } from '../rabbitmq.service';
 import { SyncLogger } from '../sync-logger';
 import { SYNC_PLUGIN_OPTIONS } from '../types';
 import type { SyncPluginOptions } from '../types';
+import { BranchKassaPaymentEvent } from '../erp-payment.events';
 
 // The Central-side counterpart to ProductConsumer (the sole RabbitMQ subscriber for a branch's
 // queue) — Central previously only ever published, never subscribed, so a branch-originated
@@ -26,6 +28,8 @@ export class CentralConsumer implements OnModuleInit {
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
         private readonly logger: SyncLogger,
         private readonly orderSyncService: OrderSyncService,
+        private readonly eventBus: EventBus,
+        private readonly requestContextService: RequestContextService,
     ) {}
 
     async onModuleInit(): Promise<void> {
@@ -115,6 +119,20 @@ export class CentralConsumer implements OnModuleInit {
     private async handlePaymentRecorded(event: SyncEventByType<'payment.recorded'>): Promise<void> {
         if (await this.isAlreadyProcessed(event.eventId)) return;
         await this.orderSyncService.applyPaymentRecorded(event);
+        if (event.payload.invoiceId !== undefined && event.payload.outcome !== undefined) {
+            // Publishes only — the risky work (payInvoice) happens later, in
+            // plugin-acquiring's inbox worker (AGENTS.md sync rule #12).
+            const ctx = await this.requestContextService.create({ apiType: 'admin' });
+            this.eventBus.publish(
+                new BranchKassaPaymentEvent(
+                    ctx,
+                    event.payload.invoiceId,
+                    event.payload.outcome,
+                    event.eventId,
+                    event.payload.rrn,
+                ),
+            );
+        }
         await this.dataSource.transaction(em => this.tryMarkProcessed(em, event.eventId));
         this.logger.info(`Applied payment.recorded [${event.payload.sourceOrderId}]`);
     }

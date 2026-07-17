@@ -146,9 +146,7 @@ export class PdfGeneratorService implements OnModuleInit {
                 );
             }
             requisites = await this.documentsService.getRequisitesById(ctx, invoice.organizationId);
-            const orgLines = order.lines.filter(
-                line => line.productVariant.customFields?.organizationId === invoice.organizationId,
-            );
+            const orgLines = await this.invoiceService.getLinesForInvoice(ctx, invoice);
             source = {
                 documentNumber: document.number,
                 issueDate: document.issueDate,

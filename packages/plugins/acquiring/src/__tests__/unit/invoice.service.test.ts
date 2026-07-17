@@ -17,6 +17,7 @@ const mockConnection = {
 
 const mockEntityHydrator = { hydrate: vi.fn() };
 const mockCounterpartyService = { getForCustomer: vi.fn() };
+const mockTranslator = { translate: vi.fn(entity => entity) };
 
 const mockCtx = {} as unknown as RequestContext;
 
@@ -47,6 +48,7 @@ describe('InvoiceService', () => {
             mockConnection,
             mockEntityHydrator as unknown as EntityHydrator,
             mockCounterpartyService as unknown as CounterpartyService,
+            mockTranslator as never,
         );
     });
 

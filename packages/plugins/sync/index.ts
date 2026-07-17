@@ -4,6 +4,11 @@ export { SyncLogger } from './src/sync-logger';
 export { SyncOutboxEntry } from './src/entities/sync-outbox.entity';
 export { SyncProcessedEvent } from './src/entities/sync-processed-event.entity';
 export { StubErpAdapter } from './src/erp-adapter.stub';
+export {
+    ErpPaymentReportedEvent,
+    BranchKassaPaymentEvent,
+    type ErpPaymentOutcome,
+} from './src/erp-payment.events';
 export type { SyncPluginOptions, RabbitMQConfig, RedisConfig } from './src/types';
 export type {
     ErpAdapter,

@@ -1,0 +1,19 @@
+query CatalogCollections {
+    collections(options: { take: 100 }) {
+        items {
+            id
+            name
+            slug
+            breadcrumbs {
+                id
+                name
+                slug
+            }
+            children {
+                id
+                name
+                slug
+            }
+        }
+    }
+}

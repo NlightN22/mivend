@@ -1,0 +1,6 @@
+query MyAdvanceBalance {
+    myAdvanceBalance {
+        amount
+        currencyCode
+    }
+}

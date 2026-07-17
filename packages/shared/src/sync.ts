@@ -102,6 +102,19 @@ const PaymentRecordedPayload = z.object({
     amount: z.number().int().nonnegative(),
     state: z.enum(['Authorized', 'Settled']),
     witnessedBy: z.string(),
+    // Optional: present when the witnessed payment applies to a specific plugin-acquiring
+    // Invoice (rather than only the legacy native-Order payment above) — lets
+    // CentralConsumer additionally publish BranchKassaPaymentEvent for the acquiring inbox.
+    invoiceId: z.number().int().positive().optional(),
+    outcome: z.enum(['success', 'pending', 'fail', 'cancel']).optional(),
+    // RRN (Retrieval Reference Number) from the branch's card terminal, or the kassa's own
+    // fiscal receipt/cheque number for a cash payment — mandatory whenever invoiceId/outcome are
+    // present (i.e. this payload represents a plugin-acquiring payment fact), since without it
+    // the payment can never be reconciled against the branch's kassa system. Left optional at
+    // this wire-format/parse layer (this envelope is shared with non-payment sync payloads too)
+    // — enforced instead at the point that actually matters, PaymentEventListener, which rejects
+    // (dead-letters) a payment fact missing it rather than silently enqueuing it as valid.
+    rrn: z.string().optional(),
 });
 
 const InventoryUpdatedPayload = z.object({

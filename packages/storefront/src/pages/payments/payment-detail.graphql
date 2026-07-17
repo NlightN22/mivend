@@ -1,0 +1,50 @@
+query PaymentDetail($id: ID!) {
+    payment(id: $id) {
+        id
+        amount
+        currencyCode
+        channel
+        status
+        createdAt
+        invoiceId
+        orderId
+        externalReference
+        refunds {
+            id
+            amount
+            status
+            providerRefundId
+            reason
+            createdAt
+        }
+        disputes {
+            id
+            type
+            status
+            amount
+            openedAt
+        }
+        invoice {
+            id
+            status
+        }
+        order {
+            id
+            code
+        }
+        allocations {
+            amount
+            isAdvance
+            invoice {
+                id
+                amount
+                currencyCode
+                status
+                order {
+                    id
+                    code
+                }
+            }
+        }
+    }
+}

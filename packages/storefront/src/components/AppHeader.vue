@@ -18,6 +18,15 @@ watch(() => route.query.q, (q) => {
     searchQuery.value = (q as string) ?? '';
 });
 const catalogOpen = ref(false);
+const mobileNavOpen = ref(false);
+
+// Pages under these prefixes render AccountSidebar (packages/storefront/src/pages/account/AccountSidebar.vue),
+// which already lists Account/Orders/Favourites — duplicating them in the mobile off-canvas nav
+// there is redundant (the sidebar itself is what should collapse on mobile, not this menu).
+const ACCOUNT_ZONE_PREFIXES = ['/account', '/orders', '/documents', '/invoices', '/payments', '/favorites', '/requests'];
+const inAccountZone = computed(() =>
+    ACCOUNT_ZONE_PREFIXES.some(prefix => route.path === prefix || route.path.startsWith(`${prefix}/`)),
+);
 
 const cartTotal = computed(() => {
     if (cartStore.totalPrice === 0) return '0 ₽';
@@ -39,21 +48,41 @@ function closeCatalog(): void {
     catalogOpen.value = false;
 }
 
+function toggleMobileNav(): void {
+    mobileNavOpen.value = !mobileNavOpen.value;
+}
+
+function closeMobileNav(): void {
+    mobileNavOpen.value = false;
+}
+
+function closeAll(): void {
+    closeCatalog();
+    closeMobileNav();
+}
+
+function onMobileCatalogClick(): void {
+    closeMobileNav();
+    toggleCatalog();
+}
+
 function navigateToCollection(slug: string): void {
     router.push({ path: '/catalog', query: { collection: slug } });
     closeCatalog();
 }
 
 function onKeydown(e: KeyboardEvent): void {
-    if (e.key === 'Escape') closeCatalog();
+    if (e.key === 'Escape') closeAll();
 }
+
+watch(() => route.fullPath, () => closeMobileNav());
 
 onMounted(() => document.addEventListener('keydown', onKeydown));
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
-    <div class="app-header-wrap" :class="{ 'app-header-wrap--open': catalogOpen }">
+    <div class="app-header-wrap" :class="{ 'app-header-wrap--open': catalogOpen || mobileNavOpen }">
         <div v-if="authStore.isLoggedIn" class="app-header__strip">
             <div class="app-header__strip-inner">
                 <span><strong>B2B Portal</strong> for fast ordering of auto parts and consumables</span>
@@ -84,16 +113,19 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     />
                 </div>
 
-                <nav class="app-header__nav">
+                <nav
+                    class="app-header__nav"
+                    :class="{ 'app-header__nav--open': mobileNavOpen, 'app-header__nav--in-zone': inAccountZone }"
+                >
                     <template v-if="authStore.isLoggedIn">
-                        <RouterLink to="/account" class="app-header__nav-btn">
+                        <RouterLink to="/account" class="app-header__nav-btn app-header__nav-btn--zone-dup">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="8" r="4"/>
                                 <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
                             </svg>
                             <span>Account</span>
                         </RouterLink>
-                        <RouterLink to="/orders" class="app-header__nav-btn">
+                        <RouterLink to="/orders" class="app-header__nav-btn app-header__nav-btn--zone-dup">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3 9l1.5-6h15L21 9"/>
                                 <rect x="3" y="9" width="18" height="12" rx="2"/>
@@ -101,7 +133,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                             </svg>
                             <span>Orders</span>
                         </RouterLink>
-                        <RouterLink to="/favorites" class="app-header__nav-btn">
+                        <RouterLink to="/favorites" class="app-header__nav-btn app-header__nav-btn--zone-dup">
                             <span class="app-header__nav-icon-wrap">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -110,14 +142,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                             </span>
                             <span>Favourites</span>
                         </RouterLink>
-                        <RouterLink to="/cart" class="app-header__cart">
-                            <span>&#128722;</span>
-                            <span class="app-header__cart-text">
-                                <small>Cart</small>
-                                {{ cartTotal }}
-                            </span>
-                            <span class="app-header__cart-badge">{{ cartStore.itemCount }}</span>
-                        </RouterLink>
+                        <button type="button" class="app-header__nav-btn app-header__nav-btn--mobile-only" @click="onMobileCatalogClick">
+                            <span>☰</span>
+                            <span>Catalogue</span>
+                        </button>
                     </template>
 
                     <template v-else>
@@ -130,6 +158,25 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                         </RouterLink>
                     </template>
                 </nav>
+
+                <RouterLink v-if="authStore.isLoggedIn" to="/cart" class="app-header__cart">
+                    <span>&#128722;</span>
+                    <span class="app-header__cart-text">
+                        <small>Cart</small>
+                        {{ cartTotal }}
+                    </span>
+                    <span class="app-header__cart-badge">{{ cartStore.itemCount }}</span>
+                </RouterLink>
+
+                <button
+                    type="button"
+                    class="app-header__hamburger"
+                    :class="{ 'app-header__hamburger--open': mobileNavOpen }"
+                    aria-label="Menu"
+                    @click="toggleMobileNav"
+                >
+                    <span></span><span></span><span></span>
+                </button>
             </div>
 
             <div v-if="authStore.isLoggedIn" class="app-header__delivery">
@@ -153,7 +200,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
             />
         </header>
 
-        <div v-if="catalogOpen" class="app-header__backdrop" @click="closeCatalog" />
+        <div
+            v-if="catalogOpen || mobileNavOpen"
+            class="app-header__backdrop"
+            :class="{ 'app-header__backdrop--nav': mobileNavOpen }"
+            @click="closeAll"
+        />
     </div>
 </template>
 
@@ -183,10 +235,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 .app-header__strip strong { color: #fff; }
 
 .app-header {
+    /* No backdrop-filter here: per spec it creates a new containing block for
+       position:fixed descendants, which trapped .app-header__nav's mobile off-canvas
+       panel inside this element's box instead of the viewport. */
     position: relative;
     background: rgba(255, 255, 255, 0.96);
     border-bottom: 1px solid #dde7e2;
-    backdrop-filter: blur(16px);
 }
 
 .app-header__inner {
@@ -194,7 +248,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     margin: 0 auto;
     padding: 12px 28px 8px;
     display: grid;
-    grid-template-columns: 160px 144px minmax(360px, 1fr) auto;
+    grid-template-columns: 160px 144px minmax(360px, 1fr) auto auto;
     gap: 12px;
     align-items: center;
 }
@@ -311,6 +365,35 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 .app-header__nav-link:hover { background: #f4faf7; color: #008a64; }
 .app-header__nav-icon { font-size: 18px; line-height: 1; }
 
+.app-header__nav-btn--mobile-only { display: none; }
+
+.app-header__hamburger {
+    display: none;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.app-header__hamburger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: #14231f;
+    border-radius: 2px;
+    transition: transform 0.15s, opacity 0.15s;
+}
+
+.app-header__hamburger--open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.app-header__hamburger--open span:nth-child(2) { opacity: 0; }
+.app-header__hamburger--open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
 .app-header__cart {
     min-height: 52px;
     min-width: 160px;
@@ -378,5 +461,84 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     inset: 0;
     background: rgba(20, 35, 31, 0.06);
     z-index: -1;
+}
+
+.app-header__backdrop--nav {
+    z-index: 55;
+    background: rgba(20, 35, 31, 0.28);
+}
+
+@media (max-width: 820px) {
+    .app-header__strip { display: none; }
+
+    .app-header__inner {
+        grid-template-columns: auto 1fr auto auto;
+        padding: 10px 16px 8px;
+    }
+
+    .app-header__catalog-btn { display: none; }
+
+    .app-header__search {
+        grid-column: 1 / -1;
+        order: 3;
+    }
+
+    .app-header__cart {
+        grid-column: 3;
+        min-width: 0;
+        min-height: 44px;
+        padding: 0 10px;
+    }
+
+    .app-header__cart-text { display: none; }
+
+    .app-header__hamburger {
+        display: flex;
+        grid-column: 4;
+    }
+
+    .app-header__nav {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(280px, 82vw);
+        background: #fff;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+        padding: 76px 16px 24px;
+        transform: translateX(100%);
+        transition: transform 0.22s ease;
+        box-shadow: -12px 0 32px rgba(20, 35, 31, 0.14);
+        z-index: 60;
+        overflow-y: auto;
+    }
+
+    .app-header__nav--open { transform: translateX(0); }
+
+    /* AccountSidebar already lists Account/Orders/Favourites on these pages — no need to
+       duplicate them in the mobile off-canvas nav too, only the mobile-only Catalogue entry. */
+    .app-header__nav--in-zone .app-header__nav-btn--zone-dup { display: none; }
+
+    .app-header__nav-btn {
+        flex-direction: row;
+        justify-content: flex-start;
+        min-width: 0;
+        width: 100%;
+        gap: 12px;
+        padding: 12px 10px;
+        border: none;
+        background: transparent;
+        font-family: inherit;
+        text-align: left;
+    }
+
+    .app-header__nav-btn--mobile-only { display: flex; }
+
+    .app-header__delivery {
+        justify-content: flex-start;
+        padding: 0 16px 8px;
+    }
 }
 </style>
