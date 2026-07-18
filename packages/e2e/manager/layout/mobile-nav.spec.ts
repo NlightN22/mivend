@@ -31,6 +31,29 @@ test('More sheet opens, lists secondary nav, and closes on backdrop click', asyn
     await expect(sheet).not.toHaveClass(/mv-mobile-sheet--open/);
 });
 
+test('More sheet items actually navigate, not just close the sheet', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.mv-app-mobile-nav').getByRole('button', { name: 'More' }).click();
+
+    const sheet = page.locator('.mv-mobile-sheet');
+    await sheet.getByRole('link', { name: 'Catalog' }).click();
+
+    await expect(page).toHaveURL(/\/catalog/);
+    await expect(sheet).not.toHaveClass(/mv-mobile-sheet--open/);
+});
+
+test('bottom nav highlights the correct item on a nested route', async ({ page }) => {
+    await page.goto('/orders');
+    const ordersLink = page.locator('.mv-app-mobile-nav').getByRole('link', { name: 'Orders' });
+    await expect(ordersLink).toHaveClass(/mv-app-mobile-nav__item--active/);
+
+    await page.goto('/customers');
+    await expect(ordersLink).not.toHaveClass(/mv-app-mobile-nav__item--active/);
+    await expect(
+        page.locator('.mv-app-mobile-nav').getByRole('link', { name: 'Customers' }),
+    ).toHaveClass(/mv-app-mobile-nav__item--active/);
+});
+
 test('Create-order FAB is shown on the orders page and creates a draft order', async ({ page }) => {
     await page.goto('/orders');
     const fab = page.locator('.mv-fab');

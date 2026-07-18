@@ -69,13 +69,22 @@ const menuItems = computed<AppSidebarItem[]>(() => {
 });
 
 // The 5 items that fit the mobile bottom bar — everything else lives in the "More" sheet.
-const mobileNavItems: AppMobileNavItem[] = [
+// Computed (not a plain array) so approvalsBadgeCount's async onMounted update actually reaches
+// the rendered badge — a plain array literal would freeze badgeCount at its value when this
+// component's <script setup> first ran, before the fetch below ever resolves.
+const mobileNavItems = computed<AppMobileNavItem[]>(() => [
     { key: 'dashboard', label: 'Dashboard', path: '/', icon: 'home' },
     { key: 'customers', label: 'Customers', path: '/customers', icon: 'customers' },
     { key: 'orders', label: 'Orders', path: '/orders', icon: 'orders' },
-    { key: 'approvals', label: 'Approvals', path: '/approvals', icon: 'approvals', badgeCount: approvalsBadgeCount.value },
+    {
+        key: 'approvals',
+        label: 'Approvals',
+        path: '/approvals',
+        icon: 'approvals',
+        badgeCount: approvalsBadgeCount.value,
+    },
     { key: 'more', label: 'More', icon: 'more' },
-];
+]);
 
 // Same permission gates as the desktop sidebar (menuItems) — the sheet must never offer a
 // route the current admin's permissions would just have the underlying query/mutation reject.
