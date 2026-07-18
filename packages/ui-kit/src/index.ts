@@ -77,6 +77,11 @@ export { default as MvCountBadge } from './components/MvCountBadge/MvCountBadge.
 export { default as MvAppTopbar } from './components/MvAppTopbar/MvAppTopbar.vue';
 export { default as MvAppSidebar } from './components/MvAppSidebar/MvAppSidebar.vue';
 export type { AppSidebarItem } from './components/MvAppSidebar/MvAppSidebar.vue';
+export { default as MvAppMobileNav } from './components/MvAppMobileNav/MvAppMobileNav.vue';
+export type { AppMobileNavItem } from './components/MvAppMobileNav/MvAppMobileNav.vue';
+export { default as MvAppMobileMoreSheet } from './components/MvAppMobileMoreSheet/MvAppMobileMoreSheet.vue';
+export type { AppMobileSheetItem } from './components/MvAppMobileMoreSheet/MvAppMobileMoreSheet.vue';
+export { default as MvFab } from './components/MvFab/MvFab.vue';
 
 export { default as MvSelect } from './components/MvSelect/MvSelect.vue';
 export type { SelectOption } from './components/MvSelect/MvSelect.vue';

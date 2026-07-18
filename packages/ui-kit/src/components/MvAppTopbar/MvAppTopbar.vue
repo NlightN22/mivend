@@ -165,4 +165,23 @@ const emit = defineEmits<{ logout: [] }>();
 .mv-app-topbar__logout:hover {
     background: var(--el-fill-color-light, #f8fafc);
 }
+
+@media (max-width: 800px) {
+    .mv-app-topbar {
+        height: auto;
+        min-height: 58px;
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
+    .mv-app-topbar__search {
+        max-width: none;
+    }
+
+    .mv-app-topbar__actions,
+    .mv-app-topbar__user,
+    .mv-app-topbar__logout {
+        display: none;
+    }
+}
 </style>

@@ -1,12 +1,27 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { MvAppTopbar, MvAppSidebar, MvNotice, type AppSidebarItem } from '@mivend/ui-kit';
+import { useRoute, useRouter } from 'vue-router';
+import {
+    MvAppTopbar,
+    MvAppSidebar,
+    MvAppMobileNav,
+    MvAppMobileMoreSheet,
+    MvFab,
+    MvNotice,
+    type AppSidebarItem,
+    type AppMobileNavItem,
+    type AppMobileSheetItem,
+} from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
 import { adminApi } from '../api/client';
 
 const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
+const moreSheetOpen = ref(false);
+// FAB only makes sense where "create a new order" is the obvious next action — the orders
+// list and any order-scoped page. Elsewhere it would float over unrelated content.
+const showCreateOrderFab = computed(() => route.path.startsWith('/orders'));
 
 const initials = computed(() => {
     const [first, last] = authStore.fullName.split(' ');
@@ -37,6 +52,32 @@ const menuItems = computed<AppSidebarItem[]>(() => {
     // Vendure admin UI (any role) is enough, no manager-portal code change needed.
     if (authStore.hasPermission('ManageAccessControl')) {
         items.push({ label: 'Settings', path: '/settings' });
+    }
+    return items;
+});
+
+// The 5 items that fit the mobile bottom bar — everything else lives in the "More" sheet.
+const mobileNavItems: AppMobileNavItem[] = [
+    { key: 'dashboard', label: 'Dashboard', path: '/', icon: 'home' },
+    { key: 'customers', label: 'Customers', path: '/customers', icon: 'customers' },
+    { key: 'orders', label: 'Orders', path: '/orders', icon: 'orders' },
+    { key: 'approvals', label: 'Approvals', path: '/approvals', icon: 'approvals', badgeCount: approvalsBadgeCount.value },
+    { key: 'more', label: 'More', icon: 'more' },
+];
+
+// Same permission gates as the desktop sidebar (menuItems) — the sheet must never offer a
+// route the current admin's permissions would just have the underlying query/mutation reject.
+const moreSheetItems = computed<AppMobileSheetItem[]>(() => {
+    const items: AppMobileSheetItem[] = [];
+    if (authStore.hasPermission('ReadInvoice')) items.push({ key: 'invoices', label: 'Invoices', path: '/invoices' });
+    if (authStore.hasPermission('ReadPayment')) items.push({ key: 'payments', label: 'Payments', path: '/payments' });
+    items.push(
+        { key: 'catalog', label: 'Catalog', path: '/catalog' },
+        { key: 'discounts', label: 'Discounts', path: '/discounts' },
+        { key: 'team', label: 'Team', path: '/team' },
+    );
+    if (authStore.hasPermission('ManageAccessControl')) {
+        items.push({ key: 'settings', label: 'Settings', path: '/settings' });
     }
     return items;
 });
@@ -80,6 +121,18 @@ async function handleLogout(): Promise<void> {
                 <RouterView />
             </main>
         </div>
+
+        <MvAppMobileNav :items="mobileNavItems" :active-path="route.path" @select-more="moreSheetOpen = true" />
+        <MvAppMobileMoreSheet
+            :open="moreSheetOpen"
+            :items="moreSheetItems"
+            :user-name="authStore.fullName"
+            :user-role-label="authStore.roleLabel ?? authStore.roleCode"
+            :user-initials="initials"
+            @close="moreSheetOpen = false"
+            @logout="handleLogout"
+        />
+        <MvFab v-if="showCreateOrderFab" to="/orders/new" aria-label="Create order" />
     </div>
 </template>
 
@@ -122,5 +175,12 @@ async function handleLogout(): Promise<void> {
 
 .layout__reconnecting {
     margin-bottom: 16px;
+}
+
+@media (max-width: 800px) {
+    .layout__content {
+        padding: 12px;
+        padding-bottom: calc(74px + env(safe-area-inset-bottom));
+    }
 }
 </style>

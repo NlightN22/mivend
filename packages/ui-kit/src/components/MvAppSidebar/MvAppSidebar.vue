@@ -79,4 +79,10 @@ withDefaults(defineProps<{ items: AppSidebarItem[]; sectionTitle?: string }>(), 
     background: var(--el-color-primary-light-9, #f0fffa);
     color: var(--el-color-primary-dark-2, #008a70);
 }
+
+@media (max-width: 800px) {
+    .mv-app-sidebar {
+        display: none;
+    }
+}
 </style>
