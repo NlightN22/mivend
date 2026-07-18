@@ -20,8 +20,19 @@ const router = useRouter();
 const route = useRoute();
 const moreSheetOpen = ref(false);
 // FAB only makes sense where "create a new order" is the obvious next action — the orders
-// list and any order-scoped page. Elsewhere it would float over unrelated content.
-const showCreateOrderFab = computed(() => route.path.startsWith('/orders'));
+// list, any order-scoped page, and a customer's Orders tab (same route, tab tracked via
+// ?tab= per the manager-portal URL-sync rule, since tab switching there doesn't change path).
+const onCustomerOrdersTab = computed(
+    () => route.path.startsWith('/customers/') && route.query.tab === 'orders',
+);
+const showCreateOrderFab = computed(() => route.path.startsWith('/orders') || onCustomerOrdersTab.value);
+const createOrderFabTarget = computed(() => {
+    if (onCustomerOrdersTab.value) {
+        const customerId = route.params.id;
+        return `/orders/new?customerId=${customerId}`;
+    }
+    return '/orders/new';
+});
 
 const initials = computed(() => {
     const [first, last] = authStore.fullName.split(' ');
@@ -132,7 +143,7 @@ async function handleLogout(): Promise<void> {
             @close="moreSheetOpen = false"
             @logout="handleLogout"
         />
-        <MvFab v-if="showCreateOrderFab" to="/orders/new" aria-label="Create order" />
+        <MvFab v-if="showCreateOrderFab" :to="createOrderFabTarget" aria-label="Create order" />
     </div>
 </template>
 

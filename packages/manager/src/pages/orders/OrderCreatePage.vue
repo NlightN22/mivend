@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { MvPanel, MvNotice } from '@mivend/ui-kit';
 import {
     createDraftOrder,
@@ -9,6 +9,7 @@ import {
     adjustDraftOrderLineQuantity,
     removeDraftOrderLine,
     fetchOrder,
+    fetchCustomerOptions,
     finalizeOrder,
     type CustomerOption,
     type DraftOrderState,
@@ -20,6 +21,7 @@ import OrderItemsTable from '../../components/order-create/OrderItemsTable.vue';
 import DeliveryPaymentSection from '../../components/order-create/DeliveryPaymentSection.vue';
 import OrderSummaryBar from '../../components/order-create/OrderSummaryBar.vue';
 
+const route = useRoute();
 const router = useRouter();
 
 const customer = ref<CustomerOption | null>(null);
@@ -50,6 +52,14 @@ async function handleCustomerSelected(selected: CustomerOption): Promise<void> {
         settingUpCustomer.value = false;
     }
 }
+
+onMounted(async () => {
+    const preselectCounterpartyId = route.query.customerId;
+    if (typeof preselectCounterpartyId !== 'string' || !preselectCounterpartyId) return;
+    const options = await fetchCustomerOptions();
+    const match = options.find(o => o.counterpartyId === preselectCounterpartyId);
+    if (match) await handleCustomerSelected(match);
+});
 
 async function handleAddProduct(product: ProductSearchResult): Promise<void> {
     if (!order.value) return;

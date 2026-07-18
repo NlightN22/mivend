@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { MvPanel, MvStatusBadge, MvSelect } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
@@ -17,7 +17,7 @@ import {
     type DiscountRuleItem,
     type CustomerDocument,
 } from '../../api/customers';
-import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
+import { fetchManagerOptions, fetchBranchOptions, type ManagerOption, type BranchOption } from '../../api/orders';
 import { fetchInvoicesForCounterparty, fetchOutstandingBalance, type InvoiceListItem, type OutstandingBalance } from '../../api/invoices';
 import { fetchPaymentsForCounterparty, type PaymentListItem } from '../../api/payments';
 import type { EntityRef } from '../../api/history';
@@ -34,12 +34,14 @@ import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue'
 const HISTORY_ENTITY_LABELS = { Counterparty: 'Customer', TradingPoint: 'Trading point' };
 
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 
 const customer = ref<CustomerListItem | null>(null);
 const credit = ref<CustomerCredit | null>(null);
 const outstandingBalance = ref<OutstandingBalance | null>(null);
 const managers = ref<ManagerOption[]>([]);
+const branches = ref<BranchOption[]>([]);
 const orders = ref<CustomerOrderItem[]>([]);
 const discounts = ref<DiscountRuleItem[]>([]);
 const documents = ref<CustomerDocument[]>([]);
@@ -58,9 +60,19 @@ const reassignError = ref('');
 const canReassign = computed(() => authStore.hasPermission('ReassignCounterpartyManager'));
 const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory'));
 
-const activeTab = ref<'overview' | 'orders' | 'invoices' | 'payments' | 'discounts' | 'documents' | 'history'>(
-    'overview',
-);
+type CustomerDetailTab = 'overview' | 'orders' | 'invoices' | 'payments' | 'discounts' | 'documents' | 'history';
+const TABS: CustomerDetailTab[] = ['overview', 'orders', 'invoices', 'payments', 'discounts', 'documents', 'history'];
+
+function tabFromQuery(): CustomerDetailTab {
+    const q = route.query.tab;
+    return typeof q === 'string' && (TABS as string[]).includes(q) ? (q as CustomerDetailTab) : 'overview';
+}
+
+const activeTab = ref<CustomerDetailTab>(tabFromQuery());
+
+watch(activeTab, tab => {
+    router.replace({ query: { ...route.query, tab } });
+});
 // EntityHistoryPanel now owns its own fetching/pagination (issue #39) — this page only supplies
 // the refs to fetch for, not a pre-loaded array.
 const historyRefs = ref<EntityRef[]>([]);
@@ -89,12 +101,14 @@ async function load(): Promise<void> {
     notFound.value = false;
     try {
         const counterpartyId = route.params.id as string;
-        const [detail, creditResult, managerOptions] = await Promise.all([
+        const [detail, creditResult, managerOptions, branchOptions] = await Promise.all([
             fetchCustomerById(counterpartyId),
             fetchCreditForCounterparty(counterpartyId),
             managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
+            branches.value.length ? Promise.resolve(branches.value) : fetchBranchOptions(),
         ]);
         managers.value = managerOptions;
+        branches.value = branchOptions;
         if (!detail) {
             notFound.value = true;
             return;
@@ -131,10 +145,21 @@ async function load(): Promise<void> {
 
 onMounted(load);
 watch(() => route.params.id, load);
+watch(
+    () => route.query.tab,
+    () => {
+        activeTab.value = tabFromQuery();
+    },
+);
 
 function managerName(id: string | null): string | null {
     if (!id) return null;
     return managers.value.find(m => m.id === id)?.name ?? null;
+}
+
+function branchName(erpId: string | null): string | null {
+    if (!erpId) return null;
+    return branches.value.find(b => b.erpId === erpId)?.name ?? null;
 }
 
 async function handleReassign(administratorId: string): Promise<void> {
@@ -187,6 +212,10 @@ async function handleReassign(administratorId: string): Promise<void> {
             </span>
         </p>
         <p v-if="reassignError" class="customer-detail__error">{{ reassignError }}</p>
+        <div class="customer-detail__meta">
+            <span v-if="branchName(customer.branchId)">Location: {{ branchName(customer.branchId) }}</span>
+            <span v-if="credit">Credit limit: {{ money(credit.creditLimit) }}</span>
+        </div>
 
         <div v-if="!loading" class="customer-detail__kpis">
             <div class="customer-detail__kpi">
@@ -311,6 +340,15 @@ async function handleReassign(administratorId: string): Promise<void> {
     width: auto;
     height: 28px;
     padding: 0 8px;
+    font-size: 13px;
+}
+
+.customer-detail__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 0;
+    color: var(--el-text-color-secondary, #6b7280);
     font-size: 13px;
 }
 
