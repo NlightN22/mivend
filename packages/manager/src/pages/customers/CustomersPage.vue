@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { MvPanel, MvFilterBar, MvFilterField, MvInput, MvSelect, MvKpiCard, MvButton, MvPagination } from '@mivend/ui-kit';
+import {
+    MvPanel,
+    MvFilterBar,
+    MvFilterField,
+    MvInput,
+    MvSelect,
+    MvKpiCard,
+    MvKpiCarousel,
+    MvButton,
+    MvPagination,
+} from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
     fetchCustomersPage,
@@ -206,7 +216,7 @@ onMounted(async () => {
             </div>
         </div>
 
-        <div v-if="summary" class="customers-page__kpis">
+        <MvKpiCarousel v-if="summary" class="customers-page__kpis">
             <MvKpiCard label="Active clients" :value="activeClientsCount" />
             <MvKpiCard
                 v-if="canReadCredit"
@@ -216,7 +226,7 @@ onMounted(async () => {
                 accent
             />
             <MvKpiCard label="Discounts expiring soon" :value="expiringGrantsCount" accent to="/discounts" />
-        </div>
+        </MvKpiCarousel>
 
         <div class="customers-page__grid">
             <MvPanel title="Client list">
@@ -283,12 +293,6 @@ onMounted(async () => {
     letter-spacing: -0.03em;
 }
 
-.customers-page__kpis {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-}
-
 .customers-page__grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 340px;
@@ -302,10 +306,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 1200px) {
-    .customers-page__kpis {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
     .customers-page__grid {
         grid-template-columns: 1fr;
     }

@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { MvKpiCard, MvPanel, MvStatusBadge, MvFilterChips, type FilterChip } from '@mivend/ui-kit';
+import {
+    MvKpiCard,
+    MvKpiCarousel,
+    MvPanel,
+    MvStatusBadge,
+    MvFilterChips,
+    type FilterChip,
+} from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { adminApi } from '../../api/client';
 import { fetchDashboardData, buildActivityFeed, type DashboardData } from '../../api/dashboard';
@@ -120,7 +127,7 @@ onMounted(async () => {
 
         <ExpiringDiscountsBanner :discounts="expiringDiscounts" />
 
-        <div v-if="data" class="dashboard__kpis">
+        <MvKpiCarousel v-if="data" class="dashboard__kpis">
             <MvKpiCard
                 v-for="card in kpiCards"
                 :key="card.key"
@@ -130,7 +137,7 @@ onMounted(async () => {
                 :to="card.to"
                 :accent="card.accent"
             />
-        </div>
+        </MvKpiCarousel>
 
         <div v-if="data" class="dashboard__grid">
             <div class="dashboard__left-stack">
@@ -203,9 +210,6 @@ onMounted(async () => {
 }
 
 .dashboard__kpis {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
     margin-bottom: 18px;
 }
 
@@ -224,10 +228,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 1200px) {
-    .dashboard__kpis {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
     .dashboard__grid {
         grid-template-columns: 1fr;
     }

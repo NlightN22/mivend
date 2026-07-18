@@ -2,6 +2,10 @@
 // Backoffice KPI tile — dashboard-style metric card reused across manager portal pages
 // (Dashboard, and future per-section summaries). See docs/ai/manager-portal-pages/
 // 00-shared-conventions.md.
+// KPI-REUSE-GUARD: always wrap a row of these in <MvKpiCarousel>, never a page-local
+// grid/flex row — a hand-rolled KPI row is a duplicate implementation, not a variant.
+// grep "KPI-REUSE-GUARD" to find this note; grep for ".kpi" + "display: grid" together
+// in packages/manager to catch a future page that skipped MvKpiCarousel.
 withDefaults(
     defineProps<{
         label: string;
