@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import MvRoundIconButton from '../MvRoundIconButton/MvRoundIconButton.vue';
 
 const track = ref<HTMLElement | null>(null);
 const canScrollLeft = ref(false);
@@ -35,36 +36,51 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="mv-kpi-carousel">
-        <button
+        <MvRoundIconButton
             v-if="canScrollLeft"
-            type="button"
-            class="mv-kpi-carousel__arrow mv-kpi-carousel__arrow--left"
+            :size="36"
+            class="mv-kpi-carousel__arrow"
             aria-label="Scroll KPIs left"
             @click="scrollBy(-1)"
         >
             ‹
-        </button>
-        <div ref="track" class="mv-kpi-carousel__track">
-            <slot />
+        </MvRoundIconButton>
+        <div class="mv-kpi-carousel__viewport">
+            <div ref="track" class="mv-kpi-carousel__track">
+                <slot />
+            </div>
+            <!-- Edge fades signal "more content this way" without the arrow ever sitting on
+                 top of a card — the track itself never loses width to make room for an arrow. -->
+            <div v-if="canScrollLeft" class="mv-kpi-carousel__fade mv-kpi-carousel__fade--left" />
+            <div v-if="canScrollRight" class="mv-kpi-carousel__fade mv-kpi-carousel__fade--right" />
         </div>
-        <button
+        <MvRoundIconButton
             v-if="canScrollRight"
-            type="button"
-            class="mv-kpi-carousel__arrow mv-kpi-carousel__arrow--right"
+            :size="36"
+            class="mv-kpi-carousel__arrow"
             aria-label="Scroll KPIs right"
             @click="scrollBy(1)"
         >
             ›
-        </button>
+        </MvRoundIconButton>
     </div>
 </template>
 
 <style scoped>
 .mv-kpi-carousel {
-    position: relative;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+}
+
+.mv-kpi-carousel__arrow {
+    flex: 0 0 auto;
+}
+
+.mv-kpi-carousel__viewport {
+    position: relative;
+    flex: 1;
+    min-width: 0;
 }
 
 .mv-kpi-carousel__track {
@@ -74,8 +90,6 @@ onBeforeUnmount(() => {
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     scrollbar-width: none;
-    flex: 1;
-    min-width: 0;
 }
 
 .mv-kpi-carousel__track::-webkit-scrollbar {
@@ -86,33 +100,24 @@ onBeforeUnmount(() => {
     flex: 0 0 auto;
     min-width: 180px;
     scroll-snap-align: start;
+    overflow: hidden;
 }
 
-.mv-kpi-carousel__arrow {
-    flex: 0 0 auto;
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    border-radius: 50%;
-    background: var(--app-surface, #fff);
-    color: var(--el-text-color-primary, #17212b);
-    font-size: 20px;
-    line-height: 1;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(16, 24, 40, 0.1);
-    transition:
-        transform 0.14s ease,
-        box-shadow 0.14s ease;
+.mv-kpi-carousel__fade {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    pointer-events: none;
 }
 
-.mv-kpi-carousel__arrow:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(16, 24, 40, 0.16);
+.mv-kpi-carousel__fade--left {
+    left: 0;
+    background: linear-gradient(to right, var(--app-bg, #f6f8fb), transparent);
 }
 
-.mv-kpi-carousel__arrow:active {
-    transform: scale(0.94);
+.mv-kpi-carousel__fade--right {
+    right: 0;
+    background: linear-gradient(to left, var(--app-bg, #f6f8fb), transparent);
 }
 </style>

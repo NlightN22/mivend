@@ -20,8 +20,10 @@ defineEmits<{ click: [] }>();
 .mv-fab {
     position: fixed;
     right: 16px;
-    bottom: calc(78px + env(safe-area-inset-bottom));
-    z-index: 48;
+    /* Sits above the 62px-min-height mobile bottom nav (z-index 50) — z-index 51 here so a
+       rounding/safe-area edge case never lets the nav's opaque background clip the FAB. */
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    z-index: 51;
     width: 54px;
     height: 54px;
     border: 0;

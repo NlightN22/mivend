@@ -49,7 +49,7 @@ test('scroll-to-top button appears after scrolling down and scrolls back to top'
     page,
 }) => {
     await page.goto('/orders');
-    const scrollUp = page.locator('.mv-scroll-nav__btn', { hasText: '↑' });
+    const scrollUp = page.getByRole('button', { name: 'Scroll to top' });
     await expect(scrollUp).toBeHidden();
 
     await page.evaluate(() => window.scrollTo(0, 800));

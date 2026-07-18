@@ -6,7 +6,7 @@ test('KPI carousel right arrow scrolls the row and stops at the end', async ({ p
     const track = page.locator('.mv-kpi-carousel__track');
     await expect(track).toBeVisible();
 
-    const rightArrow = page.locator('.mv-kpi-carousel__arrow--right');
+    const rightArrow = page.getByRole('button', { name: 'Scroll KPIs right' });
     // On a narrow layout the three KPI cards overflow the track and the arrow renders;
     // on a wide layout there may be nothing to scroll, so this is a soft check.
     if (await rightArrow.isVisible()) {

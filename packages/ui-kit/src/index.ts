@@ -84,6 +84,7 @@ export type { AppMobileNavItem } from './components/MvAppMobileNav/MvAppMobileNa
 export { default as MvAppMobileMoreSheet } from './components/MvAppMobileMoreSheet/MvAppMobileMoreSheet.vue';
 export type { AppMobileSheetItem } from './components/MvAppMobileMoreSheet/MvAppMobileMoreSheet.vue';
 export { default as MvFab } from './components/MvFab/MvFab.vue';
+export { default as MvRoundIconButton } from './components/MvRoundIconButton/MvRoundIconButton.vue';
 export { default as MvScrollNav } from './components/MvScrollNav/MvScrollNav.vue';
 export { default as MvKpiCarousel } from './components/MvKpiCarousel/MvKpiCarousel.vue';
 
