@@ -538,6 +538,38 @@ See `docs/frontend.md` for the full architecture. Critical rules:
     - See issue tracking the page-by-page rollout of this rule (existing pages predate it and
       need retrofitting one at a time) for the current status per page.
 
+2. **A tab bar must never be a plain unwrapped flex/scroll row once it holds more than ~4-5
+   tabs on a mobile viewport.** Industry consensus (Material Design 3, Apple HIG, and general
+   mobile nav UX guidance) puts the practical ceiling at 4-6 tabs before touch targets get
+   cramped or the row stops fitting — past that, collapsing extra tabs behind a "More" control
+   is the standard fix, not a wider/scrollable bar. Real incident: `CustomerDetailPage.vue`'s
+   7-tab row (Overview/Orders/Invoices/Payments/Discounts/Documents/History) had no
+   `overflow-x` handling at all, so on a narrow mobile viewport the overflowing buttons
+   stretched the _entire document_ horizontally — which, combined with `position: fixed` on
+   `MvAppMobileNav`, dragged the app's bottom navigation bar out of the visible viewport
+   entirely. A horizontally-scrollable row with edge-fade affordance (the pattern already used
+   by `MvKpiCarousel`) fixes the document-overflow bug but doesn't fix the underlying UX
+   problem — a scrollable row with no visible affordance is easy to miss, and 7 tabs is past
+   the point where scrolling is the right answer anyway.
+   **Fix pattern**: keep the 3-4 most-used tabs visible, collapse the rest into a "More ▾"
+   control that opens a small dropdown menu — the same primary/overflow split
+   `DefaultLayout.vue` already uses for the mobile bottom nav (5 slots + a "More" sheet for
+   everything else). **This collapse is mobile-only** — desktop has room to show the full row,
+   so gate it on the same `max-width: 800px` breakpoint `MvAppTopbar`/`MvAppMobileNav` already
+   use (via a `window.matchMedia` listener, not a CSS-only `display:none` trick, since which
+   tabs are "primary" vs "overflow" changes what actually renders, not just what's visible) —
+   collapsing on desktop too was an early mistake in the reference implementation, caught by
+   the developer noticing "More" showing up in the normal desktop view where all 7 tabs fit
+   comfortably in one row. See `CustomerDetailPage.vue`'s `primaryTabs`/`overflowTabs`/`isMobile`
+   for the reference implementation — `team/TeamPage.vue`'s department tabs follow the same
+   shape (`primaryDepartments`/`overflowDepartments`), replacing an earlier `flex-wrap: wrap`
+   row that avoided the overflow bug but didn't match this pattern. That makes **two** inline
+   copies; if a third page needs this same pattern, extract it into a shared `ui-kit` component
+   instead of copying the markup a third time (per the ui-kit "single source of truth" rule
+   above) — two concrete instances isn't quite enough yet to know the right generic shape
+   (fixed enum of tabs vs. a dynamic list like departments), so a bespoke component would still
+   be premature.
+
 ---
 
 ## Vendure-specific gotchas

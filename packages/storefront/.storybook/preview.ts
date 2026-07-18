@@ -1,7 +1,6 @@
 import type { Preview } from '@storybook/vue3';
 import { setup } from '@storybook/vue3';
 import { createPinia, setActivePinia } from 'pinia';
-import { INITIAL_VIEWPORTS } from '@storybook/addon-viewport';
 import { initialize, mswLoader } from 'msw-storybook-addon';
 import { http, HttpResponse } from 'msw';
 import ElementPlus from 'element-plus';
@@ -99,7 +98,7 @@ const preview: Preview = {
     parameters: {
         msw: { handlers: [graphqlHandler] },
         viewport: {
-            viewports: { ...mvViewports, ...INITIAL_VIEWPORTS },
+            viewports: mvViewports,
             defaultViewport: 'mvMobile',
         },
         backgrounds: {

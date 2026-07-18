@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { MvPanel, MvStatusBadge, MvSelect, MvKpiCard, MvKpiCarousel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
@@ -64,6 +64,15 @@ const canManageTeam = computed(() => authStore.hasPermission('ManageCounterparty
 
 type CustomerDetailTab = 'overview' | 'orders' | 'invoices' | 'payments' | 'discounts' | 'documents' | 'history';
 const TABS: CustomerDetailTab[] = ['overview', 'orders', 'invoices', 'payments', 'discounts', 'documents', 'history'];
+const TAB_LABELS: Record<CustomerDetailTab, string> = {
+    overview: 'Overview',
+    orders: 'Orders',
+    invoices: 'Invoices',
+    payments: 'Payments',
+    discounts: 'Discounts',
+    documents: 'Documents',
+    history: 'History',
+};
 
 function tabFromQuery(): CustomerDetailTab {
     const q = route.query.tab;
@@ -74,6 +83,46 @@ const activeTab = ref<CustomerDetailTab>(tabFromQuery());
 
 watch(activeTab, tab => {
     router.replace({ query: { ...route.query, tab } });
+});
+
+// Mobile-only tab-overflow pattern, see AGENTS.md's "Manager portal rules" — 7 tabs don't fit a
+// mobile row; the first 3 (most used day-to-day) stay visible, the rest collapse into "More",
+// mirroring the same primary/overflow split DefaultLayout.vue already uses for the bottom nav.
+// Desktop has room for the full row, so it's shown in full there — same breakpoint as
+// MvAppTopbar/MvAppMobileNav's own `max-width: 800px` mobile switch.
+const MOBILE_BREAKPOINT = '(max-width: 800px)';
+const mobileQuery = window.matchMedia(MOBILE_BREAKPOINT);
+const isMobile = ref(mobileQuery.matches);
+function handleMobileQueryChange(e: MediaQueryListEvent): void {
+    isMobile.value = e.matches;
+}
+
+const PRIMARY_TAB_COUNT = 3;
+const visibleTabs = computed(() => TABS.filter(t => t !== 'history' || canViewHistory.value));
+const primaryTabs = computed(() => (isMobile.value ? visibleTabs.value.slice(0, PRIMARY_TAB_COUNT) : visibleTabs.value));
+const overflowTabs = computed(() => (isMobile.value ? visibleTabs.value.slice(PRIMARY_TAB_COUNT) : []));
+const isOverflowActive = computed(() => overflowTabs.value.includes(activeTab.value));
+const tabsMoreOpen = ref(false);
+const tabsMoreRef = ref<HTMLElement | null>(null);
+
+function selectTab(tab: CustomerDetailTab): void {
+    activeTab.value = tab;
+    tabsMoreOpen.value = false;
+}
+
+function handleOutsideClick(e: MouseEvent): void {
+    if (tabsMoreRef.value && !tabsMoreRef.value.contains(e.target as Node)) {
+        tabsMoreOpen.value = false;
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('click', handleOutsideClick);
+    mobileQuery.addEventListener('change', handleMobileQueryChange);
+});
+onBeforeUnmount(() => {
+    document.removeEventListener('click', handleOutsideClick);
+    mobileQuery.removeEventListener('change', handleMobileQueryChange);
 });
 // EntityHistoryPanel now owns its own fetching/pagination (issue #39) — this page only supplies
 // the refs to fetch for, not a pre-loaded array.
@@ -244,32 +293,36 @@ async function handleReassign(administratorId: string): Promise<void> {
         </MvKpiCarousel>
 
         <div class="customer-detail__tabs">
-            <button type="button" :class="{ active: activeTab === 'overview' }" @click="activeTab = 'overview'">
-                Overview
-            </button>
-            <button type="button" :class="{ active: activeTab === 'orders' }" @click="activeTab = 'orders'">
-                Orders
-            </button>
-            <button type="button" :class="{ active: activeTab === 'invoices' }" @click="activeTab = 'invoices'">
-                Invoices
-            </button>
-            <button type="button" :class="{ active: activeTab === 'payments' }" @click="activeTab = 'payments'">
-                Payments
-            </button>
-            <button type="button" :class="{ active: activeTab === 'discounts' }" @click="activeTab = 'discounts'">
-                Discounts
-            </button>
-            <button type="button" :class="{ active: activeTab === 'documents' }" @click="activeTab = 'documents'">
-                Documents
-            </button>
             <button
-                v-if="canViewHistory"
+                v-for="tab in primaryTabs"
+                :key="tab"
                 type="button"
-                :class="{ active: activeTab === 'history' }"
-                @click="activeTab = 'history'"
+                :class="{ active: activeTab === tab }"
+                @click="selectTab(tab)"
             >
-                History
+                {{ TAB_LABELS[tab] }}
             </button>
+            <div v-if="overflowTabs.length" ref="tabsMoreRef" class="customer-detail__tabs-more">
+                <button
+                    type="button"
+                    class="customer-detail__tabs-more-trigger"
+                    :class="{ active: isOverflowActive }"
+                    @click="tabsMoreOpen = !tabsMoreOpen"
+                >
+                    {{ isOverflowActive ? TAB_LABELS[activeTab] : 'More' }} ▾
+                </button>
+                <div v-if="tabsMoreOpen" class="customer-detail__tabs-more-menu">
+                    <button
+                        v-for="tab in overflowTabs"
+                        :key="tab"
+                        type="button"
+                        :class="{ active: activeTab === tab }"
+                        @click="selectTab(tab)"
+                    >
+                        {{ TAB_LABELS[tab] }}
+                    </button>
+                </div>
+            </div>
         </div>
 
         <MvPanel v-if="!loading">
@@ -307,7 +360,6 @@ async function handleReassign(administratorId: string): Promise<void> {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    max-width: 900px;
 }
 
 .customer-detail__breadcrumb {
@@ -369,12 +421,15 @@ async function handleReassign(administratorId: string): Promise<void> {
 
 .customer-detail__tabs {
     display: flex;
+    align-items: center;
     gap: 8px;
     border-bottom: 1px solid var(--el-border-color, #e4e7ec);
     margin-top: 8px;
+    position: relative;
 }
 
-.customer-detail__tabs button {
+.customer-detail__tabs > button,
+.customer-detail__tabs-more-trigger {
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
@@ -383,11 +438,53 @@ async function handleReassign(administratorId: string): Promise<void> {
     font-weight: 700;
     color: var(--el-text-color-secondary, #6b7280);
     cursor: pointer;
+    white-space: nowrap;
 }
 
-.customer-detail__tabs button.active {
+.customer-detail__tabs > button.active,
+.customer-detail__tabs-more-trigger.active {
     color: var(--el-color-primary-dark-2, #008a70);
     border-bottom-color: var(--el-color-primary, #00b894);
+}
+
+.customer-detail__tabs-more {
+    position: relative;
+}
+
+.customer-detail__tabs-more-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    min-width: 160px;
+    padding: 6px;
+    background: var(--app-surface, #fff);
+    border: 1px solid var(--el-border-color, #e4e7ec);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(20, 42, 65, 0.12);
+}
+
+.customer-detail__tabs-more-menu button {
+    background: none;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    color: var(--el-text-color-secondary, #6b7280);
+    cursor: pointer;
+}
+
+.customer-detail__tabs-more-menu button:hover {
+    background: var(--el-fill-color-light, #f8fafc);
+}
+
+.customer-detail__tabs-more-menu button.active {
+    color: var(--el-color-primary-dark-2, #008a70);
+    background: var(--el-color-primary-light-9, #f0fffa);
 }
 
 .customer-detail__not-found {

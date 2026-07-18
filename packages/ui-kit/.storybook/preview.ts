@@ -1,6 +1,5 @@
 import type { Preview } from '@storybook/vue3';
 import { setup } from '@storybook/vue3';
-import { INITIAL_VIEWPORTS } from '@storybook/addon-viewport';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
@@ -45,7 +44,7 @@ const preview: Preview = {
             ],
         },
         viewport: {
-            viewports: { ...mvViewports, ...INITIAL_VIEWPORTS },
+            viewports: mvViewports,
             defaultViewport: 'mvDesktop',
         },
     },

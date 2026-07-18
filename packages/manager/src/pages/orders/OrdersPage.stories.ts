@@ -184,6 +184,7 @@ function mockOrdersData(): void {
             { erpId: 'branch-b', name: 'branch-b' },
         ],
     }));
+    registerMock('MyTableViews', () => ({ myTableViews: [] }));
 }
 
 export const Default: Story = {
@@ -214,6 +215,7 @@ export const Empty: Story = {
             }));
             registerMock('TeamMembers', () => ({ teamMembers: [] }));
             registerMock('Branches', () => ({ branches: [] }));
+            registerMock('MyTableViews', () => ({ myTableViews: [] }));
             await router.push('/orders');
         },
     ],

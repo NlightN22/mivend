@@ -82,3 +82,11 @@ export const Default: Story = {
         template: '<CustomerDetailPage />',
     }),
 };
+
+// A dedicated sidebar entry pinned to the mobile viewport (see AGENTS.md's "Manager portal
+// rules" tab-overflow pattern) — click straight into this story to see the mobile "3 tabs +
+// More" layout without going through the viewport dropdown first.
+export const Mobile: Story = {
+    ...Default,
+    parameters: { viewport: { defaultViewport: 'mvMobile' } },
+};
