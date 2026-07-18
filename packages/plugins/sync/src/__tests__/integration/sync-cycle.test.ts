@@ -1,6 +1,12 @@
 import { randomUUID } from 'crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DataSource } from 'typeorm';
+import {
+    createTestSchema,
+    dropTestSchema,
+    testDataSourceConnectionOptions,
+    testSchemaOptions,
+} from 'shared';
 
 import { ProductConsumer } from '../../consumers/product.consumer';
 import { CentralConsumer } from '../../consumers/central.consumer';
@@ -55,17 +61,17 @@ let centralOrderSyncMock: {
     applyUpdate: ReturnType<typeof vi.fn>;
 };
 
+const { schema, extra } = testSchemaOptions('sync_cycle');
+
 beforeAll(async () => {
+    await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
-        host: process.env['TEST_DB_HOST'] ?? 'localhost',
-        port: Number(process.env['TEST_DB_PORT'] ?? 5432),
-        username: process.env['TEST_DB_USER'] ?? 'postgres',
-        password: process.env['TEST_DB_PASSWORD'] ?? 'postgres',
-        database: process.env['TEST_DB_NAME'] ?? 'mivend_test',
+        ...testDataSourceConnectionOptions(),
+        schema,
+        extra,
         entities: [SyncOutboxEntry, SyncProcessedEvent],
         synchronize: true,
-        dropSchema: true,
     });
     await dataSource.initialize();
 
@@ -140,6 +146,7 @@ afterAll(async () => {
     await hubRabbitMQ.onModuleDestroy();
     await branchRabbitMQ.onModuleDestroy();
     await dataSource.destroy();
+    await dropTestSchema(schema);
 });
 
 // ─── Outbox → RabbitMQ ────────────────────────────────────────────────────────
