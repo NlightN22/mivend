@@ -20,6 +20,8 @@ const emit = defineEmits<{ reset: [] }>();
     padding: 14px 0 16px;
     border-bottom: 1px solid var(--el-border-color, #e4e7ec);
     margin-bottom: 14px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .mv-filter-bar__reset {

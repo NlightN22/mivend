@@ -111,6 +111,8 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
     display: grid;
     gap: 11px;
     cursor: pointer;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .mv-mobile-card__head {
@@ -124,6 +126,7 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
     font-weight: 800;
     font-size: 14px;
     min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .mv-mobile-card__highlight {
@@ -135,8 +138,12 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
 
 .mv-mobile-card__grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px;
+}
+
+.mv-mobile-card__field {
+    min-width: 0;
 }
 
 .mv-mobile-card__label {
@@ -151,6 +158,7 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
     margin-top: 3px;
     font-size: 13px;
     font-weight: 700;
+    overflow-wrap: anywhere;
 }
 
 .mv-mobile-card__actions {

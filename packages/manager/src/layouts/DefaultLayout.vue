@@ -147,6 +147,7 @@ async function handleLogout(): Promise<void> {
         <MvAppMobileMoreSheet
             :open="moreSheetOpen"
             :items="moreSheetItems"
+            :active-path="route.path"
             :user-name="authStore.fullName"
             :user-role-label="authStore.roleLabel ?? authStore.roleCode"
             :user-initials="initials"

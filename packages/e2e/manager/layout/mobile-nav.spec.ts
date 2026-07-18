@@ -68,6 +68,30 @@ test('Create-order FAB is not shown on unrelated pages', async ({ page }) => {
     await expect(page.locator('.mv-fab')).toHaveCount(0);
 });
 
+test('bottom nav "More" tab shows active on a page reached only via the sheet', async ({
+    page,
+}) => {
+    await page.goto('/discounts');
+    await expect(
+        page.locator('.mv-app-mobile-nav').getByRole('button', { name: 'More' }),
+    ).toHaveClass(/mv-app-mobile-nav__item--active/);
+
+    await page.locator('.mv-app-mobile-nav').getByRole('button', { name: 'More' }).click();
+    await expect(
+        page.locator('.mv-mobile-sheet').getByRole('link', { name: 'Discounts' }),
+    ).toHaveClass(/mv-mobile-sheet__item--active/);
+});
+
+test('orders page has no horizontal overflow at a narrow mobile viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 690 });
+    await page.goto('/orders');
+    await expect(page.locator('.mv-app-mobile-nav')).toBeVisible();
+    const overflowing = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+    expect(overflowing).toBe(false);
+});
+
 test('scroll-to-top button appears after scrolling down and scrolls back to top', async ({
     page,
 }) => {

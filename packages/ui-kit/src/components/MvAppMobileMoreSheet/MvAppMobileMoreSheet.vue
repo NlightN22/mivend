@@ -11,6 +11,7 @@ export interface AppMobileSheetItem {
 const props = defineProps<{
     open: boolean;
     items: AppMobileSheetItem[];
+    activePath?: string;
     userName?: string;
     userRoleLabel?: string | null;
     userInitials?: string;
@@ -47,7 +48,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 v-for="item in items"
                 :key="item.key"
                 class="mv-mobile-sheet__item"
-                :class="{ 'mv-mobile-sheet__item--danger': item.danger }"
+                :class="{
+                    'mv-mobile-sheet__item--danger': item.danger,
+                    'mv-mobile-sheet__item--active': !!activePath && activePath.startsWith(item.path),
+                }"
+                :aria-current="activePath && activePath.startsWith(item.path) ? 'page' : undefined"
                 :to="item.path"
                 @click="emit('close')"
             >
@@ -178,5 +183,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
 .mv-mobile-sheet__item--danger {
     color: var(--el-color-danger, #c63f4b);
+}
+
+.mv-mobile-sheet__item--active {
+    border-color: var(--el-color-primary, #00b894);
+    background: var(--el-color-primary-light-9, #f0fffa);
+    color: var(--el-color-primary-dark-2, #008a70);
 }
 </style>

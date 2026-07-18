@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { HomeFilled, User, List, CircleCheck, MoreFilled } from '@element-plus/icons-vue';
 import MvCountBadge from '../MvCountBadge/MvCountBadge.vue';
 
@@ -18,7 +19,7 @@ const ICONS = {
     more: MoreFilled,
 };
 
-defineProps<{ items: AppMobileNavItem[]; activePath: string }>();
+const props = defineProps<{ items: AppMobileNavItem[]; activePath: string }>();
 const emit = defineEmits<{ 'select-more': [] }>();
 
 function isActive(item: AppMobileNavItem, activePath: string): boolean {
@@ -26,6 +27,14 @@ function isActive(item: AppMobileNavItem, activePath: string): boolean {
     if (item.path === '/') return activePath === '/';
     return item.path != null && activePath.startsWith(item.path);
 }
+
+// "More" groups every page that has no dedicated bottom-bar slot (Discounts/Team/Settings/
+// Catalog/Invoices/Payments, per MvAppMobileMoreSheet's item list). Without this, visiting any
+// of those pages leaves no tab highlighted at all — the user loses "where am I right now",
+// which is the whole point of a bottom nav (Material Design: exactly one destination active).
+const isMoreActive = computed(
+    () => !props.items.some(item => item.key !== 'more' && isActive(item, props.activePath)),
+);
 </script>
 
 <template>
@@ -47,6 +56,8 @@ function isActive(item: AppMobileNavItem, activePath: string): boolean {
         <button
             type="button"
             class="mv-app-mobile-nav__item"
+            :class="{ 'mv-app-mobile-nav__item--active': isMoreActive }"
+            :aria-current="isMoreActive ? 'page' : undefined"
             @click="emit('select-more')"
         >
             <span class="mv-app-mobile-nav__icon-wrap">
