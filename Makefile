@@ -115,20 +115,33 @@ storybook:
 # re-running never stacks processes or hops ports. Bound to 0.0.0.0 for VS Code port
 # forwarding / external access. One fixed port per portal: ui-kit 6006, manager 6016,
 # storefront 6018 (HMR websockets use port+1).
+#
+# Also wipes node_modules/.cache/storybook (+ sb-vite-plugin-externals) before every start.
+# Storybook 8's dev-mode CSF indexer (the fast parser behind /index.json, separate from a real
+# `storybook build`) has a real recurring bug: after certain file edits it gets stuck serving a
+# stale "Could not parse import/exports with acorn" error for a file that is actually syntactically
+# valid (confirmed repeatedly with a standalone @babel/parser check) — a plain restart alone does
+# not clear it, only wiping this cache does. `pkill -f` alone was also observed to leave the actual
+# node process alive (reparented under PPID 1) holding the port, so `fuser -k` (by port, not by
+# matched command string) is used as the authoritative kill.
 storybook-ui-kit:
-	-pkill -f "storybook dev -p 6006" 2>/dev/null; sleep 1
+	-fuser -k -9 6006/tcp 2>/dev/null; pkill -9 -f "storybook dev -p 6006" 2>/dev/null; sleep 1
+	rm -rf packages/ui-kit/node_modules/.cache/storybook packages/ui-kit/node_modules/.cache/sb-vite-plugin-externals
 	pnpm --filter @mivend/ui-kit storybook:host
 
 storybook-manager:
-	-pkill -f "storybook dev -p 6016" 2>/dev/null; sleep 1
+	-fuser -k -9 6016/tcp 2>/dev/null; pkill -9 -f "storybook dev -p 6016" 2>/dev/null; sleep 1
+	rm -rf packages/manager/node_modules/.cache/storybook packages/manager/node_modules/.cache/sb-vite-plugin-externals
 	pnpm --filter @mivend/manager storybook:host
 
 storybook-storefront:
-	-pkill -f "storybook dev -p 6018" 2>/dev/null; sleep 1
+	-fuser -k -9 6018/tcp 2>/dev/null; pkill -9 -f "storybook dev -p 6018" 2>/dev/null; sleep 1
+	rm -rf packages/storefront/node_modules/.cache/storybook packages/storefront/node_modules/.cache/sb-vite-plugin-externals
 	pnpm --filter @mivend/storefront storybook:host
 
 storybook-down:
-	-pkill -f "storybook dev" 2>/dev/null
+	-fuser -k -9 6006/tcp 6016/tcp 6018/tcp 2>/dev/null
+	-pkill -9 -f "storybook dev" 2>/dev/null
 
 storefront:
 	pnpm --filter @mivend/storefront dev
