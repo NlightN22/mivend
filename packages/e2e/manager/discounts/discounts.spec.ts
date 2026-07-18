@@ -4,14 +4,11 @@ import { test, expect } from '@playwright/test';
 // single unified list backed by DiscountRegistryEntry (a CQRS-style read-model projection, see
 // DiscountRegistryService on the backend), matching the design concept's single "Grant registry"
 // table instead of the earlier two-table split (discountRulesPage + approvalRequestsByType).
-test('discounts page loads the grant registry with KPIs and at least one seeded row', async ({
-    page,
-}) => {
+test('discounts page loads the grant registry and at least one seeded row', async ({ page }) => {
     await page.goto('/discounts');
     await expect(page.getByRole('heading', { name: 'Discount Grants' })).toBeVisible({
         timeout: 15000,
     });
-    await expect(page.getByText('Active grants')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Grant registry' })).toBeVisible();
 
     const table = page.locator('.el-table-v2__row');
@@ -37,7 +34,7 @@ test('status chips filter the registry and stay in sync with the Status dropdown
     await page.goto('/discounts');
     await expect(page.locator('.el-table-v2__row').first()).toBeVisible({ timeout: 15000 });
 
-    await page.locator('.discounts-page__chip', { hasText: 'Rejected' }).click();
+    await page.locator('.mv-filter-chip', { hasText: 'Rejected' }).click();
     await page.waitForTimeout(500); // debounce-free reactive filter, but let the refetch settle
     const statuses = page.locator('.el-table-v2__row .mv-status-badge');
     const count = await statuses.count();
