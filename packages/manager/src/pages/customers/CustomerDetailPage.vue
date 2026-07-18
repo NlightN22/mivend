@@ -192,6 +192,9 @@ async function handleReassign(administratorId: string): Promise<void> {
             <MvStatusBadge :variant="customer.isActive ? 'success' : 'neutral'">
                 {{ customer.isActive ? 'Active' : 'Inactive' }}
             </MvStatusBadge>
+            <MvStatusBadge v-if="customer.erpGroupLabel" variant="info">
+                {{ customer.erpGroupLabel }}
+            </MvStatusBadge>
         </h1>
         <p class="customer-detail__subtitle">
             <span v-if="customer.inn">INN {{ customer.inn }} · </span>
