@@ -77,7 +77,7 @@ describe('OrderVisibilityService', () => {
         // Counterparty.branchId — a chain account's orders can be serviced by a different
         // branch than the customer's nominal "home" branch, see order-visibility.service.ts.
         expect(qb.andWhere).toHaveBeenCalledWith(
-            'counterparty.departmentId = :departmentId AND order."customFieldsBranchid" = :branchId',
+            'counterparty.departmentId = :departmentId AND "order"."customFieldsBranchid" = :branchId',
             { departmentId: 'dept-1', branchId: 'branch-1' },
         );
     });
