@@ -43,4 +43,14 @@ const emit = defineEmits<{ reset: [] }>();
         grid-template-columns: 1fr 1fr;
     }
 }
+
+@media (max-width: 800px) {
+    .mv-filter-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .mv-filter-bar__reset {
+        width: 100%;
+    }
+}
 </style>
