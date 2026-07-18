@@ -8,7 +8,9 @@ import type { DiscountRow, DiscountRowStatus } from '../../api/discounts';
 
 // pageSize: see manager OrdersTable's pageSize prop comment — stabilizes table height across
 // page changes instead of sizing off the current page's actual row count.
-const props = defineProps<{ rows: DiscountRow[]; pageSize?: number }>();
+// loading: must be threaded through to MvTable, not used to unmount this component at the
+// page level — unmounting during a refetch collapses page height and snaps scroll to top.
+const props = defineProps<{ rows: DiscountRow[]; pageSize?: number; loading?: boolean }>();
 const emit = defineEmits<{ renew: [row: DiscountRow] }>();
 const router = useRouter();
 
@@ -118,6 +120,7 @@ const rows = computed<TableRow[]>(() =>
         :columns="columns"
         :data="rows"
         :height="Math.max(rows.length, props.pageSize ?? 1) * 52 + 40"
+        :loading="loading"
         empty-text="No discount grants yet"
     />
 </template>

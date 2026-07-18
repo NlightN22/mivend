@@ -16,6 +16,10 @@ const props = defineProps<{
     // See OrdersTable.vue's identical doc comment — keeps table height stable across page
     // changes so a shorter last page doesn't shrink total page height and snap scroll to top.
     pageSize?: number;
+    // Must be threaded through to MvTable (not used to unmount this component at the page
+    // level) — unmounting during a refetch collapses page height and snaps scroll to top,
+    // the same bug class pageSize already guards against.
+    loading?: boolean;
 }>();
 const router = useRouter();
 
@@ -68,6 +72,7 @@ function openOrder(payload: { rowData: TableRow }): void {
         :columns="columns"
         :data="rows"
         :height="Math.max(rows.length, props.pageSize ?? 1) * 52 + 40"
+        :loading="loading"
         empty-text="No invoices match your filters"
         @row-click="openOrder"
     />

@@ -153,7 +153,7 @@ onMounted(async () => {
             <MvFilterChips :chips="CHIPS" :active="statusFilter" @select="selectChip" />
 
             <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
-            <DiscountsTable v-if="!loading" :rows="rows" :page-size="PAGE_SIZE" @renew="openRenewForm" />
+            <DiscountsTable :rows="rows" :page-size="PAGE_SIZE" :loading="loading" @renew="openRenewForm" />
             <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
         </MvPanel>
     </div>

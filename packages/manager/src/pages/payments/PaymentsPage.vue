@@ -83,8 +83,12 @@ onMounted(load);
         <MvPanel title="Payments list">
             <PaymentsFilterBar :filters="filters" @update:filters="Object.assign(filters, $event)" @reset="resetFilters" />
             <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
-            <p v-if="loading" class="payments-page__loading">Loading…</p>
-            <PaymentsTable v-else :payments="payments" :counterparty-names="counterpartyNames" :page-size="pageSize" />
+            <PaymentsTable
+                :payments="payments"
+                :counterparty-names="counterpartyNames"
+                :page-size="pageSize"
+                :loading="loading"
+            />
             <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
         </MvPanel>
     </div>
@@ -110,10 +114,5 @@ onMounted(load);
 .payments-page__subtitle {
     margin: 8px 0 0;
     color: var(--el-text-color-secondary, #6b7280);
-}
-
-.payments-page__loading {
-    color: var(--el-text-color-secondary, #6b7280);
-    font-size: 13px;
 }
 </style>

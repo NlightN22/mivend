@@ -158,7 +158,11 @@ loadAll();
 
             <MvPanel class="catalog-page__results">
                 <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
-                <div v-if="!loading" class="catalog-page__rows">
+                <div
+                    class="catalog-page__rows"
+                    :class="{ 'catalog-page__rows--loading': loading }"
+                    :style="{ minHeight: `${Math.max(items.length, pageSize) * 90}px` }"
+                >
                     <div v-for="item in items" :key="item.productVariantId" class="catalog-page__row">
                         <MvProductRow
                             :name="item.productName"
@@ -264,6 +268,11 @@ loadAll();
 .catalog-page__rows {
     display: flex;
     flex-direction: column;
+}
+
+.catalog-page__rows--loading {
+    opacity: 0.6;
+    pointer-events: none;
 }
 
 .catalog-page__row-img {
