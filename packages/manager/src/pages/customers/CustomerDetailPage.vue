@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { MvPanel, MvStatusBadge, MvSelect } from '@mivend/ui-kit';
+import { MvPanel, MvStatusBadge, MvSelect, MvKpiCard, MvKpiCarousel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
     fetchCustomerById,
@@ -217,26 +217,19 @@ async function handleReassign(administratorId: string): Promise<void> {
             <span v-if="credit">Credit limit: {{ money(credit.creditLimit) }}</span>
         </div>
 
-        <div v-if="!loading" class="customer-detail__kpis">
-            <div class="customer-detail__kpi">
-                <span class="customer-detail__kpi-label">Sales last 30 days</span>
-                <span class="customer-detail__kpi-value">{{ money(sales30d) }}</span>
-            </div>
-            <div class="customer-detail__kpi">
-                <span class="customer-detail__kpi-label">Open orders</span>
-                <span class="customer-detail__kpi-value">{{ openOrdersCount }}</span>
-            </div>
-            <div class="customer-detail__kpi">
-                <span class="customer-detail__kpi-label">Outstanding balance</span>
-                <span class="customer-detail__kpi-value">
-                    {{ outstandingBalance ? money(outstandingBalance.amount) : money(0) }}
-                </span>
-            </div>
-            <div v-if="credit" class="customer-detail__kpi">
-                <span class="customer-detail__kpi-label">Available credit</span>
-                <span class="customer-detail__kpi-value">{{ money(credit.creditLimit - credit.creditBalance) }}</span>
-            </div>
-        </div>
+        <MvKpiCarousel v-if="!loading" class="customer-detail__kpis">
+            <MvKpiCard label="Sales last 30 days" :value="money(sales30d)" />
+            <MvKpiCard label="Open orders" :value="openOrdersCount" />
+            <MvKpiCard
+                label="Outstanding balance"
+                :value="outstandingBalance ? money(outstandingBalance.amount) : money(0)"
+            />
+            <MvKpiCard
+                v-if="credit"
+                label="Available credit"
+                :value="money(credit.creditLimit - credit.creditBalance)"
+            />
+        </MvKpiCarousel>
 
         <div class="customer-detail__tabs">
             <button type="button" :class="{ active: activeTab === 'overview' }" @click="activeTab = 'overview'">
@@ -359,32 +352,7 @@ async function handleReassign(administratorId: string): Promise<void> {
 }
 
 .customer-detail__kpis {
-    display: flex;
-    gap: 12px;
     margin-top: 4px;
-}
-
-.customer-detail__kpi {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 16px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    border-radius: 14px;
-    background: var(--el-fill-color-lighter, #f9fafb);
-}
-
-.customer-detail__kpi-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 800;
-    color: var(--el-text-color-secondary, #6b7280);
-}
-
-.customer-detail__kpi-value {
-    font-size: 18px;
-    font-weight: 850;
 }
 
 .customer-detail__tabs {

@@ -44,3 +44,17 @@ test('Create-order FAB is not shown on unrelated pages', async ({ page }) => {
     await page.goto('/customers');
     await expect(page.locator('.mv-fab')).toHaveCount(0);
 });
+
+test('scroll-to-top button appears after scrolling down and scrolls back to top', async ({
+    page,
+}) => {
+    await page.goto('/orders');
+    const scrollUp = page.locator('.mv-scroll-nav__btn', { hasText: '↑' });
+    await expect(scrollUp).toBeHidden();
+
+    await page.evaluate(() => window.scrollTo(0, 800));
+    await expect(scrollUp).toBeVisible();
+
+    await scrollUp.click();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(50);
+});

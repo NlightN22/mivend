@@ -7,6 +7,7 @@ import {
     MvAppMobileNav,
     MvAppMobileMoreSheet,
     MvFab,
+    MvScrollNav,
     MvNotice,
     type AppSidebarItem,
     type AppMobileNavItem,
@@ -144,6 +145,7 @@ async function handleLogout(): Promise<void> {
             @logout="handleLogout"
         />
         <MvFab v-if="showCreateOrderFab" :to="createOrderFabTarget" aria-label="Create order" />
+        <MvScrollNav />
     </div>
 </template>
 

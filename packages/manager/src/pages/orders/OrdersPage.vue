@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import {
     MvKpiCard,
+    MvKpiCarousel,
     MvPanel,
     MvWarningBanner,
     MvPagination,
@@ -236,11 +237,11 @@ const todayAmountFormatted = computed(() => {
             Some are overdue for shipment or have a price adjustment awaiting approval.
         </MvWarningBanner>
 
-        <div v-if="summary" class="orders-page__kpis">
+        <MvKpiCarousel v-if="summary" class="orders-page__kpis">
             <MvKpiCard label="Open orders" :value="summary.openCount" />
             <MvKpiCard label="Waiting approval" :value="summary.waitingApprovalCount" accent />
             <MvKpiCard label="Today's amount" :value="todayAmountFormatted" :caption="`${summary.todayCount} orders today`" />
-        </div>
+        </MvKpiCarousel>
 
         <div class="orders-page__grid">
             <MvPanel title="Orders list">
@@ -317,9 +318,6 @@ const todayAmountFormatted = computed(() => {
 }
 
 .orders-page__kpis {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
     margin-bottom: 18px;
 }
 
@@ -342,10 +340,6 @@ const todayAmountFormatted = computed(() => {
 }
 
 @media (max-width: 1200px) {
-    .orders-page__kpis {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
     .orders-page__grid {
         grid-template-columns: 1fr;
     }
