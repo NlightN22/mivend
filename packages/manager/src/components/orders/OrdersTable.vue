@@ -17,6 +17,7 @@ const props = defineProps<{
     // shrinks total page height enough that the browser clamps window.scrollY to the new
     // (smaller) max, snapping the whole page to the top. See MvPagination's e2e test.
     pageSize?: number;
+    hiddenColumnKeys?: Set<string>;
 }>();
 const router = useRouter();
 
@@ -94,7 +95,8 @@ const columns = computed<Column<TableRow>[]>(() => {
                 ),
         },
     );
-    return cols;
+    if (!props.hiddenColumnKeys?.size) return cols;
+    return cols.filter(c => !props.hiddenColumnKeys!.has(c.key as string));
 });
 
 function openOrder(payload: { rowData: TableRow }): void {

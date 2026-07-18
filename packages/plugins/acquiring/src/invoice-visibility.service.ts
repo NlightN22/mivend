@@ -40,6 +40,42 @@ export class InvoiceVisibilityService {
         return { items, totalItems };
     }
 
+    // Real aggregate for the Customer detail page's "Outstanding balance" KPI — sums unpaid
+    // invoices (pending/issued) for one counterparty, scoped the same way findVisible is so a
+    // department-scoped manager can't probe balances outside their own branch. Assumes one
+    // currency per counterparty (true for this project's current single-currency-per-org model);
+    // returns the first currency encountered if that assumption is ever violated, rather than
+    // silently summing across currencies.
+    async getOutstandingBalance(
+        ctx: RequestContext,
+        counterpartyId: string,
+    ): Promise<{ amount: number; currencyCode: string } | null> {
+        const scope = await this.accessScopeService.resolveInvoiceScope(ctx);
+        const qb = this.connection
+            .getRepository(ctx, Invoice)
+            .createQueryBuilder('invoice')
+            .leftJoin(
+                Counterparty,
+                'counterparty',
+                'counterparty.id::text = invoice."counterpartyId"::text',
+            )
+            .andWhere('invoice.counterpartyId = :counterpartyId', { counterpartyId })
+            .andWhere('invoice.status IN (:...statuses)', { statuses: ['pending', 'issued'] });
+        this.applyScope(qb, scope);
+        const rows = await qb
+            .select('invoice.amount', 'amount')
+            .addSelect('invoice.currencyCode', 'currencyCode')
+            .getRawMany<{
+                amount: number;
+                currencyCode: string;
+            }>();
+        if (!rows.length) return null;
+        return {
+            amount: rows.reduce((sum, row) => sum + Number(row.amount), 0),
+            currencyCode: rows[0].currencyCode,
+        };
+    }
+
     // Shared by PaymentVisibilityService, which joins PaymentAttempt -> Invoice and needs the
     // exact same counterparty scope resolved/applied to the joined invoice row, not duplicated.
     async resolveScope(ctx: RequestContext): Promise<AccessScope> {

@@ -22,4 +22,13 @@ export class AdminInvoiceVisibilityResolver {
     ): Promise<PaginatedList<Invoice>> {
         return this.invoiceVisibilityService.findVisible(ctx, args.options, args.counterpartyId);
     }
+
+    @Query()
+    @Allow(CustomPermission.ReadInvoice.Permission)
+    async invoiceOutstandingBalance(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { counterpartyId: string },
+    ): Promise<{ amount: number; currencyCode: string } | null> {
+        return this.invoiceVisibilityService.getOutstandingBalance(ctx, args.counterpartyId);
+    }
 }

@@ -85,3 +85,20 @@ export async function fetchInvoicesForCounterparty(
     );
     return result.visibleInvoices.items;
 }
+
+export interface OutstandingBalance {
+    amount: number;
+    currencyCode: string;
+}
+
+export async function fetchOutstandingBalance(
+    counterpartyId: string,
+): Promise<OutstandingBalance | null> {
+    const result = await adminApi<{ invoiceOutstandingBalance: OutstandingBalance | null }>(
+        `query($counterpartyId: ID!) {
+            invoiceOutstandingBalance(counterpartyId: $counterpartyId) { amount currencyCode }
+        }`,
+        { counterpartyId },
+    );
+    return result.invoiceOutstandingBalance;
+}

@@ -7,7 +7,10 @@ import {
     MvPagination,
     MvStatusBadge,
     MvFilterChips,
+    MvColumnToggle,
+    useColumnVisibility,
     type FilterChip,
+    type ColumnVisibilityDef,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { adminApi } from '../../api/client';
@@ -56,6 +59,25 @@ const CHIPS: FilterChip[] = [
     { key: 'overdue', label: 'Overdue' },
 ];
 const activeChip = ref('all');
+
+// Personal display preference, not business data — see useColumnVisibility's own comment.
+// 'code'/'action' are marked required so a manager can never hide the one column they need to
+// identify/open a row.
+const ORDER_COLUMNS: ColumnVisibilityDef[] = [
+    { key: 'code', label: 'Order #', required: true },
+    { key: 'customer', label: 'Customer' },
+    { key: 'manager', label: 'Manager' },
+    { key: 'state', label: 'Status' },
+    { key: 'total', label: 'Total amount' },
+    { key: 'date', label: 'Date placed' },
+    { key: 'branch', label: 'Branch' },
+    { key: 'attention', label: 'Attention' },
+    { key: 'action', label: '', required: true },
+];
+const { hiddenKeys: hiddenColumnKeys, toggle: toggleColumn, toggleableColumns } = useColumnVisibility(
+    `orders-columns:${authStore.administrator?.id ?? 'anonymous'}`,
+    ORDER_COLUMNS,
+);
 
 function applyChip(key: string): void {
     activeChip.value = key;
@@ -222,6 +244,9 @@ const todayAmountFormatted = computed(() => {
 
         <div class="orders-page__grid">
             <MvPanel title="Orders list">
+                <div class="orders-page__panel-actions">
+                    <MvColumnToggle :columns="toggleableColumns" @toggle="toggleColumn" />
+                </div>
                 <OrdersFilterBar
                     :filters="filters"
                     :managers="managers"
@@ -238,6 +263,7 @@ const todayAmountFormatted = computed(() => {
                     :show-manager-column="showManagerColumn"
                     :pending-approval-order-ids="summary?.pendingApprovalOrderIds ?? new Set()"
                     :page-size="pageSize"
+                    :hidden-column-keys="hiddenColumnKeys"
                 />
                 <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
             </MvPanel>
@@ -295,6 +321,12 @@ const todayAmountFormatted = computed(() => {
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
     margin-bottom: 18px;
+}
+
+.orders-page__panel-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
 }
 
 .orders-page__grid {

@@ -18,6 +18,11 @@ export const adminApiExtensions: DocumentNode = gql`
         totalItems: Int!
     }
 
+    type MoneyAmount {
+        amount: Int!
+        currencyCode: String!
+    }
+
     input InvoiceListOptions {
         take: Int
         skip: Int
@@ -77,6 +82,8 @@ export const adminApiExtensions: DocumentNode = gql`
         visibleInvoices(options: InvoiceListOptions, counterpartyId: ID): InvoiceList!
         "Manager-portal payment list — derived-from-Invoice scoping, see PaymentVisibilityService."
         visiblePayments(options: PaymentListOptions, counterpartyId: ID): PaymentAttemptList!
+        "Sum of a counterparty's unpaid (pending/issued) invoices, scoped the same way visibleInvoices is. Null if the counterparty has no unpaid invoices, not zero-with-a-currency."
+        invoiceOutstandingBalance(counterpartyId: ID!): MoneyAmount
     }
 
     extend type Mutation {

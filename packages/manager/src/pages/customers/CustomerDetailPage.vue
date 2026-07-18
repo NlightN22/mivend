@@ -18,7 +18,7 @@ import {
     type CustomerDocument,
 } from '../../api/customers';
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
-import { fetchInvoicesForCounterparty, type InvoiceListItem } from '../../api/invoices';
+import { fetchInvoicesForCounterparty, fetchOutstandingBalance, type InvoiceListItem, type OutstandingBalance } from '../../api/invoices';
 import { fetchPaymentsForCounterparty, type PaymentListItem } from '../../api/payments';
 import type { EntityRef } from '../../api/history';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
@@ -38,6 +38,7 @@ const authStore = useAuthStore();
 
 const customer = ref<CustomerListItem | null>(null);
 const credit = ref<CustomerCredit | null>(null);
+const outstandingBalance = ref<OutstandingBalance | null>(null);
 const managers = ref<ManagerOption[]>([]);
 const orders = ref<CustomerOrderItem[]>([]);
 const discounts = ref<DiscountRuleItem[]>([]);
@@ -111,9 +112,10 @@ async function load(): Promise<void> {
         orders.value = customerId ? await fetchOrdersForCustomer(customerId) : [];
         // Invoice.counterpartyId ties directly to the counterparty (unlike Order, which needs
         // the customerId lookup above) — no equivalent indirection needed here.
-        [invoices.value, payments.value] = await Promise.all([
+        [invoices.value, payments.value, outstandingBalance.value] = await Promise.all([
             fetchInvoicesForCounterparty(counterpartyId),
             fetchPaymentsForCounterparty(counterpartyId),
+            fetchOutstandingBalance(counterpartyId),
         ]);
 
         if (canViewHistory.value) {
@@ -194,6 +196,16 @@ async function handleReassign(administratorId: string): Promise<void> {
             <div class="customer-detail__kpi">
                 <span class="customer-detail__kpi-label">Open orders</span>
                 <span class="customer-detail__kpi-value">{{ openOrdersCount }}</span>
+            </div>
+            <div class="customer-detail__kpi">
+                <span class="customer-detail__kpi-label">Outstanding balance</span>
+                <span class="customer-detail__kpi-value">
+                    {{ outstandingBalance ? money(outstandingBalance.amount) : money(0) }}
+                </span>
+            </div>
+            <div v-if="credit" class="customer-detail__kpi">
+                <span class="customer-detail__kpi-label">Available credit</span>
+                <span class="customer-detail__kpi-value">{{ money(credit.creditLimit - credit.creditBalance) }}</span>
             </div>
         </div>
 
