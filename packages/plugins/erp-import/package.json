@@ -26,6 +26,7 @@
     },
     "devDependencies": {
         "@types/express": "^4.17.0",
+        "shared": "workspace:*",
         "typescript": "^5.4.0",
         "vitest": "^4.1.9"
     }
