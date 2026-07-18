@@ -46,7 +46,7 @@ function branchName(erpId: string | null | undefined): string {
 
 const columns = computed<Column<TableRow>[]>(() => {
     const cols: Column<TableRow>[] = [
-        { key: 'code', title: 'Order #', dataKey: 'code', width: 160 },
+        { key: 'code', title: 'Order #', dataKey: 'code', width: 160, mobile: { primary: true } },
         {
             key: 'customer',
             title: 'Customer',
@@ -71,11 +71,14 @@ const columns = computed<Column<TableRow>[]>(() => {
             dataKey: 'state',
             width: 160,
             cellRenderer: ({ cellData }) => h(MvStatusBadge, {}, () => cellData as unknown as string),
+            mobile: { badge: true },
         },
         { key: 'total', title: 'Total amount', dataKey: 'total', width: 130, align: 'right' },
-        { key: 'date', title: 'Date placed', dataKey: 'date', width: 140 },
-        { key: 'branch', title: 'Branch', dataKey: 'branch', width: 140 },
-        { key: 'attention', title: 'Attention', dataKey: 'attention', width: 180 },
+        { key: 'date', title: 'Date placed', dataKey: 'date', width: 140, mobile: { hidden: true } },
+        { key: 'branch', title: 'Branch', dataKey: 'branch', width: 140, mobile: { hidden: true } },
+        // Real signal, not decorative: derived above from actual approval-workflow/order-state
+        // data (isWaitingApproval / isOverdue), not a fabricated "next action" concept.
+        { key: 'attention', title: 'Attention', dataKey: 'attention', width: 180, mobile: { highlight: true } },
         {
             key: 'action',
             title: '',
@@ -91,8 +94,9 @@ const columns = computed<Column<TableRow>[]>(() => {
                             router.push(`/orders/${(rowData as TableRow).code as string}`);
                         },
                     },
-                    () => 'Open',
+                    () => 'Open order',
                 ),
+            mobile: { actions: true },
         },
     );
     if (!props.hiddenColumnKeys?.size) return cols;

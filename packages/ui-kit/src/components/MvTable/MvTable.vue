@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { ElTableV2, ElAutoResizer } from 'element-plus';
-import type { Column } from 'element-plus';
+import MvMobileCardList from './MvMobileCardList.vue';
+import type { MvMobileColumn } from './MvMobileCardList.vue';
+import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 
 export type RowState =
   | 'default'
@@ -20,12 +22,16 @@ export interface TableRow {
 }
 
 interface Props {
-  columns: Column<TableRow>[];
+  columns: MvMobileColumn[];
   data: TableRow[];
   loading?: boolean;
   rowHeight?: number;
   height?: number;
   emptyText?: string;
+  // Columns may carry a `mobile` metadata object (see MvMobileCardList) driving how the same
+  // column config renders as a card below this breakpoint, instead of requiring a second
+  // hand-written mobile template per table.
+  mobileBreakpoint?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -33,7 +39,10 @@ const props = withDefaults(defineProps<Props>(), {
   rowHeight: 52,
   height: 400,
   emptyText: 'No data',
+  mobileBreakpoint: 800,
 });
+
+const isMobile = useIsMobileViewport(props.mobileBreakpoint);
 
 function rowClass({ rowData }: { rowData: TableRow }): string {
   return rowData._rowState ? `mv-table-row--${rowData._rowState}` : '';
@@ -58,7 +67,14 @@ const rowEventHandlers = {
       <span class="mv-table__spinner" />
     </div>
 
-    <ElAutoResizer>
+    <MvMobileCardList
+      v-if="isMobile"
+      :columns="columns"
+      :data="data"
+      :empty-text="emptyText"
+      @row-click="payload => emit('row-click', payload)"
+    />
+    <ElAutoResizer v-else>
       <template #default="{ width }">
         <ElTableV2
           :columns="columns"

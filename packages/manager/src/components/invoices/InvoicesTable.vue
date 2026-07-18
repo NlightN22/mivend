@@ -26,7 +26,9 @@ function money(item: InvoiceListItem): string {
 }
 
 const columns = computed<Column<TableRow>[]>(() => {
-    const cols: Column<TableRow>[] = [{ key: 'id', title: 'Invoice #', dataKey: 'id', width: 120 }];
+    const cols: Column<TableRow>[] = [
+        { key: 'id', title: 'Invoice #', dataKey: 'id', width: 120, mobile: { primary: true } },
+    ];
     if (!props.compact) {
         cols.push({ key: 'customer', title: 'Customer', dataKey: 'customer', width: 220 });
     }
@@ -37,6 +39,7 @@ const columns = computed<Column<TableRow>[]>(() => {
             dataKey: 'status',
             width: 140,
             cellRenderer: ({ cellData }) => h(MvStatusBadge, {}, () => cellData as unknown as string),
+            mobile: { badge: true },
         },
         { key: 'amount', title: 'Amount', dataKey: 'amount', width: 140, align: 'right' },
         { key: 'order', title: 'Order', dataKey: 'order', width: 120 },

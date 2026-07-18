@@ -7,6 +7,8 @@ export type {
 
 export { default as MvTable } from './components/MvTable/MvTable.vue';
 export type { TableRow, RowState } from './components/MvTable/MvTable.vue';
+export { default as MvMobileCardList } from './components/MvTable/MvMobileCardList.vue';
+export type { MvMobileColumn, MvMobileColumnMeta } from './components/MvTable/MvMobileCardList.vue';
 
 export { default as MvPageHeader } from './components/MvPageHeader/MvPageHeader.vue';
 export type { Breadcrumb } from './components/MvPageHeader/MvPageHeader.vue';
@@ -90,6 +92,7 @@ export { default as MvCheckbox } from './components/MvCheckbox/MvCheckbox.vue';
 export { default as MvColumnToggle } from './components/MvColumnToggle/MvColumnToggle.vue';
 export { useColumnVisibility } from './composables/useColumnVisibility';
 export type { ColumnVisibilityDef } from './composables/useColumnVisibility';
+export { useIsMobileViewport } from './composables/useIsMobileViewport';
 
 export { default as MvMultiSelect } from './components/MvMultiSelect/MvMultiSelect.vue';
 
