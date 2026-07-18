@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { ID } from '@vendure/common/lib/shared-types';
 import { Administrator, AdministratorService, ForbiddenError, RequestContext } from '@vendure/core';
+import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 import { RoleScopeConfigService } from './role-scope-config.service';
 import { AccessScope } from './types';
@@ -86,6 +88,30 @@ export class AccessScopeService {
             case 'all':
                 break;
         }
+    }
+
+    // Shared "own" scope condition for any query joined against a Counterparty-aliased row —
+    // used by CounterpartyService, OrderVisibilityService and InvoiceVisibilityService instead
+    // of each repeating `counterparty.assignedManagerId = :id`. A counterparty is "own" for the
+    // caller if they are either the Owner (assignedManagerId) OR a CounterpartyTeamMember
+    // (backup/observer) — see `packages/plugins/counterparty/src/entities/
+    // counterparty-team-member.entity.ts`. access-control cannot import that entity
+    // (counterparty plugin depends on access-control, not the reverse), so the join is a raw
+    // SQL EXISTS against the table/column names TypeORM's default naming strategy produces for
+    // that entity (`counterparty_team_member`, camelCase columns) rather than an entity import.
+    applyOwnCounterpartyFilter<T extends ObjectLiteral>(
+        qb: SelectQueryBuilder<T>,
+        counterpartyAlias: string,
+        administratorId: ID | undefined,
+    ): void {
+        qb.andWhere(
+            `(${counterpartyAlias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
+                SELECT 1 FROM counterparty_team_member ctm
+                WHERE ctm."counterpartyId" = ${counterpartyAlias}.id::text
+                AND ctm."administratorId" = :ownScopeAdminId
+            ))`,
+            { ownScopeAdminId: administratorId != null ? String(administratorId) : null },
+        );
     }
 
     private async resolveScope(ctx: RequestContext, resource: string): Promise<AccessScope> {

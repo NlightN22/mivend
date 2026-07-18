@@ -30,10 +30,42 @@ class TestCounterparty {
     @Column({ type: 'varchar', nullable: true }) erpGroupLabel!: string | null;
 }
 
+// Referenced by the EXISTS subquery inside applyOwnCounterpartyFilter's mocked implementation
+// below — must exist as a real table even though no test row is ever inserted here (team
+// membership itself is exercised in counterparty-team.access-scope.test.ts).
+@Entity('counterparty_team_member')
+class TestCounterpartyTeamMember {
+    @PrimaryGeneratedColumn('uuid')
+    id!: string;
+
+    @Column({ type: 'varchar' }) counterpartyId!: string;
+    @Column({ type: 'varchar' }) administratorId!: string;
+    @Column({ type: 'varchar' }) role!: string;
+}
+
 let dataSource: DataSource;
 let service: CounterpartyService;
 const mockCtx = {} as RequestContext;
-const mockAccessScopeService = { resolveCounterpartyScope: vi.fn() };
+const mockAccessScopeService = {
+    resolveCounterpartyScope: vi.fn(),
+    // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter) so these real-
+    // Postgres tests exercise the actual EXISTS-subquery SQL, not a no-op.
+    applyOwnCounterpartyFilter: vi.fn(
+        (
+            qb: { andWhere: (sql: string, params: Record<string, unknown>) => unknown },
+            alias: string,
+            administratorId: string | undefined,
+        ) =>
+            qb.andWhere(
+                `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
+                SELECT 1 FROM counterparty_team_member ctm
+                WHERE ctm."counterpartyId" = ${alias}.id::text
+                AND ctm."administratorId" = :ownScopeAdminId
+            ))`,
+                { ownScopeAdminId: administratorId ?? null },
+            ),
+    ),
+};
 
 beforeAll(async () => {
     dataSource = new DataSource({
@@ -43,7 +75,7 @@ beforeAll(async () => {
         username: process.env['TEST_DB_USER'] ?? 'postgres',
         password: process.env['TEST_DB_PASSWORD'] ?? 'postgres',
         database: process.env['TEST_DB_NAME'] ?? 'mivend_test',
-        entities: [TestCounterparty],
+        entities: [TestCounterparty, TestCounterpartyTeamMember],
         synchronize: true,
         dropSchema: true,
     });

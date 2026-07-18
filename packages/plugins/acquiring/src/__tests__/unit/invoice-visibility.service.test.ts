@@ -31,21 +31,37 @@ const mockCtx = {} as unknown as RequestContext;
 describe('InvoiceVisibilityService', () => {
     let service: InvoiceVisibilityService;
     let qb: ReturnType<typeof mockQueryBuilder>;
-    let accessScopeService: { resolveInvoiceScope: ReturnType<typeof vi.fn> };
+    let accessScopeService: {
+        resolveInvoiceScope: ReturnType<typeof vi.fn>;
+        applyOwnCounterpartyFilter: ReturnType<typeof vi.fn>;
+    };
 
     beforeEach(() => {
         qb = mockQueryBuilder();
         const connection = {
             getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
         };
-        accessScopeService = { resolveInvoiceScope: vi.fn() };
+        accessScopeService = {
+            resolveInvoiceScope: vi.fn(),
+            // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter).
+            applyOwnCounterpartyFilter: vi.fn((builder, alias, administratorId) => {
+                builder.andWhere(
+                    `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
+                SELECT 1 FROM counterparty_team_member ctm
+                WHERE ctm."counterpartyId" = ${alias}.id
+                AND ctm."administratorId" = :ownScopeAdminId
+            ))`,
+                    { ownScopeAdminId: administratorId ?? null },
+                );
+            }),
+        };
         service = new InvoiceVisibilityService(
             connection as unknown as TransactionalConnection,
             accessScopeService as unknown as AccessScopeService,
         );
     });
 
-    it('filters by assignedManagerId for "own" scope, with no branch restriction', async () => {
+    it('filters by assignedManagerId OR team membership for "own" scope, with no branch restriction', async () => {
         accessScopeService.resolveInvoiceScope.mockResolvedValue({
             kind: 'own',
             administratorId: 'admin-1',
@@ -53,9 +69,11 @@ describe('InvoiceVisibilityService', () => {
 
         await service.findVisible(mockCtx);
 
-        expect(qb.andWhere).toHaveBeenCalledWith('counterparty.assignedManagerId = :managerId', {
-            managerId: 'admin-1',
-        });
+        expect(accessScopeService.applyOwnCounterpartyFilter).toHaveBeenCalledWith(
+            qb,
+            'counterparty',
+            'admin-1',
+        );
     });
 
     it('filters by department + the invoice\'s own denormalized branch for "department" scope', async () => {

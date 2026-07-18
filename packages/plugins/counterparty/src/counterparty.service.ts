@@ -235,9 +235,7 @@ export class CounterpartyService {
         const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
         switch (scope.kind) {
             case 'own':
-                qb.andWhere('c.assignedManagerId = :scopeAdminId', {
-                    scopeAdminId: scope.administratorId ?? null,
-                });
+                this.accessScopeService.applyOwnCounterpartyFilter(qb, 'c', scope.administratorId);
                 break;
             case 'department':
                 qb.andWhere('c.departmentId = :scopeDept AND c.branchId = :scopeBranch', {

@@ -28,6 +28,7 @@ import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTa
 import CustomerInvoicesTab from '../../components/customers/CustomerInvoicesTab.vue';
 import CustomerPaymentsTab from '../../components/customers/CustomerPaymentsTab.vue';
 import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue';
+import AccountTeamPanel from '../../components/customers/AccountTeamPanel.vue';
 
 // Human labels for the generic EntityHistoryPanel widget — only the entity types this page
 // versions need an entry; anything else falls back to its raw entityName.
@@ -59,6 +60,7 @@ const reassignError = ref('');
 // would just be rejected.
 const canReassign = computed(() => authStore.hasPermission('ReassignCounterpartyManager'));
 const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory'));
+const canManageTeam = computed(() => authStore.hasPermission('ManageCounterpartyTeam'));
 
 type CustomerDetailTab = 'overview' | 'orders' | 'invoices' | 'payments' | 'discounts' | 'documents' | 'history';
 const TABS: CustomerDetailTab[] = ['overview', 'orders', 'invoices', 'payments', 'discounts', 'documents', 'history'];
@@ -215,6 +217,13 @@ async function handleReassign(administratorId: string): Promise<void> {
             </span>
         </p>
         <p v-if="reassignError" class="customer-detail__error">{{ reassignError }}</p>
+        <AccountTeamPanel
+            :counterparty-id="customer.id"
+            :owner-id="customer.assignedManagerId"
+            :owner-name="managerName(customer.assignedManagerId)"
+            :managers="managers"
+            :can-manage="canManageTeam"
+        />
         <div class="customer-detail__meta">
             <span v-if="branchName(customer.branchId)">Location: {{ branchName(customer.branchId) }}</span>
             <span v-if="credit">Credit limit: {{ money(credit.creditLimit) }}</span>

@@ -95,6 +95,7 @@ const ROLES = [
             'ReadFloorPrice',
             'ApproveDiscountRequest',
             'ReassignCounterpartyManager',
+            'ManageCounterpartyTeam',
             'ReadEntityHistory',
         ],
         accessScopeConfig: { counterparty: 'department', order: 'department', invoice: 'department' },
@@ -131,6 +132,7 @@ const ROLES = [
             'ApproveSecurityLimit',
             'ManageApprovalWorkflows',
             'ReassignCounterpartyManager',
+            'ManageCounterpartyTeam',
         ],
         accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all', invoice: 'all' },
     },
@@ -166,6 +168,7 @@ const ROLES = [
             'ManageAccessControl',
             'ManageApprovalWorkflows',
             'ReassignCounterpartyManager',
+            'ManageCounterpartyTeam',
             'ReadEntityHistory',
             // Native Vendure permissions gating the roles/role/updateRole operations
             // (see @vendure/core's RoleResolver) — required for the manager portal's

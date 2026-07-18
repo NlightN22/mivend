@@ -58,6 +58,11 @@ export const CustomPermission = {
         description:
             "Change a counterparty's assignedManagerId — department-head only within their own department, portal-admin unrestricted (see manager-portal-concept.md §3.3)",
     }),
+    ManageCounterpartyTeam: new PermissionDefinition({
+        name: 'ManageCounterpartyTeam',
+        description:
+            'Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner',
+    }),
     ReadEntityHistory: new PermissionDefinition({
         name: 'ReadEntityHistory',
         description:

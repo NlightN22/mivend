@@ -15,11 +15,17 @@ import { TradingPointConsumer } from './consumers/trading-point.consumer';
 import { Counterparty } from './entities/counterparty.entity';
 import { ContactPerson } from './entities/contact-person.entity';
 import { TradingPoint } from './entities/trading-point.entity';
+import { CounterpartyTeamMember } from './entities/counterparty-team-member.entity';
 import {
     CustomerCounterpartyResolver,
     CounterpartyResolver,
     CounterpartyCreditResolver,
 } from './counterparty.resolver';
+import {
+    CounterpartyTeamFieldResolver,
+    CounterpartyTeamMutationResolver,
+} from './counterparty-team.resolver';
+import { CounterpartyTeamService } from './counterparty-team.service';
 import {
     CustomerTradingPointResolver,
     CounterpartyTradingPointResolver,
@@ -136,6 +142,17 @@ const adminApiSchema = gql`
         "Free-text group/segment label from the ERP — display and filtering only."
         erpGroupLabel: String
         tradingPoints: [TradingPoint!]!
+        "Additional managers beyond the Owner (assignedManagerId) — see CounterpartyTeamMember."
+        teamMembers: [CounterpartyTeamMember!]!
+    }
+
+    "backup | observer — a small fixed technical RBAC role set, not ERP-sourced business data"
+    type CounterpartyTeamMember {
+        id: ID!
+        counterpartyId: String!
+        administratorId: String!
+        role: String!
+        createdAt: DateTime!
     }
 
     extend type Customer {
@@ -201,6 +218,14 @@ const adminApiSchema = gql`
         # Department-head only within their own department, portal-admin unrestricted — see
         # CustomPermission.ReassignCounterpartyManager.
         reassignCounterpartyManager(counterpartyId: ID!, administratorId: ID!): Counterparty!
+
+        # Add/remove additional team members beyond the Owner — see CustomPermission.ManageCounterpartyTeam.
+        addCounterpartyTeamMember(
+            counterpartyId: ID!
+            administratorId: ID!
+            role: String!
+        ): CounterpartyTeamMember!
+        removeCounterpartyTeamMember(counterpartyId: ID!, administratorId: ID!): Boolean!
 
         upsertTradingPoint(
             erpId: String!
@@ -271,6 +296,8 @@ const adminResolvers = [
     CounterpartyCreditResolver,
     TradingPointAdminResolver,
     CreditTermResolver,
+    CounterpartyTeamFieldResolver,
+    CounterpartyTeamMutationResolver,
 ];
 
 @VendurePlugin({
@@ -281,7 +308,7 @@ const adminResolvers = [
         ApprovalWorkflowPlugin,
         VersioningPlugin,
     ],
-    entities: [Counterparty, TradingPoint, ContactPerson],
+    entities: [Counterparty, TradingPoint, ContactPerson, CounterpartyTeamMember],
     shopApiExtensions: {
         schema: shopApiSchema,
         resolvers: shopResolvers,
@@ -297,6 +324,7 @@ const adminResolvers = [
         TradingPointConsumer,
         CreditTermGateService,
         CreditTermService,
+        CounterpartyTeamService,
     ],
     exports: [CounterpartyService, TradingPointService],
     configuration: (config: RuntimeVendureConfig) => {

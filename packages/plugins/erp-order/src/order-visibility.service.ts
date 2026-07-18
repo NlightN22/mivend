@@ -72,9 +72,11 @@ export class OrderVisibilityService {
                 // actually serviced it (a chain customer's locations can span branches). Adding
                 // `AND order.branchId = mine` here would silently hide a manager's own orders
                 // placed against an out-of-branch trading point — don't add it.
-                qb.andWhere('counterparty.assignedManagerId = :managerId', {
-                    managerId: scope.administratorId ?? null,
-                });
+                this.accessScopeService.applyOwnCounterpartyFilter(
+                    qb,
+                    'counterparty',
+                    scope.administratorId,
+                );
                 break;
             case 'department':
                 // Filtered by the order's own denormalized servicing branch

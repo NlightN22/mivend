@@ -96,9 +96,11 @@ export class InvoiceVisibilityService {
                 // No branch restriction — key-account-manager read exception (see
                 // docs/access-control.md): a manager sees every invoice for their own assigned
                 // accounts regardless of which branch actually serviced the underlying order.
-                qb.andWhere(`${counterpartyAlias}.assignedManagerId = :managerId`, {
-                    managerId: scope.administratorId ?? null,
-                });
+                this.accessScopeService.applyOwnCounterpartyFilter(
+                    qb,
+                    counterpartyAlias,
+                    scope.administratorId,
+                );
                 break;
             case 'department':
                 // Filtered by the invoice's own denormalized branch, not Counterparty.branchId

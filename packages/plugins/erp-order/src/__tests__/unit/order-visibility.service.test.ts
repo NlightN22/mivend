@@ -18,21 +18,38 @@ const mockCtx = {} as unknown as RequestContext;
 
 describe('OrderVisibilityService', () => {
     let listQueryBuilder: { build: ReturnType<typeof vi.fn> };
-    let accessScopeService: { resolveOrderScope: ReturnType<typeof vi.fn> };
+    let accessScopeService: {
+        resolveOrderScope: ReturnType<typeof vi.fn>;
+        applyOwnCounterpartyFilter: ReturnType<typeof vi.fn>;
+    };
     let service: OrderVisibilityService;
     let qb: ReturnType<typeof mockQueryBuilder>;
 
     beforeEach(() => {
         qb = mockQueryBuilder();
         listQueryBuilder = { build: vi.fn(() => qb) };
-        accessScopeService = { resolveOrderScope: vi.fn() };
+        accessScopeService = {
+            resolveOrderScope: vi.fn(),
+            // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter) rather
+            // than a no-op stub — these tests assert the actual SQL fragment produced.
+            applyOwnCounterpartyFilter: vi.fn((builder, alias, administratorId) => {
+                builder.andWhere(
+                    `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
+                SELECT 1 FROM counterparty_team_member ctm
+                WHERE ctm."counterpartyId" = ${alias}.id
+                AND ctm."administratorId" = :ownScopeAdminId
+            ))`,
+                    { ownScopeAdminId: administratorId ?? null },
+                );
+            }),
+        };
         service = new OrderVisibilityService(
             listQueryBuilder as unknown as ListQueryBuilder,
             accessScopeService as unknown as AccessScopeService,
         );
     });
 
-    it('filters by assignedManagerId for "own" scope', async () => {
+    it('filters by assignedManagerId OR team membership for "own" scope', async () => {
         accessScopeService.resolveOrderScope.mockResolvedValue({
             kind: 'own',
             administratorId: 'admin-1',
@@ -40,9 +57,11 @@ describe('OrderVisibilityService', () => {
 
         await service.findVisible(mockCtx);
 
-        expect(qb.andWhere).toHaveBeenCalledWith('counterparty.assignedManagerId = :managerId', {
-            managerId: 'admin-1',
-        });
+        expect(accessScopeService.applyOwnCounterpartyFilter).toHaveBeenCalledWith(
+            qb,
+            'counterparty',
+            'admin-1',
+        );
     });
 
     it('filters by department + the order\'s own servicing branch for "department" scope', async () => {

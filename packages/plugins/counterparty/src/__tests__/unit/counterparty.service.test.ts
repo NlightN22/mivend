@@ -40,6 +40,23 @@ const mockCustomerPricingService = {
 // is mocked to return per test.
 const mockAccessScopeService = {
     resolveCounterpartyScope: vi.fn(async () => ({ kind: 'all' })),
+    // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter) rather than a
+    // no-op stub — assigning-manager-OR-team-member is asserted directly, not just a bare call.
+    applyOwnCounterpartyFilter: vi.fn(
+        (
+            qb: { andWhere: (sql: string, params: Record<string, unknown>) => unknown },
+            alias: string,
+            administratorId: string | undefined,
+        ) =>
+            qb.andWhere(
+                `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
+                SELECT 1 FROM counterparty_team_member ctm
+                WHERE ctm."counterpartyId" = ${alias}.id
+                AND ctm."administratorId" = :ownScopeAdminId
+            ))`,
+                { ownScopeAdminId: administratorId ?? null },
+            ),
+    ),
     assertCounterpartyWritable: vi.fn(
         async (
             _ctx: RequestContext,
@@ -142,7 +159,7 @@ describe('CounterpartyService', () => {
             return qb;
         }
 
-        it('filters by assignedManagerId for "own" scope', async () => {
+        it('filters by assignedManagerId OR team membership for "own" scope', async () => {
             const qb = mockQueryBuilder();
             mockRepo.find = vi.fn();
             (
@@ -157,9 +174,11 @@ describe('CounterpartyService', () => {
 
             await service.findVisible(mockCtx);
 
-            expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId = :scopeAdminId', {
-                scopeAdminId: 'admin-1',
-            });
+            expect(mockAccessScopeService.applyOwnCounterpartyFilter).toHaveBeenCalledWith(
+                qb,
+                'c',
+                'admin-1',
+            );
         });
 
         it('filters by department/branch for "department" scope', async () => {

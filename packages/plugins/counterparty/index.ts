@@ -5,4 +5,7 @@ export type { TradingPointUpsertPayload } from './src/trading-point.service';
 export { Counterparty } from './src/entities/counterparty.entity';
 export { TradingPoint } from './src/entities/trading-point.entity';
 export { ContactPerson } from './src/entities/contact-person.entity';
+export { CounterpartyTeamMember } from './src/entities/counterparty-team-member.entity';
+export type { CounterpartyTeamMemberRole } from './src/entities/counterparty-team-member.entity';
+export { CounterpartyTeamService } from './src/counterparty-team.service';
 export type { PortalRole, CounterpartyUpsertPayload } from './src/types';
