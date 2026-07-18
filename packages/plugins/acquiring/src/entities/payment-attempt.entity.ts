@@ -23,7 +23,14 @@ export type ErpPostingStatus =
     | 'retrying'
     | 'reconciliationRequired';
 
+// (channel, providerPaymentId) is the business-level uniqueness scope for a payment fact — not
+// providerPaymentId alone, since the reference format/values are chosen independently by each
+// channel's own system (acquirer RRN, branch kassa receipt number, ERP payment-document id) and
+// could coincidentally collide across channels. This is the DB-level last line of defense for
+// AGENTS.md rule #13's three-level idempotency requirement (see PaymentAttemptService.payInvoice
+// for level 3's application-level check, which this index backs against a race).
 @Entity()
+@Index(['channel', 'providerPaymentId'], { unique: true })
 export class PaymentAttempt extends VendureEntity {
     constructor(input?: DeepPartial<PaymentAttempt>) {
         super(input);

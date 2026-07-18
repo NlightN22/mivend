@@ -16,6 +16,17 @@ import { SettlementEntryService } from './settlement-entry.service';
 
 export type PayInvoiceOutcome = 'success' | 'pending' | 'fail' | 'cancel';
 
+const POSTGRES_UNIQUE_VIOLATION = '23505';
+
+function isUniqueViolation(err: unknown): boolean {
+    return (
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        (err as { code?: string }).code === POSTGRES_UNIQUE_VIOLATION
+    );
+}
+
 // Thrown when a payment event's declared organization doesn't match the target invoice's real
 // one. Distinct from UserInputError so callers (PaymentInboxProcessorService) can dead-letter
 // immediately instead of retrying — a mismatch won't fix itself on the next sweep, the same
@@ -126,6 +137,21 @@ export class PaymentAttemptService {
 
         const paymentStatus = OUTCOME_TO_PAYMENT_STATUS[outcome];
 
+        // Level 3 idempotency (AGENTS.md rule #13): the same (channel, externalReference) must
+        // apply at most once, even across separate payInvoice calls — e.g. the inbox processor
+        // retrying an event whose business write already succeeded but whose markProcessed then
+        // failed (a genuine partial-failure gap found in this exact method: nothing previously
+        // stopped a retried event from creating a second PaymentAttempt for the same real-world
+        // payment). Checked *and* enforced: the find-first check handles the common retry case
+        // without a wasted failed insert, the unique index + catch below is the hard safety net
+        // for a genuine concurrent race (same pattern as InboxService.enqueue).
+        const existing = await this.connection
+            .getRepository(ctx, PaymentAttempt)
+            .findOne({ where: { channel, providerPaymentId: externalReference } });
+        if (existing) {
+            return (await this.invoiceService.findOne(ctx, Number(invoice.id)))!;
+        }
+
         // Atomic: the PaymentAttempt row and everything allocate() writes (SettlementEntry rows,
         // invoice status flips) commit together or not at all. Without this, a crash between
         // "PaymentAttempt saved" and "allocation finished" would leave an orphaned PaymentAttempt
@@ -133,35 +159,42 @@ export class PaymentAttemptService {
         // nowhere, with no way to resume automatically. With the transaction, that state can
         // never exist on disk: the caller either sees the whole operation succeed, or sees it
         // throw and can safely call payInvoice again — nothing partial to reconcile.
-        await this.connection.withTransaction(ctx, async transactionCtx => {
-            const repo = this.connection.getRepository(transactionCtx, PaymentAttempt);
-            const paymentAttempt = await repo.save(
-                repo.create({
-                    channel,
-                    invoiceId: Number(invoice.id),
-                    orderId: invoice.orderId,
-                    amount: invoice.amount,
-                    currencyCode: invoice.currencyCode,
-                    paymentStatus,
-                    providerPaymentId: externalReference,
-                }),
-            );
-
-            if (paymentStatus === 'captured') {
-                await this.settlementEntryService.allocate(transactionCtx, paymentAttempt);
-            } else if (paymentStatus === 'pending' && invoice.status === 'pending') {
-                await this.invoiceService.updateStatus(
-                    transactionCtx,
-                    Number(invoice.id),
-                    'issued',
+        try {
+            await this.connection.withTransaction(ctx, async transactionCtx => {
+                const repo = this.connection.getRepository(transactionCtx, PaymentAttempt);
+                const paymentAttempt = await repo.save(
+                    repo.create({
+                        channel,
+                        invoiceId: Number(invoice.id),
+                        orderId: invoice.orderId,
+                        amount: invoice.amount,
+                        currencyCode: invoice.currencyCode,
+                        paymentStatus,
+                        providerPaymentId: externalReference,
+                    }),
                 );
-            }
-            // 'failed'/'canceled' leave Invoice.status untouched — retryable, same semantics as a
-            // Declined order-level payment (updateStatusForOrder's decline branch never runs
-            // either). A cancellation means the attempt never actually completed — nothing to
-            // reverse financially (docs/payments.md: "Cancellation ... Nothing to reverse
-            // financially; the attempt simply never completed").
-        });
+
+                if (paymentStatus === 'captured') {
+                    await this.settlementEntryService.allocate(transactionCtx, paymentAttempt);
+                } else if (paymentStatus === 'pending' && invoice.status === 'pending') {
+                    await this.invoiceService.updateStatus(
+                        transactionCtx,
+                        Number(invoice.id),
+                        'issued',
+                    );
+                }
+                // 'failed'/'canceled' leave Invoice.status untouched — retryable, same semantics
+                // as a Declined order-level payment (updateStatusForOrder's decline branch never
+                // runs either). A cancellation means the attempt never actually completed —
+                // nothing to reverse financially (docs/payments.md: "Cancellation ... Nothing to
+                // reverse financially; the attempt simply never completed").
+            });
+        } catch (err) {
+            if (!isUniqueViolation(err)) throw err;
+            // Lost a race with a concurrent payInvoice call for the same (channel,
+            // externalReference) — the row it created is the real, already-applied payment;
+            // nothing left to do here.
+        }
 
         return (await this.invoiceService.findOne(ctx, Number(invoice.id)))!;
     }

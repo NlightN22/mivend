@@ -43,7 +43,15 @@ describe('PaymentAttemptService.payInvoice', () => {
     }
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
     function createMockPaymentAttemptRepo() {
-        return { create: vi.fn(input => input), save: vi.fn(async entity => entity) };
+        return {
+            create: vi.fn(input => input),
+            save: vi.fn(async entity => entity),
+            // payInvoice's level-3 idempotency check (AGENTS.md rule #13) — defaults to "no
+            // existing attempt for this (channel, externalReference)" so these tests exercise the
+            // normal create path; tests specifically for the idempotent-retry behavior override
+            // this per-test.
+            findOne: vi.fn(async () => null),
+        };
     }
 
     beforeEach(() => {
@@ -103,6 +111,25 @@ describe('PaymentAttemptService.payInvoice', () => {
 
         expect(mockInvoiceService.updateStatus).toHaveBeenCalledWith(mockCtx, 1, 'issued');
         expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op when a PaymentAttempt already exists for the same (channel, externalReference) — level 3 idempotency, AGENTS.md rule #13', async () => {
+        const invoice = makeInvoice({ status: 'issued' });
+        mockInvoiceService.findOne.mockResolvedValueOnce(invoice).mockResolvedValueOnce(invoice);
+        mockPaymentAttemptRepo.findOne.mockResolvedValueOnce({ id: 99 } as never);
+
+        const result = await service.payInvoice(
+            mockCtx,
+            1,
+            'success',
+            'branch-kassa',
+            'RRN-already-applied',
+        );
+
+        expect(mockPaymentAttemptRepo.create).not.toHaveBeenCalled();
+        expect(mockPaymentAttemptRepo.save).not.toHaveBeenCalled();
+        expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
+        expect(result.status).toBe('issued');
     });
 
     it('leaves the invoice status untouched on a "fail" outcome (retryable)', async () => {

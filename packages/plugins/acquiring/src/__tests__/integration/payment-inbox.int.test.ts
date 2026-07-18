@@ -70,6 +70,7 @@ class TestInvoice {
 }
 
 @Entity('payment_attempt')
+@Index(['channel', 'providerPaymentId'], { unique: true })
 class TestPaymentAttempt {
     @PrimaryGeneratedColumn()
     id!: number;

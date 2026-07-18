@@ -34,6 +34,7 @@ class TestInvoice {
 }
 
 @Entity('payment_attempt')
+@Index(['channel', 'providerPaymentId'], { unique: true })
 class TestPaymentAttempt {
     @PrimaryGeneratedColumn()
     id!: number;
@@ -285,5 +286,83 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
             .getRepository(TestPaymentAttempt)
             .find({ where: { invoiceId: Number(invoiceA.id) } });
         expect(paymentAttempts).toHaveLength(1); // exactly one — the failed attempt left nothing behind
+    });
+
+    // Level 3 idempotency (AGENTS.md rule #13). Mirrors a real partial-failure gap: the inbox
+    // processor calls payInvoice with an *explicit* externalReference (not the auto-generated
+    // stub), then calls markProcessed — if payInvoice already committed but markProcessed itself
+    // then fails, the inbox row is left retryable and the next sweep calls payInvoice again with
+    // the exact same externalReference. Before the (channel, providerPaymentId) uniqueness guard,
+    // this created a second PaymentAttempt for the same real-world payment.
+    it('retrying payInvoice with the exact same (channel, externalReference) is a safe no-op — no duplicate PaymentAttempt, no double allocation', async () => {
+        const [invoiceA, invoiceB] = await seedInvoicePair();
+        const sameReference = 'RRN-fixed-reference-for-retry-test';
+
+        const first = await paymentAttemptService.payInvoice(
+            mockCtx,
+            Number(invoiceA.id),
+            'success',
+            'branch-kassa',
+            sameReference,
+        );
+        expect(first.status).toBe('paid');
+
+        // Simulates the inbox processor's retry: same channel, same externalReference, as if the
+        // previous call's business write succeeded but its own bookkeeping (markProcessed) failed
+        // and the event became retryable again.
+        const second = await paymentAttemptService.payInvoice(
+            mockCtx,
+            Number(invoiceA.id),
+            'success',
+            'branch-kassa',
+            sameReference,
+        );
+        expect(second.status).toBe('paid');
+
+        const paymentAttempts = await dataSource
+            .getRepository(TestPaymentAttempt)
+            .find({ where: { providerPaymentId: sameReference } });
+        expect(paymentAttempts).toHaveLength(1); // not 2 — the retry did not create a duplicate
+
+        const refetchedB = await dataSource.getRepository(TestInvoice).findOneOrFail({
+            where: { id: Number(invoiceB.id) },
+        });
+        expect(refetchedB.status).toBe('paid');
+
+        const entries = await dataSource.getRepository(TestSettlementEntry).find();
+        // Exactly the allocation from the FIRST call — not doubled by the retry.
+        expect(entries).toHaveLength(2);
+    });
+
+    it('two concurrent payInvoice calls with the same (channel, externalReference) create exactly one PaymentAttempt', async () => {
+        const [invoiceA] = await seedInvoicePair();
+        const sameReference = 'RRN-fixed-reference-for-concurrency-test';
+
+        const results = await Promise.allSettled([
+            paymentAttemptService.payInvoice(
+                mockCtx,
+                Number(invoiceA.id),
+                'success',
+                'branch-kassa',
+                sameReference,
+            ),
+            paymentAttemptService.payInvoice(
+                mockCtx,
+                Number(invoiceA.id),
+                'success',
+                'branch-kassa',
+                sameReference,
+            ),
+        ]);
+
+        // Both calls resolve (the loser recognizes the unique-constraint race and treats it as a
+        // safe no-op, per payInvoice's catch(isUniqueViolation) branch) — real concurrency, not
+        // two sequential calls, exercising the DB-level guard the find-first check alone can't.
+        expect(results.every(r => r.status === 'fulfilled')).toBe(true);
+
+        const paymentAttempts = await dataSource
+            .getRepository(TestPaymentAttempt)
+            .find({ where: { providerPaymentId: sameReference } });
+        expect(paymentAttempts).toHaveLength(1);
     });
 });
