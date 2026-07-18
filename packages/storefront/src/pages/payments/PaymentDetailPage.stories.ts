@@ -4,10 +4,13 @@ import { registerMock } from '../../../.storybook/graphql-mock-registry';
 import { registerDefaultMocks } from '../../../.storybook/default-mocks';
 import PaymentDetailPage from './PaymentDetailPage.vue';
 
+// No 'autodocs': the combined Docs page renders every story's canvas at once, and each
+// story's loader pushes a different route on the shared router singleton — the pushes
+// collide and every canvas ends up on whichever route won last (see individual story
+// canvases instead).
 const meta: Meta<typeof PaymentDetailPage> = {
     title: 'Pages/Payments/PaymentDetailPage',
     component: PaymentDetailPage,
-    tags: ['autodocs'],
 };
 
 export default meta;

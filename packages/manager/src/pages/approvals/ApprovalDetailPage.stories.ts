@@ -3,10 +3,12 @@ import { router } from '../../router';
 import { registerMock } from '../../../.storybook/graphql-mock-registry';
 import ApprovalDetailPage from './ApprovalDetailPage.vue';
 
+// No 'autodocs': the combined Docs page renders every story's canvas at once, and each story's
+// loader pushes a different route on the shared router singleton — the pushes collide and every
+// canvas ends up on whichever route won last (see individual story canvases instead).
 const meta: Meta<typeof ApprovalDetailPage> = {
     title: 'Pages/Approvals/ApprovalDetailPage',
     component: ApprovalDetailPage,
-    tags: ['autodocs'],
 };
 
 export default meta;
