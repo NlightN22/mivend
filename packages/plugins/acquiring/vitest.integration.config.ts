@@ -6,13 +6,10 @@ export default defineConfig({
         environment: 'node',
         include: ['src/__tests__/integration/**/*.test.ts'],
         testTimeout: 30_000,
-        // These integration test files each run `dropSchema: true` + `synchronize: true` against
-        // the SAME shared Postgres test database (mirroring the real invoice/payment_attempt/
-        // settlement_entry table names) — running files in parallel workers races their DDL
-        // against each other (real bug: only surfaced once a second/third file using those same
-        // table names was added, "duplicate key value violates unique constraint
-        // pg_type_typname_nsp_index"). Files within one process still run just fine; only
-        // cross-file parallelism is unsafe here.
-        fileParallelism: false,
+        // Each file creates its own Postgres schema via shared's testSchemaOptions/
+        // createTestSchema instead of `dropSchema: true` against the shared `public` schema —
+        // see docs/testing-strategy.md's "Database isolation". Files no longer race on DDL, so
+        // fileParallelism is safe (previously disabled here; see git history for the old
+        // shared-schema workaround).
     },
 });

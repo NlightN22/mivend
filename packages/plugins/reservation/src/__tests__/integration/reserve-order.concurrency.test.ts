@@ -11,6 +11,12 @@ import {
     PrimaryGeneratedColumn,
 } from 'typeorm';
 import type { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    createTestSchema,
+    dropTestSchema,
+    testDataSourceConnectionOptions,
+    testSchemaOptions,
+} from 'shared';
 
 import { ReservationService } from '../../reservation.service';
 import { InsufficientStockError } from '../../reservation-errors';
@@ -105,14 +111,15 @@ function withManager(ctx: RequestContext, manager: EntityManager): RequestContex
     return { ...ctx, __manager: manager } as unknown as RequestContext;
 }
 
+const { schema, extra } = testSchemaOptions('reserve_order_concurrency');
+
 beforeAll(async () => {
+    await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
-        host: process.env['TEST_DB_HOST'] ?? 'localhost',
-        port: Number(process.env['TEST_DB_PORT'] ?? 5432),
-        username: process.env['TEST_DB_USER'] ?? 'postgres',
-        password: process.env['TEST_DB_PASSWORD'] ?? 'postgres',
-        database: process.env['TEST_DB_NAME'] ?? 'mivend_test',
+        ...testDataSourceConnectionOptions(),
+        schema,
+        extra,
         entities: [
             TestOrder,
             TestOrderLine,
@@ -122,7 +129,6 @@ beforeAll(async () => {
             TestReservation,
         ],
         synchronize: true,
-        dropSchema: true,
     });
     await dataSource.initialize();
 
@@ -145,6 +151,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await dataSource.destroy();
+    await dropTestSchema(schema);
 });
 
 // ReservationService caches the default StockLocation id for the lifetime of the singleton

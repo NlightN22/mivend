@@ -13,15 +13,20 @@
         "zod": "^3.23.0"
     },
     "peerDependencies": {
-        "@vendure/core": "^3.0.0"
+        "@vendure/core": "^3.0.0",
+        "typeorm": "^0.3.0"
     },
     "peerDependenciesMeta": {
         "@vendure/core": {
+            "optional": true
+        },
+        "typeorm": {
             "optional": true
         }
     },
     "devDependencies": {
         "@vendure/core": "^3.0.0",
+        "typeorm": "^0.3.0",
         "typescript": "^5.4.0"
     }
 }

@@ -1,6 +1,12 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    createTestSchema,
+    dropTestSchema,
+    testDataSourceConnectionOptions,
+    testSchemaOptions,
+} from 'shared';
 
 import { Invoice } from '../../entities/invoice.entity';
 import { PaymentAttempt } from '../../entities/payment-attempt.entity';
@@ -141,17 +147,17 @@ function buildConnectionShim(): TransactionalConnection {
     } as unknown as TransactionalConnection;
 }
 
+const { schema, extra } = testSchemaOptions('payment_atomicity');
+
 beforeAll(async () => {
+    await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
-        host: process.env['TEST_DB_HOST'] ?? 'localhost',
-        port: Number(process.env['TEST_DB_PORT'] ?? 5432),
-        username: process.env['TEST_DB_USER'] ?? 'postgres',
-        password: process.env['TEST_DB_PASSWORD'] ?? 'postgres',
-        database: process.env['TEST_DB_NAME'] ?? 'mivend_test',
+        ...testDataSourceConnectionOptions(),
+        schema,
+        extra,
         entities: [TestInvoice, TestPaymentAttempt, TestSettlementEntry],
         synchronize: true,
-        dropSchema: true,
     });
     await dataSource.initialize();
 
@@ -174,6 +180,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await dataSource.destroy();
+    await dropTestSchema(schema);
 });
 
 beforeEach(async () => {

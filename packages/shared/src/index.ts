@@ -1,4 +1,5 @@
 export * from './sync';
+export * from './testing/postgres-test-schema';
 // vendure-events.ts is backend-only (imports @vendure/core) — same "never touched by Vite"
 // carve-out as sync.ts above, see that comment.
 export * from './vendure-events';

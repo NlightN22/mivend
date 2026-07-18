@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn, VersionColumn } from 'typeorm';
 import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    createTestSchema,
+    dropTestSchema,
+    testDataSourceConnectionOptions,
+    testSchemaOptions,
+} from 'shared';
 
 import { ApprovalRequestService } from '../../approval-request.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
@@ -63,17 +69,17 @@ const steps = [
     },
 ];
 
+const { schema, extra } = testSchemaOptions('approval_request_concurrency');
+
 beforeAll(async () => {
+    await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
-        host: process.env['TEST_DB_HOST'] ?? 'localhost',
-        port: Number(process.env['TEST_DB_PORT'] ?? 5432),
-        username: process.env['TEST_DB_USER'] ?? 'postgres',
-        password: process.env['TEST_DB_PASSWORD'] ?? 'postgres',
-        database: process.env['TEST_DB_NAME'] ?? 'mivend_test',
+        ...testDataSourceConnectionOptions(),
+        schema,
+        extra,
         entities: [TestApprovalRequest, TestApprovalStep],
         synchronize: true,
-        dropSchema: true,
     });
     await dataSource.initialize();
 
@@ -104,6 +110,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await dataSource.destroy();
+    await dropTestSchema(schema);
 });
 
 beforeEach(async () => {

@@ -23,6 +23,7 @@
         "@nestjs/graphql": "^13.0.0",
         "@vendure/common": "^3.0.0",
         "@vendure/core": "^3.0.0",
+        "shared": "workspace:*",
         "graphql": "^16.0.0",
         "typeorm": "^0.3.0",
         "typescript": "^5.4.0",

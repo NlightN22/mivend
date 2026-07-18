@@ -6,8 +6,9 @@ export default defineConfig({
         environment: 'node',
         include: ['src/__tests__/integration/**/*.test.ts'],
         testTimeout: 30_000,
-        // Same reasoning as approval-workflow's config: each integration file spins up its own
-        // DataSource with synchronize:true/dropSchema:true against the same shared TEST_DB_NAME.
-        fileParallelism: false,
+        // Each file creates its own Postgres schema via shared's testSchemaOptions/
+        // createTestSchema instead of `dropSchema: true` against the shared `public` schema —
+        // see docs/testing-strategy.md's "Database isolation". fileParallelism no longer needs
+        // to be disabled (previous shared-schema workaround, see git history).
     },
 });

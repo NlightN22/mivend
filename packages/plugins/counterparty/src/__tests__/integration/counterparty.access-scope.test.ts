@@ -2,6 +2,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
+import {
+    createTestSchema,
+    dropTestSchema,
+    testDataSourceConnectionOptions,
+    testSchemaOptions,
+} from 'shared';
 
 import { CounterpartyService } from '../../counterparty.service';
 
@@ -67,17 +73,17 @@ const mockAccessScopeService = {
     ),
 };
 
+const { schema, extra } = testSchemaOptions('counterparty_access_scope');
+
 beforeAll(async () => {
+    await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
-        host: process.env['TEST_DB_HOST'] ?? 'localhost',
-        port: Number(process.env['TEST_DB_PORT'] ?? 5432),
-        username: process.env['TEST_DB_USER'] ?? 'postgres',
-        password: process.env['TEST_DB_PASSWORD'] ?? 'postgres',
-        database: process.env['TEST_DB_NAME'] ?? 'mivend_test',
+        ...testDataSourceConnectionOptions(),
+        schema,
+        extra,
         entities: [TestCounterparty, TestCounterpartyTeamMember],
         synchronize: true,
-        dropSchema: true,
     });
     await dataSource.initialize();
 
@@ -98,6 +104,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await dataSource.destroy();
+    await dropTestSchema(schema);
 });
 
 beforeEach(async () => {

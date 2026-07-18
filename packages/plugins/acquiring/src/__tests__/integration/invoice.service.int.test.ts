@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { EntityHydrator, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    createTestSchema,
+    dropTestSchema,
+    testDataSourceConnectionOptions,
+    testSchemaOptions,
+} from 'shared';
 import { InvoiceService } from '../../invoice.service';
 
 // Same approach as plugin-documents' integration test: VendureEntity needs a bootstrapped
@@ -24,18 +30,17 @@ class TestInvoice {
 let dataSource: DataSource;
 let service: InvoiceService;
 const mockCtx = {} as RequestContext;
+const { schema, extra } = testSchemaOptions('invoice_service');
 
 beforeAll(async () => {
+    await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
-        host: process.env['TEST_DB_HOST'] ?? 'localhost',
-        port: Number(process.env['TEST_DB_PORT'] ?? 5432),
-        username: process.env['TEST_DB_USER'] ?? 'postgres',
-        password: process.env['TEST_DB_PASSWORD'] ?? 'postgres',
-        database: process.env['TEST_DB_NAME'] ?? 'mivend_test',
+        ...testDataSourceConnectionOptions(),
+        schema,
+        extra,
         entities: [TestInvoice],
         synchronize: true,
-        dropSchema: true,
     });
     await dataSource.initialize();
 
@@ -55,6 +60,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await dataSource.destroy();
+    await dropTestSchema(schema);
 });
 
 beforeEach(async () => {

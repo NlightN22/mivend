@@ -72,34 +72,31 @@ mivend/
 Testing is mandatory — not optional. Every plugin and significant piece of logic must have tests
 before it is considered done.
 
-### Unit tests
+Full strategy, level definitions, database isolation, mocking rules, worker testing, and E2E
+strategy: **`docs/testing-strategy.md`**. Architectural risk catalog (data isolation, idempotency,
+inbox lifecycle, outbox atomicity, ordering, concurrency, retry, partial failure, overlaps,
+source ownership, eventual consistency, authorization, contract compatibility) with minimum
+scenarios per pattern: **`docs/testing-patterns.md`**.
 
-- Location: `src/__tests__/unit/` inside each package
-- Runner: Vitest
-- Required for: all service methods with business logic, all utility functions
-- Not required for: resolvers (covered by integration), trivial getters/setters
-- Rule: mock external dependencies (DB, RabbitMQ, external APIs) — unit tests must run offline
+**Before writing or changing any test, or any code that changes a business flow, CQRS event,
+inbox/outbox, worker, scope, permission, or external contract — call the `test-design` skill
+first.** It requires reading `AGENTS.md` + the two docs above, identifying business invariants,
+data ownership/scope, and external boundaries, checking for existing close tests before adding
+new ones, and producing a short test plan (changed behavior, invariants, scope, failure modes,
+applicable patterns, level per scenario, reused coverage, deliberate omissions).
 
-### Integration tests
-
-- Location: `src/__tests__/integration/` inside each package
-- Required for: every plugin, all sync flows, all business-critical API operations
-- Coverage: positive scenario + at least one negative/edge scenario per operation
-- Infrastructure: real PostgreSQL + Redis via GitHub Actions services (see `.github/workflows/integration.yml`)
-- Rule: no mocking of the database — integration tests hit a real DB
-
-### E2E tests (Playwright)
-
-- Location: `packages/e2e/storefront/`
-- Requires running dev stack (`make dev`) and seeded data (`make seed`)
-- Before writing or debugging E2E tests, read **`docs/e2e-testing.md`** — it documents known gotchas (stale auth, auto-loadMore instability, cart persistence across runs, ES null vs undefined).
+**Rule: minimum sufficient level.** Never copy the same scenario set onto every level. A business
+rule belongs in a unit test; a technical seam in an integration test; a full component chain in a
+component test; a boundary in a contract test; only a handful of critical end-to-end routes in
+E2E. No unjustified duplication across levels.
 
 ### Running tests
 
 Always run tests via Makefile, not directly through pnpm:
 
 - `make test` — unit tests (offline, no infrastructure needed)
-- `make test-int` — integration tests (starts dev infrastructure via `make up` automatically)
+- `make test-int` — integration/component/contract tests (starts dev infrastructure via `make up` automatically)
+- `make e2e` — Playwright E2E (requires `make dev` + `make seed`)
 
 Never use `pnpm test` or `pnpm --filter ... test` directly — use the Makefile targets.
 
@@ -109,13 +106,14 @@ Never use `pnpm test` or `pnpm --filter ... test` directly — use the Makefile 
 - Every PR to main: integration tests (`.github/workflows/integration.yml`)
 - A PR cannot be merged if CI is red
 
-### Definition of done for any plugin
+### Definition of done
 
-A plugin is not done until:
-
-- Unit tests cover all service methods
-- Integration test covers the main happy path and at least one failure case
-- `pnpm test` is green
+A change is not done until: applicable risks are identified with a test plan; tests are added at
+the minimum sufficient level; positive and necessary negative cases pass; data isolation,
+idempotency, retry/recovery, and atomicity are checked wherever they apply; contract is checked
+for any external-boundary change; no unjustified duplication; targeted tests and the required
+Makefile commands pass; deliberately uncovered risks are reported with a reason. Full checklist:
+`docs/testing-strategy.md`'s "Definition of done".
 
 ---
 
