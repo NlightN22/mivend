@@ -37,6 +37,9 @@ function mockInboxData(items: (typeof REQUEST_SUMMARY)[], totalItems: number): v
             allInvolved: { items, totalItems },
         },
     }));
+    registerMock('ApprovalCounterparties', () => ({
+        counterparties: { items: [{ erpId: '1', shortName: 'customer-123' }] },
+    }));
 }
 
 export const Default: Story = {

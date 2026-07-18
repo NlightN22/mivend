@@ -27,7 +27,26 @@ function mockDiscountsData(items: unknown[], totalItems: number): void {
                     priceType: 'price-type-wholesale',
                     assignedManagerId: '1',
                     branchId: 'branch-a',
+                    erpGroupLabel: null,
                     isActive: true,
+                    tradingPoints: [
+                        {
+                            id: 'tp-1',
+                            name: 'Trading point A',
+                            address: 'branch-a address',
+                            workingHours: '09:00-18:00',
+                            deliveryComment: null,
+                            isActive: true,
+                            contacts: [
+                                {
+                                    name: 'Ivan Petrov',
+                                    phone: '+7 913 000-00-11',
+                                    email: null,
+                                    isPrimary: true,
+                                },
+                            ],
+                        },
+                    ],
                 },
             ],
             totalItems: 1,

@@ -25,6 +25,9 @@ export const Default: Story = {
                     facetValues: [],
                 },
             }));
+            registerMock('CatalogFacets', () => ({
+                search: { facetValues: [] },
+            }));
             registerMock('NewArrivals', () => ({ products: { items: [buildWidgetProduct()] } }));
             registerMock('SaleProducts', () => ({
                 products: {

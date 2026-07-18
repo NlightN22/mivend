@@ -414,7 +414,7 @@ export async function fetchActiveDiscountCountsByCustomer(
             const result = await adminApi<{
                 discountGrantsForCounterparty: { validTo: string }[];
             }>(
-                `query($counterpartyId: ID!) { discountGrantsForCounterparty(counterpartyId: $counterpartyId) { validTo } }`,
+                `query ActiveDiscountCountForCounterparty($counterpartyId: ID!) { discountGrantsForCounterparty(counterpartyId: $counterpartyId) { validTo } }`,
                 { counterpartyId },
             );
             const activeCount = result.discountGrantsForCounterparty.filter(

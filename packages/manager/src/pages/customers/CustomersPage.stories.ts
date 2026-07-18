@@ -20,7 +20,21 @@ const CUSTOMER_ITEM = {
     priceType: 'price-type-wholesale',
     assignedManagerId: '1',
     branchId: 'branch-a',
+    erpGroupLabel: null,
     isActive: true,
+    tradingPoints: [
+        {
+            id: 'tp-1',
+            name: 'Trading point A',
+            address: 'branch-a address',
+            workingHours: '09:00-18:00',
+            deliveryComment: null,
+            isActive: true,
+            contacts: [
+                { name: 'Ivan Petrov', phone: '+7 913 000-00-11', email: null, isPrimary: true },
+            ],
+        },
+    ],
 };
 
 function mockCustomersData(items: (typeof CUSTOMER_ITEM)[], totalItems: number): void {
@@ -40,6 +54,10 @@ function mockCustomersData(items: (typeof CUSTOMER_ITEM)[], totalItems: number):
         teamMembers: [{ id: '1', firstName: 'Alex', lastName: 'Manager', roleCodes: ['manager'] }],
     }));
     registerMock('ExpiringDiscountGrants', () => ({ expiringDiscountGrants: [] }));
+    registerMock('ActiveDiscountCountForCounterparty', () => ({
+        discountGrantsForCounterparty: [],
+    }));
+    registerMock('LastOrderDates', () => ({ visibleOrders: { items: [] } }));
 }
 
 export const Default: Story = {
