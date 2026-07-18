@@ -93,7 +93,7 @@ export async function fetchPaymentsForCounterparty(
     const result = await adminApi<{
         visiblePayments: { items: PaymentListItem[] };
     }>(
-        `query($counterpartyId: ID!, $take: Int!) {
+        `query PaymentsForCounterparty($counterpartyId: ID!, $take: Int!) {
             visiblePayments(options: { take: $take }, counterpartyId: $counterpartyId) {
                 items { ${PAYMENT_ITEM_FIELDS} }
             }

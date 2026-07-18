@@ -35,7 +35,7 @@ export async function fetchCatalogFacets(term: string): Promise<FacetGroup[]> {
     const result = await adminApi<{
         search: { facetValues: EsFacetValueResult[] };
     }>(
-        `query($term: String) {
+        `query CatalogFacets($term: String) {
             search(input: { term: $term, take: 0, skip: 0, groupByProduct: true }) {
                 facetValues {
                     facetValue { id code name facet { code name } }
@@ -53,7 +53,7 @@ export async function fetchCatalogFacets(term: string): Promise<FacetGroup[]> {
 // storefront's mega-menu uses, via the shared buildCategoryTree shaping logic.
 export async function fetchCategoryTree(): Promise<CollectionNode[]> {
     const result = await adminApi<{ collections: { items: RawCollection[] } }>(
-        `query {
+        `query CategoryTree {
             collections(options: { take: 100 }) {
                 items {
                     id name slug
@@ -103,7 +103,7 @@ export async function fetchCatalogPage(
             })[];
         };
     }>(
-        `query($term: String, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput, $skip: Int, $take: Int) {
+        `query CatalogPage($term: String, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput, $skip: Int, $take: Int) {
             search(input: {
                 term: $term
                 facetValueFilters: $facetValueFilters
@@ -153,7 +153,7 @@ export async function fetchStockForVariants(variantIds: string[]): Promise<Map<s
     const result = await adminApi<{
         productVariants: { items: { id: string; stockLevels: { stockOnHand: number }[] }[] };
     }>(
-        `query($ids: [String!]!) {
+        `query CatalogVariantStock($ids: [String!]!) {
             productVariants(options: { filter: { id: { in: $ids } } }) {
                 items { id stockLevels { stockOnHand } }
             }

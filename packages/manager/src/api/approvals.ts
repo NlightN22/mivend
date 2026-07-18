@@ -108,7 +108,7 @@ export async function fetchApprovalsInbox(
     allInvolvedOptions: ApprovalListOptions,
 ): Promise<ApprovalsInbox> {
     const result = await adminApi<{ myApprovalsInbox: ApprovalsInbox }>(
-        `query($awaitingOptions: ApprovalListOptions, $allInvolvedOptions: ApprovalListOptions) {
+        `query ApprovalsInbox($awaitingOptions: ApprovalListOptions, $allInvolvedOptions: ApprovalListOptions) {
             myApprovalsInbox(awaitingOptions: $awaitingOptions, allInvolvedOptions: $allInvolvedOptions) {
                 awaitingMyDecision { ${PAGE_FIELDS} }
                 allInvolved { ${PAGE_FIELDS} }
@@ -121,7 +121,7 @@ export async function fetchApprovalsInbox(
 
 export async function fetchApprovalDetail(id: string): Promise<ApprovalRequestDetail | null> {
     const result = await adminApi<{ approvalRequest: ApprovalRequestDetail | null }>(
-        `query($id: ID!) {
+        `query ApprovalDetail($id: ID!) {
             approvalRequest(id: $id) {
                 ${SUMMARY_FIELDS}
                 escalatesTo
@@ -186,7 +186,7 @@ export async function fetchOrderReferences(
             }[];
         };
     }>(
-        `query($ids: [String!]!) {
+        `query ApprovalOrderReferences($ids: [String!]!) {
             visibleOrders(options: { take: 200, filter: { id: { in: $ids } } }) {
                 items {
                     id code
@@ -233,7 +233,9 @@ export async function fetchCounterpartyReferencesByErpId(): Promise<
 > {
     const result = await adminApi<{
         counterparties: { items: { erpId: string; shortName: string }[] };
-    }>(`query { counterparties(options: { take: 500 }) { items { erpId shortName } } }`);
+    }>(
+        `query ApprovalCounterparties { counterparties(options: { take: 500 }) { items { erpId shortName } } }`,
+    );
     return new Map(result.counterparties.items.map(c => [c.erpId, c]));
 }
 

@@ -31,7 +31,7 @@ export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
             }[];
         };
     }>(
-        `query {
+        `query OrderCreateCounterparties {
             counterparties(options: { take: 500 }) {
                 items {
                     id
@@ -49,7 +49,9 @@ export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
     // it's resolved via one lookup of the (small) customer book, not per-counterparty.
     const customersResult = await adminApi<{
         customers: { items: { id: string; counterparty: { id: string } | null }[] };
-    }>(`query { customers(options: { take: 200 }) { items { id counterparty { id } } } }`);
+    }>(
+        `query OrderCreateCustomers { customers(options: { take: 200 }) { items { id counterparty { id } } } }`,
+    );
     const customerIdByCounterpartyId = new Map(
         customersResult.customers.items
             .filter(c => c.counterparty)

@@ -46,7 +46,7 @@ export const NON_EDITABLE_ORDER_STATES = [
 
 export async function fetchOrderDetail(code: string): Promise<OrderDetail | null> {
     const result = await adminApi<{ visibleOrders: { items: OrderDetail[] } }>(
-        `query($code: String!) {
+        `query OrderDetail($code: String!) {
             visibleOrders(options: { take: 1, filter: { code: { eq: $code } } }) {
                 items {
                     id
@@ -100,7 +100,7 @@ export async function fetchPriceAdjustmentRequestsForOrder(
     const result = await adminApi<{
         priceAdjustmentRequestsForOrder: PriceAdjustmentRequestSummary[];
     }>(
-        `query($orderId: ID!) {
+        `query PriceAdjustmentRequestsForOrder($orderId: ID!) {
             priceAdjustmentRequestsForOrder(orderId: $orderId) {
                 id
                 payload
@@ -126,7 +126,7 @@ export interface RelatedDocument {
 
 export async function fetchRelatedDocuments(orderId: string): Promise<RelatedDocument[]> {
     const result = await adminApi<{ documents: { items: RelatedDocument[] } }>(
-        `query($orderId: ID!) {
+        `query RelatedDocuments($orderId: ID!) {
             documents(options: { take: 100 }, orderId: $orderId) {
                 items { id type number status issueDate orderId }
             }

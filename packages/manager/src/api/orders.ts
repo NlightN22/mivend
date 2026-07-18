@@ -282,7 +282,7 @@ export interface ManagerOption {
 export async function fetchManagerOptions(): Promise<ManagerOption[]> {
     const result = await adminApi<{
         teamMembers: { id: string; firstName: string; lastName: string; roleCodes: string[] }[];
-    }>(`query { teamMembers { id firstName lastName roleCodes } }`);
+    }>(`query TeamMembers { teamMembers { id firstName lastName roleCodes } }`);
     return result.teamMembers.map(a => ({
         id: a.id,
         name: `${a.firstName} ${a.lastName}`,
@@ -299,7 +299,7 @@ export interface BranchOption {
 
 export async function fetchBranchOptions(): Promise<BranchOption[]> {
     const result = await adminApi<{ branches: { erpId: string; name: string }[] }>(
-        `query { branches { erpId name } }`,
+        `query Branches { branches { erpId name } }`,
     );
     return result.branches;
 }

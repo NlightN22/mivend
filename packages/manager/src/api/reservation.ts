@@ -26,7 +26,7 @@ const RESERVATION_FIELDS = `
 
 export async function fetchOrderReservations(orderId: string): Promise<OrderReservation[]> {
     const result = await adminApi<{ orderReservations: OrderReservation[] }>(
-        `query($orderId: ID!) { orderReservations(orderId: $orderId) { ${RESERVATION_FIELDS} } }`,
+        `query OrderReservations($orderId: ID!) { orderReservations(orderId: $orderId) { ${RESERVATION_FIELDS} } }`,
         { orderId },
     );
     return result.orderReservations;

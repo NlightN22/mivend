@@ -11,7 +11,7 @@ export interface SessionSummary {
 
 export async function fetchMySessions(): Promise<SessionSummary[]> {
     const result = await adminApi<{ mySessions: SessionSummary[] }>(
-        `{ mySessions { id userAgent deviceLabel createdAt expires current } }`,
+        `query MySessions { mySessions { id userAgent deviceLabel createdAt expires current } }`,
     );
     return result.mySessions;
 }

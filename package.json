@@ -57,5 +57,11 @@
             "puppeteer",
             "sharp"
         ]
+    },
+    "msw": {
+        "workerDirectory": [
+            "packages/manager/public",
+            "packages/storefront/public"
+        ]
     }
 }

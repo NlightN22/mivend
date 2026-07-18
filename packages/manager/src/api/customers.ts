@@ -104,7 +104,7 @@ export async function fetchCustomersPage(
             totalItems: number;
         };
     }>(
-        `query($options: CounterpartyListOptions) {
+        `query CustomersPage($options: CounterpartyListOptions) {
             counterparties(options: $options) {
                 items { ${CUSTOMER_LIST_FIELDS} }
                 totalItems
@@ -120,7 +120,7 @@ export async function fetchCustomersPage(
 
 export async function fetchUnassignedCounterpartyCount(): Promise<number> {
     const result = await adminApi<{ unassignedCounterpartyCount: number }>(
-        `query { unassignedCounterpartyCount }`,
+        `query UnassignedCounterpartyCount { unassignedCounterpartyCount }`,
     );
     return result.unassignedCounterpartyCount;
 }
@@ -135,7 +135,7 @@ export interface CustomersSummary {
 
 export async function fetchCustomersSummary(): Promise<CustomersSummary> {
     const result = await adminApi<{ counterpartySummary: CustomersSummary }>(
-        `query {
+        `query CustomersSummary {
             counterpartySummary { totalCount activeCount totalCreditBalance highUsageCount }
         }`,
     );
@@ -192,7 +192,7 @@ export async function fetchCustomerById(counterpartyId: string): Promise<Custome
     const result = await adminApi<{
         counterparty: Parameters<typeof toCustomerListItem>[0] | null;
     }>(
-        `query($id: ID!) {
+        `query CustomerById($id: ID!) {
             counterparty(id: $id) { ${CUSTOMER_LIST_FIELDS} }
         }`,
         { id: counterpartyId },
@@ -284,7 +284,9 @@ export async function fetchCustomerIdForCounterparty(
 ): Promise<string | null> {
     const result = await adminApi<{
         customers: { items: { id: string; counterparty: { id: string } | null }[] };
-    }>(`query { customers(options: { take: 200 }) { items { id counterparty { id } } } }`);
+    }>(
+        `query CustomersLookup { customers(options: { take: 200 }) { items { id counterparty { id } } } }`,
+    );
     return result.customers.items.find(c => c.counterparty?.id === counterpartyId)?.id ?? null;
 }
 
@@ -303,7 +305,7 @@ export async function fetchOrdersForCustomer(
     const result = await adminApi<{
         visibleOrders: { items: CustomerOrderItem[] };
     }>(
-        `query($customerId: ID!, $take: Int!) {
+        `query CustomerOrders($customerId: ID!, $take: Int!) {
             visibleOrders(options: { take: $take, sort: { orderPlacedAt: DESC } }, customerId: $customerId) {
                 items { code state totalWithTax currencyCode orderPlacedAt }
             }
@@ -327,7 +329,7 @@ export async function fetchDocumentsForCounterparty(
     const result = await adminApi<{
         documents: { items: CustomerDocument[] };
     }>(
-        `query($counterpartyId: ID!) {
+        `query CustomerDocuments($counterpartyId: ID!) {
             documents(options: { take: 100 }, counterpartyId: $counterpartyId) {
                 items { id type number status issueDate }
             }
@@ -438,7 +440,7 @@ export async function fetchDiscountGrantsForCounterparty(
     counterpartyId: string,
 ): Promise<DiscountRuleItem[]> {
     const result = await adminApi<{ discountGrantsForCounterparty: DiscountRuleItem[] }>(
-        `query($counterpartyId: ID!) {
+        `query CustomerDiscountGrants($counterpartyId: ID!) {
             discountGrantsForCounterparty(counterpartyId: $counterpartyId) {
                 id
                 percent
@@ -463,7 +465,7 @@ export async function fetchLastOrderDatesByCounterpartyId(): Promise<Map<string,
             }[];
         };
     }>(
-        `query {
+        `query LastOrderDates {
             visibleOrders(options: { take: 500, sort: { orderPlacedAt: DESC } }) {
                 items { orderPlacedAt customer { counterparty { id } } }
             }

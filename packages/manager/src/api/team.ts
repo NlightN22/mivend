@@ -19,7 +19,7 @@ export interface TeamDirectoryMember {
 
 export async function fetchDepartments(): Promise<DepartmentOption[]> {
     const result = await adminApi<{ departments: DepartmentOption[] }>(
-        `query { departments { id erpId name } }`,
+        `query Departments { departments { id erpId name } }`,
     );
     return result.departments;
 }
@@ -34,7 +34,7 @@ export type { BranchOption };
 // e.g. Orders/Customers), which always returns real names — see that resolver's doc comment.
 export async function fetchTeamDirectory(): Promise<TeamDirectoryMember[]> {
     const result = await adminApi<{ teamDirectory: TeamDirectoryMember[] }>(
-        `query {
+        `query TeamDirectory {
             teamDirectory {
                 id
                 firstName

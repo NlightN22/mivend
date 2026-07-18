@@ -21,7 +21,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductDetail | 
             variants: { id: string; sku: string; stockLevels: { stockOnHand: number }[] }[];
         } | null;
     }>(
-        `query($slug: String) {
+        `query ProductBySlug($slug: String) {
             product(slug: $slug) {
                 id
                 name
@@ -59,7 +59,7 @@ export async function fetchCrossReferences(productId: string): Promise<CrossRefe
     const result = await adminApi<{
         productCrossReferences: CrossReferenceRow[];
     }>(
-        `query($productId: ID!) {
+        `query ProductCrossReferences($productId: ID!) {
             productCrossReferences(productId: $productId) { oemCode oemBrand }
         }`,
         { productId },

@@ -42,7 +42,7 @@ export async function fetchDiscountRegistryPage(
     const result = await adminApi<{
         discountRegistryPage: { items: DiscountRegistryEntryRow[]; totalItems: number };
     }>(
-        `query($options: DiscountRegistryListOptions) {
+        `query DiscountRegistryPage($options: DiscountRegistryListOptions) {
             discountRegistryPage(options: $options) {
                 items {
                     id
@@ -147,7 +147,9 @@ export function buildDiscountRegistryRows(
 }
 
 export async function fetchPriceTypeCodes(): Promise<string[]> {
-    const result = await adminApi<{ priceTypeCodes: string[] }>(`query { priceTypeCodes }`);
+    const result = await adminApi<{ priceTypeCodes: string[] }>(
+        `query PriceTypeCodes { priceTypeCodes }`,
+    );
     return result.priceTypeCodes;
 }
 
@@ -159,7 +161,7 @@ export interface FacetOption {
 
 export async function fetchFacets(): Promise<FacetOption[]> {
     const result = await adminApi<{ facets: { items: FacetOption[] } }>(
-        `query { facets(options: { take: 50 }) { items { code name values { code name } } } }`,
+        `query DiscountFacets { facets(options: { take: 50 }) { items { code name values { code name } } } }`,
     );
     return result.facets.items;
 }
@@ -184,7 +186,7 @@ export async function fetchExpiringDiscountGrants(
     withinDays: number,
 ): Promise<ExpiringDiscountGrant[]> {
     const result = await adminApi<{ expiringDiscountGrants: ExpiringDiscountGrant[] }>(
-        `query($withinDays: Int!) {
+        `query ExpiringDiscountGrants($withinDays: Int!) {
             expiringDiscountGrants(withinDays: $withinDays) {
                 id
                 validTo

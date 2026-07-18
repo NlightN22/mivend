@@ -119,7 +119,7 @@ export const SCOPE_RESOURCE_LABELS: Record<(typeof SCOPE_RESOURCES)[number], str
 
 export async function fetchRoles(): Promise<RoleSummary[]> {
     const result = await adminApi<{ roles: { items: RoleSummary[] } }>(
-        `query($codes: [String!]!) {
+        `query Roles($codes: [String!]!) {
             roles(options: { filter: { code: { in: $codes } } }) {
                 items { id code description }
             }
@@ -131,7 +131,7 @@ export async function fetchRoles(): Promise<RoleSummary[]> {
 
 export async function fetchRoleDetail(code: string): Promise<RoleDetail | null> {
     const result = await adminApi<{ roles: { items: RoleDetail[] } }>(
-        `query($code: String!) {
+        `query RoleDetail($code: String!) {
             roles(options: { filter: { code: { eq: $code } } }) {
                 items { id code description permissions }
             }
@@ -152,7 +152,7 @@ export async function updateRolePermissions(id: string, permissions: string[]): 
 
 export async function fetchAccessScopeConfig(code: string): Promise<AccessScopeConfig | null> {
     const result = await adminApi<{ roleAccessScopeConfig: string | null }>(
-        `query($code: String!) { roleAccessScopeConfig(roleCode: $code) }`,
+        `query RoleAccessScopeConfig($code: String!) { roleAccessScopeConfig(roleCode: $code) }`,
         { code },
     );
     return result.roleAccessScopeConfig
@@ -171,7 +171,7 @@ export async function setAccessScopeConfig(code: string, config: AccessScopeConf
 
 export async function fetchCreditTermLimit(code: string): Promise<CreditTermLimit | null> {
     const result = await adminApi<{ creditTermLimit: CreditTermLimit | null }>(
-        `query($code: String!) {
+        `query CreditTermLimit($code: String!) {
             creditTermLimit(roleCode: $code) { roleCode maxExtraDays maxAmount }
         }`,
         { code },
@@ -207,7 +207,7 @@ export async function fetchTeamMembers(): Promise<TeamMember[]> {
             }[];
         };
     }>(
-        `query {
+        `query SecurityAdministrators {
             administrators(options: { take: 200 }) {
                 items { id firstName lastName emailAddress user { roles { code } } }
             }
@@ -243,7 +243,9 @@ export async function updateAdministratorRole(
 export async function fetchPermissionCatalog(): Promise<PermissionInfo[]> {
     const result = await adminApi<{
         globalSettings: { serverConfig: { permissions: PermissionInfo[] } };
-    }>(`query { globalSettings { serverConfig { permissions { name description } } } }`);
+    }>(
+        `query PermissionCatalog { globalSettings { serverConfig { permissions { name description } } } }`,
+    );
     const known = new Set(PERMISSION_CATEGORIES.flatMap(c => c.permissionNames));
     return result.globalSettings.serverConfig.permissions.filter(p => known.has(p.name));
 }

@@ -12,7 +12,8 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
         prod-up prod-down \
         dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals seed-payment-refunds seed-all \
         verify-branch-scope \
-        storybook storefront storefront-dev
+        storybook storybook-ui-kit storybook-manager storybook-storefront storybook-down \
+        storefront storefront-dev
 
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
 
@@ -109,6 +110,25 @@ storybook:
 	pnpm --filter @mivend/ui-kit build-storybook
 	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) --profile ui up -d storybook
 	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) restart storybook
+
+# Idempotent dev Storybook servers: each target kills its own previous instance first, so
+# re-running never stacks processes or hops ports. Bound to 0.0.0.0 for VS Code port
+# forwarding / external access. One fixed port per portal: ui-kit 6006, manager 6016,
+# storefront 6018 (HMR websockets use port+1).
+storybook-ui-kit:
+	-pkill -f "storybook dev -p 6006" 2>/dev/null; sleep 1
+	pnpm --filter @mivend/ui-kit storybook:host
+
+storybook-manager:
+	-pkill -f "storybook dev -p 6016" 2>/dev/null; sleep 1
+	pnpm --filter @mivend/manager storybook:host
+
+storybook-storefront:
+	-pkill -f "storybook dev -p 6018" 2>/dev/null; sleep 1
+	pnpm --filter @mivend/storefront storybook:host
+
+storybook-down:
+	-pkill -f "storybook dev" 2>/dev/null
 
 storefront:
 	pnpm --filter @mivend/storefront dev

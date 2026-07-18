@@ -76,7 +76,7 @@ export async function fetchInvoicesForCounterparty(
     const result = await adminApi<{
         visibleInvoices: { items: InvoiceListItem[] };
     }>(
-        `query($counterpartyId: ID!, $take: Int!) {
+        `query InvoicesForCounterparty($counterpartyId: ID!, $take: Int!) {
             visibleInvoices(options: { take: $take }, counterpartyId: $counterpartyId) {
                 items { ${INVOICE_ITEM_FIELDS} }
             }
