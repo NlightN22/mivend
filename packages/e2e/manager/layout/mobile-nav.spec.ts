@@ -92,6 +92,14 @@ test('orders page has no horizontal overflow at a narrow mobile viewport', async
     expect(overflowing).toBe(false);
 });
 
+test('bottom nav and FAB are hidden on desktop/tablet, sidebar shows instead', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/orders');
+    await expect(page.locator('.mv-app-sidebar')).toBeVisible();
+    await expect(page.locator('.mv-app-mobile-nav')).toBeHidden();
+    await expect(page.locator('.mv-fab')).toBeHidden();
+});
+
 test('scroll-to-top button appears after scrolling down and scrolls back to top', async ({
     page,
 }) => {

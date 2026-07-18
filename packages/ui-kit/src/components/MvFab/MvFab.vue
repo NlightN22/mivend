@@ -18,23 +18,29 @@ defineEmits<{ click: [] }>();
 
 <style scoped>
 .mv-fab {
-    position: fixed;
-    right: 16px;
-    /* Sits above the 62px-min-height mobile bottom nav (z-index 50) — z-index 51 here so a
-       rounding/safe-area edge case never lets the nav's opaque background clip the FAB. */
-    bottom: calc(84px + env(safe-area-inset-bottom));
-    z-index: 51;
-    width: 54px;
-    height: 54px;
-    border: 0;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: var(--el-color-primary, #00a884);
-    color: #fff;
-    text-decoration: none;
-    box-shadow: 0 10px 28px rgba(0, 168, 132, 0.34);
-    cursor: pointer;
+    display: none;
+}
+
+@media (max-width: 800px) {
+    .mv-fab {
+        position: fixed;
+        right: 16px;
+        /* Sits above the 62px-min-height mobile bottom nav (z-index 50) — z-index 51 here so a
+           rounding/safe-area edge case never lets the nav's opaque background clip the FAB. */
+        bottom: calc(84px + env(safe-area-inset-bottom));
+        z-index: 51;
+        width: 54px;
+        height: 54px;
+        border: 0;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--el-color-primary, #00a884);
+        color: #fff;
+        text-decoration: none;
+        box-shadow: 0 10px 28px rgba(0, 168, 132, 0.34);
+        cursor: pointer;
+    }
 }
 
 .mv-fab:active {

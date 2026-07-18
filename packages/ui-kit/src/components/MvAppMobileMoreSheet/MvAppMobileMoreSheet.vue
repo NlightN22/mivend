@@ -66,27 +66,36 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 </template>
 
 <style scoped>
-.mv-mobile-sheet-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 58;
-    background: rgba(12, 24, 36, 0.42);
+.mv-mobile-sheet-backdrop,
+.mv-mobile-sheet {
+    display: none;
 }
 
-.mv-mobile-sheet {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 60;
-    max-height: min(72vh, 620px);
-    padding: 9px 14px calc(18px + env(safe-area-inset-bottom));
-    background: #fff;
-    border-radius: 20px 20px 0 0;
-    box-shadow: 0 -16px 40px rgba(12, 24, 36, 0.22);
-    transform: translateY(105%);
-    transition: transform 180ms ease;
-    overflow-y: auto;
+@media (max-width: 800px) {
+    .mv-mobile-sheet-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 58;
+        background: rgba(12, 24, 36, 0.42);
+    }
+
+    .mv-mobile-sheet {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 60;
+        max-height: min(72vh, 620px);
+        padding: 9px 14px calc(18px + env(safe-area-inset-bottom));
+        background: #fff;
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -16px 40px rgba(12, 24, 36, 0.22);
+        transform: translateY(105%);
+        transition: transform 180ms ease;
+        overflow-y: auto;
+    }
 }
 
 .mv-mobile-sheet--open {

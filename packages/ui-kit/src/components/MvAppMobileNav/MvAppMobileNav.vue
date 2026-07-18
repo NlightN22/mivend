@@ -70,6 +70,11 @@ const isMoreActive = computed(
 
 <style scoped>
 .mv-app-mobile-nav {
+    display: none;
+}
+
+@media (max-width: 800px) {
+    .mv-app-mobile-nav {
     position: fixed;
     left: 0;
     right: 0;
@@ -82,6 +87,7 @@ const isMoreActive = computed(
     background: rgba(255, 255, 255, 0.97);
     border-top: 1px solid var(--el-border-color, #e4e7ec);
     box-shadow: 0 -8px 24px rgba(20, 42, 65, 0.1);
+    }
 }
 
 .mv-app-mobile-nav__item {
