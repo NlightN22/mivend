@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
 import { router } from '../../router';
 import { registerMock } from '../../../.storybook/graphql-mock-registry';
+import { paginate, includesCi } from '../../../.storybook/mock-list-utils';
 import ApprovalsInboxPage from './ApprovalsInboxPage.vue';
 
 const meta: Meta<typeof ApprovalsInboxPage> = {
@@ -12,46 +13,86 @@ const meta: Meta<typeof ApprovalsInboxPage> = {
 export default meta;
 type Story = StoryObj<typeof ApprovalsInboxPage>;
 
-const REQUEST_SUMMARY = {
-    id: '1',
-    requestType: 'discount-grant',
-    status: 'pending',
-    currentStepIndex: 0,
-    currentStepRole: 'general-director',
-    stepRoles: ['general-director'],
-    totalSteps: 1,
-    requestedByAdministratorId: '1',
-    createdAt: new Date().toISOString(),
-    decidedAt: null,
-    payload: '{}',
-    steps: [],
-};
+function request(
+    id: string,
+    requestType: string,
+    status: string,
+    currentStepRole: string,
+): (typeof REQUESTS)[number] {
+    return {
+        id,
+        requestType,
+        status,
+        currentStepIndex: 0,
+        currentStepRole,
+        stepRoles: [currentStepRole],
+        totalSteps: 1,
+        requestedByAdministratorId: '1',
+        createdAt: new Date().toISOString(),
+        decidedAt: status === 'pending' ? null : new Date().toISOString(),
+        payload: '{}',
+        steps: [],
+    };
+}
 
-function mockInboxData(items: (typeof REQUEST_SUMMARY)[], totalItems: number): void {
+const REQUESTS = [
+    request('1', 'discount-grant', 'pending', 'general-director'),
+    request('2', 'priceAdjustmentApproval', 'pending', 'general-director'),
+    request('3', 'discount-grant', 'approved', 'general-director'),
+    request('4', 'priceAdjustmentApproval', 'rejected', 'general-director'),
+];
+
+interface ApprovalListOptions {
+    skip?: number;
+    take?: number;
+    search?: string;
+    requestType?: string;
+    status?: string;
+}
+
+function filterRequests(items: typeof REQUESTS, options?: ApprovalListOptions): typeof REQUESTS {
+    let filtered = items;
+    if (options?.requestType)
+        filtered = filtered.filter(r => r.requestType === options.requestType);
+    if (options?.status) filtered = filtered.filter(r => r.status === options.status);
+    if (options?.search) filtered = filtered.filter(r => includesCi(r.id, options.search!));
+    return filtered;
+}
+
+function mockInboxData(): void {
     registerMock('TeamMembers', () => ({
         teamMembers: [{ id: '1', firstName: 'Alex', lastName: 'Manager', roleCodes: ['manager'] }],
     }));
-    registerMock('ApprovalsInbox', () => ({
-        myApprovalsInbox: {
-            awaitingMyDecision: { items, totalItems },
-            allInvolved: { items, totalItems },
-        },
-    }));
+    registerMock(
+        'ApprovalsInbox',
+        (variables: {
+            awaitingOptions?: ApprovalListOptions;
+            allInvolvedOptions?: ApprovalListOptions;
+        }) => ({
+            myApprovalsInbox: {
+                awaitingMyDecision: paginate(
+                    filterRequests(
+                        REQUESTS.filter(r => r.status === 'pending'),
+                        variables.awaitingOptions,
+                    ),
+                    variables.awaitingOptions,
+                ),
+                allInvolved: paginate(
+                    filterRequests(REQUESTS, variables.allInvolvedOptions),
+                    variables.allInvolvedOptions,
+                ),
+            },
+        }),
+    );
     registerMock('ApprovalCounterparties', () => ({
-        counterparties: { items: [{ erpId: '1', shortName: 'customer-123' }] },
+        counterparties: { items: [{ erpId: '1', shortName: 'customer-101' }] },
     }));
 }
 
 export const Default: Story = {
     loaders: [
         async () => {
-            mockInboxData(
-                [
-                    REQUEST_SUMMARY,
-                    { ...REQUEST_SUMMARY, id: '2', requestType: 'priceAdjustmentApproval' },
-                ],
-                2,
-            );
+            mockInboxData();
             await router.push('/approvals');
         },
     ],
@@ -64,7 +105,14 @@ export const Default: Story = {
 export const Empty: Story = {
     loaders: [
         async () => {
-            mockInboxData([], 0);
+            registerMock('TeamMembers', () => ({ teamMembers: [] }));
+            registerMock('ApprovalsInbox', () => ({
+                myApprovalsInbox: {
+                    awaitingMyDecision: { items: [], totalItems: 0 },
+                    allInvolved: { items: [], totalItems: 0 },
+                },
+            }));
+            registerMock('ApprovalCounterparties', () => ({ counterparties: { items: [] } }));
             await router.push('/approvals');
         },
     ],
