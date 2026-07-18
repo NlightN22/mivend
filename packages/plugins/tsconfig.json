@@ -18,6 +18,7 @@
         { "path": "./reservation" },
         { "path": "./moq" },
         { "path": "./versioning" },
-        { "path": "./session-management" }
+        { "path": "./session-management" },
+        { "path": "./saved-views" }
     ]
 }

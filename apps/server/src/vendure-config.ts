@@ -23,6 +23,7 @@ import { MoqPlugin } from '@mivend/plugin-moq';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { AcquiringPlugin } from '@mivend/plugin-acquiring';
+import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
@@ -260,6 +261,7 @@ export const config: VendureConfig = {
             },
         }),
         MoqPlugin,
+        SavedViewsPlugin,
         ...instancePlugins,
     ],
 };

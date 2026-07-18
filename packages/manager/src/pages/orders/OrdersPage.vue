@@ -33,6 +33,8 @@ import OrdersTable from '../../components/orders/OrdersTable.vue';
 import AttentionList from '../../components/orders/AttentionList.vue';
 import OperationalPanel from '../../components/orders/OperationalPanel.vue';
 import SavedViewsPanel, { type SavedView } from '../../components/orders/SavedViewsPanel.vue';
+import MyTableViewsPanel from '../../components/orders/MyTableViewsPanel.vue';
+import type { SavedTableView } from '../../api/orders';
 
 const authStore = useAuthStore();
 
@@ -79,6 +81,17 @@ const { hiddenKeys: hiddenColumnKeys, toggle: toggleColumn, toggleableColumns } 
     `orders-columns:${authStore.administrator?.id ?? 'anonymous'}`,
     ORDER_COLUMNS,
 );
+const HIDEABLE_COLUMN_KEYS = ORDER_COLUMNS.filter(c => !c.required).map(c => c.key);
+
+function applyMyTableView(view: SavedTableView): void {
+    const restoredFilters = JSON.parse(view.filters) as Partial<OrdersFilters>;
+    Object.assign(filters, DEFAULT_FILTERS, restoredFilters);
+    activeChip.value = chipFromFilters(filters);
+    hiddenColumnKeys.value = new Set(
+        HIDEABLE_COLUMN_KEYS.filter(key => !view.visibleColumns.includes(key)),
+    );
+    page.value = 1;
+}
 
 function applyChip(key: string): void {
     activeChip.value = key;
@@ -278,6 +291,14 @@ const todayAmountFormatted = computed(() => {
                 </MvPanel>
                 <MvPanel title="Saved views">
                     <SavedViewsPanel :views="savedViews" @select="applySavedView" />
+                </MvPanel>
+                <MvPanel title="My table views">
+                    <MyTableViewsPanel
+                        page-key="orders"
+                        :current-filters="filters"
+                        :current-visible-columns="HIDEABLE_COLUMN_KEYS.filter(k => !hiddenColumnKeys.has(k))"
+                        @recall="applyMyTableView"
+                    />
                 </MvPanel>
             </aside>
         </div>

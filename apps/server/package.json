@@ -35,7 +35,8 @@
         "@mivend/plugin-moq": "workspace:*",
         "@mivend/plugin-versioning": "workspace:*",
         "@mivend/plugin-session-management": "workspace:*",
-        "@mivend/plugin-acquiring": "workspace:*"
+        "@mivend/plugin-acquiring": "workspace:*",
+        "@mivend/plugin-saved-views": "workspace:*"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

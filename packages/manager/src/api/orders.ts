@@ -303,3 +303,49 @@ export async function fetchBranchOptions(): Promise<BranchOption[]> {
     );
     return result.branches;
 }
+
+export interface SavedTableView {
+    id: string;
+    name: string;
+    filters: string;
+    visibleColumns: string[];
+}
+
+const SAVED_TABLE_VIEW_FIELDS = `id name filters visibleColumns`;
+
+export async function fetchMyTableViews(pageKey: string): Promise<SavedTableView[]> {
+    const result = await adminApi<{ myTableViews: SavedTableView[] }>(
+        `query MyTableViews($pageKey: String!) {
+            myTableViews(pageKey: $pageKey) { ${SAVED_TABLE_VIEW_FIELDS} }
+        }`,
+        { pageKey },
+    );
+    return result.myTableViews;
+}
+
+export async function saveTableView(
+    pageKey: string,
+    name: string,
+    filters: string,
+    visibleColumns: string[],
+): Promise<SavedTableView> {
+    const result = await adminApi<{ saveTableView: SavedTableView }>(
+        `mutation SaveTableView($pageKey: String!, $name: String!, $filters: String!, $visibleColumns: [String!]!) {
+            saveTableView(pageKey: $pageKey, name: $name, filters: $filters, visibleColumns: $visibleColumns) {
+                ${SAVED_TABLE_VIEW_FIELDS}
+            }
+        }`,
+        { pageKey, name, filters, visibleColumns },
+    );
+    return result.saveTableView;
+}
+
+export async function deleteTableView(id: string): Promise<boolean> {
+    const result = await adminApi<{ deleteTableView: boolean }>(
+        `mutation DeleteTableView($id: ID!) {
+            deleteTableView(id: $id)
+        }`,
+        { id },
+    );
+    return result.deleteTableView;
+}
