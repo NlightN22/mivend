@@ -13,44 +13,44 @@ const meta: Meta<typeof PaymentDetailPage> = {
 export default meta;
 type Story = StoryObj<typeof PaymentDetailPage>;
 
+const PAYMENT_DETAIL = {
+    id: '1',
+    amount: 460000,
+    currencyCode: 'RUB',
+    channel: 'online-acquiring',
+    status: 'captured',
+    createdAt: new Date().toISOString(),
+    invoiceId: '1',
+    orderId: '1',
+    externalReference: 'ext-ref-001',
+    refunds: [],
+    disputes: [],
+    processingEvents: [
+        { stage: 'received', occurredAt: new Date().toISOString(), note: null },
+        { stage: 'captured', occurredAt: new Date().toISOString(), note: null },
+    ],
+    invoice: { id: '1', status: 'paid' },
+    order: { id: '1', code: 'ORD-101' },
+    allocations: [
+        {
+            amount: 460000,
+            isAdvance: false,
+            invoice: {
+                id: '1',
+                amount: 460000,
+                currencyCode: 'RUB',
+                status: 'paid',
+                order: { id: '1', code: 'ORD-101' },
+            },
+        },
+    ],
+};
+
 export const Default: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            registerMock('PaymentDetail', () => ({
-                payment: {
-                    id: '1',
-                    amount: 460000,
-                    currencyCode: 'RUB',
-                    channel: 'online-acquiring',
-                    status: 'captured',
-                    createdAt: new Date().toISOString(),
-                    invoiceId: '1',
-                    orderId: '1',
-                    externalReference: 'ext-ref-001',
-                    refunds: [],
-                    disputes: [],
-                    processingEvents: [
-                        { stage: 'received', occurredAt: new Date().toISOString(), note: null },
-                        { stage: 'captured', occurredAt: new Date().toISOString(), note: null },
-                    ],
-                    invoice: { id: '1', status: 'paid' },
-                    order: { id: '1', code: 'ORD-101' },
-                    allocations: [
-                        {
-                            amount: 460000,
-                            isAdvance: false,
-                            invoice: {
-                                id: '1',
-                                amount: 460000,
-                                currencyCode: 'RUB',
-                                status: 'paid',
-                                order: { id: '1', code: 'ORD-101' },
-                            },
-                        },
-                    ],
-                },
-            }));
+            registerMock('PaymentDetail', () => ({ payment: PAYMENT_DETAIL }));
             await router.push('/payments/1');
         },
     ],

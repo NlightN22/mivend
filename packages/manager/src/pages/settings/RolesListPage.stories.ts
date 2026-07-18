@@ -12,25 +12,23 @@ const meta: Meta<typeof RolesListPage> = {
 export default meta;
 type Story = StoryObj<typeof RolesListPage>;
 
+const ROLE_ITEMS = [
+    {
+        id: '1',
+        code: 'manager',
+        description: 'Manager — own book of customers/orders',
+    },
+    {
+        id: '2',
+        code: 'general-director',
+        description: 'General director — full company-wide visibility',
+    },
+];
+
 export const Default: Story = {
     loaders: [
         async () => {
-            registerMock('Roles', () => ({
-                roles: {
-                    items: [
-                        {
-                            id: '1',
-                            code: 'manager',
-                            description: 'Manager — own book of customers/orders',
-                        },
-                        {
-                            id: '2',
-                            code: 'general-director',
-                            description: 'General director — full company-wide visibility',
-                        },
-                    ],
-                },
-            }));
+            registerMock('Roles', () => ({ roles: { items: ROLE_ITEMS } }));
             await router.push('/settings/roles');
         },
     ],
