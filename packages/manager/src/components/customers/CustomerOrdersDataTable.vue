@@ -583,28 +583,10 @@ function onColumnReorder(event: { dragIndex: number; dropIndex: number }): void 
     tableState.value.columnOrder = order;
 }
 
-// PrimeVue's own sort trigger is bound to the whole <th> (see its onColumnHeaderClick source):
-// any click landing inside a sortable column's header — the title text, the empty space around
-// it, anywhere except the filter funnel button — fires a sort. That made every accidental click
-// near a column name resort the table. There's no supported prop to shrink that hit area to just
-// the sort icon, so this intercepts the click one level up, in the capture phase (before it
-// reaches PrimeVue's own bubble-phase handler on the `th`), and stops it unless the real target
-// was the sort icon itself or the filter button (which must keep working normally — stopping
-// propagation there would also block its own click handler, not just sorting).
-function onHeaderClickCapture(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('[data-pc-section="columnheadercontent"]')) return;
-    const isSortIcon = !!target.closest('[data-pc-section="sorticon"]');
-    const isFilterButton = !!target.closest('[data-pc-section="columnfilterbutton"], .p-datatable-filter');
-    if (!isSortIcon && !isFilterButton) {
-        event.stopPropagation();
-    }
-}
-
 </script>
 
 <template>
-    <div class="customer-orders-data-table" @click.capture="onHeaderClickCapture">
+    <div class="customer-orders-data-table">
         <div class="customer-orders-data-table__toolbar">
             <div class="customer-orders-data-table__toolbar-start">
                 <!-- Same `code` field the Order # column's own funnel filters — not a second,
