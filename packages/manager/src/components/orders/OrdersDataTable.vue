@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, type Component } from 'vue';
 import { useRouter } from 'vue-router';
-import DataTable, { type DataTableSortMeta as PrimeSortMeta, type DataTableFilterMeta } from 'primevue/datatable';
+import DataTable, { type DataTableFilterMeta } from 'primevue/datatable';
 import Column from 'primevue/column';
 import Popover from 'primevue/popover';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
-import { Grid, RefreshRight } from '@element-plus/icons-vue';
-import { MvStatusBadge, MvButton, useDataTableState, type StatusBadgeVariant } from '@mivend/ui-kit';
+import { Grid, RefreshRight, Sort, SortUp, SortDown } from '@element-plus/icons-vue';
+import {
+    MvStatusBadge,
+    MvButton,
+    useDataTableState,
+    type DataTableSortMeta,
+    type StatusBadgeVariant,
+} from '@mivend/ui-kit';
 import {
     ORDER_STATE_LABEL,
     ORDER_STATE_BADGE_VARIANT,
@@ -172,10 +178,10 @@ function onColumnReorder(event: { dragIndex: number; dropIndex: number }): void 
 
 function onColumnResizeEnd(event: { element: HTMLElement; delta: number }): void {
     const field = event.element?.dataset?.pcColumn ?? event.element?.getAttribute('data-p-index');
-    // PrimeVue doesn't hand back the field name directly on resize — read it off the header
-    // cell's own text content as a pragmatic fallback since there's no documented stable field
-    // accessor on this event.
-    const headerText = event.element?.querySelector('.p-datatable-column-title')?.textContent?.trim();
+    // PrimeVue doesn't hand back the field name directly on resize — read it off our own header
+    // title span (see the Column's `#header` template below) as a pragmatic fallback since
+    // there's no documented stable field accessor on this event.
+    const headerText = event.element?.querySelector('.orders-data-table__col-title')?.textContent?.trim();
     const col = ALL_COLUMNS.value.find(c => c.header === headerText);
     if (!col) return;
     const current = tableState.value.columnWidths[col.field] ?? col.width;
@@ -183,23 +189,39 @@ function onColumnResizeEnd(event: { element: HTMLElement; delta: number }): void
     void field;
 }
 
-function sortFieldToVendure(meta: PrimeSortMeta[] | null | undefined): Partial<Record<OrderSortField, 'ASC' | 'DESC'>> {
+function sortFieldToVendure(meta: DataTableSortMeta[]): Partial<Record<OrderSortField, 'ASC' | 'DESC'>> {
     const result: Partial<Record<OrderSortField, 'ASC' | 'DESC'>> = {};
-    for (const m of meta ?? []) {
+    for (const m of meta) {
         const col = ALL_COLUMNS.value.find(c => c.field === m.field);
         if (col?.sortField) result[col.sortField] = m.order === 1 ? 'ASC' : 'DESC';
     }
     return Object.keys(result).length ? result : { orderPlacedAt: 'DESC' };
 }
 
-const multiSortMeta = ref<PrimeSortMeta[]>(
-    tableState.value.sort.map(s => ({ field: s.field, order: s.order })),
-);
-function onSort(event: { multiSortMeta?: PrimeSortMeta[] }): void {
-    const meta = event.multiSortMeta ?? [];
-    multiSortMeta.value = meta;
-    tableState.value.sort = meta.map(m => ({ field: String(m.field ?? ''), order: (m.order ?? -1) as 1 | -1 }));
-    emit('update:sort', sortFieldToVendure(meta));
+// Fully custom, single-column sort — deliberately NOT using PrimeVue's own `sortable`/
+// `sort-mode="multiple"` machinery anymore. That approach fought the library on two fronts at
+// once: (1) its click-to-sort is bound to the *whole* header `<th>`, requiring an undocumented
+// capture-phase click interceptor keyed off internal `data-pc-section` attributes to restrict it
+// to just the icon, and (2) recoloring the sort icon/header on hover meant `!important` overrides
+// racing PrimeVue's own higher-specificity internal rules. Both were real, shipped bugs (clicking
+// the title still sorted; hovering an already-sorted column's highlight made it flicker/vanish),
+// and this round of trying to patch case #2 without breaking case #1 broke sorting outright. A
+// plain button we render and wire ourselves has no such internal contract to fight — this is also
+// simpler for users: a single active sort column with a directional arrow, no multi-sort priority
+// badge to explain.
+function toggleSort(col: ColumnDef): void {
+    if (!col.sortField) return;
+    const current = tableState.value.sort[0];
+    const next: DataTableSortMeta =
+        current?.field === col.field ? { field: col.field, order: current.order === 1 ? -1 : 1 } : { field: col.field, order: 1 };
+    tableState.value.sort = [next];
+    emit('update:sort', sortFieldToVendure([next]));
+}
+
+function sortIconFor(col: ColumnDef): Component {
+    const active = tableState.value.sort[0];
+    if (active?.field !== col.field) return Sort;
+    return active.order === 1 ? SortUp : SortDown;
 }
 
 const filters = ref<DataTableFilterMeta>({ state: { value: props.stateFilter || null, matchMode: 'equals' } });
@@ -227,26 +249,13 @@ function onRowClick(event: { data: OrderRow }): void {
 
 function resetLayout(): void {
     resetTableState();
-    multiSortMeta.value = [{ field: 'date', order: -1 }];
+    tableState.value.sort = [{ field: 'date', order: -1 }];
     emit('update:sort', { orderPlacedAt: 'DESC' });
-}
-
-// See CustomerOrdersDataTable.vue's identical helper doc comment: PrimeVue's sort trigger is
-// bound to the whole sortable <th>, not just its sort icon, so any click on the title or empty
-// header space resorted the table. This blocks that in the capture phase, before PrimeVue's own
-// bubble-phase handler sees it, unless the click actually landed on the sort icon.
-function onHeaderClickCapture(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('[data-pc-section="columnheadercontent"]')) return;
-    const isSortIcon = !!target.closest('[data-pc-section="sorticon"]');
-    if (!isSortIcon) {
-        event.stopPropagation();
-    }
 }
 </script>
 
 <template>
-    <div class="orders-data-table" @click.capture="onHeaderClickCapture">
+    <div class="orders-data-table">
         <div class="orders-data-table__toolbar">
             <MvButton size="sm" variant="ghost" @click="toggleColumnsPopover">
                 <Grid class="orders-data-table__btn-icon" />
@@ -278,13 +287,10 @@ function onHeaderClickCapture(event: MouseEvent): void {
             resizable-columns
             column-resize-mode="expand"
             reorderable-columns
-            sort-mode="multiple"
-            :multi-sort-meta="multiSortMeta"
             filter-display="row"
             :filters="filters"
             row-hover
             class="orders-data-table__grid"
-            @sort="onSort"
             @filter="onFilter"
             @column-reorder="onColumnReorder"
             @column-resize-end="onColumnResizeEnd"
@@ -295,10 +301,20 @@ function onHeaderClickCapture(event: MouseEvent): void {
                 v-for="col in visibleColumns"
                 :key="col.field"
                 :field="col.field"
-                :header="col.header"
-                :sortable="!!col.sortField"
                 :style="{ width: col.width + 'px' }"
             >
+                <template #header>
+                    <span class="orders-data-table__col-title">{{ col.header }}</span>
+                    <button
+                        v-if="col.sortField"
+                        type="button"
+                        class="orders-data-table__sort-btn"
+                        :class="{ 'orders-data-table__sort-btn--active': tableState.sort[0]?.field === col.field }"
+                        @click.stop="toggleSort(col)"
+                    >
+                        <component :is="sortIconFor(col)" class="orders-data-table__sort-icon" />
+                    </button>
+                </template>
                 <template v-if="col.field === 'customer'" #body="{ data }">
                     <div class="orders-data-table__customer-cell">
                         <span class="orders-data-table__customer-name">{{ (data as OrderRow).customer }}</span>
@@ -344,54 +360,41 @@ function onHeaderClickCapture(event: MouseEvent): void {
     width: 100%;
 }
 
-/* Bigger + pushed away from the title, matching CustomerOrdersDataTable.vue's own sort-icon
-   sizing next to its filter funnel — a tiny icon flush against the title text was easy to miss
-   and easy to fat-finger past onto the (now non-sorting) title itself. Hover feedback (light
-   green) moves from the whole header cell (see the sortable-column rule below — PrimeVue's
-   default whole-header hover now points at an area that does nothing on click) down to just this
-   icon, matching CustomerOrdersDataTable.vue's identical treatment. */
-:deep(.p-datatable-sort-icon) {
-    width: 18px;
-    height: 18px;
+/* Our own sort control, rendered via the Column's `#header` template — not PrimeVue's built-in
+   `sortable` (see toggleSort()'s doc comment for why). A plain button we fully own means no
+   fighting internal PrimeVue classes/specificity for hover or click-target sizing. */
+.orders-data-table__col-title {
+    cursor: default;
+}
+
+.orders-data-table__sort-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
     margin-inline-start: 8px;
-    padding: 2px;
+    padding: 0;
+    border: none;
     border-radius: 6px;
+    background: none;
+    color: var(--el-text-color-secondary, #98a2b3);
     cursor: pointer;
     transition: background-color 0.15s, color 0.15s;
 }
 
-/* Scoped to `:not(.p-datatable-column-sorted)` — see CustomerOrdersDataTable.vue's identical
-   rule/comment. Without this exclusion, `!important` here would force the currently-sorted
-   column's own permanently-highlighted icon to this hover green instead while the mouse is over
-   it — a smaller version of the same "the active-sort highlight disappears on hover" glitch the
-   `th` rule below also had before this fix. */
-:deep(.p-datatable-sortable-column:not(.p-datatable-column-sorted) .p-datatable-sort-icon:hover) {
-    background: var(--el-color-primary-light-9, #e6faf4) !important;
-    color: var(--el-color-primary, #00b894) !important;
+.orders-data-table__sort-btn:hover {
+    background: var(--el-color-primary-light-9, #e6faf4);
+    color: var(--el-color-primary, #00b894);
 }
 
-/* See CustomerOrdersDataTable.vue's identical rule/comment: PrimeVue's own hover selector
-   (`.p-datatable-sortable-column:not(.p-datatable-column-sorted):hover`) is more specific than a
-   plain `:hover` override, so `!important` is needed to actually beat it. Scoped with the same
-   `:not(.p-datatable-column-sorted)` PrimeVue's own rule has — omitting it (an earlier version of
-   this file did) means hovering the *currently sorted* column's `th` wipes out its permanent
-   selected-column highlight for as long as the mouse stays there, reappearing on mouse-out — a
-   visible flicker bug, not just a style preference. */
-:deep(.p-datatable-sortable-column:not(.p-datatable-column-sorted):hover) {
-    background: transparent !important;
-    color: inherit !important;
+.orders-data-table__sort-btn--active {
+    color: var(--el-color-primary, #00b894);
 }
 
-/* PrimeVue's base stylesheet sets `cursor: pointer` on the whole `th`
-   (`.p-datatable-sortable-column { cursor: pointer; ... }`), not just the title — overriding only
-   `.p-datatable-column-title` left the surrounding empty header background still showing a
-   pointer/hand cursor, looking clickable even though only the sort icon does anything now. */
-:deep(.p-datatable-sortable-column) {
-    cursor: default;
-}
-
-:deep(.p-datatable-column-title) {
-    cursor: default;
+.orders-data-table__sort-icon {
+    width: 16px;
+    height: 16px;
 }
 
 .orders-data-table__customer-cell {
