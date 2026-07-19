@@ -1,3 +1,4 @@
+import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 
 export interface InvoiceListItem {
@@ -8,6 +9,7 @@ export interface InvoiceListItem {
     currencyCode: string;
     status: string;
     branchId: string | null;
+    order: { code: string };
 }
 
 export interface InvoiceFilters {
@@ -33,6 +35,17 @@ export const INVOICE_STATUS_OPTIONS = [
     { value: 'cancelled', label: 'Cancelled' },
 ] as const;
 
+// Single source of truth for the Invoice status badge color (AGENTS.md ui-kit "single source of
+// truth" rule) — mirrors api/orders.ts's ORDER_STATE_BADGE_VARIANT. Real incident this fixes:
+// InvoicesTable.vue rendered every status badge with no variant at all (always the default
+// gray), found in the same table-consistency audit that flagged PaymentsTable.vue's identical bug.
+export const INVOICE_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
+    pending: 'warning',
+    issued: 'info',
+    paid: 'success',
+    cancelled: 'danger',
+};
+
 const INVOICE_ITEM_FIELDS = `
     id
     orderId
@@ -41,6 +54,7 @@ const INVOICE_ITEM_FIELDS = `
     currencyCode
     status
     branchId
+    order { code }
 `;
 
 export async function fetchInvoicesPage(
@@ -69,21 +83,41 @@ export async function fetchInvoicesPage(
     return result.visibleInvoices;
 }
 
-export async function fetchInvoicesForCounterparty(
-    counterpartyId: string,
-    take = 20,
-): Promise<InvoiceListItem[]> {
+export interface InvoiceViewCounts {
+    all: number;
+    pending: number;
+    issued: number;
+    paid: number;
+    cancelled: number;
+}
+
+// Real COUNT per status chip (take: 0 — no row data) — mirrors
+// api/customers.ts's fetchCustomerOrderViewCounts, so chip counts reflect the whole visible set,
+// not just the currently-loaded page.
+export async function fetchInvoiceViewCounts(counterpartyId: string): Promise<InvoiceViewCounts> {
     const result = await adminApi<{
-        visibleInvoices: { items: InvoiceListItem[] };
+        all: { totalItems: number };
+        pending: { totalItems: number };
+        issued: { totalItems: number };
+        paid: { totalItems: number };
+        cancelled: { totalItems: number };
     }>(
-        `query InvoicesForCounterparty($counterpartyId: ID!, $take: Int!) {
-            visibleInvoices(options: { take: $take }, counterpartyId: $counterpartyId) {
-                items { ${INVOICE_ITEM_FIELDS} }
-            }
+        `query InvoiceViewCounts($counterpartyId: ID) {
+            all: visibleInvoices(options: { take: 0 }, counterpartyId: $counterpartyId) { totalItems }
+            pending: visibleInvoices(options: { take: 0, status: "pending" }, counterpartyId: $counterpartyId) { totalItems }
+            issued: visibleInvoices(options: { take: 0, status: "issued" }, counterpartyId: $counterpartyId) { totalItems }
+            paid: visibleInvoices(options: { take: 0, status: "paid" }, counterpartyId: $counterpartyId) { totalItems }
+            cancelled: visibleInvoices(options: { take: 0, status: "cancelled" }, counterpartyId: $counterpartyId) { totalItems }
         }`,
-        { counterpartyId, take },
+        { counterpartyId },
     );
-    return result.visibleInvoices.items;
+    return {
+        all: result.all.totalItems,
+        pending: result.pending.totalItems,
+        issued: result.issued.totalItems,
+        paid: result.paid.totalItems,
+        cancelled: result.cancelled.totalItems,
+    };
 }
 
 export interface OutstandingBalance {

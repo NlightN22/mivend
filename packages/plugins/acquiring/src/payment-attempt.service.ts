@@ -203,6 +203,39 @@ export class PaymentAttemptService {
         return this.connection.getRepository(ctx, PaymentAttempt).findOne({ where: { id } });
     }
 
+    // Real per-order "how much has actually been captured" for the manager portal's order
+    // lists (see CustomerOrdersTab.vue's Payment column) — sums only `paymentStatus = 'captured'`
+    // rows, never 'authorized'/'pending' (money not yet actually received) or 'failed'/'canceled'
+    // (never received at all). Deliberately does NOT net out refunds/disputes/chargebacks here —
+    // this is a simple list-badge read, not a reconciliation feature; a fully-refunded order
+    // will still sum as fully captured. If this ever backs a real accounting decision instead of
+    // a badge, that gap needs closing first (see AGENTS.md rule #11 on refunds/disputes being
+    // their own lifecycle, never netted against a payment record).
+    // Batched (one query for every orderId a table page needs) rather than per-row, to avoid
+    // N+1 queries against a list of ~20 orders.
+    async sumCapturedAmountsByOrderIds(
+        ctx: RequestContext,
+        orderIds: number[],
+    ): Promise<Map<number, number>> {
+        const result = new Map<number, number>();
+        if (!orderIds.length) return result;
+        const rows = await this.connection
+            .getRepository(ctx, PaymentAttempt)
+            .createQueryBuilder('payment')
+            .select('payment.orderId', 'orderId')
+            .addSelect('SUM(payment.amount)', 'capturedAmount')
+            .where('payment.orderId IN (:...orderIds)', { orderIds })
+            .andWhere('payment.paymentStatus = :status', {
+                status: 'captured' satisfies PaymentStatus,
+            })
+            .groupBy('payment.orderId')
+            .getRawMany<{ orderId: number; capturedAmount: string }>();
+        for (const row of rows) {
+            result.set(row.orderId, Number(row.capturedAmount));
+        }
+        return result;
+    }
+
     // Ownership check for the `payment(id)` query — a payment belongs to a counterparty via its
     // target invoice (same join reasoning as findForCounterparty).
     async belongsToCounterparty(

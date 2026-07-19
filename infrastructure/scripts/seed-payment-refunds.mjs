@@ -78,6 +78,15 @@ async function main() {
         const scenario = SCENARIOS[i];
 
         if (scenario.kind === 'refund') {
+            const { paymentRefundExists: exists } = await gql(
+                `query($id: String!) { paymentRefundExists(providerRefundId: $id) }`,
+                { id: scenario.providerRefundId },
+                token,
+            );
+            if (exists) {
+                console.log(`… Refund ${scenario.providerRefundId} already seeded, skipping.`);
+                continue;
+            }
             const amount = Math.round(payment.amount * scenario.fraction);
             await gql(
                 `mutation($paymentId: ID!, $amount: Int!, $reason: String!, $providerRefundId: String, $status: String) {
@@ -88,6 +97,15 @@ async function main() {
             );
             console.log(`✔ Refund on payment ${payment.id}: ${(amount / 100).toFixed(2)} ${payment.currencyCode} (${scenario.status})`);
         } else {
+            const { paymentDisputeExists: exists } = await gql(
+                `query($paymentId: ID!, $type: String!) { paymentDisputeExists(paymentId: $paymentId, type: $type) }`,
+                { paymentId: payment.id, type: scenario.type },
+                token,
+            );
+            if (exists) {
+                console.log(`… ${scenario.type} on payment ${payment.id} already seeded, skipping.`);
+                continue;
+            }
             await gql(
                 `mutation($paymentId: ID!, $type: String!, $amount: Int!, $status: String) {
                     recordPaymentDispute(paymentId: $paymentId, type: $type, amount: $amount, status: $status) { id }

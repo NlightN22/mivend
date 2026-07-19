@@ -16,6 +16,7 @@ interface TeamMember {
     id: string;
     firstName: string;
     lastName: string;
+    emailAddress: string;
     roleCodes: string[];
 }
 
@@ -57,6 +58,7 @@ export class AccessControlResolver {
             id: String(a.id),
             firstName: a.firstName,
             lastName: a.lastName,
+            emailAddress: a.emailAddress,
             roleCodes: a.user?.roles?.map(r => r.code) ?? [],
         }));
     }

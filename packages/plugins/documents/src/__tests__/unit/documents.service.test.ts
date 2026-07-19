@@ -247,5 +247,33 @@ describe('DocumentsService', () => {
             );
             expect(result).toEqual({ items: [{ id: 'doc-1' }], totalItems: 1 });
         });
+
+        it("intersects the type/status filter with the caller's visible-counterparty scope, not either alone", async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
+            mockRepo.findAndCount.mockResolvedValue([[], 0]);
+
+            await service.findVisible(mockCtx, { type: 'contract', status: 'ready' });
+
+            expect(mockRepo.findAndCount).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: expect.objectContaining({
+                        counterpartyId: expect.anything(),
+                        type: 'contract',
+                        status: 'ready',
+                    }),
+                }),
+            );
+        });
+
+        it('omits type/status from the where clause entirely when not provided', async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
+            mockRepo.findAndCount.mockResolvedValue([[], 0]);
+
+            await service.findVisible(mockCtx);
+
+            const where = mockRepo.findAndCount.mock.calls[0][0].where;
+            expect(where).not.toHaveProperty('type');
+            expect(where).not.toHaveProperty('status');
+        });
     });
 });

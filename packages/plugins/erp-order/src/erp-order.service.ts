@@ -1,5 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EventBus, Order, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    AdministratorService,
+    EventBus,
+    Fulfillment,
+    Order,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
 import { TradingPointService } from '@mivend/plugin-counterparty';
 import { OrderReadyForErpEvent } from './erp-order.events';
 import './types';
@@ -13,6 +20,7 @@ export class ErpOrderService {
         private readonly connection: TransactionalConnection,
         private readonly eventBus: EventBus,
         private readonly tradingPointService: TradingPointService,
+        private readonly administratorService: AdministratorService,
     ) {}
 
     async onOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
@@ -35,8 +43,52 @@ export class ErpOrderService {
             }
         }
 
+        // Denormalized once, here, rather than derived per-request from the order's first
+        // HistoryEntry (see AGENTS.md pagination/frontend-computation session note) — null
+        // stays null for a storefront customer's own checkout (ctx.activeUserId won't resolve
+        // to an Administrator in that case), matching the old client-side "(customer)" fallback.
+        if (ctx.activeUserId !== undefined) {
+            const admin = await this.administratorService.findOneByUserId(ctx, ctx.activeUserId);
+            if (admin) {
+                order.customFields.placedByAdministratorId = String(admin.id);
+            }
+        }
+
         await this.connection.getRepository(ctx, Order).save(order);
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
+    }
+
+    // Keeps Order.customFields.latestFulfillmentState in sync whenever a Fulfillment is added or
+    // transitions — see vendure-config.ts's doc comment on that field for why this exists
+    // (sortable/filterable server-side instead of computed per-request from the fulfillments
+    // relation). A Fulfillment can in principle cover multiple orders, so this updates each one.
+    async onFulfillmentStateChanged(ctx: RequestContext, fulfillment: Fulfillment): Promise<void> {
+        const full = await this.connection
+            .getRepository(ctx, Fulfillment)
+            .findOne({ where: { id: fulfillment.id }, relations: ['orders'] });
+        if (!full) return;
+
+        for (const orderRef of full.orders) {
+            const orderFulfillments = await this.connection
+                .getRepository(ctx, Fulfillment)
+                .createQueryBuilder('fulfillment')
+                .innerJoin('fulfillment.orders', 'o')
+                .where('o.id = :orderId', { orderId: orderRef.id })
+                .orderBy('fulfillment.createdAt', 'ASC')
+                .getMany();
+            const latestState = orderFulfillments[orderFulfillments.length - 1]?.state ?? null;
+
+            const order = await this.connection.getRepository(ctx, Order).findOne({
+                where: { id: orderRef.id },
+            });
+            if (!order) continue;
+
+            // Plain SQL UPDATE, not save() — see updateStatus()'s identical doc comment on why
+            // (save() would recompute calculated fields that require lines/surcharges joined).
+            await this.connection.getRepository(ctx, Order).update(order.id, {
+                customFields: { ...order.customFields, latestFulfillmentState: latestState },
+            });
+        }
     }
 
     async updateStatus(ctx: RequestContext, payload: ErpStatusUpdatePayload): Promise<void> {

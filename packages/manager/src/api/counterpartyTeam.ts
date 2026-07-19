@@ -1,11 +1,12 @@
 import { adminApi } from './client';
 
-export type CounterpartyTeamMemberRole = 'backup' | 'observer';
+export type CounterpartyTeamMemberRole = 'backup' | 'observer' | 'accounting-contact';
 
 export interface CounterpartyTeamMember {
     id: string;
     administratorId: string;
     role: CounterpartyTeamMemberRole;
+    phone: string | null;
 }
 
 export async function fetchCounterpartyTeam(
@@ -16,7 +17,7 @@ export async function fetchCounterpartyTeam(
     }>(
         `query CounterpartyTeam($id: ID!) {
             counterparty(id: $id) {
-                teamMembers { id administratorId role }
+                teamMembers { id administratorId role phone }
             }
         }`,
         { id: counterpartyId },
@@ -29,16 +30,18 @@ export async function addCounterpartyTeamMember(
     counterpartyId: string,
     administratorId: string,
     role: CounterpartyTeamMemberRole,
+    phone?: string | null,
 ): Promise<CounterpartyTeamMember> {
     const result = await adminApi<{ addCounterpartyTeamMember: CounterpartyTeamMember }>(
-        `mutation($counterpartyId: ID!, $administratorId: ID!, $role: String!) {
+        `mutation($counterpartyId: ID!, $administratorId: ID!, $role: String!, $phone: String) {
             addCounterpartyTeamMember(
                 counterpartyId: $counterpartyId
                 administratorId: $administratorId
                 role: $role
-            ) { id administratorId role }
+                phone: $phone
+            ) { id administratorId role phone }
         }`,
-        { counterpartyId, administratorId, role },
+        { counterpartyId, administratorId, role, phone: phone ?? null },
     );
     return result.addCounterpartyTeamMember;
 }

@@ -69,6 +69,46 @@ describe('CounterpartyTeamService', () => {
         expect(mockTeamRepo.save).not.toHaveBeenCalled();
     });
 
+    it('addTeamMember saves a valid accounting-contact member with a phone number', async () => {
+        mockTeamRepo.save.mockResolvedValue({
+            id: 'ctm-2',
+            counterpartyId: 'cp-1',
+            administratorId: 'admin-3',
+            role: 'accounting-contact',
+            phone: '+1 555 0100',
+        });
+
+        const result = await service.addTeamMember(
+            mockCtx,
+            'cp-1',
+            'admin-3',
+            'accounting-contact',
+            '+1 555 0100',
+        );
+
+        expect(result.role).toBe('accounting-contact');
+        expect(mockTeamRepo.save).toHaveBeenCalledWith(
+            expect.objectContaining({
+                role: 'accounting-contact',
+                phone: '+1 555 0100',
+            }),
+        );
+    });
+
+    it('addTeamMember defaults phone to null when omitted', async () => {
+        mockTeamRepo.save.mockResolvedValue({
+            id: 'ctm-3',
+            counterpartyId: 'cp-1',
+            administratorId: 'admin-4',
+            role: 'backup',
+            phone: null,
+        });
+
+        await service.addTeamMember(mockCtx, 'cp-1', 'admin-4', 'backup');
+
+        expect(mockTeamRepo.save).toHaveBeenCalledWith(expect.objectContaining({ phone: null }));
+    });
+
     it('addTeamMember throws UserInputError when the counterparty does not exist', async () => {
         mockCounterpartyRepo.findOne.mockResolvedValue(null);
 

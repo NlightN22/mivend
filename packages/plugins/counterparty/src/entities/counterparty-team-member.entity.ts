@@ -4,7 +4,7 @@ import { Column, Entity, Index } from 'typeorm';
 
 // A small, fixed technical set of internal RBAC roles — not ERP-sourced business data, see
 // AGENTS.md's "Business data must live in the database" section for why this is exempt.
-export type CounterpartyTeamMemberRole = 'backup' | 'observer';
+export type CounterpartyTeamMemberRole = 'backup' | 'observer' | 'accounting-contact';
 
 // Extra managers beyond Counterparty.assignedManagerId (the Owner) who can also see this
 // counterparty as "their own" for AccessScopeService's own-scope resolution. The Owner field is
@@ -26,4 +26,7 @@ export class CounterpartyTeamMember extends VendureEntity {
 
     @Column({ type: 'varchar' })
     role!: CounterpartyTeamMemberRole;
+
+    @Column({ type: 'varchar', nullable: true })
+    phone!: string | null;
 }

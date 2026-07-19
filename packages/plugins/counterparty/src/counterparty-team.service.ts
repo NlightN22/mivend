@@ -36,8 +36,9 @@ export class CounterpartyTeamService {
         counterpartyId: ID,
         administratorId: ID,
         role: CounterpartyTeamMemberRole,
+        phone?: string | null,
     ): Promise<CounterpartyTeamMember> {
-        if (role !== 'backup' && role !== 'observer') {
+        if (role !== 'backup' && role !== 'observer' && role !== 'accounting-contact') {
             throw new UserInputError(`Invalid team member role: ${role}`);
         }
         const counterparty = await this.findCounterpartyOrFail(ctx, counterpartyId);
@@ -48,6 +49,7 @@ export class CounterpartyTeamService {
             counterpartyId: String(counterpartyId),
             administratorId: String(administratorId),
             role,
+            phone: phone ?? null,
         });
         try {
             const saved = await repo.save(member);

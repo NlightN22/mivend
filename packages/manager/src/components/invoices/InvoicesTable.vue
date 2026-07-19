@@ -3,8 +3,8 @@ import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
 import { MvTable, MvStatusBadge } from '@mivend/ui-kit';
-import type { TableRow } from '@mivend/ui-kit';
-import type { InvoiceListItem } from '../../api/invoices';
+import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
+import { INVOICE_STATUS_BADGE_VARIANT, type InvoiceListItem } from '../../api/invoices';
 
 const props = defineProps<{
     invoices: InvoiceListItem[];
@@ -42,7 +42,14 @@ const columns = computed<Column<TableRow>[]>(() => {
             title: 'Status',
             dataKey: 'status',
             width: 140,
-            cellRenderer: ({ cellData }) => h(MvStatusBadge, {}, () => cellData as unknown as string),
+            cellRenderer: ({ rowData }) => {
+                const row = rowData as TableRow;
+                return h(
+                    MvStatusBadge,
+                    { variant: row.statusVariant as StatusBadgeVariant },
+                    () => row.status as string,
+                );
+            },
             mobile: { badge: true },
         },
         { key: 'amount', title: 'Amount', dataKey: 'amount', width: 140, align: 'right' },
@@ -56,13 +63,17 @@ const rows = computed<TableRow[]>(() =>
         id: invoice.id,
         customer: props.counterpartyNames.get(invoice.counterpartyId) ?? invoice.counterpartyId,
         status: invoice.status,
+        statusVariant: INVOICE_STATUS_BADGE_VARIANT[invoice.status] ?? 'neutral',
         amount: money(invoice),
-        order: invoice.orderId,
+        order: invoice.order.code,
     })),
 );
 
 function openOrder(payload: { rowData: TableRow }): void {
     if (props.compact) return;
+    // Real incident: this used to push invoice.orderId (the numeric internal Order id) into a
+    // route that expects Order.code (see router's 'orders/:code') — every click landed on a
+    // broken order-detail page. order.code now comes from the real Invoice.order resolve field.
     router.push(`/orders/${payload.rowData.order as string}`);
 }
 </script>

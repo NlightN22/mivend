@@ -146,12 +146,13 @@ const adminApiSchema = gql`
         teamMembers: [CounterpartyTeamMember!]!
     }
 
-    "backup | observer — a small fixed technical RBAC role set, not ERP-sourced business data"
+    "backup | observer | accounting-contact — a small fixed technical RBAC role set, not ERP-sourced business data"
     type CounterpartyTeamMember {
         id: ID!
         counterpartyId: String!
         administratorId: String!
         role: String!
+        phone: String
         createdAt: DateTime!
     }
 
@@ -224,6 +225,7 @@ const adminApiSchema = gql`
             counterpartyId: ID!
             administratorId: ID!
             role: String!
+            phone: String
         ): CounterpartyTeamMember!
         removeCounterpartyTeamMember(counterpartyId: ID!, administratorId: ID!): Boolean!
 

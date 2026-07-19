@@ -3,8 +3,14 @@ import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
 import { MvTable, MvStatusBadge, MvButton } from '@mivend/ui-kit';
-import type { TableRow } from '@mivend/ui-kit';
-import type { OrderListItem, ManagerOption, BranchOption } from '../../api/orders';
+import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
+import {
+    ORDER_STATE_LABEL,
+    ORDER_STATE_BADGE_VARIANT,
+    type OrderListItem,
+    type ManagerOption,
+    type BranchOption,
+} from '../../api/orders';
 
 const props = defineProps<{
     orders: OrderListItem[];
@@ -20,19 +26,6 @@ const props = defineProps<{
     hiddenColumnKeys?: Set<string>;
 }>();
 const router = useRouter();
-
-const ORDER_STATE_LABEL: Record<string, string> = {
-    AddingItems: 'Draft (storefront cart)',
-    Draft: 'Draft (order entry)',
-    ArrangingPayment: 'Arranging payment',
-    PaymentAuthorized: 'Processing',
-    PaymentSettled: 'Awaiting shipment',
-    PartiallyShipped: 'Partially shipped',
-    Shipped: 'Shipped',
-    PartiallyDelivered: 'Partially delivered',
-    Delivered: 'Delivered',
-    Cancelled: 'Cancelled',
-};
 
 function managerName(id: string | null | undefined): string {
     if (!id) return '—';
@@ -70,7 +63,14 @@ const columns = computed<Column<TableRow>[]>(() => {
             title: 'Status',
             dataKey: 'state',
             width: 160,
-            cellRenderer: ({ cellData }) => h(MvStatusBadge, {}, () => cellData as unknown as string),
+            cellRenderer: ({ rowData }) => {
+                const row = rowData as TableRow;
+                return h(
+                    MvStatusBadge,
+                    { variant: row.stateVariant as StatusBadgeVariant },
+                    () => row.state as string,
+                );
+            },
             mobile: { badge: true },
         },
         { key: 'total', title: 'Total amount', dataKey: 'total', width: 130, align: 'right' },
@@ -118,6 +118,7 @@ const rows = computed<TableRow[]>(() =>
             customerMeta: counterparty ? `INN ${counterparty.inn ?? '—'} · ${counterparty.priceType}` : '',
             manager: managerName(order.customer?.counterparty?.assignedManagerId),
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
+            stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
             total: new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: order.currencyCode,

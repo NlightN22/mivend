@@ -46,11 +46,23 @@ export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
     );
     // Counterparty -> Customer is the reverse of Customer.counterparty (see
     // CounterpartyService.getForCustomer) — there's no direct reverse field on Counterparty, so
-    // it's resolved via one lookup of the (small) customer book, not per-counterparty.
+    // it's resolved via one batched lookup filtered to exactly the counterparty ids just fetched
+    // above (not a separate, untracked flat cap — that silently dropped customers from this
+    // picker once the customer book passed 200 rows, a real incident, see AGENTS.md's
+    // Pagination section).
+    const counterpartyIds = result.counterparties.items.map(c => c.id);
     const customersResult = await adminApi<{
         customers: { items: { id: string; counterparty: { id: string } | null }[] };
     }>(
-        `query OrderCreateCustomers { customers(options: { take: 200 }) { items { id counterparty { id } } } }`,
+        // counterpartyId is a customField, filterable as a flat StringOperators field (not
+        // IDOperators, even though it holds an id) — see fetchCustomerIdForCounterparty's
+        // comment in api/customers.ts for the same gotcha.
+        `query OrderCreateCustomers($counterpartyIds: [String!]!, $take: Int!) {
+            customers(options: { take: $take, filter: { counterpartyId: { in: $counterpartyIds } } }) {
+                items { id counterparty { id } }
+            }
+        }`,
+        { counterpartyIds, take: counterpartyIds.length },
     );
     const customerIdByCounterpartyId = new Map(
         customersResult.customers.items

@@ -1,50 +1,352 @@
 [
-    { "sku": "MOT-5W30-4L", "priceTypeCode": "WHOLESALE", "price": 2100 },
-    { "sku": "MOT-10W40-4L", "priceTypeCode": "WHOLESALE", "price": 1600 },
-    { "sku": "FIL-OIL-C001", "priceTypeCode": "WHOLESALE", "price": 290 },
-    { "sku": "BRK-PAD-F101", "priceTypeCode": "WHOLESALE", "price": 1050 },
-    { "sku": "BAT-60-AGM", "priceTypeCode": "WHOLESALE", "price": 7200 },
-    { "sku": "FIL-AIR-A004", "priceTypeCode": "WHOLESALE", "price": 410 },
-    { "sku": "BRK-DISC-F201", "priceTypeCode": "WHOLESALE", "price": 2400 },
-    { "sku": "SPK-PLUG-B6S", "priceTypeCode": "WHOLESALE", "price": 150 },
-    { "sku": "MOT-0W20-4L", "priceTypeCode": "WHOLESALE", "price": 2730 },
-    { "sku": "MOT-5W40-1L", "priceTypeCode": "WHOLESALE", "price": 660 },
-    { "sku": "FIL-FUEL-F301", "priceTypeCode": "WHOLESALE", "price": 350 },
-    { "sku": "FIL-CAB-C101", "priceTypeCode": "WHOLESALE", "price": 560 },
-    { "sku": "BRK-PAD-R102", "priceTypeCode": "WHOLESALE", "price": 900 },
-    { "sku": "BRK-FLUID-500", "priceTypeCode": "WHOLESALE", "price": 270 },
-    { "sku": "SPK-PLUG-IR6", "priceTypeCode": "WHOLESALE", "price": 410 },
-    { "sku": "BAT-45-STD", "priceTypeCode": "WHOLESALE", "price": 3560 },
-    { "sku": "BAT-75-EFB", "priceTypeCode": "WHOLESALE", "price": 5720 },
-    { "sku": "MOT-5W30-1L", "priceTypeCode": "WHOLESALE", "price": 570 },
-    { "sku": "MOT-15W40-5L", "priceTypeCode": "WHOLESALE", "price": 1240 },
-    { "sku": "FIL-OIL-M002", "priceTypeCode": "WHOLESALE", "price": 430 },
-    { "sku": "BRK-DRUM-R301", "priceTypeCode": "WHOLESALE", "price": 2900 },
-    { "sku": "SPK-PLUG-PL4", "priceTypeCode": "WHOLESALE", "price": 320 },
-    { "sku": "COOL-G12-1L", "priceTypeCode": "WHOLESALE", "price": 340 },
-    { "sku": "COOL-G12-5L", "priceTypeCode": "WHOLESALE", "price": 1570 },
-    { "sku": "MOT-5W30-4L", "priceTypeCode": "FLOOR", "price": 1785 },
-    { "sku": "MOT-10W40-4L", "priceTypeCode": "FLOOR", "price": 1360 },
-    { "sku": "FIL-OIL-C001", "priceTypeCode": "FLOOR", "price": 246 },
-    { "sku": "BRK-PAD-F101", "priceTypeCode": "FLOOR", "price": 892 },
-    { "sku": "BAT-60-AGM", "priceTypeCode": "FLOOR", "price": 6120 },
-    { "sku": "FIL-AIR-A004", "priceTypeCode": "FLOOR", "price": 348 },
-    { "sku": "BRK-DISC-F201", "priceTypeCode": "FLOOR", "price": 2040 },
-    { "sku": "SPK-PLUG-B6S", "priceTypeCode": "FLOOR", "price": 128 },
-    { "sku": "MOT-0W20-4L", "priceTypeCode": "FLOOR", "price": 2320 },
-    { "sku": "MOT-5W40-1L", "priceTypeCode": "FLOOR", "price": 561 },
-    { "sku": "FIL-FUEL-F301", "priceTypeCode": "FLOOR", "price": 298 },
-    { "sku": "FIL-CAB-C101", "priceTypeCode": "FLOOR", "price": 476 },
-    { "sku": "BRK-PAD-R102", "priceTypeCode": "FLOOR", "price": 765 },
-    { "sku": "BRK-FLUID-500", "priceTypeCode": "FLOOR", "price": 230 },
-    { "sku": "SPK-PLUG-IR6", "priceTypeCode": "FLOOR", "price": 348 },
-    { "sku": "BAT-45-STD", "priceTypeCode": "FLOOR", "price": 3026 },
-    { "sku": "BAT-75-EFB", "priceTypeCode": "FLOOR", "price": 4862 },
-    { "sku": "MOT-5W30-1L", "priceTypeCode": "FLOOR", "price": 484 },
-    { "sku": "MOT-15W40-5L", "priceTypeCode": "FLOOR", "price": 1054 },
-    { "sku": "FIL-OIL-M002", "priceTypeCode": "FLOOR", "price": 366 },
-    { "sku": "BRK-DRUM-R301", "priceTypeCode": "FLOOR", "price": 2465 },
-    { "sku": "SPK-PLUG-PL4", "priceTypeCode": "FLOOR", "price": 272 },
-    { "sku": "COOL-G12-1L", "priceTypeCode": "FLOOR", "price": 289 },
-    { "sku": "COOL-G12-5L", "priceTypeCode": "FLOOR", "price": 1334 }
+    {
+        "sku": "MOT-5W30-4L",
+        "priceTypeCode": "WHOLESALE",
+        "price": 2100
+    },
+    {
+        "sku": "MOT-10W40-4L",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1600
+    },
+    {
+        "sku": "FIL-OIL-C001",
+        "priceTypeCode": "WHOLESALE",
+        "price": 290
+    },
+    {
+        "sku": "BRK-PAD-F101",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1050
+    },
+    {
+        "sku": "BAT-60-AGM",
+        "priceTypeCode": "WHOLESALE",
+        "price": 7200
+    },
+    {
+        "sku": "FIL-AIR-A004",
+        "priceTypeCode": "WHOLESALE",
+        "price": 410
+    },
+    {
+        "sku": "BRK-DISC-F201",
+        "priceTypeCode": "WHOLESALE",
+        "price": 2400
+    },
+    {
+        "sku": "SPK-PLUG-B6S",
+        "priceTypeCode": "WHOLESALE",
+        "price": 150
+    },
+    {
+        "sku": "MOT-0W20-4L",
+        "priceTypeCode": "WHOLESALE",
+        "price": 2730
+    },
+    {
+        "sku": "MOT-5W40-1L",
+        "priceTypeCode": "WHOLESALE",
+        "price": 660
+    },
+    {
+        "sku": "FIL-FUEL-F301",
+        "priceTypeCode": "WHOLESALE",
+        "price": 350
+    },
+    {
+        "sku": "FIL-CAB-C101",
+        "priceTypeCode": "WHOLESALE",
+        "price": 560
+    },
+    {
+        "sku": "BRK-PAD-R102",
+        "priceTypeCode": "WHOLESALE",
+        "price": 900
+    },
+    {
+        "sku": "BRK-FLUID-500",
+        "priceTypeCode": "WHOLESALE",
+        "price": 270
+    },
+    {
+        "sku": "SPK-PLUG-IR6",
+        "priceTypeCode": "WHOLESALE",
+        "price": 410
+    },
+    {
+        "sku": "BAT-45-STD",
+        "priceTypeCode": "WHOLESALE",
+        "price": 3560
+    },
+    {
+        "sku": "BAT-75-EFB",
+        "priceTypeCode": "WHOLESALE",
+        "price": 5720
+    },
+    {
+        "sku": "MOT-5W30-1L",
+        "priceTypeCode": "WHOLESALE",
+        "price": 570
+    },
+    {
+        "sku": "MOT-15W40-5L",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1240
+    },
+    {
+        "sku": "FIL-OIL-M002",
+        "priceTypeCode": "WHOLESALE",
+        "price": 430
+    },
+    {
+        "sku": "BRK-DRUM-R301",
+        "priceTypeCode": "WHOLESALE",
+        "price": 2900
+    },
+    {
+        "sku": "SPK-PLUG-PL4",
+        "priceTypeCode": "WHOLESALE",
+        "price": 320
+    },
+    {
+        "sku": "COOL-G12-1L",
+        "priceTypeCode": "WHOLESALE",
+        "price": 340
+    },
+    {
+        "sku": "COOL-G12-5L",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1570
+    },
+    {
+        "sku": "MOT-5W30-4L",
+        "priceTypeCode": "FLOOR",
+        "price": 1785
+    },
+    {
+        "sku": "MOT-10W40-4L",
+        "priceTypeCode": "FLOOR",
+        "price": 1360
+    },
+    {
+        "sku": "FIL-OIL-C001",
+        "priceTypeCode": "FLOOR",
+        "price": 246
+    },
+    {
+        "sku": "BRK-PAD-F101",
+        "priceTypeCode": "FLOOR",
+        "price": 892
+    },
+    {
+        "sku": "BAT-60-AGM",
+        "priceTypeCode": "FLOOR",
+        "price": 6120
+    },
+    {
+        "sku": "FIL-AIR-A004",
+        "priceTypeCode": "FLOOR",
+        "price": 348
+    },
+    {
+        "sku": "BRK-DISC-F201",
+        "priceTypeCode": "FLOOR",
+        "price": 2040
+    },
+    {
+        "sku": "SPK-PLUG-B6S",
+        "priceTypeCode": "FLOOR",
+        "price": 128
+    },
+    {
+        "sku": "MOT-0W20-4L",
+        "priceTypeCode": "FLOOR",
+        "price": 2320
+    },
+    {
+        "sku": "MOT-5W40-1L",
+        "priceTypeCode": "FLOOR",
+        "price": 561
+    },
+    {
+        "sku": "FIL-FUEL-F301",
+        "priceTypeCode": "FLOOR",
+        "price": 298
+    },
+    {
+        "sku": "FIL-CAB-C101",
+        "priceTypeCode": "FLOOR",
+        "price": 476
+    },
+    {
+        "sku": "BRK-PAD-R102",
+        "priceTypeCode": "FLOOR",
+        "price": 765
+    },
+    {
+        "sku": "BRK-FLUID-500",
+        "priceTypeCode": "FLOOR",
+        "price": 230
+    },
+    {
+        "sku": "SPK-PLUG-IR6",
+        "priceTypeCode": "FLOOR",
+        "price": 348
+    },
+    {
+        "sku": "BAT-45-STD",
+        "priceTypeCode": "FLOOR",
+        "price": 3026
+    },
+    {
+        "sku": "BAT-75-EFB",
+        "priceTypeCode": "FLOOR",
+        "price": 4862
+    },
+    {
+        "sku": "MOT-5W30-1L",
+        "priceTypeCode": "FLOOR",
+        "price": 484
+    },
+    {
+        "sku": "MOT-15W40-5L",
+        "priceTypeCode": "FLOOR",
+        "price": 1054
+    },
+    {
+        "sku": "FIL-OIL-M002",
+        "priceTypeCode": "FLOOR",
+        "price": 366
+    },
+    {
+        "sku": "BRK-DRUM-R301",
+        "priceTypeCode": "FLOOR",
+        "price": 2465
+    },
+    {
+        "sku": "SPK-PLUG-PL4",
+        "priceTypeCode": "FLOOR",
+        "price": 272
+    },
+    {
+        "sku": "COOL-G12-1L",
+        "priceTypeCode": "FLOOR",
+        "price": 289
+    },
+    {
+        "sku": "COOL-G12-5L",
+        "priceTypeCode": "FLOOR",
+        "price": 1334
+    },
+    {
+        "sku": "BELT-TIMING-T401",
+        "priceTypeCode": "WHOLESALE",
+        "price": 3140
+    },
+    {
+        "sku": "BELT-TIMING-T401",
+        "priceTypeCode": "FLOOR",
+        "price": 2670
+    },
+    {
+        "sku": "BELT-DRIVE-V501",
+        "priceTypeCode": "WHOLESALE",
+        "price": 760
+    },
+    {
+        "sku": "BELT-DRIVE-V501",
+        "priceTypeCode": "FLOOR",
+        "price": 650
+    },
+    {
+        "sku": "SUS-BALL-B601",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1010
+    },
+    {
+        "sku": "SUS-BALL-B601",
+        "priceTypeCode": "FLOOR",
+        "price": 860
+    },
+    {
+        "sku": "SUS-BUSH-B701",
+        "priceTypeCode": "WHOLESALE",
+        "price": 650
+    },
+    {
+        "sku": "SUS-BUSH-B701",
+        "priceTypeCode": "FLOOR",
+        "price": 550
+    },
+    {
+        "sku": "SUS-SHOCK-F801",
+        "priceTypeCode": "WHOLESALE",
+        "price": 2540
+    },
+    {
+        "sku": "SUS-SHOCK-F801",
+        "priceTypeCode": "FLOOR",
+        "price": 2160
+    },
+    {
+        "sku": "BRK-DISC-R901",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1860
+    },
+    {
+        "sku": "BRK-DISC-R901",
+        "priceTypeCode": "FLOOR",
+        "price": 1580
+    },
+    {
+        "sku": "BRK-HOSE-H101",
+        "priceTypeCode": "WHOLESALE",
+        "price": 290
+    },
+    {
+        "sku": "BRK-HOSE-H101",
+        "priceTypeCode": "FLOOR",
+        "price": 250
+    },
+    {
+        "sku": "WIPER-BLADE-24",
+        "priceTypeCode": "WHOLESALE",
+        "price": 500
+    },
+    {
+        "sku": "WIPER-BLADE-24",
+        "priceTypeCode": "FLOOR",
+        "price": 420
+    },
+    {
+        "sku": "LIGHT-H7-BULB",
+        "priceTypeCode": "WHOLESALE",
+        "price": 220
+    },
+    {
+        "sku": "LIGHT-H7-BULB",
+        "priceTypeCode": "FLOOR",
+        "price": 190
+    },
+    {
+        "sku": "SPK-PLUG-DBL-J8",
+        "priceTypeCode": "WHOLESALE",
+        "price": 550
+    },
+    {
+        "sku": "SPK-PLUG-DBL-J8",
+        "priceTypeCode": "FLOOR",
+        "price": 470
+    },
+    {
+        "sku": "BAT-90-AGM",
+        "priceTypeCode": "WHOLESALE",
+        "price": 8920
+    },
+    {
+        "sku": "BAT-90-AGM",
+        "priceTypeCode": "FLOOR",
+        "price": 7580
+    }
 ]

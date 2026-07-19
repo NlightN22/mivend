@@ -2,6 +2,12 @@ import { gql } from 'graphql-tag';
 import type { DocumentNode } from 'graphql';
 
 export const adminApiExtensions: DocumentNode = gql`
+    "Mirrors shop.schema.ts's InvoiceOrder — a lightweight ref, not the full core Order type."
+    type InvoiceOrder {
+        id: ID!
+        code: String!
+    }
+
     type Invoice {
         id: ID!
         orderId: ID!
@@ -11,6 +17,10 @@ export const adminApiExtensions: DocumentNode = gql`
         currencyCode: String!
         status: String!
         branchId: ID
+        "Resolved via InvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: InvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page)."
+        order: InvoiceOrder!
+        "Resolved via InvoiceFieldResolver.lines — must be declared here too: registering InvoiceFieldResolver without declaring every field it resolves throws 'Invoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging)."
+        lines: [OrderLine!]!
     }
 
     type InvoiceList {
@@ -74,16 +84,34 @@ export const adminApiExtensions: DocumentNode = gql`
         amount: Int!
     }
 
+    type OrderPaymentSummary {
+        orderId: ID!
+        "Sum of paymentStatus='captured' PaymentAttempt rows for this order — see PaymentAttemptService.sumCapturedAmountsByOrderIds for what's deliberately not netted out (refunds/disputes)."
+        capturedAmount: Int!
+    }
+
     extend type Query {
         invoicesForOrder(orderId: ID!): [Invoice!]!
         "Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (AGENTS.md Dev seed rules exception, see seed-payment-refunds.mjs)."
         capturedOnlinePayments(take: Int): [PaymentAttempt!]!
+        "Seed-script idempotency helper only — see seed-payment-refunds.mjs."
+        paymentRefundExists(providerRefundId: String!): Boolean!
+        "Seed-script idempotency helper only — see seed-payment-refunds.mjs."
+        paymentDisputeExists(paymentId: ID!, type: String!): Boolean!
         "Manager-portal invoice list, branch-scoped via AccessScopeService.resolveInvoiceScope — see AdminInvoiceVisibilityResolver / docs/access-control.md."
         visibleInvoices(options: InvoiceListOptions, counterpartyId: ID): InvoiceList!
         "Manager-portal payment list — derived-from-Invoice scoping, see PaymentVisibilityService."
         visiblePayments(options: PaymentListOptions, counterpartyId: ID): PaymentAttemptList!
         "Sum of a counterparty's unpaid (pending/issued) invoices, scoped the same way visibleInvoices is. Null if the counterparty has no unpaid invoices, not zero-with-a-currency."
         invoiceOutstandingBalance(counterpartyId: ID!): MoneyAmount
+        "Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet."
+        orderPaymentSummaries(orderIds: [ID!]!): [OrderPaymentSummary!]!
+        "Real DB-level filtered + paginated order list for one customer, bucketed by real captured-payment status (unpaid/partial/paid) — see AdminOrderPaymentViewResolver. Used by CustomerOrdersTab.vue's Unpaid/Partially paid/Paid view chips."
+        customerOrdersByPaymentView(
+            customerId: ID!
+            paymentView: String!
+            options: OrderListOptions
+        ): OrderList!
     }
 
     extend type Mutation {

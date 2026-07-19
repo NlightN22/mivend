@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router';
 import MvCountBadge from '../MvCountBadge/MvCountBadge.vue';
 
 export interface AppSidebarItem {
@@ -10,6 +11,16 @@ export interface AppSidebarItem {
 withDefaults(defineProps<{ items: AppSidebarItem[]; sectionTitle?: string }>(), {
     sectionTitle: '',
 });
+
+const route = useRoute();
+
+// Vue Router's own `active-class` marks a link active whenever its route appears anywhere in
+// the current route's `matched` chain — for a nav item pointing at '/' (Dashboard), that chain
+// always includes the DefaultLayout parent route mounted at '/', so Dashboard was highlighted
+// on every page, not just the dashboard itself. Exact path comparison instead.
+function isActive(path: string): boolean {
+    return route.path === path || (path !== '/' && route.path.startsWith(`${path}/`));
+}
 </script>
 
 <template>
@@ -19,8 +30,8 @@ withDefaults(defineProps<{ items: AppSidebarItem[]; sectionTitle?: string }>(), 
             <li v-for="item in items" :key="item.path">
                 <RouterLink
                     class="mv-app-sidebar__link"
+                    :class="{ 'mv-app-sidebar__link--active': isActive(item.path) }"
                     :to="item.path"
-                    active-class="mv-app-sidebar__link--active"
                 >
                     <span>{{ item.label }}</span>
                     <MvCountBadge v-if="item.badgeCount" :count="item.badgeCount" />

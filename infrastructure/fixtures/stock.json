@@ -3,5 +3,8 @@
     { "sku": "MOT-10W40-4L", "stockOnHand": 124 },
     { "sku": "FIL-OIL-C001", "stockOnHand": 230 },
     { "sku": "BRK-PAD-F101", "stockOnHand": 48 },
-    { "sku": "BAT-60-AGM", "stockOnHand": 15 }
+    { "sku": "BAT-60-AGM", "stockOnHand": 15 },
+    { "sku": "BAT-90-AGM", "stockOnHand": 0 },
+    { "sku": "SUS-SHOCK-F801", "stockOnHand": 33 },
+    { "sku": "WIPER-BLADE-24", "stockOnHand": 130 }
 ]

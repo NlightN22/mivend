@@ -33,6 +33,34 @@ export class PaymentAdminResolver {
         });
     }
 
+    // Seed-script idempotency helper only — see seed-payment-refunds.mjs's rerun-without-
+    // duplicating check. providerRefundId is the natural dedup key for a refund (real incident:
+    // reruns of the seed script previously duplicated every refund/dispute row because nothing
+    // checked for a prior run).
+    @Query()
+    @Allow(Permission.SuperAdmin)
+    async paymentRefundExists(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { providerRefundId: string },
+    ): Promise<boolean> {
+        const found = await this.connection
+            .getRepository(ctx, PaymentRefund)
+            .findOne({ where: { providerRefundId: args.providerRefundId } });
+        return !!found;
+    }
+
+    @Query()
+    @Allow(Permission.SuperAdmin)
+    async paymentDisputeExists(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { paymentId: string; type: string },
+    ): Promise<boolean> {
+        const found = await this.connection.getRepository(ctx, Dispute).findOne({
+            where: { paymentId: Number(args.paymentId), type: args.type as DisputeType },
+        });
+        return !!found;
+    }
+
     @Mutation()
     @Allow(Permission.SuperAdmin)
     async recordPaymentRefund(

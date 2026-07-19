@@ -7,6 +7,11 @@ declare module '@vendure/core' {
         // ErpOrderService.onOrderPlaced and docs/access-control.md's branch-scope axis.
         tradingPointId?: string | null;
         branchId?: string | null;
+        // Denormalized from the order's own Fulfillments — see ErpOrderService's
+        // onFulfillmentStateChanged and vendure-config.ts's doc comment on this field.
+        latestFulfillmentState?: string | null;
+        // Denormalized at placement time — see ErpOrderService.onOrderPlaced.
+        placedByAdministratorId?: string | null;
     }
 }
 

@@ -1,6 +1,7 @@
 import { OnApplicationBootstrap } from '@nestjs/common';
 import {
     EventBus,
+    FulfillmentStateTransitionEvent,
     OrderPlacedEvent,
     OrderStateTransitionEvent,
     PluginCommonModule,
@@ -31,7 +32,7 @@ const adminApiSchema = gql`
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
     providers: [ErpOrderService, OrderVisibilityService],
-    exports: [ErpOrderService],
+    exports: [ErpOrderService, OrderVisibilityService],
     shopApiExtensions: {
         schema: shopApiExtensions,
         resolvers: [ErpOrderResolver],
@@ -85,6 +86,13 @@ export class ErpOrderPlugin implements OnApplicationBootstrap {
             this.eventBus,
             OrderPlacedEvent,
             event => this.erpOrderService.onOrderPlaced(event.ctx, event.order),
+            'ErpOrderPlugin',
+        );
+
+        subscribeAndLog(
+            this.eventBus,
+            FulfillmentStateTransitionEvent,
+            event => this.erpOrderService.onFulfillmentStateChanged(event.ctx, event.fulfillment),
             'ErpOrderPlugin',
         );
 

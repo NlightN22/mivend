@@ -33,6 +33,16 @@ export class ImportRunService {
         await this.dataSource.getRepository(ImportRun).update(run.id, { status: 'processing' });
     }
 
+    async resetForRetry(run: ImportRun): Promise<void> {
+        await this.dataSource.getRepository(ImportRunError).delete({ run: { id: run.id } });
+        await this.dataSource.getRepository(ImportRun).update(run.id, {
+            status: 'pending',
+            processed: 0,
+            failed: 0,
+            finishedAt: null,
+        });
+    }
+
     async complete(
         run: ImportRun,
         processed: number,

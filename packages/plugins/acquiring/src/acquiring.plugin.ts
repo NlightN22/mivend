@@ -1,6 +1,7 @@
 import { PluginCommonModule, Type, VendurePlugin } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 
 import { Dispute } from './entities/dispute.entity';
 import { FiscalReceipt } from './entities/fiscal-receipt.entity';
@@ -33,13 +34,14 @@ import { PaymentAdminResolver } from './payment-admin.resolver';
 import { PaymentFieldResolver, PaymentShopResolver } from './payment.resolver';
 import { AdminInvoiceVisibilityResolver } from './admin-invoice-visibility.resolver';
 import { AdminPaymentVisibilityResolver } from './admin-payment-visibility.resolver';
+import { AdminOrderPaymentViewResolver } from './admin-order-payment-view.resolver';
 import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
 import { ACQUIRING_PLUGIN_OPTIONS } from './types';
 import type { AcquiringPluginOptions } from './types';
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CounterpartyPlugin, AccessControlPlugin],
+    imports: [PluginCommonModule, CounterpartyPlugin, AccessControlPlugin, ErpOrderPlugin],
     entities: [
         Invoice,
         PaymentAttempt,
@@ -84,6 +86,11 @@ import type { AcquiringPluginOptions } from './types';
             PaymentAdminResolver,
             AdminInvoiceVisibilityResolver,
             AdminPaymentVisibilityResolver,
+            AdminOrderPaymentViewResolver,
+            // Field resolver for Invoice.order (admin.schema.ts) — previously only registered
+            // for shopApiExtensions, so the admin API's Invoice.order was a dead schema field
+            // with no resolver wired to it at all (see admin.schema.ts's comment on Invoice.order).
+            InvoiceFieldResolver,
         ],
     },
     shopApiExtensions: {

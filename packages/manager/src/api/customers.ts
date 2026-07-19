@@ -283,20 +283,61 @@ export async function fetchCustomerIdForCounterparty(
     counterpartyId: string,
 ): Promise<string | null> {
     const result = await adminApi<{
-        customers: { items: { id: string; counterparty: { id: string } | null }[] };
+        customers: { items: { id: string }[] };
     }>(
-        `query CustomersLookup { customers(options: { take: 200 }) { items { id counterparty { id } } } }`,
+        // counterpartyId is a customField, filterable as a flat StringOperators field (not
+        // IDOperators, even though it holds an id) — same gotcha AGENTS.md documents for Shop
+        // API custom field filters being flat; here it's also typed as plain String, not ID.
+        `query CustomerIdForCounterparty($counterpartyId: String!) {
+            customers(options: { take: 1, filter: { counterpartyId: { eq: $counterpartyId } } }) {
+                items { id }
+            }
+        }`,
+        { counterpartyId },
     );
-    return result.customers.items.find(c => c.counterparty?.id === counterpartyId)?.id ?? null;
+    return result.customers.items[0]?.id ?? null;
 }
 
 export interface CustomerOrderItem {
+    id: string;
     code: string;
     state: string;
     totalWithTax: number;
     currencyCode: string;
     orderPlacedAt: string | null;
+    totalQuantity: number;
+    customer: { firstName: string; lastName: string } | null;
+    customFields: {
+        // Denormalized server-side by ErpOrderService.onFulfillmentStateChanged — see
+        // vendure-config.ts's doc comment. Null means no fulfillment yet ("Not started").
+        latestFulfillmentState: string | null;
+        // Denormalized server-side at placement time by ErpOrderService.onOrderPlaced — null
+        // means a storefront customer placed it themselves (no Administrator involved). Resolve
+        // to a display name via the `managers` list, same as OrdersTable.vue's managerName().
+        placedByAdministratorId: string | null;
+        // plugin-reservation's own state field — real column now (see CustomerOrdersDataTable.vue),
+        // not an orphaned filter with no corresponding data on screen.
+        reservationState: string | null;
+    };
 }
+
+// totalQuantity is a real field already on Vendure's Order type —
+// latestFulfillmentState/placedByAdministratorId are this project's own denormalized customFields
+// (see vendure-config.ts), replacing what used to be computed client-side from `history`/the raw
+// `fulfillments` relation on every request (neither is fetched at all anymore — the fulfillment
+// progress bar now reads a stage position from latestFulfillmentState, not a fulfilled-quantity
+// ratio computed from `fulfillments` — see CustomerOrdersTab.vue's fulfillmentProgress()).
+const CUSTOMER_ORDER_ITEM_FIELDS = `
+    id
+    code
+    state
+    totalWithTax
+    currencyCode
+    orderPlacedAt
+    totalQuantity
+    customer { firstName lastName }
+    customFields { latestFulfillmentState placedByAdministratorId reservationState }
+`;
 
 export async function fetchOrdersForCustomer(
     customerId: string,
@@ -307,12 +348,241 @@ export async function fetchOrdersForCustomer(
     }>(
         `query CustomerOrders($customerId: ID!, $take: Int!) {
             visibleOrders(options: { take: $take, sort: { orderPlacedAt: DESC } }, customerId: $customerId) {
-                items { code state totalWithTax currencyCode orderPlacedAt }
+                items { ${CUSTOMER_ORDER_ITEM_FIELDS} }
             }
         }`,
         { customerId, take },
     );
     return result.visibleOrders.items;
+}
+
+// CustomerOrdersTab's "view chips" (All/Unpaid/Partially paid/Cancelled) — real, DB-level
+// filtered + paginated per view, not a client-side filter over one loaded page (that was the
+// actual bug: counts changed as you paginated) and not a full-list-in-memory fetch either (real
+// memory/bandwidth cost for a customer with a large order history). "Cancelled" uses the same
+// visibleOrders query with a plain state filter (already a real Order column). Unpaid/Partially
+// paid go through plugin-acquiring's customerOrdersByPaymentView — a correlated SQL subquery
+// against PaymentAttempt, executed with real skip/take server-side. That query lives in
+// plugin-acquiring rather than here because plugin-erp-order (which owns visibleOrders) can't
+// depend on plugin-acquiring's PaymentAttempt entity: plugin-acquiring already depends on
+// plugin-erp-order transitively via plugin-sync, so the reverse edge would be a circular package
+// dependency (confirmed via a real `tsc -b` "Project references may not form a circular graph"
+// error when tried the other way around). See AdminOrderPaymentViewResolver in plugin-acquiring.
+export type CustomerOrdersView = 'all' | 'unpaid' | 'partial' | 'cancelled';
+
+// Sentinel for the Placed-by filter's "Customer (self)" option — customFields.
+// placedByAdministratorId is null for an order the customer placed directly via the storefront,
+// so this can't just be a real administrator id. Shared with CustomerOrdersDataTable.vue, which
+// is the only other place this must match.
+export const PLACED_BY_CUSTOMER_VALUE = '__customer__';
+
+export interface CustomerOrdersExtraFilters {
+    // Order.state — a different axis from `view` (payment status): a user can narrow "All" down
+    // to e.g. just "Awaiting shipment" while still seeing unpaid+paid orders together. Ignored
+    // when `view === 'cancelled'`, which already pins state itself. Multi-select (the Commercial
+    // state column filter — see CustomerOrdersDataTable.vue), so `eq` for one value, `in` for
+    // several.
+    state?: string[];
+    // plugin-reservation's customFields.reservationState — same field OrdersFilterBar's
+    // "Reservation" filter uses on the main Orders page.
+    reservationState?: string;
+    // ISO dates (yyyy-mm-dd), inclusive on both ends — the `date-range` filter type in
+    // CustomerOrdersDataTable.vue (presets like "Last 7 days"/"This month" plus a custom range).
+    // Either can be open-ended.
+    dateFrom?: string;
+    dateTo?: string;
+    // Order.code contains — real StringOperators filter, no denormalization needed.
+    code?: string;
+    // customFields.latestFulfillmentState — see vendure-config.ts's doc comment. Multi-select,
+    // same reasoning as `state` above.
+    fulfillmentState?: string[];
+    // customFields.placedByAdministratorId — see vendure-config.ts's doc comment.
+    placedByAdministratorId?: string;
+    // Order.totalWithTax range, in minor currency units — real NumberOperators filter.
+    totalMin?: number;
+    totalMax?: number;
+}
+
+export async function fetchOrdersPageForCustomer(
+    customerId: string,
+    page: number,
+    pageSize: number,
+    view: CustomerOrdersView,
+    // Object insertion order = ORDER BY clause order (Vendure's OrderSortParameter supports
+    // multiple keys) — see api/orders.ts's identical OrderSortField doc comment.
+    sort: Partial<Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt', 'ASC' | 'DESC'>> = {
+        orderPlacedAt: 'DESC',
+    },
+    extraFilters: CustomerOrdersExtraFilters = {},
+): Promise<{ items: CustomerOrderItem[]; totalItems: number }> {
+    const filter: Record<string, unknown> = {};
+    if (view === 'cancelled') filter.state = { eq: 'Cancelled' };
+    else if (extraFilters.state?.length) {
+        filter.state =
+            extraFilters.state.length === 1
+                ? { eq: extraFilters.state[0] }
+                : { in: extraFilters.state };
+    }
+    if (extraFilters.code) filter.code = { contains: extraFilters.code };
+    if (extraFilters.dateFrom || extraFilters.dateTo) {
+        // Inclusive on both ends, local time — `before` is the day *after* dateTo's start, so a
+        // range ending "today" still includes every order placed today regardless of time of day.
+        const orderPlacedAt: Record<string, string> = {};
+        if (extraFilters.dateFrom)
+            orderPlacedAt.after = new Date(`${extraFilters.dateFrom}T00:00:00`).toISOString();
+        if (extraFilters.dateTo) {
+            const start = new Date(`${extraFilters.dateTo}T00:00:00`);
+            orderPlacedAt.before = new Date(start.getTime() + 24 * 60 * 60 * 1000).toISOString();
+        }
+        filter.orderPlacedAt = orderPlacedAt;
+    }
+    if (extraFilters.totalMin !== undefined || extraFilters.totalMax !== undefined) {
+        filter.totalWithTax = {
+            ...(extraFilters.totalMin !== undefined ? { gte: extraFilters.totalMin } : {}),
+            ...(extraFilters.totalMax !== undefined ? { lte: extraFilters.totalMax } : {}),
+        };
+    }
+    // Custom fields in Shop/Admin API filters are flat, not nested under a `customFields` key —
+    // see AGENTS.md's Vendure gotcha. Real incident this fixes: `filter.customFields = {...}`
+    // isn't a valid `OrderFilterParameter` shape at all — every query using it (reservationState,
+    // fulfillmentState, placedByAdministratorId) threw a GraphQL validation error
+    // ('Field "customFields" is not defined by type "OrderFilterParameter"') on every request
+    // that set any of these, so picking any value in that column's funnel filter just broke the
+    // whole table (no rows, not "no matches" — a real fetch failure).
+    if (extraFilters.reservationState)
+        filter.reservationState = { eq: extraFilters.reservationState };
+    if (extraFilters.fulfillmentState?.length) {
+        // 'Not started' is this UI's synthetic label for "no fulfillment yet" — the real column
+        // value is a null customField, not a literal string, so it needs `isNull` instead of
+        // `eq`/`in` (see FULFILLMENT_STATE_OPTIONS in api/orders.ts). Multi-select can mix
+        // 'Not started' with real values at once, which needs an `_or` across both shapes — a
+        // single `in` can't express "isNull OR one of these strings".
+        const hasNotStarted = extraFilters.fulfillmentState.includes('Not started');
+        const realValues = extraFilters.fulfillmentState.filter(v => v !== 'Not started');
+        if (hasNotStarted && realValues.length) {
+            filter._or = [
+                { latestFulfillmentState: { isNull: true } },
+                {
+                    latestFulfillmentState:
+                        realValues.length === 1 ? { eq: realValues[0] } : { in: realValues },
+                },
+            ];
+        } else if (hasNotStarted) {
+            filter.latestFulfillmentState = { isNull: true };
+        } else {
+            filter.latestFulfillmentState =
+                realValues.length === 1 ? { eq: realValues[0] } : { in: realValues };
+        }
+    }
+    if (extraFilters.placedByAdministratorId) {
+        filter.placedByAdministratorId =
+            extraFilters.placedByAdministratorId === PLACED_BY_CUSTOMER_VALUE
+                ? { isNull: true }
+                : { eq: extraFilters.placedByAdministratorId };
+    }
+
+    const options = {
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        sort,
+        ...(Object.keys(filter).length ? { filter } : {}),
+    };
+
+    if (view === 'unpaid' || view === 'partial') {
+        const result = await adminApi<{
+            customerOrdersByPaymentView: { items: CustomerOrderItem[]; totalItems: number };
+        }>(
+            `query CustomerOrdersByPaymentView($customerId: ID!, $paymentView: String!, $options: OrderListOptions) {
+                customerOrdersByPaymentView(customerId: $customerId, paymentView: $paymentView, options: $options) {
+                    totalItems
+                    items { ${CUSTOMER_ORDER_ITEM_FIELDS} }
+                }
+            }`,
+            { customerId, paymentView: view, options },
+        );
+        return result.customerOrdersByPaymentView;
+    }
+
+    const result = await adminApi<{
+        visibleOrders: { items: CustomerOrderItem[]; totalItems: number };
+    }>(
+        `query CustomerOrdersPage($customerId: ID!, $options: OrderListOptions) {
+            visibleOrders(options: $options, customerId: $customerId) {
+                totalItems
+                items { ${CUSTOMER_ORDER_ITEM_FIELDS} }
+            }
+        }`,
+        { customerId, options },
+    );
+    return result.visibleOrders;
+}
+
+export interface CustomerOrderViewCounts {
+    all: number;
+    unpaid: number;
+    partial: number;
+    cancelled: number;
+}
+
+// Lean counts for the view chips — `options: { take: 0 }` returns totalItems (a real COUNT)
+// without fetching any row data, same shape as fetchOrdersSummary's own chip counts
+// (api/orders.ts). One round trip via GraphQL aliases, not four separate requests.
+export async function fetchCustomerOrderViewCounts(
+    customerId: string,
+): Promise<CustomerOrderViewCounts> {
+    const result = await adminApi<{
+        all: { totalItems: number };
+        cancelled: { totalItems: number };
+        unpaid: { totalItems: number };
+        partial: { totalItems: number };
+    }>(
+        `query CustomerOrderViewCounts($customerId: ID!) {
+            all: visibleOrders(customerId: $customerId, options: { take: 0 }) { totalItems }
+            cancelled: visibleOrders(
+                customerId: $customerId
+                options: { take: 0, filter: { state: { eq: "Cancelled" } } }
+            ) { totalItems }
+            unpaid: customerOrdersByPaymentView(
+                customerId: $customerId
+                paymentView: "unpaid"
+                options: { take: 0 }
+            ) { totalItems }
+            partial: customerOrdersByPaymentView(
+                customerId: $customerId
+                paymentView: "partial"
+                options: { take: 0 }
+            ) { totalItems }
+        }`,
+        { customerId },
+    );
+    return {
+        all: result.all.totalItems,
+        cancelled: result.cancelled.totalItems,
+        unpaid: result.unpaid.totalItems,
+        partial: result.partial.totalItems,
+    };
+}
+
+// Real per-order captured-payment total (plugin-acquiring's PaymentAttempt, our actual payment
+// source of truth per AGENTS.md rule #11 — not Vendure's own `Order.payments`). Batched: one
+// query for every order id a table page needs, not one per row. See
+// PaymentAttemptService.sumCapturedAmountsByOrderIds for what "captured" means and what's
+// deliberately not netted out (refunds/disputes/chargebacks).
+export async function fetchOrderPaymentSummaries(orderIds: string[]): Promise<Map<string, number>> {
+    const map = new Map<string, number>();
+    if (!orderIds.length) return map;
+    const result = await adminApi<{
+        orderPaymentSummaries: { orderId: string; capturedAmount: number }[];
+    }>(
+        `query OrderPaymentSummaries($orderIds: [ID!]!) {
+            orderPaymentSummaries(orderIds: $orderIds) { orderId capturedAmount }
+        }`,
+        { orderIds },
+    );
+    for (const summary of result.orderPaymentSummaries) {
+        map.set(summary.orderId, summary.capturedAmount);
+    }
+    return map;
 }
 
 export interface CustomerDocument {
@@ -323,20 +593,65 @@ export interface CustomerDocument {
     issueDate: string;
 }
 
-export async function fetchDocumentsForCounterparty(
+// Document.status is a fixed internal technical state (the document-generation pipeline's own
+// lifecycle — see plugin-documents/src/entities/document.entity.ts), not ERP-sourced business
+// data — same carve-out as api/orders.ts's ORDER_STATE_OPTIONS. Document.type, unlike status, is
+// real ERP/business-sourced data (invoice/contract/return/reconciliation/anything else the ERP
+// pushes — see the entity's own doc comment) and must NOT be a hardcoded dropdown (AGENTS.md
+// "Business data must live in the database") — it's exposed as free-text search instead (see
+// CustomerDocumentsTab.vue's `type` filter field), same treatment as Customers page's
+// `erpGroupLabel` free-text filter.
+export const DOCUMENT_STATUS_OPTIONS = [
+    { value: '', label: 'All statuses' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'generating', label: 'Generating' },
+    { value: 'ready', label: 'Ready' },
+    { value: 'failed', label: 'Failed' },
+] as const;
+
+export interface CustomerDocumentFilters {
+    [key: string]: string;
+    type: string;
+    status: string;
+}
+
+export const DEFAULT_CUSTOMER_DOCUMENT_FILTERS: CustomerDocumentFilters = {
+    type: '',
+    status: '',
+};
+
+// Real server-side pagination (AGENTS.md "Pagination" rule — documents accumulate over a
+// customer's lifetime just like orders/invoices/payments, and aren't exempt just because the
+// tab is small on screen). Replaces an earlier flat `take: 100` fetch with no pagination at all,
+// which silently dropped a long-lived customer's older documents past the 100th row with no way
+// for the user to see more (found in the same pagination-antipattern audit as
+// CustomerOrdersTab.vue's view-chip fix).
+export async function fetchDocumentsPageForCounterparty(
     counterpartyId: string,
-): Promise<CustomerDocument[]> {
+    page: number,
+    pageSize: number,
+    filters: CustomerDocumentFilters = DEFAULT_CUSTOMER_DOCUMENT_FILTERS,
+): Promise<{ items: CustomerDocument[]; totalItems: number }> {
     const result = await adminApi<{
-        documents: { items: CustomerDocument[] };
+        documents: { items: CustomerDocument[]; totalItems: number };
     }>(
-        `query CustomerDocuments($counterpartyId: ID!) {
-            documents(options: { take: 100 }, counterpartyId: $counterpartyId) {
+        `query CustomerDocumentsPage($counterpartyId: ID!, $options: DocumentListOptions) {
+            documents(options: $options, counterpartyId: $counterpartyId) {
+                totalItems
                 items { id type number status issueDate }
             }
         }`,
-        { counterpartyId },
+        {
+            counterpartyId,
+            options: {
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                type: filters.type || undefined,
+                status: filters.status || undefined,
+            },
+        },
     );
-    return result.documents.items;
+    return result.documents;
 }
 
 export interface CustomerCredit {

@@ -9,6 +9,7 @@
     "references": [
         { "path": "../access-control" },
         { "path": "../counterparty" },
+        { "path": "../erp-order" },
         { "path": "../sync" },
         { "path": "../../shared" }
     ]

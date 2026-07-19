@@ -135,7 +135,7 @@ async function handleLogout(): Promise<void> {
         </MvAppTopbar>
         <div class="layout__body">
             <MvAppSidebar :items="menuItems" section-title="Workspace" />
-            <main class="layout__content">
+            <main class="layout__content" :class="{ 'layout__content--with-fab': showCreateOrderFab }">
                 <MvNotice v-if="authStore.isReconnecting" variant="warning" class="layout__reconnecting">
                     Reconnecting to the server… your session is still active.
                 </MvNotice>
@@ -204,6 +204,14 @@ async function handleLogout(): Promise<void> {
     .layout__content {
         padding: 12px;
         padding-bottom: calc(74px + env(safe-area-inset-bottom));
+    }
+
+    /* MvFab sits at bottom: 84px, height 54px — its top edge reaches ~138px from the viewport
+       bottom. Real incident: on /orders (or a customer's Orders tab), the default 74px of
+       clearance (sized only for the bottom nav) let the FAB visually cover the pagination
+       row's "Next" button once a page was scrolled to its natural end, making it untappable. */
+    .layout__content--with-fab {
+        padding-bottom: calc(160px + env(safe-area-inset-bottom));
     }
 }
 </style>

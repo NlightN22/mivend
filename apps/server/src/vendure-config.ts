@@ -124,6 +124,34 @@ export const config: VendureConfig = {
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Payment Status (synced)' }],
             },
+            {
+                // Denormalized from the order's own Fulfillments (most recently created one's
+                // state) whenever a Fulfillment is added or transitions — see
+                // ErpOrderService.onFulfillmentStateChanged. Exists so the manager portal's
+                // Orders tables can sort/filter by fulfillment status server-side instead of
+                // fetching every order's fulfillments relation and computing this per-request on
+                // the frontend (real incident this fixes — see CustomerOrdersTab.vue's git
+                // history: fulfillment status/placed-by were being derived client-side from
+                // nested relations on every page load, un-filterable/un-sortable as a result).
+                // Null means "no fulfillment yet" (same as the frontend's previous "Not started"
+                // fallback).
+                name: 'latestFulfillmentState',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Latest Fulfillment State' }],
+            },
+            {
+                // The Administrator who placed this order via the manager portal, denormalized
+                // once at the same AddingItems/Draft → * transition as branchId/tradingPointId
+                // (see ErpOrderService.onOrderPlaced) — null when a storefront customer placed
+                // it themselves. Same reasoning as latestFulfillmentState: makes "Placed by"
+                // sortable/filterable server-side instead of derived from the order's first
+                // HistoryEntry on every request.
+                name: 'placedByAdministratorId',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Placed By (Administrator)' }],
+            },
         ],
         Product: [
             {

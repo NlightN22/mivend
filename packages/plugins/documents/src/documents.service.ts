@@ -21,6 +21,7 @@ export interface DocumentListOptions {
     take?: number;
     skip?: number;
     type?: string;
+    status?: string;
     search?: string;
 }
 
@@ -89,6 +90,8 @@ export class DocumentsService {
                 where: {
                     counterpartyId: In(counterpartyIds),
                     ...(orderId !== undefined ? { orderId: String(orderId) } : {}),
+                    ...(options?.type ? { type: options.type } : {}),
+                    ...(options?.status ? { status: options.status as Document['status'] } : {}),
                 },
                 order: { issueDate: 'DESC' },
                 take,

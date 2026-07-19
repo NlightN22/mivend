@@ -44,8 +44,13 @@ const props = withDefaults(defineProps<Props>(), {
 
 const isMobile = useIsMobileViewport(props.mobileBreakpoint);
 
-function rowClass({ rowData }: { rowData: TableRow }): string {
-  return rowData._rowState ? `mv-table-row--${rowData._rowState}` : '';
+// Zebra striping (odd rows) gives real row-to-row separation on the desktop table, matching
+// the mobile card list's own gap+tinted-background fix — a plain white table with only 1px
+// row-divider lines read as visually flat/hard to scan on a long list. A `_rowState` (e.g.
+// low-stock/reserved) always wins over the plain zebra stripe.
+function rowClass({ rowData, rowIndex }: { rowData: TableRow; rowIndex: number }): string {
+  if (rowData._rowState) return `mv-table-row--${rowData._rowState}`;
+  return rowIndex % 2 === 1 ? 'mv-table-row--zebra' : '';
 }
 
 const fixedHeight = computed(() => props.height);
@@ -146,6 +151,11 @@ const rowEventHandlers = {
   letter-spacing: 0.04em !important;
   color: #667085 !important;
 }
+
+/* Zebra striping — plain data rows only (a real _rowState always overrides, see rowClass).
+   --el-fill-color-light (#f8fafc) was tried first and was practically indistinguishable from
+   white on a real screen — needs a visibly darker tint to actually read as a stripe. */
+.mv-table-row--zebra { background: var(--el-fill-color, #eef1f5) !important; }
 
 /* Row states */
 .mv-table-row--in-stock .el-table-v2__row-cell { color: #065F46; }

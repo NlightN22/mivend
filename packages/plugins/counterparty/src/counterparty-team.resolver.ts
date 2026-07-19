@@ -31,13 +31,20 @@ export class CounterpartyTeamMutationResolver {
     @Allow(CustomPermission.ManageCounterpartyTeam.Permission)
     async addCounterpartyTeamMember(
         @Ctx() ctx: RequestContext,
-        @Args() args: { counterpartyId: string; administratorId: string; role: string },
+        @Args()
+        args: {
+            counterpartyId: string;
+            administratorId: string;
+            role: string;
+            phone?: string | null;
+        },
     ): Promise<CounterpartyTeamMember> {
         return this.counterpartyTeamService.addTeamMember(
             ctx,
             args.counterpartyId,
             args.administratorId,
-            args.role as 'backup' | 'observer',
+            args.role as 'backup' | 'observer' | 'accounting-contact',
+            args.phone,
         );
     }
 

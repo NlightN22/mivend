@@ -433,4 +433,70 @@ describe('PaymentAttemptService queries', () => {
         expect(allocations[0].invoice).toEqual(makeInvoice({ id: 2 }));
         expect(allocations[1].invoice).toBeNull();
     });
+
+    describe('sumCapturedAmountsByOrderIds', () => {
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+        function createMockAggregateQb() {
+            const qb = {
+                select: vi.fn(),
+                addSelect: vi.fn(),
+                where: vi.fn(),
+                andWhere: vi.fn(),
+                groupBy: vi.fn(),
+                getRawMany: vi.fn(),
+            };
+            qb.select.mockReturnValue(qb);
+            qb.addSelect.mockReturnValue(qb);
+            qb.where.mockReturnValue(qb);
+            qb.andWhere.mockReturnValue(qb);
+            qb.groupBy.mockReturnValue(qb);
+            return qb;
+        }
+
+        it('returns an empty map without querying when given no orderIds', async () => {
+            const mockConnection = {
+                getRepository: vi.fn(),
+            } as unknown as TransactionalConnection;
+            const service = new PaymentAttemptService(
+                mockConnection,
+                {} as unknown as InvoiceService,
+                {} as unknown as SettlementEntryService,
+                {} as never,
+            );
+
+            const result = await service.sumCapturedAmountsByOrderIds(mockCtx, []);
+
+            expect(result.size).toBe(0);
+            expect(mockConnection.getRepository).not.toHaveBeenCalled();
+        });
+
+        it('sums only captured payments, grouped per orderId — an authorized-but-not-yet-captured or failed attempt must never count as money received', async () => {
+            const qb = createMockAggregateQb();
+            qb.getRawMany.mockResolvedValue([
+                { orderId: 10, capturedAmount: '5000' },
+                { orderId: 11, capturedAmount: '1250' },
+            ]);
+            const mockConnection = {
+                getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
+            } as unknown as TransactionalConnection;
+            const service = new PaymentAttemptService(
+                mockConnection,
+                {} as unknown as InvoiceService,
+                {} as unknown as SettlementEntryService,
+                {} as never,
+            );
+
+            const result = await service.sumCapturedAmountsByOrderIds(mockCtx, [10, 11, 12]);
+
+            expect(qb.andWhere).toHaveBeenCalledWith('payment.paymentStatus = :status', {
+                status: 'captured',
+            });
+            expect(result.get(10)).toBe(5000);
+            expect(result.get(11)).toBe(1250);
+            // Order 12 had no captured rows at all — absent from the map, not zero-with-a-key;
+            // the resolver (AdminPaymentVisibilityResolver.orderPaymentSummaries) is the layer
+            // that turns "absent" into a displayed 0.
+            expect(result.has(12)).toBe(false);
+        });
+    });
 });

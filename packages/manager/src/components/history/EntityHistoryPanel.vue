@@ -275,18 +275,19 @@ function handleRowClick({ rowData }: { rowData: TableRow }): void {
             </MvFilterField>
         </MvFilterBar>
 
-        <div v-if="rawRows.length" class="entity-history__table">
+        <div v-if="rawRows.length || loading" class="entity-history__table">
             <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
             <MvTable
                 :columns="columns"
                 :data="rows"
                 :height="Math.min(Math.max(rows.length, PAGE_SIZE) * 52 + 40, 520)"
+                :loading="loading"
                 empty-text="No changes match these filters"
                 @row-click="handleRowClick"
             />
             <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
         </div>
-        <p v-else-if="!loading" class="entity-history__empty">No changes recorded yet</p>
+        <p v-else class="entity-history__empty">No changes recorded yet</p>
 
         <MvModal v-if="selectedRow" title="Change details" @close="selectedRow = null">
             <div class="entity-history__detail">

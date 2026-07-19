@@ -93,7 +93,17 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
 <style scoped>
 .mv-mobile-cards {
     display: grid;
-    gap: 10px;
+    gap: 12px;
+    /* A border + shadow alone weren't enough real separation on an actual phone screen (real
+       incident: cards read as one continuous block when the border sits flush against the
+       panel's own white background — a 1-3px shadow at this scale is nearly invisible on a
+       real display, not just in a zoomed-in screenshot). A visibly tinted page background
+       behind white cards is the standard mobile list pattern (iOS grouped lists, Material
+       list) — contrast that actually survives a real screen, not just border color tuning. */
+    background: var(--el-fill-color-light, #f1f4f7);
+    padding: 10px;
+    /* No border-radius of its own — this fills MvTable's outer wrapper (.mv-table), which
+       already clips to its own 12px radius via overflow:hidden. */
 }
 
 .mv-mobile-cards__empty {

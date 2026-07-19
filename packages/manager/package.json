@@ -18,8 +18,10 @@
     "dependencies": {
         "@element-plus/icons-vue": "^2.3.0",
         "@mivend/ui-kit": "workspace:*",
+        "@primevue/themes": "4.5.4",
         "element-plus": "^2.9.0",
         "pinia": "^2.2.0",
+        "primevue": "^4.5.4",
         "shared": "workspace:*",
         "vue": "^3.5.0",
         "vue-router": "^4.4.0"

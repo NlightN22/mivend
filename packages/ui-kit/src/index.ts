@@ -9,6 +9,15 @@ export { default as MvTable } from './components/MvTable/MvTable.vue';
 export type { TableRow, RowState } from './components/MvTable/MvTable.vue';
 export { default as MvMobileCardList } from './components/MvTable/MvMobileCardList.vue';
 export type { MvMobileColumn, MvMobileColumnMeta } from './components/MvTable/MvMobileCardList.vue';
+export type {
+    MvDataTableColumn,
+    DataTableColumnFilter,
+    DataTableFilterKind,
+} from './components/MvTable/dataTableTypes';
+export { toColumnVisibilityDefs } from './components/MvTable/dataTableTypes';
+export { useDataTableState } from './composables/useDataTableState';
+export type { DataTableState, DataTableSortMeta } from './composables/useDataTableState';
+export { default as MvDataTableToolbar } from './components/MvDataTableToolbar/MvDataTableToolbar.vue';
 
 export { default as MvPageHeader } from './components/MvPageHeader/MvPageHeader.vue';
 export type { Breadcrumb } from './components/MvPageHeader/MvPageHeader.vue';
@@ -72,6 +81,7 @@ export { default as MvProgressBar } from './components/MvProgressBar/MvProgressB
 export type { ProgressBarVariant } from './components/MvProgressBar/MvProgressBar.vue';
 
 export { default as MvKpiCard } from './components/MvKpiCard/MvKpiCard.vue';
+export { default as MvSkeleton } from './components/MvSkeleton/MvSkeleton.vue';
 export { default as MvFilterChips } from './components/MvFilterChips/MvFilterChips.vue';
 export type { FilterChip } from './components/MvFilterChips/MvFilterChips.vue';
 export { default as MvPanel } from './components/MvPanel/MvPanel.vue';
@@ -96,6 +106,33 @@ export { default as MvColumnToggle } from './components/MvColumnToggle/MvColumnT
 export { useColumnVisibility } from './composables/useColumnVisibility';
 export type { ColumnVisibilityDef } from './composables/useColumnVisibility';
 export { useIsMobileViewport } from './composables/useIsMobileViewport';
+export { useDebouncedCallback } from './composables/useDebouncedCallback';
+
+export { default as MvDatePicker } from './components/MvDatePicker/MvDatePicker.vue';
+
+// Typed column-filter system (AGENTS.md manager-portal rules) — every filterable data-table
+// column declares one of these types explicitly; the table resolves the matching component via
+// COLUMN_FILTER_REGISTRY instead of building its own popover/input/select per column.
+export * from './components/MvColumnFilter/columnFilterTypes';
+export {
+    COLUMN_FILTER_REGISTRY,
+    resolveColumnFilterComponent,
+} from './components/MvColumnFilter/columnFilterRegistry';
+export { default as MvColumnFilterText } from './components/MvColumnFilter/MvColumnFilterText.vue';
+export { default as MvColumnFilterSelect } from './components/MvColumnFilter/MvColumnFilterSelect.vue';
+export { default as MvColumnFilterBoolean } from './components/MvColumnFilter/MvColumnFilterBoolean.vue';
+export { default as MvColumnFilterStatus } from './components/MvColumnFilter/MvColumnFilterStatus.vue';
+export { default as MvColumnFilterEnum } from './components/MvColumnFilter/MvColumnFilterEnum.vue';
+export { default as MvColumnFilterDate } from './components/MvColumnFilter/MvColumnFilterDate.vue';
+export { default as MvColumnFilterDateRange } from './components/MvColumnFilter/MvColumnFilterDateRange.vue';
+export {
+    DATE_RANGE_PRESETS,
+    resolveDateRangePreset,
+} from './components/MvColumnFilter/dateRangePresets';
+export { default as MvColumnFilterAmountRange } from './components/MvColumnFilter/MvColumnFilterAmountRange.vue';
+
+export { default as MvActiveFilterChips } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
+export type { ActiveFilterChip } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
 
 export { default as MvMultiSelect } from './components/MvMultiSelect/MvMultiSelect.vue';
 

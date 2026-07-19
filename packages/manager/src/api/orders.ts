@@ -1,3 +1,4 @@
+import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 
 export interface OrderListItem {
@@ -52,6 +53,16 @@ export const ORDER_RESERVATION_STATE_OPTIONS = [
     { value: 'FAILED', label: 'Failed' },
 ] as const;
 
+// Single source of truth for the Reservation badge color — same reasoning/precedent as
+// ORDER_STATE_BADGE_VARIANT/FULFILLMENT_STATE_BADGE_VARIANT above.
+export const ORDER_RESERVATION_STATE_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
+    AWAITING_CONFIRMATION: 'warning',
+    RESERVED: 'success',
+    EXPIRED: 'danger',
+    RELEASED: 'neutral',
+    FAILED: 'danger',
+};
+
 // Order states are Vendure's own OrderProcess state machine — fixed by application logic, not
 // ERP-sourced business data, so a const list is the documented carve-out in AGENTS.md ("internal
 // technical states"), not a hardcoded business enum.
@@ -79,7 +90,7 @@ export const DATE_RANGE_OPTIONS = [
     { value: 'month', label: 'This month' },
 ] as const;
 
-function dateRangeToAfter(range: string): string {
+export function dateRangeToAfter(range: string): string {
     const now = new Date();
     switch (range) {
         case 'today':
@@ -99,7 +110,10 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
     };
     if (filters.state) filter.state = { eq: filters.state };
     if (filters.reservationState) {
-        filter.customFields = { reservationState: { eq: filters.reservationState } };
+        // Flat, not nested under `customFields` — see AGENTS.md's Vendure gotcha and
+        // api/customers.ts's identical fix (same bug, same root cause: `filter.customFields`
+        // isn't a valid `OrderFilterParameter` shape, so this silently matched nothing).
+        filter.reservationState = { eq: filters.reservationState };
     }
     return filter;
 }
@@ -119,10 +133,19 @@ const ORDER_ITEM_FIELDS = `
     }
 `;
 
+// Real Vendure OrderSortParameter keys only — the PrimeVue DataTable's own column `field` names
+// (see OrdersDataTable.vue) don't all match 1:1 (e.g. its 'total'/'date' columns sort by
+// totalWithTax/orderPlacedAt), so callers map through this before building the `sort` object.
+export type OrderSortField = 'code' | 'state' | 'totalWithTax' | 'orderPlacedAt';
+
 export async function fetchOrdersPage(
     filters: OrdersFilters,
     page: number,
     pageSize: number,
+    // Object insertion order = ORDER BY clause order — supports Vendure's own multi-field sort
+    // (see OrdersDataTable.vue's sortMode="multiple"). Defaults to the original single-field
+    // "newest first" behavior when omitted.
+    sort: Partial<Record<OrderSortField, 'ASC' | 'DESC'>> = { orderPlacedAt: 'DESC' },
 ): Promise<{ items: OrderListItem[]; totalItems: number }> {
     const result = await adminApi<{
         visibleOrders: { items: OrderListItem[]; totalItems: number };
@@ -137,7 +160,7 @@ export async function fetchOrdersPage(
             options: {
                 skip: (page - 1) * pageSize,
                 take: pageSize,
-                sort: { orderPlacedAt: 'DESC' },
+                sort,
                 filter: buildFilter(filters),
             },
             managerId: filters.managerId || undefined,
@@ -273,19 +296,103 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
     };
 }
 
+// Shared between OrdersTable.vue and CustomerOrdersTab.vue — the same Order.state values must
+// read the same everywhere in the manager portal.
+export const ORDER_STATE_LABEL: Record<string, string> = {
+    AddingItems: 'Draft (storefront cart)',
+    Draft: 'Draft (order entry)',
+    ArrangingPayment: 'Arranging payment',
+    PaymentAuthorized: 'Processing',
+    PaymentSettled: 'Awaiting shipment',
+    PartiallyShipped: 'Partially shipped',
+    Shipped: 'Shipped',
+    PartiallyDelivered: 'Partially delivered',
+    Delivered: 'Delivered',
+    Cancelled: 'Cancelled',
+};
+
+// Single source of truth for Commercial-state badge color — keyed by the raw Order.state
+// (not the label above), so relabeling ORDER_STATE_LABEL never silently breaks this map.
+// Any manager-portal component rendering a Commercial state badge must use this, not its own
+// ad hoc variant — see AGENTS.md's ui-kit "single source of truth" rule and the real incident
+// this fixes: OrdersTable.vue/CustomerOrdersTab.vue were each rendering this badge with no
+// variant at all (always the default gray), and Fulfillment separately hardcoded 'info' for
+// every state regardless of value — neither read as intended, and the two tables didn't even
+// agree with each other since Fulfillment's map lived nowhere.
+export const ORDER_STATE_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
+    AddingItems: 'neutral',
+    Draft: 'neutral',
+    ArrangingPayment: 'warning',
+    PaymentAuthorized: 'info',
+    PaymentSettled: 'info',
+    PartiallyShipped: 'warning',
+    Shipped: 'info',
+    PartiallyDelivered: 'warning',
+    Delivered: 'success',
+    Cancelled: 'danger',
+};
+
+// Single source of truth for the Fulfillment badge color — keyed by the real Vendure
+// Fulfillment.state value, plus the synthetic 'Not started' CustomerOrdersTab.vue/OrdersTable.vue
+// use when an order has no fulfillment yet at all.
+export const FULFILLMENT_STATE_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
+    'Not started': 'neutral',
+    Pending: 'warning',
+    Shipped: 'info',
+    Delivered: 'success',
+    Cancelled: 'danger',
+};
+
+// Mirrors the keys above — real Fulfillment.state values (Vendure's own default fulfillment
+// process) plus the synthetic 'Not started' — used as the Fulfillment column's filter options
+// (see customFields.latestFulfillmentState in api/customers.ts).
+export const FULFILLMENT_STATE_OPTIONS = [
+    { value: 'Not started', label: 'Not started' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Shipped', label: 'Shipped' },
+    { value: 'Delivered', label: 'Delivered' },
+    { value: 'Cancelled', label: 'Cancelled' },
+] as const;
+
+// Single source of truth for "how far along" a fulfillment stage is — a *sequence position*
+// (Not started -> Pending -> Shipped -> Delivered), not a quantity-fulfilled ratio. Real bug this
+// fixes: CustomerOrdersTab.vue's fulfillmentProgress() previously computed
+// fulfilledQuantity/totalQuantity, which is 100% the moment a single Fulfillment record exists
+// covering all lines regardless of that fulfillment's own state — so Pending, Shipped, and
+// Delivered orders all rendered a fully-filled progress bar, indistinguishable from each other
+// (the seed data's typical one-fulfillment-per-order shape made this especially obvious).
+// 'Cancelled' has no defined stage — it's a terminal state off the normal progression, not a
+// percentage of it; callers should branch on it separately (e.g. render the bar as empty/hidden)
+// rather than looking it up here.
+export const FULFILLMENT_STAGE_INDEX: Record<string, number> = {
+    'Not started': 0,
+    Pending: 1,
+    Shipped: 2,
+    Delivered: 3,
+};
+export const FULFILLMENT_STAGE_COUNT = 3;
+
 export interface ManagerOption {
     id: string;
     name: string;
+    email: string;
     roleCodes: string[];
 }
 
 export async function fetchManagerOptions(): Promise<ManagerOption[]> {
     const result = await adminApi<{
-        teamMembers: { id: string; firstName: string; lastName: string; roleCodes: string[] }[];
-    }>(`query TeamMembers { teamMembers { id firstName lastName roleCodes } }`);
+        teamMembers: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            emailAddress: string;
+            roleCodes: string[];
+        }[];
+    }>(`query TeamMembers { teamMembers { id firstName lastName emailAddress roleCodes } }`);
     return result.teamMembers.map(a => ({
         id: a.id,
         name: `${a.firstName} ${a.lastName}`,
+        email: a.emailAddress,
         roleCodes: a.roleCodes,
     }));
 }

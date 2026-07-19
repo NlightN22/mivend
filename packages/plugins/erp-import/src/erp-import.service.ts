@@ -16,6 +16,7 @@ import { DepartmentHandler } from './handlers/department.handler';
 import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 import { ImportRunService } from './import-run.service';
+import type { ImportRun } from './entities/import-run.entity';
 import type { BatchImportBody, ImportRecord, ImportRunResult } from './types';
 
 const loggerCtx = 'ErpImportService';
@@ -43,7 +44,7 @@ export class ErpImportService {
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
         const existing = await this.importRunService.findByExchangeId(body.exchangeId);
-        if (existing) {
+        if (existing && existing.status !== 'failed') {
             Logger.verbose(
                 `Duplicate exchangeId=${body.exchangeId}, returning existing run`,
                 loggerCtx,
@@ -51,7 +52,14 @@ export class ErpImportService {
             return this.importRunService.toResult(existing);
         }
 
-        const run = await this.importRunService.createPending(body);
+        let run: ImportRun;
+        if (existing) {
+            Logger.verbose(`Retrying previously failed exchangeId=${body.exchangeId}`, loggerCtx);
+            await this.importRunService.resetForRetry(existing);
+            run = existing;
+        } else {
+            run = await this.importRunService.createPending(body);
+        }
         await this.importRunService.markProcessing(run);
 
         const errors: Array<{ index: number; message: string }> = [];

@@ -36,6 +36,7 @@ const adminApiSchema = gql`
         id: ID!
         firstName: String!
         lastName: String!
+        emailAddress: String!
         roleCodes: [String!]!
     }
 

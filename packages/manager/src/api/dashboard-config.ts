@@ -104,7 +104,7 @@ const APPROVER_CARDS: KpiCardConfig[] = [
     {
         key: 'unassigned-clients',
         label: 'Unassigned clients',
-        to: '/customers?unassigned=true',
+        to: '/customers?managerId=__unassigned__',
         accent: true,
         value: data => data.unassignedClientsCount,
     },

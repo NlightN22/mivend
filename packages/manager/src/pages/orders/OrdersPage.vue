@@ -7,11 +7,11 @@ import {
     MvWarningBanner,
     MvPagination,
     MvStatusBadge,
-    MvFilterChips,
-    MvColumnToggle,
+    MvDataTableToolbar,
     useColumnVisibility,
+    toColumnVisibilityDefs,
     type FilterChip,
-    type ColumnVisibilityDef,
+    type MvDataTableColumn,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { adminApi } from '../../api/client';
@@ -22,14 +22,16 @@ import {
     fetchOrdersSummary,
     fetchManagerOptions,
     fetchBranchOptions,
+    ORDER_STATE_OPTIONS,
+    ORDER_RESERVATION_STATE_OPTIONS,
+    DATE_RANGE_OPTIONS,
     type OrdersFilters,
     type OrderListItem,
     type OrdersSummary,
     type ManagerOption,
     type BranchOption,
 } from '../../api/orders';
-import OrdersFilterBar from '../../components/orders/OrdersFilterBar.vue';
-import OrdersTable from '../../components/orders/OrdersTable.vue';
+import OrdersTableResponsive from '../../components/orders/OrdersTableResponsive.vue';
 import AttentionList from '../../components/orders/AttentionList.vue';
 import OperationalPanel from '../../components/orders/OperationalPanel.vue';
 import SavedViewsPanel, { type SavedView } from '../../components/orders/SavedViewsPanel.vue';
@@ -63,32 +65,60 @@ const CHIPS: FilterChip[] = [
 ];
 const activeChip = ref('all');
 
-// Personal display preference, not business data — see useColumnVisibility's own comment.
-// 'code'/'action' are marked required so a manager can never hide the one column they need to
+// Single source of truth for this table's toolbar (AGENTS.md/MvDataTableToolbar consolidation —
+// replaces the old separate ORDER_COLUMNS/OrdersFilterBar-fields/CHIPS trio). Entries with no
+// matching visible column (search/reservationState/dateRange/managerId — OrdersTable.vue has no
+// such columns) are marked `required` too so they're excluded from the Columns toggle, which
+// only makes sense for entries that ARE real display columns. 'code'/'action' are marked
+// required for the usual reason: a manager can never hide the one column they need to
 // identify/open a row.
-const ORDER_COLUMNS: ColumnVisibilityDef[] = [
-    { key: 'code', label: 'Order #', required: true },
-    { key: 'customer', label: 'Customer' },
-    { key: 'manager', label: 'Manager' },
-    { key: 'state', label: 'Status' },
-    { key: 'total', label: 'Total amount' },
-    { key: 'date', label: 'Date placed' },
-    { key: 'branch', label: 'Branch' },
-    { key: 'attention', label: 'Attention' },
-    { key: 'action', label: '', required: true },
-];
-const { hiddenKeys: hiddenColumnKeys, toggle: toggleColumn, toggleableColumns } = useColumnVisibility(
+const ORDER_TABLE_COLUMNS = computed<MvDataTableColumn[]>(() => {
+    const cols: MvDataTableColumn[] = [
+        { key: 'search', title: 'Search', required: true, filter: { kind: 'search', placeholder: 'Order number, customer...' } },
+        { key: 'code', title: 'Order #', required: true },
+        { key: 'customer', title: 'Customer' },
+    ];
+    if (showManagerColumn.value) {
+        cols.push({ key: 'manager', title: 'Manager' });
+        cols.push({
+            key: 'managerId',
+            title: 'Manager filter',
+            required: true,
+            filter: {
+                kind: 'select',
+                options: [{ value: '', label: 'All managers' }, ...managers.value.map(m => ({ value: m.id, label: m.name }))],
+            },
+        });
+    }
+    cols.push(
+        { key: 'state', title: 'Status', filter: { kind: 'select', options: [...ORDER_STATE_OPTIONS] } },
+        {
+            key: 'reservationState',
+            title: 'Reservation',
+            required: true,
+            filter: { kind: 'select', options: [...ORDER_RESERVATION_STATE_OPTIONS] },
+        },
+        { key: 'dateRange', title: 'Date range', required: true, filter: { kind: 'select', options: [...DATE_RANGE_OPTIONS] } },
+        { key: 'total', title: 'Total amount' },
+        { key: 'date', title: 'Date placed' },
+        { key: 'branch', title: 'Branch' },
+        { key: 'attention', title: 'Attention' },
+        { key: 'action', title: '', required: true },
+    );
+    return cols;
+});
+const { hiddenKeys: hiddenColumnKeys, toggle: toggleColumn } = useColumnVisibility(
     `orders-columns:${authStore.administrator?.id ?? 'anonymous'}`,
-    ORDER_COLUMNS,
+    toColumnVisibilityDefs(ORDER_TABLE_COLUMNS.value),
 );
-const HIDEABLE_COLUMN_KEYS = ORDER_COLUMNS.filter(c => !c.required).map(c => c.key);
+const HIDEABLE_COLUMN_KEYS = computed(() => ORDER_TABLE_COLUMNS.value.filter(c => !c.required).map(c => c.key));
 
 function applyMyTableView(view: SavedTableView): void {
     const restoredFilters = JSON.parse(view.filters) as Partial<OrdersFilters>;
     Object.assign(filters, DEFAULT_FILTERS, restoredFilters);
     activeChip.value = chipFromFilters(filters);
     hiddenColumnKeys.value = new Set(
-        HIDEABLE_COLUMN_KEYS.filter(key => !view.visibleColumns.includes(key)),
+        HIDEABLE_COLUMN_KEYS.value.filter(key => !view.visibleColumns.includes(key)),
     );
     page.value = 1;
 }
@@ -136,8 +166,18 @@ function applySavedView(key: string): void {
     // already surfaces these orders individually.
 }
 
+// Set by OrdersDataTable.vue's (desktop-only) column sort — see api/orders.ts's
+// OrderSortField/fetchOrdersPage doc comment for why only these 4 fields are real.
+const sort = ref<Partial<Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt', 'ASC' | 'DESC'>>>({
+    orderPlacedAt: 'DESC',
+});
+function handleSortChange(next: typeof sort.value): void {
+    sort.value = next;
+    void loadOrders();
+}
+
 async function loadOrders(): Promise<void> {
-    const result = await fetchOrdersPage(filters, page.value, pageSize);
+    const result = await fetchOrdersPage(filters, page.value, pageSize, sort.value);
     orders.value = result.items;
     totalItems.value = result.totalItems;
 }
@@ -146,7 +186,7 @@ async function loadAll(): Promise<void> {
     loading.value = true;
     try {
         const [ordersResult, summaryResult, managerOptions, branchOptions] = await Promise.all([
-            fetchOrdersPage(filters, page.value, pageSize),
+            fetchOrdersPage(filters, page.value, pageSize, sort.value),
             fetchOrdersSummary(),
             managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
             branches.value.length ? Promise.resolve(branches.value) : fetchBranchOptions(),
@@ -258,26 +298,32 @@ const todayAmountFormatted = computed(() => {
 
         <div class="orders-page__grid">
             <MvPanel title="Orders list">
-                <div class="orders-page__panel-actions">
-                    <MvColumnToggle :columns="toggleableColumns" @toggle="toggleColumn" />
-                </div>
-                <OrdersFilterBar
+                <MvDataTableToolbar
+                    :columns="ORDER_TABLE_COLUMNS"
                     :filters="filters"
-                    :managers="managers"
-                    :show-manager-filter="showManagerColumn"
+                    :hidden-column-keys="hiddenColumnKeys"
+                    :chips="CHIPS"
+                    :active-chip="activeChip"
                     @update:filters="Object.assign(filters, $event)"
                     @reset="resetFilters"
+                    @toggle-column="toggleColumn"
+                    @select-chip="applyChip"
+                    hide-column-toggle
                 />
-                <MvFilterChips :chips="CHIPS" :active="activeChip" @select="applyChip" />
                 <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
-                <OrdersTable
+                <OrdersTableResponsive
                     :orders="orders"
                     :managers="managers"
                     :branches="branches"
                     :show-manager-column="showManagerColumn"
                     :pending-approval-order-ids="summary?.pendingApprovalOrderIds ?? new Set()"
+                    :loading="loading"
+                    :total-items="totalItems"
                     :page-size="pageSize"
-                    :hidden-column-keys="hiddenColumnKeys"
+                    :state-filter="filters.state"
+                    :administrator-id="authStore.administrator?.id ?? 'anonymous'"
+                    @update:sort="handleSortChange"
+                    @update:state-filter="filters.state = $event"
                 />
                 <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
             </MvPanel>
@@ -342,11 +388,6 @@ const todayAmountFormatted = computed(() => {
     margin-bottom: 18px;
 }
 
-.orders-page__panel-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 8px;
-}
 
 .orders-page__grid {
     display: grid;

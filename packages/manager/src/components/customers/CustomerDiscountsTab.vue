@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
-import { MvStatusBadge } from '@mivend/ui-kit';
+import type { Column } from 'element-plus';
+import { MvTable, MvStatusBadge, MvButton } from '@mivend/ui-kit';
+import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
 import type { DiscountRuleItem } from '../../api/customers';
 
-defineProps<{ discounts: DiscountRuleItem[] }>();
+// Genuinely bounded (AGENTS.md pagination exemption) — DiscountGrantResolver.
+// discountGrantsForCounterparty returns only the grants currently applying to one counterparty,
+// not an ever-growing history, so no server-side pagination is needed here (unlike
+// Orders/Invoices/Payments tabs, which fetch their own paginated pages).
+const props = defineProps<{ discounts: DiscountRuleItem[] }>();
 const router = useRouter();
 
 // No exact "expiring soon" threshold has been decided yet (see
@@ -11,7 +18,7 @@ const router = useRouter();
 // consistent with the same approximation used on the Dashboard.
 const EXPIRING_SOON_DAYS = 14;
 
-function status(discount: DiscountRuleItem): { label: string; variant: 'success' | 'warning' | 'neutral' } {
+function status(discount: DiscountRuleItem): { label: string; variant: StatusBadgeVariant } {
     const now = Date.now();
     const validTo = new Date(discount.validTo).getTime();
     if (validTo < now) return { label: 'Expired', variant: 'neutral' };
@@ -20,27 +27,52 @@ function status(discount: DiscountRuleItem): { label: string; variant: 'success'
     }
     return { label: 'Active', variant: 'success' };
 }
+
+// MvTable renders this same column config as mobile cards below its own breakpoint — no
+// separate hand-written mobile column set needed (see MvTable.vue).
+const columns: Column<TableRow>[] = [
+    { key: 'scope', title: 'Applies to', dataKey: 'scope', width: 220, flexGrow: 1, mobile: { primary: true } },
+    { key: 'percent', title: 'Discount', dataKey: 'percent', width: 110, align: 'right' },
+    { key: 'validTo', title: 'Valid until', dataKey: 'validTo', width: 130 },
+    {
+        key: 'status',
+        title: 'Status',
+        dataKey: 'status',
+        width: 140,
+        cellRenderer: ({ rowData }) => {
+            const row = rowData as TableRow;
+            return h(MvStatusBadge, { variant: row.statusVariant as StatusBadgeVariant }, () => row.status as string);
+        },
+        mobile: { badge: true },
+    },
+];
+
+const rows = computed<TableRow[]>(() =>
+    props.discounts.map(discount => ({
+        scope: discount.facetValueCode ?? 'All products',
+        percent: `${discount.percent}%`,
+        validTo: new Date(discount.validTo).toLocaleDateString('en-US'),
+        status: status(discount).label,
+        statusVariant: status(discount).variant,
+    })),
+);
+
+function goToDiscounts(): void {
+    router.push('/discounts');
+}
 </script>
 
 <template>
     <div class="customer-discounts">
         <div class="customer-discounts__header">
-            <button type="button" class="customer-discounts__new" @click="router.push('/discounts')">
-                New discount grant
-            </button>
+            <MvButton size="sm" @click="goToDiscounts">New discount grant</MvButton>
         </div>
-        <ul v-if="discounts.length" class="customer-discounts__list">
-            <li v-for="discount in discounts" :key="discount.id">
-                <div>
-                    <strong>{{ discount.facetValueCode ?? 'All products' }}</strong>
-                    <span class="customer-discounts__meta">
-                        {{ discount.percent }}% · until {{ new Date(discount.validTo).toLocaleDateString('en-US') }}
-                    </span>
-                </div>
-                <MvStatusBadge :variant="status(discount).variant">{{ status(discount).label }}</MvStatusBadge>
-            </li>
-        </ul>
-        <p v-else class="customer-discounts__empty">No discounts apply to this customer</p>
+        <MvTable
+            :columns="columns"
+            :data="rows"
+            :height="Math.max(rows.length, 1) * 52 + 40"
+            empty-text="No discounts apply to this customer"
+        />
     </div>
 </template>
 
@@ -49,42 +81,5 @@ function status(discount: DiscountRuleItem): { label: string; variant: 'success'
     display: flex;
     justify-content: flex-end;
     margin-bottom: 12px;
-}
-
-.customer-discounts__new {
-    background: var(--el-color-primary, #00b894);
-    color: #fff;
-    border: none;
-    border-radius: 999px;
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.customer-discounts__list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.customer-discounts__list li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 13px;
-}
-
-.customer-discounts__meta {
-    margin-left: 8px;
-    color: var(--el-text-color-secondary, #6b7280);
-}
-
-.customer-discounts__empty {
-    color: var(--el-text-color-secondary, #6b7280);
-    font-size: 13px;
 }
 </style>

@@ -3,8 +3,9 @@ import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
 import { MvTable, MvStatusBadge } from '@mivend/ui-kit';
-import type { TableRow } from '@mivend/ui-kit';
+import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
 import type { RecentOrder } from '../../api/dashboard';
+import { ORDER_STATE_LABEL, ORDER_STATE_BADGE_VARIANT } from '../../api/orders';
 
 const props = defineProps<{ orders: RecentOrder[] }>();
 const router = useRouter();
@@ -17,7 +18,10 @@ const columns: Column<TableRow>[] = [
         title: 'Status',
         dataKey: 'state',
         width: 170,
-        cellRenderer: ({ cellData }) => h(MvStatusBadge, {}, () => cellData as unknown as string),
+        cellRenderer: ({ rowData }) => {
+            const row = rowData as TableRow;
+            return h(MvStatusBadge, { variant: row.stateVariant as StatusBadgeVariant }, () => row.state as string);
+        },
     },
     { key: 'total', title: 'Total', dataKey: 'total', width: 120, align: 'right' },
     { key: 'date', title: 'Date', dataKey: 'date', width: 120 },
@@ -27,7 +31,8 @@ const rows = computed<TableRow[]>(() =>
     props.orders.map(order => ({
         code: order.code,
         customer: order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : '—',
-        state: order.state,
+        state: ORDER_STATE_LABEL[order.state] ?? order.state,
+        stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
         total: new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: order.currencyCode,

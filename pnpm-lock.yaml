@@ -155,12 +155,18 @@ importers:
             '@mivend/ui-kit':
                 specifier: workspace:*
                 version: link:../ui-kit
+            '@primevue/themes':
+                specifier: 4.5.4
+                version: 4.5.4
             element-plus:
                 specifier: ^2.9.0
                 version: 2.14.2(vue@3.5.39(typescript@5.9.3))
             pinia:
                 specifier: ^2.2.0
                 version: 2.3.1(typescript@5.9.3)(vue@3.5.39(typescript@5.9.3))
+            primevue:
+                specifier: ^4.5.4
+                version: 4.5.4(vue@3.5.39(typescript@5.9.3))
             shared:
                 specifier: workspace:*
                 version: link:../shared
@@ -250,6 +256,9 @@ importers:
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../counterparty
+            '@mivend/plugin-erp-order':
+                specifier: workspace:*
+                version: link:../erp-order
             '@mivend/plugin-sync':
                 specifier: workspace:*
                 version: link:../sync
@@ -3270,6 +3279,56 @@ packages:
             }
         engines: { node: '>=18' }
         hasBin: true
+
+    '@primeuix/styled@0.7.4':
+        resolution:
+            {
+                integrity: sha512-QSO/NpOQg8e9BONWRBx9y8VGMCMYz0J/uKfNJEya/RGEu7ARx0oYW0ugI1N3/KB1AAvyGxzKBzGImbwg0KUiOQ==,
+            }
+        engines: { node: '>=12.11.0' }
+
+    '@primeuix/styles@2.0.3':
+        resolution:
+            {
+                integrity: sha512-2ykAB6BaHzR/6TwF8ShpJTsZrid6cVIEBVlookSdvOdmlWuevGu5vWOScgIwqWwlZcvkFYAGR/SUV3OHCTBMdw==,
+            }
+
+    '@primeuix/themes@2.0.3':
+        resolution:
+            {
+                integrity: sha512-3fS1883mtCWhgUgNf/feiaaDSOND4EBIOu9tZnzJlJ8QtYyL6eFLcA6V3ymCWqLVXQ1+lTVEZv1gl47FIdXReg==,
+            }
+
+    '@primeuix/utils@0.6.4':
+        resolution:
+            {
+                integrity: sha512-pZ5f+vj7wSzRhC7KoEQRU5fvYAe+RP9+m39CTscZ3UywCD1Y2o6Fe1rRgklMPSkzUcty2jzkA0zMYkiJBD1hgg==,
+            }
+        engines: { node: '>=12.11.0' }
+
+    '@primevue/core@4.5.4':
+        resolution:
+            {
+                integrity: sha512-lYJJB3wTrDJ8MkLctzHfrPZAqXVxoatjIsswSJzupatf6ZogJHVYADUKcn1JAkLLk8dtV1FA2AxDek663fHO5Q==,
+            }
+        engines: { node: '>=12.11.0' }
+        peerDependencies:
+            vue: ^3.5.0
+
+    '@primevue/icons@4.5.4':
+        resolution:
+            {
+                integrity: sha512-DxgryEc7ZmUqcEhYMcxGBRyFzdtLIoy3jLtlH1zsVSRZaG+iSAcjQ88nvfkZxGUZtZBFL7sRjF6KLq3bJZJwUw==,
+            }
+        engines: { node: '>=12.11.0' }
+
+    '@primevue/themes@4.5.4':
+        resolution:
+            {
+                integrity: sha512-rUFZxMHLanTZdvZq4zgZPk+KRBZ3s7fE3bBK32OrZBkHQhEJmkJ7Ftd4w4QFlXyz1B7c+k5invZiOOCjwHXg9Q==,
+            }
+        engines: { node: '>=12.11.0' }
+        deprecated: 'Deprecated. This package is no longer maintained. Please migrate to @primeuix/themes: https://www.npmjs.com/package/@primeuix/themes'
 
     '@protobufjs/aspromise@1.1.2':
         resolution:
@@ -8540,6 +8599,13 @@ packages:
             }
         engines: { node: ^14.15.0 || ^16.10.0 || >=18.0.0 }
 
+    primevue@4.5.4:
+        resolution:
+            {
+                integrity: sha512-nTyEohZABFJhVIpeUxgP0EJ8vKcJAhD+Z7DYj95e7ie/MNUCjRNcGjqmE1cXtXi4z54qDfTSI9h2uJ51qz2DIw==,
+            }
+        engines: { node: '>=12.11.0' }
+
     process@0.11.10:
         resolution:
             {
@@ -12101,6 +12167,38 @@ snapshots:
         dependencies:
             playwright: 1.61.1
 
+    '@primeuix/styled@0.7.4':
+        dependencies:
+            '@primeuix/utils': 0.6.4
+
+    '@primeuix/styles@2.0.3':
+        dependencies:
+            '@primeuix/styled': 0.7.4
+
+    '@primeuix/themes@2.0.3':
+        dependencies:
+            '@primeuix/styled': 0.7.4
+
+    '@primeuix/utils@0.6.4': {}
+
+    '@primevue/core@4.5.4(vue@3.5.39(typescript@5.9.3))':
+        dependencies:
+            '@primeuix/styled': 0.7.4
+            '@primeuix/utils': 0.6.4
+            vue: 3.5.39(typescript@5.9.3)
+
+    '@primevue/icons@4.5.4(vue@3.5.39(typescript@5.9.3))':
+        dependencies:
+            '@primeuix/utils': 0.6.4
+            '@primevue/core': 4.5.4(vue@3.5.39(typescript@5.9.3))
+        transitivePeerDependencies:
+            - vue
+
+    '@primevue/themes@4.5.4':
+        dependencies:
+            '@primeuix/styled': 0.7.4
+            '@primeuix/themes': 2.0.3
+
     '@protobufjs/aspromise@1.1.2': {}
 
     '@protobufjs/base64@1.1.2': {}
@@ -15270,6 +15368,16 @@ snapshots:
             '@jest/schemas': 29.6.3
             ansi-styles: 5.2.0
             react-is: 18.3.1
+
+    primevue@4.5.4(vue@3.5.39(typescript@5.9.3)):
+        dependencies:
+            '@primeuix/styled': 0.7.4
+            '@primeuix/styles': 2.0.3
+            '@primeuix/utils': 0.6.4
+            '@primevue/core': 4.5.4(vue@3.5.39(typescript@5.9.3))
+            '@primevue/icons': 4.5.4(vue@3.5.39(typescript@5.9.3))
+        transitivePeerDependencies:
+            - vue
 
     process@0.11.10: {}
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { MvPanel, MvStatusBadge, MvSelect, MvKpiCard, MvKpiCarousel } from '@mivend/ui-kit';
+import { MvPanel, MvStatusBadge, MvKpiCard, MvKpiCarousel, MvSkeleton } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
     fetchCustomerById,
@@ -9,26 +9,24 @@ import {
     fetchCustomerIdForCounterparty,
     fetchOrdersForCustomer,
     fetchDiscountGrantsForCounterparty,
-    fetchDocumentsForCounterparty,
-    reassignCounterpartyManager,
     type CustomerListItem,
     type CustomerCredit,
     type CustomerOrderItem,
     type DiscountRuleItem,
-    type CustomerDocument,
 } from '../../api/customers';
 import { fetchManagerOptions, fetchBranchOptions, type ManagerOption, type BranchOption } from '../../api/orders';
-import { fetchInvoicesForCounterparty, fetchOutstandingBalance, type InvoiceListItem, type OutstandingBalance } from '../../api/invoices';
-import { fetchPaymentsForCounterparty, type PaymentListItem } from '../../api/payments';
+import { fetchOutstandingBalance, type OutstandingBalance } from '../../api/invoices';
+import { fetchCounterpartyTeam, type CounterpartyTeamMember } from '../../api/counterpartyTeam';
 import type { EntityRef } from '../../api/history';
+import { Location, Wallet, User } from '@element-plus/icons-vue';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
 import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
 import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTab.vue';
 import CustomerInvoicesTab from '../../components/customers/CustomerInvoicesTab.vue';
 import CustomerPaymentsTab from '../../components/customers/CustomerPaymentsTab.vue';
+import CustomerTeamTab from '../../components/customers/CustomerTeamTab.vue';
 import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue';
-import AccountTeamPanel from '../../components/customers/AccountTeamPanel.vue';
 
 // Human labels for the generic EntityHistoryPanel widget — only the entity types this page
 // versions need an entry; anything else falls back to its raw entityName.
@@ -44,26 +42,43 @@ const outstandingBalance = ref<OutstandingBalance | null>(null);
 const managers = ref<ManagerOption[]>([]);
 const branches = ref<BranchOption[]>([]);
 const orders = ref<CustomerOrderItem[]>([]);
+// The Vendure Customer id, resolved from the route's counterparty id — distinct from
+// customer.value.id (the counterparty id) and required by visibleOrders(customerId: ...).
+const vendureCustomerId = ref<string | null>(null);
 const discounts = ref<DiscountRuleItem[]>([]);
-const documents = ref<CustomerDocument[]>([]);
-const invoices = ref<InvoiceListItem[]>([]);
-const payments = ref<PaymentListItem[]>([]);
+// Fed by CustomerTeamTab's own @loaded emit (see below) once the Team tab has fetched — this
+// page also fetches it directly in load() so the header's compact Backup manager / Observers
+// summary has data even before the Team tab is opened.
+const teamMembers = ref<CounterpartyTeamMember[]>([]);
 const loading = ref(true);
 const notFound = ref(false);
-const reassigning = ref(false);
-const reassignError = ref('');
 
-// Gate directly on the same permission the backend mutation/queries themselves check
-// (CustomPermission.ReassignCounterpartyManager / ReadEntityHistory) — not a role-code
-// allowlist. Whoever the native Vendure admin UI grants this permission to sees the control;
-// the mutation/query is still the real enforcement, this only avoids showing a control that
-// would just be rejected.
-const canReassign = computed(() => authStore.hasPermission('ReassignCounterpartyManager'));
+// Gate directly on the same permission the backend query itself checks (CustomPermission.
+// ReadEntityHistory) — not a role-code allowlist. Reassigning the primary manager moved out of
+// this header (info-only now, see the info-row's own doc comment) — that edit belongs on a
+// future Team tab, gated to specific roles, not here.
 const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory'));
 const canManageTeam = computed(() => authStore.hasPermission('ManageCounterpartyTeam'));
 
-type CustomerDetailTab = 'overview' | 'orders' | 'invoices' | 'payments' | 'discounts' | 'documents' | 'history';
-const TABS: CustomerDetailTab[] = ['overview', 'orders', 'invoices', 'payments', 'discounts', 'documents', 'history'];
+type CustomerDetailTab =
+    | 'overview'
+    | 'orders'
+    | 'invoices'
+    | 'payments'
+    | 'discounts'
+    | 'documents'
+    | 'team'
+    | 'history';
+const TABS: CustomerDetailTab[] = [
+    'overview',
+    'orders',
+    'invoices',
+    'payments',
+    'discounts',
+    'documents',
+    'team',
+    'history',
+];
 const TAB_LABELS: Record<CustomerDetailTab, string> = {
     overview: 'Overview',
     orders: 'Orders',
@@ -71,6 +86,7 @@ const TAB_LABELS: Record<CustomerDetailTab, string> = {
     payments: 'Payments',
     discounts: 'Discounts',
     documents: 'Documents',
+    team: 'Team',
     history: 'History',
 };
 
@@ -167,21 +183,18 @@ async function load(): Promise<void> {
         customer.value = detail;
         credit.value = creditResult;
 
-        const [customerId, grants, docs] = await Promise.all([
+        const [customerId, grants] = await Promise.all([
             fetchCustomerIdForCounterparty(counterpartyId),
             fetchDiscountGrantsForCounterparty(counterpartyId),
-            fetchDocumentsForCounterparty(counterpartyId),
         ]);
         discounts.value = grants;
-        documents.value = docs;
+        vendureCustomerId.value = customerId;
         orders.value = customerId ? await fetchOrdersForCustomer(customerId) : [];
-        // Invoice.counterpartyId ties directly to the counterparty (unlike Order, which needs
-        // the customerId lookup above) — no equivalent indirection needed here.
-        [invoices.value, payments.value, outstandingBalance.value] = await Promise.all([
-            fetchInvoicesForCounterparty(counterpartyId),
-            fetchPaymentsForCounterparty(counterpartyId),
-            fetchOutstandingBalance(counterpartyId),
-        ]);
+        teamMembers.value = await fetchCounterpartyTeam(counterpartyId);
+        // CustomerInvoicesTab/CustomerPaymentsTab now own their own fetching/pagination (same
+        // shape as CustomerOrdersTab) — this page only still needs outstandingBalance for its
+        // own KPI card.
+        outstandingBalance.value = await fetchOutstandingBalance(counterpartyId);
 
         if (canViewHistory.value) {
             historyRefs.value = [
@@ -208,30 +221,50 @@ function managerName(id: string | null): string | null {
     return managers.value.find(m => m.id === id)?.name ?? null;
 }
 
+// First backup (a counterparty can in principle have more than one, but the header only has
+// room for a single-line summary — the Team tab (CustomerTeamTab) lists every one of them).
+const backupManagerName = computed(() => {
+    const backup = teamMembers.value.find(m => m.role === 'backup');
+    return backup ? managerName(backup.administratorId) : null;
+});
+const observerCount = computed(() => teamMembers.value.filter(m => m.role === 'observer').length);
+
 function branchName(erpId: string | null): string | null {
     if (!erpId) return null;
     return branches.value.find(b => b.erpId === erpId)?.name ?? null;
 }
 
-async function handleReassign(administratorId: string): Promise<void> {
-    if (!customer.value || !administratorId) return;
-    reassignError.value = '';
-    reassigning.value = true;
-    try {
-        await reassignCounterpartyManager(customer.value.id, administratorId);
-        customer.value = { ...customer.value, assignedManagerId: administratorId };
-    } catch (e) {
-        reassignError.value = e instanceof Error ? e.message : 'Could not reassign manager';
-    } finally {
-        reassigning.value = false;
-    }
+// No photo data for administrators (ManagerOption has no avatar URL) — initials on a plain
+// colored circle is the standard fallback for exactly this case, closer to the reference design
+// than reusing the same generic person icon three times over for every manager slot.
+function initials(name: string | null): string {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
+
 </script>
 
 <template>
     <div v-if="notFound" class="customer-detail__not-found">
         <h1>Customer not found</h1>
         <RouterLink to="/customers">Back to customers</RouterLink>
+    </div>
+
+    <!-- First load only (no `customer` yet) — a stale-shaped skeleton is worse than nothing once
+         real content exists, so tab switches / refetches after the first load fall through to
+         MvPanel's own `v-if="!loading"` gap below instead of re-showing this. -->
+    <div v-else-if="loading && !customer" class="customer-detail">
+        <MvSkeleton width="220px" height="13px" />
+        <MvSkeleton width="360px" height="28px" />
+        <MvSkeleton width="180px" height="13px" />
+        <div class="customer-detail__kpis-skeleton">
+            <MvSkeleton v-for="i in 4" :key="i" height="84px" radius="12px" />
+        </div>
+        <div class="customer-detail__tabs-skeleton">
+            <MvSkeleton v-for="i in 7" :key="i" width="90px" height="20px" />
+        </div>
+        <MvSkeleton height="320px" radius="12px" />
     </div>
 
     <div v-else-if="customer" class="customer-detail">
@@ -247,35 +280,53 @@ async function handleReassign(administratorId: string): Promise<void> {
                 {{ customer.erpGroupLabel }}
             </MvStatusBadge>
         </h1>
-        <p class="customer-detail__subtitle">
-            <span v-if="customer.inn">INN {{ customer.inn }} · </span>
-            <template v-if="!canReassign">
-                <span v-if="managerName(customer.assignedManagerId)">
-                    Manager: {{ managerName(customer.assignedManagerId) }}
-                </span>
-                <span v-else>No manager assigned</span>
-            </template>
-            <span v-else class="customer-detail__manager-control">
-                Manager:
-                <MvSelect
-                    :model-value="customer.assignedManagerId ?? ''"
-                    :options="[{ value: '', label: 'Unassigned' }, ...managers.map(m => ({ value: m.id, label: m.name }))]"
-                    :disabled="reassigning"
-                    @update:model-value="handleReassign($event)"
-                />
-            </span>
-        </p>
-        <p v-if="reassignError" class="customer-detail__error">{{ reassignError }}</p>
-        <AccountTeamPanel
-            :counterparty-id="customer.id"
-            :owner-id="customer.assignedManagerId"
-            :owner-name="managerName(customer.assignedManagerId)"
-            :managers="managers"
-            :can-manage="canManageTeam"
-        />
-        <div class="customer-detail__meta">
-            <span v-if="branchName(customer.branchId)">Location: {{ branchName(customer.branchId) }}</span>
-            <span v-if="credit">Credit limit: {{ money(credit.creditLimit) }}</span>
+        <p v-if="customer.inn" class="customer-detail__subtitle">INN {{ customer.inn }}</p>
+
+        <!-- Info-only row — no edit controls here at all (see AGENTS.md-style rule this page now
+             follows: reassigning managers, changing location, adjusting credit limit all belong
+             on a future Team tab gated to specific roles, not the header). Location has no "add"
+             concept yet either way (only "change location", not built), and credit limit changes
+             go through a separate approval flow (also not built) — both are plain display
+             regardless. -->
+        <div class="customer-detail__info-row">
+            <div class="customer-detail__info-item">
+                <Location class="customer-detail__info-icon" />
+                <div class="customer-detail__info-text">
+                    <span class="customer-detail__info-label">Location</span>
+                    <span class="customer-detail__info-value">{{ branchName(customer.branchId) ?? '—' }}</span>
+                </div>
+            </div>
+            <span class="customer-detail__info-divider" />
+            <div class="customer-detail__info-item">
+                <Wallet class="customer-detail__info-icon" />
+                <div class="customer-detail__info-text">
+                    <span class="customer-detail__info-label">Credit limit</span>
+                    <span class="customer-detail__info-value">{{ credit ? money(credit.creditLimit) : '—' }}</span>
+                </div>
+            </div>
+            <span class="customer-detail__info-divider" />
+            <div class="customer-detail__info-item">
+                <span class="customer-detail__avatar">{{ initials(managerName(customer.assignedManagerId)) }}</span>
+                <div class="customer-detail__info-text">
+                    <span class="customer-detail__info-label">Primary manager</span>
+                    <span class="customer-detail__info-value">{{ managerName(customer.assignedManagerId) ?? 'Unassigned' }}</span>
+                </div>
+            </div>
+            <div class="customer-detail__info-item">
+                <span class="customer-detail__avatar">{{ initials(backupManagerName) }}</span>
+                <div class="customer-detail__info-text">
+                    <span class="customer-detail__info-label">Backup manager</span>
+                    <span class="customer-detail__info-value">{{ backupManagerName ?? '—' }}</span>
+                </div>
+            </div>
+            <span class="customer-detail__info-divider" />
+            <div class="customer-detail__info-item">
+                <User class="customer-detail__info-icon" />
+                <div class="customer-detail__info-text">
+                    <span class="customer-detail__info-label">Observers</span>
+                    <span class="customer-detail__info-value">{{ observerCount }}</span>
+                </div>
+            </div>
         </div>
 
         <MvKpiCarousel v-if="!loading" class="customer-detail__kpis">
@@ -332,19 +383,32 @@ async function handleReassign(administratorId: string): Promise<void> {
                 :credit="credit"
                 @changed="load"
             />
-            <CustomerOrdersTab v-else-if="activeTab === 'orders'" :orders="orders" />
+            <CustomerOrdersTab
+                v-else-if="activeTab === 'orders' && vendureCustomerId"
+                :customer-id="vendureCustomerId"
+            />
+            <p v-else-if="activeTab === 'orders'" class="customer-detail__no-orders">No orders yet</p>
             <CustomerInvoicesTab
                 v-else-if="activeTab === 'invoices'"
-                :invoices="invoices"
                 :counterparty-id="customer.id"
             />
             <CustomerPaymentsTab
                 v-else-if="activeTab === 'payments'"
-                :payments="payments"
                 :counterparty-id="customer.id"
             />
             <CustomerDiscountsTab v-else-if="activeTab === 'discounts'" :discounts="discounts" />
-            <CustomerDocumentsTab v-else-if="activeTab === 'documents'" :documents="documents" />
+            <CustomerDocumentsTab v-else-if="activeTab === 'documents'" :counterparty-id="customer.id" />
+            <CustomerTeamTab
+                v-else-if="activeTab === 'team'"
+                :counterparty-id="customer.id"
+                :owner-id="customer.assignedManagerId"
+                :owner-name="managerName(customer.assignedManagerId)"
+                :managers="managers"
+                :can-manage="canManageTeam"
+                :can-view-history="canViewHistory"
+                :history-refs="historyRefs"
+                @loaded="teamMembers = $event"
+            />
             <EntityHistoryPanel
                 v-else
                 :refs="historyRefs"
@@ -387,36 +451,91 @@ async function handleReassign(administratorId: string): Promise<void> {
     font-size: 13px;
 }
 
-.customer-detail__manager-control {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.customer-detail__manager-control :deep(.mv-select) {
-    width: auto;
-    height: 28px;
-    padding: 0 8px;
-    font-size: 13px;
-}
-
-.customer-detail__meta {
+.customer-detail__info-row {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 4px 16px;
-    margin: 0;
-    color: var(--el-text-color-secondary, #6b7280);
-    font-size: 13px;
+    gap: 24px;
+    padding: 20px 24px;
+    border: 1px solid var(--el-border-color, #e4e7ec);
+    border-radius: var(--app-radius-lg, 16px);
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
-.customer-detail__error {
-    margin: 4px 0 0;
-    color: var(--el-color-danger, #dc2626);
+.customer-detail__info-divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--el-border-color, #e4e7ec);
+}
+
+.customer-detail__info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.customer-detail__info-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--el-text-color-secondary, #98a2b3);
+    flex-shrink: 0;
+}
+
+.customer-detail__avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--el-color-primary-light-9, #e6faf4);
+    color: var(--el-color-primary, #00b894);
     font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.customer-detail__info-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.customer-detail__info-label {
+    font-size: 12px;
+    color: var(--el-text-color-secondary, #6b7280);
+}
+
+.customer-detail__info-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary, #17212b);
 }
 
 .customer-detail__kpis {
     margin-top: 4px;
+}
+
+.customer-detail__kpis-skeleton {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+}
+
+@media (max-width: 800px) {
+    .customer-detail__kpis-skeleton {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.customer-detail__tabs-skeleton {
+    display: flex;
+    gap: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    margin-top: 8px;
 }
 
 .customer-detail__tabs {
@@ -491,5 +610,11 @@ async function handleReassign(administratorId: string): Promise<void> {
     padding: 60px 0;
     text-align: center;
     color: var(--el-text-color-secondary, #6b7280);
+}
+
+.customer-detail__no-orders {
+    margin: 0;
+    color: var(--el-text-color-secondary, #6b7280);
+    font-size: 13px;
 }
 </style>

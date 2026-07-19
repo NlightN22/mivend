@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import {
     MvPanel,
     MvFilterBar,
@@ -32,7 +32,6 @@ import CustomersTable from '../../components/customers/CustomersTable.vue';
 import NeedsAttentionPanel, { type AttentionEntry } from '../../components/customers/NeedsAttentionPanel.vue';
 
 const authStore = useAuthStore();
-const route = useRoute();
 // "My Clients" only makes sense for Manager, whose list is their own assigned book — every
 // other role sees a department/company-wide list, so the generic title fits better there (see
 // docs/ai/manager-portal-pages/04-customers-list.md).
@@ -62,15 +61,51 @@ const loading = ref(true);
 const EXPIRING_SOON_DAYS = 14;
 const ATTENTION_TOP_N = 5;
 
-const search = ref('');
-const statusFilter = ref<'' | 'active' | 'inactive'>('');
 // Sentinel value for the Manager select's "Unassigned" option — distinct from '' (no filter) and
 // from any real manager id. See CounterpartyService.findVisiblePage's `unassignedOnly` doc
 // comment for why this is a dedicated flag, not `managerId: null`.
 const UNASSIGNED_SENTINEL = '__unassigned__';
-const managerFilter = ref(route.query.unassigned === 'true' ? UNASSIGNED_SENTINEL : '');
-const branchFilter = ref('');
-const groupFilter = ref('');
+
+interface CustomerFiltersState extends Record<string, string> {
+    search: string;
+    status: string;
+    managerId: string;
+    branchId: string;
+    groupLabel: string;
+}
+const DEFAULT_FILTERS: CustomerFiltersState = {
+    search: '',
+    status: '',
+    managerId: '',
+    branchId: '',
+    groupLabel: '',
+};
+const filters = reactive<CustomerFiltersState>({ ...DEFAULT_FILTERS });
+
+// Manager portal rule (AGENTS.md): every filtered/sorted/paginated view must be a shareable URL.
+const { fromQuery, toQuery } = useUrlSyncedState(DEFAULT_FILTERS);
+fromQuery(filters, page);
+
+const search = computed({
+    get: () => filters.search,
+    set: (value: string) => { filters.search = value; },
+});
+const statusFilter = computed({
+    get: () => filters.status as '' | 'active' | 'inactive',
+    set: (value: '' | 'active' | 'inactive') => { filters.status = value; },
+});
+const managerFilter = computed({
+    get: () => filters.managerId,
+    set: (value: string) => { filters.managerId = value; },
+});
+const branchFilter = computed({
+    get: () => filters.branchId,
+    set: (value: string) => { filters.branchId = value; },
+});
+const groupFilter = computed({
+    get: () => filters.groupLabel,
+    set: (value: string) => { filters.groupLabel = value; },
+});
 const STATUS_OPTIONS = [
     { value: '', label: 'All statuses' },
     { value: 'active', label: 'Active' },
@@ -119,11 +154,7 @@ const attentionItems = computed<AttentionEntry[]>(() => {
 });
 
 function resetFilters(): void {
-    search.value = '';
-    statusFilter.value = '';
-    managerFilter.value = '';
-    branchFilter.value = '';
-    groupFilter.value = '';
+    Object.assign(filters, DEFAULT_FILTERS);
     page.value = 1;
 }
 
@@ -176,7 +207,10 @@ async function loadPage(): Promise<void> {
     }
 }
 
-watch([search, statusFilter, managerFilter, branchFilter, groupFilter, page], () => void loadPage());
+watch([search, statusFilter, managerFilter, branchFilter, groupFilter, page], () => {
+    toQuery(filters, page);
+    void loadPage();
+});
 watch([search, statusFilter, managerFilter, branchFilter, groupFilter], () => {
     page.value = 1;
 });

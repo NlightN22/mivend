@@ -111,6 +111,30 @@ async function createDraftOrderLine(token, customerId, variantId) {
     return { orderId, orderLineId: lines[lines.length - 1].id };
 }
 
+// Per-request-type idempotency: fetch existing requests' justification text (part of the JSON
+// payload) and skip creating any scenario whose justification already exists. No dedicated dedup
+// key on ApprovalRequest — the justification string doubles as one, since each seed scenario below
+// uses a unique, descriptive justification by design.
+async function existingJustifications(token, requestType) {
+    const res = await gql(
+        `query($requestType: String!, $options: ApprovalListOptions) {
+            approvalRequestsByType(requestType: $requestType, options: $options) { items { payload } }
+        }`,
+        { requestType, options: { take: 200 } },
+        token,
+    );
+    const set = new Set();
+    for (const item of res.data.approvalRequestsByType.items) {
+        try {
+            const justification = JSON.parse(item.payload).justification;
+            if (justification) set.add(justification);
+        } catch {
+            // malformed payload — ignore, treat as not-seeded
+        }
+    }
+    return set;
+}
+
 async function main() {
     console.log('\n── Seeding manager-portal approval requests ──\n');
 
@@ -149,8 +173,12 @@ async function main() {
         undefined,
         directorToken,
     );
-    const counterparty = counterpartiesRes.data.counterparties.items.find(c => c.erpId === 'cnt-001');
-    if (!counterparty) throw new Error('Seeded counterparty cnt-001 not found — run `make seed` first.');
+    const counterpartyByErpId = new Map(
+        counterpartiesRes.data.counterparties.items.map(c => [c.erpId, c.id]),
+    );
+    if (!counterpartyByErpId.has('cnt-001')) {
+        throw new Error('Seeded counterparty cnt-001 not found — run `make seed` first.');
+    }
 
     const variantsRes = await gql(
         `{ productVariants(options: { take: 1 }) { items { id sku } } }`,
@@ -163,48 +191,73 @@ async function main() {
     const validFrom = new Date().toISOString();
     const validTo = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    // --- discountGrantApproval: one approved, one rejected, one left pending ---
-    async function requestDiscountGrant(percent, justification) {
+    // --- discountGrantApproval: varied counterparties, percentages, decisions ---
+    // cnt-001 gets several *approved* grants with different facet scope and validTo distance —
+    // each approved request materializes into a real DiscountGrant, which is what
+    // CustomerDetailPage's Discounts tab (discountGrantsForCounterparty) actually lists, so
+    // "5 approved grants for cnt-001" is what makes that tab show 5 rows, not just 5 requests.
+    const discountGrantScenarios = [
+        { counterpartyErpId: 'cnt-001', percent: 15, justification: 'Loyal customer, consistent volume for 2 years', decision: 'approved' },
+        { counterpartyErpId: 'cnt-001', percent: 12, facetCode: 'brand', facetValueCode: 'castrol', validToDays: 10, justification: 'Castrol volume tier renewal, expiring soon for visibility', decision: 'approved' },
+        { counterpartyErpId: 'cnt-001', percent: 18, facetCode: 'brand', facetValueCode: 'brembo', validToDays: -5, justification: 'Brembo campaign discount from last quarter, now expired', decision: 'approved' },
+        { counterpartyErpId: 'cnt-001', percent: 8, facetCode: 'brand', facetValueCode: 'ngk', validToDays: 180, justification: 'NGK long-term partnership discount', decision: 'approved' },
+        { counterpartyErpId: 'cnt-001', percent: 20, validToDays: 45, justification: 'Renewal of the prior all-products discount at a higher tier', decision: 'approved' },
+        { counterpartyErpId: 'cnt-001', percent: 40, justification: 'Customer is threatening to switch to a competitor', decision: 'rejected', comment: 'Margin impact too high for this price type' },
+        { counterpartyErpId: 'cnt-001', percent: 10, justification: 'New volume tier, first order over 500kg', decision: null },
+        { counterpartyErpId: 'cnt-002', percent: 12, justification: 'Retail partner requesting matching regional discount', decision: 'approved' },
+        { counterpartyErpId: 'cnt-003', percent: 8, justification: 'First bulk order from a new garage chain', decision: null },
+        { counterpartyErpId: 'cnt-004', percent: 20, justification: 'Annual contract renewal with volume commitment', decision: 'approved' },
+        { counterpartyErpId: 'cnt-005', percent: 25, justification: 'One-off clearance deal for slow-moving stock', decision: 'rejected', comment: 'Percent exceeds category margin floor' },
+        { counterpartyErpId: 'cnt-006', percent: 10, justification: 'Seasonal promotion for winter tyre-related parts', decision: null },
+        { counterpartyErpId: 'cnt-007', percent: 15, justification: 'Referral bonus for bringing in a new counterparty', decision: 'approved' },
+        { counterpartyErpId: 'cnt-008', percent: 18, justification: 'Compensation for a delayed prior shipment', decision: null },
+    ];
+    const existingGrantJustifications = await existingJustifications(directorToken, 'discountGrantApproval');
+    for (const s of discountGrantScenarios) {
+        if (existingGrantJustifications.has(s.justification)) continue;
+        const scenarioValidTo = s.validToDays != null
+            ? new Date(Date.now() + s.validToDays * 24 * 60 * 60 * 1000).toISOString()
+            : validTo;
         const res = await gql(
             `mutation($input: DiscountGrantInput!) { requestDiscountGrant(input: $input) { id } }`,
             {
                 input: {
                     priceTypeCode: 'WHOLESALE',
-                    percent,
+                    percent: s.percent,
+                    facetCode: s.facetCode ?? null,
+                    facetValueCode: s.facetValueCode ?? null,
                     validFrom,
-                    validTo,
-                    justification,
-                    counterpartyIds: [counterparty.id],
+                    validTo: scenarioValidTo,
+                    justification: s.justification,
+                    counterpartyIds: [counterpartyByErpId.get(s.counterpartyErpId)],
                 },
             },
             managerToken,
         );
-        return res.data.requestDiscountGrant.id;
+        const requestId = res.data.requestDiscountGrant.id;
+        if (s.decision) {
+            await gql(
+                `mutation($requestId: ID!, $decision: String!, $comment: String) { decideDiscountGrantRequest(requestId: $requestId, decision: $decision, comment: $comment) { id } }`,
+                { requestId, decision: s.decision, comment: s.comment ?? null },
+                deptHeadToken,
+            );
+        }
+        console.log(`✔ discountGrantApproval: ${s.decision ?? 'pending'} (${s.counterpartyErpId})`);
     }
-    const grantApproved = await requestDiscountGrant(15, 'Loyal customer, consistent volume for 2 years');
-    await gql(
-        `mutation($requestId: ID!) { decideDiscountGrantRequest(requestId: $requestId, decision: "approved") { id } }`,
-        { requestId: grantApproved },
-        deptHeadToken,
-    );
-    console.log('✔ discountGrantApproval: 1 approved');
 
-    const grantRejected = await requestDiscountGrant(40, 'Customer is threatening to switch to a competitor');
-    await gql(
-        `mutation($requestId: ID!) { decideDiscountGrantRequest(requestId: $requestId, decision: "rejected", comment: "Margin impact too high for this price type") { id } }`,
-        { requestId: grantRejected },
-        deptHeadToken,
-    );
-    console.log('✔ discountGrantApproval: 1 rejected');
-
-    await requestDiscountGrant(10, 'New volume tier, first order over 500kg');
-    console.log('✔ discountGrantApproval: 1 pending');
-
-    // --- priceAdjustmentApproval: one approved, one left pending ---
+    // --- priceAdjustmentApproval: varied justifications, real draft orders ---
     // No FLOOR price type is seeded by `make seed`, so PriceAdjustmentGateService's
     // "no floor configured -> requires-approval" conservative default means every adjustment
     // below always goes through the approval workflow, regardless of the requested price.
-    async function requestPriceAdjustment(justification) {
+    const priceAdjustmentScenarios = [
+        { justification: 'Competitor is offering this SKU at a lower price locally', decision: 'approved' },
+        { justification: 'One-off deal to close a large order this week', decision: null },
+        { justification: 'Bulk purchase, requesting a per-unit discount', decision: 'approved' },
+        { justification: 'Matching a price quoted by the customer from another supplier', decision: null },
+    ];
+    const existingAdjustmentJustifications = await existingJustifications(directorToken, 'priceAdjustmentApproval');
+    for (const s of priceAdjustmentScenarios) {
+        if (existingAdjustmentJustifications.has(s.justification)) continue;
         const { orderId, orderLineId } = await createDraftOrderLine(directorToken, customer.id, variant.id);
         const res = await gql(
             `mutation($orderId: ID!, $orderLineId: ID!, $requestedPrice: Int!, $justification: String) {
@@ -212,58 +265,73 @@ async function main() {
                     approvalRequestId
                 }
             }`,
-            { orderId, orderLineId, requestedPrice: 100, justification },
+            { orderId, orderLineId, requestedPrice: 100, justification: s.justification },
             managerToken,
         );
-        return res.data.requestPriceAdjustment.approvalRequestId;
+        const requestId = res.data.requestPriceAdjustment.approvalRequestId;
+        if (s.decision) {
+            await gql(
+                `mutation($requestId: ID!) { decidePriceAdjustmentRequest(requestId: $requestId, decision: "approved") { id } }`,
+                { requestId },
+                deptHeadToken,
+            );
+        }
+        console.log(`✔ priceAdjustmentApproval: ${s.decision ?? 'pending'}`);
     }
-    const adjustmentApproved = await requestPriceAdjustment('Competitor is offering this SKU at a lower price locally');
-    await gql(
-        `mutation($requestId: ID!) { decidePriceAdjustmentRequest(requestId: $requestId, decision: "approved") { id } }`,
-        { requestId: adjustmentApproved },
-        deptHeadToken,
-    );
-    console.log('✔ priceAdjustmentApproval: 1 approved');
 
-    await requestPriceAdjustment('One-off deal to close a large order this week');
-    console.log('✔ priceAdjustmentApproval: 1 pending');
+    // --- creditTermApproval (within limit): varied counterparties/days/decisions ---
+    const creditTermScenarios = [
+        { counterpartyErpId: 'cnt-001', days: 7, justification: 'Temporary cash-flow gap, resolves next quarter', decision: 'approved' },
+        { counterpartyErpId: 'cnt-002', days: 5, justification: 'Short delay while awaiting a bank transfer', decision: 'approved' },
+        { counterpartyErpId: 'cnt-003', days: 10, justification: 'Extension requested during a busy seasonal period', decision: null },
+        { counterpartyErpId: 'cnt-004', days: 3, justification: 'Minor delay due to accounting reconciliation', decision: 'approved' },
+        { counterpartyErpId: 'cnt-005', days: 12, justification: 'Extension tied to an unusually large seasonal order', decision: null },
+        { counterpartyErpId: 'cnt-006', days: 14, justification: 'Maximum within-limit extension for a long-term partner', decision: 'rejected', comment: 'Existing balance already elevated' },
+    ];
+    const existingCreditTermJustifications = await existingJustifications(directorToken, 'creditTermApproval');
+    for (const s of creditTermScenarios) {
+        if (existingCreditTermJustifications.has(s.justification)) continue;
+        const res = await gql(
+            `mutation($input: CreditTermRequestInput!) { requestCreditTermExtension(input: $input) { id requestType } }`,
+            { input: { counterpartyErpId: s.counterpartyErpId, requestedExtraDays: s.days, justification: s.justification } },
+            managerToken,
+        );
+        if (s.decision) {
+            await gql(
+                `mutation($requestId: ID!, $decision: String!, $comment: String) { decideCreditTermRequest(requestId: $requestId, decision: $decision, comment: $comment) { id } }`,
+                { requestId: res.data.requestCreditTermExtension.id, decision: s.decision, comment: s.comment ?? null },
+                deptHeadToken,
+            );
+        }
+        console.log(`✔ creditTermApproval (within limit): ${s.decision ?? 'pending'} (${s.counterpartyErpId})`);
+    }
 
-    // --- creditTermApproval (within limit) + creditTermApprovalEscalated (exceeds limit) ---
-    const withinLimit = await gql(
-        `mutation($input: CreditTermRequestInput!) { requestCreditTermExtension(input: $input) { id requestType } }`,
-        { input: { counterpartyErpId: 'cnt-001', requestedExtraDays: 7, justification: 'Temporary cash-flow gap, resolves next quarter' } },
-        managerToken,
-    );
-    await gql(
-        `mutation($requestId: ID!) { decideCreditTermRequest(requestId: $requestId, decision: "approved") { id } }`,
-        { requestId: withinLimit.data.requestCreditTermExtension.id },
-        deptHeadToken,
-    );
-    console.log('✔ creditTermApproval (within limit): 1 approved');
-
-    const escalatedInProgress = await gql(
-        `mutation($input: CreditTermRequestInput!) { requestCreditTermExtension(input: $input) { id requestType } }`,
-        { input: { counterpartyErpId: 'cnt-001', requestedExtraDays: 30, justification: 'Customer requests extended terms for a seasonal restock order' } },
-        managerToken,
-    );
-    await gql(
-        `mutation($requestId: ID!) { decideCreditTermRequest(requestId: $requestId, decision: "approved") { id } }`,
-        { requestId: escalatedInProgress.data.requestCreditTermExtension.id },
-        securityToken,
-    );
-    console.log('✔ creditTermApprovalEscalated: step 1 approved, awaiting general-director (step 2 pending)');
-
-    const escalatedRejected = await gql(
-        `mutation($input: CreditTermRequestInput!) { requestCreditTermExtension(input: $input) { id requestType } }`,
-        { input: { counterpartyErpId: 'cnt-001', requestedExtraDays: 45, justification: 'Customer wants to defer payment for a bulk seasonal order' } },
-        managerToken,
-    );
-    await gql(
-        `mutation($requestId: ID!) { decideCreditTermRequest(requestId: $requestId, decision: "rejected", comment: "Existing balance already near the credit limit") { id } }`,
-        { requestId: escalatedRejected.data.requestCreditTermExtension.id },
-        securityToken,
-    );
-    console.log('✔ creditTermApprovalEscalated: rejected at step 1');
+    // --- creditTermApprovalEscalated (exceeds limit): varied counterparties/days/decisions ---
+    const escalatedScenarios = [
+        { counterpartyErpId: 'cnt-001', days: 30, justification: 'Customer requests extended terms for a seasonal restock order', decision: 'approved' },
+        { counterpartyErpId: 'cnt-002', days: 45, justification: 'Customer wants to defer payment for a bulk seasonal order', decision: 'rejected', comment: 'Existing balance already near the credit limit' },
+        { counterpartyErpId: 'cnt-007', days: 21, justification: 'Extension requested to bridge a large infrastructure project', decision: null },
+        { counterpartyErpId: 'cnt-008', days: 60, justification: 'Long-term extension tied to a multi-month supply contract', decision: 'approved' },
+        { counterpartyErpId: 'cnt-009', days: 25, justification: 'Extension requested pending resolution of a billing dispute', decision: null },
+        { counterpartyErpId: 'cnt-010', days: 35, justification: 'Extension requested during a temporary cash-flow shortfall', decision: 'rejected', comment: 'Counterparty already past a prior extension' },
+    ];
+    const existingEscalatedJustifications = await existingJustifications(directorToken, 'creditTermApprovalEscalated');
+    for (const s of escalatedScenarios) {
+        if (existingEscalatedJustifications.has(s.justification)) continue;
+        const res = await gql(
+            `mutation($input: CreditTermRequestInput!) { requestCreditTermExtension(input: $input) { id requestType } }`,
+            { input: { counterpartyErpId: s.counterpartyErpId, requestedExtraDays: s.days, justification: s.justification } },
+            managerToken,
+        );
+        if (s.decision) {
+            await gql(
+                `mutation($requestId: ID!, $decision: String!, $comment: String) { decideCreditTermRequest(requestId: $requestId, decision: $decision, comment: $comment) { id } }`,
+                { requestId: res.data.requestCreditTermExtension.id, decision: s.decision, comment: s.comment ?? null },
+                securityToken,
+            );
+        }
+        console.log(`✔ creditTermApprovalEscalated: ${s.decision ?? 'pending step 1'} (${s.counterpartyErpId})`);
+    }
 
     console.log('\nDone.\n');
 }

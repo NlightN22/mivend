@@ -48,6 +48,7 @@ const columns = computed<Column<TableRow>[]>(() => [
         title: 'Company name',
         dataKey: 'name',
         width: 220,
+        mobile: { primary: true },
         cellRenderer: ({ rowData }) => {
             const row = rowData as TableRow;
             return h('div', { class: 'customers-table__company-cell' }, [
@@ -106,6 +107,7 @@ const columns = computed<Column<TableRow>[]>(() => [
         title: 'Status',
         dataKey: 'status',
         width: 110,
+        mobile: { badge: true },
         cellRenderer: ({ cellData }) =>
             h(MvStatusBadge, { variant: cellData ? 'success' : 'neutral' }, () => (cellData ? 'Active' : 'Inactive')),
     },

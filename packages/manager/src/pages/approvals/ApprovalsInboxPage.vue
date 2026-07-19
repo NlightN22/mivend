@@ -138,7 +138,7 @@ onMounted(load);
             />
 
             <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
-            <ApprovalsTable :rows="rows" :page-size="PAGE_SIZE" />
+            <ApprovalsTable :rows="rows" :page-size="PAGE_SIZE" :loading="loading" />
             <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
         </MvPanel>
     </div>

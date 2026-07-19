@@ -10,7 +10,8 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
         e2e e2e-ui e2e-report \
         docker-build docker-push \
         prod-up prod-down \
-        dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals seed-payment-refunds seed-all \
+        dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals seed-payment-refunds \
+        seed-customer-detail seed-all \
         verify-branch-scope \
         storybook storybook-ui-kit storybook-manager storybook-storefront storybook-down \
         storefront storefront-dev
@@ -90,11 +91,20 @@ seed-payment-refunds:
 	@echo "Server ready. Seeding payment refunds/disputes..."
 	node infrastructure/scripts/seed-payment-refunds.mjs
 
+# Tops up Orders/Invoices/Documents/History on the demo customer's detail page (AutoService
+# Nord / cnt-001) past each tab's page size, so pagination is exercisable in dev/manual QA.
+# Idempotent — safe to re-run, only creates the difference up to its target count.
+seed-customer-detail:
+	@echo "Waiting for server on :3000..."
+	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
+	@echo "Server ready. Topping up customer-detail tabs..."
+	node infrastructure/scripts/seed-customer-detail.mjs
+
 # One command for the full local seeding order (roles → ERP data → approval requests — this
 # exact order matters, see seed-approvals' own comment above). This is what you want by default;
-# the three targets above stay separate only because occasionally you need to re-run just one
+# the targets above stay separate only because occasionally you need to re-run just one
 # (e.g. re-seeding ERP data without wiping roles/administrators).
-seed-all: seed-access-roles seed seed-approvals seed-payment-refunds
+seed-all: seed-access-roles seed seed-approvals seed-payment-refunds seed-customer-detail
 
 # E2E verification of branch-scope access control against an already-running, already-seeded
 # central instance (make dev + make seed-all first). Safe to run repeatedly — creates its own

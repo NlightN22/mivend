@@ -23,6 +23,8 @@ export const adminApiExtensions = gql`
     input DocumentListOptions {
         take: Int
         skip: Int
+        type: String
+        status: String
     }
 
     type OrganizationRequisites {

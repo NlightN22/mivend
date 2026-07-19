@@ -22,8 +22,7 @@ const counterpartyNames = ref<Map<string, string>>(new Map());
 const loading = ref(true);
 
 // Manager portal rule (AGENTS.md): every filtered/sorted/paginated view must be a shareable
-// URL — including counterpartyId, which arrives here from CustomerInvoicesTab's "View all"
-// link (see api/invoices.ts's InvoiceFilters shape).
+// URL — including counterpartyId (see api/invoices.ts's InvoiceFilters shape).
 const { fromQuery, toQuery } = useUrlSyncedState(DEFAULT_INVOICE_FILTERS);
 fromQuery(filters, page);
 

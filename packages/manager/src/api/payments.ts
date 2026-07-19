@@ -1,3 +1,4 @@
+import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 
 export interface PaymentListItem {
@@ -42,6 +43,23 @@ export const PAYMENT_STATUS_OPTIONS = [
     { value: 'chargeback', label: 'Chargeback' },
 ] as const;
 
+// Single source of truth for the PaymentAttempt status badge color (AGENTS.md ui-kit "single
+// source of truth" rule) — mirrors api/orders.ts's ORDER_STATE_BADGE_VARIANT. Real incident this
+// fixes: PaymentsTable.vue rendered every status badge with no variant at all (always the
+// default gray), found in the same table-consistency audit that flagged InvoicesTable.vue's
+// identical bug.
+export const PAYMENT_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
+    pending: 'warning',
+    authorized: 'info',
+    captured: 'success',
+    failed: 'danger',
+    canceled: 'neutral',
+    partiallyRefunded: 'warning',
+    refunded: 'neutral',
+    disputed: 'danger',
+    chargeback: 'danger',
+};
+
 export const PAYMENT_CHANNEL_OPTIONS = [
     { value: '', label: 'All sources' },
     { value: 'online-acquiring', label: 'Online' },
@@ -84,21 +102,4 @@ export async function fetchPaymentsPage(
         },
     );
     return result.visiblePayments;
-}
-
-export async function fetchPaymentsForCounterparty(
-    counterpartyId: string,
-    take = 20,
-): Promise<PaymentListItem[]> {
-    const result = await adminApi<{
-        visiblePayments: { items: PaymentListItem[] };
-    }>(
-        `query PaymentsForCounterparty($counterpartyId: ID!, $take: Int!) {
-            visiblePayments(options: { take: $take }, counterpartyId: $counterpartyId) {
-                items { ${PAYMENT_ITEM_FIELDS} }
-            }
-        }`,
-        { counterpartyId, take },
-    );
-    return result.visiblePayments.items;
 }

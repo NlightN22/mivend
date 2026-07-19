@@ -2,8 +2,8 @@
 import { computed, h } from 'vue';
 import type { Column } from 'element-plus';
 import { MvTable, MvStatusBadge } from '@mivend/ui-kit';
-import type { TableRow } from '@mivend/ui-kit';
-import type { PaymentListItem } from '../../api/payments';
+import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
+import { PAYMENT_STATUS_BADGE_VARIANT, type PaymentListItem } from '../../api/payments';
 
 const props = defineProps<{
     payments: PaymentListItem[];
@@ -45,7 +45,14 @@ const columns = computed<Column<TableRow>[]>(() => {
             title: 'Status',
             dataKey: 'status',
             width: 140,
-            cellRenderer: ({ cellData }) => h(MvStatusBadge, {}, () => cellData as unknown as string),
+            cellRenderer: ({ rowData }) => {
+                const row = rowData as TableRow;
+                return h(
+                    MvStatusBadge,
+                    { variant: row.statusVariant as StatusBadgeVariant },
+                    () => row.status as string,
+                );
+            },
         },
         { key: 'amount', title: 'Amount', dataKey: 'amount', width: 140, align: 'right' },
         { key: 'invoice', title: 'Invoice', dataKey: 'invoice', width: 120 },
@@ -59,6 +66,7 @@ const rows = computed<TableRow[]>(() =>
         customer: customerName(payment),
         channel: CHANNEL_LABEL[payment.channel] ?? payment.channel,
         status: payment.paymentStatus,
+        statusVariant: PAYMENT_STATUS_BADGE_VARIANT[payment.paymentStatus] ?? 'neutral',
         amount: money(payment),
         invoice: payment.invoiceId ?? '—',
     })),
