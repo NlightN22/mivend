@@ -3,17 +3,18 @@ import { computed, onMounted, ref, watch, type Component } from 'vue';
 import { useRouter } from 'vue-router';
 import DataTable, { type DataTableFilterMeta } from 'primevue/datatable';
 import Column from 'primevue/column';
-import Select from 'primevue/select';
 import { Setting, Sort, SortUp, SortDown, Rank } from '@element-plus/icons-vue';
 import {
     MvStatusBadge,
     MvColumnToggle,
     MvActiveFilterChips,
+    MvColumnFilterStatus,
     useDataTableState,
     resolveColumnFilterComponent,
     DATE_RANGE_PRESETS,
     type StatusBadgeVariant,
     type ColumnFilterConfig,
+    type StatusFilterConfig,
     type AmountRangeFilterValue,
     type DateRangeFilterValue,
     type ActiveFilterChip,
@@ -195,11 +196,21 @@ const placedByOptions = computed(() => [
     { value: PLACED_BY_CUSTOMER_VALUE, label: 'Customer (self)' },
     ...props.managers.map(m => ({ value: m.id, label: m.name })),
 ]);
-const PAYMENT_VIEW_OPTIONS: { value: CustomerOrdersView | ''; label: string }[] = [
-    { value: 'unpaid', label: 'Unpaid' },
-    { value: 'partial', label: 'Partially paid' },
-    { value: 'cancelled', label: 'Cancelled' },
-];
+// Colors match how these same states already render elsewhere: the body cell's own payment
+// badge (Unpaid=neutral, Partially paid=warning — see CustomerOrdersTab.vue's
+// PAYMENT_BADGE_VARIANT) and Cancelled's order-state badge (danger — see
+// ORDER_STATE_BADGE_VARIANT in api/orders.ts). The plain native <select> this replaced showed
+// these as unstyled text, inconsistent with every other status-shaped filter (Commercial
+// state/Fulfillment/Reservation) which already use MvColumnFilterStatus's colored-badge list.
+const PAYMENT_FILTER_CONFIG: StatusFilterConfig = {
+    type: 'status',
+    placeholder: 'Search payment view…',
+    options: [
+        { value: 'unpaid', label: 'Unpaid', variant: 'neutral' },
+        { value: 'partial', label: 'Partially paid', variant: 'warning' },
+        { value: 'cancelled', label: 'Cancelled', variant: 'danger' },
+    ],
+};
 
 // Splices in the two bits of config that depend on live data (currency, manager list) rather than
 // static declaration — see ALL_COLUMNS' doc comments on the 'total'/'placedBy' entries above.
@@ -469,8 +480,9 @@ watch(
         paymentView.value = value === 'all' ? '' : value;
     },
 );
-function onPaymentViewChange(): void {
-    emit('update:payment-view', (paymentView.value || 'all') as CustomerOrdersView);
+function onPaymentViewChange(value: CustomerOrdersView | ''): void {
+    paymentView.value = value;
+    emit('update:payment-view', (value || 'all') as CustomerOrdersView);
     closeFilterOverlay();
 }
 
@@ -762,16 +774,15 @@ function onColumnReorder(event: { dragIndex: number; dropIndex: number }): void 
                 <template v-if="col.field === 'payment'" #body="{ data }">
                     <MvStatusBadge :variant="(data as TableRow).paymentVariant as StatusBadgeVariant">{{ (data as TableRow).payment }}</MvStatusBadge>
                 </template>
-                <!-- The one sanctioned `custom` filter — see ALL_COLUMNS' doc comment. -->
+                <!-- The one sanctioned `custom` filter — see ALL_COLUMNS' doc comment. Reuses the
+                     same colored-badge checklist every other status-shaped filter uses
+                     (MvColumnFilterStatus) instead of a plain unstyled native <select> — single-
+                     select here since the backend paymentView only ever takes one value. -->
                 <template v-if="col.field === 'payment'" #filter>
-                    <Select
-                        v-model="paymentView"
-                        :options="PAYMENT_VIEW_OPTIONS"
-                        option-label="label"
-                        option-value="value"
-                        placeholder="All payment views"
-                        show-clear
-                        @change="onPaymentViewChange"
+                    <MvColumnFilterStatus
+                        :config="PAYMENT_FILTER_CONFIG"
+                        :model-value="paymentView"
+                        @update:model-value="onPaymentViewChange($event as CustomerOrdersView | '')"
                     />
                 </template>
 
