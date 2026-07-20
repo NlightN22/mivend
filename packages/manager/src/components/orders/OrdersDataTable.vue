@@ -270,10 +270,19 @@ function onRowClick(event: { data: OrderRow }): void {
     router.push(`/orders/${event.data.code}`);
 }
 
+// See CustomerOrdersDataTable.vue's identical `tableRemountKey` doc comment: PrimeVue's own
+// resizableColumns implementation injects a `!important`-based <style> element into document.head
+// on every resize, which always wins over this table's own `:style="{ width: ... }"` binding and
+// is never cleared except by another resize or the DataTable unmounting. Resetting
+// tableState.columnWidths alone updates our own reactive binding but leaves that stylesheet's
+// override in place — bumping this key forces a full remount, which runs PrimeVue's cleanup too.
+const tableRemountKey = ref(0);
+
 function resetLayout(): void {
     resetTableState();
     tableState.value.sort = [{ field: 'date', order: -1 }];
     emit('update:sort', { orderPlacedAt: 'DESC' });
+    tableRemountKey.value++;
 }
 </script>
 
@@ -301,6 +310,7 @@ function resetLayout(): void {
         </Popover>
 
         <DataTable
+            :key="tableRemountKey"
             :value="rows"
             :loading="loading"
             data-key="code"

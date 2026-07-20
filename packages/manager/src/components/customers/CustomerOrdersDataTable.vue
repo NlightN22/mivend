@@ -524,12 +524,27 @@ function onColumnsReorder(order: string[]): void {
 // separate top-level toolbar button. Resets column order/width/visibility and sort, deliberately
 // NOT filters — filter state has its own separate reset (the "Clear filters" action in the
 // Active-filters chip row below), so one button no longer does two unrelated things at once.
+// Real bug found live: PrimeVue's resizableColumns implementation (see resizeTableCells() in its
+// own datatable source) applies a resized column's new width by injecting its OWN <style> element
+// into document.head, with `!important` width/max-width rules keyed by nth-child position —
+// entirely separate from, and always winning over, the plain `:style="{ width: ... }"` binding
+// this table's own Column uses. That stylesheet is only ever destroyed/recreated on the *next*
+// resize (or on the DataTable unmounting) — there's no public API to clear it directly. Resetting
+// our own tableState.columnWidths correctly updates our reactive binding, but PrimeVue's
+// `!important` override from the last resize stays in the DOM regardless, so the table visually
+// stayed at whatever width was last dragged even after a "successful" reset. Bumping the
+// DataTable's own `:key` forces a full unmount/remount, which runs PrimeVue's own cleanup
+// (destroying that stylesheet) and re-renders columns fresh from our now-reset widths — the only
+// reliable way to actually undo a resize's visual effect, not just its persisted value.
+const tableRemountKey = ref(0);
+
 function onColumnsReset(): void {
     tableState.value.hiddenColumns = [];
     tableState.value.columnOrder = ALL_COLUMNS.map(c => c.field);
     tableState.value.columnWidths = Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width]));
     tableState.value.sort = [{ field: 'date', order: -1 }];
     emit('update:sort', { orderPlacedAt: 'DESC' });
+    tableRemountKey.value++;
 }
 
 function resetFilters(): void {
@@ -671,6 +686,7 @@ function onColumnReorder(event: { dragIndex: number; dropIndex: number }): void 
         <MvActiveFilterChips :chips="activeFilterChips" @remove="onRemoveFilterChip" @clear-all="resetFilters" />
 
         <DataTable
+            :key="tableRemountKey"
             :value="rows"
             :loading="loading"
             data-key="code"
