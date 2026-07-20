@@ -9,6 +9,7 @@ import {
     MvColumnToggle,
     useColumnVisibility,
     useIsMobileViewport,
+    useLatestRequest,
     type ColumnVisibilityDef,
     type DateRangeFilterValue,
 } from '@mivend/ui-kit';
@@ -133,7 +134,6 @@ const totalMaxFilter = ref<number | undefined>(undefined);
 const totalItems = ref(0);
 const orders = ref<CustomerOrderItem[]>([]);
 const paymentSummaries = ref<Map<string, number>>(new Map());
-const loading = ref(true);
 
 // Segmented quick filters — each is a real, separately server-paginated query (see
 // fetchOrdersPageForCustomer in api/customers.ts), not a client-side filter over one loaded
@@ -175,9 +175,15 @@ function buildExtraFilters(): CustomerOrdersExtraFilters {
     };
 }
 
-async function load(): Promise<void> {
-    loading.value = true;
-    try {
+// useLatestRequest guards against an out-of-order network response overwriting fresher state —
+// see its own doc comment (@mivend/ui-kit) for the real incident this fixes (PrimeVue's paginator
+// doesn't disable itself mid-fetch, so a second page-change can start a new fetch before the
+// first one's response resolves; over real network latency, whichever response arrives *last*
+// wins by default, not whichever was requested last). The payment-summary lookup is folded into
+// the same fetcher (not a separate `await` after applying the order page) so it's covered by the
+// same guard as one atomic unit — a second, independent `await` outside the fetcher wouldn't be.
+const { loading, run: load } = useLatestRequest(
+    async () => {
         const result = await fetchOrdersPageForCustomer(
             props.customerId,
             page.value,
@@ -186,13 +192,15 @@ async function load(): Promise<void> {
             sort.value,
             buildExtraFilters(),
         );
+        const summaries = await fetchOrderPaymentSummaries(result.items.map(o => o.id));
+        return { result, summaries };
+    },
+    ({ result, summaries }) => {
         orders.value = result.items;
         totalItems.value = result.totalItems;
-        paymentSummaries.value = await fetchOrderPaymentSummaries(result.items.map(o => o.id));
-    } finally {
-        loading.value = false;
-    }
-}
+        paymentSummaries.value = summaries;
+    },
+);
 
 async function loadCounts(): Promise<void> {
     viewCounts.value = await fetchCustomerOrderViewCounts(props.customerId);
@@ -431,6 +439,7 @@ const rows = computed(() =>
         @update:page="handlePageChange"
         @update:page-size="handlePageSizeChange"
         @update:payment-view="activeView = $event"
+        @reset-page="page = 1"
     >
         <template #view-chips>
             <button

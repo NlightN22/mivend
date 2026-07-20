@@ -125,7 +125,7 @@ const ALL_COLUMNS = computed<ColumnDef[]>(() => {
 // Persisted per admin, per table — column order/width/visibility/sort/pageSize (AGENTS.md
 // "personal display preference, not business data" — same reasoning as useColumnVisibility,
 // just the richer PrimeVue-shaped version, see useDataTableState's own doc comment).
-const { state: tableState, reset: resetTableState } = useDataTableState(
+const { state: tableState, resetColumns: resetTableColumns } = useDataTableState(
     `orders-datatable:${props.administratorId || 'anonymous'}`,
     {
         columnOrder: ALL_COLUMNS.value.map(c => c.field),
@@ -135,6 +135,7 @@ const { state: tableState, reset: resetTableState } = useDataTableState(
         filters: {},
         pageSize: props.pageSize,
     },
+    { columns: ALL_COLUMNS.value, allowedFilterKeys: [], externallyOwned: { pageSize: true } },
 );
 
 // Reorder/resize/visibility all operate on this ordered, filtered view of ALL_COLUMNS — the
@@ -279,7 +280,7 @@ function onRowClick(event: { data: OrderRow }): void {
 const tableRemountKey = ref(0);
 
 function resetLayout(): void {
-    resetTableState();
+    resetTableColumns();
     tableState.value.sort = [{ field: 'date', order: -1 }];
     emit('update:sort', { createdAt: 'DESC' });
     tableRemountKey.value++;

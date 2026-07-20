@@ -32,6 +32,7 @@ export interface ColumnFilterStatusOption extends ColumnFilterOption {
 export interface TextFilterConfig {
     type: 'text';
     placeholder?: string;
+    debounceMs?: number;
 }
 export interface SelectFilterConfig {
     type: 'select';

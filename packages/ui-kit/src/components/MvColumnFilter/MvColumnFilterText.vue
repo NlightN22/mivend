@@ -27,7 +27,7 @@ watch(
     },
 );
 
-const debouncedEmit = useDebouncedCallback((value: string) => emit('update:modelValue', value));
+const debouncedEmit = useDebouncedCallback((value: string) => emit('update:modelValue', value), props.config.debounceMs);
 
 function onInput(e: Event): void {
     localValue.value = (e.target as HTMLInputElement).value;

@@ -137,6 +137,14 @@ export class InvoiceVisibilityService {
         if (options?.status) {
             qb.andWhere('invoice.status = :status', { status: options.status });
         }
+        if (options?.search) {
+            // Substring match against the invoice's own numeric id (cast to text) — see
+            // InvoiceListOptions.search's own doc comment (invoice.service.ts) for why this,
+            // not a real document-number field, is what "search invoices" means today.
+            qb.andWhere('CAST(invoice.id AS text) ILIKE :search', {
+                search: `%${options.search}%`,
+            });
+        }
         this.applyScope(qb, scope);
         return qb;
     }

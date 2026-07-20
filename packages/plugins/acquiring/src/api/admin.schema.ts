@@ -37,6 +37,8 @@ export const adminApiExtensions: DocumentNode = gql`
         take: Int
         skip: Int
         status: String
+        "Substring match against the invoice's own numeric id (cast to text) — see InvoiceListOptions's server-side doc comment (invoice.service.ts) for why this, not a real document-number field, is what search means today."
+        search: String
     }
 
     type PaymentInboxSweepResult {

@@ -15,8 +15,13 @@ export type {
     DataTableFilterKind,
 } from './components/MvTable/dataTableTypes';
 export { toColumnVisibilityDefs } from './components/MvTable/dataTableTypes';
-export { useDataTableState } from './composables/useDataTableState';
-export type { DataTableState, DataTableSortMeta } from './composables/useDataTableState';
+export { useDataTableState, normalizeDataTableState } from './composables/useDataTableState';
+export type {
+    DataTableState,
+    DataTableSortMeta,
+    DataTableColumnMeta,
+    UseDataTableStateOptions,
+} from './composables/useDataTableState';
 export { default as MvDataTableToolbar } from './components/MvDataTableToolbar/MvDataTableToolbar.vue';
 
 export { default as MvPageHeader } from './components/MvPageHeader/MvPageHeader.vue';
@@ -107,6 +112,13 @@ export { useColumnVisibility } from './composables/useColumnVisibility';
 export type { ColumnVisibilityDef } from './composables/useColumnVisibility';
 export { useIsMobileViewport } from './composables/useIsMobileViewport';
 export { useDebouncedCallback } from './composables/useDebouncedCallback';
+export { usePagedScrollHeight } from './composables/usePagedScrollHeight';
+export type { PagedScrollHeightOptions } from './composables/usePagedScrollHeight';
+export { useHorizontalScrollFade } from './composables/useHorizontalScrollFade';
+export type { HorizontalScrollFade } from './composables/useHorizontalScrollFade';
+export { useLatestRequest } from './composables/useLatestRequest';
+export type { UseLatestRequest } from './composables/useLatestRequest';
+export { default as MvScrollFadeOverlay } from './components/MvScrollFadeOverlay/MvScrollFadeOverlay.vue';
 
 export { default as MvDatePicker } from './components/MvDatePicker/MvDatePicker.vue';
 
@@ -130,9 +142,24 @@ export {
     resolveDateRangePreset,
 } from './components/MvColumnFilter/dateRangePresets';
 export { default as MvColumnFilterAmountRange } from './components/MvColumnFilter/MvColumnFilterAmountRange.vue';
+export {
+    closePrimeVueFilterOverlay,
+    interactionMode,
+    hasValue,
+    describeValue,
+} from './components/MvColumnFilter/columnFilterDispatch';
 
 export { default as MvActiveFilterChips } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
 export type { ActiveFilterChip } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
+
+// The standard desktop table for the manager portal (AGENTS.md) — see
+// MvAdvancedDataTable.vue's own doc comment for the full feature set and component boundary.
+export { default as MvAdvancedDataTable } from './components/MvAdvancedDataTable/MvAdvancedDataTable.vue';
+export type {
+    AdvancedDataTableColumn,
+    AdvancedDataTableSearchConfig,
+    AdvancedDataTableRowClickPayload,
+} from './components/MvAdvancedDataTable/advancedDataTableTypes';
 
 export { default as MvMultiSelect } from './components/MvMultiSelect/MvMultiSelect.vue';
 

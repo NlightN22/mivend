@@ -18,11 +18,16 @@ export interface InvoiceFilters {
     [key: string]: string;
     status: string;
     counterpartyId: string;
+    // Substring match against the invoice's own numeric id — see InvoiceListOptions.search's
+    // doc comment (plugin-acquiring) for why this, not a real document-number field, is what
+    // "search invoices" means today.
+    search: string;
 }
 
 export const DEFAULT_INVOICE_FILTERS: InvoiceFilters = {
     status: '',
     counterpartyId: '',
+    search: '',
 };
 
 // Invoice.status is a fixed internal state machine (plugin-acquiring's InvoiceStatus), not
@@ -76,6 +81,7 @@ export async function fetchInvoicesPage(
                 skip: (page - 1) * pageSize,
                 take: pageSize,
                 status: filters.status || undefined,
+                search: filters.search || undefined,
             },
             counterpartyId: filters.counterpartyId || undefined,
         },

@@ -22,6 +22,10 @@ export interface InvoiceListOptions {
     take?: number;
     skip?: number;
     status?: string;
+    // Substring match against the invoice's own numeric id (cast to text) — Invoice has no
+    // dedicated document-number field yet (just Vendure's auto-increment id, shown to managers
+    // as "Invoice #"), so this is the closest real search-by-identifier this list can offer today.
+    search?: string;
 }
 
 // Splits one aggregate storefront Order into one Invoice per organization it touches — decided
@@ -163,6 +167,11 @@ export class InvoiceService {
 
         if (options?.status) {
             qb.andWhere('invoice.status = :status', { status: options.status });
+        }
+        if (options?.search) {
+            qb.andWhere('CAST(invoice.id AS text) ILIKE :search', {
+                search: `%${options.search}%`,
+            });
         }
 
         const [items, totalItems] = await qb.getManyAndCount();

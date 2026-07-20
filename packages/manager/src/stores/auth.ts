@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { clearPersonalUiState } from '../composables/clearPersonalUiState';
 import { adminApi } from '../api/client';
 
 interface AdministratorRole {
@@ -138,6 +139,12 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (e) {
             console.warn('[auth] logout mutation failed:', e);
         }
+        // Clears this administrator's own persisted table/column UI state (order/width/
+        // visibility/sort/pageSize/filters) — never lets a stale preference from an earlier
+        // session silently resurface next time they (or someone else, on a shared machine) log
+        // in. Scoped to this one administrator's keys only (see clearPersonalUiState's own doc
+        // comment) — must run before clearing `administrator.value` below, since it needs the id.
+        if (administrator.value) clearPersonalUiState(administrator.value.id);
         generation++;
         stopBackgroundRetry();
         administrator.value = null;

@@ -572,6 +572,37 @@ See `docs/frontend.md` for the full architecture. Critical rules:
    (fixed enum of tabs vs. a dynamic list like departments), so a bespoke component would still
    be premature.
 
+3. **A list page's toolbar search box defaults to searching only that list's own non-hideable
+   identifying column** (e.g. `Order #`/`code` for orders, an invoice number, a payment
+   reference) — never silently promise cross-column search the backend doesn't do. Concretely:
+   that column is declared `required: true` in the table's own column config (never hideable via
+   the column-toggle), and the search input is wired to that one column only. Real, full
+   multi-column search (matching against status/state/payment/etc., not just the identifier) is
+   a deliberate per-table opt-in — each list's own DB columns and enum/label mapping need their
+   own backend query change (an `OR` across real columns, pushed into SQL per the pagination rule
+   above — never "fetch everything, filter client-side") — and is out of scope until requested
+   for that specific list. See `CustomerOrdersDataTable.vue`'s `CODE_COLUMN` for the reference
+   shape.
+
+4. **Any reactive-params-driven fetch (page/filter/sort change → refetch) must guard against an
+   out-of-order response overwriting fresher state — use `useLatestRequest` (`@mivend/ui-kit`),
+   never a bare `async function load() { ... }` with no ordering guard.** Real incident: neither
+   `CustomerOrdersTab.vue` nor `CustomerInvoicesTab.vue` had this originally — PrimeVue's paginator
+   doesn't disable itself while a page fetch is in flight, so a second page-change click (or just
+   real network latency through a VPN/proxy, which a local `localhost` dev loopback never
+   surfaces) can start a second fetch before the first one's response resolves; whichever response
+   arrives _last_ wins by default, not whichever was requested last, so a user could see "page 2"
+   showing page 3's rows with page 3 itself empty. `useLatestRequest(fetcher, onResult)` returns
+   `{ loading, run }`: `run()` is what a `watch([...deps], () => void run())` should call, and only
+   the _latest_ call's result is ever applied — a stale response is silently discarded, not
+   applied. If a fetch needs a second `await` afterward (e.g. Orders' per-page payment-summary
+   lookup), fold it into the same `fetcher` function as one atomic unit — a second, independent
+   `await` performed outside `fetcher` (e.g. inside `onResult`) is not covered by the guard.
+   This is a "latest-wins" guard, not true cancellation — it doesn't abort the stale network
+   request itself (this project's `adminApi` client has no `AbortSignal` support to cancel
+   through yet); adding that would be the more complete fix if wasted stale requests become a
+   real cost, not just a correctness bug.
+
 ---
 
 ## Vendure-specific gotchas
