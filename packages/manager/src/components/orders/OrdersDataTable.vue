@@ -224,6 +224,29 @@ function sortIconFor(col: ColumnDef): Component {
     return active.order === 1 ? SortUp : SortDown;
 }
 
+// PrimeVue's own header mousedown handler (bound directly on each sortable/reorderable `th`) arms
+// a native HTML5 column-drag on ANY mousedown there that isn't an <input>/<textarea>/the resize
+// handle — nothing in that check knows about our own custom sort button or reorder handle, so
+// without this, dragging the title, the sort button, or genuinely empty header space all start a
+// column drag too (confirmed live — an earlier version tried covering the "empty space" case with
+// a flex-growing spacer element instead, but that visually dragged the sort/reorder icons away
+// from the title as the column got wider, which looked broken in its own way).
+// This delegated listener is registered on the wrapper (bubble phase, ordinary Vue template
+// binding — not `.capture`), so by DOM bubble order it always runs *after* the `th`'s own
+// mousedown listener already ran and set `draggable`. That means this only has to *correct*
+// `draggable` back to `false` when the real mousedown target isn't inside the reorder handle —
+// robust regardless of column reorders/rebuilds, since it's one listener on a stable ancestor, not
+// something reattached per header cell.
+function onHeaderMousedown(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const th = target.closest('th');
+    if (!th) return;
+    const isHandle = !!target.closest('.orders-data-table__reorder-handle');
+    if (!isHandle) {
+        (th as HTMLElement).draggable = false;
+    }
+}
+
 const filters = ref<DataTableFilterMeta>({ state: { value: props.stateFilter || null, matchMode: 'equals' } });
 watch(
     () => props.stateFilter,
@@ -255,7 +278,7 @@ function resetLayout(): void {
 </script>
 
 <template>
-    <div class="orders-data-table">
+    <div class="orders-data-table" @mousedown="onHeaderMousedown">
         <div class="orders-data-table__toolbar">
             <MvButton size="sm" variant="ghost" @click="toggleColumnsPopover">
                 <Grid class="orders-data-table__btn-icon" />
@@ -304,18 +327,16 @@ function resetLayout(): void {
                 :style="{ width: col.width + 'px' }"
             >
                 <template #header>
-                    <span class="orders-data-table__col-title" @mousedown.stop>{{ col.header }}</span>
+                    <span class="orders-data-table__col-title">{{ col.header }}</span>
                     <button
                         v-if="col.sortField"
                         type="button"
                         class="orders-data-table__sort-btn"
                         :class="{ 'orders-data-table__sort-btn--active': tableState.sort[0]?.field === col.field }"
-                        @mousedown.stop
                         @click.stop="toggleSort(col)"
                     >
                         <component :is="sortIconFor(col)" class="orders-data-table__sort-icon" />
                     </button>
-                    <span class="orders-data-table__col-spacer" @mousedown.stop />
                     <span class="orders-data-table__reorder-handle" title="Drag to reorder column">
                         <Rank class="orders-data-table__reorder-icon" />
                     </span>
@@ -402,22 +423,9 @@ function resetLayout(): void {
     height: 16px;
 }
 
-/* Fills the leftover header width between the title/sort control and the reorder handle —
-   without this, that gap is bare `th` background, and PrimeVue arms column-drag on ANY mousedown
-   there (see the reorder-handle comment below). `@mousedown.stop` on this element (and on the
-   title/sort button above) is what keeps that arming from firing outside the handle. */
-.orders-data-table__col-spacer {
-    flex: 1 1 auto;
-}
-
-/* PrimeVue's `reorderableColumns` arms a column drag on *any* mousedown in the header that isn't
-   on an <input>/<textarea>/the resize handle (see @primeuix's onColumnHeaderMouseDown) — so
-   without this, dragging the column title or empty header space around reorders columns, easy to
-   trigger by accident. Real fix: stop that mousedown from ever reaching the `th` for every other
-   interactive/empty part of the header (title, sort button, spacer above — all `@mousedown.stop`)
-   and leave *only* this handle's own mousedown un-stopped, so it's the sole way to start a drag.
-   Deliberately not `@mousedown.stop` here — that would disable dragging entirely, defeating the
-   point. */
+/* See onHeaderMousedown()'s doc comment for why dragging is restricted to this handle without
+   a flex-growing spacer (an earlier version used one, and it visually dragged this icon away from
+   the title as the column got wider). */
 .orders-data-table__reorder-handle {
     display: inline-flex;
     align-items: center;
