@@ -124,6 +124,43 @@ export default [
             ],
         },
     },
+    // AGENTS.md sync rules #5/#6: "plugin-sync owns RabbitMQ and the ERP adapter — nothing else
+    // touches them" / "Branches never call the ERP." Other plugins publish/subscribe via
+    // Vendure's EventBus instead. Enforced here rather than left to review, since an accidental
+    // `import * as amqplib from 'amqplib'` or a direct ErpAdapter import elsewhere would compile
+    // and run fine — nothing else would catch the boundary violation.
+    {
+        files: ['packages/plugins/**/*.ts', 'apps/server/**/*.ts'],
+        ignores: ['packages/plugins/sync/**', '**/*.test.ts', '**/__tests__/**'],
+        languageOptions: { parser: tsParser },
+        plugins: { '@typescript-eslint': tsPlugin },
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: 'amqplib',
+                            message:
+                                'RabbitMQ is owned exclusively by plugin-sync (AGENTS.md sync rule #5). Publish/subscribe via Vendure EventBus instead.',
+                        },
+                        {
+                            name: 'amqp-connection-manager',
+                            message:
+                                'RabbitMQ is owned exclusively by plugin-sync (AGENTS.md sync rule #5). Publish/subscribe via Vendure EventBus instead.',
+                        },
+                    ],
+                    patterns: [
+                        {
+                            group: ['**/erp-adapter.interface', '**/erp-adapter.stub', '@mivend/plugin-sync/**/erp-adapter*'],
+                            message:
+                                'The ERP adapter is owned exclusively by plugin-sync (AGENTS.md sync rule #6 — branches never call the ERP). Only plugin-sync may import it.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
     // All storefront GraphQL operations must go through codegen (packages/storefront/codegen.ts)
     // — a hand-written query/mutation string is invisible to the schema and can't be typed.
     // See AGENTS.md's storefront rule and docs/frontend.md.

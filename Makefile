@@ -6,8 +6,8 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
 
 .PHONY: up down logs ps restart \
         build lint fmt \
-        test test-int test-e2e \
-        e2e e2e-ui e2e-report \
+        test test-int test-e2e mutation-pilot \
+        e2e e2e-smoke e2e-ui e2e-report \
         docker-build docker-push \
         prod-up prod-down \
         dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals seed-payment-refunds \
@@ -174,6 +174,11 @@ test:
 test-int: up
 	pnpm --filter "{packages/**}" --no-bail test:integration
 
+# Mutation testing pilot (docs/testing-strategy.md "Mutation testing") — ad hoc only, not part
+# of CI or `make test`. Scoped in stryker.config.mjs to one small module at a time.
+mutation-pilot:
+	pnpm mutation:pilot
+
 # ── Docker app images ──────────────────────────────────────────────────────────
 
 docker-build:
@@ -199,6 +204,11 @@ prod-down:
 
 e2e test-e2e:
 	pnpm --filter @mivend/e2e test
+
+# Minimal critical-route subset (login, order creation) — see docs/testing-strategy.md's
+# "E2E strategy". Requires the same `make dev` + `make seed` stack as `make e2e`.
+e2e-smoke:
+	pnpm --filter @mivend/e2e test:smoke
 
 e2e-ui:
 	pnpm --filter @mivend/e2e test:ui

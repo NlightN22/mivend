@@ -37,7 +37,7 @@ async function latestOrderState(page: Page): Promise<string | undefined> {
 // placed orders". These tests click the real checkout/payment-stub buttons (not gql())
 // so they exercise the exact code path that was broken.
 test.describe('Checkout places a real order (regression)', () => {
-    test('deferred payment moves the order out of AddingItems and it appears in /orders', async ({
+    test('deferred payment moves the order out of AddingItems and it appears in /orders @smoke', async ({
         page,
     }) => {
         await clearCart(page);

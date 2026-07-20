@@ -6,7 +6,7 @@ test.describe('Login page', () => {
         await page.goto('/login');
     });
 
-    test('successful login redirects to home', async ({ page }) => {
+    test('successful login redirects to home @smoke', async ({ page }) => {
         await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
         await page.locator('input[type="password"]').fill(E2E_CUSTOMER.password);
         await page.getByRole('button', { name: 'Войти' }).click();

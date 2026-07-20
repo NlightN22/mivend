@@ -30,8 +30,14 @@ Thumbs.db
 # GraphQL codegen output
 src/api/generated/
 
-# Claude Code local state
-.claude/
+# Claude Code local state — but NOT .claude/skills/ or the shared settings.json: skills are the
+# canonical, repo-wide procedure source (AGENTS.md's "Testing requirements" points every agent,
+# not just Claude Code, at .claude/skills/test-design/SKILL.md) and settings.json is checked-in
+# project config, not personal state. Only settings.local.json (personal overrides) and any
+# future genuinely local/generated Claude Code artifacts stay ignored.
+.claude/*
+!.claude/skills/
+!.claude/settings.json
 
 # Vendure instance-specific
 .vendure/
@@ -40,3 +46,7 @@ src/api/generated/
 packages/e2e/.auth/
 packages/e2e/playwright-report/
 packages/e2e/test-results/
+
+# StrykerJS mutation testing output (docs/testing-strategy.md "Mutation testing")
+reports/mutation/
+.stryker-tmp/

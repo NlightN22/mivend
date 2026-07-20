@@ -5,7 +5,7 @@ import { EventBus, RequestContextService } from '@vendure/core';
 import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
 import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
 import { ErpStatusUpdateDto } from './dto/erp-status-update.dto';
-import { ErpPaymentReportedDto } from './dto/erp-payment-reported.dto';
+import { ERP_PAYMENT_OUTCOMES, ErpPaymentReportedDto } from './dto/erp-payment-reported.dto';
 import { ErpPaymentReportedEvent } from './erp-payment.events';
 
 @ApiTags('ERP Callback')
@@ -61,6 +61,14 @@ export class ErpCallbackController {
         }
         if (!payload.organizationId) {
             throw new BadRequestException('organizationId is required');
+        }
+        if (!payload.invoiceId) {
+            throw new BadRequestException('invoiceId is required');
+        }
+        if (!ERP_PAYMENT_OUTCOMES.includes(payload.outcome)) {
+            throw new BadRequestException(
+                `outcome must be one of ${ERP_PAYMENT_OUTCOMES.join(', ')}, got "${String(payload.outcome)}"`,
+            );
         }
         const ctx = await this.requestContextService.create({ apiType: 'admin', req });
         this.eventBus.publish(

@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-const ERP_PAYMENT_OUTCOMES = ['success', 'pending', 'fail', 'cancel'] as const;
+// The full set of values plugin-acquiring's PayInvoiceOutcome accepts (see
+// packages/plugins/acquiring/src/payment-attempt.service.ts's OUTCOME_TO_PAYMENT_STATUS) —
+// duplicated here rather than imported since plugin-sync must not depend on plugin-acquiring
+// (rule #5/#6: sync owns the transport boundary, not the other way around). Exported so
+// ErpCallbackController can validate against it at runtime — this project has no global
+// class-validator ValidationPipe wired, so @ApiProperty's `enum` is Swagger documentation only,
+// not runtime enforcement, and an unrecognized value must be rejected explicitly, not passed
+// through to `OUTCOME_TO_PAYMENT_STATUS[outcome]` as `undefined`.
+export const ERP_PAYMENT_OUTCOMES = ['success', 'pending', 'fail', 'cancel'] as const;
 
 export class ErpPaymentReportedDto {
     @ApiProperty({ description: 'plugin-acquiring Invoice id this payment applies to.' })

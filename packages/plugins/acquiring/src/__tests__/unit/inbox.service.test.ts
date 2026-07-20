@@ -31,7 +31,6 @@ describe('InboxService', () => {
         return {
             findOne: vi.fn(),
             findOneOrFail: vi.fn(),
-            find: vi.fn(),
             create: vi.fn(input => input),
             save: vi.fn(async entity => entity),
             update: vi.fn(),
@@ -95,28 +94,13 @@ describe('InboxService', () => {
         });
     });
 
-    describe('claimBatch', () => {
-        it('claims pending rows oldest-first and marks them "processing"', async () => {
-            const rows = [makeEvent({ id: 1 }), makeEvent({ id: 2 })];
-            mockRepo.find.mockResolvedValue(rows);
-
-            const claimed = await service.claimBatch(mockCtx, 10);
-
-            expect(mockRepo.find).toHaveBeenCalledWith(
-                expect.objectContaining({ where: { status: 'pending' }, take: 10 }),
-            );
-            expect(claimed.every(row => row.status === 'processing')).toBe(true);
-            expect(mockRepo.save).toHaveBeenCalledWith(rows);
-        });
-
-        it('does not call save when there is nothing pending', async () => {
-            mockRepo.find.mockResolvedValue([]);
-
-            await service.claimBatch(mockCtx);
-
-            expect(mockRepo.save).not.toHaveBeenCalled();
-        });
-    });
+    // claimBatch itself (oldest-first ordering, marking 'processing', the atomic
+    // SELECT...FOR UPDATE SKIP LOCKED claim, and stuck-'processing' recovery) is deliberately
+    // NOT unit-tested here — it runs a real transaction/row-lock against rawConnection, and a
+    // mocked query builder would only prove the mock was called, not that the locking actually
+    // prevents a double-claim (see docs/testing-strategy.md: "a unit test does not prove
+    // ORM/SQL/transaction/locking behavior"). Covered for real in
+    // integration/payment-inbox-claim.int.test.ts.
 
     describe('markProcessed / markFailed', () => {
         it('markProcessed sets status "processed" with a processedAt timestamp', async () => {

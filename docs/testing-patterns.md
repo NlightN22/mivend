@@ -32,7 +32,12 @@ predicate logic; E2E only for the one "user sees only their branch" smoke case.
 **Common false positive**: asserting "N rows changed" without checking foreign-scope rows
 individually — a batch that touches the wrong scope but the same row count passes silently.
 
-**mivend example**: `counterparty.access-scope.test.ts` (`plugin-counterparty`).
+**mivend example**: `counterparty.access-scope.test.ts` (`plugin-counterparty`); `plugin-acquiring`'s
+`payment-inbox.int.test.ts` — "organization data isolation within a single sweep batch" processes
+two organizations' events in the same `claimBatch` batch (deliberately sharing an identical
+`externalReference` string, to prove isolation is by scope, not by coincidentally-unique values)
+and asserts each organization's own `PaymentAttempt`/`SettlementEntry` rows, not just a batch-wide
+row count.
 
 **Exceptions**: genuinely global lookups (e.g. system configuration) — document why scope doesn't
 apply, don't just omit the test.
@@ -56,8 +61,14 @@ error unless the domain requires one.
 
 **Common false positive**: only testing the happy-path single call, never actually calling twice.
 
-**mivend example**: `plugin-acquiring`'s `IdempotencyService`/`idempotency.service.test.ts`,
-`InboxService`/`inbox.service.test.ts`.
+**mivend example**: `plugin-acquiring`'s `IdempotencyService` — `idempotency.service.test.ts` for
+the mock-appropriate happy-path/failure scenarios, `integration/idempotency.int.test.ts` for real
+concurrent same-key calls against Postgres (`IdempotencyService.claim()` is an atomic
+INSERT-wins-the-unique-index + conditional UPDATE, not find-then-save, for exactly the reason
+this pattern doc calls out: a plain find-then-save has a TOCTOU window where two racing callers
+both see "no existing row" and both execute the command); `InboxService`/`inbox.service.test.ts`
+
+- `integration/payment-inbox-claim.int.test.ts` for the inbound-event-dedup level.
 
 **Exceptions**: none — every async/repeatable flow needs this per rule #12/13 in AGENTS.md.
 
@@ -84,7 +95,14 @@ prevents double-claim (real concurrent claim, not sequential).
 actual state machine transitions end to end.
 
 **mivend example**: `plugin-acquiring`'s `IncomingPaymentEvent` + `InboxService` +
-`PaymentInboxProcessorService` + `PaymentInboxWorker`, `payment-inbox.int.test.ts`.
+`PaymentInboxProcessorService` + `PaymentInboxWorker` — `payment-inbox.int.test.ts` for the
+accept→retry→dead-letter/redelivery chain, `payment-inbox-claim.int.test.ts` for real concurrent
+claim (two callers, one row each — `InboxService.claimBatch` is a real
+`SELECT ... FOR UPDATE SKIP LOCKED` transaction, not find-then-save; this used to be a genuine
+double-claim race, since the admin "run sweep now" mutation and the scheduled BullMQ sweep can
+call `claimBatch` at the same moment) and stuck-`processing` recovery (DB-side
+`now() - interval` staleness check — see `inbox.service.ts`'s comment on why it's DB-side, not an
+app-clock `Date` comparison: the app process and DB server clocks are not guaranteed to agree).
 
 **Exceptions**: none — this is the mandatory shape per AGENTS.md rule #12.
 
@@ -258,7 +276,10 @@ downgraded.
 **Common false positive**: testing that the guard exists without testing that the disallowed path
 is actually blocked at runtime.
 
-**mivend example**: `ReplicaOrderInterceptor`, `PaymentReconciliationIssue` (`plugin-acquiring`).
+**mivend example**: `ReplicaOrderInterceptor`, `PaymentReconciliationIssue` (`plugin-acquiring`) —
+`payment-inbox.int.test.ts`'s "a payment event declaring the wrong organization" proves the
+disallowed mutation is actually rejected at runtime (invoice status left untouched, event
+dead-lettered, `PaymentReconciliationIssue` reported), not just that the check exists.
 
 **Exceptions**: none — this is architecturally non-negotiable per AGENTS.md sync rules #6-#13.
 
@@ -334,8 +355,21 @@ just "the current producer's output parses," which proves nothing about compatib
 **Common false positive**: round-tripping the current version through the current parser and
 calling that a contract test — it never exercises version skew.
 
-**mivend example**: gap — no contract suite exists yet; introduce for `plugin-sync`'s RabbitMQ
-envelope and `plugin-erp-import`'s REST DTOs as part of the pilot/CI stages.
+**mivend example**: `plugin-sync`'s `sync-event-envelope.contract.test.ts` — `SyncEventSchema`
+(the RabbitMQ envelope, `packages/shared/src/sync.ts`) IS the contract, validated with pure Zod
+`safeParse`, no DB/RabbitMQ needed: required envelope/payload fields, allowed-value enums,
+unknown-field tolerance (forward compatibility), and the `<eventType>.<target>` routing-key
+format — including a dedicated `payment.recorded` section for the branch-kassa/plugin-acquiring
+payment boundary (legacy vs. full shape, `outcome`/`state` enums, positive-invoiceId, and the
+explicit "mandatory-together fields are NOT enforced at this schema layer, PaymentEventListener
+does that instead" boundary). `plugin-sync`'s `ErpCallbackController`/`ErpPaymentReportedDto` (the
+REST ERP→platform boundary, `erp-callback.controller.test.ts`) enforces required fields
+(`invoiceId`, `organizationId`, `erpEventId`) and the `outcome` enum at runtime — found and fixed
+as a real gap during the pilot: no global `ValidationPipe` is wired in this project, so
+`@ApiProperty`'s `enum`/`required` are Swagger documentation only, and an unrecognized `outcome`
+value would otherwise have reached `OUTCOME_TO_PAYMENT_STATUS[outcome]` in `plugin-acquiring` as
+`undefined` silently, rather than being rejected at intake. `plugin-erp-import`'s REST DTOs remain
+a gap — not yet introduced.
 
 **Exceptions**: internal-only interfaces with a single producer and consumer deployed atomically
 (same release) can skip version-skew scenarios, but must still check required-field/shape drift.

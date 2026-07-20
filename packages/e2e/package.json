@@ -5,6 +5,7 @@
     "private": true,
     "scripts": {
         "test": "playwright test",
+        "test:smoke": "playwright test --grep @smoke --project=storefront-noauth --project=storefront",
         "test:ui": "playwright test --ui",
         "report": "playwright show-report"
     },

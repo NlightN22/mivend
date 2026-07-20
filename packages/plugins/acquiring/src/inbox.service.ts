@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { Brackets } from 'typeorm';
 
 import { IncomingPaymentEvent } from './entities/incoming-payment-event.entity';
 
@@ -11,6 +12,12 @@ const POSTGRES_UNIQUE_VIOLATION = '23505';
 // of a transient issue (e.g. a brief DB blip) without either giving up too early or retrying a
 // truly broken event forever.
 const MAX_ATTEMPTS = 5;
+
+// A row stuck in 'processing' this long was almost certainly abandoned by a worker that crashed
+// or was killed mid-processPendingEvents (it advances to 'processed'/'pending'/'failed' well
+// under a second in the normal case) — reclaim it on the next sweep instead of leaving it stuck
+// forever, since claimBatch only ever selected 'pending' rows otherwise.
+const STUCK_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class InboxService {
@@ -53,21 +60,50 @@ export class InboxService {
         }
     }
 
-    // Claims a batch of pending rows for the periodic sweep (PaymentInboxProcessorService),
-    // marking them 'processing' so an overlapping sweep run doesn't pick up the same row twice.
+    // Claims a batch of pending rows (plus any row stuck in 'processing' past
+    // STUCK_PROCESSING_THRESHOLD_MS — a crashed worker's abandoned claim) for the periodic sweep
+    // (PaymentInboxProcessorService). SELECT ... FOR UPDATE SKIP LOCKED inside a single
+    // transaction, not a separate find()+save(), is what actually prevents two concurrent
+    // callers (the scheduled BullMQ sweep and the admin-triggered "run sweep now" mutation can
+    // run at the same time) from both selecting the same row before either commits its
+    // 'processing' status — a plain find-then-save has a real TOCTOU race window between the
+    // two calls.
     async claimBatch(ctx: RequestContext, limit = 20): Promise<IncomingPaymentEvent[]> {
-        const repo = this.connection.getRepository(ctx, IncomingPaymentEvent);
-        const rows = await repo.find({
-            where: { status: 'pending' },
-            order: { createdAt: 'ASC' },
-            take: limit,
+        // Transact off the same repo's manager (repo.target, not a re-imported entity class) so
+        // this still resolves correctly through TransactionalConnection's own repository
+        // resolution (channel/ctx scoping in production, entity-mapping test shims in
+        // integration tests) rather than assuming a bare rawConnection.getRepository(Entity)
+        // lookup — see AGENTS.md "What not to do" on bypassing the service layer.
+        const outerRepo = this.connection.getRepository(ctx, IncomingPaymentEvent);
+        return outerRepo.manager.transaction(async manager => {
+            const repo = manager.getRepository(outerRepo.target);
+            // Compares against the database's own now() rather than an app-side `Date`
+            // threshold — a fixed interval computed DB-side is immune to any clock skew between
+            // the app process and the Postgres server (real, observed in this test suite: the
+            // two clocks differed by hours in the dev container), and updatedAt was written by
+            // this same DB clock in the first place.
+            const rows = await repo
+                .createQueryBuilder('event')
+                .where(
+                    new Brackets(qb => {
+                        qb.where('event.status = :pending', { pending: 'pending' }).orWhere(
+                            `event.status = :processing AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval`,
+                            { processing: 'processing', staleMs: STUCK_PROCESSING_THRESHOLD_MS },
+                        );
+                    }),
+                )
+                .orderBy('event.createdAt', 'ASC')
+                .take(limit)
+                .setLock('pessimistic_write')
+                .setOnLocked('skip_locked')
+                .getMany();
+            if (rows.length === 0) return rows;
+            for (const row of rows) {
+                row.status = 'processing';
+            }
+            await repo.save(rows);
+            return rows;
         });
-        if (rows.length === 0) return rows;
-        for (const row of rows) {
-            row.status = 'processing';
-        }
-        await repo.save(rows);
-        return rows;
     }
 
     async markProcessed(ctx: RequestContext, id: number): Promise<void> {

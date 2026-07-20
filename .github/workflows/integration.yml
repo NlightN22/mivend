@@ -4,6 +4,11 @@ on:
     pull_request:
         branches: [main]
     workflow_dispatch:
+        inputs:
+            run_e2e_smoke:
+                description: 'Run the E2E smoke job too (unverified in CI yet — see docs/testing-strategy.md)'
+                type: boolean
+                default: false
 
 jobs:
     integration:
@@ -79,10 +84,15 @@ jobs:
             - name: Run integration tests
               run: pnpm --filter "{packages/**}" --no-bail test:integration
 
-    # E2E tests require a running server + storefront — run locally via `make e2e`
-    e2e:
-        name: E2E tests (scaffolded)
-        if: false
+    # Small critical-route subset (login, order creation — see docs/testing-strategy.md's "E2E
+    # strategy"), not the full Playwright suite. Manual-trigger only for now
+    # (workflow_dispatch with run_e2e_smoke=true) until its real runtime/flakiness in a fresh
+    # GitHub-hosted runner (boots postgres/redis/rabbitmq/elasticsearch + server + worker +
+    # storefront + manager natively) has been observed at least once — see AGENTS.md "Do not
+    # include heavy E2E on every push without a time estimate."
+    e2e-smoke:
+        name: E2E smoke
+        if: github.event_name == 'workflow_dispatch' && inputs.run_e2e_smoke
         needs: integration
         runs-on: ubuntu-latest
         steps:
@@ -96,7 +106,7 @@ jobs:
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             - run: pnpm --filter @mivend/e2e exec playwright install --with-deps chromium
-            - run: make e2e
+            - run: bash infrastructure/scripts/ci-e2e-smoke.sh
             - uses: actions/upload-artifact@v4
               if: failure()
               with:

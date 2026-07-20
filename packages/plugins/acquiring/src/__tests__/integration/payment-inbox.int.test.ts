@@ -1,5 +1,12 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    DataSource,
+    Entity,
+    Index,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn,
+} from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { BranchKassaPaymentEvent, ErpPaymentReportedEvent } from '@mivend/plugin-sync';
 import {
@@ -120,6 +127,7 @@ class TestIncomingPaymentEvent {
     @Column({ type: 'text', nullable: true }) lastError!: string | null;
     @Column({ type: 'timestamp', nullable: true }) processedAt!: Date | null;
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }) createdAt!: Date;
+    @UpdateDateColumn() updatedAt!: Date;
 }
 
 let dataSource: DataSource;
@@ -599,5 +607,84 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
             .getRepository(TestInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
         expect(untouchedInvoice.status).toBe('issued'); // never applied
+    });
+});
+
+describe('Payment inbox: organization data isolation within a single sweep batch (integration, real Postgres)', () => {
+    // AGENTS.md's scope-isolation pattern: two invoices in different organizations, processed in
+    // the SAME sweep batch (claimBatch's default limit is 20 — both events land in one call), one
+    // with a coincidentally identical externalReference value to prove the isolation is by
+    // organization scope, not by accidentally-unique reference strings. Asserting only "org A's
+    // invoice got paid" is not enough — this also asserts org B's invoice, PaymentAttempt count,
+    // and SettlementEntry are byte-for-byte the same before and after processing org A's event.
+    it("processing organization A's event in the same batch as organization B's event never touches organization B's data", async () => {
+        const invoiceA = await dataSource.getRepository(TestInvoice).save({
+            orderId: 20,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 1000,
+            currencyCode: 'RUB',
+            status: 'issued',
+        });
+        const invoiceB = await dataSource.getRepository(TestInvoice).save({
+            orderId: 21,
+            organizationId: 2,
+            counterpartyId: 6,
+            amount: 2000,
+            currencyCode: 'RUB',
+            status: 'issued',
+        });
+
+        await inboxService.enqueue(mockCtx, 'bank-transfer-erp', 'shared-ref-001', 'hash-a', {
+            invoiceId: Number(invoiceA.id),
+            organizationId: 1,
+            outcome: 'success',
+            channel: 'bank-transfer-erp',
+            externalReference: 'shared-ref-001',
+        });
+        // Same externalReference string as org A's event, deliberately — this is a different
+        // provider+providerEventId row (level 2 dedup scope), so it must not collide with or
+        // affect org A's processing despite the coincidentally identical reference value.
+        await inboxService.enqueue(mockCtx, 'branch-kassa', 'shared-ref-001', 'hash-b', {
+            invoiceId: Number(invoiceB.id),
+            organizationId: 2,
+            outcome: 'success',
+            channel: 'branch-kassa',
+            externalReference: 'shared-ref-001',
+        });
+
+        const sweep = await processorService.processPendingEvents(mockCtx);
+        expect(sweep).toEqual({ processed: 2, failed: 0 });
+
+        const paidA = await dataSource
+            .getRepository(TestInvoice)
+            .findOneOrFail({ where: { id: Number(invoiceA.id) } });
+        expect(paidA.status).toBe('paid');
+        const paidB = await dataSource
+            .getRepository(TestInvoice)
+            .findOneOrFail({ where: { id: Number(invoiceB.id) } });
+        expect(paidB.status).toBe('paid');
+
+        // Each organization's own PaymentAttempt exists, scoped to its own invoice — neither
+        // batch member created a stray attempt against the other organization's invoice.
+        const attemptsForA = await dataSource
+            .getRepository(TestPaymentAttempt)
+            .find({ where: { invoiceId: Number(invoiceA.id) } });
+        const attemptsForB = await dataSource
+            .getRepository(TestPaymentAttempt)
+            .find({ where: { invoiceId: Number(invoiceB.id) } });
+        expect(attemptsForA).toHaveLength(1);
+        expect(attemptsForB).toHaveLength(1);
+        expect(attemptsForA[0].channel).toBe('bank-transfer-erp');
+        expect(attemptsForB[0].channel).toBe('branch-kassa');
+
+        // Total PaymentAttempt/SettlementEntry rows across the whole batch is exactly 2 each —
+        // no cross-organization duplication or leakage produced extra rows.
+        const allAttempts = await dataSource.getRepository(TestPaymentAttempt).find();
+        const allSettlements = await dataSource.getRepository(TestSettlementEntry).find();
+        expect(allAttempts).toHaveLength(2);
+        expect(allSettlements).toHaveLength(2);
+        expect(allSettlements.filter(entry => entry.organizationId === 1)).toHaveLength(1);
+        expect(allSettlements.filter(entry => entry.organizationId === 2)).toHaveLength(1);
     });
 });

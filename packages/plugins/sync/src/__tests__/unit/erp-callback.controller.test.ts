@@ -51,5 +51,31 @@ describe('ErpCallbackController', () => {
 
             expect(eventBus.publish).not.toHaveBeenCalled();
         });
+
+        it('rejects with 400 when invoiceId is missing', async () => {
+            await expect(
+                controller.receivePayment({} as never, {
+                    invoiceId: 0,
+                    organizationId: 1,
+                    outcome: 'success',
+                    erpEventId: 'ERP-PMT-3',
+                }),
+            ).rejects.toBeInstanceOf(BadRequestException);
+
+            expect(eventBus.publish).not.toHaveBeenCalled();
+        });
+
+        it('rejects with 400 when outcome is not one of the recognized values — otherwise it would silently reach OUTCOME_TO_PAYMENT_STATUS[outcome] as undefined downstream in plugin-acquiring', async () => {
+            await expect(
+                controller.receivePayment({} as never, {
+                    invoiceId: 1,
+                    organizationId: 1,
+                    outcome: 'bogus' as never,
+                    erpEventId: 'ERP-PMT-4',
+                }),
+            ).rejects.toBeInstanceOf(BadRequestException);
+
+            expect(eventBus.publish).not.toHaveBeenCalled();
+        });
     });
 });

@@ -194,6 +194,92 @@ describe('SyncEventSchema (contract)', () => {
         });
     });
 
+    describe('payment.recorded — the branch-kassa/plugin-acquiring payment boundary', () => {
+        function validPaymentPayload(): Record<string, unknown> {
+            return {
+                sourceOrderId: 'order-1',
+                method: 'cash',
+                amount: 1000,
+                state: 'Settled',
+                witnessedBy: 'branch-a',
+            };
+        }
+
+        it('accepts the legacy native-Order shape with no invoiceId/organizationId/outcome/rrn at all', () => {
+            const result = SyncEventSchema.safeParse({
+                ...validEnvelope(),
+                eventType: 'payment.recorded',
+                payload: validPaymentPayload(),
+            });
+            expect(result.success).toBe(true);
+        });
+
+        it('accepts the full plugin-acquiring shape (invoiceId + organizationId + outcome + rrn all present)', () => {
+            const result = SyncEventSchema.safeParse({
+                ...validEnvelope(),
+                eventType: 'payment.recorded',
+                payload: {
+                    ...validPaymentPayload(),
+                    invoiceId: 42,
+                    organizationId: 1,
+                    outcome: 'success',
+                    rrn: '123456789012',
+                },
+            });
+            expect(result.success).toBe(true);
+        });
+
+        it('rejects an outcome value outside the recognized set', () => {
+            const result = SyncEventSchema.safeParse({
+                ...validEnvelope(),
+                eventType: 'payment.recorded',
+                payload: { ...validPaymentPayload(), invoiceId: 42, outcome: 'bogus' },
+            });
+            expect(result.success).toBe(false);
+        });
+
+        it('rejects a state value outside Authorized/Settled', () => {
+            const result = SyncEventSchema.safeParse({
+                ...validEnvelope(),
+                eventType: 'payment.recorded',
+                payload: { ...validPaymentPayload(), state: 'Captured' },
+            });
+            expect(result.success).toBe(false);
+        });
+
+        it('rejects a negative amount', () => {
+            const result = SyncEventSchema.safeParse({
+                ...validEnvelope(),
+                eventType: 'payment.recorded',
+                payload: { ...validPaymentPayload(), amount: -1 },
+            });
+            expect(result.success).toBe(false);
+        });
+
+        it('rejects a non-positive invoiceId when present — plugin-acquiring Invoice ids are always positive', () => {
+            const result = SyncEventSchema.safeParse({
+                ...validEnvelope(),
+                eventType: 'payment.recorded',
+                payload: { ...validPaymentPayload(), invoiceId: 0 },
+            });
+            expect(result.success).toBe(false);
+        });
+
+        // This wire-format layer intentionally leaves invoiceId/organizationId/outcome/rrn all
+        // optional (see PaymentRecordedPayload's own comment) — the mandatory-together
+        // requirement (an invoiceId with no rrn is invalid) is enforced downstream by
+        // PaymentEventListener, not here. This test documents that boundary explicitly, so it
+        // reads as a deliberate design decision rather than a gap this contract suite missed.
+        it('does NOT reject invoiceId present without rrn at the schema level — that combination is rejected by PaymentEventListener instead, not this schema', () => {
+            const result = SyncEventSchema.safeParse({
+                ...validEnvelope(),
+                eventType: 'payment.recorded',
+                payload: { ...validPaymentPayload(), invoiceId: 42, outcome: 'success' },
+            });
+            expect(result.success).toBe(true);
+        });
+    });
+
     describe('routing key format — <eventType>.<target>', () => {
         // SyncService.publishEntry builds this inline (`${entry.eventType}.${entry.target}`),
         // and every consumer's binding key depends on it (RabbitMQService.subscribe's callers use

@@ -1,0 +1,25 @@
+{
+    "permissions": {
+        "allow": [
+            "Read(**)",
+            "Edit(**)",
+            "Bash(pnpm *)",
+            "Bash(npm *)",
+            "Bash(git *)",
+            "Bash(mkdir *)",
+            "Bash(cat *)",
+            "Bash(tail *)",
+            "Bash(head *)",
+            "Bash(ls *)",
+            "Bash(wc *)",
+            "Bash(find *)",
+            "Bash(ps *)",
+            "Bash(date*)",
+            "WebSearch",
+            "Skill(run)",
+            "Skill(run:*)",
+            "Skill(update-config)",
+            "Skill(update-config:*)"
+        ]
+    }
+}

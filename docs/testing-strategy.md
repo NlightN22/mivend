@@ -178,9 +178,13 @@ isolated cart/session per test, no inter-test ordering dependency, trace/screens
 failure, no fixed `waitForTimeout` sleeps, a minimal smoke subset runnable in CI, heavy E2E in a
 separate workflow if runtime requires it.
 
-Current gap: the E2E job in `.github/workflows/integration.yml` is `if: false` — E2E does not run
-in CI today, only via `make e2e` locally. Re-enabling a minimal smoke subset is part of the CI
-work in this migration (see `docs/ai/PROJECT_CONTEXT.md` for status).
+A minimal `@smoke`-tagged subset (storefront login, deferred-payment order creation — see
+`packages/e2e/package.json`'s `test:smoke` / `make e2e-smoke`) runs via
+`.github/workflows/integration.yml`'s `e2e-smoke` job, booted non-interactively by
+`infrastructure/scripts/ci-e2e-smoke.sh`. It is `workflow_dispatch`-only for now (manual
+`run_e2e_smoke: true`) until its real runtime/flakiness on a fresh GitHub-hosted runner has been
+observed at least once — flip it to run on every PR once verified. The full suite (`make e2e`)
+stays local-only.
 
 ## CI
 
@@ -194,6 +198,39 @@ infrastructure-flaky steps, never to mask a real bug.
 Selective, not blanket: payment distribution, scope predicates, state-transition guards, overlap
 algorithms, idempotency decisions, reservation/availability calculations, ownership rules. Start
 with a pilot on one small module before deciding whether to expand.
+
+**Pilot run and conclusion**: StrykerJS (`@stryker-mutator/core` + `@stryker-mutator/vitest-runner`,
+root devDependencies — not added to any single plugin's own `package.json`, since
+`@stryker-mutator/vitest-runner` requires `vitest >=2.0.0` and several plugins, including
+`plugin-acquiring`, still pin their own `vitest ^1.0.0`/`1.6.x`) against
+`plugin-acquiring/src/idempotency.service.ts` — chosen as a genuine idempotency-decision module
+this same testing-architecture pass had just found a real, previously-untested concurrency bug in
+(see `idempotency.service.ts`'s `claim()` and `idempotency.int.test.ts`). Config: `stryker.config.mjs`
+at the repo root, `mutate` scoped to that one file, driven through the root `vitest.config.ts`
+(`make mutation-pilot` / `pnpm mutation:pilot`).
+
+Result: 81 mutants, 14 killed, 10 survived, 57 "no coverage" — a low headline score (~17%), but
+**every one of the 10 survivors is a branch this project deliberately tests at the integration
+level, not unit level** (the `claim()` outcome branches for `'conflict'`/`'in-progress'`/
+`'completed'`, and the `POSTGRES_UNIQUE_VIOLATION` constant's real-error-code path) — confirmed
+against `idempotency.int.test.ts`, which does kill all of them when run separately. None of the
+survivors represent an actual undetected regression; the pilot instead validated that the
+level-placement decision (`docs/testing-strategy.md`'s "minimum sufficient level" rule) was
+correct, not sloppy.
+
+**Cost/usefulness verdict**: mutation testing at the _unit_ level alone gives a misleading score
+for any module whose real coverage is split across unit + integration levels by design — which,
+per this project's own placement rule, is the common case, not the exception. Getting a
+meaningful score would require running Stryker against a live-Postgres integration config too
+(this pilot's config deliberately does not — no CI infra wiring, no live DB dependency for an ad
+hoc mutation run), which raises the real cost (run time was already ~1 minute for one 90-line
+file/81 mutants; a live-DB integration run would add infra startup and per-mutant DB isolation
+overhead on top). **Decision: keep it as a manual, ad hoc tool for a developer to run against one
+module they're actively hardening (`make mutation-pilot`) — do not wire it into CI, do not set a
+blanket score threshold, and do not expand it to more modules automatically.** Revisit only if a
+specific module's tests keep passing through a real regression that mutation testing would have
+caught — the general pattern-level candidates listed above remain valid targets for that
+narrower, deliberate use, one module at a time.
 
 ## Definition of done
 

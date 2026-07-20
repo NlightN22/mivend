@@ -85,6 +85,14 @@ data ownership/scope, and external boundaries, checking for existing close tests
 new ones, and producing a short test plan (changed behavior, invariants, scope, failure modes,
 applicable patterns, level per scenario, reused coverage, deliberate omissions).
 
+The canonical, single source for this procedure is `.claude/skills/test-design/SKILL.md` — it
+applies to every agent working in this repo, not only Claude Code. If your tooling has no
+skill-invocation mechanism (Codex, or any other agent that only reads `AGENTS.md`/repo files
+directly): read `.claude/skills/test-design/SKILL.md` yourself and follow its procedure and test
+plan format inline before writing or changing tests — do not skip this step just because there is
+no `Skill` tool call available to you. Do not duplicate that file's content elsewhere; if your
+tooling needs its own entry point, add a thin adapter file that points back to it instead.
+
 **Rule: minimum sufficient level.** Never copy the same scenario set onto every level. A business
 rule belongs in a unit test; a technical seam in an integration test; a full component chain in a
 component test; a boundary in a contract test; only a handful of critical end-to-end routes in
