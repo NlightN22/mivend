@@ -1,10 +1,13 @@
 <script setup lang="ts">
-// Standalone single-date calendar popover — native Date arithmetic, no date library dependency
-// (matches MvSelect's "stay light" convention). The only date-picking UI in ui-kit; reused by
-// MvColumnFilterDate for the `single-date` column-filter type, but exported standalone since any
-// future feature needing a plain date picker should use this rather than reaching for a new
-// library or a page-local implementation.
-import { computed, ref } from 'vue';
+// General-purpose date picker — a plain masked text input (DD.MM.YYYY, ordinary free typing/
+// backspacing, no browser-native segmented widget) plus a click-to-pick calendar grid below it,
+// bundled as one component. Native Date arithmetic, no date library dependency (matches
+// MvSelect's "stay light" convention). The only date-picking UI in ui-kit; reused by
+// MvColumnFilterDate (single-date column filter) and MvColumnFilterDateRange (custom range's
+// From/To) — any future feature needing a date input should use this rather than reaching for
+// `<input type="date">` (whose per-segment navigation/backspace behavior is the reason this
+// input exists) or a new library.
+import { computed, ref, watch } from 'vue';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 
 const props = defineProps<{ modelValue: string }>();
@@ -24,10 +27,53 @@ function toIso(date: Date): string {
 function isSameDay(a: Date, b: Date): boolean {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
+function toDisplay(date: Date | null): string {
+    if (!date) return '';
+    return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+}
 
 const selected = computed(() => parseIso(props.modelValue));
 const today = new Date();
 const viewMonth = ref(selected.value ?? new Date(today.getFullYear(), today.getMonth(), 1));
+
+// The text field's own state — deliberately separate from `selected`/`modelValue` rather than a
+// computed wrapper around it, so a date that's only half-typed (e.g. "10.07.") doesn't get
+// clobbered back to blank/reformatted on every keystroke. Only re-synced from `modelValue` when
+// it changes from *outside* (a calendar click, or the parent resetting/clearing it) — see the
+// watcher below.
+const textValue = ref(toDisplay(selected.value));
+watch(
+    () => props.modelValue,
+    v => {
+        textValue.value = toDisplay(parseIso(v));
+    },
+);
+
+// Auto-inserts the `.` separators as digits are typed (a plain <input type="text">, not a masked-
+// input library — matches this component's "stay light" convention) and only emits once all 8
+// digits form a real calendar date, so a half-typed value never briefly emits a wrong/clamped
+// date. Deliberately does NOT try to preserve exact cursor position through the reformat — for an
+// 8-digit date the caret lands at the end either way in the overwhelmingly common case (typing
+// left-to-right), and getting this exactly right would need tracking selectionStart across a
+// contenteditable-style diff, not worth it for this input's actual usage pattern.
+function onTextInput(event: Event): void {
+    const digits = (event.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) textValue.value = digits;
+    else if (digits.length <= 4) textValue.value = `${digits.slice(0, 2)}.${digits.slice(2)}`;
+    else textValue.value = `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
+
+    if (digits.length !== 8) return;
+    const day = Number(digits.slice(0, 2));
+    const month = Number(digits.slice(2, 4));
+    const year = Number(digits.slice(4));
+    const candidate = new Date(year, month - 1, day);
+    // Rejects "35.02.2026"-style overflow instead of silently normalizing it to a nearby real
+    // date (new Date() rolls invalid day/month numbers forward by default) — comparing the
+    // constructed date's own fields back against what was typed is the only way to detect that.
+    if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) return;
+    viewMonth.value = new Date(year, month - 1, 1);
+    emit('update:modelValue', toIso(candidate));
+}
 
 const monthLabel = computed(() => viewMonth.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
 
@@ -63,6 +109,14 @@ function clear(): void {
 
 <template>
     <div class="mv-date-picker">
+        <input
+            class="mv-date-picker__input"
+            type="text"
+            inputmode="numeric"
+            placeholder="DD.MM.YYYY"
+            :value="textValue"
+            @input="onTextInput"
+        />
         <div class="mv-date-picker__header">
             <button type="button" class="mv-date-picker__nav" aria-label="Previous month" @click="prevMonth">
                 <ArrowLeft />
@@ -101,6 +155,22 @@ function clear(): void {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+.mv-date-picker__input {
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--el-border-color, #e4e7ec);
+    border-radius: var(--app-radius-md, 12px);
+    background: var(--el-fill-color-light, #f8fafc);
+    font-size: 13px;
+    color: var(--el-text-color-primary, #17212b);
+}
+
+.mv-date-picker__input:focus {
+    outline: none;
+    border-color: var(--el-color-primary, #00b894);
 }
 
 .mv-date-picker__header {
