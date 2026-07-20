@@ -53,22 +53,63 @@ function tryParseComplete(masked: string): string | null {
     const month = Number(digits.slice(2, 4));
     const year = Number(digits.slice(4));
     const candidate = new Date(year, month - 1, day);
+    // Rejects "30.02.2026"-style overflow instead of silently normalizing it to a nearby real
+    // date (new Date() rolls invalid day/month numbers forward by default) — real feedback: this
+    // check already existed, but a rejected value left the input showing the invalid text with no
+    // visual sign anything was wrong. See fromInvalid/toInvalid below for the actual fix.
     if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) return null;
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 const fromText = ref(toDisplayText(customFrom.value));
 const toText = ref(toDisplayText(customTo.value));
+// True only once a field has all 8 digits typed and they *don't* form a real calendar date (e.g.
+// "30.02.2026") — a half-typed field ("10.07.") isn't "invalid," it's just incomplete, so this
+// only lights up once there's something concrete and wrong to flag.
+const fromInvalid = ref(false);
+const toInvalid = ref(false);
 watch(customFrom, v => (fromText.value = toDisplayText(v)));
 watch(customTo, v => (toText.value = toDisplayText(v)));
+
+// If both ends of the range end up with From after To (either from typing or from a calendar
+// pick), swap them rather than silently accepting a backwards/empty-result range or leaving the
+// user to notice and fix it themselves — the standard behavior real range pickers use.
+function reorderIfNeeded(): void {
+    if (customFrom.value && customTo.value && customFrom.value > customTo.value) {
+        const tmp = customFrom.value;
+        customFrom.value = customTo.value;
+        customTo.value = tmp;
+    }
+}
+
 function onFromInput(event: Event): void {
     fromText.value = maskDigits((event.target as HTMLInputElement).value);
+    if (fromText.value.replace(/\D/g, '').length < 8) {
+        fromInvalid.value = false;
+        return;
+    }
     const iso = tryParseComplete(fromText.value);
-    if (iso) customFrom.value = iso;
+    if (iso) {
+        fromInvalid.value = false;
+        customFrom.value = iso;
+        reorderIfNeeded();
+    } else {
+        fromInvalid.value = true;
+    }
 }
 function onToInput(event: Event): void {
     toText.value = maskDigits((event.target as HTMLInputElement).value);
+    if (toText.value.replace(/\D/g, '').length < 8) {
+        toInvalid.value = false;
+        return;
+    }
     const iso = tryParseComplete(toText.value);
-    if (iso) customTo.value = iso;
+    if (iso) {
+        toInvalid.value = false;
+        customTo.value = iso;
+        reorderIfNeeded();
+    } else {
+        toInvalid.value = true;
+    }
 }
 // Selects the whole value on focus (matches native `<input type="date">`'s own affordance) so
 // coming back to an already-filled field is a single Delete + retype, not a manual select-all
@@ -100,14 +141,23 @@ function onPresetChange(): void {
 // lands straight on Apply/Clear.
 function pickFrom(value: string): void {
     customFrom.value = value;
+    fromInvalid.value = false;
+    reorderIfNeeded();
     activeField.value = 'to';
 }
 function pickTo(value: string): void {
     customTo.value = value;
+    toInvalid.value = false;
+    reorderIfNeeded();
     activeField.value = null;
 }
+// Applying/clearing closes the filter popover — same as every other filter type with an
+// Apply/Clear pair (see MvColumnFilterAmountRange's identical `emit('close')`); real feedback:
+// "I clicked Apply/Clear, I'm done, let's move on" — leaving the popover open after either action
+// was an unnecessary extra click to dismiss it.
 function onApplyCustom(): void {
     emit('update:modelValue', { preset: 'custom', from: customFrom.value, to: customTo.value });
+    emit('close');
 }
 function onClear(): void {
     selectedPreset.value = presets.value[0]?.key ?? '';
@@ -115,8 +165,11 @@ function onClear(): void {
     customTo.value = '';
     fromText.value = '';
     toText.value = '';
+    fromInvalid.value = false;
+    toInvalid.value = false;
     activeField.value = null;
     emit('update:modelValue', { preset: '', from: '', to: '' });
+    emit('close');
 }
 </script>
 
@@ -135,7 +188,10 @@ function onClear(): void {
                         inputmode="numeric"
                         placeholder="DD.MM.YYYY"
                         class="mv-column-filter-date-range__date-input"
-                        :class="{ 'mv-column-filter-date-range__date-input--active': activeField === 'from' }"
+                        :class="{
+                            'mv-column-filter-date-range__date-input--active': activeField === 'from',
+                            'mv-column-filter-date-range__date-input--invalid': fromInvalid,
+                        }"
                         :value="fromText"
                         @input="onFromInput"
                         @focus="(e) => { activeField = 'from'; selectAllOnFocus(e); }"
@@ -149,13 +205,17 @@ function onClear(): void {
                         inputmode="numeric"
                         placeholder="DD.MM.YYYY"
                         class="mv-column-filter-date-range__date-input"
-                        :class="{ 'mv-column-filter-date-range__date-input--active': activeField === 'to' }"
+                        :class="{
+                            'mv-column-filter-date-range__date-input--active': activeField === 'to',
+                            'mv-column-filter-date-range__date-input--invalid': toInvalid,
+                        }"
                         :value="toText"
                         @input="onToInput"
                         @focus="(e) => { activeField = 'to'; selectAllOnFocus(e); }"
                     />
                 </div>
             </div>
+            <p v-if="fromInvalid || toInvalid" class="mv-column-filter-date-range__error">Not a real date</p>
 
             <!-- hide-clear: the footer's own Clear (below) already clears both From and To — the
                  calendar's own per-field Clear button was a second, redundant clear affordance
@@ -234,6 +294,17 @@ function onClear(): void {
     border-color: var(--el-color-primary, #00b894);
     color: var(--el-color-primary, #00b894);
     font-weight: 600;
+}
+
+.mv-column-filter-date-range__date-input--invalid {
+    border-color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger, #dc2626);
+}
+
+.mv-column-filter-date-range__error {
+    margin: -6px 0 0;
+    font-size: 11px;
+    color: var(--el-color-danger, #dc2626);
 }
 
 .mv-column-filter-date-range__arrow {

@@ -10,7 +10,7 @@ import MvButton from '../MvButton/MvButton.vue';
 import type { AmountRangeFilterConfig, AmountRangeFilterValue, AmountRangePreset } from './columnFilterTypes';
 
 const props = defineProps<{ config: AmountRangeFilterConfig; modelValue: AmountRangeFilterValue }>();
-const emit = defineEmits<{ 'update:modelValue': [value: AmountRangeFilterValue] }>();
+const emit = defineEmits<{ 'update:modelValue': [value: AmountRangeFilterValue]; close: [] }>();
 
 const MODES: { value: AmountRangeFilterValue['mode']; label: string }[] = [
     { value: 'range', label: 'Range' },
@@ -75,6 +75,10 @@ function onApply(): void {
         case 'range':
             min = minLocal.value;
             max = maxLocal.value;
+            // A "From" typed higher than "To" (or vice versa) is swapped rather than silently
+            // accepted as a backwards/empty-result range — same reasoning as
+            // MvColumnFilterDateRange's identical From/To reordering.
+            if (min !== undefined && max !== undefined && min > max) [min, max] = [max, min];
             break;
         case 'equal':
             min = singleLocal.value;
@@ -96,9 +100,11 @@ function onApply(): void {
     // being created in the first place, not just detecting it after the fact.
     if (min === undefined && max === undefined) {
         emit('update:modelValue', { mode: 'range', min: undefined, max: undefined });
+        emit('close');
         return;
     }
     emit('update:modelValue', { mode: mode.value, min, max });
+    emit('close');
 }
 function onClear(): void {
     mode.value = 'range';
@@ -106,6 +112,7 @@ function onClear(): void {
     maxLocal.value = undefined;
     singleLocal.value = undefined;
     emit('update:modelValue', { mode: 'range', min: undefined, max: undefined });
+    emit('close');
 }
 </script>
 

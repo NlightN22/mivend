@@ -65,13 +65,23 @@ watch(
 // 8-digit date the caret lands at the end either way in the overwhelmingly common case (typing
 // left-to-right), and getting this exactly right would need tracking selectionStart across a
 // contenteditable-style diff, not worth it for this input's actual usage pattern.
+// True only once the field has all 8 digits typed and they *don't* form a real calendar date
+// (e.g. "30.02.2026") — a half-typed field ("10.07.") isn't "invalid," it's just incomplete, so
+// this only lights up once there's something concrete and wrong to flag. Real feedback: rejecting
+// the value silently (leaving the invalid text sitting there with no sign anything was wrong) was
+// indistinguishable from it having been accepted.
+const invalid = ref(false);
+
 function onTextInput(event: Event): void {
     const digits = (event.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 8);
     if (digits.length <= 2) textValue.value = digits;
     else if (digits.length <= 4) textValue.value = `${digits.slice(0, 2)}.${digits.slice(2)}`;
     else textValue.value = `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
 
-    if (digits.length !== 8) return;
+    if (digits.length < 8) {
+        invalid.value = false;
+        return;
+    }
     const day = Number(digits.slice(0, 2));
     const month = Number(digits.slice(2, 4));
     const year = Number(digits.slice(4));
@@ -79,7 +89,11 @@ function onTextInput(event: Event): void {
     // Rejects "35.02.2026"-style overflow instead of silently normalizing it to a nearby real
     // date (new Date() rolls invalid day/month numbers forward by default) — comparing the
     // constructed date's own fields back against what was typed is the only way to detect that.
-    if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) return;
+    if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) {
+        invalid.value = true;
+        return;
+    }
+    invalid.value = false;
     viewMonth.value = new Date(year, month - 1, 1);
     emit('update:modelValue', toIso(candidate));
 }
@@ -129,6 +143,7 @@ function selectAllOnFocus(event: FocusEvent): void {
         <input
             v-if="!hideInput"
             class="mv-date-picker__input"
+            :class="{ 'mv-date-picker__input--invalid': invalid }"
             type="text"
             inputmode="numeric"
             placeholder="DD.MM.YYYY"
@@ -136,6 +151,7 @@ function selectAllOnFocus(event: FocusEvent): void {
             @input="onTextInput"
             @focus="selectAllOnFocus"
         />
+        <p v-if="invalid" class="mv-date-picker__error">Not a real date</p>
         <div class="mv-date-picker__header">
             <button type="button" class="mv-date-picker__nav" aria-label="Previous month" @click="prevMonth">
                 <ArrowLeft />
@@ -190,6 +206,17 @@ function selectAllOnFocus(event: FocusEvent): void {
 .mv-date-picker__input:focus {
     outline: none;
     border-color: var(--el-color-primary, #00b894);
+}
+
+.mv-date-picker__input--invalid {
+    border-color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger, #dc2626);
+}
+
+.mv-date-picker__error {
+    margin: -4px 0 0;
+    font-size: 11px;
+    color: var(--el-color-danger, #dc2626);
 }
 
 .mv-date-picker__header {
