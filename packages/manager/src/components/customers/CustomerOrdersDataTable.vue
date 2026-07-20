@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 import DataTable, { type DataTableFilterMeta } from 'primevue/datatable';
 import Column from 'primevue/column';
 import Select from 'primevue/select';
-import { Setting, Sort, SortUp, SortDown } from '@element-plus/icons-vue';
+import { Setting, Sort, SortUp, SortDown, Rank } from '@element-plus/icons-vue';
 import {
     MvStatusBadge,
     MvColumnToggle,
@@ -678,16 +678,21 @@ function onColumnReorder(event: { dragIndex: number; dropIndex: number }): void 
                 :show-clear-button="false"
             >
                 <template #header>
-                    <span class="customer-orders-data-table__col-title">{{ col.header }}</span>
+                    <span class="customer-orders-data-table__col-title" @mousedown.stop>{{ col.header }}</span>
                     <button
                         v-if="col.sortField"
                         type="button"
                         class="customer-orders-data-table__sort-btn"
                         :class="{ 'customer-orders-data-table__sort-btn--active': tableState.sort[0]?.field === col.field }"
+                        @mousedown.stop
                         @click.stop="toggleSort(col)"
                     >
                         <component :is="sortIconFor(col)" class="customer-orders-data-table__sort-icon" />
                     </button>
+                    <span class="customer-orders-data-table__col-spacer" @mousedown.stop />
+                    <span class="customer-orders-data-table__reorder-handle" title="Drag to reorder column">
+                        <Rank class="customer-orders-data-table__reorder-icon" />
+                    </span>
                 </template>
                 <template v-if="col.field === 'state'" #body="{ data }">
                     <MvStatusBadge :variant="(data as TableRow).stateVariant as StatusBadgeVariant">{{ (data as TableRow).state }}</MvStatusBadge>
@@ -862,6 +867,67 @@ function onColumnReorder(event: { dragIndex: number; dropIndex: number }): void 
 .customer-orders-data-table__sort-icon {
     width: 16px;
     height: 16px;
+}
+
+/* Fills the leftover header width between the title/sort control and the reorder handle —
+   without this, that gap is bare `th` background, and PrimeVue arms column-drag on ANY mousedown
+   there (see the reorder-handle comment below). `@mousedown.stop` on this element (and on the
+   title/sort button above) is what keeps that arming from firing outside the handle. */
+.customer-orders-data-table__col-spacer {
+    flex: 1 1 auto;
+}
+
+/* PrimeVue's `reorderableColumns` arms a column drag on *any* mousedown in the header that isn't
+   on an <input>/<textarea>/the resize handle (see @primeuix's onColumnHeaderMouseDown) — so
+   without this, dragging the column title or empty header space around reorders columns, easy to
+   trigger by accident. Real fix: stop that mousedown from ever reaching the `th` for every other
+   interactive/empty part of the header (title, sort button, spacer above — all `@mousedown.stop`)
+   and leave *only* this handle's own mousedown un-stopped, so it's the sole way to start a drag.
+   Deliberately not `@mousedown.stop` here — that would disable dragging entirely, defeating the
+   point. */
+.customer-orders-data-table__reorder-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin-inline: 4px 6px;
+    border-radius: 6px;
+    color: var(--el-text-color-secondary, #98a2b3);
+    cursor: grab;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.customer-orders-data-table__reorder-handle:hover {
+    background: var(--el-color-primary-light-9, #e6faf4);
+    color: var(--el-color-primary, #00b894);
+}
+
+.customer-orders-data-table__reorder-icon {
+    width: 15px;
+    height: 15px;
+}
+
+/* PrimeVue's resize handle is a full-height strip at each column's trailing edge, but its default
+   border is fully transparent — no visible affordance a column boundary is draggable at all until
+   the cursor already happens to land on it. The full-height *hit area* stays as-is (shrinking it
+   would make the boundary harder to actually grab) — only the *visible* line is a short, centered
+   mark via `::after`, rather than a line spanning the whole header cell's height edge-to-edge,
+   which read as an oddly heavy full-height divider. */
+:deep(.p-datatable-column-resizer)::after {
+    content: '';
+    position: absolute;
+    inset-inline-end: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 20px;
+    background: var(--el-border-color, #e4e7ec);
+}
+
+:deep(.p-datatable-column-resizer:hover)::after {
+    width: 2px;
+    background: var(--el-color-primary, #00b894);
 }
 
 :deep(.p-datatable-filter) {
