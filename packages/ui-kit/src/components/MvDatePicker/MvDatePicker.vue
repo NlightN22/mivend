@@ -10,8 +10,16 @@
 import { computed, ref, watch } from 'vue';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 
-const props = defineProps<{ modelValue: string }>();
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
+const props = withDefaults(defineProps<{ modelValue: string; hideInput?: boolean }>(), {
+    hideInput: false,
+});
+// `update:modelValue` fires for both typing and calendar clicks (the actual value change).
+// `pick` fires *only* on an explicit calendar-day click — a distinct signal a caller can use to
+// auto-advance/collapse a multi-field UI (e.g. MvColumnFilterDateRange's From→To flow), without
+// that same auto-collapse firing the instant a typed date completes (real incident: it used to
+// share one event, so finishing typing a date closed the calendar immediately, with no chance to
+// fix a typo — see MvColumnFilterDateRange.vue's comment for the full report).
+const emit = defineEmits<{ 'update:modelValue': [value: string]; pick: [value: string] }>();
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -100,22 +108,32 @@ function nextMonth(): void {
     viewMonth.value = new Date(viewMonth.value.getFullYear(), viewMonth.value.getMonth() + 1, 1);
 }
 function pick(day: DayCell): void {
-    emit('update:modelValue', toIso(day.date));
+    const iso = toIso(day.date);
+    emit('update:modelValue', iso);
+    emit('pick', iso);
 }
 function clear(): void {
     emit('update:modelValue', '');
+}
+// Selects the whole value on focus (matches native `<input type="date">`'s own affordance) so
+// coming back to an already-filled field is a single Delete + retype, not a manual select-all
+// first.
+function selectAllOnFocus(event: FocusEvent): void {
+    (event.target as HTMLInputElement).select();
 }
 </script>
 
 <template>
     <div class="mv-date-picker">
         <input
+            v-if="!hideInput"
             class="mv-date-picker__input"
             type="text"
             inputmode="numeric"
             placeholder="DD.MM.YYYY"
             :value="textValue"
             @input="onTextInput"
+            @focus="selectAllOnFocus"
         />
         <div class="mv-date-picker__header">
             <button type="button" class="mv-date-picker__nav" aria-label="Previous month" @click="prevMonth">
