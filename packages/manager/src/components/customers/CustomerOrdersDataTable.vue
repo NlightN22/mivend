@@ -547,12 +547,18 @@ function resetFilters(): void {
     emit('update:payment-view', 'all');
 }
 
-function onColumnResizeEnd(event: { element: HTMLElement }): void {
+function onColumnResizeEnd(event: { element: HTMLElement; delta: number }): void {
     const headerText = event.element?.querySelector('.customer-orders-data-table__col-title')?.textContent?.trim();
     const col = ALL_COLUMNS.find(c => c.header === headerText);
     if (!col) return;
     const current = tableState.value.columnWidths[col.field] ?? col.width;
-    tableState.value.columnWidths = { ...tableState.value.columnWidths, [col.field]: current };
+    // Real bug, present since this table's first commit: this used to write `current` straight
+    // back to itself (never applying `event.delta`, PrimeVue's actual resize amount) — visually
+    // the column resized fine (PrimeVue applies the new width immediately via its own injected
+    // <style> during the drag), but nothing was ever actually persisted, so a reload silently
+    // reverted every resize, and "Reset table layout" had nothing real to reset either — the
+    // stored width was already stuck at its old value the whole time.
+    tableState.value.columnWidths = { ...tableState.value.columnWidths, [col.field]: current + event.delta };
 }
 
 function sortToVendure(meta: DataTableSortMeta[]): Partial<Record<OrderSortField, 'ASC' | 'DESC'>> {
