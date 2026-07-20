@@ -305,6 +305,7 @@ export interface CustomerOrderItem {
     totalWithTax: number;
     currencyCode: string;
     orderPlacedAt: string | null;
+    createdAt: string;
     totalQuantity: number;
     customer: { firstName: string; lastName: string } | null;
     customFields: {
@@ -334,6 +335,7 @@ const CUSTOMER_ORDER_ITEM_FIELDS = `
     totalWithTax
     currencyCode
     orderPlacedAt
+    createdAt
     totalQuantity
     customer { firstName lastName }
     customFields { latestFulfillmentState placedByAdministratorId reservationState }
@@ -410,8 +412,10 @@ export async function fetchOrdersPageForCustomer(
     view: CustomerOrdersView,
     // Object insertion order = ORDER BY clause order (Vendure's OrderSortParameter supports
     // multiple keys) — see api/orders.ts's identical OrderSortField doc comment.
-    sort: Partial<Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt', 'ASC' | 'DESC'>> = {
-        orderPlacedAt: 'DESC',
+    sort: Partial<
+        Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt', 'ASC' | 'DESC'>
+    > = {
+        createdAt: 'DESC',
     },
     extraFilters: CustomerOrdersExtraFilters = {},
 ): Promise<{ items: CustomerOrderItem[]; totalItems: number }> {
@@ -425,16 +429,23 @@ export async function fetchOrdersPageForCustomer(
     }
     if (extraFilters.code) filter.code = { contains: extraFilters.code };
     if (extraFilters.dateFrom || extraFilters.dateTo) {
+        // Filters on createdAt, not orderPlacedAt — matches what the "Date created" column
+        // actually displays (see CustomerOrdersDataTable.vue). orderPlacedAt stays reserved for
+        // KPI/overdue semantics elsewhere (dashboard.ts) where "only orders that were actually
+        // placed" is the correct meaning; this column/filter is purely informational and must
+        // cover every order, including ones never placed (abandoned carts, cancelled-before-
+        // placement) — see seed-customer-detail.mjs's spreadOrderPlacedDates for the real incident
+        // that surfaced this (orders showing "—" in this column despite genuinely existing).
         // Inclusive on both ends, local time — `before` is the day *after* dateTo's start, so a
-        // range ending "today" still includes every order placed today regardless of time of day.
-        const orderPlacedAt: Record<string, string> = {};
+        // range ending "today" still includes every order created today regardless of time of day.
+        const createdAt: Record<string, string> = {};
         if (extraFilters.dateFrom)
-            orderPlacedAt.after = new Date(`${extraFilters.dateFrom}T00:00:00`).toISOString();
+            createdAt.after = new Date(`${extraFilters.dateFrom}T00:00:00`).toISOString();
         if (extraFilters.dateTo) {
             const start = new Date(`${extraFilters.dateTo}T00:00:00`);
-            orderPlacedAt.before = new Date(start.getTime() + 24 * 60 * 60 * 1000).toISOString();
+            createdAt.before = new Date(start.getTime() + 24 * 60 * 60 * 1000).toISOString();
         }
-        filter.orderPlacedAt = orderPlacedAt;
+        filter.createdAt = createdAt;
     }
     if (extraFilters.totalMin !== undefined || extraFilters.totalMax !== undefined) {
         filter.totalWithTax = {

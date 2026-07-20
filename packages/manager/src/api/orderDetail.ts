@@ -14,6 +14,7 @@ export interface OrderDetail {
     code: string;
     state: string;
     orderPlacedAt: string | null;
+    createdAt: string;
     currencyCode: string;
     subTotalWithTax: number;
     shippingWithTax: number;
@@ -53,6 +54,7 @@ export async function fetchOrderDetail(code: string): Promise<OrderDetail | null
                     code
                     state
                     orderPlacedAt
+                    createdAt
                     currencyCode
                     subTotalWithTax
                     shippingWithTax

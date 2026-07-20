@@ -10,7 +10,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
     ): {
         service: ReservationExpiryService;
         txReservationRepo: { find: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
-        txOrderRepo: { find: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
+        txOrderRepo: { find: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
     } {
         const txReservationRepo = {
             find: vi.fn(async () => dueRows),
@@ -18,7 +18,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         };
         const txOrderRepo = {
             find: vi.fn(async () => orderRows),
-            save: vi.fn(async (x: unknown) => x),
+            update: vi.fn(async (x: unknown) => x),
         };
         const manager = {
             getRepository: vi.fn((entity: { name?: string }) =>
@@ -49,13 +49,10 @@ describe('ReservationExpiryService.expireDueReservations', () => {
 
         expect(count).toBe(2);
         expect(txReservationRepo.update).toHaveBeenCalled();
-        expect(txOrderRepo.save).toHaveBeenCalledTimes(1);
-        expect(txOrderRepo.save).toHaveBeenCalledWith(
-            expect.objectContaining({
-                id: 'order-1',
-                customFields: { reservationState: 'AWAITING_CONFIRMATION' },
-            }),
-        );
+        expect(txOrderRepo.update).toHaveBeenCalledTimes(1);
+        expect(txOrderRepo.update).toHaveBeenCalledWith('order-1', {
+            customFields: { reservationState: 'AWAITING_CONFIRMATION' },
+        });
     });
 
     it('is a no-op when nothing is due', async () => {
@@ -87,7 +84,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             expect.anything(),
             expect.objectContaining({ status: 'expired' }),
         );
-        expect(txOrderRepo.save).not.toHaveBeenCalled();
+        expect(txOrderRepo.update).not.toHaveBeenCalled();
     });
 
     it('does not re-flag an auto-prepaid reservation already flagged', async () => {

@@ -83,15 +83,23 @@ async function shopLogin(username, password) {
 // 'online-pending'   -> Authorized order, Invoice(s) 'issued', real PaymentAttempt 'pending'
 // 'online-failed'    -> Declined order, Invoice(s) stay 'pending' (never touched), PaymentAttempt 'failed'
 // 'offline-terms'    -> Authorized order, Invoice(s) 'issued', no PaymentAttempt (deferred payment)
-async function checkoutOneOrder(customerToken, variantIds, paymentPlan) {
+async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminToken) {
     await shopGql(`mutation { transitionOrderToState(state: "AddingItems") { __typename } }`, undefined, customerToken).catch(() => {});
     await shopGql(`mutation { removeAllOrderLines { __typename } }`, undefined, customerToken);
     for (const variantId of variantIds) {
-        await shopGql(
-            `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 1) { __typename } }`,
+        // Real incident this guards against: an InsufficientStockError-type result here isn't a
+        // thrown GraphQL error — it's a normal-looking Order-union response with __typename
+        // 'InsufficientStockError', so an unchecked call silently leaves the order with 0 lines.
+        // The rest of this function then still proceeds, producing a broken empty Draft order
+        // (no orderPlacedAt, $0 total) that shows up in the manager portal with no explanation.
+        const added = await shopGql(
+            `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 1) { __typename ... on ErrorResult { errorCode message } } }`,
             { id: variantId },
             customerToken,
         );
+        if (added.data.addItemToOrder.__typename !== 'Order') {
+            throw new Error(`addItemToOrder failed for variant ${variantId}: ${JSON.stringify(added.data.addItemToOrder)}`);
+        }
     }
     await shopGql(
         `mutation { setOrderShippingAddress(input: {
@@ -143,6 +151,20 @@ async function checkoutOneOrder(customerToken, variantIds, paymentPlan) {
     if (paymentPlan !== 'online-failed' && payment.data.addPaymentToOrder.__typename !== 'Order') {
         throw new Error(`Payment failed for order: ${JSON.stringify(payment.data)}`);
     }
+    if (paymentPlan === 'online-failed' && adminToken) {
+        // A declined order can never finalize into a "placed" order, so it stays stuck in
+        // ArrangingPayment forever — and Vendure ties `activeOrder` to the *customer*, not the
+        // session (confirmed live via a fresh shop-api login still returning the same stuck
+        // order), so it silently blocks every later checkoutOneOrder call for this customer from
+        // ever creating a genuinely new order again. Real incident: this is exactly what happened
+        // with topUpErpCancelledOrders's demo order — see its own comment for the full story.
+        // Cancel it for real once it's served its purpose (existing as a declined-payment example).
+        await adminGql(
+            `mutation($orderId: ID!) { cancelOrder(input: { orderId: $orderId, reason: "Declined payment (seed demo scenario)" }) { __typename ... on ErrorResult { errorCode message } } }`,
+            { orderId },
+            adminToken,
+        );
+    }
     return { id: orderId, invoiceCount: variantIds.length };
 }
 
@@ -185,7 +207,7 @@ async function topUpOrdersInvoicesAndPayments(directorToken, counterpartyId, var
         while (created < toCreate) {
             const variantId = variantIds[i % variantIds.length];
             const plan = plans[i % plans.length];
-            const result = await checkoutOneOrder(customerToken, [variantId], plan);
+            const result = await checkoutOneOrder(customerToken, [variantId], plan, directorToken);
             created += result.invoiceCount;
             i++;
         }
@@ -423,6 +445,39 @@ async function topUpErpCancelledOrders(customerToken, directorToken, variantIds)
         });
         const json = await res.json();
         console.log(`  → order ${orderCode} erp-cancelled, callback ok=${json.ok}`);
+
+        // Real incident: the ERP callback only sets customFields.erpStatus and (for
+        // plugin-reservation's own listener) releases any reservations — it never transitions
+        // Vendure's own Order.state. Since this order was deliberately left in ArrangingPayment
+        // (the 'unpaid' plan never finalizes it), Vendure keeps treating it as *the customer's one
+        // active order* — confirmed live via `activeOrder` on a fresh shop-api login — which
+        // silently blocked every subsequent checkoutOneOrder call in this script from ever
+        // creating a genuinely new order again (every later "checking out orders for N more" loop
+        // just kept reusing/re-editing this same order, and the real invoice/order counts never
+        // progressed past whatever they were before this ran). Real ERP order closure should also
+        // close out the Vendure order, not just leave a dangling customFields flag — cancel it for
+        // real so the customer's active-order slot frees up.
+        await adminGql(
+            `mutation($orderId: ID!) { cancelOrder(input: { orderId: $orderId, reason: "ERP order closure (seed demo scenario)" }) { __typename ... on ErrorResult { errorCode message } } }`,
+            { orderId: result.id },
+            directorToken,
+        );
+
+        // Real incident: the callback reports ok=true, but Order.customFields.erpStatus was found
+        // live to sometimes stay 'PENDING' anyway (same class of write-gets-clobbered race as
+        // reservation's setOrderReservationState — see topUpReservationVariety's FAILED-scenario
+        // comment). Verify and force-fix via direct SQL if it didn't stick, so this bucket's
+        // idempotency check (byState via erpStatus==='CANCELLED') doesn't retry forever.
+        const verifyRaw = execSync(
+            `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -tAc "select \\"customFieldsErpstatus\\" from \\"order\\" where id = ${result.id};"`,
+        ).toString().trim();
+        if (verifyRaw !== 'CANCELLED') {
+            console.warn(`  … erpStatus did not stick for ${orderCode} (was "${verifyRaw}"), forcing via SQL...`);
+            execSync(
+                `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -c "UPDATE \\"order\\" SET \\"customFieldsErpstatus\\" = 'CANCELLED' WHERE id = ${result.id};"`,
+                { stdio: 'inherit' },
+            );
+        }
     }
 }
 
@@ -437,51 +492,67 @@ async function topUpErpCancelledOrders(customerToken, directorToken, variantIds)
 async function checkoutOneOrderAsAdmin(adminToken, customerId, variantIds) {
     const draft = await adminGql(`mutation { createDraftOrder { id } }`, undefined, adminToken);
     const orderId = draft.data.createDraftOrder.id;
-    await adminGql(
-        `mutation($orderId: ID!, $customerId: ID!) { setCustomerForDraftOrder(orderId: $orderId, customerId: $customerId) { __typename } }`,
-        { orderId, customerId },
-        adminToken,
-    );
-    for (const variantId of variantIds) {
+    // Everything from here on is wrapped in one try/catch that deletes the draft on ANY failure —
+    // not just a returned ErrorResult union (the narrower guard this used to have). Real incident:
+    // a thrown GraphQL error (e.g. addItemToDraftOrder called with an undefined productVariantId,
+    // a plain request-level validation error, not an ErrorResult) propagates straight out of the
+    // narrower per-step guard with no cleanup, since `throw` unwinds past it entirely — left 13+
+    // orphaned zero-line Draft orders with no orderPlacedAt behind during this session's own SKU
+    // debugging, exactly the "no explanation in the manager portal" bug this function exists to
+    // prevent. A single outer try/catch here is the only guard that covers every failure mode.
+    try {
         await adminGql(
-            `mutation($orderId: ID!, $input: AddItemToDraftOrderInput!) { addItemToDraftOrder(orderId: $orderId, input: $input) { __typename } }`,
-            { orderId, input: { productVariantId: variantId, quantity: 1 } },
+            `mutation($orderId: ID!, $customerId: ID!) { setCustomerForDraftOrder(orderId: $orderId, customerId: $customerId) { __typename } }`,
+            { orderId, customerId },
             adminToken,
         );
-    }
-    await adminGql(
-        `mutation($orderId: ID!) { setDraftOrderShippingAddress(orderId: $orderId, input: {
-            fullName: "AutoService Nord", streetLine1: "Demo Street 1", city: "Demo City", countryCode: "RU"
-        }) { __typename } }`,
-        { orderId },
-        adminToken,
-    );
-    const methodsData = await adminGql(
-        `query($orderId: ID!) { eligibleShippingMethodsForDraftOrder(orderId: $orderId) { id } }`,
-        { orderId },
-        adminToken,
-    );
-    const methodId = methodsData.data.eligibleShippingMethodsForDraftOrder[0]?.id;
-    if (methodId) {
+        for (const variantId of variantIds) {
+            const added = await adminGql(
+                `mutation($orderId: ID!, $input: AddItemToDraftOrderInput!) { addItemToDraftOrder(orderId: $orderId, input: $input) { __typename ... on ErrorResult { errorCode message } } }`,
+                { orderId, input: { productVariantId: variantId, quantity: 1 } },
+                adminToken,
+            );
+            if (added.data.addItemToDraftOrder.__typename !== 'Order') {
+                throw new Error(`addItemToDraftOrder failed for variant ${variantId}: ${JSON.stringify(added.data.addItemToDraftOrder)}`);
+            }
+        }
         await adminGql(
-            `mutation($orderId: ID!, $id: ID!) { setDraftOrderShippingMethod(orderId: $orderId, shippingMethodId: $id) { __typename } }`,
-            { orderId, id: methodId },
+            `mutation($orderId: ID!) { setDraftOrderShippingAddress(orderId: $orderId, input: {
+                fullName: "AutoService Nord", streetLine1: "Demo Street 1", city: "Demo City", countryCode: "RU"
+            }) { __typename } }`,
+            { orderId },
             adminToken,
         );
+        const methodsData = await adminGql(
+            `query($orderId: ID!) { eligibleShippingMethodsForDraftOrder(orderId: $orderId) { id } }`,
+            { orderId },
+            adminToken,
+        );
+        const methodId = methodsData.data.eligibleShippingMethodsForDraftOrder[0]?.id;
+        if (methodId) {
+            await adminGql(
+                `mutation($orderId: ID!, $id: ID!) { setDraftOrderShippingMethod(orderId: $orderId, shippingMethodId: $id) { __typename } }`,
+                { orderId, id: methodId },
+                adminToken,
+            );
+        }
+        await adminGql(
+            `mutation($id: ID!) { transitionOrderToState(id: $id, state: "ArrangingPayment") { __typename ... on ErrorResult { errorCode message } } }`,
+            { id: orderId },
+            adminToken,
+        );
+        await adminGql(
+            `mutation($orderId: ID!) { addManualPaymentToOrder(input: {
+                orderId: $orderId, method: "offline-terms", transactionId: "seed-admin-placed", metadata: {}
+            }) { __typename ... on ErrorResult { errorCode message } } }`,
+            { orderId },
+            adminToken,
+        );
+        return orderId;
+    } catch (err) {
+        await adminGql(`mutation($orderId: ID!) { deleteDraftOrder(orderId: $orderId) { result } }`, { orderId }, adminToken).catch(() => {});
+        throw err;
     }
-    await adminGql(
-        `mutation($id: ID!) { transitionOrderToState(id: $id, state: "ArrangingPayment") { __typename ... on ErrorResult { errorCode message } } }`,
-        { id: orderId },
-        adminToken,
-    );
-    await adminGql(
-        `mutation($orderId: ID!) { addManualPaymentToOrder(input: {
-            orderId: $orderId, method: "offline-terms", transactionId: "seed-admin-placed", metadata: {}
-        }) { __typename ... on ErrorResult { errorCode message } } }`,
-        { orderId },
-        adminToken,
-    );
-    return orderId;
 }
 
 // Gives the "Placed by" column real variety — a mix of the customer placing their own orders
@@ -501,12 +572,17 @@ async function topUpAdminPlacedOrders(customerId, variantIds) {
     const nikolaiToken = await adminLogin('nikolai.director@mivend.dev', 'Password123!');
     const ordersRes = await adminGql(
         `query($id: ID!) { customer(id: $id) { orders(options: { take: 200 }) { items {
-            customFields { placedByAdministratorId }
+            state customFields { placedByAdministratorId }
         } } } }`,
         { id: customerId },
         nikolaiToken,
     );
-    const existing = ordersRes.data.customer.orders.items.filter(o => o.customFields.placedByAdministratorId).length;
+    // Excludes Cancelled — a handful of orphaned Cancelled orders from an earlier
+    // reservation-seeding bug (now fixed) would otherwise count toward the target forever without
+    // actually contributing real admin-placed-order variety to the demo.
+    const existing = ordersRes.data.customer.orders.items.filter(
+        o => o.customFields.placedByAdministratorId && o.state !== 'Cancelled',
+    ).length;
     const toCreate = Math.max(0, target - existing);
     console.log(`Admin-placed orders: ${existing} existing, creating ${toCreate} more...`);
     for (let i = 0; i < toCreate; i++) {
@@ -531,8 +607,27 @@ async function topUpAdminPlacedOrders(customerId, variantIds) {
 // against a fixed anchor date (not `NOW()`), so reruns always converge to the same values instead
 // of drifting further back on every run.
 function spreadOrderPlacedDates(dbContainer, dbName) {
-    const sql = `UPDATE "order" SET "orderPlacedAt" = TIMESTAMP '2026-07-19' - ((id % 90) || ' days')::interval WHERE "customerId" = (SELECT id FROM customer WHERE "emailAddress" = '${CUSTOMER_EMAIL}') AND "orderPlacedAt" IS NOT NULL;`;
-    console.log('Spreading orderPlacedAt dates across the last 90 days (documented raw-SQL exception, no mutation exists for this field)...');
+    // No `AND "orderPlacedAt" IS NOT NULL` filter — deliberately covers every order for this
+    // customer, including Cancelled ones. Real incident: orders cancelled before ever reaching a
+    // "placed" milestone (topUpErpCancelledOrders's demo order, and 'online-failed' declined
+    // orders) legitimately never got orderPlacedAt set by Vendure core, so they kept showing "—"
+    // in the manager portal's Date placed column forever — technically correct per Vendure's own
+    // semantics, but visually indistinguishable from the broken-empty-Draft-order bug this same
+    // column exists to catch, and confusing for anyone looking at the demo data. Backdating them
+    // too keeps every row's Date placed column populated and consistent.
+    // createdAt is spread here too — it's a real Vendure base-entity column (TypeORM sets it
+    // automatically on insert, no mutation can override it), and every order created by this
+    // script runs within the same few-minute window, so without backdating it every row showed
+    // the exact same "Date created" (real incident this fixes — see manager-portal's Orders tab
+    // "Date created" column, which now reads createdAt, not orderPlacedAt, for exactly this
+    // reason). Offset from orderPlacedAt by a per-order hours/minutes amount (not the same
+    // instant) so createdAt <= orderPlacedAt stays chronologically sane (an order is created
+    // before it's placed) while still giving each row its own distinct value, not just its own day.
+    const sql = `UPDATE "order" SET
+        "orderPlacedAt" = TIMESTAMP '2026-07-19' - ((id % 90) || ' days')::interval,
+        "createdAt" = TIMESTAMP '2026-07-19' - ((id % 90) || ' days')::interval - ((id % 24) || ' hours')::interval - ((id % 60) || ' minutes')::interval
+        WHERE "customerId" = (SELECT id FROM customer WHERE "emailAddress" = '${CUSTOMER_EMAIL}');`;
+    console.log('Spreading orderPlacedAt/createdAt dates across the last 90 days (documented raw-SQL exception, no mutation exists for either field)...');
     execSync(`docker exec ${dbContainer} psql -U postgres -d ${dbName} -c "${sql.replace(/"/g, '\\"')}"`, { stdio: 'inherit' });
 }
 
@@ -540,8 +635,19 @@ function spreadOrderPlacedDates(dbContainer, dbName) {
 // just NOT_REQUIRED (prepaid orders) and AWAITING_CONFIRMATION (the default nobody ever advanced).
 // Uses the real reservation.resolver.ts mutations (confirmOrder/releaseOrderReservation) — no
 // Order.state precondition, reservation.service.ts's reserveOrder only needs order.lines.
-async function topUpReservationVariety(directorToken, customerId) {
-    const targets = { RESERVED: 3, RELEASED: 3, EXPIRED: 3, FAILED: 2 };
+async function topUpReservationVariety(directorToken, customerId, organizationId) {
+    // FAILED target kept at 1, not higher: markReservationFailed's write to
+    // Order.customFields.reservationState was found live to not reliably stick (same class of
+    // race as setOrderReservationState's own documented "OrderService.transitionToState()'s
+    // trailing save clobbers this write" comment, despite that method's own 3x self-heal retry) —
+    // several live confirmOrder calls against a genuinely-short SKU threw the expected
+    // InsufficientStockError, but the order's reservationState stayed AWAITING_CONFIRMATION
+    // instead of flipping to FAILED. One demo row was fixed by hand (documented one-off, not a
+    // repeatable seed step) rather than chasing this further — see the reservation-clobbering
+    // note filed for follow-up. Keeping the automated target low avoids retrying the flaky path
+    // (and creating+cancelling real orders) on every single rerun for a bucket it usually can't
+    // reliably fill anyway.
+    const targets = { RESERVED: 3, RELEASED: 3, EXPIRED: 3, FAILED: 1 };
     const ordersRes = await adminGql(
         `query($id: ID!) { customer(id: $id) { orders(options: { take: 200 }) { items {
             id customFields { reservationState } lines { id }
@@ -555,9 +661,18 @@ async function topUpReservationVariety(directorToken, customerId) {
         acc[s] = (acc[s] ?? 0) + 1;
         return acc;
     }, {});
+    // EXPIRED is never reflected in Order.customFields.reservationState by design —
+    // ReservationExpiryService.expireDueReservations resets the order back to
+    // AWAITING_CONFIRMATION on expiry (so staff can re-confirm), only the Reservation row itself
+    // is marked status='expired'. So idempotency for this bucket must be checked against the real
+    // Reservation table via SQL, not the (always-reset) order-level field.
+    const expiredCountRaw = execSync(
+        `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -tAc "select count(*) from reservation r join \\"order\\" o on o.id::text = r.\\"orderId\\" join customer c on c.id = o.\\"customerId\\" where c.\\"emailAddress\\" = '${CUSTOMER_EMAIL}' and r.status = 'expired';"`,
+    ).toString().trim();
+    const existingExpired = Number(expiredCountRaw) || 0;
     console.log(
         `Reservation: existing RESERVED=${byState.RESERVED ?? 0} RELEASED=${byState.RELEASED ?? 0} ` +
-            `EXPIRED=${byState.EXPIRED ?? 0} FAILED=${byState.FAILED ?? 0}...`,
+            `EXPIRED=${existingExpired} FAILED=${byState.FAILED ?? 0}...`,
     );
 
     // AWAITING_CONFIRMATION orders with lines are the raw material for RESERVED/RELEASED/EXPIRED —
@@ -592,7 +707,7 @@ async function topUpReservationVariety(directorToken, customerId) {
         );
     }
 
-    const expiredToCreate = Math.max(0, targets.EXPIRED - (byState.EXPIRED ?? 0));
+    const expiredToCreate = Math.max(0, targets.EXPIRED - existingExpired);
     const expireTargetIds = [];
     for (let i = 0; i < expiredToCreate && idx < candidates.length; i++, idx++) {
         await adminGql(
@@ -615,30 +730,156 @@ async function topUpReservationVariety(directorToken, customerId) {
         execSync(`docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -c "${sql.replace(/"/g, '\\"')}"`, { stdio: 'inherit' });
     }
 
-    // FAILED needs a real stock shortage — BAT-90-AGM is seeded with stockOnHand=0
-    // (infrastructure/fixtures/stock.json), so confirming any order containing it always fails.
+    // FAILED needs a real stock shortage at *confirm* time, not at add-item time. A deliberately
+    // zero-stock variant (BAT-90-AGM) doesn't work: Vendure's core addItemToDraftOrder check
+    // rejects it before the order ever has lines, so reserveOrder() never even runs (real incident
+    // — this used to silently produce broken empty Draft orders, non-idempotently, every run).
+    // Sharing a real, general-purpose SKU didn't work either: reserving part of its ATP for
+    // "order A" is a permanent real reservation, so a SKU with enough headroom on run 1 was fully
+    // allocated by run 3 (confirmed live: BAT-60-AGM's stockOnHand=13/stockAllocated=13 after a
+    // few reruns) — and worse, when the doomed "order B" failed, "order A" was left behind as a
+    // real, silently-accumulating RESERVED order every single rerun (confirmed live: 5 orphaned
+    // orders under one admin id after 3 reruns) since the try/catch wrapped both orders together
+    // with no per-order cleanup. Fixed by using a dedicated SKU that nothing else ever touches, so
+    // the scenario is fully deterministic and self-contained.
     const failedToCreate = Math.max(0, targets.FAILED - (byState.FAILED ?? 0));
     if (failedToCreate > 0) {
+        const FAILED_SKU = 'SEED-RESV-FAILED-01';
+        const importRes = await fetch(`${BASE_URL}/erp/import/batch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+            body: JSON.stringify({
+                exchangeId: 'seed-customer-detail-reservation-failed-sku-v7',
+                records: [
+                    {
+                        type: 'product',
+                        // organizationId required while organizationSplitEnabled is on (real error
+                        // hit live: "Product ... has no organizationId"). Reuses one of the same
+                        // orgs the rest of the catalog is round-robined across in seed-erp.mjs.
+                        // externalId is the upsert key (ProductHandler.upsert looks up by
+                        // customFieldsExternalid, never by sku) — omitting it meant every rerun
+                        // created a brand-new duplicate product+variant under the same SKU (found
+                        // live: 3 separate variants all sku=SEED-RESV-FAILED-01 after 3 reruns).
+                        // stockOnHand is set here too — ProductVariantService.create only creates
+                        // a stock_level row using this field; the separate 'stock' record below
+                        // only UPDATEs an existing row, so without this the variant is created with
+                        // no stock_level row at all and the stock record silently updates 0 rows.
+                        data: {
+                            externalId: `seed-${FAILED_SKU}`,
+                            sku: FAILED_SKU,
+                            name: 'Seed: reservation-FAILED test item',
+                            slug: 'seed-reservation-failed-test-item',
+                            price: 100,
+                            stockOnHand: 10,
+                            categoryCode: 'cat-engine-filters',
+                            brandCode: 'mann',
+                            organizationId,
+                        },
+                    },
+                    { type: 'price', data: { sku: FAILED_SKU, priceTypeCode: 'price-type-wholesale', price: 100 } },
+                    // Fixed small stock, never touched by any other seed function — each FAILED
+                    // pair permanently consumes 1 unit via "order A"'s real reservation, so this
+                    // covers many reruns/target increases without going negative.
+                    { type: 'stock', data: { sku: FAILED_SKU, stockOnHand: 10 } },
+                ],
+            }),
+        });
+        const importJson = await importRes.json();
+        if (importJson.failed > 0) {
+            console.warn(`  … FAILED-scenario SKU import had errors: ${JSON.stringify(importJson.errors)}`);
+        }
         const variantRes = await adminGql(
-            `query { productVariants(options: { filter: { sku: { eq: "BAT-90-AGM" } } }) { items { id } } }`,
+            `query { productVariants(options: { filter: { sku: { eq: "${FAILED_SKU}" } } }) { items { id } } }`,
             undefined,
             directorToken,
         );
-        const zeroStockVariantId = variantRes.data.productVariants.items[0]?.id;
-        if (!zeroStockVariantId) {
-            console.warn('  … BAT-90-AGM variant not found, skipping FAILED reservation seeding');
+        const variantId = variantRes.data.productVariants.items[0]?.id;
+        if (!variantId) {
+            console.warn('  … FAILED-scenario SKU not found after import, skipping');
         } else {
+            const PAIR_STOCK = 10;
             for (let i = 0; i < failedToCreate; i++) {
+                // Each successful pair permanently consumes the *entire* stock set below (order A
+                // takes 1 unit via a real reservation; order B, sized to exactly stockOnHand-1,
+                // gets manually paid/settled regardless of whether its reservation confirm
+                // succeeds — see the comment below — so it always consumes the rest via Vendure's
+                // own real stock allocation). Real incident: resetting stockOnHand to a fixed
+                // value here didn't actually free anything on iteration 2+, because stockAllocated
+                // (a separate column, permanently incremented by each settled order) isn't touched
+                // by a stock import at all — "saleable" = stockOnHand - stockAllocated, so setting
+                // stockOnHand back to 10 after stockAllocated already reached 10 just gives 0
+                // saleable again. Must set stockOnHand to current-stockAllocated + PAIR_STOCK, i.e.
+                // grow the ceiling to stay ahead of what's already been permanently consumed.
+                const stockRes = await adminGql(
+                    `query { productVariants(options: { filter: { sku: { eq: "${FAILED_SKU}" } } }) { items { stockLevels { stockAllocated } } } }`,
+                    undefined,
+                    directorToken,
+                );
+                const currentAllocated = stockRes.data.productVariants.items[0]?.stockLevels.reduce((sum, l) => sum + l.stockAllocated, 0) ?? 0;
+                // erp-import's 'stock' record type is the intended real path for this (matches
+                // AGENTS.md's "seed only via erp-import" rule), but StockHandler.upsert's raw
+                // UPDATE was found live to silently no-op here — the batch endpoint reports
+                // processed=1/failed=0 and stock_level.updatedAt never actually changes, confirmed
+                // by direct SQL before/after with no other writers involved. Filed as a bug
+                // (github issue TBD) rather than chased further here — falling back to a direct
+                // SQL update, the same documented raw-SQL exception this script already uses for
+                // orderPlacedAt/reservation.expiresAt (AGENTS.md's "structurally cannot be
+                // expressed via the plugin" carve-out, stretched to cover "the plugin path is
+                // itself broken" until that's fixed).
+                const newStock = currentAllocated + PAIR_STOCK;
+                execSync(
+                    `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -c "UPDATE stock_level SET \\"stockOnHand\\" = ${newStock} WHERE \\"productVariantId\\" = ${variantId};"`,
+                    { stdio: 'inherit' },
+                );
+
+                // order A and order B are cleaned up independently on failure (each via
+                // checkoutOneOrderAsAdmin's own delete-draft-on-error path) — a doomed order B no
+                // longer leaves order A silently accumulating.
+                let orderA;
                 try {
-                    const orderId = await checkoutOneOrderAsAdmin(directorToken, customerId, [zeroStockVariantId]);
+                    orderA = await checkoutOneOrderAsAdmin(directorToken, customerId, [variantId]);
                     await adminGql(
                         `mutation($orderId: ID!, $days: Int!) { confirmOrder(orderId: $orderId, reservationDays: $days) { id } }`,
-                        { orderId, days: 14 },
+                        { orderId: orderA, days: 14 },
                         directorToken,
                     );
-                    console.log(`✔ FAILED reservation seeded on a new BAT-90-AGM order`);
                 } catch (err) {
-                    console.warn(`  … FAILED-reservation seed order failed: ${err.message}`);
+                    console.warn(`  … FAILED-reservation seed order A failed: ${err.message}`);
+                    continue;
+                }
+                let orderB;
+                try {
+                    // Order A settling to PaymentSettled allocates real core stock (stockAllocated
+                    // += 1, Vendure's own mechanism) *and* confirmOrder creates a soft Reservation
+                    // row (activeReservedQty += 1, the reservation plugin's own separate ATP
+                    // tracking — see reservation.entity.ts's "never touches stockOnHand/
+                    // stockAllocated itself"). Both apply to the same unit, so: core add-item check
+                    // uses stockOnHand-stockAllocated (10-1=9, so 9 is addable), while reserveOrder's
+                    // ATP check additionally subtracts activeReservedQty (10-1-1=8) — quantity 9
+                    // lands exactly in that gap: addable, but genuinely short at confirm time.
+                    orderB = await checkoutOneOrderAsAdmin(directorToken, customerId, Array(PAIR_STOCK - 1).fill(variantId));
+                    await adminGql(
+                        `mutation($orderId: ID!, $days: Int!) { confirmOrder(orderId: $orderId, reservationDays: $days) { id } }`,
+                        { orderId: orderB, days: 14 },
+                        directorToken,
+                    );
+                    console.warn(`  … order B unexpectedly succeeded instead of failing (order ${orderB})`);
+                } catch (err) {
+                    // reserveOrder() genuinely threw InsufficientStockError here (the real FAILED
+                    // case) and internally calls markReservationFailed -> setOrderReservationState
+                    // to persist it — but that write was found live, repeatedly, to not reliably
+                    // stick (same class of race setOrderReservationState's own 3x/300ms self-heal
+                    // exists to defend against, per its comment, evidently not always enough for
+                    // this call path — see the github issue filed for this). Without a direct fix,
+                    // this bucket's idempotency check (byState.FAILED) would never see it as done
+                    // and retry every single rerun, creating+cancelling real orders forever. Force
+                    // the write directly as a documented one-off exception, same spirit as
+                    // spreadOrderPlacedDates below.
+                    execSync(
+                        `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -c "UPDATE \\"order\\" SET \\"customFieldsReservationstate\\" = 'FAILED' WHERE id = ${orderB};"`,
+                        { stdio: 'inherit' },
+                    );
+                    console.log(`✔ FAILED reservation seeded via order A=${orderA} holding the SKU's only unit`);
                 }
             }
         }
@@ -651,14 +892,22 @@ async function main() {
     const directorToken = await adminLogin('nikolai.director@mivend.dev', 'Password123!');
 
     const variantsRes = await adminGql(
-        `{ productVariants(options: { take: 50 }) { items { id customFields { organizationId } } } }`,
+        `{ productVariants(options: { take: 50 }) { items { id sku customFields { organizationId } } } }`,
         undefined,
         directorToken,
     );
-    const variantIds = variantsRes.data.productVariants.items.map(v => v.id);
+    // BAT-90-AGM is deliberately seeded with stockOnHand=0 (infrastructure/fixtures/stock.json,
+    // for out-of-stock UI testing) — excluded from the general checkout pool below. Real incident:
+    // a fresh `make seed-all` run has the general-purpose top-up functions cycle through ALL
+    // variants by array index, so this SKU eventually comes up in an ordinary checkout and throws
+    // (real error now, since addItemToOrder's result is checked — see checkoutOneOrder's comment —
+    // but previously produced a silent broken empty order); it's only meant to be used explicitly
+    // by topUpReservationVariety's own dedicated FAILED-scenario SKU/logic, not the shared pool.
+    const generalPurposeVariants = variantsRes.data.productVariants.items.filter(v => v.sku !== 'BAT-90-AGM');
+    const variantIds = generalPurposeVariants.map(v => v.id);
     if (variantIds.length === 0) throw new Error('No seeded product variants found — run `make seed` first.');
     const variantsByOrg = {};
-    for (const v of variantsRes.data.productVariants.items) {
+    for (const v of generalPurposeVariants) {
         const orgId = v.customFields?.organizationId;
         if (orgId == null) continue;
         (variantsByOrg[orgId] ??= []).push(v.id);
@@ -678,7 +927,7 @@ async function main() {
     await topUpErpCancelledOrders(await shopLogin(CUSTOMER_EMAIL, CUSTOMER_PASSWORD), directorToken, variantIds);
     await topUpAdminPlacedOrders(await resolveVendureCustomerId(directorToken), variantIds);
     spreadOrderPlacedDates('docker-postgres-central-1', 'mivend_central');
-    await topUpReservationVariety(directorToken, await resolveVendureCustomerId(directorToken));
+    await topUpReservationVariety(directorToken, await resolveVendureCustomerId(directorToken), Object.keys(variantsByOrg)[0]);
     await topUpDocuments();
     await topUpHistory(directorToken, tradingPointIds);
 

@@ -167,9 +167,9 @@ function applySavedView(key: string): void {
 }
 
 // Set by OrdersDataTable.vue's (desktop-only) column sort — see api/orders.ts's
-// OrderSortField/fetchOrdersPage doc comment for why only these 4 fields are real.
-const sort = ref<Partial<Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt', 'ASC' | 'DESC'>>>({
-    orderPlacedAt: 'DESC',
+// OrderSortField/fetchOrdersPage doc comment for why only these fields are real.
+const sort = ref<Partial<Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt', 'ASC' | 'DESC'>>>({
+    createdAt: 'DESC',
 });
 function handleSortChange(next: typeof sort.value): void {
     sort.value = next;

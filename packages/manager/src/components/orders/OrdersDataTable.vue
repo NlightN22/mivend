@@ -93,7 +93,7 @@ const rows = computed<OrderRow[]>(() =>
                 style: 'currency',
                 currency: order.currencyCode,
             }).format(order.totalWithTax / 100),
-            date: order.orderPlacedAt ? new Date(order.orderPlacedAt).toLocaleDateString('en-US') : '—',
+            date: new Date(order.createdAt).toLocaleDateString('en-US'),
             branch: branchName(counterparty?.branchId),
             attention: isWaitingApproval ? 'Price limit exceeded' : isOverdue ? 'Shipment overdue' : '',
         };
@@ -115,7 +115,7 @@ const ALL_COLUMNS = computed<ColumnDef[]>(() => {
     cols.push(
         { field: 'state', header: 'Status', sortField: 'state', width: 160 },
         { field: 'total', header: 'Total amount', sortField: 'totalWithTax', width: 140 },
-        { field: 'date', header: 'Date placed', sortField: 'orderPlacedAt', width: 140 },
+        { field: 'date', header: 'Date created', sortField: 'createdAt', width: 140 },
         { field: 'branch', header: 'Branch', width: 140 },
         { field: 'attention', header: 'Attention', width: 180 },
     );
@@ -131,7 +131,7 @@ const { state: tableState, reset: resetTableState } = useDataTableState(
         columnOrder: ALL_COLUMNS.value.map(c => c.field),
         columnWidths: Object.fromEntries(ALL_COLUMNS.value.map(c => [c.field, c.width])),
         hiddenColumns: [],
-        sort: [{ field: 'orderPlacedAt', order: -1 }],
+        sort: [{ field: 'createdAt', order: -1 }],
         filters: {},
         pageSize: props.pageSize,
     },
@@ -195,7 +195,7 @@ function sortFieldToVendure(meta: DataTableSortMeta[]): Partial<Record<OrderSort
         const col = ALL_COLUMNS.value.find(c => c.field === m.field);
         if (col?.sortField) result[col.sortField] = m.order === 1 ? 'ASC' : 'DESC';
     }
-    return Object.keys(result).length ? result : { orderPlacedAt: 'DESC' };
+    return Object.keys(result).length ? result : { createdAt: 'DESC' };
 }
 
 // Fully custom, single-column sort — deliberately NOT using PrimeVue's own `sortable`/
@@ -281,7 +281,7 @@ const tableRemountKey = ref(0);
 function resetLayout(): void {
     resetTableState();
     tableState.value.sort = [{ field: 'date', order: -1 }];
-    emit('update:sort', { orderPlacedAt: 'DESC' });
+    emit('update:sort', { createdAt: 'DESC' });
     tableRemountKey.value++;
 }
 </script>

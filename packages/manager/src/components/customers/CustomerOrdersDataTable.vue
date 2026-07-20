@@ -147,8 +147,8 @@ const ALL_COLUMNS: ColumnDef[] = [
     },
     {
         field: 'date',
-        header: 'Date placed',
-        sortField: 'orderPlacedAt',
+        header: 'Date created',
+        sortField: 'createdAt',
         width: 140,
         filterConfig: { type: 'date-range' },
     },
@@ -555,7 +555,7 @@ function onColumnsReset(): void {
     tableState.value.columnOrder = ALL_COLUMNS.map(c => c.field);
     tableState.value.columnWidths = Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width]));
     tableState.value.sort = [{ field: 'date', order: -1 }];
-    emit('update:sort', { orderPlacedAt: 'DESC' });
+    emit('update:sort', { createdAt: 'DESC' });
     tableRemountKey.value++;
 }
 
@@ -594,7 +594,7 @@ function sortToVendure(meta: DataTableSortMeta[]): Partial<Record<OrderSortField
         const col = ALL_COLUMNS.find(c => c.field === m.field);
         if (col?.sortField) result[col.sortField] = m.order === 1 ? 'ASC' : 'DESC';
     }
-    return Object.keys(result).length ? result : { orderPlacedAt: 'DESC' };
+    return Object.keys(result).length ? result : { createdAt: 'DESC' };
 }
 
 // Fully custom, single-column sort — see OrdersDataTable.vue's identical `toggleSort()` doc

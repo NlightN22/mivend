@@ -24,6 +24,7 @@ function mockOrderDetailData(): void {
                     code: 'ORD-101',
                     state: 'PaymentAuthorized',
                     orderPlacedAt: new Date().toISOString(),
+                    createdAt: new Date().toISOString(),
                     currencyCode: 'RUB',
                     subTotalWithTax: 400000,
                     shippingWithTax: 50000,

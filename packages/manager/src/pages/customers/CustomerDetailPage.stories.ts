@@ -40,6 +40,7 @@ const CUSTOMER_ORDERS: CustomerOrderItem[] = Array.from({ length: 27 }, (_, i) =
     totalWithTax: 45000 + i * 8760,
     currencyCode: 'RUB',
     orderPlacedAt: new Date(Date.now() - i * 86400000).toISOString(),
+    createdAt: new Date(Date.now() - i * 86400000).toISOString(),
     totalQuantity: 2 + (i % 10),
     customer: { firstName: 'Ivan', lastName: 'Petrov' },
     // Every 3rd order has no placedByAdministratorId — placed by the storefront customer

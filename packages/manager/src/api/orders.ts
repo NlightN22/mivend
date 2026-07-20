@@ -8,6 +8,11 @@ export interface OrderListItem {
     totalWithTax: number;
     currencyCode: string;
     orderPlacedAt: string | null;
+    // Informational "when this order was formed" date, shown in the Date placed column — distinct
+    // from orderPlacedAt (which stays the KPI/overdue/sort semantic: only set once an order is
+    // actually placed via checkout, real orders like abandoned carts or cancelled-before-placement
+    // orders never get it). createdAt is a real Vendure base-entity field, always populated.
+    createdAt: string;
     customFields: { reservationState: string } | null;
     customer: {
         firstName: string;
@@ -125,6 +130,7 @@ const ORDER_ITEM_FIELDS = `
     totalWithTax
     currencyCode
     orderPlacedAt
+    createdAt
     customFields { reservationState }
     customer {
         firstName
@@ -136,7 +142,7 @@ const ORDER_ITEM_FIELDS = `
 // Real Vendure OrderSortParameter keys only — the PrimeVue DataTable's own column `field` names
 // (see OrdersDataTable.vue) don't all match 1:1 (e.g. its 'total'/'date' columns sort by
 // totalWithTax/orderPlacedAt), so callers map through this before building the `sort` object.
-export type OrderSortField = 'code' | 'state' | 'totalWithTax' | 'orderPlacedAt';
+export type OrderSortField = 'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt';
 
 export async function fetchOrdersPage(
     filters: OrdersFilters,
@@ -145,7 +151,7 @@ export async function fetchOrdersPage(
     // Object insertion order = ORDER BY clause order — supports Vendure's own multi-field sort
     // (see OrdersDataTable.vue's sortMode="multiple"). Defaults to the original single-field
     // "newest first" behavior when omitted.
-    sort: Partial<Record<OrderSortField, 'ASC' | 'DESC'>> = { orderPlacedAt: 'DESC' },
+    sort: Partial<Record<OrderSortField, 'ASC' | 'DESC'>> = { createdAt: 'DESC' },
 ): Promise<{ items: OrderListItem[]; totalItems: number }> {
     const result = await adminApi<{
         visibleOrders: { items: OrderListItem[]; totalItems: number };

@@ -30,6 +30,7 @@ const ORDERS: CustomerOrderItem[] = Array.from({ length: 34 }, (_, i) => ({
     totalWithTax: 45000 + i * 12345,
     currencyCode: 'USD',
     orderPlacedAt: new Date(Date.now() - i * 86400000).toISOString(),
+    createdAt: new Date(Date.now() - i * 86400000).toISOString(),
     totalQuantity: 3 + (i % 12),
     customer: { firstName: 'Ivan', lastName: 'Petrov' },
     customFields: {

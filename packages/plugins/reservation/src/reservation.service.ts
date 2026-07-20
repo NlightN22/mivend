@@ -219,6 +219,13 @@ export class ReservationService {
                 new ReservationReleasedEvent(ctx, reservation, order?.code ?? String(orderId)),
             );
         }
+        // Real bug fixed here: this method used to only flip the Reservation rows to 'released'
+        // and never touched Order.customFields.reservationState, so a released order stayed stuck
+        // showing 'RESERVED' forever — RELEASED is a declared OrderReservationState (types.ts) and
+        // a real manager-portal filter option, but was structurally unreachable before this fix.
+        if (order) {
+            await this.setOrderReservationState(ctx, order, 'RELEASED');
+        }
         return active.length;
     }
 

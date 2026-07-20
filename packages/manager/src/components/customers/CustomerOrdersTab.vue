@@ -121,7 +121,7 @@ const pageSize = ref(20);
 const page = ref(1);
 // Desktop-only (CustomerOrdersDataTable.vue) sort/filter state — mobile's simpler card view
 // doesn't expose these controls, matching the main Orders page's own mobile/desktop split.
-const sort = ref<Partial<Record<OrderSortField, 'ASC' | 'DESC'>>>({ orderPlacedAt: 'DESC' });
+const sort = ref<Partial<Record<OrderSortField, 'ASC' | 'DESC'>>>({ createdAt: 'DESC' });
 const stateFilter = ref<string[]>([]);
 const reservationStateFilter = ref('');
 const dateRangeFilter = ref<DateRangeFilterValue>({ preset: '', from: '', to: '' });
@@ -369,7 +369,7 @@ const rows = computed(() =>
         // Total filter needs the raw code to derive the currency symbol via Intl (see AGENTS.md
         // "business data must live in the database": never hardcode a currency symbol).
         currencyCode: order.currencyCode,
-        date: order.orderPlacedAt ? new Date(order.orderPlacedAt).toLocaleDateString('en-US') : '—',
+        date: new Date(order.createdAt).toLocaleDateString('en-US'),
         placedBy: placedByLabel(order),
         reservation: reservationLabel(order),
         reservationVariant: ORDER_RESERVATION_STATE_BADGE_VARIANT[order.customFields.reservationState ?? ''] ?? 'neutral',

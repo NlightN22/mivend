@@ -37,7 +37,7 @@ const rows = computed<TableRow[]>(() =>
             style: 'currency',
             currency: order.currencyCode,
         }).format(order.totalWithTax / 100),
-        date: order.orderPlacedAt ? new Date(order.orderPlacedAt).toLocaleDateString('en-US') : '—',
+        date: new Date(order.createdAt).toLocaleDateString('en-US'),
     })),
 );
 

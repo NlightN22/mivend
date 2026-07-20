@@ -74,7 +74,7 @@ const columns = computed<Column<TableRow>[]>(() => {
             mobile: { badge: true },
         },
         { key: 'total', title: 'Total amount', dataKey: 'total', width: 130, align: 'right' },
-        { key: 'date', title: 'Date placed', dataKey: 'date', width: 140, mobile: { hidden: true } },
+        { key: 'date', title: 'Date created', dataKey: 'date', width: 140, mobile: { hidden: true } },
         { key: 'branch', title: 'Branch', dataKey: 'branch', width: 140, mobile: { hidden: true } },
         // Real signal, not decorative: derived above from actual approval-workflow/order-state
         // data (isWaitingApproval / isOverdue), not a fabricated "next action" concept.
@@ -123,7 +123,7 @@ const rows = computed<TableRow[]>(() =>
                 style: 'currency',
                 currency: order.currencyCode,
             }).format(order.totalWithTax / 100),
-            date: order.orderPlacedAt ? new Date(order.orderPlacedAt).toLocaleDateString('en-US') : '—',
+            date: new Date(order.createdAt).toLocaleDateString('en-US'),
             branch: branchName(counterparty?.branchId),
             attention: isWaitingApproval ? 'Price limit exceeded' : isOverdue ? 'Shipment overdue' : '',
         };

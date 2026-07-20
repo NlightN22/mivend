@@ -6,6 +6,7 @@ export interface RecentOrder {
     totalWithTax: number;
     currencyCode: string;
     orderPlacedAt: string | null;
+    createdAt: string;
     customer: { firstName: string; lastName: string } | null;
 }
 
@@ -128,6 +129,7 @@ const DASHBOARD_QUERY = `
                 totalWithTax
                 currencyCode
                 orderPlacedAt
+                createdAt
                 customer { firstName lastName }
             }
         }

@@ -112,8 +112,8 @@ watch(() => route.params.code, load);
                 <MvStatusBadge variant="info">{{ order.state }}</MvStatusBadge>
             </h1>
             <p class="order-detail__subtitle">
-                Placed
-                {{ order.orderPlacedAt ? new Date(order.orderPlacedAt).toLocaleDateString('en-US') : '—' }}
+                Created
+                {{ new Date(order.createdAt).toLocaleDateString('en-US') }}
             </p>
         </div>
 
