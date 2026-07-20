@@ -157,8 +157,11 @@ function onClear(): void {
                 </div>
             </div>
 
-            <MvDatePicker v-if="activeField === 'from'" hide-input :model-value="customFrom" @pick="pickFrom" />
-            <MvDatePicker v-if="activeField === 'to'" hide-input :model-value="customTo" @pick="pickTo" />
+            <!-- hide-clear: the footer's own Clear (below) already clears both From and To — the
+                 calendar's own per-field Clear button was a second, redundant clear affordance
+                 visible at the same time (real feedback: "Clear" appeared twice). -->
+            <MvDatePicker v-if="activeField === 'from'" hide-input hide-clear :model-value="customFrom" @pick="pickFrom" />
+            <MvDatePicker v-if="activeField === 'to'" hide-input hide-clear :model-value="customTo" @pick="pickTo" />
 
             <div class="mv-column-filter-date-range__footer">
                 <MvButton size="sm" variant="ghost" @click="onClear">Clear</MvButton>

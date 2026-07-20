@@ -10,8 +10,9 @@
 import { computed, ref, watch } from 'vue';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 
-const props = withDefaults(defineProps<{ modelValue: string; hideInput?: boolean }>(), {
+const props = withDefaults(defineProps<{ modelValue: string; hideInput?: boolean; hideClear?: boolean }>(), {
     hideInput: false,
+    hideClear: false,
 });
 // `update:modelValue` fires for both typing and calendar clicks (the actual value change).
 // `pick` fires *only* on an explicit calendar-day click — a distinct signal a caller can use to
@@ -163,7 +164,7 @@ function selectAllOnFocus(event: FocusEvent): void {
                 {{ day.date.getDate() }}
             </button>
         </div>
-        <button v-if="modelValue" type="button" class="mv-date-picker__clear" @click="clear">Clear</button>
+        <button v-if="modelValue && !hideClear" type="button" class="mv-date-picker__clear" @click="clear">Clear</button>
     </div>
 </template>
 
