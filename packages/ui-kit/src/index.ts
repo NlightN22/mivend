@@ -108,8 +108,6 @@ export type { ColumnVisibilityDef } from './composables/useColumnVisibility';
 export { useIsMobileViewport } from './composables/useIsMobileViewport';
 export { useDebouncedCallback } from './composables/useDebouncedCallback';
 
-export { default as MvDatePicker } from './components/MvDatePicker/MvDatePicker.vue';
-
 // Typed column-filter system (AGENTS.md manager-portal rules) — every filterable data-table
 // column declares one of these types explicitly; the table resolves the matching component via
 // COLUMN_FILTER_REGISTRY instead of building its own popover/input/select per column.
