@@ -87,6 +87,17 @@ function onApply(): void {
             max = singleLocal.value;
             break;
     }
+    // Switching to a non-"range" mode tab (Equal/More than/Less than) and clicking Apply without
+    // ever typing a number left `min`/`max` both undefined — a real, previously-shipped bug: that
+    // got persisted as e.g. `{ mode: 'less' }` (see the table's own `hasValue()` doc comment for
+    // why the `mode` field surviving alone made it look permanently "active"), showing a
+    // "Total: ≤ $undefined" chip that never went away. Emitting the real "no filter" shape here —
+    // same as Clear — instead of a mode with no number is what actually prevents that state from
+    // being created in the first place, not just detecting it after the fact.
+    if (min === undefined && max === undefined) {
+        emit('update:modelValue', { mode: 'range', min: undefined, max: undefined });
+        return;
+    }
     emit('update:modelValue', { mode: mode.value, min, max });
 }
 function onClear(): void {

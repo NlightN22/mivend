@@ -362,9 +362,26 @@ function onFilterValueChange(col: ColumnDef, value: unknown, context: 'column' |
 // way, so an applied filter was easy to miss entirely. Highlighting it green (matching the
 // design reference) needs our own hook: passed to each filterable <Column>'s `pt.headerCell`
 // below, since PrimeVue exposes no ready-made "active" CSS class for a custom filter template.
+// `'mode' in value` (not `'min' in value`) is the discriminator for AmountRangeFilterValue —
+// deliberately, not incidentally. useDataTableState persists filters via plain
+// `JSON.stringify`/`JSON.parse` (see its own source), and `JSON.stringify` drops any key whose
+// value is `undefined` — an all-empty amount-range value (`{ mode: 'range', min: undefined, max:
+// undefined }`, this table's own DEFAULT_FILTERS.total) round-trips through localStorage as just
+// `{"mode":"range"}`, with the `min`/`max` keys gone entirely. Checking `'min' in value` then
+// fails (the key isn't there to find), falls through to the generic `return !!value`, and a
+// completely empty filter reads as "active" forever — a real, confirmed bug: an accidental
+// "Less than" mode + Apply with no number typed (`onApply()` in MvColumnFilterAmountRange.vue
+// leaves `singleLocal` at its initial `undefined` if the field was never touched) persists
+// `{mode:'less'}`, which showed a permanent "Total: ≤ $undefined" chip on every page load that
+// even "Clear filters" couldn't remove (Clear writes the same all-undefined shape, which
+// round-trips through localStorage and loses its keys the exact same way). `mode` is a plain
+// non-optional string on AmountRangeFilterValue, so unlike `min`/`max` it always survives the
+// round-trip — checking for it (rather than for the specific field that determines active-ness)
+// is what makes this robust after a reload, not just on the first render before anything's been
+// persisted.
 function hasValue(value: unknown): boolean {
     if (Array.isArray(value)) return value.length > 0;
-    if (value && typeof value === 'object' && 'min' in value) {
+    if (value && typeof value === 'object' && 'mode' in value) {
         const v = value as AmountRangeFilterValue;
         return v.min !== undefined || v.max !== undefined;
     }
