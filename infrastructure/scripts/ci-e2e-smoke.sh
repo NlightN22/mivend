@@ -33,6 +33,16 @@ pnpm --filter @mivend/plugin-documents exec puppeteer browsers install chrome
 DEV_PID=""
 cleanup() {
     local code=$?
+    if [ "$code" -ne 0 ]; then
+        # `docker compose up -d` never streams container stdout/stderr to the CI log — only
+        # orchestration events (Creating/Starting/Healthy/exited) are visible there. A silent
+        # postgres-central crash (real incident: exited(1), then later exited(3), with zero
+        # diagnostic output in the CI log either time) is otherwise undebuggable after the
+        # fact — the container is gone by the time anyone looks. Dump every service's logs
+        # before tearing anything down, on any failure.
+        echo "==> Failure detected — dumping infra container logs before teardown:"
+        $COMPOSE logs --no-color || true
+    fi
     if [ -n "$DEV_PID" ]; then
         kill "$DEV_PID" 2>/dev/null || true
         wait "$DEV_PID" 2>/dev/null || true
