@@ -22,6 +22,14 @@ cd "$REPO_ROOT"
 # postgres/postgres credentials docker-compose.dev.yml itself hardcodes), so just seed it.
 [ -f apps/server/.env.central ] || cp apps/server/.env.central.example apps/server/.env.central
 
+# plugin-documents' PdfBrowserService launches a real Chrome via puppeteer at server bootstrap
+# (onModuleInit) — a missing browser throws there, which crashes the whole Nest bootstrap (not
+# just PDF generation), so :3000/health never comes up at all. `puppeteer` is in this repo's
+# `pnpm.onlyBuiltDependencies` allowlist, which normally lets its postinstall download Chrome —
+# but that didn't happen on this fresh CI runner (cache path empty), so install it explicitly
+# rather than depend on postinstall behavior working silently.
+pnpm --filter @mivend/plugin-documents exec puppeteer browsers install chrome
+
 DEV_PID=""
 cleanup() {
     local code=$?
