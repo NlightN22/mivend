@@ -18,7 +18,7 @@ until $COMPOSE exec -T postgres-central pg_isready -U postgres >/dev/null 2>&1; 
 done
 
 echo "==> Starting Vendure server natively for initial migration..."
-dotenv -e apps/server/.env.central -- pnpm --filter server dev &
+pnpm dev:central &
 SERVER_PID=$!
 trap 'kill $SERVER_PID 2>/dev/null || true; wait $SERVER_PID 2>/dev/null || true' EXIT
 

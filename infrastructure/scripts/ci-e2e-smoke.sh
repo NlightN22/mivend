@@ -35,14 +35,37 @@ echo "==> Starting infra (postgres, redis, rabbitmq, elasticsearch)..."
 GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER:-nlightn22}"
 GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER,,}" $COMPOSE up -d --wait
 
+# Bounded wait, not an infinite `until ...; do sleep 2; done` loop — real incident this fixes:
+# GitHub Actions' ubuntu runner image has its own `dotenv` on PATH (the Ruby gem, pre-installed
+# for unrelated tooling), which shadows this project's `dotenv-cli` npm package and doesn't
+# support the `-e` flag. The migration server process below crashed instantly with an
+# unrecognized-option error, but since it runs backgrounded (`&`), `set -euo pipefail` never saw
+# that failure — the script just sat waiting on a port that was never going to open, for the
+# workflow's entire multi-hour default timeout, wasting CI minutes for no reason. A bounded wait
+# turns "hangs forever" into "fails loudly within a few minutes" for this and any similar future
+# background-process failure.
+wait_for_url() {
+    local url="$1"
+    local timeout_s="${2:-120}"
+    local waited=0
+    until curl -sf "$url" >/dev/null 2>&1; do
+        if [ "$waited" -ge "$timeout_s" ]; then
+            echo "::error::Timed out after ${timeout_s}s waiting for $url" >&2
+            return 1
+        fi
+        sleep 2
+        waited=$((waited + 2))
+    done
+}
+
 echo "==> Starting Vendure server natively for initial migration..."
-dotenv -e apps/server/.env.central -- pnpm --filter server dev &
+# `pnpm exec dotenv` (or the equivalent `pnpm dev:central` script, used here) forces resolution
+# through node_modules/.bin — never the shadowing system `dotenv` above.
+pnpm dev:central &
 MIGRATE_PID=$!
 
 echo "==> Waiting for Vendure server on :3000..."
-until curl -sf http://localhost:3000/health >/dev/null 2>&1; do
-    sleep 2
-done
+wait_for_url http://localhost:3000/health
 kill "$MIGRATE_PID" 2>/dev/null || true
 wait "$MIGRATE_PID" 2>/dev/null || true
 
@@ -57,9 +80,7 @@ DEV_PID=$!
 
 echo "==> Waiting for server (:3000), storefront (:5173), manager (:5174)..."
 for url in http://localhost:3000/health http://localhost:5173 http://localhost:5174; do
-    until curl -sf "$url" >/dev/null 2>&1; do
-        sleep 2
-    done
+    wait_for_url "$url" 180
 done
 
 echo "==> Running E2E smoke subset..."
