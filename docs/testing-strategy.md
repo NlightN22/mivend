@@ -305,34 +305,48 @@ Honest inventory as of this pass through the testing-architecture task (not a ca
 some of these are deliberate, some are real gaps worth tracking). Update this list as items are
 closed or new ones are found; don't let it silently go stale.
 
-- **`packages/storefront`'s typecheck is currently broken on `main`**, independent of anything in
-  this document: `vue-tsc --noEmit` fails on 6 real errors across `HomePage.vue`,
-  `FavoritesPage.vue`, `ProductListView.vue`, `SettingsPage.vue` (unused vars, a generic-type
-  mismatch, `| undefined` not narrowed). Found while verifying `integration.yml`'s "Build plugins"
-  step could pass at all (see the CI section's `pnpm --filter '!@mivend/manager'
---filter '!@mivend/storefront'` scoping — that fix specifically routes around this, it does not
-  fix it). Needs someone with real storefront context to fix; not attempted here since it's
-  unrelated to testing architecture and risks changing real behavior without a test plan of its
-  own (see the `test-design` skill — this itself would need one).
-- **`e2e-smoke` had never actually been run in CI before this pass — and still isn't green.**
-  Two `workflow_dispatch` runs so far surfaced, in order: (1) `integration.yml`'s unscoped build
-  step and `manager`'s circular-type bug — both fixed; (2) `postgres:16`'s CI service (and,
-  turns out, a genuinely fresh local Postgres volume too) never had the `uuid-ossp` extension
-  created, breaking every plugin whose entities default an id column to `uuid_generate_v4()` —
-  fixed centrally in `createTestSchema()` (`packages/shared/src/testing/postgres-test-schema.ts`);
-  (3) `plugin-reservation`'s `reserve-order.concurrency.test.ts` was missing `rawConnection` on
-  its connection shim (same class of bug as the `InboxService`/`IdempotencyService` fixes earlier
-  in this doc) — fixed — **but revealed a deeper, still-unfixed bug underneath**: once the shim
-  has `rawConnection`, `ReservationService.setOrderReservationState`'s raw SQL
-  (`FROM "order" WHERE id = $1`) hits `relation "order" does not exist`, because this test's own
-  hand-rolled fixture table is named `reservation_test_order`, not `order` — the raw SQL's
-  hardcoded production table name and the test's fixture table name were never able to agree.
-  (4) `plugin-approval-workflow`'s `approval-request.concurrency.test.ts`'s "exactly one of two
-  concurrent decide() calls succeeds" test also fails once the uuid extension is fixed (was
-  masked entirely before, by the extension error). Neither (3)'s deeper bug nor (4) has been
-  investigated — both are pre-existing, plugin-specific bugs unrelated to this pass's testing
-  architecture work, not CI/infra issues. **`e2e-smoke` cannot be confirmed working, and should
-  not be flipped from `workflow_dispatch`-only to running on every PR, until both are resolved.**
+- ~~`packages/storefront`'s typecheck was broken on `main`~~ **Fixed.** 6 real errors across
+  `HomePage.vue`, `FavoritesPage.vue`, `ProductListView.vue`, `SettingsPage.vue`: two genuinely
+  unused declarations (`ProductListView.vue`'s `handleToggleFavorite` took an unused `variantId`
+  param — the function already derives it from the item it's given; `SettingsPage.vue`'s unused
+  `useRouter()`), one wrong-generic-idiom bug (`FavoritesPage.vue`'s `toCard` typed its param as
+  `ReturnType<typeof favoritesStore.items>[number]` — `items` is a `Ref<FavoriteItem[]>` _value_,
+  not a callable, so `ReturnType<...>` was never valid; fixed by importing `FavoriteItem` and
+  using it directly), and one composable return-type bug (`useWidgetProducts.ts` declared
+  `items`/`loading` as `ReturnType<typeof ref<T>>`, which resolved to `Ref<T | undefined>` instead
+  of `Ref<T>` — fixed by typing them as plain `Ref<T>`, which is what `ref<T>(initialValue)`
+  actually, always returns). `vue-tsc --noEmit` and the real `vite build` are both clean now.
+- **`e2e-smoke` had never actually been run in CI before this pass.** Two `workflow_dispatch` runs
+  surfaced, and this pass fixed, four unrelated pre-existing bugs in order: (1) `integration.yml`'s
+  unscoped build step and `manager`'s circular-type bug; (2) `postgres:16`'s CI service (and a
+  genuinely fresh local Postgres volume) never created the `uuid-ossp` extension needed by several
+  entities' `uuid_generate_v4()` id default — fixed centrally in `createTestSchema()`
+  (`packages/shared/src/testing/postgres-test-schema.ts`); (3)
+  `reserve-order.concurrency.test.ts` was missing `rawConnection` on its shim (same class of bug
+  as the `InboxService`/`IdempotencyService` fixes earlier in this doc) — fixed, which then
+  exposed `ReservationService.setOrderReservationState`'s raw SQL hardcoding the production table/
+  flattened-customField-column names (`FROM "order"`, `"customFieldsReservationstate"`), which a
+  test's simplified fixture (a plain `customFields: jsonb` column, no production-style flattened
+  columns, and a non-`order` table name to sidestep the reserved-keyword-quoting gotcha
+  documented in AGENTS.md's Vendure gotchas) can never satisfy — fixed by replacing the raw SQL
+  with a normal `repo.findOne()` re-read through the same entity-mapped repository the rest of
+  the method already uses, which resolves correctly against either the real `Order` entity or any
+  test's differently-shaped/differently-named stand-in; (4)
+  `approval-request.concurrency.test.ts`'s "exactly one of two concurrent decide() calls
+  succeeds" consistently showed both calls succeeding — verified via a forced-simultaneous-read
+  harness that the service's own optimistic-lock guard (`UPDATE ... WHERE version = :version`) is
+  correct (the loser reliably gets `affected: 0` once real overlap actually happens); the test
+  itself just wasn't reliably forcing that overlap against a fast local Postgres (the first
+  `decide()` call's whole read→write chain could complete before the second call's read even
+  started — genuinely sequential, not a race, and "both succeed" is the correct outcome for that
+  case). Fixed with an explicit read-race barrier (`armReadRaceBarrier`) that holds every
+  `findOneOrFail` call until all expected callers have completed their own read, so the write
+  phase always starts from a genuinely concurrent, same-version read. All four fixed, full
+  `pnpm build` + `make lint` + `make test` + every plugin's `test:integration` run together
+  (`pnpm --filter "{packages/**}" --no-bail test:integration`) all green as of this pass. Still
+  outstanding before flipping `e2e-smoke` from `workflow_dispatch`-only to running on every PR:
+  confirm a real `workflow_dispatch` run is green end-to-end (the local checks above are strong
+  evidence but not the same as the actual GitHub-hosted runner booting the full native stack).
 - **CI has 2 jobs with labeled subset-steps, not 4-6 fully separate jobs** — deliberate, see the
   CI section above for the full reasoning and the revisit condition.
 - **Mutation testing is ad hoc only (`make mutation-pilot`), not in CI** — deliberate, see the

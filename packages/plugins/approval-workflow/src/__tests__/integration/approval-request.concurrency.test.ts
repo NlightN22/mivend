@@ -11,6 +11,37 @@ import {
 import { ApprovalRequestService } from '../../approval-request.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
+// `decide()`'s real race window is between its initial read (`repo.findOneOrFail`) and its
+// guarded UPDATE — but `Promise.allSettled([service.decide(...), service.decide(...)])` alone
+// does not reliably force both reads to land before either write, especially against a fast
+// local Postgres: the first call's whole read->write chain can complete before the second call's
+// read even starts, which is genuinely sequential processing, not a race — and trivially "both
+// succeed" with no conflict, which is correct behavior for that case, not a bug. That produced a
+// real, consistently-reproducing false failure in this test (verified separately: a
+// forced-simultaneous-read harness proves the guarded UPDATE's optimistic lock is correct — the
+// loser gets `affected: 0` — every time real overlap actually happens). This barrier makes the
+// overlap real instead of hoping for it: it holds each `findOneOrFail` call until N calls have
+// all completed their own read, so every caller's write phase starts from a genuinely
+// concurrent, same-version read.
+let readRaceBarrier: (() => Promise<void>) | null = null;
+
+function armReadRaceBarrier(expectedArrivals: number): void {
+    let arrived = 0;
+    let release: () => void;
+    const gate = new Promise<void>(resolve => {
+        release = resolve;
+    });
+    readRaceBarrier = async () => {
+        arrived += 1;
+        if (arrived >= expectedArrivals) release();
+        await gate;
+    };
+}
+
+function disarmReadRaceBarrier(): void {
+    readRaceBarrier = null;
+}
+
 // Same constraint as documents/sync's integration tests (VendureEntity needs a bootstrap-time
 // EntityIdStrategy for its primary column) — hand-rolled tables matching production schema,
 // against real Postgres, no DB mocking.
@@ -85,8 +116,29 @@ beforeAll(async () => {
 
     const entityMap = { ApprovalRequest: TestApprovalRequest, ApprovalStep: TestApprovalStep };
     const connectionShim = {
-        getRepository: (_ctx: RequestContext, entity: { name: string }) =>
-            dataSource.getRepository(entityMap[entity.name as keyof typeof entityMap]),
+        getRepository: (_ctx: RequestContext, entity: { name: string }) => {
+            const repo = dataSource.getRepository(entityMap[entity.name as keyof typeof entityMap]);
+            // See `withReadRaceBarrier` below — only patches findOneOrFail when a barrier is
+            // armed for the current test, a no-op otherwise.
+            if (entity.name === 'ApprovalRequest' && readRaceBarrier) {
+                const gate = readRaceBarrier;
+                return new Proxy(repo, {
+                    get(target, prop, receiver) {
+                        if (prop === 'findOneOrFail') {
+                            return async (...args: unknown[]) => {
+                                const result = await (
+                                    target.findOneOrFail as (...a: unknown[]) => Promise<unknown>
+                                )(...args);
+                                await gate();
+                                return result;
+                            };
+                        }
+                        return Reflect.get(target, prop, receiver);
+                    },
+                });
+            }
+            return repo;
+        },
     } as unknown as TransactionalConnection;
 
     const workflowDefinitionService = {
@@ -128,10 +180,16 @@ describe('ApprovalRequestService.decide (integration, real Postgres, concurrency
             xstateSnapshot: null,
         });
 
-        const results = await Promise.allSettled([
-            service.decide(mockCtx, request.id, 'approved'),
-            service.decide(mockCtx, request.id, 'approved'),
-        ]);
+        armReadRaceBarrier(2);
+        let results: PromiseSettledResult<unknown>[];
+        try {
+            results = await Promise.allSettled([
+                service.decide(mockCtx, request.id, 'approved'),
+                service.decide(mockCtx, request.id, 'approved'),
+            ]);
+        } finally {
+            disarmReadRaceBarrier();
+        }
 
         const fulfilled = results.filter(r => r.status === 'fulfilled');
         const rejected = results.filter(r => r.status === 'rejected');

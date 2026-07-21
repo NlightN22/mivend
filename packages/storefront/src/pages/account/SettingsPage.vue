@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { endAllSessions, endSession, fetchMySessions, type SessionSummary } from '../../api/sessions';
 import AccountSidebar from './AccountSidebar.vue';
 
 const authStore = useAuthStore();
-const router = useRouter();
 
 const sessions = ref<SessionSummary[]>([]);
 const sessionsLoading = ref(true);

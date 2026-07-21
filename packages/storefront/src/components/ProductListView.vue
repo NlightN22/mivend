@@ -74,7 +74,7 @@ function buildFavoriteItem(p: ProductItem): FavoriteItem {
     };
 }
 
-function handleToggleFavorite(variantId: string | undefined, p: ProductItem): void {
+function handleToggleFavorite(p: ProductItem): void {
     favoritesStore.toggle(buildFavoriteItem(p));
 }
 
@@ -143,7 +143,7 @@ function handleToggleFavorite(variantId: string | undefined, p: ProductItem): vo
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
                     @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1)"
                     @update-cart-qty="onUpdateQty"
-                    @toggle-favorite="(variantId: string | undefined) => handleToggleFavorite(variantId, p)"
+                    @toggle-favorite="() => handleToggleFavorite(p)"
                     @view-analogs="() => {}"
                 />
             </div>
@@ -171,7 +171,7 @@ function handleToggleFavorite(variantId: string | undefined, p: ProductItem): vo
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
                     @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1)"
                     @update-cart-qty="onUpdateQty"
-                    @toggle-favorite="(variantId: string | undefined) => handleToggleFavorite(variantId, p)"
+                    @toggle-favorite="() => handleToggleFavorite(p)"
                     @view-analogs="() => {}"
                 />
             </div>

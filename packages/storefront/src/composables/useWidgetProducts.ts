@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import { shopApi } from '../api/client';
 import {
     NewArrivalsDocument,
@@ -11,8 +11,8 @@ import type { ProductItem } from './useProductList';
 export type WidgetMode = 'new-arrivals' | 'sales' | 'popular';
 
 export function useWidgetProducts(mode: WidgetMode): {
-    items: ReturnType<typeof ref<ProductItem[]>>;
-    loading: ReturnType<typeof ref<boolean>>;
+    items: Ref<ProductItem[]>;
+    loading: Ref<boolean>;
     load: () => Promise<void>;
 } {
     const items = ref<ProductItem[]>([]);

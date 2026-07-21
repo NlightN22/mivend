@@ -268,11 +268,16 @@ export class ReservationService {
         // reservationState no-op update also (harmlessly) recovering, e.g., a manual-confirm race.
         for (let attempt = 0; attempt < 3; attempt++) {
             await new Promise(resolve => setTimeout(resolve, 300));
-            const current: Array<{ state: string }> = await this.connection.rawConnection.query(
-                `SELECT "customFieldsReservationstate" AS state FROM "order" WHERE id = $1`,
-                [order.id],
-            );
-            if (current[0]?.state === state) return;
+            // Re-reads through the same repo (real Order entity, or whatever a test's connection
+            // shim maps it to) rather than a raw SQL string hardcoding the production table/
+            // flattened-customField column name — a raw `"order"`/`"customFieldsReservationstate"`
+            // string bypasses TypeORM's entity resolution entirely, so it can never resolve
+            // against a test's differently-named/differently-shaped fixture table, making this
+            // retry-verification path structurally untestable at the integration level. This is
+            // otherwise the exact same check: `customFields.reservationState` on the freshly
+            // reloaded row.
+            const current = await repo.findOne({ where: { id: order.id } });
+            if (current?.customFields?.reservationState === state) return;
             await repo.update(order.id, {
                 customFields: { ...order.customFields, reservationState: state },
             });

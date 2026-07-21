@@ -6,7 +6,7 @@ import FavoritesToolbar from './FavoritesToolbar.vue';
 import FavoriteProductCard from './FavoriteProductCard.vue';
 import FavoriteProductRow from './FavoriteProductRow.vue';
 import type { FavoriteProduct } from './FavoriteProductCard.vue';
-import { useFavoritesStore } from '../../stores/favorites';
+import { useFavoritesStore, type FavoriteItem } from '../../stores/favorites';
 import { useCartStore } from '../../stores/cart';
 
 const favoritesStore = useFavoritesStore();
@@ -24,7 +24,7 @@ function getQty(variantId: string): number {
     return localQty.value[variantId] ?? 1;
 }
 
-function toCard(item: ReturnType<typeof favoritesStore.items>[number]): FavoriteProduct {
+function toCard(item: FavoriteItem): FavoriteProduct {
     const priceStr = item.price != null
         ? new Intl.NumberFormat('ru-RU').format(item.price) + ' ' + (item.currency === 'RUB' ? '₽' : item.currency)
         : '—';
