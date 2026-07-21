@@ -28,12 +28,26 @@ retry() {
     return 1
 }
 
-# Wait until postgres accepts connections via unix socket (as OS user, bypasses role LOGIN check)
-retry su -s /bin/sh postgres -c "psql -d template1 -c 'SELECT 1'" >/dev/null 2>&1
+# Wait for the REAL instance specifically — via TCP, not the default unix-socket connection.
+# The official image's two-phase startup only ever binds the *temp* init instance to the unix
+# socket (never TCP); the real, final instance binds both. A unix-socket check (this script's
+# previous approach) succeeds during the temp phase too, which raced this script's own custom
+# ALTER USER against /docker-entrypoint-initdb.d/01-create-test-db.sql's own
+# `ALTER USER postgres WITH PASSWORD ... LOGIN` — two concurrent ALTER USER statements on the
+# same pg_authid row, one of which fails with "tuple concurrently updated" and aborts the whole
+# official entrypoint (a fatal error in an init script kills the container). Waiting on TCP
+# instead structurally can't observe the temp phase at all, so this race can't happen — this is
+# a real fix, not just tolerating the race with more retries (which the previous version of this
+# script tried and didn't fully close, since exiting the retry loop and starting the next step
+# is still not synchronized with the init script's own completion).
+retry pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1
 
-# Ensure the postgres role can log in — idempotent, safe to run every startup. Retried like every
-# other step here: a transient failure (e.g. the temp init instance shutting down between the
-# wait above and this command) must not kill the whole container.
+# Ensure the postgres role can log in — idempotent, safe to run every startup. Back to the
+# unix-socket connection (peer-auth as the `postgres` OS user, bypassing any LOGIN/password
+# check entirely) now that the TCP wait above guarantees we're talking to the real instance, not
+# the temp one — the actual fix was making the *wait* TCP-specific, not this connection's own
+# transport, and unix-socket peer auth is simpler/more reliable than depending on pg_hba.conf's
+# host-connection trust rules (which this project doesn't control the exact contents of).
 retry su -s /bin/sh postgres -c "psql -d template1 -c 'ALTER USER postgres WITH LOGIN'" >/dev/null 2>&1
 
 # Create application database if it does not exist
