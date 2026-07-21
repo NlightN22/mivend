@@ -26,7 +26,14 @@ cleanup() {
 trap cleanup EXIT
 
 echo "==> Starting infra (postgres, redis, rabbitmq, elasticsearch)..."
-GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER:-nlightn22}" $COMPOSE up -d --wait
+# GitHub Actions runners set GITHUB_REPOSITORY_OWNER themselves (to the real, case-preserved
+# repo owner login, e.g. "NlightN22") — so the docker-compose file's own
+# `${GITHUB_REPOSITORY_OWNER:-nlightn22}` fallback never actually triggers in CI, and Docker
+# rejects an image reference with an uppercase repository name ("invalid reference format").
+# Lowercase it explicitly rather than relying on a default that only applies when the var is
+# unset, which is never true here.
+GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER:-nlightn22}"
+GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER,,}" $COMPOSE up -d --wait
 
 echo "==> Starting Vendure server natively for initial migration..."
 dotenv -e apps/server/.env.central -- pnpm --filter server dev &
