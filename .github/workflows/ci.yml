@@ -56,6 +56,15 @@ jobs:
             - name: Run unit tests
               run: pnpm test
 
+            # Contract tests (docs/testing-strategy.md's "Contract" level) need no DB/infra, so
+            # they already run as part of `pnpm test` above — this step re-runs just that subset
+            # for a distinctly labeled pass/fail in the Actions log, per the target CI pipeline
+            # (lint -> ... -> unit -> integration -> component -> contract -> E2E smoke). A
+            # dedicated job/service matrix isn't worth it for the one contract suite that exists
+            # today (`plugin-sync`'s RabbitMQ envelope) — revisit if that count grows.
+            - name: Run contract tests (subset of unit tests above, labeled separately)
+              run: pnpm exec vitest run packages/plugins/sync/src/__tests__/contracts
+
             - name: Upload coverage
               if: always()
               uses: actions/upload-artifact@v4

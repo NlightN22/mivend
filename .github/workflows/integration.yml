@@ -84,6 +84,18 @@ jobs:
             - name: Run integration tests
               run: pnpm --filter "{packages/**}" --no-bail test:integration
 
+            # Component tests (docs/testing-strategy.md's "Component" level — a full
+            # enqueue->claim->process->persist chain) already ran as part of the step above (same
+            # `test:integration` script, same DB/infra, no reason to spin up a second Postgres/
+            # Redis/RabbitMQ matrix for two files) — this re-runs just that subset for a
+            # distinctly labeled pass/fail in the Actions log, per the target CI pipeline. Not
+            # worth a dedicated job for the two component suites that exist today
+            # (plugin-erp-import, plugin-reservation); revisit if that count grows.
+            - name: Run component tests (subset of integration tests above, labeled separately)
+              run: |
+                  pnpm --filter @mivend/plugin-erp-import exec vitest run --config vitest.integration.config.ts component
+                  pnpm --filter @mivend/plugin-reservation exec vitest run --config vitest.integration.config.ts component
+
     # Small critical-route subset (login, order creation — see docs/testing-strategy.md's "E2E
     # strategy"), not the full Playwright suite. Manual-trigger only for now
     # (workflow_dispatch with run_e2e_smoke=true) until its real runtime/flakiness in a fresh

@@ -202,6 +202,30 @@ E2E smoke, with a separate heavier E2E workflow if needed. Coverage is a diagnos
 goal — no blanket high coverage threshold without analysis. Retries apply only to genuinely
 infrastructure-flaky steps, never to mask a real bug.
 
+**Actual shape (2 jobs, not 6+)**: `.github/workflows/ci.yml`'s `lint-and-typecheck` job covers
+lint/format/typecheck; its `unit-tests` job runs `pnpm test` (unit + contract — contract tests
+need no DB/infra, so they're already part of the unit vitest run) with a second, explicitly
+labeled step that re-runs just the contract subset for a distinctly named pass/fail in the
+Actions log. `.github/workflows/integration.yml`'s `integration` job runs the full
+`test:integration` across every plugin (integration + component together — both need the same
+Postgres/Redis/RabbitMQ, so there's no isolation reason to split them), with a second, explicitly
+labeled step that re-runs just the two existing component suites (`plugin-erp-import`,
+`plugin-reservation`) the same way. `e2e-smoke` stays a separate `workflow_dispatch`-only job (see
+"E2E strategy" above).
+
+**Why not 4-6 fully separate jobs, one per level, matching the target pipeline literally**: as of
+this writing there is exactly 1 contract suite and 2 component suites in the whole repo (`git
+grep` them if that's changed since). A dedicated job means a dedicated Postgres/Redis/RabbitMQ
+service matrix and its own startup cost, paid on every push, for 1-3 files — the same "don't add
+abstractions before real repetition" rule this project applies everywhere else in `AGENTS.md`
+applies to CI structure too. The chosen shape (extra labeled _steps_ within the existing 2 jobs,
+re-running the same subset a second time under its own name) gets the actual goal — a level's
+pass/fail is visible on its own in the Actions log, not buried inside a generic "tests passed" —
+at effectively zero extra infra cost, accepting a few seconds of redundant re-execution instead.
+**Revisit this decision once component or contract suite count grows enough that a dedicated job
+(and its own service matrix) pays for itself** — there's no fixed threshold, use judgment at that
+point the same way this decision was made.
+
 ## Mutation testing
 
 Selective, not blanket: payment distribution, scope predicates, state-transition guards, overlap
