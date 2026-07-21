@@ -58,6 +58,17 @@ wait_for_url() {
     done
 }
 
+echo "==> Building plugins + shared + server (ts-node-dev needs plugins' compiled dist/)..."
+# The "integration" job (integration.yml) has its own separate "Build plugins" step, but this is
+# a different job on a different, fresh runner with no shared filesystem — apps/server's
+# `dev` script (ts-node-dev) `require()`s each `@mivend/plugin-*` package directly, which
+# resolves to its `dist/index.js` via package.json's "main" field. On a fresh checkout with no
+# prior build, that dist/ doesn't exist yet, so the migration server crashed on its very first
+# plugin import — never listens on :3000, and the wait below timed out. manager/storefront are
+# excluded (same reasoning as integration.yml): they're started via `pnpm dev:all`'s own Vite dev
+# servers, which compile on the fly and don't need a pre-build.
+pnpm --filter '!@mivend/manager' --filter '!@mivend/storefront' -r build
+
 echo "==> Starting Vendure server natively for initial migration..."
 # `pnpm exec dotenv` (or the equivalent `pnpm dev:central` script, used here) forces resolution
 # through node_modules/.bin — never the shadowing system `dotenv` above.
