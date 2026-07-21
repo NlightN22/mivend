@@ -298,3 +298,55 @@ A change is not done until:
 - E2E failure: check the Playwright trace/screenshot artifact first, not the assertion message —
   most failures are stale auth state, seed drift, or a missing `make dev`/`make seed`, per
   `docs/e2e-testing.md`.
+
+## Known technical debt
+
+Honest inventory as of this pass through the testing-architecture task (not a call to action —
+some of these are deliberate, some are real gaps worth tracking). Update this list as items are
+closed or new ones are found; don't let it silently go stale.
+
+- **`packages/storefront`'s typecheck is currently broken on `main`**, independent of anything in
+  this document: `vue-tsc --noEmit` fails on 6 real errors across `HomePage.vue`,
+  `FavoritesPage.vue`, `ProductListView.vue`, `SettingsPage.vue` (unused vars, a generic-type
+  mismatch, `| undefined` not narrowed). Found while verifying `integration.yml`'s "Build plugins"
+  step could pass at all (see the CI section's `pnpm --filter '!@mivend/manager'
+--filter '!@mivend/storefront'` scoping — that fix specifically routes around this, it does not
+  fix it). Needs someone with real storefront context to fix; not attempted here since it's
+  unrelated to testing architecture and risks changing real behavior without a test plan of its
+  own (see the `test-design` skill — this itself would need one).
+- **`e2e-smoke` had never actually been run in CI before this pass — and still isn't green.**
+  Two `workflow_dispatch` runs so far surfaced, in order: (1) `integration.yml`'s unscoped build
+  step and `manager`'s circular-type bug — both fixed; (2) `postgres:16`'s CI service (and,
+  turns out, a genuinely fresh local Postgres volume too) never had the `uuid-ossp` extension
+  created, breaking every plugin whose entities default an id column to `uuid_generate_v4()` —
+  fixed centrally in `createTestSchema()` (`packages/shared/src/testing/postgres-test-schema.ts`);
+  (3) `plugin-reservation`'s `reserve-order.concurrency.test.ts` was missing `rawConnection` on
+  its connection shim (same class of bug as the `InboxService`/`IdempotencyService` fixes earlier
+  in this doc) — fixed — **but revealed a deeper, still-unfixed bug underneath**: once the shim
+  has `rawConnection`, `ReservationService.setOrderReservationState`'s raw SQL
+  (`FROM "order" WHERE id = $1`) hits `relation "order" does not exist`, because this test's own
+  hand-rolled fixture table is named `reservation_test_order`, not `order` — the raw SQL's
+  hardcoded production table name and the test's fixture table name were never able to agree.
+  (4) `plugin-approval-workflow`'s `approval-request.concurrency.test.ts`'s "exactly one of two
+  concurrent decide() calls succeeds" test also fails once the uuid extension is fixed (was
+  masked entirely before, by the extension error). Neither (3)'s deeper bug nor (4) has been
+  investigated — both are pre-existing, plugin-specific bugs unrelated to this pass's testing
+  architecture work, not CI/infra issues. **`e2e-smoke` cannot be confirmed working, and should
+  not be flipped from `workflow_dispatch`-only to running on every PR, until both are resolved.**
+- **CI has 2 jobs with labeled subset-steps, not 4-6 fully separate jobs** — deliberate, see the
+  CI section above for the full reasoning and the revisit condition.
+- **Mutation testing is ad hoc only (`make mutation-pilot`), not in CI** — deliberate, see the
+  "Mutation testing" section above.
+- **`plugin-erp-import`'s per-record `data` payload shape has no runtime validation** — only the
+  outer envelope (`exchangeId`, `records`, each record's `type`) is checked
+  (`batch-import.contract.test.ts`). The 15 individual record DTOs (`ProductRecordDto`,
+  `StockRecordDto`, etc.) are Swagger-only, same root cause as the `outcome`-enum gaps already
+  fixed elsewhere (no global `ValidationPipe`/`class-validator` in this project). Not fixed here —
+  15 DTOs' worth of real validation logic is a substantially larger, separately-scoped change than
+  the narrow envelope-level fixes made this pass, and each one needs its own risk analysis (what
+  should reject vs. what should tolerate unknown/missing fields) rather than a blanket treatment.
+- **Contract-test coverage is 2 boundaries (`plugin-sync`'s RabbitMQ envelope,
+  `plugin-erp-import`'s batch DTO) out of several documented candidates** (GraphQL schema/
+  generated operations, `plugin-sync`'s central/branch sync formats beyond the envelope schema
+  itself). Extend opportunistically when touching those boundaries, per the `test-design` skill —
+  not a backlog to clear in one pass.

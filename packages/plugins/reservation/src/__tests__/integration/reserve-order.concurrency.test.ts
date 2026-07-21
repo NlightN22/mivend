@@ -133,6 +133,7 @@ beforeAll(async () => {
     await dataSource.initialize();
 
     const connectionShim = {
+        rawConnection: dataSource,
         getRepository: (ctx: RequestContext, entity: { name: string }) => {
             const manager = (ctx as unknown as { __manager?: EntityManager }).__manager;
             const target = entityMap[entity.name as keyof typeof entityMap];
