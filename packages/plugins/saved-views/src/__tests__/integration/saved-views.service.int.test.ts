@@ -8,6 +8,12 @@ import {
     PrimaryGeneratedColumn,
 } from 'typeorm';
 import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    createTestSchema,
+    dropTestSchema,
+    testDataSourceConnectionOptions,
+    testSchemaOptions,
+} from 'shared';
 import { SavedViewsService } from '../../saved-views.service';
 
 // Mirrors plugin-acquiring/plugin-documents' integration test approach: VendureEntity needs a
@@ -34,17 +40,17 @@ function ctxFor(userId: string): RequestContext {
     return { activeUserId: userId } as unknown as RequestContext;
 }
 
+const { schema, extra } = testSchemaOptions('saved_views_service');
+
 beforeAll(async () => {
+    await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
-        host: process.env['TEST_DB_HOST'] ?? 'localhost',
-        port: Number(process.env['TEST_DB_PORT'] ?? 5432),
-        username: process.env['TEST_DB_USER'] ?? 'postgres',
-        password: process.env['TEST_DB_PASSWORD'] ?? 'postgres',
-        database: process.env['TEST_DB_NAME'] ?? 'mivend_test',
+        ...testDataSourceConnectionOptions(),
+        schema,
+        extra,
         entities: [TestSavedTableView],
         synchronize: true,
-        dropSchema: true,
     });
     await dataSource.initialize();
 
@@ -67,6 +73,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await dataSource.destroy();
+    await dropTestSchema(schema);
 });
 
 beforeEach(async () => {

@@ -7,6 +7,12 @@ import type {
     UserService,
     SessionService,
 } from '@vendure/core';
+import {
+    createTestSchema,
+    dropTestSchema,
+    testDataSourceConnectionOptions,
+    testSchemaOptions,
+} from 'shared';
 import { SessionManagementService } from '../../session-management.service';
 
 // Same hand-rolled-table approach as packages/plugins/documents' integration test
@@ -40,17 +46,17 @@ function ctxFor(userId: string, currentToken?: string): RequestContext {
     } as unknown as RequestContext;
 }
 
+const { schema, extra } = testSchemaOptions('session_management');
+
 beforeAll(async () => {
+    await createTestSchema(schema);
     dataSource = new DataSource({
         type: 'postgres',
-        host: process.env['TEST_DB_HOST'] ?? 'localhost',
-        port: Number(process.env['TEST_DB_PORT'] ?? 5432),
-        username: process.env['TEST_DB_USER'] ?? 'postgres',
-        password: process.env['TEST_DB_PASSWORD'] ?? 'postgres',
-        database: process.env['TEST_DB_NAME'] ?? 'mivend_test',
+        ...testDataSourceConnectionOptions(),
+        schema,
+        extra,
         entities: [TestAuthenticatedSession],
         synchronize: true,
-        dropSchema: true,
     });
     await dataSource.initialize();
 
@@ -102,6 +108,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await dataSource.destroy();
+    await dropTestSchema(schema);
 });
 
 beforeEach(async () => {

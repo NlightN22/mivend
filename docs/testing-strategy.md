@@ -125,6 +125,15 @@ Once a plugin's integration config uses schema-per-file, its `fileParallelism: f
 can be removed — files (and, subject to real DB connection-pool limits, workers) may run in
 parallel because each owns its own schema.
 
+**Rollout status: complete across every plugin with integration tests** — `documents`,
+`saved-views`, and `session-management` were the last three still on `dropSchema: true` against
+the shared `public` schema; migrated together with `plugin-erp-import`'s already-migrated
+component test verified as the reference. Confirmed by running all of `documents`, `saved-views`,
+`session-management`, `erp-import`, and `acquiring`'s integration suites concurrently
+(`pnpm --filter <these 5> --no-bail test:integration`) — the actual risk this decision exists to
+prevent (cross-plugin, not just cross-file, DDL races against one shared `mivend_test` database)
+is what this run exercises, not just each plugin in isolation.
+
 ## Mocking strategy
 
 Allowed to mock: external payment provider, ERP adapter, transport boundary, SMTP, file storage,

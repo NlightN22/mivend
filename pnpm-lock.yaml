@@ -752,6 +752,9 @@ importers:
             graphql:
                 specifier: ^16.0.0
                 version: 16.14.2
+            shared:
+                specifier: workspace:*
+                version: link:../../shared
             typeorm:
                 specifier: ^0.3.0
                 version: 0.3.30(ioredis@5.10.1)(pg@8.22.0)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
