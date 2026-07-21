@@ -190,9 +190,19 @@ separate workflow if runtime requires it.
 A minimal `@smoke`-tagged subset (storefront login, deferred-payment order creation — see
 `packages/e2e/package.json`'s `test:smoke` / `make e2e-smoke`) runs via
 `.github/workflows/integration.yml`'s `e2e-smoke` job, booted non-interactively by
-`infrastructure/scripts/ci-e2e-smoke.sh`. It is `workflow_dispatch`-only for now (manual
-`run_e2e_smoke: true`) until its real runtime/flakiness on a fresh GitHub-hosted runner has been
-observed at least once — flip it to run on every PR once verified. The full suite (`make e2e`)
+`infrastructure/scripts/ci-e2e-smoke.sh`. **Verified green end to end** (`workflow_dispatch` run
+`29812146992`, 2026-07-21 — `integration` job ~2min, `e2e-smoke` job ~3min) after 11 iterative
+`workflow_dispatch` attempts that found and fixed 7 real, previously-unknown bugs in the boot
+path (see "Known technical debt" below for the full list — CI build scoping, a manager circular
+type, the `uuid-ossp` extension, `dotenv` PATH-shadowing by a system Ruby gem, unbounded wait
+loops, a missing pre-build step, a gitignored `.env.central`, missing Chrome for puppeteer, and a
+genuine postgres init-script race condition). **Deliberately kept `workflow_dispatch`-only, not
+flipped to run on every PR** — booting the full native stack (5 infra containers + server+worker+
+storefront+manager) costs several minutes end to end for what is, on purpose, only 2 tests; that
+cost is real and was explicitly weighed against running it routinely (see `AGENTS.md`'s "Do not
+include heavy E2E on every push without a time estimate" — this is that estimate). Re-run
+manually via `gh workflow run integration.yml -f run_e2e_smoke=true` when touching the boot path
+itself, or periodically as a health check — not as a per-PR gate. The full suite (`make e2e`)
 stays local-only.
 
 ## CI
@@ -316,37 +326,71 @@ closed or new ones are found; don't let it silently go stale.
   `items`/`loading` as `ReturnType<typeof ref<T>>`, which resolved to `Ref<T | undefined>` instead
   of `Ref<T>` — fixed by typing them as plain `Ref<T>`, which is what `ref<T>(initialValue)`
   actually, always returns). `vue-tsc --noEmit` and the real `vite build` are both clean now.
-- **`e2e-smoke` had never actually been run in CI before this pass.** Two `workflow_dispatch` runs
-  surfaced, and this pass fixed, four unrelated pre-existing bugs in order: (1) `integration.yml`'s
-  unscoped build step and `manager`'s circular-type bug; (2) `postgres:16`'s CI service (and a
-  genuinely fresh local Postgres volume) never created the `uuid-ossp` extension needed by several
-  entities' `uuid_generate_v4()` id default — fixed centrally in `createTestSchema()`
-  (`packages/shared/src/testing/postgres-test-schema.ts`); (3)
-  `reserve-order.concurrency.test.ts` was missing `rawConnection` on its shim (same class of bug
-  as the `InboxService`/`IdempotencyService` fixes earlier in this doc) — fixed, which then
-  exposed `ReservationService.setOrderReservationState`'s raw SQL hardcoding the production table/
-  flattened-customField-column names (`FROM "order"`, `"customFieldsReservationstate"`), which a
-  test's simplified fixture (a plain `customFields: jsonb` column, no production-style flattened
-  columns, and a non-`order` table name to sidestep the reserved-keyword-quoting gotcha
-  documented in AGENTS.md's Vendure gotchas) can never satisfy — fixed by replacing the raw SQL
-  with a normal `repo.findOne()` re-read through the same entity-mapped repository the rest of
-  the method already uses, which resolves correctly against either the real `Order` entity or any
-  test's differently-shaped/differently-named stand-in; (4)
-  `approval-request.concurrency.test.ts`'s "exactly one of two concurrent decide() calls
-  succeeds" consistently showed both calls succeeding — verified via a forced-simultaneous-read
-  harness that the service's own optimistic-lock guard (`UPDATE ... WHERE version = :version`) is
-  correct (the loser reliably gets `affected: 0` once real overlap actually happens); the test
-  itself just wasn't reliably forcing that overlap against a fast local Postgres (the first
-  `decide()` call's whole read→write chain could complete before the second call's read even
-  started — genuinely sequential, not a race, and "both succeed" is the correct outcome for that
-  case). Fixed with an explicit read-race barrier (`armReadRaceBarrier`) that holds every
-  `findOneOrFail` call until all expected callers have completed their own read, so the write
-  phase always starts from a genuinely concurrent, same-version read. All four fixed, full
-  `pnpm build` + `make lint` + `make test` + every plugin's `test:integration` run together
-  (`pnpm --filter "{packages/**}" --no-bail test:integration`) all green as of this pass. Still
-  outstanding before flipping `e2e-smoke` from `workflow_dispatch`-only to running on every PR:
-  confirm a real `workflow_dispatch` run is green end-to-end (the local checks above are strong
-  evidence but not the same as the actual GitHub-hosted runner booting the full native stack).
+- ~~`e2e-smoke` had never actually been run in CI~~ **Fixed — verified green** (see "E2E strategy"
+  above for the run reference). It took 11 iterative `workflow_dispatch` attempts to get there,
+  each surfacing one real, previously-unknown bug in the boot path — a useful reminder that "we
+  wrote a CI script" and "the CI script actually works" are different claims until the second one
+  is checked for real:
+    1. `integration.yml`'s "Build plugins" step ran unscoped `pnpm build` (the whole monorepo,
+       including `manager`/`storefront`, neither of which integration tests touch) — scoped to
+       `pnpm --filter '!@mivend/manager' --filter '!@mivend/storefront' -r build`.
+    2. `manager`'s `ApprovalsInboxPage.stories.ts` had a genuine circular return-type annotation.
+    3. Neither the CI `postgres:16` service nor a genuinely fresh local Postgres volume ever created
+       the `uuid-ossp` extension several entities' `uuid_generate_v4()` id default needs — fixed
+       centrally in `createTestSchema()` (`packages/shared/src/testing/postgres-test-schema.ts`).
+    4. `reserve-order.concurrency.test.ts` was missing `rawConnection` on its shim (same class of
+       bug as the `InboxService`/`IdempotencyService` fixes earlier in this doc), which then exposed
+       `ReservationService.setOrderReservationState`'s raw SQL hardcoding the production table/
+       flattened-customField-column names (`FROM "order"`, `"customFieldsReservationstate"`) — no
+       test fixture could ever satisfy that; fixed by replacing the raw SQL with a normal
+       `repo.findOne()` re-read through the same entity-mapped repository the rest of the method
+       already uses.
+    5. `approval-request.concurrency.test.ts`'s "exactly one of two concurrent decide() calls
+       succeeds" wasn't reliably forcing real read/write overlap against a fast local Postgres (the
+       first call's whole read→write chain could finish before the second call's read even started
+       — genuinely sequential, and "both succeed" is the _correct_ outcome for that case, not a
+       bug — verified separately that the service's own optimistic-lock guard is correct via a
+       forced-simultaneous-read harness). Fixed with an explicit read-race barrier
+       (`armReadRaceBarrier`) that holds every `findOneOrFail` call until all expected callers have
+       read, so the write phase always starts from a genuinely concurrent, same-version read.
+    6. `ci-e2e-smoke.sh`: `dotenv -e ...` resolved to the ubuntu runner's own pre-installed Ruby
+       `dotenv` gem (shadowing the project's `dotenv-cli` npm package), which doesn't support `-e`
+       and crashed instantly — but backgrounded, so `set -euo pipefail` never saw it, and the script
+       just hung on a port that would never open. Fixed by calling `pnpm dev:central` (forces
+       `node_modules/.bin` resolution) instead of the raw binary; also replaced every unbounded
+       `until curl ...; do sleep 2; done` wait with a bounded `wait_for_url` helper so any _other_
+       future background-process failure fails loudly within minutes instead of hanging for the
+       workflow's entire default timeout.
+    7. `ci-e2e-smoke.sh` never built plugins/shared before starting the server — `ts-node-dev`
+       `require()`s each `@mivend/plugin-*` package directly (via its `dist/index.js`), it does not
+       transpile workspace dependencies on the fly the way Vite does. Fixed by adding the same
+       scoped build step `integration.yml` already has.
+    8. `apps/server/.env.central` is gitignored (only `.env.*.example` variants are committed), so
+       it never exists on a fresh checkout — `dotenv-cli` silently no-ops on a missing file, so none
+       of the expected env vars were ever set, and Vendure's own hardcoded fallback
+       (`process.env.DB_NAME ?? 'mivend'`) pointed at a database that was never created. Fixed by
+       seeding `.env.central` from its `.example` (a real, working drop-in — same dev-only
+       credentials `docker-compose.dev.yml` itself already hardcodes) when missing.
+    9. `plugin-documents`' `PdfBrowserService` launches a real Chrome via puppeteer at server
+       bootstrap; a missing browser crashed the whole Nest bootstrap, not just PDF generation.
+       `puppeteer`'s postinstall (which normally downloads Chrome) didn't run on the fresh runner —
+       fixed by installing it explicitly (`pnpm --filter @mivend/plugin-documents exec puppeteer
+browsers install chrome`).
+    10. The custom `infrastructure/docker/postgres/entrypoint.sh` raced its own `ALTER USER postgres
+WITH LOGIN` against `/docker-entrypoint-initdb.d/01-create-test-db.sql`'s own `ALTER USER`
+        statement — the official postgres image's two-phase startup only binds its _temp_ init
+        instance (the one running init scripts) to the unix socket, never TCP, but this
+        entrypoint's wait loop connected via the default unix-socket path, which succeeds during
+        the temp phase too. Two concurrent `ALTER USER` statements on the same `pg_authid` row
+        produced "tuple concurrently updated", aborting the whole official entrypoint (a fatal
+        error in an init script kills the container) — only diagnosable at all once a "dump
+        container logs on failure" step was added, since `docker compose up -d` never streams
+        container stdout. Fixed by waiting on `pg_isready -h 127.0.0.1` (forces TCP) before this
+        entrypoint's own commands run, which structurally can't observe the temp phase at all.
+
+    Deliberately **not** flipped to run on every PR despite being green now — see "E2E strategy"
+    above for the reasoning (cost vs. benefit for 2 tests) and the re-run command.
+
 - **CI has 2 jobs with labeled subset-steps, not 4-6 fully separate jobs** — deliberate, see the
   CI section above for the full reasoning and the revisit condition.
 - **Mutation testing is ad hoc only (`make mutation-pilot`), not in CI** — deliberate, see the
