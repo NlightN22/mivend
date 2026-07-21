@@ -13,6 +13,15 @@ REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 COMPOSE="docker compose -f $REPO_ROOT/infrastructure/docker/docker-compose.dev.yml"
 cd "$REPO_ROOT"
 
+# apps/server/.env.central is gitignored (.gitignore's ".env.*" rule — only .env.*.example
+# variants are committed), so it never exists on a fresh CI checkout. dotenv-cli silently no-ops
+# on a missing file (no error), so the server started with none of its expected env vars set,
+# and Vendure's own hardcoded fallback (`process.env.DB_NAME ?? 'mivend'`, vendure-config.ts)
+# kicked in — a database that was never created, since docker-compose creates `mivend_central`.
+# The .example file is a real, working drop-in for local/CI dev use (no secrets — same
+# postgres/postgres credentials docker-compose.dev.yml itself hardcodes), so just seed it.
+[ -f apps/server/.env.central ] || cp apps/server/.env.central.example apps/server/.env.central
+
 DEV_PID=""
 cleanup() {
     local code=$?
