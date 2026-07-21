@@ -330,66 +330,56 @@ closed or new ones are found; don't let it silently go stale.
   above for the run reference). It took 11 iterative `workflow_dispatch` attempts to get there,
   each surfacing one real, previously-unknown bug in the boot path — a useful reminder that "we
   wrote a CI script" and "the CI script actually works" are different claims until the second one
-  is checked for real:
-    1. `integration.yml`'s "Build plugins" step ran unscoped `pnpm build` (the whole monorepo,
-       including `manager`/`storefront`, neither of which integration tests touch) — scoped to
-       `pnpm --filter '!@mivend/manager' --filter '!@mivend/storefront' -r build`.
-    2. `manager`'s `ApprovalsInboxPage.stories.ts` had a genuine circular return-type annotation.
-    3. Neither the CI `postgres:16` service nor a genuinely fresh local Postgres volume ever created
-       the `uuid-ossp` extension several entities' `uuid_generate_v4()` id default needs — fixed
-       centrally in `createTestSchema()` (`packages/shared/src/testing/postgres-test-schema.ts`).
-    4. `reserve-order.concurrency.test.ts` was missing `rawConnection` on its shim (same class of
-       bug as the `InboxService`/`IdempotencyService` fixes earlier in this doc), which then exposed
-       `ReservationService.setOrderReservationState`'s raw SQL hardcoding the production table/
-       flattened-customField-column names (`FROM "order"`, `"customFieldsReservationstate"`) — no
-       test fixture could ever satisfy that; fixed by replacing the raw SQL with a normal
-       `repo.findOne()` re-read through the same entity-mapped repository the rest of the method
-       already uses.
-    5. `approval-request.concurrency.test.ts`'s "exactly one of two concurrent decide() calls
-       succeeds" wasn't reliably forcing real read/write overlap against a fast local Postgres (the
-       first call's whole read→write chain could finish before the second call's read even started
-       — genuinely sequential, and "both succeed" is the _correct_ outcome for that case, not a
-       bug — verified separately that the service's own optimistic-lock guard is correct via a
-       forced-simultaneous-read harness). Fixed with an explicit read-race barrier
-       (`armReadRaceBarrier`) that holds every `findOneOrFail` call until all expected callers have
-       read, so the write phase always starts from a genuinely concurrent, same-version read.
-    6. `ci-e2e-smoke.sh`: `dotenv -e ...` resolved to the ubuntu runner's own pre-installed Ruby
-       `dotenv` gem (shadowing the project's `dotenv-cli` npm package), which doesn't support `-e`
-       and crashed instantly — but backgrounded, so `set -euo pipefail` never saw it, and the script
-       just hung on a port that would never open. Fixed by calling `pnpm dev:central` (forces
-       `node_modules/.bin` resolution) instead of the raw binary; also replaced every unbounded
-       `until curl ...; do sleep 2; done` wait with a bounded `wait_for_url` helper so any _other_
-       future background-process failure fails loudly within minutes instead of hanging for the
-       workflow's entire default timeout.
-    7. `ci-e2e-smoke.sh` never built plugins/shared before starting the server — `ts-node-dev`
-       `require()`s each `@mivend/plugin-*` package directly (via its `dist/index.js`), it does not
-       transpile workspace dependencies on the fly the way Vite does. Fixed by adding the same
-       scoped build step `integration.yml` already has.
-    8. `apps/server/.env.central` is gitignored (only `.env.*.example` variants are committed), so
-       it never exists on a fresh checkout — `dotenv-cli` silently no-ops on a missing file, so none
-       of the expected env vars were ever set, and Vendure's own hardcoded fallback
-       (`process.env.DB_NAME ?? 'mivend'`) pointed at a database that was never created. Fixed by
-       seeding `.env.central` from its `.example` (a real, working drop-in — same dev-only
-       credentials `docker-compose.dev.yml` itself already hardcodes) when missing.
-    9. `plugin-documents`' `PdfBrowserService` launches a real Chrome via puppeteer at server
-       bootstrap; a missing browser crashed the whole Nest bootstrap, not just PDF generation.
-       `puppeteer`'s postinstall (which normally downloads Chrome) didn't run on the fresh runner —
-       fixed by installing it explicitly (`pnpm --filter @mivend/plugin-documents exec puppeteer
-browsers install chrome`).
-    10. The custom `infrastructure/docker/postgres/entrypoint.sh` raced its own `ALTER USER postgres
+  is checked for real: 1. `integration.yml`'s "Build plugins" step ran unscoped `pnpm build` (the whole monorepo,
+  including `manager`/`storefront`, neither of which integration tests touch) — scoped to
+  `pnpm --filter '!@mivend/manager' --filter '!@mivend/storefront' -r build`. 2. `manager`'s `ApprovalsInboxPage.stories.ts` had a genuine circular return-type annotation. 3. Neither the CI `postgres:16` service nor a genuinely fresh local Postgres volume ever created
+  the `uuid-ossp` extension several entities' `uuid_generate_v4()` id default needs — fixed
+  centrally in `createTestSchema()` (`packages/shared/src/testing/postgres-test-schema.ts`). 4. `reserve-order.concurrency.test.ts` was missing `rawConnection` on its shim (same class of
+  bug as the `InboxService`/`IdempotencyService` fixes earlier in this doc), which then exposed
+  `ReservationService.setOrderReservationState`'s raw SQL hardcoding the production table/
+  flattened-customField-column names (`FROM "order"`, `"customFieldsReservationstate"`) — no
+  test fixture could ever satisfy that; fixed by replacing the raw SQL with a normal
+  `repo.findOne()` re-read through the same entity-mapped repository the rest of the method
+  already uses. 5. `approval-request.concurrency.test.ts`'s "exactly one of two concurrent decide() calls
+  succeeds" wasn't reliably forcing real read/write overlap against a fast local Postgres (the
+  first call's whole read→write chain could finish before the second call's read even started
+  — genuinely sequential, and "both succeed" is the _correct_ outcome for that case, not a
+  bug — verified separately that the service's own optimistic-lock guard is correct via a
+  forced-simultaneous-read harness). Fixed with an explicit read-race barrier
+  (`armReadRaceBarrier`) that holds every `findOneOrFail` call until all expected callers have
+  read, so the write phase always starts from a genuinely concurrent, same-version read. 6. `ci-e2e-smoke.sh`: `dotenv -e ...` resolved to the ubuntu runner's own pre-installed Ruby
+  `dotenv` gem (shadowing the project's `dotenv-cli` npm package), which doesn't support `-e`
+  and crashed instantly — but backgrounded, so `set -euo pipefail` never saw it, and the script
+  just hung on a port that would never open. Fixed by calling `pnpm dev:central` (forces
+  `node_modules/.bin` resolution) instead of the raw binary; also replaced every unbounded
+  `until curl ...; do sleep 2; done` wait with a bounded `wait_for_url` helper so any _other_
+  future background-process failure fails loudly within minutes instead of hanging for the
+  workflow's entire default timeout. 7. `ci-e2e-smoke.sh` never built plugins/shared before starting the server — `ts-node-dev`
+  `require()`s each `@mivend/plugin-*` package directly (via its `dist/index.js`), it does not
+  transpile workspace dependencies on the fly the way Vite does. Fixed by adding the same
+  scoped build step `integration.yml` already has. 8. `apps/server/.env.central` is gitignored (only `.env.*.example` variants are committed), so
+  it never exists on a fresh checkout — `dotenv-cli` silently no-ops on a missing file, so none
+  of the expected env vars were ever set, and Vendure's own hardcoded fallback
+  (`process.env.DB_NAME ?? 'mivend'`) pointed at a database that was never created. Fixed by
+  seeding `.env.central` from its `.example` (a real, working drop-in — same dev-only
+  credentials `docker-compose.dev.yml` itself already hardcodes) when missing. 9. `plugin-documents`' `PdfBrowserService` launches a real Chrome via puppeteer at server
+  bootstrap; a missing browser crashed the whole Nest bootstrap, not just PDF generation.
+  `puppeteer`'s postinstall (which normally downloads Chrome) didn't run on the fresh runner —
+  fixed by installing it explicitly (`pnpm --filter @mivend/plugin-documents exec puppeteer
+browsers install chrome`). 10. The custom `infrastructure/docker/postgres/entrypoint.sh` raced its own `ALTER USER postgres
 WITH LOGIN` against `/docker-entrypoint-initdb.d/01-create-test-db.sql`'s own `ALTER USER`
-        statement — the official postgres image's two-phase startup only binds its _temp_ init
-        instance (the one running init scripts) to the unix socket, never TCP, but this
-        entrypoint's wait loop connected via the default unix-socket path, which succeeds during
-        the temp phase too. Two concurrent `ALTER USER` statements on the same `pg_authid` row
-        produced "tuple concurrently updated", aborting the whole official entrypoint (a fatal
-        error in an init script kills the container) — only diagnosable at all once a "dump
-        container logs on failure" step was added, since `docker compose up -d` never streams
-        container stdout. Fixed by waiting on `pg_isready -h 127.0.0.1` (forces TCP) before this
-        entrypoint's own commands run, which structurally can't observe the temp phase at all.
+  statement — the official postgres image's two-phase startup only binds its _temp_ init
+  instance (the one running init scripts) to the unix socket, never TCP, but this
+  entrypoint's wait loop connected via the default unix-socket path, which succeeds during
+  the temp phase too. Two concurrent `ALTER USER` statements on the same `pg_authid` row
+  produced "tuple concurrently updated", aborting the whole official entrypoint (a fatal
+  error in an init script kills the container) — only diagnosable at all once a "dump
+  container logs on failure" step was added, since `docker compose up -d` never streams
+  container stdout. Fixed by waiting on `pg_isready -h 127.0.0.1` (forces TCP) before this
+  entrypoint's own commands run, which structurally can't observe the temp phase at all.
 
-    Deliberately **not** flipped to run on every PR despite being green now — see "E2E strategy"
-    above for the reasoning (cost vs. benefit for 2 tests) and the re-run command.
+        Deliberately **not** flipped to run on every PR despite being green now — see "E2E strategy"
+        above for the reasoning (cost vs. benefit for 2 tests) and the re-run command.
 
 - **CI has 2 jobs with labeled subset-steps, not 4-6 fully separate jobs** — deliberate, see the
   CI section above for the full reasoning and the revisit condition.
@@ -403,8 +393,17 @@ WITH LOGIN` against `/docker-entrypoint-initdb.d/01-create-test-db.sql`'s own `A
   15 DTOs' worth of real validation logic is a substantially larger, separately-scoped change than
   the narrow envelope-level fixes made this pass, and each one needs its own risk analysis (what
   should reject vs. what should tolerate unknown/missing fields) rather than a blanket treatment.
+  Tracked: `tasks/erp-import-record-validation.md`.
 - **Contract-test coverage is 2 boundaries (`plugin-sync`'s RabbitMQ envelope,
   `plugin-erp-import`'s batch DTO) out of several documented candidates** (GraphQL schema/
   generated operations, `plugin-sync`'s central/branch sync formats beyond the envelope schema
   itself). Extend opportunistically when touching those boundaries, per the `test-design` skill —
-  not a backlog to clear in one pass.
+  not a backlog to clear in one pass. Tracked: `tasks/contract-tests-expansion.md`.
+- **"Forbid a production scheduler inside component tests" (one of the "Архитектурные
+  ограничения" examples the original task named) has no static enforcement** — only architectural
+  practice (workers are split into scheduler/sweep/claim/processor, tests call the processing
+  methods directly, never a real `bullmq` `Worker`/`Queue`). No ESLint rule exists for it yet,
+  unlike the sibling examples (RabbitMQ/ErpAdapter boundaries, sync-processing-in-webhooks,
+  owning-service import boundaries), which are all enforced. Not added speculatively — no real
+  violation exists yet to calibrate a rule against. Tracked:
+  `tasks/eslint-forbid-scheduler-in-component-tests.md`.
