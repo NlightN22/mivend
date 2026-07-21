@@ -1,16 +1,6 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref, watch } from 'vue';
-import {
-    MvButton,
-    MvCheckbox,
-    MvModal,
-    MvSelect,
-    MvStatusBadge,
-    MvTable,
-    MvInput,
-} from '@mivend/ui-kit';
-import type { TableRow } from '@mivend/ui-kit';
-import type { Column } from 'element-plus';
+import { computed, onMounted, ref, watch } from 'vue';
+import { MvButton, MvCheckbox, MvModal, MvSelect, MvInput } from '@mivend/ui-kit';
 import {
     fetchCounterpartyTeam,
     addCounterpartyTeamMember,
@@ -21,6 +11,8 @@ import {
 import type { ManagerOption } from '../../api/orders';
 import type { EntityRef } from '../../api/history';
 import EntityHistoryPanel from '../history/EntityHistoryPanel.vue';
+import CustomerTeamDataTable, { type TeamRow } from './CustomerTeamDataTable.vue';
+import { useAuthStore } from '../../stores/auth';
 
 const props = defineProps<{
     counterpartyId: string;
@@ -33,6 +25,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ loaded: [members: CounterpartyTeamMember[]] }>();
+
+const authStore = useAuthStore();
 
 const ROLE_LABEL: Record<CounterpartyTeamMemberRole, string> = {
     backup: 'Backup manager',
@@ -132,84 +126,32 @@ async function handleRemove(administratorId: string): Promise<void> {
 onMounted(load);
 watch(() => props.counterpartyId, load);
 
-interface TeamRow extends TableRow {
-    administratorId: string | null;
-    isOwner: boolean;
-}
-
-const columns = computed<Column<TableRow>[]>(() => [
-    {
-        key: 'member',
-        title: 'Member',
-        dataKey: 'member',
-        width: 200,
-        flexGrow: 1,
-        mobile: { primary: true },
-    },
-    {
-        key: 'role',
-        title: 'Role',
-        dataKey: 'role',
-        width: 170,
-        cellRenderer: ({ rowData }) => {
-            const row = rowData as TeamRow;
-            return h(MvStatusBadge, { variant: row.isOwner ? 'info' : 'neutral' }, () => row.role as string);
-        },
-        mobile: { badge: true },
-    },
-    { key: 'primaryContact', title: 'Primary contact', dataKey: 'primaryContact', width: 130 },
-    { key: 'email', title: 'Email', dataKey: 'email', width: 220 },
-    { key: 'phone', title: 'Phone', dataKey: 'phone', width: 150 },
-    {
-        key: 'status',
-        title: 'Status',
-        dataKey: 'status',
-        width: 110,
-        cellRenderer: () => h(MvStatusBadge, { variant: 'success' }, () => 'Active'),
-    },
-    {
-        key: 'actions',
-        title: 'Actions',
-        dataKey: 'actions',
-        width: 110,
-        cellRenderer: ({ rowData }) => {
-            const row = rowData as TeamRow;
-            if (row.isOwner || !props.canManage || !row.administratorId) return h('span');
-            const administratorId = row.administratorId;
-            return h(
-                MvButton,
-                {
-                    variant: 'danger',
-                    size: 'sm',
-                    disabled: saving.value,
-                    onClick: () => void handleRemove(administratorId),
-                },
-                () => 'Remove',
-            );
-        },
-    },
-]);
-
 const rows = computed<TeamRow[]>(() => {
     const ownerRow: TeamRow = {
+        id: 'owner',
         member: props.ownerName ?? 'Unassigned',
         role: 'Primary manager',
+        isPrimary: true,
         primaryContact: 'Yes',
         email: manager(props.ownerId ?? '')?.email ?? '—',
         phone: '—',
+        createdAt: null,
+        status: 'Active',
         administratorId: props.ownerId,
         isOwner: true,
-        _key: 'owner',
     };
     const memberRows: TeamRow[] = members.value.map(m => ({
+        id: m.id,
         member: manager(m.administratorId)?.name ?? m.administratorId,
         role: ROLE_LABEL[m.role] ?? m.role,
+        isPrimary: false,
         primaryContact: 'No',
         email: manager(m.administratorId)?.email ?? '—',
         phone: m.phone ?? '—',
+        createdAt: m.createdAt,
+        status: 'Active',
         administratorId: m.administratorId,
         isOwner: false,
-        _key: m.id,
     }));
     return [ownerRow, ...memberRows];
 });
@@ -222,12 +164,13 @@ const rows = computed<TeamRow[]>(() => {
             <MvButton v-if="canManage" size="sm" @click="openAdd">+ Add team member</MvButton>
         </div>
 
-        <MvTable
-            :columns="columns"
-            :data="rows"
-            :height="Math.max(rows.length, 3) * 52 + 40"
+        <CustomerTeamDataTable
+            :rows="rows"
             :loading="loading"
-            empty-text="No team members yet"
+            :can-manage="canManage"
+            :saving="saving"
+            :administrator-id="authStore.administrator?.id ?? 'anonymous'"
+            @remove="handleRemove"
         />
         <p v-if="error" class="customer-team__error">{{ error }}</p>
 

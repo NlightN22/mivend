@@ -321,13 +321,13 @@ export default async function globalSetup(): Promise<void> {
         // fresh CI DB) doesn't pile up duplicates and break the specs' strict-mode text
         // locators.
         const existingGrants = await adminGql<{
-            discountGrantsForCounterparty: { percent: number }[];
+            discountGrantsForCounterparty: { items: { percent: number }[] };
         }>(
-            `query($counterpartyId: ID!) { discountGrantsForCounterparty(counterpartyId: $counterpartyId) { percent } }`,
+            `query($counterpartyId: ID!) { discountGrantsForCounterparty(counterpartyId: $counterpartyId) { items { percent } } }`,
             { counterpartyId: e2eCounterpartyId },
             deptHeadToken,
         );
-        const alreadySeeded = existingGrants.data.discountGrantsForCounterparty.some(
+        const alreadySeeded = existingGrants.data.discountGrantsForCounterparty.items.some(
             g => g.percent === 8,
         );
 

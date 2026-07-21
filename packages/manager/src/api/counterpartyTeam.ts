@@ -7,6 +7,7 @@ export interface CounterpartyTeamMember {
     administratorId: string;
     role: CounterpartyTeamMemberRole;
     phone: string | null;
+    createdAt: string;
 }
 
 export async function fetchCounterpartyTeam(
@@ -17,7 +18,7 @@ export async function fetchCounterpartyTeam(
     }>(
         `query CounterpartyTeam($id: ID!) {
             counterparty(id: $id) {
-                teamMembers { id administratorId role phone }
+                teamMembers { id administratorId role phone createdAt }
             }
         }`,
         { id: counterpartyId },
