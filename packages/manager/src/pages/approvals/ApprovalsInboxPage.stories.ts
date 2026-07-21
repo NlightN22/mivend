@@ -13,12 +13,27 @@ const meta: Meta<typeof ApprovalsInboxPage> = {
 export default meta;
 type Story = StoryObj<typeof ApprovalsInboxPage>;
 
+interface ApprovalRequestMock {
+    id: string;
+    requestType: string;
+    status: string;
+    currentStepIndex: number;
+    currentStepRole: string;
+    stepRoles: string[];
+    totalSteps: number;
+    requestedByAdministratorId: string;
+    createdAt: string;
+    decidedAt: string | null;
+    payload: string;
+    steps: unknown[];
+}
+
 function request(
     id: string,
     requestType: string,
     status: string,
     currentStepRole: string,
-): (typeof REQUESTS)[number] {
+): ApprovalRequestMock {
     return {
         id,
         requestType,

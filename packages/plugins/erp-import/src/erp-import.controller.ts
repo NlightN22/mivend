@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+    BadRequestException,
+    Body,
+    Controller,
+    Get,
+    HttpCode,
+    Param,
+    Post,
+    Req,
+    UseGuards,
+} from '@nestjs/common';
 import {
     ApiBearerAuth,
     ApiBody,
@@ -38,12 +48,22 @@ export class ErpImportController {
         @Req() req: Request,
         @Body() body: BatchImportRequestDto,
     ): Promise<ImportRunResult> {
+        // No global ValidationPipe is wired (this project doesn't use class-validator), so
+        // @ApiProperty()'s "required" is Swagger documentation only, not runtime enforcement —
+        // check the envelope explicitly. exchangeId is the idempotency key this whole endpoint's
+        // dedup contract depends on (docs/testing-strategy.md); records must be present so a
+        // malformed/empty submission fails loudly instead of creating a vacuous "done" run.
+        if (!body.exchangeId) {
+            throw new BadRequestException('exchangeId is required');
+        }
+        if (!Array.isArray(body.records)) {
+            throw new BadRequestException('records must be an array');
+        }
         const ctx = await this.requestContextService.create({ apiType: 'admin', req });
-        // BatchImportRequestDto documents the envelope shape for Swagger; each
-        // record's exact `data` shape is validated per-type inside
-        // ErpImportService.processRecord (unrecognized `type` values are
-        // silently skipped there, same as before this DTO existed) — safe to
-        // treat the wider DTO shape as the strict internal union at this boundary.
+        // BatchImportRequestDto documents the envelope shape for Swagger; each record's exact
+        // `data` shape is validated per-type inside the corresponding handler. An unrecognized
+        // `type` value is rejected as a per-record error by ErpImportService.processRecord's
+        // switch default — never silently counted as processed.
         return this.erpImportService.processBatch(ctx, body as unknown as BatchImportBody);
     }
 

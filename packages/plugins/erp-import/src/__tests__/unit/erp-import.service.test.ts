@@ -288,4 +288,24 @@ describe('ErpImportService', () => {
         ]);
         expect(stockHandler.upsert).toHaveBeenCalledOnce();
     });
+
+    it('records an unrecognized record type as a per-record error, never silently counts it as processed', async () => {
+        const body = {
+            exchangeId: 'ex-6',
+            records: [
+                { type: 'bogusType', data: {} },
+                { type: 'stock', data: { sku: 'SKU3', stockOnHand: 5 } },
+            ],
+        } as unknown as BatchImportBody;
+        importRunService.findByExchangeId
+            .mockResolvedValueOnce(null)
+            .mockResolvedValue(makeRun({ status: 'done' }));
+
+        await service.processBatch(ctx, body);
+
+        expect(importRunService.complete).toHaveBeenCalledWith(expect.anything(), 1, [
+            { index: 0, message: 'Unrecognized record type: "bogusType"' },
+        ]);
+        expect(stockHandler.upsert).toHaveBeenCalledOnce();
+    });
 });

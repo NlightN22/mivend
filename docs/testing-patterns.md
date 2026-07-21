@@ -368,8 +368,15 @@ REST ERP→platform boundary, `erp-callback.controller.test.ts`) enforces requir
 as a real gap during the pilot: no global `ValidationPipe` is wired in this project, so
 `@ApiProperty`'s `enum`/`required` are Swagger documentation only, and an unrecognized `outcome`
 value would otherwise have reached `OUTCOME_TO_PAYMENT_STATUS[outcome]` in `plugin-acquiring` as
-`undefined` silently, rather than being rejected at intake. `plugin-erp-import`'s REST DTOs remain
-a gap — not yet introduced.
+`undefined` silently, rather than being rejected at intake. `plugin-erp-import`'s
+`batch-import.contract.test.ts` covers the ERP→platform batch-import boundary similarly: an
+`it.each` over every type `TYPE_TO_SCHEMA` (the DTO's producer-facing contract) declares supported
+proves the consumer (`ErpImportService.processRecord`'s switch) actually handles each one — real
+producer/consumer agreement, not just a static list comparison — plus an explicit check that an
+unrecognized type is rejected as a per-record error. Found and fixed the same class of gap here
+too: the switch had no `default` case, so an unrecognized `type` fell through silently and the
+caller's `processed++` counted it as a success; the controller also didn't check `exchangeId`/
+`records`/`invoiceId` presence at all.
 
 **Exceptions**: internal-only interfaces with a single producer and consumer deployed atomically
 (same release) can skip version-skew scenarios, but must still check required-field/shape drift.

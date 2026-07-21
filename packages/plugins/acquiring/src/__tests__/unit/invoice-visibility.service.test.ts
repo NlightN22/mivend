@@ -28,23 +28,24 @@ function mockQueryBuilder() {
 
 const mockCtx = {} as unknown as RequestContext;
 
-describe('InvoiceVisibilityService', () => {
-    let service: InvoiceVisibilityService;
-    let qb: ReturnType<typeof mockQueryBuilder>;
-    let accessScopeService: {
-        resolveInvoiceScope: ReturnType<typeof vi.fn>;
-        applyOwnCounterpartyFilter: ReturnType<typeof vi.fn>;
-    };
-
-    beforeEach(() => {
-        qb = mockQueryBuilder();
-        const connection = {
-            getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
-        };
-        accessScopeService = {
-            resolveInvoiceScope: vi.fn(),
-            // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter).
-            applyOwnCounterpartyFilter: vi.fn((builder, alias, administratorId) => {
+// Same "let inference do the work" fix as mockQueryBuilder above — pre-declaring
+// accessScopeService's type as `{ applyOwnCounterpartyFilter: ReturnType<typeof vi.fn> }`
+// (no generic args, so it widens to `Mock<any[], unknown>`) is what produced the
+// "Mock<[builder,alias,administratorId], void> not assignable to Mock<any[], unknown>"
+// build error — a concretely-typed callback's inferred Mock type doesn't downcast to that
+// wider annotation. Extracting the factory lets accessScopeService's declared type come from
+// `ReturnType<typeof mockAccessScopeService>` instead, matching each mock's real signature.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
+function mockAccessScopeService() {
+    return {
+        resolveInvoiceScope: vi.fn(),
+        // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter).
+        applyOwnCounterpartyFilter: vi.fn(
+            (
+                builder: { andWhere: (sql: string, params: Record<string, unknown>) => void },
+                alias: string,
+                administratorId: string | undefined,
+            ) => {
                 builder.andWhere(
                     `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
                 SELECT 1 FROM counterparty_team_member ctm
@@ -53,8 +54,22 @@ describe('InvoiceVisibilityService', () => {
             ))`,
                     { ownScopeAdminId: administratorId ?? null },
                 );
-            }),
+            },
+        ),
+    };
+}
+
+describe('InvoiceVisibilityService', () => {
+    let service: InvoiceVisibilityService;
+    let qb: ReturnType<typeof mockQueryBuilder>;
+    let accessScopeService: ReturnType<typeof mockAccessScopeService>;
+
+    beforeEach(() => {
+        qb = mockQueryBuilder();
+        const connection = {
+            getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
         };
+        accessScopeService = mockAccessScopeService();
         service = new InvoiceVisibilityService(
             connection as unknown as TransactionalConnection,
             accessScopeService as unknown as AccessScopeService,

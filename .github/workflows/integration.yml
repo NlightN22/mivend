@@ -78,8 +78,14 @@ jobs:
 
             - run: pnpm install --frozen-lockfile
 
+            # Integration tests only ever consume plugin (+ shared, + server) dist output —
+            # manager and storefront are separate deployable apps neither test:integration nor
+            # e2e-smoke's server/worker touch. `pnpm build` (unscoped `pnpm -r build`) used to run
+            # here regardless, which meant an unrelated manager/storefront build break (real
+            # incident: this literally happened — see git history around this comment) could fail
+            # the whole integration job even though nothing it actually needs was affected.
             - name: Build plugins
-              run: pnpm build
+              run: pnpm --filter '!@mivend/manager' --filter '!@mivend/storefront' -r build
 
             - name: Run integration tests
               run: pnpm --filter "{packages/**}" --no-bail test:integration

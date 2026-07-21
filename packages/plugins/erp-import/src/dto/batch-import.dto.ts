@@ -35,9 +35,11 @@ const RECORD_TYPE_DTOS = [
     EmployeeRecordDto,
 ] as const;
 
-// `type` -> which of RECORD_TYPE_DTOS is the shape of `data`. Keep in sync
-// with the ImportRecord union in ../types.ts.
-const TYPE_TO_SCHEMA: Record<string, (typeof RECORD_TYPE_DTOS)[number]> = {
+// `type` -> which of RECORD_TYPE_DTOS is the shape of `data`. Keep in sync with the ImportRecord
+// union in ../types.ts and the switch in ErpImportService.processRecord — exported so
+// contracts/batch-import.contract.test.ts can assert all three stay in agreement instead of
+// silently drifting (see docs/testing-patterns.md's "Contract compatibility" pattern).
+export const TYPE_TO_SCHEMA: Record<string, (typeof RECORD_TYPE_DTOS)[number]> = {
     product: ProductRecordDto,
     price: PriceRecordDto,
     stock: StockRecordDto,

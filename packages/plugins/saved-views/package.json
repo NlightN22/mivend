@@ -14,7 +14,8 @@
         "@vendure/core": "^3.0.0"
     },
     "dependencies": {
-        "graphql-tag": "^2.12.6"
+        "graphql-tag": "^2.12.6",
+        "shared": "workspace:*"
     },
     "devDependencies": {
         "@nestjs/common": "^11.0.0",
@@ -22,7 +23,6 @@
         "@vendure/common": "^3.0.0",
         "@vendure/core": "^3.0.0",
         "graphql": "^16.0.0",
-        "shared": "workspace:*",
         "typeorm": "^0.3.0",
         "typescript": "^5.4.0",
         "vitest": "^4.1.9"
