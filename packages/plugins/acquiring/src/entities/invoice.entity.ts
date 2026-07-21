@@ -28,6 +28,17 @@ export class Invoice extends VendureEntity {
     @Column({ type: 'int' })
     orderId!: number;
 
+    // The invoice's own human-facing business number — generated at creation (see
+    // InvoiceService.createInvoicesForOrder) via shared/src/documentCode.ts's
+    // generateDocumentCode('INV'), the same generation principle as Order.code/PaymentAttempt.
+    // number/DiscountGrant.number but with its own distinct prefix — reusing Order.code directly
+    // here would give every invoice split off one order the same visible identity as that order,
+    // indistinguishable from it in a shared list. `orderId` (below) is the real, queryable link
+    // back to the order; this column is Invoice's own identity, not a derived alias of Order's.
+    @Index()
+    @Column({ type: 'varchar' })
+    number!: string;
+
     @Index()
     @Column({ type: 'int' })
     organizationId!: number;

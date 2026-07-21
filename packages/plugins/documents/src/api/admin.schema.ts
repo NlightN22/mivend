@@ -24,7 +24,11 @@ export const adminApiExtensions = gql`
         take: Int
         skip: Int
         type: String
+        "Exact-match multi-select, populated from documentTypes — see that query's doc comment."
+        types: [String!]
         status: String
+        "Substring match against the document's own number (ILIKE)."
+        search: String
     }
 
     type OrganizationRequisites {
@@ -41,6 +45,12 @@ export const adminApiExtensions = gql`
         # visible-counterparty scope) — a caller must never fetch an unbounded page and filter
         # client-side (see AGENTS.md's pagination rule).
         documents(options: DocumentListOptions, counterpartyId: ID, orderId: ID): DocumentList!
+        # Real distinct Document.type values within the caller's visible-counterparty scope
+        # (optionally narrowed further to one counterparty) — backs the manager portal's Type
+        # column checklist filter with live data instead of a hardcoded dropdown (AGENTS.md
+        # "Business data must live in the database": document type is free-text ERP data with no
+        # fixed value set).
+        documentTypes(counterpartyId: ID): [String!]!
         # id/erpId lookup for our own legal entities — see docs/payments.md "Organizations".
         organizationRequisites: [OrganizationRequisites!]!
     }

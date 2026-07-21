@@ -10,6 +10,9 @@ export const adminApiExtensions: DocumentNode = gql`
 
     type Invoice {
         id: ID!
+        "Human-facing business number — generated at creation, distinct from the order's own code — see Invoice.number's own doc comment (invoice.entity.ts)."
+        number: String!
+        createdAt: DateTime!
         orderId: ID!
         organizationId: ID!
         counterpartyId: ID!
@@ -37,7 +40,7 @@ export const adminApiExtensions: DocumentNode = gql`
         take: Int
         skip: Int
         status: String
-        "Substring match against the invoice's own numeric id (cast to text) — see InvoiceListOptions's server-side doc comment (invoice.service.ts) for why this, not a real document-number field, is what search means today."
+        "Substring match against the invoice's own number (Invoice.number)."
         search: String
     }
 
@@ -48,6 +51,11 @@ export const adminApiExtensions: DocumentNode = gql`
 
     type PaymentAttempt {
         id: ID!
+        "The payment's own internal, human-facing business number — generated the same way as Order.code/Invoice.number/DiscountGrant.number. See PaymentAttempt.number's own doc comment (payment-attempt.entity.ts) for why this is distinct from providerPaymentId below (AGENTS.md rule #13)."
+        number: String!
+        createdAt: DateTime!
+        "The payment's real external reference — an acquirer RRN, a branch kassa receipt number, an ERP payment-document id, or (until a real acquirer is wired in) a clearly-marked stub value. Mandatory for every channel; used for reconciliation, never as this payment's own displayed identity."
+        providerPaymentId: String!
         channel: String!
         paymentStatus: String!
         amount: Int!
@@ -67,6 +75,8 @@ export const adminApiExtensions: DocumentNode = gql`
         skip: Int
         status: String
         channel: String
+        "Substring match against the payment's own internal number (PaymentAttempt.number) — never providerPaymentId."
+        search: String
     }
 
     type PaymentRefund {

@@ -90,6 +90,16 @@ describe('PaymentVisibilityService', () => {
         });
     });
 
+    it('filters by search (number substring) when provided, in addition to scope', async () => {
+        invoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findVisible(mockCtx, { search: '42' });
+
+        expect(qb.andWhere).toHaveBeenCalledWith('payment.number ILIKE :search', {
+            search: '%42%',
+        });
+    });
+
     it('filters by counterpartyId when provided, in addition to scope', async () => {
         invoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
 

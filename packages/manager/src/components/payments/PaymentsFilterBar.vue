@@ -7,6 +7,7 @@ const props = defineProps<{ filters: PaymentFilters }>();
 const emit = defineEmits<{ 'update:filters': [filters: PaymentFilters]; reset: [] }>();
 
 const fields = computed<TableFilterFieldDef[]>(() => [
+    { key: 'search', label: 'Payment #', type: 'search', placeholder: 'Payment number contains…' },
     { key: 'status', label: 'Status', type: 'select', options: [...PAYMENT_STATUS_OPTIONS] },
     { key: 'channel', label: 'Source', type: 'select', options: [...PAYMENT_CHANNEL_OPTIONS] },
 ]);

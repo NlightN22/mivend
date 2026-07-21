@@ -69,6 +69,15 @@ export class DocumentsAdminResolver {
     }
 
     @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    async documentTypes(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { counterpartyId?: string },
+    ): Promise<string[]> {
+        return this.documentsService.findVisibleTypes(ctx, args.counterpartyId);
+    }
+
+    @Query()
     @Allow(Permission.ReadCustomer)
     async organizationRequisites(@Ctx() ctx: RequestContext): Promise<OrganizationRequisites[]> {
         return this.documentsService.findAllRequisites(ctx);

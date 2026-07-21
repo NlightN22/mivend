@@ -372,6 +372,26 @@ describe('PaymentAttemptService queries', () => {
         });
     });
 
+    it('findForCounterparty applies search as a substring match against the payment number', async () => {
+        const qb = createMockQb();
+        qb.getManyAndCount.mockResolvedValue([[], 0]);
+        const mockConnection = {
+            getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb), find: vi.fn() })),
+        } as unknown as TransactionalConnection;
+        const service = new PaymentAttemptService(
+            mockConnection,
+            {} as unknown as InvoiceService,
+            {} as unknown as SettlementEntryService,
+            {} as never,
+        );
+
+        await service.findForCounterparty(mockCtx, '5', { search: 'RRN-123' });
+
+        expect(qb.andWhere).toHaveBeenCalledWith('payment.number ILIKE :search', {
+            search: '%RRN-123%',
+        });
+    });
+
     it('belongsToCounterparty is false when the payment has no invoiceId', async () => {
         const mockConnection = {
             getRepository: vi.fn(),

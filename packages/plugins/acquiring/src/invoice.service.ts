@@ -9,6 +9,7 @@ import {
     TransactionalConnection,
     TranslatorService,
 } from '@vendure/core';
+import { generateDocumentCode } from 'shared';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 
 import { Invoice, InvoiceStatus } from './entities/invoice.entity';
@@ -22,9 +23,7 @@ export interface InvoiceListOptions {
     take?: number;
     skip?: number;
     status?: string;
-    // Substring match against the invoice's own numeric id (cast to text) — Invoice has no
-    // dedicated document-number field yet (just Vendure's auto-increment id, shown to managers
-    // as "Invoice #"), so this is the closest real search-by-identifier this list can offer today.
+    // Substring match against the invoice's own number (see Invoice.number's doc comment).
     search?: string;
 }
 
@@ -105,6 +104,7 @@ export class InvoiceService {
                 currencyCode: order.currencyCode,
                 status: 'pending',
                 branchId,
+                number: generateDocumentCode('INV'),
             }),
         );
         return repo.save(invoices);
@@ -169,7 +169,7 @@ export class InvoiceService {
             qb.andWhere('invoice.status = :status', { status: options.status });
         }
         if (options?.search) {
-            qb.andWhere('CAST(invoice.id AS text) ILIKE :search', {
+            qb.andWhere('invoice.number ILIKE :search', {
                 search: `%${options.search}%`,
             });
         }

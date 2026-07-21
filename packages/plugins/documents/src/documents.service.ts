@@ -8,7 +8,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { In } from 'typeorm';
+import { ILike, In } from 'typeorm';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { Invoice } from '@mivend/plugin-acquiring';
 
@@ -21,6 +21,12 @@ export interface DocumentListOptions {
     take?: number;
     skip?: number;
     type?: string;
+    // Exact-match multi-select, unlike `type` (ILike substring) — populated from real distinct
+    // values returned by findVisibleTypes, never a hardcoded list (AGENTS.md "Business data must
+    // live in the database"), so an exact match is correct here: the manager portal's Type
+    // column filter is a checklist of real values, not a free-text search box. If both `type`
+    // and `types` are given, `types` wins (see findVisible).
+    types?: string[];
     status?: string;
     search?: string;
 }
@@ -90,14 +96,51 @@ export class DocumentsService {
                 where: {
                     counterpartyId: In(counterpartyIds),
                     ...(orderId !== undefined ? { orderId: String(orderId) } : {}),
-                    ...(options?.type ? { type: options.type } : {}),
+                    // ILike, not an exact equals — `type` is free-text ERP business data with no
+                    // fixed value set (see DocumentListOptions' doc comment / AGENTS.md "Business
+                    // data must live in the database"), rendered in the manager portal as a text
+                    // filter box. An exact-match filter behind a text box that looks like search
+                    // is a real UX mismatch (typing "inv" would silently match nothing even
+                    // though "invoice" documents exist) — same reasoning as `search` below.
+                    ...(options?.types?.length
+                        ? { type: In(options.types) }
+                        : options?.type
+                          ? { type: ILike(`%${options.type}%`) }
+                          : {}),
                     ...(options?.status ? { status: options.status as Document['status'] } : {}),
+                    // Same ILike-on-number search findForCounterparty (the shop-api path) already
+                    // had — this admin-facing path was simply missing it.
+                    ...(options?.search ? { number: ILike(`%${options.search}%`) } : {}),
                 },
                 order: { issueDate: 'DESC' },
                 take,
                 skip,
             });
         return { items, totalItems };
+    }
+
+    // Real, bounded server-side aggregate (a small DISTINCT over an already-scoped set of rows,
+    // never "fetch everything and dedupe in JS" — AGENTS.md pagination rule) that backs the
+    // manager portal's Type column checklist filter. Reusing CounterpartyService.findVisible()
+    // scoping mirrors findVisible above — same reasoning, don't re-derive visibility here.
+    async findVisibleTypes(ctx: RequestContext, counterpartyId?: ID): Promise<string[]> {
+        const visibleCounterparties = await this.counterpartyService.findVisible(ctx);
+        let counterpartyIds = visibleCounterparties.map(c => String(c.id));
+        if (counterpartyId !== undefined) {
+            counterpartyIds = counterpartyIds.filter(id => id === String(counterpartyId));
+        }
+        if (counterpartyIds.length === 0) {
+            return [];
+        }
+        const rows = await this.connection
+            .getRepository(ctx, Document)
+            .createQueryBuilder('document')
+            .select('document.type', 'type')
+            .distinct(true)
+            .where('document.counterpartyId IN (:...counterpartyIds)', { counterpartyIds })
+            .orderBy('document.type', 'ASC')
+            .getRawMany<{ type: string }>();
+        return rows.map(r => r.type);
     }
 
     async upsertFromErp(ctx: RequestContext, record: DocumentRecord): Promise<Document> {

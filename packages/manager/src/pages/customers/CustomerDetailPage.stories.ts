@@ -57,6 +57,8 @@ const INVOICE_STATUSES = ['pending', 'issued', 'paid', 'cancelled'];
 // 6 invoices cycling through all 4 statuses — enough to exercise every chip/badge variant.
 const CUSTOMER_INVOICES: InvoiceListItem[] = Array.from({ length: 6 }, (_, i) => ({
     id: `INV-${1000 + i}`,
+    number: `ORD-${200 + i}-1`,
+    createdAt: new Date(2026, 6, 1 + i).toISOString(),
     orderId: String(200 + i),
     counterpartyId: '1',
     amount: 45000 + i * 8760,
@@ -70,6 +72,9 @@ const PAYMENT_STATUSES = ['pending', 'authorized', 'captured', 'failed', 'cancel
 // 5 payments cycling through a handful of statuses — enough to exercise several badge variants.
 const CUSTOMER_PAYMENTS: PaymentListItem[] = Array.from({ length: 5 }, (_, i) => ({
     id: `PAY-${1000 + i}`,
+    number: `PAY-202607-${900000 + i}`,
+    createdAt: new Date(2026, 6, 1 + i).toISOString(),
+    providerPaymentId: `RRN-${900000 + i}`,
     channel: i % 2 === 0 ? 'online-acquiring' : 'branch-kassa',
     paymentStatus: PAYMENT_STATUSES[i % PAYMENT_STATUSES.length],
     amount: 45000 + i * 8760,
@@ -167,7 +172,9 @@ function mockCustomerDetailData(): void {
                       : order.totalWithTax,
         })),
     }));
-    registerMock('CustomerDiscountGrants', () => ({ discountGrantsForCounterparty: [] }));
+    registerMock('CustomerDiscountGrantsPage', () => ({
+        discountGrantsForCounterparty: { totalItems: 0, items: [] },
+    }));
     registerMock('CustomerDocumentsPage', () => ({ documents: { totalItems: 0, items: [] } }));
     // Feeds CustomerInvoicesTab (the "Invoices" tab) — same shape as the standalone
     // InvoicesPage.vue, filtered by status server-side per view chip.

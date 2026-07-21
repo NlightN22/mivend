@@ -1,24 +1,35 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { MvPanel, MvStatusBadge, MvKpiCard, MvKpiCarousel, MvSkeleton } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import { useTabSync } from '../../composables/useTabSync';
 import {
     fetchCustomerById,
     fetchCreditForCounterparty,
     fetchCustomerIdForCounterparty,
     fetchOrdersForCustomer,
-    fetchDiscountGrantsForCounterparty,
     type CustomerListItem,
     type CustomerCredit,
     type CustomerOrderItem,
-    type DiscountRuleItem,
 } from '../../api/customers';
 import { fetchManagerOptions, fetchBranchOptions, type ManagerOption, type BranchOption } from '../../api/orders';
 import { fetchOutstandingBalance, type OutstandingBalance } from '../../api/invoices';
 import { fetchCounterpartyTeam, type CounterpartyTeamMember } from '../../api/counterpartyTeam';
 import type { EntityRef } from '../../api/history';
 import { Location, Wallet, User } from '@element-plus/icons-vue';
+// Tab icons use Tabler (AGENTS.md "Icon kit" rule) — pick from there first before adding any
+// other icon package.
+import {
+    IconHome2,
+    IconShoppingBag,
+    IconFileInvoice,
+    IconCreditCard,
+    IconDiscount,
+    IconFolder,
+    IconUsers,
+    IconHistory,
+} from '@tabler/icons-vue';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
 import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
@@ -33,7 +44,6 @@ import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue'
 const HISTORY_ENTITY_LABELS = { Counterparty: 'Customer', TradingPoint: 'Trading point' };
 
 const route = useRoute();
-const router = useRouter();
 const authStore = useAuthStore();
 
 const customer = ref<CustomerListItem | null>(null);
@@ -45,7 +55,6 @@ const orders = ref<CustomerOrderItem[]>([]);
 // The Vendure Customer id, resolved from the route's counterparty id — distinct from
 // customer.value.id (the counterparty id) and required by visibleOrders(customerId: ...).
 const vendureCustomerId = ref<string | null>(null);
-const discounts = ref<DiscountRuleItem[]>([]);
 // Fed by CustomerTeamTab's own @loaded emit (see below) once the Team tab has fetched — this
 // page also fetches it directly in load() so the header's compact Backup manager / Observers
 // summary has data even before the Team tab is opened.
@@ -89,17 +98,20 @@ const TAB_LABELS: Record<CustomerDetailTab, string> = {
     team: 'Team',
     history: 'History',
 };
+const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
+    overview: IconHome2,
+    orders: IconShoppingBag,
+    invoices: IconFileInvoice,
+    payments: IconCreditCard,
+    discounts: IconDiscount,
+    documents: IconFolder,
+    team: IconUsers,
+    history: IconHistory,
+};
 
-function tabFromQuery(): CustomerDetailTab {
-    const q = route.query.tab;
-    return typeof q === 'string' && (TABS as string[]).includes(q) ? (q as CustomerDetailTab) : 'overview';
-}
-
-const activeTab = ref<CustomerDetailTab>(tabFromQuery());
-
-watch(activeTab, tab => {
-    router.replace({ query: { ...route.query, tab } });
-});
+// Tab-switch/URL-sync logic lives in useTabSync.ts (unit-tested there) — see its own doc comment
+// for the two real regressions this replaced.
+const { activeTab, selectTab: selectTabInternal } = useTabSync<CustomerDetailTab>(TABS, 'overview');
 
 // Mobile-only tab-overflow pattern, see AGENTS.md's "Manager portal rules" — 7 tabs don't fit a
 // mobile row; the first 3 (most used day-to-day) stay visible, the rest collapse into "More",
@@ -122,7 +134,7 @@ const tabsMoreOpen = ref(false);
 const tabsMoreRef = ref<HTMLElement | null>(null);
 
 function selectTab(tab: CustomerDetailTab): void {
-    activeTab.value = tab;
+    selectTabInternal(tab);
     tabsMoreOpen.value = false;
 }
 
@@ -183,17 +195,12 @@ async function load(): Promise<void> {
         customer.value = detail;
         credit.value = creditResult;
 
-        const [customerId, grants] = await Promise.all([
-            fetchCustomerIdForCounterparty(counterpartyId),
-            fetchDiscountGrantsForCounterparty(counterpartyId),
-        ]);
-        discounts.value = grants;
-        vendureCustomerId.value = customerId;
-        orders.value = customerId ? await fetchOrdersForCustomer(customerId) : [];
+        vendureCustomerId.value = await fetchCustomerIdForCounterparty(counterpartyId);
+        orders.value = vendureCustomerId.value ? await fetchOrdersForCustomer(vendureCustomerId.value) : [];
         teamMembers.value = await fetchCounterpartyTeam(counterpartyId);
-        // CustomerInvoicesTab/CustomerPaymentsTab now own their own fetching/pagination (same
-        // shape as CustomerOrdersTab) — this page only still needs outstandingBalance for its
-        // own KPI card.
+        // CustomerInvoicesTab/CustomerPaymentsTab/CustomerDiscountsTab now own their own
+        // fetching/pagination (same shape as CustomerOrdersTab) — this page only still needs
+        // outstandingBalance for its own KPI card.
         outstandingBalance.value = await fetchOutstandingBalance(counterpartyId);
 
         if (canViewHistory.value) {
@@ -209,12 +216,6 @@ async function load(): Promise<void> {
 
 onMounted(load);
 watch(() => route.params.id, load);
-watch(
-    () => route.query.tab,
-    () => {
-        activeTab.value = tabFromQuery();
-    },
-);
 
 function managerName(id: string | null): string | null {
     if (!id) return null;
@@ -351,6 +352,7 @@ function initials(name: string | null): string {
                 :class="{ active: activeTab === tab }"
                 @click="selectTab(tab)"
             >
+                <component :is="TAB_ICONS[tab]" class="customer-detail__tab-icon" />
                 {{ TAB_LABELS[tab] }}
             </button>
             <div v-if="overflowTabs.length" ref="tabsMoreRef" class="customer-detail__tabs-more">
@@ -360,6 +362,7 @@ function initials(name: string | null): string {
                     :class="{ active: isOverflowActive }"
                     @click="tabsMoreOpen = !tabsMoreOpen"
                 >
+                    <component v-if="isOverflowActive" :is="TAB_ICONS[activeTab]" class="customer-detail__tab-icon" />
                     {{ isOverflowActive ? TAB_LABELS[activeTab] : 'More' }} ▾
                 </button>
                 <div v-if="tabsMoreOpen" class="customer-detail__tabs-more-menu">
@@ -370,6 +373,7 @@ function initials(name: string | null): string {
                         :class="{ active: activeTab === tab }"
                         @click="selectTab(tab)"
                     >
+                        <component :is="TAB_ICONS[tab]" class="customer-detail__tab-icon" />
                         {{ TAB_LABELS[tab] }}
                     </button>
                 </div>
@@ -396,7 +400,7 @@ function initials(name: string | null): string {
                 v-else-if="activeTab === 'payments'"
                 :counterparty-id="customer.id"
             />
-            <CustomerDiscountsTab v-else-if="activeTab === 'discounts'" :discounts="discounts" />
+            <CustomerDiscountsTab v-else-if="activeTab === 'discounts'" :counterparty-id="customer.id" />
             <CustomerDocumentsTab v-else-if="activeTab === 'documents'" :counterparty-id="customer.id" />
             <CustomerTeamTab
                 v-else-if="activeTab === 'team'"
@@ -549,6 +553,9 @@ function initials(name: string | null): string {
 
 .customer-detail__tabs > button,
 .customer-detail__tabs-more-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
@@ -564,6 +571,12 @@ function initials(name: string | null): string {
 .customer-detail__tabs-more-trigger.active {
     color: var(--el-color-primary-dark-2, #008a70);
     border-bottom-color: var(--el-color-primary, #00b894);
+}
+
+.customer-detail__tab-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
 }
 
 .customer-detail__tabs-more {
@@ -586,6 +599,9 @@ function initials(name: string | null): string {
 }
 
 .customer-detail__tabs-more-menu button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     background: none;
     border: none;
     border-radius: 6px;

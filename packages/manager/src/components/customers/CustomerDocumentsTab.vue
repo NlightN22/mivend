@@ -1,107 +1,120 @@
 <script setup lang="ts">
-import { computed, h, onMounted, reactive, ref, watch } from 'vue';
-import type { Column } from 'element-plus';
-import { MvTable, MvStatusBadge, MvPagination, MvTableFilters, type TableFilterFieldDef } from '@mivend/ui-kit';
-import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
+import { onMounted, ref, watch } from 'vue';
+import { useLatestRequest } from '@mivend/ui-kit';
+import CustomerDocumentsDataTable from './CustomerDocumentsDataTable.vue';
+import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
+import { useAuthStore } from '../../stores/auth';
 import {
     fetchDocumentsPageForCounterparty,
+    fetchDocumentTypes,
     DEFAULT_CUSTOMER_DOCUMENT_FILTERS,
-    DOCUMENT_STATUS_OPTIONS,
     type CustomerDocument,
-    type CustomerDocumentFilters,
 } from '../../api/customers';
 
 // Server-side paginated + filtered (AGENTS.md "Pagination" rule) — owns its own fetching, same
-// shape as CustomerOrdersTab.vue, rather than receiving a pre-loaded array from
-// CustomerDetailPage.
+// shape as CustomerDiscountsTab.vue.
 const props = defineProps<{ counterpartyId: string }>();
+const authStore = useAuthStore();
 
-const PAGE_SIZE = 20;
+const pageSize = ref(20);
 const page = ref(1);
 const totalItems = ref(0);
 const documents = ref<CustomerDocument[]>([]);
-const loading = ref(true);
-const filters = reactive<CustomerDocumentFilters>({ ...DEFAULT_CUSTOMER_DOCUMENT_FILTERS });
+// Real distinct type values for this counterparty's documents — backs the Type column's
+// checklist filter (see CustomerDocumentsDataTable.vue's ALL_COLUMNS doc comment). Loaded once on
+// mount, same as any other filter-options list (compare CustomerOrdersTab.vue's managers ref).
+const typeOptions = ref<string[]>([]);
 
-// `type` is ERP/business-sourced (see api/customers.ts's doc comment on DOCUMENT_STATUS_OPTIONS)
-// — free-text search, not a fixed dropdown. `status` is a genuinely fixed internal state.
-const filterFields: TableFilterFieldDef[] = [
-    { key: 'type', label: 'Type', type: 'search', placeholder: 'invoice, contract...' },
-    { key: 'status', label: 'Status', type: 'select', options: [...DOCUMENT_STATUS_OPTIONS] },
-];
+const typeFilter = ref<string[]>([]);
+const statusFilter = ref('');
+const searchFilter = ref('');
 
-async function load(): Promise<void> {
-    loading.value = true;
-    try {
-        const result = await fetchDocumentsPageForCounterparty(props.counterpartyId, page.value, PAGE_SIZE, filters);
+interface DocumentUrlFilters {
+    [key: string]: string;
+    type: string;
+    status: string;
+    search: string;
+    pageSize: string;
+}
+const URL_FILTER_DEFAULTS: DocumentUrlFilters = { type: '', status: '', search: '', pageSize: '20' };
+const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
+
+function buildUrlFilters(): DocumentUrlFilters {
+    return {
+        type: typeFilter.value.join(','),
+        status: statusFilter.value,
+        search: searchFilter.value,
+        pageSize: String(pageSize.value),
+    };
+}
+
+{
+    const parsed = { ...URL_FILTER_DEFAULTS };
+    fromQuery(parsed, page);
+    if (parsed.type) typeFilter.value = parsed.type.split(',').filter(Boolean);
+    if (parsed.status) statusFilter.value = parsed.status;
+    if (parsed.search) searchFilter.value = parsed.search;
+    if (parsed.pageSize) pageSize.value = Number(parsed.pageSize);
+}
+
+const { loading, run: load } = useLatestRequest(
+    () =>
+        fetchDocumentsPageForCounterparty(
+            props.counterpartyId,
+            page.value,
+            pageSize.value,
+            {
+                ...DEFAULT_CUSTOMER_DOCUMENT_FILTERS,
+                types: typeFilter.value,
+                status: statusFilter.value,
+                search: searchFilter.value,
+            },
+        ),
+    result => {
         documents.value = result.items;
         totalItems.value = result.totalItems;
-    } finally {
-        loading.value = false;
-    }
+    },
+);
+
+async function loadTypeOptions(): Promise<void> {
+    typeOptions.value = await fetchDocumentTypes(props.counterpartyId);
 }
 
-function resetFilters(): void {
-    Object.assign(filters, DEFAULT_CUSTOMER_DOCUMENT_FILTERS);
-    page.value = 1;
-}
-
-watch(filters, () => {
+watch([typeFilter, statusFilter, searchFilter, pageSize], () => {
     page.value = 1;
 });
-watch([page, filters], () => void load());
+watch([page, typeFilter, statusFilter, searchFilter, pageSize], () => {
+    void load();
+    toQuery(buildUrlFilters(), page);
+});
 
-onMounted(load);
-
-function variant(status: string): StatusBadgeVariant {
-    if (status === 'ready') return 'success';
-    if (status === 'failed') return 'danger';
-    if (status === 'generating') return 'warning';
-    return 'neutral';
+function onDataTableFilters(filters: { types: string[]; status: string; search: string }): void {
+    typeFilter.value = filters.types;
+    statusFilter.value = filters.status;
+    searchFilter.value = filters.search;
 }
 
-// MvTable renders this same column config as mobile cards below its own breakpoint — no
-// separate hand-written mobile column set needed (see MvTable.vue).
-const columns: Column<TableRow>[] = [
-    { key: 'number', title: 'Document #', dataKey: 'number', width: 180, mobile: { primary: true } },
-    { key: 'type', title: 'Type', dataKey: 'type', width: 130 },
-    { key: 'issueDate', title: 'Issue date', dataKey: 'issueDate', width: 130 },
-    {
-        key: 'status',
-        title: 'Status',
-        dataKey: 'status',
-        width: 140,
-        cellRenderer: ({ rowData }) => {
-            const row = rowData as TableRow;
-            return h(MvStatusBadge, { variant: row.statusVariant as StatusBadgeVariant }, () => row.status as string);
-        },
-        mobile: { badge: true },
-    },
-];
-
-const rows = computed<TableRow[]>(() =>
-    documents.value.map(doc => ({
-        number: doc.number,
-        type: doc.type,
-        issueDate: new Date(doc.issueDate).toLocaleDateString('en-US'),
-        status: doc.status,
-        statusVariant: variant(doc.status),
-    })),
-);
+onMounted(() => {
+    void load();
+    void loadTypeOptions();
+});
 </script>
 
 <template>
-    <MvTableFilters :fields="filterFields" :model-value="filters" @update:model-value="Object.assign(filters, $event)" @reset="resetFilters" />
-
-    <!-- Same top+bottom MvPagination pattern as CustomerOrdersTab.vue/OrdersPage.vue. -->
-    <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
-
-    <MvTable
-        :columns="columns"
-        :data="rows"
-        :height="Math.max(rows.length, PAGE_SIZE) * 52 + 40"
+    <CustomerDocumentsDataTable
+        :documents="documents"
         :loading="loading"
-        empty-text="No documents for this customer"
+        :total-items="totalItems"
+        :page="page"
+        :page-size="pageSize"
+        :type-options="typeOptions"
+        :type-filter="typeFilter"
+        :status-filter="statusFilter"
+        :search-filter="searchFilter"
+        :administrator-id="authStore.administrator?.id ?? 'anonymous'"
+        @update:filters="onDataTableFilters"
+        @update:page="page = $event"
+        @update:page-size="pageSize = $event"
+        @reset-page="page = 1"
     />
-    <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
 </template>

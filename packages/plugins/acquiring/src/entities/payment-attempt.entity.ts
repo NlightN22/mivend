@@ -36,6 +36,17 @@ export class PaymentAttempt extends VendureEntity {
         super(input);
     }
 
+    // The payment's own internal, human-facing business number — generated at creation
+    // (PaymentAttemptService.payInvoice), same generation principle as Order.code/Invoice.number/
+    // DiscountGrant.number (shared/src/documentCode.ts's generateDocumentCode). Deliberately
+    // distinct from `providerPaymentId` below: per AGENTS.md rule #13, an internally-generated
+    // identity and an external system's own reference serve two different purposes (this
+    // project's own document numbering vs. reconciling against the acquirer/kassa/ERP) and must
+    // never be conflated into one field, even though both are "a number for this payment."
+    @Index()
+    @Column({ type: 'varchar' })
+    number!: string;
+
     @Column({ type: 'varchar' })
     channel!: PaymentChannel;
 

@@ -43,7 +43,13 @@ export interface DiscountRuleForRegistry {
     validTo: Date;
 }
 
-const EXPIRING_SOON_DAYS = 14;
+// Exported — DiscountGrantService.findForCounterparty (Customer Detail page's Discounts tab)
+// reuses this exact threshold for its own active/expiring-soon/expired computation, so the two
+// independent "is this discount expiring soon" answers (registry list, customer-facing list)
+// can't silently drift apart. No exact threshold has been decided yet (see
+// manager-portal-concept.md §8.2, "N не определено") — 14 days is a placeholder, same one the
+// Dashboard already uses.
+export const EXPIRING_SOON_DAYS = 14;
 
 // The only file in the codebase allowed to touch DiscountRegistryEntry directly (see AGENTS.md
 // "Pagination" — read-model/projection tables). Every other file goes through these methods.

@@ -150,7 +150,7 @@ onMounted(async () => {
                 </MvFilterField>
             </MvFilterBar>
 
-            <MvFilterChips :chips="CHIPS" :active="statusFilter" @select="selectChip" />
+            <MvFilterChips class="discounts-page__view-chips" :chips="CHIPS" :active="statusFilter" @select="selectChip" />
 
             <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
             <DiscountsTable :rows="rows" :page-size="PAGE_SIZE" :loading="loading" @renew="openRenewForm" />
@@ -170,6 +170,10 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.discounts-page__view-chips {
+    margin-bottom: 12px;
 }
 
 .discounts-page__breadcrumb {

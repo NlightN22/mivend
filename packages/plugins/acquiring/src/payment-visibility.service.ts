@@ -53,6 +53,9 @@ export class PaymentVisibilityService {
         if (options?.channel) {
             qb.andWhere('payment.channel = :channel', { channel: options.channel });
         }
+        if (options?.search) {
+            qb.andWhere('payment.number ILIKE :search', { search: `%${options.search}%` });
+        }
         this.invoiceVisibilityService.applyScope(qb, scope, 'invoice', 'counterparty');
 
         const totalItems = await qb.getCount();

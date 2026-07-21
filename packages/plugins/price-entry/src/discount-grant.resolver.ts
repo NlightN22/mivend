@@ -1,6 +1,6 @@
 import { Args, Query, Mutation, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/core';
+import { Allow, Ctx, PaginatedList, Permission, RequestContext, Transaction } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import { ApprovalRequest, ApprovalStepDecision } from '@mivend/plugin-approval-workflow';
 
@@ -8,6 +8,7 @@ import {
     DiscountGrantService,
     DiscountGrantInput,
     DiscountGrantForCustomer,
+    DiscountGrantsForCounterpartyOptions,
 } from './discount-grant.service';
 import { DiscountGrant } from './discount-grant.entity';
 
@@ -28,9 +29,13 @@ export class DiscountGrantResolver {
     @Allow(Permission.ReadCatalog)
     async discountGrantsForCounterparty(
         @Ctx() ctx: RequestContext,
-        @Args() args: { counterpartyId: ID },
-    ): Promise<DiscountGrantForCustomer[]> {
-        return this.discountGrantService.findForCounterparty(ctx, args.counterpartyId);
+        @Args() args: { counterpartyId: ID; options?: DiscountGrantsForCounterpartyOptions },
+    ): Promise<PaginatedList<DiscountGrantForCustomer>> {
+        return this.discountGrantService.findForCounterparty(
+            ctx,
+            args.counterpartyId,
+            args.options,
+        );
     }
 
     @Transaction()

@@ -19,6 +19,7 @@
         "@element-plus/icons-vue": "^2.3.0",
         "@mivend/ui-kit": "workspace:*",
         "@primevue/themes": "4.5.4",
+        "@tabler/icons-vue": "^3.45.0",
         "element-plus": "^2.9.0",
         "pinia": "^2.2.0",
         "primevue": "^4.5.4",

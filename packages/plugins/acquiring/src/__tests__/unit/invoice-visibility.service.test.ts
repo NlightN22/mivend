@@ -122,12 +122,12 @@ describe('InvoiceVisibilityService', () => {
         expect(qb.andWhere).toHaveBeenCalledWith('invoice.status = :status', { status: 'paid' });
     });
 
-    it('filters by search (id substring) when provided, in addition to scope', async () => {
+    it('filters by search (number substring) when provided, in addition to scope', async () => {
         accessScopeService.resolveInvoiceScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, { search: '42' });
 
-        expect(qb.andWhere).toHaveBeenCalledWith('CAST(invoice.id AS text) ILIKE :search', {
+        expect(qb.andWhere).toHaveBeenCalledWith('invoice.number ILIKE :search', {
             search: '%42%',
         });
     });

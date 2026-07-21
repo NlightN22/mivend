@@ -31,16 +31,30 @@ export function useUrlSyncedState<F extends Record<string, string>>(
 
     // Uses router.replace, not push, so filter tweaks don't spam browser history — only real
     // navigation should create a history entry (see AGENTS.md).
+    //
+    // Starts from a copy of the *current* route.query, not an empty object — a page can be
+    // embedded inside a parent that owns its own query param (e.g. CustomerDetailPage.vue's
+    // `tab`), and only this composable's own keys (the filter keys + `page`) should be
+    // touched. Real bug this fixes: CustomerOrdersTab.vue typing into its search box replaced
+    // the whole query string, silently dropping `?tab=orders` and bouncing the visible tab back
+    // to Overview mid-edit.
     function toQuery(filters: F, page: Ref<number>): void {
         const query: Record<string, string> = {};
+        for (const [key, value] of Object.entries(route.query)) {
+            if (typeof value === 'string') query[key] = value;
+        }
         for (const key of Object.keys(defaults) as (keyof F)[]) {
             const value = filters[key];
             if (value && value !== defaults[key]) {
                 query[key as string] = value;
+            } else {
+                delete query[key as string];
             }
         }
         if (page.value > 1) {
             query.page = String(page.value);
+        } else {
+            delete query.page;
         }
         void router.replace({ query });
     }

@@ -1,20 +1,8 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import type { Column } from 'element-plus';
-import {
-    MvTable,
-    MvStatusBadge,
-    MvPagination,
-    MvColumnToggle,
-    useColumnVisibility,
-    useIsMobileViewport,
-    useLatestRequest,
-    type ColumnVisibilityDef,
-    type DateRangeFilterValue,
-} from '@mivend/ui-kit';
-import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useLatestRequest, MvFilterChips, type DateRangeFilterValue, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import {
     fetchOrdersPageForCustomer,
     fetchOrderPaymentSummaries,
@@ -38,29 +26,7 @@ import {
 } from '../../api/orders';
 import CustomerOrdersDataTable from './CustomerOrdersDataTable.vue';
 
-const isMobile = useIsMobileViewport(800);
-
 const authStore = useAuthStore();
-
-// Personal display preference, not business data — see useColumnVisibility's own comment.
-// 'code'/'action'(row-click) aren't in this list since there's no dedicated action column here
-// (the whole row is clickable) — 'code' is still required so a customer's order list can't lose
-// its one identifying column.
-const ORDER_COLUMNS: ColumnVisibilityDef[] = [
-    { key: 'code', label: 'Order #', required: true },
-    { key: 'state', label: 'Commercial state' },
-    { key: 'fulfillment', label: 'Fulfillment' },
-    { key: 'payment', label: 'Payment' },
-    { key: 'items', label: 'Items' },
-    { key: 'total', label: 'Total' },
-    { key: 'date', label: 'Date placed' },
-    { key: 'placedBy', label: 'Placed by' },
-    { key: 'reservation', label: 'Reservation' },
-];
-const { hiddenKeys: hiddenColumnKeys, toggle: toggleColumn, toggleableColumns } = useColumnVisibility(
-    `customer-orders-columns:${authStore.administrator?.id ?? 'anonymous'}`,
-    ORDER_COLUMNS,
-);
 
 type PaymentLabel = 'Paid' | 'Partially paid' | 'Unpaid';
 const PAYMENT_BADGE_VARIANT: Record<PaymentLabel, 'success' | 'warning' | 'neutral'> = {
@@ -72,7 +38,6 @@ const PAYMENT_BADGE_VARIANT: Record<PaymentLabel, 'success' | 'warning' | 'neutr
 // Server-side paginated (AGENTS.md "Pagination" rule) — owns its own fetching, same shape as
 // EntityHistoryPanel.vue, rather than receiving a pre-loaded array from CustomerDetailPage.
 const props = defineProps<{ customerId: string }>();
-const router = useRouter();
 
 const managers = ref<ManagerOption[]>([]);
 
@@ -120,8 +85,6 @@ function fulfillmentProgress(order: CustomerOrderItem): number {
 
 const pageSize = ref(20);
 const page = ref(1);
-// Desktop-only (CustomerOrdersDataTable.vue) sort/filter state — mobile's simpler card view
-// doesn't expose these controls, matching the main Orders page's own mobile/desktop split.
 const sort = ref<Partial<Record<OrderSortField, 'ASC' | 'DESC'>>>({ createdAt: 'DESC' });
 const stateFilter = ref<string[]>([]);
 const reservationStateFilter = ref('');
@@ -142,13 +105,100 @@ const paymentSummaries = ref<Map<string, number>>(new Map());
 // currently loaded.
 type ViewKey = CustomerOrdersView;
 const activeView = ref<ViewKey>('all');
-const VIEWS: { key: ViewKey; label: string }[] = [
+// variant reuses PAYMENT_BADGE_VARIANT/ORDER_STATE_BADGE_VARIANT — the same maps the Payment/
+// Commercial-state row badges draw from — so the quick-filter chip and its row badge can never
+// drift into different colors (see MvFilterChips' own doc comment).
+const VIEWS: { key: ViewKey; label: string; variant?: FilterChip['variant'] }[] = [
     { key: 'all', label: 'All' },
-    { key: 'unpaid', label: 'Unpaid' },
-    { key: 'partial', label: 'Partially paid' },
-    { key: 'cancelled', label: 'Cancelled' },
+    { key: 'unpaid', label: 'Unpaid', variant: PAYMENT_BADGE_VARIANT.Unpaid },
+    { key: 'partial', label: 'Partially paid', variant: PAYMENT_BADGE_VARIANT['Partially paid'] },
+    { key: 'cancelled', label: 'Cancelled', variant: ORDER_STATE_BADGE_VARIANT.Cancelled },
 ];
 const viewCounts = ref<CustomerOrderViewCounts>({ all: 0, unpaid: 0, partial: 0, cancelled: 0 });
+const viewChips = computed<FilterChip[]>(() =>
+    VIEWS.map(v => ({ key: v.key, label: `${v.label} ${viewCounts.value[v.key]}`, variant: v.variant })),
+);
+
+// AGENTS.md manager-portal rule: every filter/sort/page-controlled list must be a shareable URL.
+// useUrlSyncedState only accepts a flat Record<string,string>, so every non-string ref above
+// (arrays, the dateRange object, numbers, the sort object) is flattened into/out of this shape —
+// same reasoning as OrdersPage.vue's own OrdersFilters, just with more fields since this tab has
+// more filter controls than the top-level Orders page.
+interface CustomerOrdersUrlFilters {
+    [key: string]: string;
+    view: string;
+    state: string;
+    reservationState: string;
+    dateFrom: string;
+    dateTo: string;
+    datePreset: string;
+    code: string;
+    fulfillmentState: string;
+    placedBy: string;
+    totalMin: string;
+    totalMax: string;
+    sortField: string;
+    sortDir: string;
+    pageSize: string;
+}
+const URL_FILTER_DEFAULTS: CustomerOrdersUrlFilters = {
+    view: 'all',
+    state: '',
+    reservationState: '',
+    dateFrom: '',
+    dateTo: '',
+    datePreset: '',
+    code: '',
+    fulfillmentState: '',
+    placedBy: '',
+    totalMin: '',
+    totalMax: '',
+    sortField: 'createdAt',
+    sortDir: 'DESC',
+    pageSize: '20',
+};
+const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
+
+function buildUrlFilters(): CustomerOrdersUrlFilters {
+    const [sortField, sortDir] = Object.entries(sort.value)[0] ?? ['createdAt', 'DESC'];
+    return {
+        view: activeView.value,
+        state: stateFilter.value.join(','),
+        reservationState: reservationStateFilter.value,
+        dateFrom: dateRangeFilter.value.from,
+        dateTo: dateRangeFilter.value.to,
+        datePreset: dateRangeFilter.value.preset,
+        code: codeFilter.value,
+        fulfillmentState: fulfillmentStateFilter.value.join(','),
+        placedBy: placedByFilter.value,
+        totalMin: totalMinFilter.value !== undefined ? String(totalMinFilter.value) : '',
+        totalMax: totalMaxFilter.value !== undefined ? String(totalMaxFilter.value) : '',
+        sortField,
+        sortDir: sortDir ?? 'DESC',
+        pageSize: String(pageSize.value),
+    };
+}
+
+// Applied once, synchronously, before the watchers below are registered — so restoring state
+// from the URL doesn't itself trigger an extra load() via those watchers (mirrors OrdersPage.vue
+// calling fromQuery before its own watch/loadOrders setup).
+{
+    const parsed = { ...URL_FILTER_DEFAULTS };
+    fromQuery(parsed, page);
+    if (parsed.view) activeView.value = parsed.view as ViewKey;
+    if (parsed.state) stateFilter.value = parsed.state.split(',').filter(Boolean);
+    if (parsed.reservationState) reservationStateFilter.value = parsed.reservationState;
+    if (parsed.dateFrom || parsed.dateTo || parsed.datePreset) {
+        dateRangeFilter.value = { preset: parsed.datePreset, from: parsed.dateFrom, to: parsed.dateTo };
+    }
+    if (parsed.code) codeFilter.value = parsed.code;
+    if (parsed.fulfillmentState) fulfillmentStateFilter.value = parsed.fulfillmentState.split(',').filter(Boolean);
+    if (parsed.placedBy) placedByFilter.value = parsed.placedBy;
+    if (parsed.totalMin) totalMinFilter.value = Number(parsed.totalMin);
+    if (parsed.totalMax) totalMaxFilter.value = Number(parsed.totalMax);
+    if (parsed.sortField) sort.value = { [parsed.sortField]: (parsed.sortDir || 'DESC') as 'ASC' | 'DESC' };
+    if (parsed.pageSize) pageSize.value = Number(parsed.pageSize);
+}
 
 // Paid/Partially paid/Unpaid — compares the real captured total (see fetchOrderPaymentSummaries)
 // against the order's own totalWithTax. Deliberately simple (no refund netting yet, see
@@ -223,7 +273,10 @@ const filterRefs = [
 watch(filterRefs, () => {
     page.value = 1;
 });
-watch([page, sort, ...filterRefs], () => void load());
+watch([page, sort, ...filterRefs], () => {
+    void load();
+    toQuery(buildUrlFilters(), page);
+});
 
 onMounted(() => {
     void load();
@@ -269,98 +322,10 @@ function money(order: CustomerOrderItem): string {
     );
 }
 
-function openOrder(code: string): void {
-    router.push(`/orders/${code}`);
-}
-
-// MvTable renders this same column config as mobile cards below its own breakpoint (see
-// MvTable.vue) — no separate hand-written mobile column set needed.
-const columns = computed<Column<TableRow>[]>(() => {
-    const cols: Column<TableRow>[] = [
-    { key: 'code', title: 'Order #', dataKey: 'code', width: 190, mobile: { primary: true } },
-    {
-        key: 'state',
-        title: 'Commercial state',
-        dataKey: 'state',
-        width: 150,
-        cellRenderer: ({ rowData }) => {
-            const row = rowData as TableRow;
-            return h(MvStatusBadge, { variant: row.stateVariant as StatusBadgeVariant }, () => row.state as string);
-        },
-        mobile: { badge: true },
-    },
-    {
-        key: 'fulfillment',
-        title: 'Fulfillment',
-        dataKey: 'fulfillment',
-        width: 160,
-        // Inline styles, not a scoped CSS class — Vue's `scoped` CSS only instruments elements
-        // compiled from this file's own <template>, not VNodes built imperatively via h() in a
-        // cellRenderer, so a scoped class here would silently never apply (real bug caught by
-        // inspecting computed styles: the progress bar's height came back 0px).
-        cellRenderer: ({ rowData }) => {
-            const row = rowData as TableRow;
-            return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } }, [
-                h(
-                    MvStatusBadge,
-                    { variant: row.fulfillmentVariant as StatusBadgeVariant },
-                    () => row.fulfillment as string,
-                ),
-                h(
-                    'div',
-                    {
-                        style: {
-                            width: '108px',
-                            height: '6px',
-                            background: 'var(--el-fill-color-light, #edf1f4)',
-                            borderRadius: '999px',
-                            overflow: 'hidden',
-                        },
-                    },
-                    [
-                        h('span', {
-                            style: {
-                                display: 'block',
-                                height: '100%',
-                                width: `${row.fulfillmentProgress as number}%`,
-                                background: 'var(--el-color-primary, #00b894)',
-                            },
-                        }),
-                    ],
-                ),
-            ]);
-        },
-    },
-    {
-        key: 'payment',
-        title: 'Payment',
-        dataKey: 'payment',
-        width: 140,
-        cellRenderer: ({ rowData }) => {
-            const label = (rowData as TableRow).payment as PaymentLabel;
-            return h(MvStatusBadge, { variant: PAYMENT_BADGE_VARIANT[label] }, () => label);
-        },
-    },
-    { key: 'items', title: 'Items', dataKey: 'items', width: 90, align: 'right' },
-    { key: 'total', title: 'Total', dataKey: 'total', width: 130, align: 'right' },
-    { key: 'date', title: 'Date placed', dataKey: 'date', width: 140, mobile: { hidden: true } },
-    { key: 'placedBy', title: 'Placed by', dataKey: 'placedBy', width: 170, mobile: { hidden: true } },
-    {
-        key: 'reservation',
-        title: 'Reservation',
-        dataKey: 'reservation',
-        width: 150,
-        mobile: { hidden: true },
-        cellRenderer: ({ rowData }) => {
-            const row = rowData as TableRow;
-            return h(MvStatusBadge, { variant: row.reservationVariant as StatusBadgeVariant }, () => row.reservation as string);
-        },
-    },
-    ];
-    if (!hiddenColumnKeys.value.size) return cols;
-    return cols.filter(c => !hiddenColumnKeys.value.has(c.key as string));
-});
-
+// CustomerOrdersDataTable renders this same row shape on both desktop (PrimeVue DataTable) and
+// mobile (MvAdvancedDataTable's own built-in card view, driven by each column's `mobile` hint) —
+// no separate hand-written mobile row/column set needed (see MvAdvancedMobileCardList.vue in
+// @mivend/ui-kit).
 const rows = computed(() =>
     orders.value.map(order => ({
         code: order.code,
@@ -377,7 +342,10 @@ const rows = computed(() =>
         // Total filter needs the raw code to derive the currency symbol via Intl (see AGENTS.md
         // "business data must live in the database": never hardcode a currency symbol).
         currencyCode: order.currencyCode,
-        date: new Date(order.createdAt).toLocaleDateString('en-US'),
+        // Raw ISO timestamp, not pre-formatted — CustomerOrdersDataTable's #cell-date slot
+        // renders it via MvDateTimeCell (date + a smaller time-of-day line), which needs the
+        // real value to format both parts.
+        date: order.createdAt,
         placedBy: placedByLabel(order),
         reservation: reservationLabel(order),
         reservationVariant: ORDER_RESERVATION_STATE_BADGE_VARIANT[order.customFields.reservationState ?? ''] ?? 'neutral',
@@ -386,42 +354,11 @@ const rows = computed(() =>
 </script>
 
 <template>
-    <div v-if="isMobile" class="customer-orders__toolbar">
-        <div class="customer-orders__views">
-            <button
-                v-for="view in VIEWS"
-                :key="view.key"
-                type="button"
-                class="customer-orders__view-chip"
-                :class="{ 'customer-orders__view-chip--active': activeView === view.key }"
-                @click="activeView = view.key"
-            >
-                {{ view.label }} {{ viewCounts[view.key] }}
-            </button>
-        </div>
-        <MvColumnToggle :columns="toggleableColumns" @toggle="toggleColumn" />
-    </div>
-
-    <template v-if="isMobile">
-        <!-- Same top+bottom MvPagination pattern as OrdersPage.vue — a long list shouldn't
-             require scrolling all the way down just to reach the Next button. -->
-        <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
-
-        <MvTable
-            :columns="columns"
-            :data="rows"
-            :height="Math.max(rows.length, pageSize) * 52 + 40"
-            :loading="loading"
-            empty-text="No orders yet"
-            @row-click="({ rowData }) => openOrder((rowData as TableRow).code as string)"
-        />
-        <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
-    </template>
     <CustomerOrdersDataTable
-        v-else
         :rows="rows"
         :loading="loading"
         :total-items="totalItems"
+        :page="page"
         :page-size="pageSize"
         :managers="managers"
         :state-filter="stateFilter"
@@ -442,53 +379,7 @@ const rows = computed(() =>
         @reset-page="page = 1"
     >
         <template #view-chips>
-            <button
-                v-for="view in VIEWS"
-                :key="view.key"
-                type="button"
-                class="customer-orders__view-chip"
-                :class="{ 'customer-orders__view-chip--active': activeView === view.key }"
-                @click="activeView = view.key"
-            >
-                {{ view.label }} {{ viewCounts[view.key] }}
-            </button>
+            <MvFilterChips :chips="viewChips" :active="activeView" @select="activeView = $event as ViewKey" />
         </template>
     </CustomerOrdersDataTable>
 </template>
-
-<style scoped>
-.customer-orders__toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-
-.customer-orders__views {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.customer-orders__view-chip {
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    background: #fff;
-    color: var(--el-text-color-secondary, #6b7280);
-    border-radius: 999px;
-    padding: 7px 12px;
-    font-size: 12px;
-    font-weight: 750;
-    cursor: pointer;
-}
-
-.customer-orders__view-chip:hover {
-    border-color: var(--el-text-color-secondary, #9ca3af);
-}
-
-.customer-orders__view-chip--active {
-    background: var(--el-color-primary-light-9, #f0fffa);
-    border-color: #bcebdd;
-    color: var(--el-color-primary-dark-2, #008a70);
-}
-</style>

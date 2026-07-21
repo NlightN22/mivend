@@ -15,6 +15,19 @@ export interface AdvancedDataTableColumn {
     // Omit entirely for a column with no server-side sort support — no sort UI renders for it.
     sortField?: string;
     filterConfig: ColumnFilterConfig;
+    // Layout hints for the mobile card view (see MvAdvancedMobileCardList.vue) — mirrors
+    // MvTable's own MvMobileColumnMeta (MvMobileCardList.vue) minus `actions`/`highlight`, which
+    // no current consumer of this component needs; add them here if one does, following the same
+    // pattern. Omit entirely for a column that should just render as a normal label/value pair.
+    mobile?: {
+        // Card title — at most one column should set this.
+        primary?: boolean;
+        // Rendered top-right next to the title, alongside the primary field (e.g. a status
+        // badge) — at most one column should set this.
+        badge?: boolean;
+        // Omitted from the card entirely (e.g. a column only useful for desktop filtering).
+        hidden?: boolean;
+    };
 }
 
 export interface AdvancedDataTableSearchConfig {

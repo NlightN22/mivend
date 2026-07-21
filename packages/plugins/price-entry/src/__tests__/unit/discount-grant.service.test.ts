@@ -13,6 +13,30 @@ function mockCtx(permissions: string[]): RequestContext {
     } as unknown as RequestContext;
 }
 
+// Deliberately un-annotated (see payment-visibility.service.test.ts's identical comment) — an
+// explicit annotation defeats TS's inference of each mock's real call signature.
+function mockQueryBuilder(getManyResult: unknown[] = [], count = 0) {
+    const qb = {
+        leftJoinAndSelect: vi.fn(),
+        where: vi.fn(),
+        andWhere: vi.fn(),
+        orderBy: vi.fn(),
+        addOrderBy: vi.fn(),
+        skip: vi.fn(),
+        take: vi.fn(),
+        getCount: vi.fn(async () => count),
+        getMany: vi.fn(async () => getManyResult),
+    };
+    qb.leftJoinAndSelect.mockReturnValue(qb);
+    qb.where.mockReturnValue(qb);
+    qb.andWhere.mockReturnValue(qb);
+    qb.orderBy.mockReturnValue(qb);
+    qb.addOrderBy.mockReturnValue(qb);
+    qb.skip.mockReturnValue(qb);
+    qb.take.mockReturnValue(qb);
+    return qb;
+}
+
 const validInput = {
     priceTypeCode: 'WHOLESALE',
     facetCode: 'brand',
@@ -33,9 +57,12 @@ describe('DiscountGrantService', () => {
         create: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
         find: ReturnType<typeof vi.fn>;
+        createQueryBuilder: ReturnType<typeof vi.fn>;
     };
+    let ruleRepo: { findBy: ReturnType<typeof vi.fn> };
     let counterpartyRepo: { findBy: ReturnType<typeof vi.fn> };
     let connection: { getRepository: ReturnType<typeof vi.fn> };
+    let qb: ReturnType<typeof mockQueryBuilder>;
     let discountRegistryService: {
         createFromRequest: ReturnType<typeof vi.fn>;
         markDecided: ReturnType<typeof vi.fn>;
@@ -48,16 +75,21 @@ describe('DiscountGrantService', () => {
             createRequest: vi.fn(async () => ({ id: 'req-1' })),
             decide: vi.fn(),
         };
+        qb = mockQueryBuilder();
         grantRepo = {
             create: vi.fn((input: unknown) => input),
             save: vi.fn(async (input: unknown) => input),
             find: vi.fn(async () => []),
+            createQueryBuilder: vi.fn(() => qb),
         };
+        ruleRepo = { findBy: vi.fn(async () => []) };
         counterpartyRepo = { findBy: vi.fn(async () => []) };
         connection = {
-            getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
-                entity?.name === 'Counterparty' ? counterpartyRepo : grantRepo,
-            ),
+            getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) => {
+                if (entity?.name === 'Counterparty') return counterpartyRepo;
+                if (entity?.name === 'DiscountRule') return ruleRepo;
+                return grantRepo;
+            }),
         };
         discountRegistryService = {
             createFromRequest: vi.fn(async () => undefined),
@@ -212,6 +244,98 @@ describe('DiscountGrantService', () => {
                     counterparties: [{ id: 'cp-1' }, { id: 'cp-2' }],
                 }),
             );
+        });
+    });
+
+    describe('findForCounterparty', () => {
+        // Test plan (test-design skill): changed behavior is real server-side pagination +
+        // search/status filtering on a list previously (wrongly) treated as bounded — see
+        // findForCounterparty's own doc comment. Invariant under test: the SQL-side status
+        // filter and computeGrantStatus()'s per-row label must agree (same `now`); scope
+        // (company-wide vs counterparty) logic is unchanged and already covered by existing
+        // decideAndApply tests above, not re-tested here. No CQRS/inbox/outbox/idempotency risk
+        // applies — a plain paginated read, same level (unit, mocked query builder) as
+        // PaymentVisibilityService/InvoiceVisibilityService's own tests.
+        const ctx = mockCtx([]);
+
+        it('applies search as a substring match against the grant number', async () => {
+            await service.findForCounterparty(ctx, 'cp-1', { search: '42' });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('grant.number ILIKE :search', {
+                search: '%42%',
+            });
+        });
+
+        it('applies take/skip for pagination, defaulting to take=50/skip=0', async () => {
+            await service.findForCounterparty(ctx, 'cp-1');
+            expect(qb.take).toHaveBeenCalledWith(50);
+            expect(qb.skip).toHaveBeenCalledWith(0);
+
+            await service.findForCounterparty(ctx, 'cp-1', { take: 10, skip: 20 });
+            expect(qb.take).toHaveBeenCalledWith(10);
+            expect(qb.skip).toHaveBeenCalledWith(20);
+        });
+
+        it('filters by status=expired via validTo < now', async () => {
+            await service.findForCounterparty(ctx, 'cp-1', { status: 'expired' });
+            expect(qb.andWhere).toHaveBeenCalledWith(
+                'grant.validTo < :now',
+                expect.objectContaining({ now: expect.any(Date) }),
+            );
+        });
+
+        it('filters by status=expiring-soon via a validTo window', async () => {
+            await service.findForCounterparty(ctx, 'cp-1', { status: 'expiring-soon' });
+            expect(qb.andWhere).toHaveBeenCalledWith(
+                'grant.validTo >= :now AND grant.validTo < :soon',
+                expect.objectContaining({ now: expect.any(Date), soon: expect.any(Date) }),
+            );
+        });
+
+        it("computes each returned item's status consistently with a soon-expiring validTo", async () => {
+            const now = Date.now();
+            const grant = {
+                id: 'g-1',
+                discountRuleId: 'rule-1',
+                validTo: new Date(now + 5 * 24 * 60 * 60 * 1000), // 5 days out — inside the 14-day window
+                scopeType: 'all' as const,
+            };
+            qb.getMany.mockResolvedValue([grant]);
+            qb.getCount.mockResolvedValue(1);
+            ruleRepo.findBy.mockResolvedValue([
+                { id: 'rule-1', facetValueCode: 'acme', percent: 10 },
+            ]);
+
+            const result = await service.findForCounterparty(ctx, 'cp-1');
+
+            expect(result.items[0]).toMatchObject({ id: 'g-1', status: 'expiring-soon' });
+            expect(result.totalItems).toBe(1);
+        });
+
+        it('drops a grant whose DiscountRule no longer exists, rather than throwing', async () => {
+            qb.getMany.mockResolvedValue([
+                {
+                    id: 'g-1',
+                    discountRuleId: 'missing-rule',
+                    validTo: new Date(),
+                    scopeType: 'all' as const,
+                },
+            ]);
+            ruleRepo.findBy.mockResolvedValue([]);
+
+            const result = await service.findForCounterparty(ctx, 'cp-1');
+
+            expect(result.items).toEqual([]);
+        });
+
+        it('returns an empty page without querying DiscountRule when no grants match', async () => {
+            qb.getMany.mockResolvedValue([]);
+            qb.getCount.mockResolvedValue(0);
+
+            const result = await service.findForCounterparty(ctx, 'cp-1');
+
+            expect(result).toEqual({ items: [], totalItems: 0 });
+            expect(ruleRepo.findBy).not.toHaveBeenCalled();
         });
     });
 

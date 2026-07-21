@@ -3,13 +3,18 @@ import { RequestContext, TransactionalConnection, UserInputError } from '@vendur
 import { DocumentsService } from '../../documents.service';
 
 const mockQb = {
+    select: vi.fn(),
+    distinct: vi.fn(),
     where: vi.fn(),
     andWhere: vi.fn(),
     orderBy: vi.fn(),
     take: vi.fn(),
     skip: vi.fn(),
     getManyAndCount: vi.fn(),
+    getRawMany: vi.fn(),
 };
+mockQb.select.mockReturnValue(mockQb);
+mockQb.distinct.mockReturnValue(mockQb);
 mockQb.where.mockReturnValue(mockQb);
 mockQb.andWhere.mockReturnValue(mockQb);
 mockQb.orderBy.mockReturnValue(mockQb);
@@ -254,15 +259,31 @@ describe('DocumentsService', () => {
 
             await service.findVisible(mockCtx, { type: 'contract', status: 'ready' });
 
-            expect(mockRepo.findAndCount).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    where: expect.objectContaining({
-                        counterpartyId: expect.anything(),
-                        type: 'contract',
-                        status: 'ready',
-                    }),
-                }),
-            );
+            const where = mockRepo.findAndCount.mock.calls[0][0].where;
+            expect(where.counterpartyId).toBeDefined();
+            // ILIKE, not an exact-equals FindOperator — see the `type` filter's own doc comment.
+            expect(where.type).toMatchObject({ _type: 'ilike', _value: '%contract%' });
+            expect(where.status).toBe('ready');
+        });
+
+        it('filters by an exact-match `types` list (checklist filter) instead of ILIKE when provided', async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
+            mockRepo.findAndCount.mockResolvedValue([[], 0]);
+
+            await service.findVisible(mockCtx, { types: ['invoice', 'waybill'] });
+
+            const where = mockRepo.findAndCount.mock.calls[0][0].where;
+            expect(where.type).toMatchObject({ _type: 'in', _value: ['invoice', 'waybill'] });
+        });
+
+        it('prefers `types` over `type` when both are given', async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
+            mockRepo.findAndCount.mockResolvedValue([[], 0]);
+
+            await service.findVisible(mockCtx, { type: 'contract', types: ['invoice'] });
+
+            const where = mockRepo.findAndCount.mock.calls[0][0].where;
+            expect(where.type).toMatchObject({ _type: 'in', _value: ['invoice'] });
         });
 
         it('omits type/status from the where clause entirely when not provided', async () => {
@@ -274,6 +295,63 @@ describe('DocumentsService', () => {
             const where = mockRepo.findAndCount.mock.calls[0][0].where;
             expect(where).not.toHaveProperty('type');
             expect(where).not.toHaveProperty('status');
+        });
+
+        it('applies search as an ILIKE substring match against the document number', async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
+            mockRepo.findAndCount.mockResolvedValue([[], 0]);
+
+            await service.findVisible(mockCtx, { search: '42' });
+
+            const where = mockRepo.findAndCount.mock.calls[0][0].where;
+            // ILike() returns a FindOperator, not a plain string — assert on its shape rather
+            // than object identity (TypeORM's own FindOperator has no useful toEqual match).
+            expect(where.number).toMatchObject({ _type: 'ilike', _value: '%42%' });
+        });
+
+        it('omits the number filter entirely when search is not provided', async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
+            mockRepo.findAndCount.mockResolvedValue([[], 0]);
+
+            await service.findVisible(mockCtx);
+
+            const where = mockRepo.findAndCount.mock.calls[0][0].where;
+            expect(where).not.toHaveProperty('number');
+        });
+    });
+
+    describe('findVisibleTypes', () => {
+        it('returns no rows without querying documents when no counterparty is visible', async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([]);
+            const result = await service.findVisibleTypes(mockCtx);
+            expect(result).toEqual([]);
+            expect(mockRepo.createQueryBuilder).not.toHaveBeenCalled();
+        });
+
+        it("intersects a caller-supplied counterpartyId with the caller's visible-counterparty scope, not either alone", async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
+            mockQb.getRawMany.mockResolvedValue([]);
+
+            const result = await service.findVisibleTypes(mockCtx, '2');
+
+            // '2' isn't in the visible set (['1']) — the intersection must be empty, mirroring
+            // findVisible's identical scoping guarantee, not just handed back the caller's id.
+            expect(result).toEqual([]);
+            expect(mockRepo.createQueryBuilder).not.toHaveBeenCalled();
+        });
+
+        it('returns the distinct type values from the scoped query, in the order the DB returns them', async () => {
+            mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }, { id: '2' }]);
+            mockQb.getRawMany.mockResolvedValue([{ type: 'contract' }, { type: 'invoice' }]);
+
+            const result = await service.findVisibleTypes(mockCtx);
+
+            expect(mockQb.distinct).toHaveBeenCalledWith(true);
+            expect(mockQb.where).toHaveBeenCalledWith(
+                'document.counterpartyId IN (:...counterpartyIds)',
+                { counterpartyIds: ['1', '2'] },
+            );
+            expect(result).toEqual(['contract', 'invoice']);
         });
     });
 });

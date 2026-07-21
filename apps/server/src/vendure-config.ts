@@ -293,3 +293,10 @@ export const config: VendureConfig = {
         ...instancePlugins,
     ],
 };
+// force restart 1784646839
+// force restart 1784647603
+// force restart 1784648415
+// force restart 1784652831
+// force restart2 1784652875
+// force restart3 1784653316
+// hard restart 1784653421

@@ -1,3 +1,4 @@
+import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 
 export interface ContactPersonInfo {
@@ -609,9 +610,11 @@ export interface CustomerDocument {
 // data — same carve-out as api/orders.ts's ORDER_STATE_OPTIONS. Document.type, unlike status, is
 // real ERP/business-sourced data (invoice/contract/return/reconciliation/anything else the ERP
 // pushes — see the entity's own doc comment) and must NOT be a hardcoded dropdown (AGENTS.md
-// "Business data must live in the database") — it's exposed as free-text search instead (see
-// CustomerDocumentsTab.vue's `type` filter field), same treatment as Customers page's
-// `erpGroupLabel` free-text filter.
+// "Business data must live in the database") — but that doesn't rule out a checklist filter, only
+// a *hardcoded* one: fetchDocumentTypes below pulls the real, currently-visible distinct type
+// values from the backend (plugin-documents' new `documentTypes` query, a real bounded DISTINCT,
+// not a hardcoded list) and CustomerDocumentsDataTable.vue renders those as checkboxes, same
+// shape as any other checklist filter, just backend-driven rather than a source-code enum.
 export const DOCUMENT_STATUS_OPTIONS = [
     { value: '', label: 'All statuses' },
     { value: 'pending', label: 'Pending' },
@@ -620,15 +623,30 @@ export const DOCUMENT_STATUS_OPTIONS = [
     { value: 'failed', label: 'Failed' },
 ] as const;
 
+// Single source of truth for the status badge color (AGENTS.md ui-kit rule) — mirrors
+// PAYMENT_STATUS_BADGE_VARIANT/INVOICE_STATUS_BADGE_VARIANT. Previously an inline variant()
+// function local to CustomerDocumentsTab.vue.
+export const DOCUMENT_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
+    pending: 'neutral',
+    generating: 'warning',
+    ready: 'success',
+    failed: 'danger',
+};
+
 export interface CustomerDocumentFilters {
-    [key: string]: string;
-    type: string;
+    // Real distinct values selected in the checklist filter (see DOCUMENT_STATUS_OPTIONS' own
+    // doc comment) — exact match, not the old free-text substring search.
+    types: string[];
     status: string;
+    // Substring match against the document's own number (ILIKE) — see
+    // DocumentsService.findVisible's doc comment.
+    search: string;
 }
 
 export const DEFAULT_CUSTOMER_DOCUMENT_FILTERS: CustomerDocumentFilters = {
-    type: '',
+    types: [],
     status: '',
+    search: '',
 };
 
 // Real server-side pagination (AGENTS.md "Pagination" rule — documents accumulate over a
@@ -657,12 +675,26 @@ export async function fetchDocumentsPageForCounterparty(
             options: {
                 skip: (page - 1) * pageSize,
                 take: pageSize,
-                type: filters.type || undefined,
+                types: filters.types.length ? filters.types : undefined,
                 status: filters.status || undefined,
+                search: filters.search || undefined,
             },
         },
     );
     return result.documents;
+}
+
+// Real distinct Document.type values within this counterparty's visible documents — backs the
+// Type column's checklist filter (see DOCUMENT_STATUS_OPTIONS' own doc comment). A small, bounded
+// aggregate (plugin-documents' DocumentsService.findVisibleTypes), not a hardcoded list.
+export async function fetchDocumentTypes(counterpartyId: string): Promise<string[]> {
+    const result = await adminApi<{ documentTypes: string[] }>(
+        `query CustomerDocumentTypes($counterpartyId: ID!) {
+            documentTypes(counterpartyId: $counterpartyId)
+        }`,
+        { counterpartyId },
+    );
+    return result.documentTypes;
 }
 
 export interface CustomerCredit {
@@ -734,47 +766,136 @@ export async function fetchCreditForCounterparty(
 export async function fetchActiveDiscountCountsByCustomer(
     counterpartyIds: string[],
 ): Promise<Map<string, number>> {
-    const now = Date.now();
     const entries = await Promise.all(
         [...new Set(counterpartyIds)].map(async counterpartyId => {
+            // take: 0 — only totalItems is needed, mirrors DiscountRegistryService's own
+            // countByStatus helper (findAllPaginated(ctx, { take: 0, status })). status: 'active'
+            // is computed server-side (DiscountGrantService.computeGrantStatus), the single
+            // source of truth this used to duplicate client-side via a raw validTo comparison.
             const result = await adminApi<{
-                discountGrantsForCounterparty: { validTo: string }[];
+                discountGrantsForCounterparty: { totalItems: number };
             }>(
-                `query ActiveDiscountCountForCounterparty($counterpartyId: ID!) { discountGrantsForCounterparty(counterpartyId: $counterpartyId) { validTo } }`,
-                { counterpartyId },
+                `query ActiveDiscountCountForCounterparty($counterpartyId: ID!, $options: DiscountGrantForCustomerListOptions) {
+                    discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: $options) { totalItems }
+                }`,
+                { counterpartyId, options: { take: 0, status: 'active' } },
             );
-            const activeCount = result.discountGrantsForCounterparty.filter(
-                g => new Date(g.validTo).getTime() >= now,
-            ).length;
-            return [counterpartyId, activeCount] as const;
+            return [counterpartyId, result.discountGrantsForCounterparty.totalItems] as const;
         }),
     );
     return new Map(entries);
 }
 
+export type DiscountGrantStatus = 'active' | 'expiring-soon' | 'expired';
+
 export interface DiscountRuleItem {
     id: string;
+    number: string;
+    createdAt: string;
     percent: number;
     facetValueCode: string | null;
     validTo: string;
+    status: DiscountGrantStatus;
+}
+
+export interface DiscountGrantFilters {
+    [key: string]: string;
+    search: string;
+    status: string;
+}
+
+export const DEFAULT_DISCOUNT_GRANT_FILTERS: DiscountGrantFilters = { search: '', status: '' };
+
+export const DISCOUNT_GRANT_STATUS_OPTIONS = [
+    { value: '', label: 'All statuses' },
+    { value: 'active', label: 'Active' },
+    { value: 'expiring-soon', label: 'Expiring soon' },
+    { value: 'expired', label: 'Expired' },
+] as const;
+
+// Single source of truth for the status badge color (AGENTS.md ui-kit rule) — mirrors
+// PAYMENT_STATUS_BADGE_VARIANT/INVOICE_STATUS_BADGE_VARIANT.
+export const DISCOUNT_GRANT_STATUS_BADGE_VARIANT: Record<DiscountGrantStatus, StatusBadgeVariant> =
+    {
+        active: 'success',
+        'expiring-soon': 'warning',
+        expired: 'neutral',
+    };
+
+export interface DiscountGrantViewCounts {
+    all: number;
+    active: number;
+    expiringSoon: number;
+    expired: number;
+}
+
+// Lean counts for the view chips (`options: { take: 0 }` returns totalItems, a real COUNT, with
+// no row data) — same shape as fetchCustomerOrderViewCounts/fetchInvoiceViewCounts above, one
+// round trip via GraphQL aliases (aliased `expiringSoon` since GraphQL alias names can't contain
+// a hyphen like the `expiring-soon` status value itself).
+export async function fetchDiscountGrantViewCounts(
+    counterpartyId: string,
+): Promise<DiscountGrantViewCounts> {
+    const result = await adminApi<{
+        all: { totalItems: number };
+        active: { totalItems: number };
+        expiringSoon: { totalItems: number };
+        expired: { totalItems: number };
+    }>(
+        `query DiscountGrantViewCounts($counterpartyId: ID!) {
+            all: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0 }) { totalItems }
+            active: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0, status: "active" }) { totalItems }
+            expiringSoon: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0, status: "expiring-soon" }) { totalItems }
+            expired: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0, status: "expired" }) { totalItems }
+        }`,
+        { counterpartyId },
+    );
+    return {
+        all: result.all.totalItems,
+        active: result.active.totalItems,
+        expiringSoon: result.expiringSoon.totalItems,
+        expired: result.expired.totalItems,
+    };
 }
 
 // Only grants that actually apply to this counterparty (company-wide or scoped to it) — see
 // DiscountGrantService.findForCounterparty. Using discountRules(priceTypeCode) here would leak
-// grants scoped to a *different* customer that happens to share the same price type.
-export async function fetchDiscountGrantsForCounterparty(
+// grants scoped to a *different* customer that happens to share the same price type. Real
+// server-side pagination (AGENTS.md "Pagination" rule) — this list is not genuinely bounded, it
+// accumulates one row per approved renewal over the customer's whole lifetime (nothing removes an
+// expired grant).
+export async function fetchDiscountGrantsPage(
     counterpartyId: string,
-): Promise<DiscountRuleItem[]> {
-    const result = await adminApi<{ discountGrantsForCounterparty: DiscountRuleItem[] }>(
-        `query CustomerDiscountGrants($counterpartyId: ID!) {
-            discountGrantsForCounterparty(counterpartyId: $counterpartyId) {
-                id
-                percent
-                facetValueCode
-                validTo
+    filters: DiscountGrantFilters,
+    page: number,
+    pageSize: number,
+): Promise<{ items: DiscountRuleItem[]; totalItems: number }> {
+    const result = await adminApi<{
+        discountGrantsForCounterparty: { items: DiscountRuleItem[]; totalItems: number };
+    }>(
+        `query CustomerDiscountGrantsPage($counterpartyId: ID!, $options: DiscountGrantForCustomerListOptions) {
+            discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: $options) {
+                totalItems
+                items {
+                    id
+                    number
+                    createdAt
+                    percent
+                    facetValueCode
+                    validTo
+                    status
+                }
             }
         }`,
-        { counterpartyId },
+        {
+            counterpartyId,
+            options: {
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                search: filters.search || undefined,
+                status: filters.status || undefined,
+            },
+        },
     );
     return result.discountGrantsForCounterparty;
 }

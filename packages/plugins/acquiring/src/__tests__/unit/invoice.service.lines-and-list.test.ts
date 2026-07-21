@@ -127,6 +127,16 @@ describe('InvoiceService.findForCounterparty', () => {
             status: 'issued',
         });
     });
+
+    it('applies search as a substring match against the invoice number', async () => {
+        mockQb.getManyAndCount.mockResolvedValue([[], 0]);
+
+        await service.findForCounterparty(mockCtx, '42', { search: 'ORD-202607' });
+
+        expect(mockQb.andWhere).toHaveBeenCalledWith('invoice.number ILIKE :search', {
+            search: '%ORD-202607%',
+        });
+    });
 });
 
 describe('InvoiceService.updateStatusForOrder', () => {

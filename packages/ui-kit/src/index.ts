@@ -36,8 +36,14 @@ export type { StatusTagVariant } from './components/MvStatusTag/MvStatusTag.vue'
 export { default as MvStatusBadge } from './components/MvStatusBadge/MvStatusBadge.vue';
 export type { StatusBadgeVariant } from './components/MvStatusBadge/MvStatusBadge.vue';
 
+export { default as MvDocumentTypeChip } from './components/MvDocumentTypeChip/MvDocumentTypeChip.vue';
+export { resolveDocumentTypeStyle } from './components/MvDocumentTypeChip/documentTypeStyles';
+export type { DocumentTypeStyle } from './components/MvDocumentTypeChip/documentTypeStyles';
+
 export { default as MvAmountDisplay } from './components/MvAmountDisplay/MvAmountDisplay.vue';
 export type { AmountSize } from './components/MvAmountDisplay/MvAmountDisplay.vue';
+
+export { default as MvDateTimeCell } from './components/MvDateTimeCell/MvDateTimeCell.vue';
 
 export { default as MvFormField } from './components/MvFormField/MvFormField.vue';
 

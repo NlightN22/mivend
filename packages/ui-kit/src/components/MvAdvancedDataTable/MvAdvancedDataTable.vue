@@ -9,10 +9,12 @@ import MvScrollFadeOverlay from '../MvScrollFadeOverlay/MvScrollFadeOverlay.vue'
 import MvColumnFilterText from '../MvColumnFilter/MvColumnFilterText.vue';
 import { resolveColumnFilterComponent } from '../MvColumnFilter/columnFilterRegistry';
 import { interactionMode, closePrimeVueFilterOverlay, hasValue, describeValue } from '../MvColumnFilter/columnFilterDispatch';
+import MvAdvancedMobileCardList from './MvAdvancedMobileCardList.vue';
 import type { ActiveFilterChip } from '../MvActiveFilterChips/MvActiveFilterChips.vue';
 import type { DataTableState, DataTableSortMeta } from '../../composables/useDataTableState';
 import { usePagedScrollHeight } from '../../composables/usePagedScrollHeight';
 import { useHorizontalScrollFade } from '../../composables/useHorizontalScrollFade';
+import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import type { AdvancedDataTableColumn, AdvancedDataTableSearchConfig, AdvancedDataTableRowClickPayload } from './advancedDataTableTypes';
 
 // The standard desktop table for the manager portal (see AGENTS.md's manager-portal rules) —
@@ -31,6 +33,10 @@ const props = withDefaults(
         loading: boolean;
         totalItems: number;
         dataKey: string;
+        // Only used by the mobile card view's own MvPagination (see MvAdvancedMobileCardList.vue)
+        // — the desktop <DataTable> tracks its paginator cursor itself via `first`/`tableState.
+        // pageSize`, so this is otherwise redundant with what the consumer already owns.
+        page: number;
         rowHeightPx: number;
         headerHeightPx: number;
         rowsPerPageOptions?: number[];
@@ -292,6 +298,11 @@ function getScrollContainer(): HTMLElement | null {
     return tableWrapper.value?.querySelector<HTMLElement>('.p-datatable-table-container') ?? null;
 }
 const { canScrollLeft, canScrollRight, scrollBy } = useHorizontalScrollFade(getScrollContainer);
+
+// Same breakpoint MvTable/MvAppTopbar/MvAppMobileNav already standardize on (max-width: 800px) —
+// see MvAdvancedMobileCardList.vue's own doc comment for why this is a separate render path
+// rather than a toggle within the existing PrimeVue markup.
+const isMobile = useIsMobileViewport(800);
 </script>
 
 <template>
@@ -308,7 +319,11 @@ const { canScrollLeft, canScrollRight, scrollBy } = useHorizontalScrollFade(getS
             </div>
             <div class="mv-advanced-data-table__toolbar-end">
                 <slot name="toolbar-end" />
+                <!-- Column reorder/resize/hide has no equivalent in a card layout — there's no
+                     header row for a toggle menu to describe, and every field either shows on
+                     the card (per its `mobile` hint) or doesn't. Desktop-only. -->
                 <MvColumnToggle
+                    v-if="!isMobile"
                     :columns="columnToggleItems"
                     trigger-label=""
                     searchable
@@ -325,9 +340,33 @@ const { canScrollLeft, canScrollRight, scrollBy } = useHorizontalScrollFade(getS
             </div>
         </div>
 
-        <MvActiveFilterChips :chips="activeFilterChips" @remove="onRemoveFilterChip" @clear-all="clearFilters" />
+        <!-- Per-column filters (the thing these chips summarize) have no UI at all on mobile —
+             see MvAdvancedMobileCardList.vue's own doc comment — so there's nothing for this to
+             ever show there. Desktop-only, same reasoning as MvColumnToggle above. -->
+        <MvActiveFilterChips v-if="!isMobile" :chips="activeFilterChips" @remove="onRemoveFilterChip" @clear-all="clearFilters" />
 
-        <div ref="tableWrapper" class="mv-advanced-data-table__scroll-host">
+        <MvAdvancedMobileCardList
+            v-if="isMobile"
+            :columns="visibleColumns"
+            :rows="rows"
+            :data-key="dataKey"
+            :loading="loading"
+            :total-items="totalItems"
+            :page="page"
+            :page-size="tableState.pageSize"
+            :empty-message="emptyMessage"
+            @row-click="emit('row-click', $event)"
+            @update:page="p => emit('update:page', p)"
+        >
+            <template #empty>
+                <slot name="empty">{{ emptyMessage }}</slot>
+            </template>
+            <template v-for="col in visibleColumns" :key="col.field" #[`cell-${col.field}`]="slotProps">
+                <slot :name="`cell-${col.field}`" v-bind="slotProps">{{ defaultCellText(col.field, (slotProps.data as Record<string, unknown>)[col.field]) }}</slot>
+            </template>
+        </MvAdvancedMobileCardList>
+
+        <div v-else ref="tableWrapper" class="mv-advanced-data-table__scroll-host">
             <MvScrollFadeOverlay
                 :can-scroll-left="canScrollLeft"
                 :can-scroll-right="canScrollRight"

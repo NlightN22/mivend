@@ -6,6 +6,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import { generateDocumentCode } from 'shared';
 
 import { Invoice } from './entities/invoice.entity';
 import { PaymentAttempt, PaymentChannel, PaymentStatus } from './entities/payment-attempt.entity';
@@ -64,6 +65,9 @@ export interface PaymentListOptions {
     skip?: number;
     status?: string;
     channel?: string;
+    // Substring match against the payment's own internal number (see PaymentAttempt.number's
+    // doc comment) — never providerPaymentId, the external reference, per AGENTS.md rule #13.
+    search?: string;
 }
 
 // One row of "what this payment was applied to" — a SettlementEntry that traces back to a
@@ -164,6 +168,7 @@ export class PaymentAttemptService {
                 const repo = this.connection.getRepository(transactionCtx, PaymentAttempt);
                 const paymentAttempt = await repo.save(
                     repo.create({
+                        number: generateDocumentCode('PAY'),
                         channel,
                         invoiceId: Number(invoice.id),
                         orderId: invoice.orderId,
@@ -280,6 +285,9 @@ export class PaymentAttemptService {
         }
         if (options?.channel) {
             qb.andWhere('payment.channel = :channel', { channel: options.channel });
+        }
+        if (options?.search) {
+            qb.andWhere('payment.number ILIKE :search', { search: `%${options.search}%` });
         }
 
         const [items, totalItems] = await qb.getManyAndCount();

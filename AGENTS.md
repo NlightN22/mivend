@@ -478,6 +478,18 @@ Forbidden at the page/feature level:
 If a ui-kit component does not support a required variant, **add the variant to the ui-kit** and use it everywhere.
 This keeps the design consistent and changes visible across the whole application.
 
+### Icon kit
+
+**`@tabler/icons-vue` is the recommended first source for any new icon.** Check it before adding
+an icon from any other package. It has a much larger, more visually distinct set than
+`@element-plus/icons-vue` (already used for a handful of pre-existing spots, e.g.
+`CustomerDetailPage.vue`'s info-row icons — not worth migrating those retroactively, but new
+icon needs should reach for Tabler first). Only fall back to a different icon package if Tabler
+genuinely has no reasonable icon for the concept — and if so, document why in the component that
+adds it. Reference usage: `MvDocumentTypeChip` (`packages/ui-kit/src/components/MvDocumentTypeChip`)
+for a colored icon+label chip keyed off free-text business data with a neutral fallback, and
+`CustomerDetailPage.vue`'s `TAB_ICONS` for per-tab icons.
+
 ---
 
 ## REST endpoint documentation (Swagger/OpenAPI)

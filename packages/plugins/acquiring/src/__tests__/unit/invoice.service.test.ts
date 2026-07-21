@@ -27,6 +27,7 @@ function makeOrder(
 ): Order {
     return {
         id: 1,
+        code: 'ORD-202607-ABCD1234',
         currencyCode: 'RUB',
         customer: { id: 'cust-1' },
         lines: lines.map((line, i) => ({
@@ -101,10 +102,34 @@ describe('InvoiceService', () => {
                         organizationId: 1,
                         amount: 1000,
                         counterpartyId: 42,
+                        number: expect.stringMatching(/^INV-\d{6}-[0-9A-F]{8}$/),
                     }),
-                    expect.objectContaining({ organizationId: 2, amount: 500, counterpartyId: 42 }),
+                    expect.objectContaining({
+                        organizationId: 2,
+                        amount: 500,
+                        counterpartyId: 42,
+                        number: expect.stringMatching(/^INV-\d{6}-[0-9A-F]{8}$/),
+                    }),
                 ]),
             );
+        });
+
+        it("generates each invoice's own distinct number — never Order.code reused as-is", async () => {
+            mockRepo.find.mockResolvedValue([]);
+            mockCounterpartyService.getForCustomer.mockResolvedValue({ id: '42' });
+            const order = makeOrder([
+                { organizationId: 1, linePriceWithTax: 1000 },
+                { organizationId: 2, linePriceWithTax: 500 },
+            ]);
+
+            const invoices = await service.createInvoicesForOrder(mockCtx, order);
+
+            const numbers = invoices.map(i => i.number);
+            expect(new Set(numbers).size).toBe(2);
+            for (const number of numbers) {
+                expect(number).not.toContain(order.code);
+                expect(number).toMatch(/^INV-/);
+            }
         });
 
         it("denormalizes branchId from the customer's preferred trading point", async () => {

@@ -147,10 +147,29 @@ const adminApiSchema = gql`
 
     type DiscountGrantForCustomer {
         id: ID!
+        "Human-facing business number — see DiscountGrant.number's own doc comment (discount-grant.entity.ts)."
+        number: String!
+        createdAt: DateTime!
         facetValueCode: String
         percent: Int!
         validTo: DateTime!
         scopeType: String!
+        "active | expiring-soon | expired — computed server-side, see DiscountGrantService.computeGrantStatus."
+        status: String!
+    }
+
+    type DiscountGrantForCustomerList {
+        items: [DiscountGrantForCustomer!]!
+        totalItems: Int!
+    }
+
+    input DiscountGrantForCustomerListOptions {
+        take: Int
+        skip: Int
+        "Substring match against the grant's own number (DiscountGrant.number)."
+        search: String
+        "active | expiring-soon | expired"
+        status: String
     }
 
     # Read-model/projection row for the /discounts registry — see DiscountRegistryEntry /
@@ -192,8 +211,13 @@ const adminApiSchema = gql`
         discountRules(priceTypeCode: String): [DiscountRule!]!
         expiringDiscountGrants(withinDays: Int!): [DiscountGrant!]!
         # Only grants that actually apply to this counterparty (company-wide or scoped to it) —
-        # see DiscountGrantService.findForCounterparty.
-        discountGrantsForCounterparty(counterpartyId: ID!): [DiscountGrantForCustomer!]!
+        # see DiscountGrantService.findForCounterparty. Real server-side pagination — this list
+        # accumulates over the customer's lifetime (nothing removes an expired grant), it is not
+        # a genuinely bounded set.
+        discountGrantsForCounterparty(
+            counterpartyId: ID!
+            options: DiscountGrantForCustomerListOptions
+        ): DiscountGrantForCustomerList!
         priceTypeCodes: [String!]!
         # Batch lookup for the catalog list/detail pages. Gated on ReadCatalog UNLESS
         # priceTypeCode is the floor price type, which requires ReadFloorPrice instead —

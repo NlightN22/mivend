@@ -3,6 +3,8 @@ import { adminApi } from './client';
 
 export interface InvoiceListItem {
     id: string;
+    number: string;
+    createdAt: string;
     orderId: string;
     counterpartyId: string;
     amount: number;
@@ -18,9 +20,7 @@ export interface InvoiceFilters {
     [key: string]: string;
     status: string;
     counterpartyId: string;
-    // Substring match against the invoice's own numeric id — see InvoiceListOptions.search's
-    // doc comment (plugin-acquiring) for why this, not a real document-number field, is what
-    // "search invoices" means today.
+    // Substring match against the invoice's own number (InvoiceListItem.number).
     search: string;
 }
 
@@ -53,6 +53,8 @@ export const INVOICE_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = 
 
 const INVOICE_ITEM_FIELDS = `
     id
+    number
+    createdAt
     orderId
     counterpartyId
     amount

@@ -5,6 +5,7 @@ import {
     MvStatusBadge,
     MvColumnFilterStatus,
     MvAdvancedDataTable,
+    MvDateTimeCell,
     useDataTableState,
     type AdvancedDataTableColumn,
     type AdvancedDataTableRowClickPayload,
@@ -27,11 +28,12 @@ import {
 } from '../../api/orders';
 import { PLACED_BY_CUSTOMER_VALUE, type CustomerOrdersView } from '../../api/customers';
 
-// Desktop-only table for the customer detail Orders tab, built on @mivend/ui-kit's
-// MvAdvancedDataTable — the standard desktop table for the manager portal (AGENTS.md). Mobile
-// keeps CustomerOrdersTab.vue's own MvTable-based card rendering (see its `isMobile` branch). Row
-// shaping (fulfillment/payment/placedBy labels) stays in CustomerOrdersTab.vue so it's computed
-// once and shared between both branches, not duplicated here.
+// The customer detail Orders table, built on @mivend/ui-kit's MvAdvancedDataTable — the standard
+// table for the manager portal (AGENTS.md), desktop and mobile alike: MvAdvancedDataTable renders
+// its own built-in mobile card view below its breakpoint (see MvAdvancedMobileCardList.vue),
+// driven by each column's `mobile` hint below, so this component no longer needs its own
+// isMobile branch. Row shaping (fulfillment/payment/placedBy labels) stays in
+// CustomerOrdersTab.vue so it's computed once, not duplicated here.
 //
 // Everything genuinely generic (column toggle/reorder/resize, per-column filter dispatch, active
 // filter chips, stable scroll height, horizontal scroll-fade, saved-state normalization) lives in
@@ -45,6 +47,7 @@ const props = defineProps<{
     rows: TableRow[];
     loading: boolean;
     totalItems: number;
+    page: number;
     pageSize: number;
     managers: ManagerOption[];
     stateFilter: string[];
@@ -94,6 +97,14 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         width: 170,
         required: true,
         filterConfig: { type: 'text', placeholder: 'Order number contains…' },
+        mobile: { primary: true },
+    },
+    {
+        field: 'date',
+        header: 'Date created',
+        sortField: 'createdAt',
+        width: 140,
+        filterConfig: { type: 'date-range' },
     },
     {
         field: 'state',
@@ -106,6 +117,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
             placeholder: 'All commercial states',
             options: NON_BLANK_STATE_OPTIONS.map(o => ({ ...o, variant: ORDER_STATE_BADGE_VARIANT[o.value] ?? 'neutral' })),
         },
+        mobile: { badge: true },
     },
     {
         field: 'fulfillment',
@@ -131,18 +143,12 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: { type: 'amount-range', currencyCode: 'USD' },
     },
     {
-        field: 'date',
-        header: 'Date created',
-        sortField: 'createdAt',
-        width: 140,
-        filterConfig: { type: 'date-range' },
-    },
-    {
         field: 'placedBy',
         header: 'Placed by',
         width: 170,
         // options placeholder — real list (from props.managers) spliced in by resolvedColumns.
         filterConfig: { type: 'enum', placeholder: 'Anyone', options: [] },
+        mobile: { hidden: true },
     },
     {
         field: 'reservationState',
@@ -153,6 +159,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
             placeholder: 'Any reservation state',
             options: NON_BLANK_RESERVATION_OPTIONS.map(o => ({ ...o, variant: ORDER_RESERVATION_STATE_BADGE_VARIANT[o.value] ?? 'neutral' })),
         },
+        mobile: { hidden: true },
     },
 ];
 
@@ -337,6 +344,7 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<TableRow>): void {
         :rows="rows"
         :loading="loading"
         :total-items="totalItems"
+        :page="page"
         data-key="code"
         :row-height-px="61"
         :header-height-px="65"
@@ -353,6 +361,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<TableRow>): void {
                  Cancelled — see CustomerOrdersTab.vue) — this is just the reserved slot for them,
                  empty by default. -->
             <slot name="view-chips" />
+        </template>
+
+        <template #cell-date="{ data }">
+            <MvDateTimeCell :value="(data as TableRow).date as string" />
         </template>
 
         <template #cell-state="{ data }">
