@@ -468,7 +468,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     background: rgba(20, 35, 31, 0.28);
 }
 
-@media (max-width: 820px) {
+@media (max-width: 1180px) {
     .app-header__strip { display: none; }
 
     .app-header__inner {

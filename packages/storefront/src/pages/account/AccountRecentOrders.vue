@@ -16,23 +16,25 @@ const orders = [
       <RouterLink to="/orders" class="recent-orders__link-more">All orders</RouterLink>
     </div>
 
-    <div class="recent-orders__list">
-      <div v-for="order in orders" :key="order.number" class="recent-orders__row">
-        <div>
-          <div class="recent-orders__number">Order #{{ order.number }}</div>
-          <div class="recent-orders__meta">{{ order.date }} · {{ order.address }}</div>
-        </div>
-        <div class="recent-orders__amount">{{ order.amount }}</div>
-        <div>
-          <span class="recent-orders__pill" :class="`recent-orders__pill--${order.statusType}`">
-            {{ order.status }}
-          </span>
-        </div>
-        <div class="recent-orders__meta">{{ order.items }} items</div>
-        <div class="recent-orders__actions">
-          <button v-for="action in order.actions" :key="action" class="recent-orders__btn" :class="{ 'recent-orders__btn--primary': action === 'Open' }">
-            {{ action }}
-          </button>
+    <div class="recent-orders__scroll">
+      <div class="recent-orders__list">
+        <div v-for="order in orders" :key="order.number" class="recent-orders__row">
+          <div class="recent-orders__cell recent-orders__cell--main">
+            <div class="recent-orders__number">Order #{{ order.number }}</div>
+            <div class="recent-orders__meta recent-orders__meta--truncate">{{ order.date }} · {{ order.address }}</div>
+          </div>
+          <div class="recent-orders__cell recent-orders__amount">{{ order.amount }}</div>
+          <div class="recent-orders__cell">
+            <span class="recent-orders__pill" :class="`recent-orders__pill--${order.statusType}`">
+              {{ order.status }}
+            </span>
+          </div>
+          <div class="recent-orders__cell recent-orders__meta">{{ order.items }} items</div>
+          <div class="recent-orders__cell recent-orders__actions">
+            <button v-for="action in order.actions" :key="action" class="recent-orders__btn" :class="{ 'recent-orders__btn--primary': action === 'Open' }">
+              {{ action }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -77,18 +79,30 @@ const orders = [
   text-decoration: none;
 }
 
-.recent-orders__list { display: grid; gap: 10px; }
+.recent-orders__scroll {
+  overflow-x: auto;
+}
+
+.recent-orders__list {
+  display: grid;
+  gap: 10px;
+  min-width: 720px;
+}
 
 .recent-orders__row {
   min-height: 76px;
   display: grid;
-  grid-template-columns: minmax(160px, 1.1fr) 130px 170px 140px 120px;
+  grid-template-columns: minmax(180px, 1.1fr) 120px 160px 100px 180px;
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
   border: 1px solid #edf2ef;
   border-radius: 18px;
   background: #fbfdfc;
+}
+
+.recent-orders__cell {
+  min-width: 0;
 }
 
 .recent-orders__number {
@@ -101,6 +115,12 @@ const orders = [
   color: #66736e;
   font-size: 13px;
   line-height: 1.32;
+}
+
+.recent-orders__meta--truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .recent-orders__amount {
@@ -127,18 +147,22 @@ const orders = [
 
 .recent-orders__actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
 }
 
 .recent-orders__btn {
   border: 0;
   min-height: 38px;
+  min-width: 86px;
   border-radius: 12px;
   padding: 0 13px;
   background: #f3f8f6;
   color: #263732;
   font-weight: 950;
+  font-size: 13px;
+  white-space: nowrap;
+  text-align: center;
   cursor: pointer;
   font: inherit;
 }
@@ -148,14 +172,4 @@ const orders = [
   color: #fff;
 }
 
-@media (max-width: 1240px) {
-  .recent-orders__row {
-    grid-template-columns: 1.2fr 120px 150px 120px;
-  }
-  .recent-orders__actions { grid-column: 1 / -1; justify-content: flex-start; }
-}
-
-@media (max-width: 960px) {
-  .recent-orders__row { grid-template-columns: 1fr; }
-}
 </style>
