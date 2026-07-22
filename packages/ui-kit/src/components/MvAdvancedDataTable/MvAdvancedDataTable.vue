@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="TRow extends Record<string, unknown>">
-import { computed, ref, watch, type Component } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue';
 import DataTable, { type DataTableFilterMeta } from 'primevue/datatable';
 import Column from 'primevue/column';
 import { Setting, Sort, SortUp, SortDown, Rank } from '@element-plus/icons-vue';
@@ -8,7 +8,13 @@ import MvActiveFilterChips from '../MvActiveFilterChips/MvActiveFilterChips.vue'
 import MvScrollFadeOverlay from '../MvScrollFadeOverlay/MvScrollFadeOverlay.vue';
 import MvColumnFilterText from '../MvColumnFilter/MvColumnFilterText.vue';
 import { resolveColumnFilterComponent } from '../MvColumnFilter/columnFilterRegistry';
-import { interactionMode, closePrimeVueFilterOverlay, hasValue, describeValue } from '../MvColumnFilter/columnFilterDispatch';
+import {
+    interactionMode,
+    closePrimeVueFilterOverlay,
+    installFilterOverlayClickFix,
+    hasValue,
+    describeValue,
+} from '../MvColumnFilter/columnFilterDispatch';
 import MvAdvancedMobileCardList from './MvAdvancedMobileCardList.vue';
 import type { ActiveFilterChip } from '../MvActiveFilterChips/MvActiveFilterChips.vue';
 import type { DataTableState, DataTableSortMeta } from '../../composables/useDataTableState';
@@ -194,6 +200,14 @@ function onFilterValueChange(col: AdvancedDataTableColumn, value: unknown): void
     tableState.value.filters = { ...tableState.value.filters, [col.field]: value };
     if (interactionMode(col.filterConfig) === 'instant-close') closePrimeVueFilterOverlay();
 }
+
+// See installFilterOverlayClickFix's own doc comment — fixes a real bug where opening a second
+// column's filter overlay left the first one open, confirmed live via Playwright.
+let uninstallFilterOverlayClickFix: (() => void) | undefined;
+onMounted(() => {
+    uninstallFilterOverlayClickFix = installFilterOverlayClickFix();
+});
+onBeforeUnmount(() => uninstallFilterOverlayClickFix?.());
 function filterActiveClass(field: string): string | undefined {
     return hasValue(tableState.value.filters[field]) ? 'mv-advanced-data-table__th--filtered' : undefined;
 }

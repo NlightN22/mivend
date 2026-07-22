@@ -8,13 +8,52 @@ import { DATE_RANGE_PRESETS } from './dateRangePresets';
 // PrimeVue's own column-filter overlay has no exposed handle to close it from a fully custom
 // `#filter` template (its open/close state is internal to the ColumnFilter it wraps) — dispatching
 // a click on <body> triggers the overlay's own outside-click listener, closing it the same way
-// clicking elsewhere on the page already does. Best-effort: confirmed live this doesn't reliably
-// fire for every column/interaction — a real user click outside (or Escape) still closes it
-// normally either way, so this only affects whether a single-value pick closes the popover for
-// you automatically vs. requiring one more click. Guarded for non-DOM environments (unit tests) —
+// clicking elsewhere on the page already does. Guarded for non-DOM environments (unit tests) —
 // this workaround must stay isolated to filter-overlay interaction, never used more generally.
 export function closePrimeVueFilterOverlay(): void {
     if (typeof document !== 'undefined') document.body.click();
+}
+
+// Root cause of a real, confirmed bug (reproduced live via Playwright: open a column's filter
+// overlay, click anything inside it — our own MvColumnFilterSelect's trigger, a text input, a
+// checkbox — then click a *different* column's filter icon; the first overlay stayed open,
+// stacking two overlays at once): PrimeVue's `filter-display="menu"` ColumnFilter tracks a
+// `selfClick` flag to tell "this click landed inside my own overlay" apart from "this click was
+// genuinely outside", set via a global OverlayEventBus whenever *any* click bubbles through the
+// overlay's DOM, and only cleared again at the very end of the *next* document click's handling.
+// That means exactly one subsequent outside click — a different filter's icon included — is
+// silently swallowed after any interaction inside an open overlay; a second outside click then
+// works normally. `closePrimeVueFilterOverlay`'s single body-click dispatch only "consumes" this
+// stale flag when called right after that one inner interaction, which is why it was only wired
+// into `onFilterValueChange` (a value commit) and stayed unreliable for everything else — typing,
+// opening a nested dropdown, ticking a multi-select box, etc.
+//
+// This installs a generic fix instead of one more special case: any click bubbling through
+// `.p-datatable-filter-overlay` (PrimeVue's own class for the popover content, confirmed via
+// live DOM inspection) fires one corrective body-click of its own, *synchronously*, right there —
+// deliberately not deferred via setTimeout/microtask. `document` is the outermost point any click
+// can bubble to, so a plain (non-capture) listener registered on it is guaranteed to run *after*
+// every other bubble-phase handler for the same click has already run — including the Popover's
+// own bubble handler that sets PrimeVue's `selfClick` flag — so by the time this fires, that flag
+// is already in its final state for the real click and the corrective click can safely consume it
+// immediately. (An earlier version deferred via `setTimeout(fn, 0)`, reasoning the same ordering
+// guarantee held across a macrotask boundary too — reproduced live via Playwright and it does
+// not: a fast-enough subsequent real click can still land before the deferred timer fires,
+// letting the stale flag survive. Synchronous dispatch removes that race outright.) The
+// corrective click safely resets the flag without itself closing anything (the "don't actually
+// close, just stop swallowing the next real outside click" case, same as the existing per-commit
+// workaround, just applied to every interaction instead of only value commits). Call once from
+// MvAdvancedDataTable's `onMounted`, keep the returned cleanup for `onBeforeUnmount`.
+export function installFilterOverlayClickFix(): () => void {
+    if (typeof document === 'undefined') return () => {};
+    const handler = (event: MouseEvent): void => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('.p-datatable-filter-overlay')) {
+            closePrimeVueFilterOverlay();
+        }
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
 }
 
 // Decides how a filter type commits: 'instant-close' (a single pick fully specifies the filter,
