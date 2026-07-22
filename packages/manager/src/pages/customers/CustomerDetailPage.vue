@@ -409,8 +409,6 @@ function initials(name: string | null): string {
                 :owner-name="managerName(customer.assignedManagerId)"
                 :managers="managers"
                 :can-manage="canManageTeam"
-                :can-view-history="canViewHistory"
-                :history-refs="historyRefs"
                 @loaded="teamMembers = $event"
             />
             <EntityHistoryPanel

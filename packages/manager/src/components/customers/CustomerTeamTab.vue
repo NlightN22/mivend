@@ -9,19 +9,20 @@ import {
     type CounterpartyTeamMemberRole,
 } from '../../api/counterpartyTeam';
 import type { ManagerOption } from '../../api/orders';
-import type { EntityRef } from '../../api/history';
-import EntityHistoryPanel from '../history/EntityHistoryPanel.vue';
 import CustomerTeamDataTable, { type TeamRow } from './CustomerTeamDataTable.vue';
 import { useAuthStore } from '../../stores/auth';
 
+// Recent-changes history for this customer is owned exclusively by the customer-detail page's
+// own "History" tab (EntityHistoryPanel in CustomerDetailPage.vue) — this tab previously
+// duplicated that same panel/data in a "Recent changes" side panel, showing the customer's whole
+// history (not just team changes) a second time. Removed; see CustomerDetailPage.vue's `history`
+// tab for the single source of truth.
 const props = defineProps<{
     counterpartyId: string;
     ownerId: string | null;
     ownerName: string | null;
     managers: ManagerOption[];
     canManage: boolean;
-    canViewHistory: boolean;
-    historyRefs: EntityRef[];
 }>();
 
 const emit = defineEmits<{ loaded: [members: CounterpartyTeamMember[]] }>();
@@ -174,28 +175,21 @@ const rows = computed<TeamRow[]>(() => {
         />
         <p v-if="error" class="customer-team__error">{{ error }}</p>
 
-        <div class="customer-team__panels">
-            <div class="customer-team__panel">
-                <h4 class="customer-team__panel-title">Team notifications</h4>
-                <p class="customer-team__panel-subtitle">
-                    Choose who will receive notifications about orders, invoices and payments for this customer.
-                </p>
-                <div class="customer-team__notifications">
-                    <MvCheckbox
-                        v-for="role in NOTIFICATION_ROLES"
-                        :key="role"
-                        :model-value="notificationChecks[role]"
-                        :label="role"
-                        @update:model-value="notificationChecks[role] = $event"
-                    />
-                </div>
-                <MvButton size="sm" disabled>Save</MvButton>
+        <div class="customer-team__panel customer-team__notifications-panel">
+            <h4 class="customer-team__panel-title">Team notifications</h4>
+            <p class="customer-team__panel-subtitle">
+                Choose who will receive notifications about orders, invoices and payments for this customer.
+            </p>
+            <div class="customer-team__notifications">
+                <MvCheckbox
+                    v-for="role in NOTIFICATION_ROLES"
+                    :key="role"
+                    :model-value="notificationChecks[role]"
+                    :label="role"
+                    @update:model-value="notificationChecks[role] = $event"
+                />
             </div>
-
-            <div v-if="canViewHistory" class="customer-team__panel customer-team__panel--wide">
-                <h4 class="customer-team__panel-title">Recent changes</h4>
-                <EntityHistoryPanel :refs="historyRefs" :managers="managers" />
-            </div>
+            <MvButton size="sm" disabled>Save</MvButton>
         </div>
 
         <MvModal v-if="addOpen" title="Add team member" @close="addOpen = false">
@@ -243,16 +237,8 @@ const rows = computed<TeamRow[]>(() => {
     font-size: 13px;
 }
 
-.customer-team__panels {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-    gap: 16px;
-}
-
-@media (max-width: 800px) {
-    .customer-team__panels {
-        grid-template-columns: 1fr;
-    }
+.customer-team__notifications-panel {
+    max-width: 420px;
 }
 
 .customer-team__panel {
