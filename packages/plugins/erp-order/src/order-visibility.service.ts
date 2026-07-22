@@ -100,8 +100,22 @@ export class OrderVisibilityService {
                 // this becomes `syntax error at or near "order"` at query time (same class of
                 // bug as AGENTS.md's documented Brackets-alias gotcha, but here it hit even
                 // outside a Brackets callback because of the raw-column mixing).
+                //
+                // `OR ... IS NULL`: a branch-less order is a legitimate, expected state, not an
+                // edge case to exclude — ErpOrderService.onOrderPlaced only denormalizes
+                // branchId when the customer has a `preferredTradingPointId` set, which is
+                // optional (a customer can have trading points and place real orders without
+                // ever marking one preferred). Without this OR, `column = :branchId` is `NULL`
+                // (neither true nor false) for every such order in Postgres, so a plain AND
+                // silently hid it from every department-scoped viewer regardless of department —
+                // a real bug, not just a test artifact (confirmed against live seeded data: a
+                // real order with a real matching departmentId was invisible to its own
+                // department head purely because branchId was null). A branch-less order still
+                // requires the department to match — it's just not further narrowed by branch,
+                // consistent with the 'own' scope's identical "no branch restriction" carve-out
+                // above.
                 qb.andWhere(
-                    `counterparty.departmentId = :departmentId AND "${qb.alias}"."customFieldsBranchid" = :branchId`,
+                    `counterparty.departmentId = :departmentId AND ("${qb.alias}"."customFieldsBranchid" = :branchId OR "${qb.alias}"."customFieldsBranchid" IS NULL)`,
                     { departmentId: scope.departmentId ?? null, branchId: scope.branchId ?? null },
                 );
                 break;

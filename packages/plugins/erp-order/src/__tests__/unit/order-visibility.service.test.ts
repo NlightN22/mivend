@@ -76,10 +76,32 @@ describe('OrderVisibilityService', () => {
         // Filters by the order's own denormalized branchId (customFieldsBranchid), not
         // Counterparty.branchId — a chain account's orders can be serviced by a different
         // branch than the customer's nominal "home" branch, see order-visibility.service.ts.
+        // The `OR ... IS NULL` clause is required, not optional — see the next test.
         expect(qb.andWhere).toHaveBeenCalledWith(
-            'counterparty.departmentId = :departmentId AND "order"."customFieldsBranchid" = :branchId',
+            'counterparty.departmentId = :departmentId AND ("order"."customFieldsBranchid" = :branchId OR "order"."customFieldsBranchid" IS NULL)',
             { departmentId: 'dept-1', branchId: 'branch-1' },
         );
+    });
+
+    it('does not exclude a branch-less order (customFieldsBranchid IS NULL) from department scope', async () => {
+        // Real bug this guards against: `column = :branchId` evaluates to NULL (not false) in
+        // Postgres when the column itself is NULL, so a plain `AND branchId = :branchId` with no
+        // explicit `OR ... IS NULL` silently drops every branch-less order from every
+        // department-scoped viewer's results, regardless of department match — confirmed against
+        // live seeded data, not just this unit test. A customer can have real trading points and
+        // place real orders without ever setting `preferredTradingPointId` (optional field), so
+        // `Order.customFields.branchId` staying null is an expected, common state, not an
+        // exceptional one — see ErpOrderService.onOrderPlaced's own doc comment.
+        accessScopeService.resolveOrderScope.mockResolvedValue({
+            kind: 'department',
+            departmentId: 'dept-1',
+            branchId: 'branch-1',
+        });
+
+        await service.findVisible(mockCtx);
+
+        const [sql] = qb.andWhere.mock.calls[0];
+        expect(sql).toContain('IS NULL');
     });
 
     it('applies no extra filter for "all" scope', async () => {

@@ -43,7 +43,16 @@ export class ErpOrderResolver {
             .leftJoinAndSelect('variant.product', 'product')
             .leftJoin('product.translations', 'productTranslation')
             .where('user.id = :userId', { userId: ctx.activeUserId })
-            .andWhere("order.state NOT IN ('AddingItems', 'Cancelled')")
+            // 'Draft' is an admin-side work-in-progress state (manager portal's /orders/new,
+            // or any admin `createDraftOrder` call) — the customer was attached
+            // (`setCustomerForDraftOrder`) but the order was never actually placed/handed to
+            // them, same category as an in-progress 'AddingItems' cart. Real incident this
+            // fixes: an abandoned admin draft order (created, customer attached, then never
+            // completed — e.g. a manager started "+ New order" and never finished, or an
+            // automation like e2e's createConfirmedOrder helper failed partway through) showed
+            // up in that customer's storefront "My Orders" as a permanent $0/0-item ghost order,
+            // because 'Draft' was missing from this exclusion list.
+            .andWhere("order.state NOT IN ('AddingItems', 'Draft', 'Cancelled')")
             .orderBy('order.createdAt', 'DESC')
             .take(take)
             .skip(skip);
