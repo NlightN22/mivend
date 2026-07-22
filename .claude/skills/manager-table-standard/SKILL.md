@@ -129,6 +129,21 @@ bottom margin shifts the visible content off-center within it.
    cursor internally; don't forget to pass it from the owning `*Tab.vue`/`*Page.vue` down through
    the `*DataTable.vue` wrapper.
 
+9. **The table's primary action button (create/add a new row) goes in `MvAdvancedDataTable`'s own
+   `#toolbar-end` slot — right of the search box, left of the column-toggle gear icon — never in
+   a separate header block above the table.** This is the standard toolbar the component already
+   builds (search + view-chips on the left via `#toolbar-start`, action button + gear on the
+   right via `#toolbar-end`) — see `CustomerDiscountsDataTable.vue`'s "New discount grant" button
+   for the reference shape. Do not add a bespoke `<div class="*__header">` with its own title/count
+   and its own button next to the table — that duplicates layout the component already provides
+   and drifts visually from every other table (real incident: `CustomerTeamTab.vue`'s "Team
+   members N" header + "+ Add team member" button lived in their own row above the table instead
+   of the toolbar, both because the tab predated this component's `#toolbar-end` slot and because
+   the row count was redundant information already visible from the table itself — fixed by moving
+   the button into `#toolbar-end` and deleting the header entirely, matching `CustomerDiscountsTab.vue`).
+   A row count in a title above the table is redundant with the table's own row/pagination display
+   and should not be added back.
+
 ## Procedure
 
 1. Identify the table's identifying column and confirm point 1 above.
@@ -143,6 +158,8 @@ bottom margin shifts the visible content off-center within it.
 5. Confirm pagination is either real (server `skip`/`take`) or explicitly exempted with a comment
    explaining why, per AGENTS.md's bounded-list test.
 6. Confirm filter/page state is URL-synced if the table has real, user-facing filters.
-7. If any backend change is needed, run the `test-design` skill for it before writing code.
-8. Implement, then run the `final-check` skill (`make lint` + `make test`, plus
+7. Confirm the primary action button lives in `#toolbar-end` (point 9) and there's no separate
+   header block with a title/row-count above the table.
+8. If any backend change is needed, run the `test-design` skill for it before writing code.
+9. Implement, then run the `final-check` skill (`make lint` + `make test`, plus
    `pnpm --filter './packages/plugins/**' build` if a plugin changed) before reporting done.

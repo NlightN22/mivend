@@ -160,11 +160,6 @@ const rows = computed<TeamRow[]>(() => {
 
 <template>
     <div class="customer-team">
-        <div class="customer-team__header">
-            <h3 class="customer-team__title">Team members <span class="customer-team__count">{{ rows.length }}</span></h3>
-            <MvButton v-if="canManage" size="sm" @click="openAdd">+ Add team member</MvButton>
-        </div>
-
         <CustomerTeamDataTable
             :rows="rows"
             :loading="loading"
@@ -172,7 +167,11 @@ const rows = computed<TeamRow[]>(() => {
             :saving="saving"
             :administrator-id="authStore.administrator?.id ?? 'anonymous'"
             @remove="handleRemove"
-        />
+        >
+            <template #toolbar-end>
+                <MvButton v-if="canManage" size="sm" @click="openAdd">+ Add team member</MvButton>
+            </template>
+        </CustomerTeamDataTable>
         <p v-if="error" class="customer-team__error">{{ error }}</p>
 
         <div class="customer-team__panel customer-team__notifications-panel">
@@ -208,27 +207,6 @@ const rows = computed<TeamRow[]>(() => {
     display: flex;
     flex-direction: column;
     gap: 16px;
-}
-
-.customer-team__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.customer-team__title {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.customer-team__count {
-    color: var(--el-text-color-secondary, #6b7280);
-    font-weight: 500;
 }
 
 .customer-team__error {
