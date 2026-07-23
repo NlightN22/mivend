@@ -19,6 +19,16 @@ query ProductDetail($slug: String!) {
                 code
             }
         }
+        collections {
+            id
+            name
+            slug
+            breadcrumbs {
+                id
+                name
+                slug
+            }
+        }
     }
 }
 

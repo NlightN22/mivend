@@ -361,7 +361,7 @@ async function main() {
     // dedup-by-exchangeId (ImportRunService.findByExchangeId) makes reseeding a no-op
     // instead of piling up a new erp_import_run row every time. Bump to 'v2' etc. only
     // when fixture data actually changes and must be reapplied.
-    const run = 'v2';
+    const run = 'v3';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');

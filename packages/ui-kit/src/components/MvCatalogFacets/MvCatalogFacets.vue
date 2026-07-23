@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 
+interface CategoryCrumb {
+    id: string;
+    name: string;
+    slug: string;
+}
+
 const props = withDefaults(
     defineProps<{
         facetGroups: { code: string; name: string; values: { id: string; name: string; count: number }[] }[];
@@ -12,6 +18,14 @@ const props = withDefaults(
         // separate mega-menu/URL slug, so it hides that group here; manager has no such
         // navigation and passes an empty array to show every facet group as checkboxes.
         hiddenFacetCodes?: string[];
+        // Ancestors/current/children of the selected category — renders as one more section
+        // in this same widget (see catalog-facets__cat-* below), not a separate boxed panel.
+        // Omit entirely (undefined) to not render the category section at all.
+        categoryPanel?: {
+            ancestors: CategoryCrumb[];
+            current?: CategoryCrumb;
+            children: CategoryCrumb[];
+        };
     }>(),
     { hiddenFacetCodes: () => ['category'] },
 );
@@ -21,6 +35,7 @@ const emit = defineEmits<{
     'toggleFacetValue': [id: string];
     'update:priceMin': [v: number | null];
     'update:priceMax': [v: number | null];
+    'navigateCategory': [slug: string | undefined];
     reset: [];
 }>();
 
@@ -57,6 +72,44 @@ function onMaxInput(e: Event): void {
 
 <template>
     <aside class="catalog-facets">
+        <!-- Category (ancestors + current + children of the selected category) -->
+        <div v-if="categoryPanel" class="catalog-facets__block">
+            <h2 class="catalog-facets__block-title">Category</h2>
+
+            <button
+                v-if="categoryPanel.current"
+                type="button"
+                class="catalog-facets__cat-link catalog-facets__cat-link--ancestor"
+                @click="emit('navigateCategory', undefined)"
+            >
+                <span class="catalog-facets__cat-chevron">‹</span> All categories
+            </button>
+
+            <button
+                v-for="ancestor in categoryPanel.ancestors"
+                :key="ancestor.id"
+                type="button"
+                class="catalog-facets__cat-link catalog-facets__cat-link--ancestor"
+                @click="emit('navigateCategory', ancestor.slug)"
+            >
+                <span class="catalog-facets__cat-chevron">‹</span> {{ ancestor.name }}
+            </button>
+
+            <div v-if="categoryPanel.current" class="catalog-facets__cat-current">
+                {{ categoryPanel.current.name }}
+            </div>
+
+            <button
+                v-for="child in categoryPanel.children"
+                :key="child.id"
+                type="button"
+                class="catalog-facets__cat-link"
+                @click="emit('navigateCategory', child.slug)"
+            >
+                {{ child.name }}
+            </button>
+        </div>
+
         <!-- Availability -->
         <div class="catalog-facets__block">
             <h2 class="catalog-facets__block-title">Availability</h2>
@@ -235,4 +288,32 @@ function onMaxInput(e: Event): void {
 .catalog-facets__reset:hover { border-color: #00b894; color: #00b894; }
 
 .catalog-facets__count { color: #9aada6; font-size: 12px; }
+
+.catalog-facets__cat-link {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 6px 0;
+    margin: 0;
+    font-size: 14px;
+    font-family: inherit;
+    color: #43524d;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.catalog-facets__cat-link:hover { color: #00b894; }
+
+.catalog-facets__cat-link--ancestor { color: #66736e; font-weight: 700; }
+
+.catalog-facets__cat-chevron { display: inline-block; margin-right: 2px; }
+
+.catalog-facets__cat-current {
+    padding: 6px 0;
+    font-size: 14px;
+    font-weight: 900;
+    color: #14231f;
+}
 </style>

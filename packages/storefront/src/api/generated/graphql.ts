@@ -2276,7 +2276,9 @@ export type OrderCustomFields = {
     erpOrderId?: Maybe<Scalars['String']['output']>;
     erpStatus?: Maybe<Scalars['String']['output']>;
     erpStatusAt?: Maybe<Scalars['DateTime']['output']>;
+    latestFulfillmentState?: Maybe<Scalars['String']['output']>;
     paymentStatus?: Maybe<Scalars['String']['output']>;
+    placedByAdministratorId?: Maybe<Scalars['String']['output']>;
     sourceOrderId?: Maybe<Scalars['String']['output']>;
     tradingPointId?: Maybe<Scalars['String']['output']>;
 };
@@ -2293,8 +2295,10 @@ export type OrderFilterParameter = {
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
     id?: InputMaybe<IdOperators>;
+    latestFulfillmentState?: InputMaybe<StringOperators>;
     orderPlacedAt?: InputMaybe<DateOperators>;
     paymentStatus?: InputMaybe<StringOperators>;
+    placedByAdministratorId?: InputMaybe<StringOperators>;
     shipping?: InputMaybe<NumberOperators>;
     shippingWithTax?: InputMaybe<NumberOperators>;
     sourceOrderId?: InputMaybe<StringOperators>;
@@ -2436,8 +2440,10 @@ export type OrderSortParameter = {
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
+    latestFulfillmentState?: InputMaybe<SortOrder>;
     orderPlacedAt?: InputMaybe<SortOrder>;
     paymentStatus?: InputMaybe<SortOrder>;
+    placedByAdministratorId?: InputMaybe<SortOrder>;
     shipping?: InputMaybe<SortOrder>;
     shippingWithTax?: InputMaybe<SortOrder>;
     sourceOrderId?: InputMaybe<SortOrder>;
@@ -2780,6 +2786,8 @@ export enum Permission {
     ManageAccessControl = 'ManageAccessControl',
     /** Create/edit WorkflowDefinition chains (layer 5, /settings) */
     ManageApprovalWorkflows = 'ManageApprovalWorkflows',
+    /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
+    ManageCounterpartyTeam = 'ManageCounterpartyTeam',
     /** Owner means the user owns this entity, e.g. a Customer's own Order */
     Owner = 'Owner',
     /** Public means any unauthenticated user may perform the operation */
@@ -2812,8 +2820,12 @@ export enum Permission {
     ReadFacet = 'ReadFacet',
     /** Read the raw floor-price threshold for a variant (financial data, layer 4 redaction) */
     ReadFloorPrice = 'ReadFloorPrice',
+    /** Read invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveInvoiceScope) */
+    ReadInvoice = 'ReadInvoice',
     /** Grants permission to read Order */
     ReadOrder = 'ReadOrder',
+    /** Read payment records for the manager portal — a resource derived from Invoice, scoped the same way (AccessScopeService.resolveInvoiceScope) */
+    ReadPayment = 'ReadPayment',
     /** Grants permission to read PaymentMethod */
     ReadPaymentMethod = 'ReadPaymentMethod',
     /** Grants permission to read Product */
@@ -3905,7 +3917,9 @@ export type UpdateOrderCustomFieldsInput = {
     erpOrderId?: InputMaybe<Scalars['String']['input']>;
     erpStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
+    latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;
     paymentStatus?: InputMaybe<Scalars['String']['input']>;
+    placedByAdministratorId?: InputMaybe<Scalars['String']['input']>;
     sourceOrderId?: InputMaybe<Scalars['String']['input']>;
     tradingPointId?: InputMaybe<Scalars['String']['input']>;
 };
@@ -4194,6 +4208,12 @@ export type ProductDetailQuery = {
             stockLevel: string;
         }>;
         facetValues: Array<{ name: string; facet: { code: string } }>;
+        collections: Array<{
+            id: string;
+            name: string;
+            slug: string;
+            breadcrumbs: Array<{ id: string; name: string; slug: string }>;
+        }>;
     } | null;
 };
 
@@ -4992,6 +5012,16 @@ export const ProductDetailDocument = new TypedDocumentString(`
       name
       facet {
         code
+      }
+    }
+    collections {
+      id
+      name
+      slug
+      breadcrumbs {
+        id
+        name
+        slug
       }
     }
   }

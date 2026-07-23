@@ -37,6 +37,19 @@ async function handleAddToCart(qty: number): Promise<void> {
   if (discount) toast(discountAddToCartHint(discount.percent, discount.brand), 'success');
 }
 const category = computed(() => product.value?.facetValues.find(fv => fv.facet.code === 'category')?.name ?? '');
+// A product can belong to several collections; the deepest one (most breadcrumbs) gives the
+// most specific real ancestry path to show — breadcrumbs = [root, ...ancestors, self].
+const breadcrumbItems = computed(() => {
+  const collections = product.value?.collections ?? [];
+  const deepest = [...collections].sort((a, b) => b.breadcrumbs.length - a.breadcrumbs.length)[0];
+  const trail = deepest ? deepest.breadcrumbs.slice(1).map(c => ({ label: c.name, to: `/catalog?collection=${c.slug}` })) : [];
+  return [
+    { label: 'Главная', to: '/' },
+    { label: 'Каталог', to: '/catalog' },
+    ...trail,
+    { label: product.value?.name ?? '' },
+  ];
+});
 const stockVariantLabel = computed((): 'ok' | 'low' | 'out' => {
   const sl = variant.value?.stockLevel ?? '';
   if (!sl || sl === 'OUT_OF_STOCK') return 'out';
@@ -74,11 +87,7 @@ onMounted(() => { fetchData(route.params.slug as string); });
     <template v-else>
       <MvBreadcrumbs
         class="product-page__crumbs"
-        :items="[
-          { label: 'Главная', to: '/' },
-          { label: 'Каталог', to: '/catalog' },
-          { label: product.name },
-        ]"
+        :items="breadcrumbItems"
       />
 
       <div class="product-page__layout">

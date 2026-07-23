@@ -4,6 +4,21 @@
     { "erpId": "cat-engine-filters", "name": "Filters", "parentErpId": "cat-engine" },
     { "erpId": "cat-engine-cooling", "name": "Cooling System", "parentErpId": "cat-engine" },
     { "erpId": "cat-engine-oils", "name": "Engine Oils", "parentErpId": "cat-engine" },
+    {
+        "erpId": "cat-engine-oils-mineral",
+        "name": "Mineral Oils",
+        "parentErpId": "cat-engine-oils"
+    },
+    {
+        "erpId": "cat-engine-oils-semi-synthetic",
+        "name": "Semi-Synthetic Oils",
+        "parentErpId": "cat-engine-oils"
+    },
+    {
+        "erpId": "cat-engine-oils-synthetic",
+        "name": "Synthetic Oils",
+        "parentErpId": "cat-engine-oils"
+    },
     { "erpId": "cat-suspension", "name": "Suspension and Steering", "parentErpId": null },
     {
         "erpId": "cat-suspension-ball",

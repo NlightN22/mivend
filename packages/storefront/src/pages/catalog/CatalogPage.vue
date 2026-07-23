@@ -2,16 +2,18 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import { useCatalogStore } from '../../stores/catalog';
 import { useProductList, type FilterState } from '../../composables/useProductList';
-import { MvCatalogFacets } from '@mivend/ui-kit';
+import { MvCatalogFacets, MvBreadcrumbs } from '@mivend/ui-kit';
 import ProductListView from '../../components/ProductListView.vue';
 // Imports the TS source directly — see the comment in useProductList.ts for why 'shared''s
 // compiled package output breaks a Vite production build.
-import { resolveCategoryFacetValueId } from '../../../../shared/src/collectionTree';
+import { resolveCategoryFacetValueId, buildCategoryPanel } from '../../../../shared/src/collectionTree';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const catalogStore = useCatalogStore();
 
 function parseFiltersFromQuery(): FilterState {
     const facetValueIds = route.query.fv
@@ -75,6 +77,27 @@ function resetFilters(): void {
 
 const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
 
+const selectedCategorySlug = computed(() => (route.query.collection as string) || undefined);
+
+const categoryPanel = computed(() =>
+    buildCategoryPanel(catalogStore.rawCollections, selectedCategorySlug.value),
+);
+
+const breadcrumbItems = computed(() => {
+    if (!categoryPanel.value.current) return [];
+    return [
+        { label: 'Каталог', to: '/catalog' },
+        ...categoryPanel.value.ancestors.map(a => ({ label: a.name, to: `/catalog?collection=${a.slug}` })),
+        { label: categoryPanel.value.current.name },
+    ];
+});
+
+const catalogHeading = computed(() => categoryPanel.value.current?.name ?? 'Product catalog');
+
+function navigateCategory(slug: string | undefined): void {
+    router.push({ query: { ...route.query, collection: slug, fv: undefined } });
+}
+
 watch(() => route.query.q, q => {
     searchQuery.value = (q as string) ?? '';
     pendingCategorySlug.value = undefined;
@@ -94,11 +117,19 @@ watch(() => route.query.fv, () => {
     syncingFromUrl = false;
 });
 
-onMounted(load);
+onMounted(() => {
+    load();
+    catalogStore.loadCollections();
+});
 </script>
 
 <template>
     <main class="catalog-page">
+        <template v-if="!searchQuery && breadcrumbItems.length">
+            <MvBreadcrumbs class="catalog-page__crumbs" :items="breadcrumbItems" />
+            <h1 class="catalog-page__heading">{{ catalogHeading }}</h1>
+        </template>
+
         <div class="catalog-page__inner">
             <MvCatalogFacets
                 :facet-groups="facetGroups"
@@ -106,10 +137,12 @@ onMounted(load);
                 :selected-facet-values="selectedFacetValues"
                 :price-min="filters.priceMin"
                 :price-max="filters.priceMax"
+                :category-panel="searchQuery ? undefined : categoryPanel"
                 @update:in-stock-only="filters = { ...filters, inStock: $event }"
                 @toggle-facet-value="toggleFacetValue"
                 @update:price-min="filters = { ...filters, priceMin: $event }"
                 @update:price-max="filters = { ...filters, priceMax: $event }"
+                @navigate-category="navigateCategory"
                 @reset="resetFilters"
             />
 
@@ -136,6 +169,15 @@ onMounted(load);
     max-width: 1440px;
     margin: 0 auto;
     padding: 24px 28px 56px;
+}
+
+.catalog-page__crumbs { margin-bottom: 14px; }
+
+.catalog-page__heading {
+    margin: 0 0 20px;
+    font-size: 30px;
+    letter-spacing: -0.03em;
+    color: #14231f;
 }
 
 .catalog-page__inner {
