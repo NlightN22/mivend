@@ -266,11 +266,11 @@ function onStepperChange(qty: number): void {
 
 .mv-product-row__add-btn {
   height: 36px; padding: 0 14px; border: none; border-radius: 10px;
-  background: var(--mv-color-emerald, #00b894); color: #fff; font-size: 13px; font-weight: 700;
+  background: var(--app-accent-orange, #ff8a00); color: #fff; font-size: 13px; font-weight: 700;
   cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;
   transition: background 0.15s; flex-shrink: 0; white-space: nowrap; font-family: inherit;
 }
-.mv-product-row__add-btn:hover:not(:disabled) { background: #00a07e; }
+.mv-product-row__add-btn:hover:not(:disabled) { background: #e67a00; }
 .mv-product-row__add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .mv-product-row__analog-btn {
