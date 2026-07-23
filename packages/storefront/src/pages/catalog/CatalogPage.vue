@@ -83,8 +83,10 @@ const categoryPanel = computed(() =>
     buildCategoryPanel(catalogStore.rawCollections, selectedCategorySlug.value),
 );
 
+// Always at least [{ label: 'Каталог' }] — even with nothing selected — so this block stays
+// mounted with a stable height instead of appearing/disappearing as the category changes.
 const breadcrumbItems = computed(() => {
-    if (!categoryPanel.value.current) return [];
+    if (!categoryPanel.value.current) return [{ label: 'Каталог' }];
     return [
         { label: 'Каталог', to: '/catalog' },
         ...categoryPanel.value.ancestors.map(a => ({ label: a.name, to: `/catalog?collection=${a.slug}` })),
@@ -92,7 +94,7 @@ const breadcrumbItems = computed(() => {
     ];
 });
 
-const catalogHeading = computed(() => categoryPanel.value.current?.name ?? 'Product catalog');
+const catalogHeading = computed(() => categoryPanel.value.current?.name ?? 'All products');
 
 function navigateCategory(slug: string | undefined): void {
     router.push({ query: { ...route.query, collection: slug, fv: undefined } });
@@ -125,7 +127,7 @@ onMounted(() => {
 
 <template>
     <main class="catalog-page">
-        <template v-if="!searchQuery && breadcrumbItems.length">
+        <template v-if="!searchQuery">
             <MvBreadcrumbs class="catalog-page__crumbs" :items="breadcrumbItems" />
             <h1 class="catalog-page__heading">{{ catalogHeading }}</h1>
         </template>
