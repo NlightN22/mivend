@@ -107,9 +107,11 @@ watch(() => route.query.q, q => {
 });
 
 watch(() => route.query.collection, slug => {
+    // resetFilters() also clears pendingCategorySlug — must run before assigning the new
+    // slug below, or it immediately wipes out the value this watcher just set.
+    resetFilters();
     pendingCategorySlug.value = (slug as string) || undefined;
     searchQuery.value = '';
-    resetFilters();
 });
 
 // Restore filters when navigating back via browser history
