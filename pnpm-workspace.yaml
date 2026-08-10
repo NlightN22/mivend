@@ -2,3 +2,13 @@ packages:
     - 'apps/*'
     - 'packages/*'
     - 'packages/plugins/*'
+allowBuilds:
+    '@apollo/protobufjs': true
+    '@scarf/scarf': false
+    bcrypt: true
+    esbuild: true
+    msgpackr-extract: true
+    msw: true
+    puppeteer: true
+    sharp: true
+    vue-demi: true
