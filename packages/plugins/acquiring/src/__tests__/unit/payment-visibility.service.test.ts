@@ -8,6 +8,7 @@ import { InvoiceVisibilityService } from '../../invoice-visibility.service';
 // spurious "Mock<...> not assignable to Mock<any[], unknown>" errors (same fix as this session's
 // other query-builder mocks). getRawAndEntities is typed loosely (Record<string, unknown>[])
 // since individual tests reassign it with differently-shaped raw/entity rows.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
 function mockQueryBuilder() {
     const qb = {
         innerJoin: vi.fn(),

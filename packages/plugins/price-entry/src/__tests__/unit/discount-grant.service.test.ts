@@ -15,6 +15,7 @@ function mockCtx(permissions: string[]): RequestContext {
 
 // Deliberately un-annotated (see payment-visibility.service.test.ts's identical comment) — an
 // explicit annotation defeats TS's inference of each mock's real call signature.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
 function mockQueryBuilder(getManyResult: unknown[] = [], count = 0) {
     const qb = {
         leftJoinAndSelect: vi.fn(),

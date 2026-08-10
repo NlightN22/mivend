@@ -7,6 +7,7 @@ import { InvoiceVisibilityService } from '../../invoice-visibility.service';
 // annotation here defeats TS's own inference of each mock's real call signature and produces
 // spurious "Mock<...> not assignable to Mock<any[], unknown>" errors (same fix as this
 // session's other query-builder mocks).
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
 function mockQueryBuilder() {
     const qb = {
         leftJoin: vi.fn(),

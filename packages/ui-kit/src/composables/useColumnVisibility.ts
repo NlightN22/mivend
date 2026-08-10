@@ -1,4 +1,4 @@
-import { computed, ref, watch, type Ref } from 'vue';
+import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
 
 export interface ColumnVisibilityDef {
     key: string;
@@ -14,7 +14,14 @@ export interface ColumnVisibilityDef {
 // entity (see AGENTS.md "business data must live in the database" — that rule is about domain
 // facts, not per-user display preference). storageKey should be unique per table+admin, e.g.
 // `orders-columns:${administratorId}`.
-export function useColumnVisibility(storageKey: string, columns: ColumnVisibilityDef[]) {
+export function useColumnVisibility(
+    storageKey: string,
+    columns: ColumnVisibilityDef[],
+): {
+    hiddenKeys: Ref<Set<string>>;
+    toggle: (key: string) => void;
+    toggleableColumns: ComputedRef<(ColumnVisibilityDef & { visible: boolean })[]>;
+} {
     const hideable = columns.filter(c => !c.required);
     const stored = (() => {
         try {
