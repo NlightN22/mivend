@@ -557,9 +557,15 @@ importers:
 
     packages/plugins/erp-integration:
         dependencies:
+            '@bufbuild/protobuf':
+                specifier: ^2.0.0
+                version: 2.13.0
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../erp-order
+            '@nlightn22/event-contracts':
+                specifier: ^0.5.0
+                version: 0.5.0
             bullmq:
                 specifier: ^5.0.0
                 version: 5.79.1(supports-color@8.1.1)
@@ -1548,6 +1554,12 @@ packages:
         resolution:
             {
                 integrity: sha512-DDaRehssg1aNrH4+2hnj1B7vnUGEjU6OIlyRdkMd0aUdIUvKXrJfXsy8LVtXAy7DRvYVluWbMspsRhz2lcW0mQ==,
+            }
+
+    '@bufbuild/protobuf@2.13.0':
+        resolution:
+            {
+                integrity: sha512-acq7c49vxfm1ggJ95P70TX7ABDM0vxr1SYD3BB0o0jnBLB4OAqeHyKuN+cD3w80gXEDQ2zxHpR6CUeA+O/aU9g==,
             }
 
     '@chromatic-com/storybook@3.2.7':
@@ -3521,6 +3533,13 @@ packages:
             reflect-metadata: ^0.1.13 || ^0.2.0
             rxjs: ^7.2.0
             typeorm: ^0.3.0 || ^1.0.0-dev
+
+    '@nlightn22/event-contracts@0.5.0':
+        resolution:
+            {
+                integrity: sha512-uDCtydDJcuAuBR+e4Rq9EHS6Q636GwreZ7ptAbUF5hvZo4cVjVmq1hTz/7yJk08twC5mCVgJoEZxSFsSI46dSw==,
+                tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.5.0/e631d058f6282cd12f7c9eb8d97c886ecf40794f,
+            }
 
     '@nodelib/fs.scandir@2.1.5':
         resolution:
@@ -11633,6 +11652,8 @@ snapshots:
 
     '@borewit/text-codec@0.2.2': {}
 
+    '@bufbuild/protobuf@2.13.0': {}
+
     '@chromatic-com/storybook@3.2.7(react@19.2.7)(storybook@8.6.18(prettier@3.8.4)(supports-color@8.1.1))':
         dependencies:
             chromatic: 11.29.0
@@ -12970,6 +12991,10 @@ snapshots:
             reflect-metadata: 0.2.2
             rxjs: 7.8.2
             typeorm: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
+
+    '@nlightn22/event-contracts@0.5.0':
+        dependencies:
+            '@bufbuild/protobuf': 2.13.0
 
     '@nodelib/fs.scandir@2.1.5':
         dependencies:

@@ -12,3 +12,5 @@ allowBuilds:
     puppeteer: true
     sharp: true
     vue-demi: true
+minimumReleaseAgeExclude:
+    - '@nlightn22/event-contracts@0.4.0 || 0.5.0'
