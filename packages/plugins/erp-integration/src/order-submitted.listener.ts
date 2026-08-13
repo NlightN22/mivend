@@ -38,18 +38,34 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
     private async handle(event: OrderReadyForErpEvent): Promise<void> {
         const order = await this.connection
             .getRepository(event.ctx, Order)
-            .findOne({ where: { id: event.orderId } });
+            .findOne({
+                where: { id: event.orderId },
+                relations: ['lines', 'lines.productVariant'],
+            });
         if (!order) return;
 
-        const organizationId = order.customFields?.organizationId;
-        if (!organizationId) {
-            // No organization resolved yet for this order — nothing to report to Integration
+        // organizationId lives on ProductVariant, not Order — an order can legitimately span
+        // multiple organizations (see payment-method-handlers.ts's computeInvoiceSplit /
+        // GlobalSettings.organizationSplitEnabled, which already computes a real per-organization
+        // Invoice split for exactly this reason). One order.submitted event per distinct
+        // organization found across the order's lines, same "one fact per organization" shape
+        // InvoiceService already establishes — never a single, arbitrarily-chosen organizationId
+        // for a multi-organization order.
+        const organizationIds = [
+            ...new Set(
+                order.lines
+                    .map(line => line.productVariant?.customFields?.organizationId)
+                    .filter((id): id is number => id != null),
+            ),
+        ];
+        if (organizationIds.length === 0) {
+            // No organization resolved for any line yet — nothing to report to Integration
             // Service about. Not an error: matches ErpOrderService.onOrderPlaced's own tolerance
             // for a missing trading point/branch at placement time.
             return;
         }
 
-        const payload: OrderSubmittedPayload = {
+        const payloads: OrderSubmittedPayload[] = organizationIds.map(organizationId => ({
             eventId: randomUUID(),
             orderId: event.orderId,
             orderCode: event.orderCode,
@@ -57,7 +73,7 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
             submittedAt: new Date().toISOString(),
             totalWithTax: order.totalWithTax,
             currencyCode: order.currencyCode,
-        };
+        }));
 
         // Deliberate, documented deviation from AGENTS.md sync rule #1's letter ("outbox write
         // in the same DB transaction as the business data"): the Order write already committed
@@ -74,12 +90,19 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
         // ErpOrderService.onOrderPlaced's own transaction (a cross-plugin coupling this issue's
         // milestone scope deliberately avoided) or a periodic reconciliation sweep — neither
         // implemented here.
+        //
+        // All organizations for one order are written in a single transaction: a partial publish
+        // (order reported to Integration Service for org A but not org B) is a worse, harder-to-
+        // reconcile state than the whole order's outbox write failing together — matches
+        // SyncService.processErpChanges's own multi-event-batch-in-one-transaction precedent.
         await this.dataSource.transaction(async em => {
-            await this.outboxService.writeToOutbox(em, {
-                eventId: payload.eventId,
-                eventType: 'order.submitted',
-                payload: payload as unknown as Record<string, unknown>,
-            });
+            for (const payload of payloads) {
+                await this.outboxService.writeToOutbox(em, {
+                    eventId: payload.eventId,
+                    eventType: 'order.submitted',
+                    payload: payload as unknown as Record<string, unknown>,
+                });
+            }
         });
     }
 }
