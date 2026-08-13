@@ -27,6 +27,7 @@
         "@mivend/plugin-search": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-sync": "workspace:*",
+        "@mivend/plugin-erp-integration": "workspace:*",
         "@mivend/plugin-documents": "workspace:*",
         "@mivend/plugin-popular-products": "workspace:*",
         "@mivend/plugin-access-control": "workspace:*",

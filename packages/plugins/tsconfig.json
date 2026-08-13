@@ -14,6 +14,7 @@
         { "path": "./documents" },
         { "path": "./search" },
         { "path": "./sync" },
+        { "path": "./erp-integration" },
         { "path": "./erp-import" },
         { "path": "./reservation" },
         { "path": "./moq" },

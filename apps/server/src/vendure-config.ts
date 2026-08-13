@@ -1,4 +1,5 @@
 import path from 'path';
+import { readFileSync } from 'fs';
 import { LanguageCode, VendureConfig } from '@vendure/core';
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
@@ -14,6 +15,7 @@ import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { SearchPlugin, elasticsearchPlugin } from '@mivend/plugin-search';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { SyncPlugin, StubErpAdapter } from '@mivend/plugin-sync';
+import { ErpIntegrationPlugin } from '@mivend/plugin-erp-integration';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
 import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-control';
@@ -280,6 +282,43 @@ export const config: VendureConfig = {
                 url: process.env.RABBITMQ_URL ?? 'amqp://mivend:mivend@localhost:5672',
             },
             erpAdapter: new StubErpAdapter(),
+        }),
+        ErpIntegrationPlugin.init({
+            instanceType,
+            kafka: {
+                brokers: (process.env.INTEGRATION_KAFKA_BROKERS ?? 'localhost:9094').split(','),
+                clientId: process.env.INTEGRATION_KAFKA_CLIENT_ID ?? 'mivend-central-hub',
+                ssl: process.env.INTEGRATION_KAFKA_CA_PATH
+                    ? {
+                          ca: [
+                              readFileSync(
+                                  path.resolve(__dirname, process.env.INTEGRATION_KAFKA_CA_PATH),
+                                  'utf-8',
+                              ),
+                          ],
+                      }
+                    : undefined,
+                sasl:
+                    process.env.INTEGRATION_KAFKA_SASL_USERNAME &&
+                    process.env.INTEGRATION_KAFKA_SASL_PASSWORD
+                        ? {
+                              mechanism: 'scram-sha-512',
+                              username: process.env.INTEGRATION_KAFKA_SASL_USERNAME,
+                              password: process.env.INTEGRATION_KAFKA_SASL_PASSWORD,
+                          }
+                        : undefined,
+                topic:
+                    process.env.INTEGRATION_KAFKA_TOPIC ??
+                    'mivend.orders.events.v1.order-submitted',
+            },
+            schemaRegistry: {
+                url: process.env.INTEGRATION_SCHEMA_REGISTRY_URL ?? 'http://localhost:8081',
+            },
+            redis: {
+                host: process.env.REDIS_HOST ?? 'localhost',
+                port: parseInt(process.env.REDIS_PORT ?? '6379'),
+                db: redisDb,
+            },
         }),
         ReservationPlugin.init({
             redis: {
