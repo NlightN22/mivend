@@ -20,6 +20,21 @@ import type { ErpIntegrationPluginOptions } from '../../../types';
 const OPTIONS: ErpIntegrationPluginOptions = {
     instanceType: 'central',
     kafka: { brokers: ['localhost:9092'], clientId: 'test', topic: 'mivend.erp-integration' },
+    kafkaConsumer: {
+        brokers: ['localhost:9092'],
+        clientId: 'test-consumer',
+        groupId: 'test-group',
+        topics: {
+            category: 't-category',
+            organization: 't-organization',
+            warehouse: 't-warehouse',
+            'price-type': 't-price-type',
+            product: 't-product',
+            offer: 't-offer',
+            price: 't-price',
+            stock: 't-stock',
+        },
+    },
     schemaRegistry: { url: 'http://localhost:8081' },
     redis: { host: 'localhost', port: 6379 },
     maxRetry: 3,

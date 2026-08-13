@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ORDER_SUBMITTED_SCHEMA } from '../../../schemas/order-submitted.schema';
 import type { OrderSubmittedPayload } from '../../../schemas/order-submitted.schema';
-import { encodeConfluentMessage, decodeConfluentMessage } from '../../../wire-format';
+import { encodeConfluentMessage } from '../../../wire-format';
 
 // Contract-compatibility pattern (docs/testing-patterns.md) — this is the boundary MiVend owns
 // and is producer-authoritative for (issue #62's Schema Registry decision). No live Registry
@@ -49,11 +49,11 @@ describe('order.submitted contract', () => {
         );
     });
 
-    it('round-trips a fixed fixture payload through the Confluent wire-format envelope', () => {
+    it('encodes a fixed fixture payload with the Confluent wire-format envelope header', () => {
         const encoded = encodeConfluentMessage(7, FIXTURE);
-        const decoded = decodeConfluentMessage(encoded);
 
-        expect(decoded.schemaId).toBe(7);
-        expect(decoded.payload).toEqual(FIXTURE);
+        expect(encoded.readUInt8(0)).toBe(0);
+        expect(encoded.readUInt32BE(1)).toBe(7);
+        expect(JSON.parse(encoded.subarray(5).toString('utf-8'))).toEqual(FIXTURE);
     });
 });

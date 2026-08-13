@@ -36,15 +36,47 @@ export interface RedisConfig {
     db?: number;
 }
 
+export interface KafkaConsumerConfig {
+    brokers: string[];
+    clientId: string;
+    groupId: string;
+    ssl?: boolean | { ca: string[] };
+    sasl?: {
+        mechanism: 'plain' | 'scram-sha-256' | 'scram-sha-512';
+        username: string;
+        password: string;
+    };
+    // Integration Service's own inbound topics for the Milestone-1 streams — one topic per
+    // entity type (issue #62's design section 2). Keyed by INBOUND_STREAMS in inbox-event.ts so
+    // adding a stream later means adding one entry here + one handler, not touching consumer
+    // wiring itself.
+    topics: Record<InboundStream, string>;
+}
+
+export type InboundStream =
+    | 'category'
+    | 'organization'
+    | 'warehouse'
+    | 'price-type'
+    | 'product'
+    | 'offer'
+    | 'price'
+    | 'stock';
+
 export interface ErpIntegrationPluginOptions {
     instanceType: 'central' | 'branch';
     kafka: KafkaConfig;
+    kafkaConsumer: KafkaConsumerConfig;
     schemaRegistry: SchemaRegistryConfig;
     redis: RedisConfig;
     maxRetry?: number;
     outboxPollIntervalMs?: number;
+    inboxPollIntervalMs?: number;
 }
 
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
 export const MAX_RETRY_DEFAULT = 5;
 export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
+export const INBOX_POLL_INTERVAL_DEFAULT = 5000;
+export const INBOX_MAX_ATTEMPTS_DEFAULT = 5;
+export const loggerCtx = 'ErpIntegrationPlugin';

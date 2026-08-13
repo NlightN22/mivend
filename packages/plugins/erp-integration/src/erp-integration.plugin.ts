@@ -2,9 +2,19 @@ import { PluginCommonModule, Type, VendurePlugin } from '@vendure/core';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
+import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
 import { IntegrationOutboxWorker } from './integration-outbox.worker';
+import { IntegrationInboxService } from './integration-inbox.service';
+import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
+import { IntegrationInboxWorker } from './integration-inbox.worker';
+import { KafkaConsumerService } from './kafka-consumer.service';
+import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.service';
+import { CategoryStreamHandler } from './handlers/category.handler';
+import { PriceStreamHandler } from './handlers/price.handler';
+import { ProductStreamHandler } from './handlers/product.handler';
+import { StockStreamHandler } from './handlers/stock.handler';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
@@ -22,11 +32,20 @@ import type { ErpIntegrationPluginOptions } from './types';
 // never schedule the BullMQ worker, and never subscribe to the order-submitted EventBus stream.
 @VendurePlugin({
     imports: [PluginCommonModule, ErpOrderPlugin],
-    entities: [IntegrationOutboxEntry],
+    entities: [IntegrationOutboxEntry, IntegrationInboxEvent],
     providers: [
         IntegrationOutboxService,
         IntegrationOutboxProcessorService,
         IntegrationOutboxWorker,
+        IntegrationInboxService,
+        IntegrationInboxProcessorService,
+        IntegrationInboxWorker,
+        KafkaConsumerService,
+        KafkaConsumerBootstrapService,
+        CategoryStreamHandler,
+        PriceStreamHandler,
+        ProductStreamHandler,
+        StockStreamHandler,
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,

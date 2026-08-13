@@ -4,6 +4,11 @@ GITHUB_REPOSITORY_OWNER ?= nlightn22
 VERSION = $(shell node -p "require('./package.json').version")
 GIT_SHA = $(shell git rev-parse --short HEAD)
 
+# Machine-specific overrides (gitignored) — e.g. TEST_DB_PORT when this machine's
+# docker-postgres-central-1 isn't on the shared default port 5432 (see .env.local.example).
+-include .env.local
+export
+
 .PHONY: up down logs ps restart \
         build lint fmt \
         test test-int test-e2e mutation-pilot \

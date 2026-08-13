@@ -311,6 +311,61 @@ export const config: VendureConfig = {
                     process.env.INTEGRATION_KAFKA_TOPIC ??
                     'mivend.orders.events.v1.order-submitted',
             },
+            kafkaConsumer: {
+                brokers: (process.env.INTEGRATION_KAFKA_BROKERS ?? 'localhost:9094').split(','),
+                clientId: process.env.INTEGRATION_KAFKA_CONSUMER_CLIENT_ID ?? 'mivend-central-hub',
+                groupId: process.env.INTEGRATION_KAFKA_CONSUMER_GROUP_ID ?? 'mivend-central-hub',
+                ssl: process.env.INTEGRATION_KAFKA_CA_PATH
+                    ? {
+                          ca: [
+                              readFileSync(
+                                  path.resolve(__dirname, process.env.INTEGRATION_KAFKA_CA_PATH),
+                                  'utf-8',
+                              ),
+                          ],
+                      }
+                    : undefined,
+                sasl:
+                    process.env.INTEGRATION_KAFKA_SASL_USERNAME &&
+                    process.env.INTEGRATION_KAFKA_SASL_PASSWORD
+                        ? {
+                              mechanism: 'scram-sha-512',
+                              username: process.env.INTEGRATION_KAFKA_SASL_USERNAME,
+                              password: process.env.INTEGRATION_KAFKA_SASL_PASSWORD,
+                          }
+                        : undefined,
+                // Real topic names, verified against Integration Service's own producer
+                // (outbox-event-mapper.ts) and search-service's own consumer
+                // (indexing.constants.ts's KAFKA_TOPIC_PREFIX/topicForStream): always
+                // "company.catalog.events.v1.<kebab-stream>-changed" — see
+                // docs/ai/1c-integration-service-decision.md's 2026-08-14 retraction.
+                topics: {
+                    category:
+                        process.env.INTEGRATION_KAFKA_TOPIC_CATEGORY ??
+                        'company.catalog.events.v1.category-changed',
+                    organization:
+                        process.env.INTEGRATION_KAFKA_TOPIC_ORGANIZATION ??
+                        'company.catalog.events.v1.organization-changed',
+                    warehouse:
+                        process.env.INTEGRATION_KAFKA_TOPIC_WAREHOUSE ??
+                        'company.catalog.events.v1.warehouse-changed',
+                    'price-type':
+                        process.env.INTEGRATION_KAFKA_TOPIC_PRICE_TYPE ??
+                        'company.catalog.events.v1.price-type-changed',
+                    product:
+                        process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT ??
+                        'company.catalog.events.v1.product-changed',
+                    offer:
+                        process.env.INTEGRATION_KAFKA_TOPIC_OFFER ??
+                        'company.catalog.events.v1.offer-changed',
+                    price:
+                        process.env.INTEGRATION_KAFKA_TOPIC_PRICE ??
+                        'company.catalog.events.v1.price-changed',
+                    stock:
+                        process.env.INTEGRATION_KAFKA_TOPIC_STOCK ??
+                        'company.catalog.events.v1.stock-changed',
+                },
+            },
             schemaRegistry: {
                 url: process.env.INTEGRATION_SCHEMA_REGISTRY_URL ?? 'http://localhost:8081',
             },
