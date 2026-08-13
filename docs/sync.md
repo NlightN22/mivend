@@ -2,9 +2,21 @@
 
 Data exchange between hub, branches, and the legacy ERP.
 
+**Target direction (decided, not yet implemented — see
+`docs/ai/1c-integration-service-decision.md`):** the central hub no longer talks to the legacy
+ERP directly. A separate Integration Service (its own project, not part of this monorepo) owns
+the ERP-facing side of the exchange and exchanges data with this repo over Kafka **in both
+directions** — inbound entity events (catalog/prices/stock) and outbound business events
+(order-registration, reservations, payment confirmations) alike. There is no synchronous RPC
+channel in the target design — see "Why Kafka both ways, not Kafka + RPC" below. The sections
+below describe both the current, still-live direct-ERP-adapter shape and the target shape — read
+`1c-integration-service-decision.md` before changing anything in `plugin-sync`/`erp-import`.
+
 ---
 
 ## Topology
+
+Current (still live):
 
 ```
 [Legacy ERP]
@@ -16,9 +28,42 @@ Data exchange between hub, branches, and the legacy ERP.
      └── [Branch ...]
 ```
 
-- The central hub is the **only** node that communicates with the legacy ERP.
-- Branches never call the ERP directly.
-- All hub↔branch communication goes through RabbitMQ — never direct HTTP between instances.
+Target (decided, not yet implemented):
+
+```
+[Legacy ERP]
+     ↕ (owned entirely by Integration Service — this repo never talks to the ERP)
+[Integration Service]           ← separate project, not part of this monorepo
+     ↕ Kafka, bidirectional (inbound: catalog/prices/stock; outbound: order-registration,
+        reservations, payment confirmations — each topic schema-registered by its own producer)
+[Central Hub]
+     ↕ RabbitMQ (cloud, durable queues)
+     ├── [Branch A]
+     ├── [Branch B]
+     └── [Branch ...]
+```
+
+### Why Kafka both ways, not Kafka + a synchronous RPC channel
+
+An earlier pass at this document had the central hub using Kafka for inbound events and a
+synchronous RPC channel (tRPC, mirroring Integration Service's own internal stack) for outbound
+commands/queries. That was based on a partial reading of Integration Service's own design and
+was wrong: their own architecture already routes outbound business commands (order-registration,
+reservations, payment confirmations) through Kafka too — the hub publishes a business event
+(e.g. `OrderSubmitted`), Integration Service's own consumer turns it into a durable outbound
+command, delivered to 1C on 1C's own regulated-job PULL/ACK cycle. A synchronous RPC channel is
+reserved there only for genuinely rare cases needing an immediate real-time answer (e.g. a
+credit-limit check at order time) — explicitly not the default transport, and not needed for
+anything in this repo's current scope. Adopt the same default here: **one transport
+(Kafka, bidirectional) for the whole exchange**, not two, until a concrete case is identified that
+actually cannot tolerate the regulated-job cycle's latency.
+
+- The central hub is the **only** node that talks to Integration Service over Kafka — branches
+  never do, exactly as they never talked to the ERP directly under the current shape.
+- Branches never call the ERP, and never will call Integration Service, directly.
+- All hub↔branch communication goes through RabbitMQ — never direct HTTP between instances. This
+  part of the topology is unaffected by the Integration Service migration: it is scoped entirely
+  to the hub↔branch boundary, not the hub↔ERP boundary.
 - Branch instances operate fully offline when RabbitMQ is unavailable.
 
 ---
@@ -175,7 +220,7 @@ The outbox worker queries only rows where `delivered_at IS NULL`.
 
 ---
 
-## ERP adapter interface
+## ERP adapter interface (current — being superseded)
 
 `plugin-sync` exposes an internal adapter interface that the ERP integration must implement.
 This keeps ERP-specific protocol details isolated from the rest of the system.
@@ -195,6 +240,23 @@ interface ErpAdapter {
 
 The concrete implementation (HTTP, file exchange, direct DB — whatever the ERP supports) is
 injected via plugin options and never referenced directly in domain code.
+
+**This interface is superseded end-to-end by the Integration Service direction** (see
+`docs/ai/1c-integration-service-decision.md`), inbound and outbound alike — not implemented yet,
+kept here only as the current, still-running shape:
+
+- `fetchChanges` (catalog/price/stock polling) is replaced by a Kafka consumer subscribed to
+  Integration Service's entity-event topics — no polling, no cursor, delivery is push-based.
+- `pushOrder`/`pushInventoryDelta` (direct HTTP to the ERP) is replaced by publishing a MiVend
+  business event (e.g. `OrderSubmitted`) to Kafka — via this repo's own outbox pattern, the same
+  shape already used for `sync_outbox`/RabbitMQ — that Integration Service's own consumer turns
+  into a durable outbound command, delivered to 1C on 1C's own regulated-job pull/ack cycle. This
+  repo never calls 1C, or Integration Service, synchronously for this — no RPC channel, Kafka
+  both ways (see "Why Kafka both ways" above).
+
+Do not extend or "fix" `ErpAdapter` for new functionality — new work in this area should target
+the Integration Service shape instead. See `1c-integration-service-decision.md`'s "Not yet done"
+section for what's actually unblocked to start.
 
 ---
 
@@ -256,6 +318,11 @@ All other plugins publish domain events via Vendure's `EventBus`.
 `plugin-sync` subscribes to those events and translates them into outbox writes.
 
 No other plugin imports from `plugin-sync` or calls RabbitMQ directly.
+
+This still holds for the RabbitMQ/hub-branch half of `plugin-sync`'s job. The ERP-adapter half
+is expected to move to a bidirectional Kafka producer/consumer targeting Integration Service
+instead (see above) — when that lands, whether it stays inside `plugin-sync` or becomes its own
+plugin is an open implementation question, not decided here.
 
 ---
 

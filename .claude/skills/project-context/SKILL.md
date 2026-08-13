@@ -62,6 +62,38 @@ Inspect the project state when useful:
 
 Do not run expensive commands just to update the context.
 
+**Size pre-check**: run `wc -l docs/ai/PROJECT_CONTEXT.md` before editing. If the existing file is
+already at or over the 400-line cap (see "Size limit" below), compress it _before_ adding this
+session's update — don't pile a new entry onto an already-oversized file and defer the cleanup.
+
+## Size limit
+
+**`docs/ai/PROJECT_CONTEXT.md` must not exceed 400 lines.** This is a hard cap, not a guideline —
+the file exists to be read cold by a fresh session with no other context, and a multi-thousand-line
+file defeats that purpose as badly as a missing one.
+
+**Post-check**: after writing the update, run `wc -l docs/ai/PROJECT_CONTEXT.md` again. If it is
+over 400 lines:
+
+1. Identify session-dated narrative sections that are old (resolved, superseded, or no longer
+   actionable) — dated incident write-ups, step-by-step bug-fix walkthroughs, resolved technical
+   debt, superseded decisions.
+2. Move the full, unabridged text of those sections into `docs/ai/.backup/` (e.g.
+   `docs/ai/.backup/PROJECT_CONTEXT-<date>.md` or a dated compression file) — never delete
+   history outright, archive it. This directory already exists for exactly this purpose; check it
+   before assuming nothing was preserved.
+3. Replace each archived section in the main file with a **one-to-a-few-line compressed summary**:
+   the durable fact/decision that still matters, a pointer to the archive file for full detail, and
+   nothing else. A future session only needs "what is true now and why," not the blow-by-blow of
+   how it was discovered.
+4. Keep the "Do not redo / do not forget" and "Known problems and limitations" sections' actual
+   content — compress their prose, but do not silently drop a rule just to hit the line count.
+5. Re-run `wc -l` and repeat until under 400 lines.
+
+Do not achieve the cap by deleting information outright (only the main file shrinks; the archive
+keeps full history) and do not compress by simply truncating the file — every currently-true
+fact/decision/rule must survive in summarized form.
+
 ## Anti-pattern review: synchronous processing of risky inbound events
 
 Before finalizing the context update, scan the session's diff (`git diff --name-only`, plus
@@ -141,4 +173,6 @@ After updating the file, respond with:
 
 - The updated file path.
 - A short summary of what changed in the context.
+- Final line count (`wc -l`) and confirmation it is at or under 400 lines — if compression was
+  needed, name the archive file(s) the removed detail was moved to.
 - Any important warning or next recommended step.

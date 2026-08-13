@@ -12,7 +12,7 @@ Catalog scale: tens of thousands of SKUs.
 
 Each business location runs its own independent Vendure instance with its own PostgreSQL database.
 Branch instances sync periodically with a central hub.
-The central hub is the only node that communicates with the legacy ERP.
+The central hub is the only node that communicates with the legacy ERP side of the exchange.
 
 **Why autonomous:** Locations may have unreliable network connectivity. Each branch must operate fully without access to the central hub.
 
@@ -23,6 +23,27 @@ The central hub is the only node that communicates with the legacy ERP.
                   [Branch Instance B]
                   [Branch Instance ...]
 ```
+
+**Decided, not yet implemented** (see `docs/ai/1c-integration-service-decision.md`): the direct
+`[Legacy ERP] ←→ [Central Hub]` edge above is being replaced. A separate Integration Service (its
+own project) becomes the only thing that talks to the ERP; the central hub exchanges data with it
+over Kafka **in both directions** — entity events (catalog/price/stock) inbound, business events
+(orders/reservations/payments) outbound — schema-registered per producer, not through a
+synchronous RPC channel:
+
+```
+[Legacy ERP]  ←→  [Integration Service]
+                       ↕ Kafka (bidirectional, schema-registered)
+                  [Central Hub]
+                       ↕ RabbitMQ (cloud)
+                  [Branch Instance A]
+                  [Branch Instance B]
+                  [Branch Instance ...]
+```
+
+The hub↔branch RabbitMQ topology is unaffected — this change only moves the ERP-facing edge of
+the diagram, not the hub-spoke structure below it. See `docs/sync.md` for the full current vs.
+target shape.
 
 ## Sync architecture
 
@@ -248,16 +269,16 @@ Branch app is stateless — multiple instances behind a load balancer share all 
 
 ## Plugin responsibilities
 
-| Plugin             | Responsibility                                                             |
-| ------------------ | -------------------------------------------------------------------------- |
-| `reservation`      | Soft reservation, TTL management, auto-release                             |
-| `customer-pricing` | Price type assignment and resolution per customer                          |
-| `credit-terms`     | Credit limits and deferred payment enforcement                             |
-| `cross-reference`  | OEM number lookup, analog matching, external catalog integration           |
-| `search`           | Elasticsearch: full-text, fuzzy, OEM search, transliteration               |
-| `sync`             | Outbox pattern + RabbitMQ producer/consumer + legacy ERP adapter interface |
-| `acquiring`        | Online payment processing                                                  |
-| `pos-api`          | API for point-of-sale systems (later phase)                                |
+| Plugin             | Responsibility                                                                                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reservation`      | Soft reservation, TTL management, auto-release                                                                                                                   |
+| `customer-pricing` | Price type assignment and resolution per customer                                                                                                                |
+| `credit-terms`     | Credit limits and deferred payment enforcement                                                                                                                   |
+| `cross-reference`  | OEM number lookup, analog matching, external catalog integration                                                                                                 |
+| `search`           | Elasticsearch: full-text, fuzzy, OEM search, transliteration                                                                                                     |
+| `sync`             | Outbox pattern + RabbitMQ producer/consumer + legacy ERP adapter interface (ERP adapter half being superseded by Integration Service/Kafka — see `docs/sync.md`) |
+| `acquiring`        | Online payment processing                                                                                                                                        |
+| `pos-api`          | API for point-of-sale systems (later phase)                                                                                                                      |
 
 ## Development phases
 

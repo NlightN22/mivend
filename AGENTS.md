@@ -142,15 +142,29 @@ See `docs/sync.md` for the full design. These rules must never be broken:
 4. **No silent drops.** Every failure is logged, retried with backoff, and eventually routed to
    a dead-letter queue for manual inspection. `try/catch` that swallows sync errors is forbidden.
 
-5. **plugin-sync owns RabbitMQ and the ERP adapter — nothing else touches them.**
+5. **plugin-sync owns RabbitMQ and the ERP-facing boundary — nothing else touches them.**
    Other plugins publish to Vendure's `EventBus`. `plugin-sync` subscribes and handles transport.
    No other plugin imports from `plugin-sync` or references RabbitMQ directly.
+   **Decided, not yet implemented** (`docs/ai/1c-integration-service-decision.md`): the
+   ERP-facing half of this moves from a direct `ErpAdapter` HTTP integration to a **bidirectional
+   Kafka producer/consumer** targeting a separate Integration Service, which becomes the only
+   thing that talks to the ERP directly — this repo never will. No synchronous RPC channel is
+   used for this — inbound entity events and outbound business commands both go over Kafka, each
+   topic schema-registered by its own producer (see `docs/sync.md`'s "Why Kafka both ways, not
+   Kafka + RPC"). Whether that lands inside `plugin-sync` or as its own plugin is still open;
+   either way, the "one owner, nothing else touches the transport" rule carries over unchanged —
+   it just applies to Kafka-to-Integration-Service instead of direct-HTTP-to-ERP.
 
-6. **Branches never call the ERP.** Only the central hub communicates with the legacy ERP,
-   via the `ErpAdapter` interface implemented inside `plugin-sync`.
+6. **Branches never call the ERP (or, once implemented, Integration Service).** Only the central
+   hub communicates with the legacy ERP — currently via the `ErpAdapter` interface implemented
+   inside `plugin-sync`; per the decision above, this is being replaced by a bidirectional Kafka
+   producer/consumer to Integration Service, still central-hub-only.
 
 7. **ERP is master for business data.** Price types, prices, catalog, customer core fields, and
-   credit limits flow ERP → Hub → Branch and are never modified locally on branches.
+   credit limits flow ERP → Hub → Branch and are never modified locally on branches. Per the
+   decision above, "ERP" here is expected to mean "ERP via Integration Service" once that lands —
+   the ownership rule itself (ERP is master, hub/branch are read-only for this data) is unchanged
+   by which transport carries it.
 
 8. **Reservations sync Branch → Central only.** Branch is the source of truth; the hub aggregates for reporting. Reservations never flow from hub back to branches.
 
