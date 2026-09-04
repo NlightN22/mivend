@@ -177,13 +177,17 @@ onMounted(loadAll);
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>
 
         <MvPanel title="Warehouse assignment">
-            <p class="branch-settings-page__hint">
-                Confirm which branch each warehouse belongs to and whether it counts toward that
-                branch's available-to-promise stock — 1C's own branch/isActive values are shown
-                as read-only reference and are not always reliable.
-            </p>
+            <template #subheader>
+                <p class="branch-settings-page__description">
+                    Confirm which branch each warehouse belongs to and whether it counts toward that
+                    branch's available-to-promise stock — 1C's own branch/isActive values are shown
+                    as read-only reference and are not always reliable.
+                </p>
+            </template>
+
             <MvInput
                 v-model="warehouseSearch"
+                class="branch-settings-page__search"
                 placeholder="Search warehouses by name or ERP id…"
             />
             <MvNotice v-if="reassignError" variant="error">{{ reassignError }}</MvNotice>
@@ -197,7 +201,14 @@ onMounted(loadAll);
         </MvPanel>
 
         <MvPanel title="Branch settings">
+            <template #subheader>
+                <p class="branch-settings-page__description">
+                    Set defaults and visibility for the selected branch.
+                </p>
+            </template>
+
             <MvSelect v-model="selectedBranchId" :options="branchSelectOptions" />
+            <div class="branch-settings-page__divider" />
             <MvNotice v-if="settingsLoadError" variant="error">{{ settingsLoadError }}</MvNotice>
             <BranchSettingsForm
                 v-if="!settingsLoading"
@@ -216,8 +227,24 @@ onMounted(loadAll);
 .branch-settings-page {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 18px;
     max-width: 1000px;
+}
+
+.branch-settings-page__description {
+    margin: 0;
+    font-size: 13px;
+    color: var(--el-text-color-secondary, #6b7280);
+}
+
+.branch-settings-page__search {
+    margin-bottom: 12px;
+}
+
+.branch-settings-page__divider {
+    height: 1px;
+    margin: 14px 0;
+    background: var(--el-border-color, #e4e7ec);
 }
 
 .branch-settings-page__breadcrumb {
@@ -229,12 +256,6 @@ onMounted(loadAll);
     margin: 0;
     font-size: 28px;
     letter-spacing: -0.03em;
-}
-
-.branch-settings-page__hint {
-    margin: 0 0 12px;
-    font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
 }
 
 .branch-settings-page__not-authorized {

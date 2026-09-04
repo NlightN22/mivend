@@ -77,36 +77,46 @@ function onSave(): void {
 
 <template>
     <form class="branch-settings-form" @submit.prevent="onSave">
-        <MvFormField label="Default price type" required>
-            <MvSelect v-model="form.defaultPriceTypeId" :options="priceTypeSelectOptions" />
-        </MvFormField>
+        <section class="branch-settings-form__section">
+            <h3 class="branch-settings-form__section-title">Defaults</h3>
 
-        <MvFormField label="Default warehouse" required>
-            <MvSelect v-model="form.defaultWarehouseId" :options="warehouseSelectOptions" />
-        </MvFormField>
+            <MvFormField label="Default price type" required>
+                <MvSelect v-model="form.defaultPriceTypeId" :options="priceTypeSelectOptions" />
+            </MvFormField>
 
-        <MvFormField label="Visible price types">
-            <MvMultiSelect v-model="form.visiblePriceTypeIds" :options="priceTypeOptions" />
-            <p class="branch-settings-form__hint">Leave empty to allow every price type.</p>
-        </MvFormField>
+            <MvFormField label="Default warehouse" required>
+                <MvSelect v-model="form.defaultWarehouseId" :options="warehouseSelectOptions" />
+            </MvFormField>
+        </section>
 
-        <MvFormField label="Visible warehouses">
-            <MvMultiSelect v-model="form.visibleWarehouseIds" :options="warehouseOptions" />
-            <p class="branch-settings-form__hint">Leave empty to allow every warehouse.</p>
-        </MvFormField>
+        <section class="branch-settings-form__section">
+            <h3 class="branch-settings-form__section-title">Visibility</h3>
+
+            <MvFormField label="Visible price types">
+                <MvMultiSelect v-model="form.visiblePriceTypeIds" :options="priceTypeOptions" />
+                <p class="branch-settings-form__hint">Leave empty to allow every price type.</p>
+            </MvFormField>
+
+            <MvFormField label="Visible warehouses">
+                <MvMultiSelect v-model="form.visibleWarehouseIds" :options="warehouseOptions" />
+                <p class="branch-settings-form__hint">Leave empty to allow every warehouse.</p>
+            </MvFormField>
+        </section>
 
         <MvNotice v-if="missingRequired" variant="warning">
             Default price type and default warehouse are required before saving.
         </MvNotice>
         <MvNotice v-if="saveError" variant="error">{{ saveError }}</MvNotice>
 
-        <MvButton
-            native-type="submit"
-            :disabled="missingRequired || saving"
-            :loading="saving"
-        >
-            Save branch settings
-        </MvButton>
+        <div class="branch-settings-form__actions">
+            <MvButton
+                native-type="submit"
+                :disabled="missingRequired || saving"
+                :loading="saving"
+            >
+                Save branch settings
+            </MvButton>
+        </div>
     </form>
 </template>
 
@@ -114,13 +124,33 @@ function onSave(): void {
 .branch-settings-form {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 20px;
     max-width: 480px;
+}
+
+.branch-settings-form__section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.branch-settings-form__section-title {
+    margin: 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 800;
+    color: var(--el-text-color-secondary, #6b7280);
 }
 
 .branch-settings-form__hint {
     margin: 4px 0 0;
     font-size: 12px;
     color: var(--el-text-color-secondary, #6b7280);
+}
+
+.branch-settings-form__actions {
+    display: flex;
+    justify-content: flex-end;
 }
 </style>
