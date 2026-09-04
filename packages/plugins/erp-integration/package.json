@@ -18,6 +18,8 @@
         "kafkajs": "^2.2.4",
         "shared": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
+        "@mivend/plugin-customer-pricing": "workspace:*",
+        "@mivend/plugin-price-entry": "workspace:*",
         "@bufbuild/protobuf": "^2.0.0",
         "@nlightn22/event-contracts": "^0.13.0"
     },

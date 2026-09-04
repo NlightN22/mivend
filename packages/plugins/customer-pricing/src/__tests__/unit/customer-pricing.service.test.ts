@@ -154,4 +154,112 @@ describe('CustomerPricingService', () => {
             expect(mockPriceTypeRepo.create).not.toHaveBeenCalled();
         });
     });
+
+    describe('upsertPriceTypeByExternalId', () => {
+        it('creates a new price type with a slugified code when externalId is unseen', async () => {
+            mockPriceTypeRepo.findOne.mockResolvedValueOnce(null); // find by externalId
+            mockPriceTypeRepo.findOne.mockResolvedValueOnce(null); // code collision check
+            const created = {
+                externalId: 'guid-1',
+                code: 'wholesale',
+                name: 'Wholesale',
+                isActive: true,
+            };
+            mockPriceTypeRepo.create.mockReturnValue(created);
+            mockPriceTypeRepo.save.mockResolvedValue(created);
+
+            const result = await service.upsertPriceTypeByExternalId(
+                mockCtx,
+                'guid-1',
+                'Wholesale',
+                true,
+            );
+
+            expect(mockPriceTypeRepo.create).toHaveBeenCalledWith({
+                externalId: 'guid-1',
+                code: 'wholesale',
+                name: 'Wholesale',
+                isActive: true,
+            });
+            expect(result).toEqual(created);
+        });
+
+        it('transliterates Cyrillic names into an ASCII slug', async () => {
+            mockPriceTypeRepo.findOne.mockResolvedValueOnce(null);
+            mockPriceTypeRepo.findOne.mockResolvedValueOnce(null);
+            mockPriceTypeRepo.create.mockImplementation(input => input);
+            mockPriceTypeRepo.save.mockImplementation(input => Promise.resolve(input));
+
+            const result = await service.upsertPriceTypeByExternalId(
+                mockCtx,
+                'guid-2',
+                'Опт',
+                true,
+            );
+
+            expect(result.code).toBe('opt');
+        });
+
+        it('dedupes a slug collision by appending a numeric suffix', async () => {
+            mockPriceTypeRepo.findOne
+                .mockResolvedValueOnce(null) // find by externalId
+                .mockResolvedValueOnce({ code: 'wholesale' }) // collision on base slug
+                .mockResolvedValueOnce(null); // free
+            mockPriceTypeRepo.create.mockImplementation(input => input);
+            mockPriceTypeRepo.save.mockImplementation(input => Promise.resolve(input));
+
+            const result = await service.upsertPriceTypeByExternalId(
+                mockCtx,
+                'guid-3',
+                'Wholesale',
+                true,
+            );
+
+            expect(result.code).toBe('wholesale-2');
+        });
+
+        it('updates name/isActive only, preserving the existing code on update', async () => {
+            const existing = {
+                externalId: 'guid-1',
+                code: 'renamed-by-admin',
+                name: 'Old',
+                isActive: false,
+            };
+            mockPriceTypeRepo.findOne.mockResolvedValueOnce(existing);
+            mockPriceTypeRepo.save.mockImplementation(input => Promise.resolve(input));
+
+            const result = await service.upsertPriceTypeByExternalId(
+                mockCtx,
+                'guid-1',
+                'New Name',
+                true,
+            );
+
+            expect(result.code).toBe('renamed-by-admin');
+            expect(result.name).toBe('New Name');
+            expect(result.isActive).toBe(true);
+            expect(mockPriceTypeRepo.create).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('findPriceTypeByExternalId', () => {
+        it('finds a price type by externalId', async () => {
+            mockPriceTypeRepo.findOne.mockResolvedValue(wholesalePriceType);
+
+            const result = await service.findPriceTypeByExternalId(mockCtx, 'guid-1');
+
+            expect(mockPriceTypeRepo.findOne).toHaveBeenCalledWith({
+                where: { externalId: 'guid-1' },
+            });
+            expect(result).toEqual(wholesalePriceType);
+        });
+
+        it('returns null when no price type has that externalId', async () => {
+            mockPriceTypeRepo.findOne.mockResolvedValue(null);
+
+            const result = await service.findPriceTypeByExternalId(mockCtx, 'unknown-guid');
+
+            expect(result).toBeNull();
+        });
+    });
 });

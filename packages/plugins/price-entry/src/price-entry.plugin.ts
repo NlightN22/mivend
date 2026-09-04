@@ -288,7 +288,7 @@ const adminApiSchema = gql`
         DiscountGrantService,
         DiscountRegistryService,
     ],
-    exports: [DiscountRuleService, PriceResolutionService],
+    exports: [PriceEntryService, DiscountRuleService, PriceResolutionService],
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.OrderLine = [
             ...(config.customFields.OrderLine ?? []),

@@ -6,6 +6,7 @@ import { CategoryStreamHandler } from './handlers/category.handler';
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
 import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
 import { PriceStreamHandler } from './handlers/price.handler';
+import { PriceTypeStreamHandler } from './handlers/price-type.handler';
 import { ProductStreamHandler } from './handlers/product.handler';
 import { StockStreamHandler } from './handlers/stock.handler';
 import { IntegrationInboxService } from './integration-inbox.service';
@@ -28,6 +29,7 @@ export class IntegrationInboxProcessorService {
         productHandler: ProductStreamHandler,
         categoryHandler: CategoryStreamHandler,
         priceHandler: PriceStreamHandler,
+        priceTypeHandler: PriceTypeStreamHandler,
         stockHandler: StockStreamHandler,
     ) {
         this.handlers = {
@@ -37,7 +39,7 @@ export class IntegrationInboxProcessorService {
             stock: stockHandler,
             organization: new DeferredStreamHandler('organization'),
             warehouse: new DeferredStreamHandler('warehouse'),
-            'price-type': new DeferredStreamHandler('price-type'),
+            'price-type': priceTypeHandler,
             offer: new DeferredStreamHandler('offer'),
         };
     }

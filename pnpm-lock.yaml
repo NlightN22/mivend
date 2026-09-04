@@ -560,9 +560,15 @@ importers:
             '@bufbuild/protobuf':
                 specifier: ^2.0.0
                 version: 2.13.0
+            '@mivend/plugin-customer-pricing':
+                specifier: workspace:*
+                version: link:../customer-pricing
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../erp-order
+            '@mivend/plugin-price-entry':
+                specifier: workspace:*
+                version: link:../price-entry
             '@nlightn22/event-contracts':
                 specifier: ^0.13.0
                 version: 0.13.0

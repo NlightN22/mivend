@@ -98,4 +98,89 @@ export class CustomerPricingService {
         const priceType = await this.upsertPriceType(ctx, priceTypeCode, priceTypeCode);
         return this.setCustomerPriceType(ctx, customerId, priceType.id);
     }
+
+    async findPriceTypeByExternalId(
+        ctx: RequestContext,
+        externalId: string,
+    ): Promise<PriceType | null> {
+        return this.connection.getRepository(ctx, PriceType).findOne({ where: { externalId } });
+    }
+
+    // Used by erp-integration's PriceTypeStreamHandler (issue #63). `code` is never touched on
+    // update — an admin may have already renamed it via the admin-facing upsertPriceType
+    // mutation, and 1C's name is not the source of truth for the business code after creation.
+    async upsertPriceTypeByExternalId(
+        ctx: RequestContext,
+        externalId: string,
+        name: string,
+        isActive: boolean,
+    ): Promise<PriceType> {
+        const repo = this.connection.getRepository(ctx, PriceType);
+        const existing = await repo.findOne({ where: { externalId } });
+        if (existing) {
+            existing.name = name;
+            existing.isActive = isActive;
+            return repo.save(existing);
+        }
+        const code = await this.generateUniqueCode(ctx, name);
+        const created = repo.create({ externalId, code, name, isActive });
+        return repo.save(created);
+    }
+
+    private async generateUniqueCode(ctx: RequestContext, name: string): Promise<string> {
+        const repo = this.connection.getRepository(ctx, PriceType);
+        const base = slugify(name) || 'price-type';
+        let candidate = base;
+        let suffix = 2;
+        while (await repo.findOne({ where: { code: candidate } })) {
+            candidate = `${base}-${suffix}`;
+            suffix += 1;
+        }
+        return candidate;
+    }
+}
+
+const CYRILLIC_TO_LATIN: Record<string, string> = {
+    а: 'a',
+    б: 'b',
+    в: 'v',
+    г: 'g',
+    д: 'd',
+    е: 'e',
+    ё: 'e',
+    ж: 'zh',
+    з: 'z',
+    и: 'i',
+    й: 'y',
+    к: 'k',
+    л: 'l',
+    м: 'm',
+    н: 'n',
+    о: 'o',
+    п: 'p',
+    р: 'r',
+    с: 's',
+    т: 't',
+    у: 'u',
+    ф: 'f',
+    х: 'h',
+    ц: 'ts',
+    ч: 'ch',
+    ш: 'sh',
+    щ: 'sch',
+    ъ: '',
+    ы: 'y',
+    ь: '',
+    э: 'e',
+    ю: 'yu',
+    я: 'ya',
+};
+
+function slugify(value: string): string {
+    const transliterated = value
+        .toLowerCase()
+        .split('')
+        .map(char => CYRILLIC_TO_LATIN[char] ?? char)
+        .join('');
+    return transliterated.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
