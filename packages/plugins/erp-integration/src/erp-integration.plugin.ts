@@ -2,6 +2,7 @@ import { PluginCommonModule, Type, VendurePlugin } from '@vendure/core';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
+import { AccessControlPlugin } from '@mivend/plugin-access-control';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
@@ -18,6 +19,7 @@ import { PriceStreamHandler } from './handlers/price.handler';
 import { PriceTypeStreamHandler } from './handlers/price-type.handler';
 import { ProductStreamHandler } from './handlers/product.handler';
 import { StockStreamHandler } from './handlers/stock.handler';
+import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
@@ -34,7 +36,13 @@ import type { ErpIntegrationPluginOptions } from './types';
 // still constructed (cheap, no I/O in their constructors), but never start a Kafka connection,
 // never schedule the BullMQ worker, and never subscribe to the order-submitted EventBus stream.
 @VendurePlugin({
-    imports: [PluginCommonModule, ErpOrderPlugin, CustomerPricingPlugin, PriceEntryPlugin],
+    imports: [
+        PluginCommonModule,
+        ErpOrderPlugin,
+        CustomerPricingPlugin,
+        PriceEntryPlugin,
+        AccessControlPlugin,
+    ],
     entities: [IntegrationOutboxEntry, IntegrationInboxEvent],
     providers: [
         IntegrationOutboxService,
@@ -50,6 +58,7 @@ import type { ErpIntegrationPluginOptions } from './types';
         PriceTypeStreamHandler,
         ProductStreamHandler,
         StockStreamHandler,
+        WarehouseStreamHandler,
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,

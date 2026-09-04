@@ -10,6 +10,7 @@
         { "path": "../../shared" },
         { "path": "../erp-order" },
         { "path": "../customer-pricing" },
-        { "path": "../price-entry" }
+        { "path": "../price-entry" },
+        { "path": "../access-control" }
     ]
 }

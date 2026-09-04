@@ -188,6 +188,18 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'Organization' }],
             },
         ],
+        StockLocation: [
+            {
+                // Idempotency key for erp-integration's WarehouseStreamHandler: correlates this
+                // StockLocation with the Warehouse it was created for (Warehouse.erpId, the
+                // warehouse's own 1C GUID) — StockLocation has no native external-id field.
+                name: 'warehouseErpId',
+                type: 'string',
+                nullable: true,
+                unique: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Warehouse ERP ID' }],
+            },
+        ],
         GlobalSettings: [
             {
                 // Admin-controlled toggle (Settings screen in Admin UI — customFields on

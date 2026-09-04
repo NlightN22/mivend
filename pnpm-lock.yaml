@@ -560,6 +560,9 @@ importers:
             '@bufbuild/protobuf':
                 specifier: ^2.0.0
                 version: 2.13.0
+            '@mivend/plugin-access-control':
+                specifier: workspace:*
+                version: link:../access-control
             '@mivend/plugin-customer-pricing':
                 specifier: workspace:*
                 version: link:../customer-pricing
