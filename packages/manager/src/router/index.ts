@@ -114,6 +114,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'settings/branches',
+                    name: 'settings-branches',
+                    component: () => import('../pages/settings/BranchSettingsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'settings/security',
                     name: 'settings-security',
                     component: () => import('../pages/settings/SecurityPage.vue'),
