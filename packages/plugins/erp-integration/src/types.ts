@@ -9,6 +9,13 @@ declare module '@vendure/core' {
         // there is no single per-Order organizationId to read.
         organizationId?: number | null;
     }
+
+    interface CustomStockLocationFields {
+        // Owned by apps/server/src/vendure-config.ts's customFields config. StockLocation has no
+        // native external-id field — this is WarehouseStreamHandler's idempotency key
+        // (Warehouse.erpId) and BranchStockLocationStrategy's join key back to Warehouse.
+        warehouseErpId?: string | null;
+    }
 }
 
 export interface KafkaConfig {

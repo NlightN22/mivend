@@ -10,6 +10,7 @@ export { IntegrationOutboxEntry } from './src/entities/integration-outbox-entry.
 export { IntegrationInboxEvent } from './src/entities/integration-inbox-event.entity';
 export type { IntegrationInboxEventStatus } from './src/entities/integration-inbox-event.entity';
 export { encodeConfluentMessage } from './src/wire-format';
+export { BranchStockLocationStrategy } from './src/branch-stock-location.strategy';
 export type {
     ErpIntegrationPluginOptions,
     KafkaConfig,

@@ -15,7 +15,7 @@ import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { SearchPlugin, elasticsearchPlugin } from '@mivend/plugin-search';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { SyncPlugin, StubErpAdapter } from '@mivend/plugin-sync';
-import { ErpIntegrationPlugin } from '@mivend/plugin-erp-integration';
+import { ErpIntegrationPlugin, BranchStockLocationStrategy } from '@mivend/plugin-erp-integration';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
 import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-control';
@@ -227,6 +227,12 @@ export const config: VendureConfig = {
     orderOptions: {
         orderCodeStrategy: new DateStampedOrderCodeStrategy(),
         orderItemPriceCalculationStrategy: new CustomerPriceCalculationStrategy(),
+    },
+    catalogOptions: {
+        // Not MultiChannelStockLocationStrategy — a branch here is a soft staff-grouping tag,
+        // not a Channel-shaped catalog/pricing partition (see BranchStockLocationStrategy's own
+        // comment and issue #63's confirmed architecture decision).
+        stockLocationStrategy: new BranchStockLocationStrategy(),
     },
     paymentOptions: {
         paymentMethodHandlers: [offlineTermsPaymentHandler, onlineStubPaymentHandler],
