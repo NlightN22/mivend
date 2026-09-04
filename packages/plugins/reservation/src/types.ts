@@ -17,6 +17,13 @@ declare module '@vendure/core' {
     interface CustomProductVariantFields {
         multiplicity?: number | null;
     }
+    // Owned by @mivend/plugin-erp-integration (declaration merging) — ReservationAvailabilityService
+    // reads this to resolve a branch's Warehouses to their StockLocations without taking a
+    // package dependency on erp-integration, see BranchStockLocationStrategy for the sibling
+    // resolution this mirrors.
+    interface CustomStockLocationFields {
+        warehouseErpId?: string | null;
+    }
 }
 
 export const loggerCtx = 'ReservationPlugin';
