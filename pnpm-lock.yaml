@@ -564,8 +564,8 @@ importers:
                 specifier: workspace:*
                 version: link:../erp-order
             '@nlightn22/event-contracts':
-                specifier: ^0.5.0
-                version: 0.5.0
+                specifier: ^0.13.0
+                version: 0.13.0
             bullmq:
                 specifier: ^5.0.0
                 version: 5.79.1(supports-color@8.1.1)
@@ -3534,11 +3534,11 @@ packages:
             rxjs: ^7.2.0
             typeorm: ^0.3.0 || ^1.0.0-dev
 
-    '@nlightn22/event-contracts@0.5.0':
+    '@nlightn22/event-contracts@0.13.0':
         resolution:
             {
-                integrity: sha512-uDCtydDJcuAuBR+e4Rq9EHS6Q636GwreZ7ptAbUF5hvZo4cVjVmq1hTz/7yJk08twC5mCVgJoEZxSFsSI46dSw==,
-                tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.5.0/e631d058f6282cd12f7c9eb8d97c886ecf40794f,
+                integrity: sha512-BqvVFrRMSSDdfbFROaxhOfnDNMcXlZLb+yJpMITTo0QFJ9CfS1sPN8avtj5Ap1GwaHkMoOF6ZlFETqeDKG0TGQ==,
+                tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.13.0/361349e4b516f5a04b58466b78becbb545e2c3b4,
             }
 
     '@nodelib/fs.scandir@2.1.5':
@@ -6503,6 +6503,7 @@ packages:
                 integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==,
             }
         engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
+        deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
         hasBin: true
         peerDependencies:
             jiti: '*'
@@ -10902,6 +10903,12 @@ packages:
                 integrity: sha512-YbGqHZ5/eW4SnkPNR44mKVc6ZKQoRs/Rux1sxC6rdwXb4qpbOSYfDr9DsTHolOTGmIKgM9j141mZbBeg05R1pw==,
             }
 
+    vue-component-type-helpers@3.3.11:
+        resolution:
+            {
+                integrity: sha512-LwcxzeliO9fkQcpJG0PoX8X5kmAhKmH9wkpDLxNabwzkQ9Zeib2YVHwFV4pcWmMLfXVfjr/dSV+DaJ3cIPgSNA==,
+            }
+
     vue-component-type-helpers@3.3.5:
         resolution:
             {
@@ -10912,12 +10919,6 @@ packages:
         resolution:
             {
                 integrity: sha512-Skkhw9agYSgsWqv7bxSOGJZa9SaiJbZVGdXuFWnrzKaQYHnw9qbjD630rw6RyMqDbp54nfLCLw5SZA55if7JLg==,
-            }
-
-    vue-component-type-helpers@3.3.9:
-        resolution:
-            {
-                integrity: sha512-3c/UfMe0SqyEfcGTyH7mfshHagJ9QTCbppCb0/uGpHZpFug7+If3GeGZN7I0YheKEExemx3xldQPoO7PQSOLQg==,
             }
 
     vue-demi@0.14.10:
@@ -12992,7 +12993,7 @@ snapshots:
             rxjs: 7.8.2
             typeorm: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
 
-    '@nlightn22/event-contracts@0.5.0':
+    '@nlightn22/event-contracts@0.13.0':
         dependencies:
             '@bufbuild/protobuf': 2.13.0
 
@@ -13405,7 +13406,7 @@ snapshots:
             ts-dedent: 2.3.0
             type-fest: 2.19.0
             vue: 3.5.39(typescript@5.9.3)
-            vue-component-type-helpers: 3.3.9
+            vue-component-type-helpers: 3.3.11
 
     '@stryker-mutator/api@9.6.1':
         dependencies:
@@ -17500,11 +17501,11 @@ snapshots:
 
     vue-component-type-helpers@2.2.12: {}
 
+    vue-component-type-helpers@3.3.11: {}
+
     vue-component-type-helpers@3.3.5: {}
 
     vue-component-type-helpers@3.3.7: {}
-
-    vue-component-type-helpers@3.3.9: {}
 
     vue-demi@0.14.10(vue@3.5.39(typescript@5.9.3)):
         dependencies:

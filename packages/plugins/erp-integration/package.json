@@ -19,7 +19,7 @@
         "shared": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "@bufbuild/protobuf": "^2.0.0",
-        "@nlightn22/event-contracts": "^0.5.0"
+        "@nlightn22/event-contracts": "^0.13.0"
     },
     "devDependencies": {
         "@nestjs/common": "^11.0.0",
