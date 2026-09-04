@@ -3,69 +3,128 @@ import type { RequestContext } from '@vendure/core';
 
 import { StockStreamHandler } from '../../handlers/stock.handler';
 
+function createConnection(rows: Array<Record<string, unknown> | undefined>): {
+    rawConnection: { createQueryBuilder: () => unknown };
+} {
+    let call = 0;
+    return {
+        rawConnection: {
+            createQueryBuilder: () => {
+                const row = rows[call];
+                call += 1;
+                return {
+                    select: vi.fn().mockReturnThis(),
+                    from: vi.fn().mockReturnThis(),
+                    innerJoin: vi.fn().mockReturnThis(),
+                    where: vi.fn().mockReturnThis(),
+                    getRawOne: vi.fn().mockResolvedValue(row),
+                };
+            },
+        },
+    };
+}
+
 describe('StockStreamHandler', () => {
     const ctx = {} as RequestContext;
 
-    it('skips when productId or availableQuantity is missing', async () => {
-        const getRawOne = vi.fn();
-        const qb = {
-            select: vi.fn().mockReturnThis(),
-            from: vi.fn().mockReturnThis(),
-            innerJoin: vi.fn().mockReturnThis(),
-            where: vi.fn().mockReturnThis(),
-            getRawOne,
-        };
-        const connection = { rawConnection: { createQueryBuilder: vi.fn().mockReturnValue(qb) } };
-        const handler = new StockStreamHandler(connection as never);
+    it('skips when productId/warehouseId/quantity is missing', async () => {
+        const warehouseService = { findByErpId: vi.fn() };
+        const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
+        const handler = new StockStreamHandler(
+            createConnection([]) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
 
-        await handler.apply(ctx, 'stock-1', { productId: '', availableQuantity: 5 });
+        await handler.apply(ctx, 'stock-1', { productId: '', quantity: 5 });
 
-        expect(getRawOne).not.toHaveBeenCalled();
+        expect(warehouseService.findByErpId).not.toHaveBeenCalled();
     });
 
     it('skips a deleted stock event without writing', async () => {
-        const getRawOne = vi.fn();
-        const qb = {
-            select: vi.fn().mockReturnThis(),
-            from: vi.fn().mockReturnThis(),
-            innerJoin: vi.fn().mockReturnThis(),
-            where: vi.fn().mockReturnThis(),
-            getRawOne,
-        };
-        const connection = { rawConnection: { createQueryBuilder: vi.fn().mockReturnValue(qb) } };
-        const handler = new StockStreamHandler(connection as never);
+        const warehouseService = { findByErpId: vi.fn() };
+        const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
+        const handler = new StockStreamHandler(
+            createConnection([]) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
 
         await handler.apply(ctx, 'stock-1', {
             productId: 'prod-1',
-            availableQuantity: 5,
+            warehouseId: 'wh-1',
+            quantity: 5,
             isDeleted: true,
         });
 
-        expect(getRawOne).not.toHaveBeenCalled();
+        expect(warehouseService.findByErpId).not.toHaveBeenCalled();
     });
 
-    it('writes availableQuantity as stockOnHand into the default stock_level row for the resolved variant', async () => {
-        const selectGetRawOne = vi.fn().mockResolvedValue({ id: 'variant-1' });
-        const selectQb = {
-            select: vi.fn().mockReturnThis(),
-            from: vi.fn().mockReturnThis(),
-            innerJoin: vi.fn().mockReturnThis(),
-            where: vi.fn().mockReturnThis(),
-            getRawOne: selectGetRawOne,
+    it('skips when no Warehouse is found for warehouseId (out-of-order delivery)', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue(null) };
+        const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
+        const handler = new StockStreamHandler(
+            createConnection([]) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
+
+        await handler.apply(ctx, 'stock-1', {
+            productId: 'prod-1',
+            warehouseId: 'wh-missing',
+            quantity: 5,
+        });
+
+        expect(stockLevelService.getStockLevel).not.toHaveBeenCalled();
+    });
+
+    it('skips when no StockLocation matches the warehouse yet', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
+        const handler = new StockStreamHandler(
+            createConnection([undefined]) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
+
+        await handler.apply(ctx, 'stock-1', {
+            productId: 'prod-1',
+            warehouseId: 'wh-1',
+            quantity: 5,
+        });
+
+        expect(stockLevelService.getStockLevel).not.toHaveBeenCalled();
+    });
+
+    it('skips when no variant matches the productId', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
+        const handler = new StockStreamHandler(
+            createConnection([{ id: 'loc-1' }, undefined]) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
+
+        await handler.apply(ctx, 'stock-1', {
+            productId: 'prod-missing',
+            warehouseId: 'wh-1',
+            quantity: 5,
+        });
+
+        expect(stockLevelService.getStockLevel).not.toHaveBeenCalled();
+    });
+
+    it('writes the delta between quantity and the current stockOnHand for the resolved location', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLevelService = {
+            getStockLevel: vi.fn().mockResolvedValue({ stockOnHand: 3 }),
+            updateStockOnHandForLocation: vi.fn(),
         };
-        const execute = vi.fn().mockResolvedValue(undefined);
-        const updateQb = {
-            update: vi.fn().mockReturnThis(),
-            set: vi.fn().mockReturnThis(),
-            where: vi.fn().mockReturnThis(),
-            execute,
-        };
-        const createQueryBuilder = vi
-            .fn()
-            .mockReturnValueOnce(selectQb)
-            .mockReturnValueOnce(updateQb);
-        const connection = { rawConnection: { createQueryBuilder } };
-        const handler = new StockStreamHandler(connection as never);
+        const handler = new StockStreamHandler(
+            createConnection([{ id: 'loc-1' }, { id: 'variant-1' }]) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
 
         await handler.apply(ctx, 'stock-1', {
             productId: 'prod-1',
@@ -73,31 +132,34 @@ describe('StockStreamHandler', () => {
             quantity: 12,
             reservedQuantity: 2,
             availableQuantity: 10,
-            isDeleted: false,
         });
 
-        expect(updateQb.set).toHaveBeenCalledWith({ stockOnHand: 10 });
-        expect(execute).toHaveBeenCalledTimes(1);
+        expect(stockLevelService.updateStockOnHandForLocation).toHaveBeenCalledWith(
+            ctx,
+            'variant-1',
+            'loc-1',
+            9,
+        );
     });
 
-    it('skips writing when no variant matches the productId', async () => {
-        const selectGetRawOne = vi.fn().mockResolvedValue(undefined);
-        const selectQb = {
-            select: vi.fn().mockReturnThis(),
-            from: vi.fn().mockReturnThis(),
-            innerJoin: vi.fn().mockReturnThis(),
-            where: vi.fn().mockReturnThis(),
-            getRawOne: selectGetRawOne,
+    it('does not write when the reported quantity already matches stockOnHand', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLevelService = {
+            getStockLevel: vi.fn().mockResolvedValue({ stockOnHand: 12 }),
+            updateStockOnHandForLocation: vi.fn(),
         };
-        const createQueryBuilder = vi.fn().mockReturnValue(selectQb);
-        const connection = { rawConnection: { createQueryBuilder } };
-        const handler = new StockStreamHandler(connection as never);
+        const handler = new StockStreamHandler(
+            createConnection([{ id: 'loc-1' }, { id: 'variant-1' }]) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
 
         await handler.apply(ctx, 'stock-1', {
-            productId: 'prod-missing',
-            availableQuantity: 5,
+            productId: 'prod-1',
+            warehouseId: 'wh-1',
+            quantity: 12,
         });
 
-        expect(createQueryBuilder).toHaveBeenCalledTimes(1);
+        expect(stockLevelService.updateStockOnHandForLocation).not.toHaveBeenCalled();
     });
 });

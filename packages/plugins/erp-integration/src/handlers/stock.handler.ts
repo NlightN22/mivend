@@ -1,36 +1,38 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { RequestContext, StockLevelService, TransactionalConnection } from '@vendure/core';
+import { WarehouseService } from '@mivend/plugin-access-control';
 
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationStockHandler';
 
 // Applies Integration Service's `stock` stream (StockChanged: productId/warehouseId/quantity/
-// reservedQuantity/availableQuantity, not sku/stockOnHand — issue #63). Variant lookup is by
-// product externalId (single-variant-per-product assumption, matching ProductStreamHandler's
-// default-variant creation).
-//
-// warehouseId maps to a per-warehouse Warehouse/StockLocation entity that does not exist yet in
-// this codebase (issue #62's design notes; only a single default StockLocation exists per
-// docs/ai/PROJECT_CONTEXT.md). Deliberate simplification: every warehouse's stock is folded into
-// the one existing default stock_level row, using availableQuantity (the closest existing
-// single-location analog to real ATP) — not a full multi-warehouse implementation, which is
-// future work tied to the StockLocation-per-warehouse migration.
+// reservedQuantity/availableQuantity). Now per-location (issue #63's Warehouse/StockLocation
+// migration, replacing the earlier single-default-location simplification): warehouseId resolves
+// to a real StockLocation via Warehouse.erpId -> StockLocation.customFields.warehouseErpId
+// (WarehouseStreamHandler's own idempotency key). `quantity` (the physical on-hand count) maps to
+// StockLevel.stockOnHand — not `availableQuantity`, which already nets out reservations and has
+// no direct StockLevel column of its own.
 @Injectable()
 export class StockStreamHandler implements InboundStreamHandler {
-    constructor(private readonly connection: TransactionalConnection) {}
+    constructor(
+        private readonly connection: TransactionalConnection,
+        private readonly warehouseService: WarehouseService,
+        private readonly stockLevelService: StockLevelService,
+    ) {}
 
     async apply(
-        _ctx: RequestContext,
+        ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
         const productId = String(payload.productId ?? '');
-        const availableQuantity = Number(payload.availableQuantity ?? NaN);
+        const warehouseId = String(payload.warehouseId ?? '');
+        const quantity = Number(payload.quantity ?? NaN);
         const isDeleted = payload.isDeleted === true;
-        if (!productId || Number.isNaN(availableQuantity)) {
+        if (!productId || !warehouseId || Number.isNaN(quantity)) {
             Logger.warn(
-                `stock ${entityId}: missing productId/availableQuantity, skipping`,
+                `stock ${entityId}: missing productId/warehouseId/quantity, skipping`,
                 loggerCtx,
             );
             return;
@@ -40,15 +42,26 @@ export class StockStreamHandler implements InboundStreamHandler {
             return;
         }
 
-        const variant = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('pv.id', 'id')
-            .from('product_variant', 'pv')
-            .innerJoin('product', 'p', 'p.id = pv."productId"')
-            .where('p."customFieldsExternalid" = :productId', { productId })
-            .getRawOne<{ id: string }>();
+        const warehouse = await this.warehouseService.findByErpId(ctx, warehouseId);
+        if (!warehouse) {
+            Logger.warn(
+                `stock ${entityId}: no Warehouse found for warehouseId=${warehouseId}, skipping`,
+                loggerCtx,
+            );
+            return;
+        }
 
-        if (!variant) {
+        const stockLocationId = await this.findStockLocationId(warehouseId);
+        if (!stockLocationId) {
+            Logger.warn(
+                `stock ${entityId}: no StockLocation found for warehouseId=${warehouseId}, skipping`,
+                loggerCtx,
+            );
+            return;
+        }
+
+        const variantId = await this.findVariantId(productId);
+        if (!variantId) {
             Logger.warn(
                 `stock ${entityId}: variant not found for productId=${productId}`,
                 loggerCtx,
@@ -56,13 +69,41 @@ export class StockStreamHandler implements InboundStreamHandler {
             return;
         }
 
-        const stockOnHand = Math.round(availableQuantity);
-        await this.connection.rawConnection
+        const stockOnHand = Math.round(quantity);
+        const current = await this.stockLevelService.getStockLevel(ctx, variantId, stockLocationId);
+        const change = stockOnHand - current.stockOnHand;
+        if (change !== 0) {
+            await this.stockLevelService.updateStockOnHandForLocation(
+                ctx,
+                variantId,
+                stockLocationId,
+                change,
+            );
+        }
+        Logger.verbose(
+            `Updated stock productId=${productId} warehouseId=${warehouseId} qty=${stockOnHand}`,
+            loggerCtx,
+        );
+    }
+
+    private async findVariantId(productId: string): Promise<string | undefined> {
+        const row = await this.connection.rawConnection
             .createQueryBuilder()
-            .update('stock_level')
-            .set({ stockOnHand })
-            .where('"productVariantId" = :id', { id: variant.id })
-            .execute();
-        Logger.verbose(`Updated stock productId=${productId} qty=${stockOnHand}`, loggerCtx);
+            .select('pv.id', 'id')
+            .from('product_variant', 'pv')
+            .innerJoin('product', 'p', 'p.id = pv."productId"')
+            .where('p."customFieldsExternalid" = :productId', { productId })
+            .getRawOne<{ id: string }>();
+        return row?.id;
+    }
+
+    private async findStockLocationId(warehouseErpId: string): Promise<string | undefined> {
+        const row = await this.connection.rawConnection
+            .createQueryBuilder()
+            .select('sl.id', 'id')
+            .from('stock_location', 'sl')
+            .where('sl."customFieldsWarehouseerpid" = :erpId', { erpId: warehouseErpId })
+            .getRawOne<{ id: string }>();
+        return row?.id;
     }
 }
