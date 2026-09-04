@@ -43,14 +43,12 @@ export class ReservationAvailabilityService {
         branchId?: string | null,
     ): Promise<number> {
         const stockLocationIds = await this.resolveStockLocationIds(ctx, branchId);
-        const stockLevels = await this.connection
-            .getRepository(ctx, StockLevel)
-            .find({
-                where: stockLocationIds.map(stockLocationId => ({
-                    productVariantId,
-                    stockLocationId,
-                })),
-            });
+        const stockLevels = await this.connection.getRepository(ctx, StockLevel).find({
+            where: stockLocationIds.map(stockLocationId => ({
+                productVariantId,
+                stockLocationId,
+            })),
+        });
         const stockOnHand = stockLevels.reduce((sum, level) => sum + level.stockOnHand, 0);
         const stockAllocated = stockLevels.reduce((sum, level) => sum + level.stockAllocated, 0);
         const reserved = await this.sumActiveReservations(ctx, productVariantId, stockLocationIds);
@@ -82,8 +80,12 @@ export class ReservationAvailabilityService {
         if (!branchId) {
             return [await this.getDefaultStockLocationId(ctx)];
         }
+        // includedInBranchAtp is the human-curated flag (issue #66) — isActive is only 1C's own
+        // suggested default and has been observed to be an unreliable "holds real stock" signal
+        // (a branch's largest-stock warehouse was flagged isActive=false in a real check), so it
+        // is deliberately not part of this filter.
         const warehouses = (await this.warehouseService.findAll(ctx)).filter(
-            w => w.branchId === branchId && w.isActive,
+            w => w.branchId === branchId && w.includedInBranchAtp,
         );
         if (warehouses.length === 0) {
             return [await this.getDefaultStockLocationId(ctx)];

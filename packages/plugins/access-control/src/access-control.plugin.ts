@@ -9,10 +9,12 @@ import gql from 'graphql-tag';
 import { AccessControlResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
 import { BranchService } from './branch.service';
+import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
 import { EmployeeService } from './employee.service';
 import { Branch } from './entities/branch.entity';
+import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
@@ -32,6 +34,24 @@ const adminApiSchema = gql`
         id: ID!
         erpId: String!
         name: String!
+    }
+
+    type Warehouse {
+        id: ID!
+        erpId: String!
+        name: String!
+        branchId: String!
+        isActive: Boolean!
+        includedInBranchAtp: Boolean!
+    }
+
+    type BranchSettings {
+        id: ID!
+        branchId: String!
+        defaultPriceTypeId: String!
+        visiblePriceTypeIds: [String!]
+        defaultWarehouseId: String!
+        visibleWarehouseIds: [String!]
     }
 
     type TeamMember {
@@ -61,6 +81,8 @@ const adminApiSchema = gql`
     extend type Query {
         departments: [Department!]!
         branches: [Branch!]!
+        warehouses: [Warehouse!]!
+        branchSettings(branchId: String!): BranchSettings
         teamMembers: [TeamMember!]!
         teamDirectory: [TeamDirectoryMember!]!
         creditTermLimit(roleCode: String!): CreditTermLimit
@@ -70,18 +92,31 @@ const adminApiSchema = gql`
     extend type Mutation {
         setRoleAccessScopeConfig(roleCode: String!, accessScopeConfig: String!): Boolean!
         setCreditTermLimit(roleCode: String!, maxExtraDays: Int!, maxAmount: Int): CreditTermLimit!
+        updateWarehouseBranchAssignment(
+            warehouseId: ID!
+            branchId: String!
+            includedInBranchAtp: Boolean!
+        ): Warehouse!
+        setBranchSettings(
+            branchId: String!
+            defaultPriceTypeId: String!
+            visiblePriceTypeIds: [String!]
+            defaultWarehouseId: String!
+            visibleWarehouseIds: [String!]
+        ): BranchSettings!
     }
 `;
 
 @VendurePlugin({
     imports: [PluginCommonModule],
-    entities: [RoleAccessScope, Department, Branch, Warehouse, CreditTermLimit],
+    entities: [RoleAccessScope, Department, Branch, Warehouse, BranchSettings, CreditTermLimit],
     providers: [
         AccessScopeService,
         RoleScopeConfigService,
         DepartmentService,
         BranchService,
         WarehouseService,
+        BranchSettingsService,
         EmployeeService,
         CreditTermLimitService,
     ],
@@ -91,6 +126,7 @@ const adminApiSchema = gql`
         DepartmentService,
         BranchService,
         WarehouseService,
+        BranchSettingsService,
         EmployeeService,
         CreditTermLimitService,
     ],
@@ -130,6 +166,19 @@ const adminApiSchema = gql`
                 type: 'string' as const,
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Source Administrator ID' }],
+            },
+        ];
+        config.customFields.GlobalSettings = [
+            ...(config.customFields.GlobalSettings ?? []),
+            {
+                // Issue #66 fallback: any counterparty/manager with no branchId (or a branchId
+                // with no BranchSettings configured yet) resolves to this branch's settings —
+                // see BranchSettingsService.resolveEffective. Deliberately just an id pointing at
+                // a real Branch row, not a duplicated settings blob.
+                name: 'defaultBranchId',
+                type: 'string' as const,
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Default Branch ID' }],
             },
         ];
         return config;

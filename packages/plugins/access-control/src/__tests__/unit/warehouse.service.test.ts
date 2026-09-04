@@ -77,4 +77,28 @@ describe('WarehouseService', () => {
         await service.findByErpId(ctx, 'wh-1');
         expect(warehouseRepo.findOne).toHaveBeenCalledWith({ where: { erpId: 'wh-1' } });
     });
+
+    it('setBranchAssignment overrides branchId and includedInBranchAtp on the curated warehouse', async () => {
+        const existing = {
+            id: 'wh-1',
+            erpId: 'erp-wh-1',
+            branchId: 'branch-suggested',
+            includedInBranchAtp: true,
+        };
+        warehouseRepo.findOne.mockResolvedValue(existing);
+        const result = await service.setBranchAssignment(ctx, 'wh-1', 'branch-confirmed', false);
+        expect(warehouseRepo.save).toHaveBeenCalledWith(
+            expect.objectContaining({ branchId: 'branch-confirmed', includedInBranchAtp: false }),
+        );
+        expect(result.branchId).toBe('branch-confirmed');
+        expect(result.includedInBranchAtp).toBe(false);
+    });
+
+    it('setBranchAssignment throws when the warehouse does not exist', async () => {
+        warehouseRepo.findOne.mockResolvedValue(null);
+        await expect(service.setBranchAssignment(ctx, 'missing', 'branch-1', true)).rejects.toThrow(
+            /not found/,
+        );
+        expect(warehouseRepo.save).not.toHaveBeenCalled();
+    });
 });

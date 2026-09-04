@@ -19,6 +19,7 @@ interface Warehouse {
     branchId: string;
     erpId: string;
     isActive: boolean;
+    includedInBranchAtp: boolean;
 }
 
 interface StockLocationRow {
@@ -106,8 +107,8 @@ describe('ReservationAvailabilityService', () => {
     it('aggregates stockOnHand/stockAllocated/reservations across every StockLocation of a branch with multiple warehouses', async () => {
         const service = createService({
             warehouses: [
-                { branchId: 'branch-a', erpId: 'wh-1', isActive: true },
-                { branchId: 'branch-a', erpId: 'wh-2', isActive: true },
+                { branchId: 'branch-a', erpId: 'wh-1', isActive: true, includedInBranchAtp: true },
+                { branchId: 'branch-a', erpId: 'wh-2', isActive: true, includedInBranchAtp: true },
             ],
             stockLocations: [
                 { id: 'loc-1', customFields: { warehouseErpId: 'wh-1' } },
@@ -130,8 +131,8 @@ describe('ReservationAvailabilityService', () => {
     it('excludes StockLocations belonging to other branches from the aggregate', async () => {
         const service = createService({
             warehouses: [
-                { branchId: 'branch-a', erpId: 'wh-1', isActive: true },
-                { branchId: 'branch-b', erpId: 'wh-2', isActive: true },
+                { branchId: 'branch-a', erpId: 'wh-1', isActive: true, includedInBranchAtp: true },
+                { branchId: 'branch-b', erpId: 'wh-2', isActive: true, includedInBranchAtp: true },
             ],
             stockLocations: [
                 { id: 'loc-1', customFields: { warehouseErpId: 'wh-1' } },
@@ -147,18 +148,46 @@ describe('ReservationAvailabilityService', () => {
         expect(available).toBe(10);
     });
 
-    it('falls back to the default StockLocation when the branch has no active warehouses', async () => {
+    it('falls back to the default StockLocation when the branch has no curated-included warehouses', async () => {
         const service = createService({
-            warehouses: [{ branchId: 'branch-a', erpId: 'wh-1', isActive: false }],
+            warehouses: [
+                {
+                    branchId: 'branch-a',
+                    erpId: 'wh-1',
+                    isActive: false,
+                    includedInBranchAtp: false,
+                },
+            ],
             stockLevels: [{ stockLocationId: 'location-1', stockOnHand: 7, stockAllocated: 2 }],
         });
         const available = await service.getAvailableToPromise(ctx, 'variant-1', 'branch-a');
         expect(available).toBe(5);
     });
 
+    it('excludes a warehouse curated out of branch ATP even when 1C still flags it isActive=true', async () => {
+        const service = createService({
+            warehouses: [
+                { branchId: 'branch-a', erpId: 'wh-1', isActive: true, includedInBranchAtp: true },
+                { branchId: 'branch-a', erpId: 'wh-2', isActive: true, includedInBranchAtp: false },
+            ],
+            stockLocations: [
+                { id: 'loc-1', customFields: { warehouseErpId: 'wh-1' } },
+                { id: 'loc-2', customFields: { warehouseErpId: 'wh-2' } },
+            ],
+            stockLevels: [
+                { stockLocationId: 'loc-1', stockOnHand: 10, stockAllocated: 0 },
+                { stockLocationId: 'loc-2', stockOnHand: 999, stockAllocated: 0 },
+            ],
+        });
+        const available = await service.getAvailableToPromise(ctx, 'variant-1', 'branch-a');
+        expect(available).toBe(10);
+    });
+
     it('falls back to the default StockLocation when the branch resolves no matching StockLocation yet', async () => {
         const service = createService({
-            warehouses: [{ branchId: 'branch-a', erpId: 'wh-1', isActive: true }],
+            warehouses: [
+                { branchId: 'branch-a', erpId: 'wh-1', isActive: true, includedInBranchAtp: true },
+            ],
             stockLocations: [],
             stockLevels: [{ stockLocationId: 'location-1', stockOnHand: 6, stockAllocated: 1 }],
         });

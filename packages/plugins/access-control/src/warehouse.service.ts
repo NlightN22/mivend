@@ -12,6 +12,12 @@ export interface WarehouseRecordInput {
     isActive: boolean;
 }
 
+export class WarehouseNotFoundError extends Error {
+    constructor(warehouseId: string) {
+        super(`Warehouse ${warehouseId} not found`);
+    }
+}
+
 @Injectable()
 export class WarehouseService {
     constructor(private connection: TransactionalConnection) {}
@@ -58,5 +64,25 @@ export class WarehouseService {
 
     async findByErpId(ctx: RequestContext, erpId: string): Promise<Warehouse | null> {
         return this.connection.getRepository(ctx, Warehouse).findOne({ where: { erpId } });
+    }
+
+    // Manager-portal curation (issue #66) — staff confirm/override the branch a Warehouse
+    // belongs to and whether it counts toward that branch's ATP aggregation. 1C's own
+    // branchId/isActive (set by upsert above) stay untouched as the read-only suggested default;
+    // this is the only place that ever changes includedInBranchAtp.
+    async setBranchAssignment(
+        ctx: RequestContext,
+        warehouseId: string,
+        branchId: string,
+        includedInBranchAtp: boolean,
+    ): Promise<Warehouse> {
+        const repo = this.connection.getRepository(ctx, Warehouse);
+        const warehouse = await repo.findOne({ where: { id: warehouseId } });
+        if (!warehouse) {
+            throw new WarehouseNotFoundError(warehouseId);
+        }
+        warehouse.branchId = branchId;
+        warehouse.includedInBranchAtp = includedInBranchAtp;
+        return repo.save(warehouse);
     }
 }

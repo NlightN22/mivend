@@ -5,12 +5,16 @@ import { Allow, AdministratorService, Ctx, RequestContext, Transaction } from '@
 import { CustomPermission } from './custom-permission';
 import { AccessScopeService } from './access-scope.service';
 import { BranchService } from './branch.service';
+import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
 import { Branch } from './entities/branch.entity';
+import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
+import { Warehouse } from './entities/warehouse.entity';
 import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.service';
+import { WarehouseService } from './warehouse.service';
 
 interface TeamMember {
     id: string;
@@ -36,6 +40,8 @@ export class AccessControlResolver {
         private roleScopeConfigService: RoleScopeConfigService,
         private departmentService: DepartmentService,
         private branchService: BranchService,
+        private warehouseService: WarehouseService,
+        private branchSettingsService: BranchSettingsService,
         private creditTermLimitService: CreditTermLimitService,
         private administratorService: AdministratorService,
         private accessScopeService: AccessScopeService,
@@ -115,6 +121,61 @@ export class AccessControlResolver {
     @Allow(Permission.Authenticated)
     async branches(@Ctx() ctx: RequestContext): Promise<Branch[]> {
         return this.branchService.findAll(ctx);
+    }
+
+    // Curation source list for the Warehouse↔Branch admin surface (issue #66) — view-only for
+    // any authenticated administrator, same as departments/branches above.
+    @Query()
+    @Allow(Permission.Authenticated)
+    async warehouses(@Ctx() ctx: RequestContext): Promise<Warehouse[]> {
+        return this.warehouseService.findAll(ctx);
+    }
+
+    @Query()
+    @Allow(Permission.Authenticated)
+    async branchSettings(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { branchId: string },
+    ): Promise<BranchSettings | null> {
+        return this.branchSettingsService.getForBranch(ctx, args.branchId);
+    }
+
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ManageAccessControl.Permission)
+    async updateWarehouseBranchAssignment(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { warehouseId: string; branchId: string; includedInBranchAtp: boolean },
+    ): Promise<Warehouse> {
+        return this.warehouseService.setBranchAssignment(
+            ctx,
+            args.warehouseId,
+            args.branchId,
+            args.includedInBranchAtp,
+        );
+    }
+
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ManageAccessControl.Permission)
+    async setBranchSettings(
+        @Ctx() ctx: RequestContext,
+        @Args()
+        args: {
+            branchId: string;
+            defaultPriceTypeId: string;
+            visiblePriceTypeIds?: string[];
+            defaultWarehouseId: string;
+            visibleWarehouseIds?: string[];
+        },
+    ): Promise<BranchSettings> {
+        return this.branchSettingsService.upsert(ctx, {
+            branchId: args.branchId,
+            defaultPriceTypeId: args.defaultPriceTypeId,
+            visiblePriceTypeIds: args.visiblePriceTypeIds ?? null,
+            defaultWarehouseId: args.defaultWarehouseId,
+            visibleWarehouseIds: args.visibleWarehouseIds ?? null,
+        });
     }
 
     @Transaction()

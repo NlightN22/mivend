@@ -4,9 +4,11 @@ import type { AdministratorService, RequestContext } from '@vendure/core';
 import { AccessControlResolver } from '../../access-control.resolver';
 import { AccessScopeService } from '../../access-scope.service';
 import { BranchService } from '../../branch.service';
+import { BranchSettingsService } from '../../branch-settings.service';
 import { CreditTermLimitService } from '../../credit-term-limit.service';
 import { DepartmentService } from '../../department.service';
 import { RoleScopeConfigService } from '../../role-scope-config.service';
+import { WarehouseService } from '../../warehouse.service';
 
 function mockAdministrator(
     id: string,
@@ -37,6 +39,8 @@ describe('AccessControlResolver.teamMembers', () => {
             {} as RoleScopeConfigService,
             {} as DepartmentService,
             {} as BranchService,
+            {} as WarehouseService,
+            {} as BranchSettingsService,
             {} as CreditTermLimitService,
             administratorService as unknown as AdministratorService,
             {} as AccessScopeService,
@@ -78,6 +82,8 @@ describe('AccessControlResolver.teamDirectory', () => {
             {} as RoleScopeConfigService,
             {} as DepartmentService,
             {} as BranchService,
+            {} as WarehouseService,
+            {} as BranchSettingsService,
             {} as CreditTermLimitService,
             administratorService as unknown as AdministratorService,
             accessScopeService as unknown as AccessScopeService,
