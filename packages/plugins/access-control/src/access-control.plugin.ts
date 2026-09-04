@@ -17,6 +17,8 @@ import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
 import { RoleScopeConfigService } from './role-scope-config.service';
+import { Warehouse } from './entities/warehouse.entity';
+import { WarehouseService } from './warehouse.service';
 
 const adminApiSchema = gql`
     type Department {
@@ -73,12 +75,13 @@ const adminApiSchema = gql`
 
 @VendurePlugin({
     imports: [PluginCommonModule],
-    entities: [RoleAccessScope, Department, Branch, CreditTermLimit],
+    entities: [RoleAccessScope, Department, Branch, Warehouse, CreditTermLimit],
     providers: [
         AccessScopeService,
         RoleScopeConfigService,
         DepartmentService,
         BranchService,
+        WarehouseService,
         EmployeeService,
         CreditTermLimitService,
     ],
@@ -87,6 +90,7 @@ const adminApiSchema = gql`
         RoleScopeConfigService,
         DepartmentService,
         BranchService,
+        WarehouseService,
         EmployeeService,
         CreditTermLimitService,
     ],
