@@ -27,6 +27,9 @@ jobs:
             - name: Lint
               run: pnpm lint
 
+            - name: Check erp-integration event-contracts drift
+              run: make check-event-contracts
+
             - name: Format check
               run: pnpm format:check
 

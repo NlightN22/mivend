@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, RequestContextService } from '@vendure/core';
-import type { DataSource } from 'typeorm';
+import { DataSource } from 'typeorm';
 
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';

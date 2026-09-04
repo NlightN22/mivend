@@ -168,6 +168,14 @@ build:
 lint:
 	pnpm lint
 
+# Guards against packages/plugins/erp-integration silently drifting from Integration Service's
+# real @nlightn22/event-contracts schema (docs/ai/1c-integration-service-decision.md's "Audit
+# 2026-09-04" — a real incident, not hypothetical: pinned 0.5.0 vs upstream 0.13.0, 8 minor
+# versions of undetected drift). Network-dependent — warns and exits 0 if GitHub Packages is
+# unreachable, never blocks lint on a missing/expired token or offline dev machine.
+check-event-contracts:
+	node infrastructure/scripts/check-event-contracts.mjs
+
 fmt:
 	pnpm format
 

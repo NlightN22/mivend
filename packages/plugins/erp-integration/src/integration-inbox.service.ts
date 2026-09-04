@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Brackets } from 'typeorm';
-import type { DataSource } from 'typeorm';
+import { Brackets, DataSource } from 'typeorm';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { INBOX_MAX_ATTEMPTS_DEFAULT } from './types';

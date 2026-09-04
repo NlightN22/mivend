@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { DataSource } from 'typeorm';
+import { DataSource } from 'typeorm';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { KafkaProducerService } from './kafka-producer.service';
