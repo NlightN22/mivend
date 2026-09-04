@@ -142,23 +142,25 @@ See `docs/sync.md` for the full design. These rules must never be broken:
 4. **No silent drops.** Every failure is logged, retried with backoff, and eventually routed to
    a dead-letter queue for manual inspection. `try/catch` that swallows sync errors is forbidden.
 
-5. **plugin-sync owns RabbitMQ and the ERP-facing boundary — nothing else touches them.**
-   Other plugins publish to Vendure's `EventBus`. `plugin-sync` subscribes and handles transport.
-   No other plugin imports from `plugin-sync` or references RabbitMQ directly.
-   **Decided, not yet implemented** (`docs/ai/1c-integration-service-decision.md`): the
-   ERP-facing half of this moves from a direct `ErpAdapter` HTTP integration to a **bidirectional
-   Kafka producer/consumer** targeting a separate Integration Service, which becomes the only
-   thing that talks to the ERP directly — this repo never will. No synchronous RPC channel is
-   used for this — inbound entity events and outbound business commands both go over Kafka, each
-   topic schema-registered by its own producer (see `docs/sync.md`'s "Why Kafka both ways, not
-   Kafka + RPC"). Whether that lands inside `plugin-sync` or as its own plugin is still open;
-   either way, the "one owner, nothing else touches the transport" rule carries over unchanged —
-   it just applies to Kafka-to-Integration-Service instead of direct-HTTP-to-ERP.
+5. **plugin-sync owns RabbitMQ (hub↔branch); `plugin-erp-integration` owns the Integration
+   Service boundary — nothing else touches either transport.** Other plugins publish to Vendure's
+   `EventBus`; `plugin-sync` subscribes and handles hub↔branch RabbitMQ transport.
+   **`plugin-erp-integration` (central-hub-only) is the single owner of all traffic to/from
+   Integration Service, and that traffic goes over Kafka exclusively — never a direct HTTP/REST
+   call to Integration Service or to 1C from this repo, in either direction.** This repo never
+   talks to 1C directly, and never talks to Integration Service synchronously (no RPC channel of
+   any kind, see `docs/sync.md`'s "Why Kafka both ways, not Kafka + RPC") — inbound catalog/
+   price/stock streams are consumed from Kafka topics (`company.catalog.events.v1.*`) into
+   `IntegrationInboxEvent`, and outbound business events (e.g. `OrderSubmitted`) are published to
+   Kafka via `IntegrationOutboxEntry`, both schema-decoded/encoded per
+   `docs/ai/1c-integration-service-decision.md`. No other plugin imports from `plugin-sync` or
+   `plugin-erp-integration`, or references RabbitMQ/Kafka/the Schema Registry directly — this is
+   now implemented (issue #62/#63), not a future decision.
 
-6. **Branches never call the ERP (or, once implemented, Integration Service).** Only the central
-   hub communicates with the legacy ERP — currently via the `ErpAdapter` interface implemented
-   inside `plugin-sync`; per the decision above, this is being replaced by a bidirectional Kafka
-   producer/consumer to Integration Service, still central-hub-only.
+6. **Branches never call the ERP or Integration Service.** Only the central hub talks to either
+   — `plugin-sync`'s legacy `ErpAdapter` (direct HTTP, being phased out) and
+   `plugin-erp-integration`'s Kafka consumer/producer (the real, current path) are both gated to
+   `instanceType === 'central'` only; a branch instance must never bootstrap either.
 
 7. **ERP is master for business data.** Price types, prices, catalog, customer core fields, and
    credit limits flow ERP → Hub → Branch and are never modified locally on branches. Per the
