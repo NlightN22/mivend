@@ -37,6 +37,15 @@ export class ReservationAvailabilityService {
     // No cap is applied for a location 1C has never reported a StockChanged for
     // (erpAvailableQuantity still null) — falls back to the local-only number for that location,
     // same bootstrap behavior as every other ERP-sourced field in this codebase.
+    //
+    // KNOWN RESIDUAL RISK (mivend.audit.72 HIGH, deliberately not fixed here): a real oversell
+    // window exists if 1C's StockChanged confirming a hold is delayed or dropped after
+    // erpConfirmedAt is set — neither the (now-excluded) local reservation nor erpAvailableQuantity
+    // reflects the held unit until 1C's own event catches up. This is the direct tradeoff of
+    // "trust 1C once confirmed" (the decided design, see issue #72's discussion) — fixing it
+    // properly needs either a bounded grace-period fallback or #73's nightly reconciliation
+    // worker to catch and correct the drift, not a change to this method alone. Flagged for a
+    // deliberate decision, not silently patched.
     async getAvailableToPromise(
         ctx: RequestContext,
         productVariantId: ID,
@@ -63,11 +72,23 @@ export class ReservationAvailabilityService {
                 level.stockAllocated -
                 (unconfirmedReservedByLocation.get(locationId) ?? 0);
             const erpCap = level.customFields?.erpAvailableQuantity;
-            total += erpCap != null ? Math.min(localFree, erpCap) : localFree;
+            const capped = erpCap != null ? Math.min(localFree, erpCap) : localFree;
+            // Floored at 0 (mivend.audit.72 LOW) — a malformed/negative erpAvailableQuantity from
+            // 1C (not expected under normal operation, but stock.handler.ts doesn't validate the
+            // incoming value) must not turn into a negative contribution once summed across
+            // locations, which would silently understate ATP for the whole branch.
+            total += Math.max(0, capped);
         }
         return total;
     }
 
+    // Sums ALL active reservations regardless of erpConfirmedAt (mivend.audit.72 MEDIUM: this is
+    // deliberately NOT the same set getAvailableToPromise subtracts, which only counts
+    // *unconfirmed* ones — confirmed reservations are trusted to already be inside 1C's own
+    // availableQuantity, see that method's own comment). This method answers "how much do we
+    // currently hold, full stop" (informational/reporting), not "how much should still be
+    // subtracted from ATP." Do not reuse this for an ATP-adjacent calculation without checking
+    // which of the two questions is actually being asked.
     async getReservedQuantity(
         ctx: RequestContext,
         productVariantId: ID,

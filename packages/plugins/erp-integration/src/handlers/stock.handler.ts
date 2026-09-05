@@ -79,6 +79,15 @@ export class StockStreamHandler implements InboundStreamHandler {
             return;
         }
 
+        // mivend.audit.72 MEDIUM: `current` is a single point-in-time read reused below for both
+        // the stockOnHand delta and the erpAvailableQuantity write — a lost-update race is
+        // possible in principle if two StockChanged messages for the same StockLevel were applied
+        // concurrently. `processPendingBatch`'s own sequential for-loop (no Promise.all) rules
+        // this out within one worker process; a genuinely concurrent write would need a second
+        // worker PROCESS (BullMQ replica) claiming rows from the same inbox at the same time —
+        // not something this comment can rule out on its own, since it depends on how many worker
+        // replicas this plugin is actually deployed with. Flagging as an accepted risk rather than
+        // adding row-locking here until that's confirmed one way or the other — see mivend.audit.72.
         const stockOnHand = Math.round(quantity);
         const current = await this.stockLevelService.getStockLevel(ctx, variantId, stockLocationId);
         const change = stockOnHand - current.stockOnHand;

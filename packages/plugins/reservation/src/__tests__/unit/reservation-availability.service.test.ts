@@ -275,6 +275,24 @@ describe('ReservationAvailabilityService', () => {
         expect(available).toBe(12);
     });
 
+    it('floors a negative capped result at 0 instead of understating the branch total (mivend.audit.72 LOW)', async () => {
+        const service = createService({
+            stockLevels: [
+                {
+                    stockLocationId: 'location-1',
+                    stockOnHand: 5,
+                    stockAllocated: 0,
+                    // Malformed/negative value from 1C — not expected in practice, but
+                    // stock.handler.ts doesn't validate the incoming payload.
+                    customFields: { erpAvailableQuantity: -3 },
+                },
+            ],
+            reservations: [],
+        });
+        const available = await service.getAvailableToPromise(ctx, 'variant-1');
+        expect(available).toBe(0);
+    });
+
     it('applies the erpAvailableQuantity cap per StockLocation, not after summing across locations', async () => {
         const service = createService({
             warehouses: [
