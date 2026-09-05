@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { MvInput, MvNotice, MvPanel, MvSelect } from '@mivend/ui-kit';
+import { MvNotice, MvPanel, MvSelect } from '@mivend/ui-kit';
 import type { SelectOption } from '@mivend/ui-kit';
 import { useLatestRequest } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import WarehouseCurationTable from '../../components/settings/WarehouseCurationTable.vue';
 import BranchSettingsForm from '../../components/settings/BranchSettingsForm.vue';
@@ -22,8 +22,6 @@ import {
 } from '../../api/branchSettings';
 
 const authStore = useAuthStore();
-const route = useRoute();
-const router = useRouter();
 
 const branches = ref<BranchOption[]>([]);
 const priceTypes = ref<PriceTypeOption[]>([]);
@@ -32,19 +30,38 @@ const loadError = ref('');
 const loading = ref(true);
 
 // Warehouses are a bounded ERP org-structure list (a few dozen at most, one per physical/
-// logical warehouse) — client-side text filtering is acceptable here, same exemption class as
-// TeamDirectoryTable's department roster (AGENTS.md's Pagination section: "exempt only if
-// genuinely, structurally bounded"). Still URL-synced per the manager-portal rule, since it's a
-// real user-facing filter someone may want to share/bookmark.
-const warehouseSearch = ref(typeof route.query.warehouseSearch === 'string' ? route.query.warehouseSearch : '');
-watch(warehouseSearch, value => {
-    const query = { ...route.query };
-    if (value) {
-        query.warehouseSearch = value;
-    } else {
-        delete query.warehouseSearch;
-    }
-    void router.replace({ query });
+// logical warehouse) — exempt from server pagination per AGENTS.md's Pagination section
+// ("exempt only if genuinely, structurally bounded"), same exemption class as
+// TeamDirectoryTable's department roster. Still rendered via MvAdvancedDataTable
+// (manager-table-standard point 6: an exempt table still gets the standard rendering/mobile-
+// card-view, just without real server skip/take) — page/pageSize are threaded through and the
+// full filtered list is sliced client-side to feed it. The search is still a real, user-facing
+// filter someone may want to share/bookmark, so it (and the page number) stay URL-synced.
+const warehouseSearch = ref('');
+const warehousePage = ref(1);
+const warehousePageSize = ref(20);
+
+interface WarehouseUrlFilters {
+    [key: string]: string;
+    warehouseSearch: string;
+}
+const URL_FILTER_DEFAULTS: WarehouseUrlFilters = { warehouseSearch: '' };
+const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
+
+{
+    const parsed = { ...URL_FILTER_DEFAULTS };
+    fromQuery(parsed, warehousePage);
+    if (parsed.warehouseSearch) warehouseSearch.value = parsed.warehouseSearch;
+}
+
+function buildUrlFilters(): WarehouseUrlFilters {
+    return { warehouseSearch: warehouseSearch.value };
+}
+watch(warehouseSearch, () => {
+    warehousePage.value = 1;
+});
+watch([warehouseSearch, warehousePage], () => {
+    toQuery(buildUrlFilters(), warehousePage);
 });
 
 const filteredWarehouses = computed<Warehouse[]>(() => {
@@ -54,6 +71,14 @@ const filteredWarehouses = computed<Warehouse[]>(() => {
         w => w.name.toLowerCase().includes(term) || w.erpId.toLowerCase().includes(term),
     );
 });
+const pagedWarehouses = computed<Warehouse[]>(() => {
+    const start = (warehousePage.value - 1) * warehousePageSize.value;
+    return filteredWarehouses.value.slice(start, start + warehousePageSize.value);
+});
+
+function onWarehouseFilters(filters: { search: string }): void {
+    warehouseSearch.value = filters.search;
+}
 
 const savingWarehouseId = ref<string | null>(null);
 const reassignError = ref('');
@@ -185,18 +210,21 @@ onMounted(loadAll);
                 </p>
             </template>
 
-            <MvInput
-                v-model="warehouseSearch"
-                class="branch-settings-page__search"
-                placeholder="Search warehouses by name or ERP id…"
-            />
             <MvNotice v-if="reassignError" variant="error">{{ reassignError }}</MvNotice>
             <WarehouseCurationTable
-                :warehouses="filteredWarehouses"
+                :warehouses="pagedWarehouses"
                 :branches="branches"
                 :loading="loading"
                 :saving-warehouse-id="savingWarehouseId"
+                :total-items="filteredWarehouses.length"
+                :page="warehousePage"
+                :page-size="warehousePageSize"
+                :search-filter="warehouseSearch"
+                :administrator-id="authStore.administrator?.id ?? 'anonymous'"
                 @reassign="onReassign"
+                @update:filters="onWarehouseFilters"
+                @update:page="warehousePage = $event"
+                @update:page-size="warehousePageSize = $event"
             />
         </MvPanel>
 
@@ -235,10 +263,6 @@ onMounted(loadAll);
     margin: 0;
     font-size: 13px;
     color: var(--el-text-color-secondary, #6b7280);
-}
-
-.branch-settings-page__search {
-    margin-bottom: 12px;
 }
 
 .branch-settings-page__divider {
