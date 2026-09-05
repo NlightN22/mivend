@@ -5,7 +5,9 @@ import { config } from './vendure-config';
 
 // Documents only the custom REST endpoints (ERP import/callback) — Shop/Admin
 // APIs are GraphQL and already self-documenting via introspection. See issue
-// #28 and AGENTS.md's "REST endpoint DTOs must be classes" rule.
+// #28 and the backend-plugin-rules skill's "REST endpoint documentation
+// (Swagger/OpenAPI)" section (request/response shapes must be classes, never
+// a plain interface).
 //
 // Must run via `onBeforeAppListen`, not after `bootstrap()` resolves — Vendure
 // calls `app.listen()` internally before returning, and Nest finalizes its

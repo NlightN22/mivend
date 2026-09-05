@@ -21,8 +21,9 @@ import { ApprovalStepService } from './approval-step.service';
 
 // A requestType is an internal technical identifier fixed by the workflow engine, not
 // swappable business data — mapping it to the permission required to *create* that kind of
-// request is therefore code, not a DB table, per AGENTS.md's "internal technical states"
-// carve-out. The chain of *who approves* each step, by contrast, is fully data-driven
+// request is therefore code, not a DB table, per the backend-plugin-rules skill's "internal
+// technical states" carve-out. The chain of *who approves* each step, by contrast, is fully
+// data-driven
 // (WorkflowDefinition.stepsJson).
 const CREATE_PERMISSION_BY_REQUEST_TYPE: Record<string, string> = {
     priceAdjustmentApproval: CustomPermission.RequestPriceAdjustmentApproval.Permission,

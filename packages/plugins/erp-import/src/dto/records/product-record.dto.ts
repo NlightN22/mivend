@@ -1,8 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-// Mirrors ProductRecord in ../../types.ts — kept in sync by hand, see
-// AGENTS.md's "REST endpoint documentation" section for why this isn't
-// auto-derived from the internal interface.
+// Mirrors ProductRecord in ../../types.ts — kept in sync by hand, see the
+// backend-plugin-rules skill's "REST endpoint documentation (Swagger/OpenAPI)"
+// section for why this isn't auto-derived from the internal interface.
 export class ProductRecordDto {
     @ApiProperty({ description: 'ERP identifier for this product, used as the idempotency key.' })
     externalId!: string;

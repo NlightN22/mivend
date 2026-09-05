@@ -28,7 +28,8 @@ export interface EmployeeRecordInput {
 // Binds ERP org-structure data (department/branch/role) onto an existing Administrator,
 // matched by email. Never creates an Administrator — account provisioning (login/password)
 // is Vendure system configuration, out of erp-import's scope, same carve-out as tax
-// zones/channels in AGENTS.md's "Dev seed rules". If no matching Administrator exists yet,
+// zones/channels in the backend-plugin-rules skill's "Dev seed rules". If no matching
+// Administrator exists yet,
 // the record is skipped with a warning, not silently dropped.
 @Injectable()
 export class EmployeeService {

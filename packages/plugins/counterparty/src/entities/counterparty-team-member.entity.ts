@@ -3,7 +3,8 @@ import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
 // A small, fixed technical set of internal RBAC roles — not ERP-sourced business data, see
-// AGENTS.md's "Business data must live in the database" section for why this is exempt.
+// the backend-plugin-rules skill's "Business data must live in the database" section for why
+// this is exempt.
 export type CounterpartyTeamMemberRole = 'backup' | 'observer' | 'accounting-contact';
 
 // Extra managers beyond Counterparty.assignedManagerId (the Owner) who can also see this

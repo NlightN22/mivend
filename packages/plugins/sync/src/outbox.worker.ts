@@ -27,7 +27,8 @@ export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
         // entirely (a real, live-verified bug found 2026-07-15: every branch-origin outbox
         // entry sat at status='pending' forever, since nothing ever drained it) — only the
         // ERP-polling job ('scan-erp', real 1C integration) is genuinely central-only, per
-        // AGENTS.md's "Branches never call the ERP".
+        // the external-integration-rules skill's "Branches never call the ERP or Integration
+        // Service."
         const connection = {
             host: this.options.redis.host,
             port: this.options.redis.port,
