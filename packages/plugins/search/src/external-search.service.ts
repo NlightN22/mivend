@@ -42,9 +42,12 @@ export interface ExternalSearchResponse {
 // search-service instead of Elasticsearch. facetValues/collections have no search-service
 // equivalent and are always returned empty (see the storefront facet-sidebar note in the issue).
 // Incoming collection/facet-value/sort filters are also unsupported (search-service is
-// free-text discovery only) — mapSearchInputToResolveQueryRequest throws rather than silently
-// ignoring them (audit finding, mivend.audit.70). Category/faceted-filter storefront pages need
-// their own follow-up design against this backend, not covered by issue #69's scope.
+// free-text discovery only) — mapSearchInputToResolveQueryRequest drops them and logs loudly
+// (Logger.warn) rather than either silently ignoring them or hard-failing the request (audit
+// finding, mivend.audit.70: a hard throw here broke every real storefront facet-filter click
+// under SEARCH_BACKEND=external, which is worse than the original silent-drop gap it replaced).
+// Category/faceted-filter storefront pages still need their own follow-up design against this
+// backend — not covered by issue #69's scope, this is a stopgap that keeps `search` available.
 @Injectable()
 export class ExternalSearchService {
     constructor(
@@ -53,7 +56,7 @@ export class ExternalSearchService {
     ) {}
 
     async search(ctx: RequestContext, input: SearchInput): Promise<ExternalSearchResponse> {
-        const request = mapSearchInputToResolveQueryRequest(input);
+        const { request } = mapSearchInputToResolveQueryRequest(input);
         if (!request.query) {
             return { items: [], totalItems: 0, facetValues: [], collections: [] };
         }

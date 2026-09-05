@@ -132,6 +132,28 @@ describe('ExternalSearchService.search', () => {
         expect(lookup.findByExternalId).not.toHaveBeenCalled();
     });
 
+    // Audit finding, mivend.audit.70 (round 3, CRITICAL): a prior fix made this path throw,
+    // which meant a real storefront visitor selecting any facet filter under
+    // SEARCH_BACKEND=external got a hard shop-api failure instead of degraded results.
+    it('degrades to a plain free-text search instead of throwing when a facet filter is present', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+        };
+        const lookup = makeLookup(makeProduct());
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            lookup as unknown as ProductLookupService,
+        );
+
+        const result = await service.search(ctx, {
+            term: 'oil',
+            facetValueFilters: [{ and: 'fv-1' }],
+        } as SearchInput);
+
+        expect(result.items).toHaveLength(1);
+        expect(client.resolveQuery).toHaveBeenCalledWith(expect.objectContaining({ query: 'oil' }));
+    });
+
     it('returns an empty response without calling search-service when the term is empty', async () => {
         const client = { resolveQuery: vi.fn() };
         const lookup = makeLookup(null);
