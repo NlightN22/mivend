@@ -83,7 +83,8 @@ export type InboundStream =
     | 'price'
     | 'stock'
     | 'storage-location'
-    | 'stock-organization';
+    | 'stock-organization'
+    | 'order-registration-result';
 
 export interface ErpIntegrationPluginOptions {
     instanceType: 'central' | 'branch';

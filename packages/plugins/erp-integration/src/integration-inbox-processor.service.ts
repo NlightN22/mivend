@@ -5,6 +5,7 @@ import { DataSource } from 'typeorm';
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
 import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
+import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrganizationStreamHandler } from './handlers/organization.handler';
 import { PriceStreamHandler } from './handlers/price.handler';
 import { PriceTypeStreamHandler } from './handlers/price-type.handler';
@@ -37,6 +38,7 @@ export class IntegrationInboxProcessorService {
         warehouseHandler: WarehouseStreamHandler,
         organizationHandler: OrganizationStreamHandler,
         storageLocationHandler: StorageLocationStreamHandler,
+        orderRegistrationResultHandler: OrderRegistrationResultHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -48,6 +50,7 @@ export class IntegrationInboxProcessorService {
             'price-type': priceTypeHandler,
             offer: new DeferredStreamHandler('offer'),
             'storage-location': storageLocationHandler,
+            'order-registration-result': orderRegistrationResultHandler,
             // Quantity dimension deliberately deferred to issue #72 (ATP/reservation-drift
             // source-of-truth); organization_id here is not authoritative — StorageLocationChanged
             // above is the sole source for ProductVariant.customFields.organizationId, so this

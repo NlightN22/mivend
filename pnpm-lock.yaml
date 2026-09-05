@@ -575,6 +575,9 @@ importers:
             '@mivend/plugin-price-entry':
                 specifier: workspace:*
                 version: link:../price-entry
+            '@mivend/plugin-reservation':
+                specifier: workspace:*
+                version: link:../reservation
             '@nlightn22/event-contracts':
                 specifier: ^0.13.0
                 version: 0.13.0

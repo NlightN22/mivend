@@ -17,6 +17,7 @@ import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
+import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
 import { ReservationExpiryService } from './reservation-expiry.service';
@@ -24,8 +25,10 @@ import { ReservationExpiryWorker } from './reservation-expiry.worker';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
 import { ReservationExtensionService } from './reservation-extension.service';
 import { ReservationPaymentService } from './reservation-payment.service';
+import { ReservationReconciliationIssueService } from './reservation-reconciliation-issue.service';
 import { ReservationResolver } from './reservation.resolver';
 import { ReservationService } from './reservation.service';
+import { ReservationWriteOffSyncService } from './reservation-write-off-sync.service';
 import {
     DEFAULT_ORDER_RESERVATION_STATE,
     DEFAULT_RESERVATION_DAYS,
@@ -80,12 +83,14 @@ const adminApiSchema = gql`
 
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin],
-    entities: [Reservation, ReservationExtensionLimit],
+    entities: [Reservation, ReservationExtensionLimit, ReservationReconciliationIssue],
     providers: [
         ReservationService,
         ReservationPaymentService,
         ReservationExtensionService,
         ReservationErpSyncService,
+        ReservationReconciliationIssueService,
+        ReservationWriteOffSyncService,
         ReservationExpiryService,
         ReservationAvailabilityService,
         ReservationExtensionLimitService,
@@ -95,7 +100,7 @@ const adminApiSchema = gql`
             useFactory: (): ReservationPluginOptions => ReservationPlugin.options,
         },
     ],
-    exports: [ReservationService],
+    exports: [ReservationService, ReservationWriteOffSyncService],
     adminApiExtensions: {
         schema: adminApiSchema,
         resolvers: [ReservationResolver],

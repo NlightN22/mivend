@@ -462,6 +462,14 @@ export const config: VendureConfig = {
                     'stock-organization':
                         process.env.INTEGRATION_KAFKA_TOPIC_STOCK_ORGANIZATION ??
                         'company.catalog.events.v1.stock-organization-changed',
+                    // Issue #75: 1C's own, same-transaction confirmation that an order document
+                    // was posted and stock written off — the real reservation-release trigger.
+                    // Different domain from the 8 catalog streams above (company.orders, not
+                    // company.catalog) — see OrderRegistrationResultHandler/
+                    // ReservationWriteOffSyncService.
+                    'order-registration-result':
+                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_REGISTRATION_RESULT ??
+                        'company.orders.events.v1.order-registration-result',
                 },
             },
             schemaRegistry: {

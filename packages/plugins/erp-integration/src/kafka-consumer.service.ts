@@ -4,6 +4,7 @@ import { Logger } from '@vendure/core';
 import {
     CategoryChangedSchema,
     OfferChangedSchema,
+    OrderRegistrationResultSchema,
     OrganizationChangedSchema,
     PriceChangedSchema,
     PriceTypeChangedSchema,
@@ -66,6 +67,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     stock: StockChangedSchema,
     'storage-location': StorageLocationChangedSchema,
     'stock-organization': StockOrganizationChangedSchema,
+    'order-registration-result': OrderRegistrationResultSchema,
 };
 
 @Injectable()

@@ -35,6 +35,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             stock: 't-stock',
             'storage-location': 't-storage-location',
             'stock-organization': 't-stock-organization',
+            'order-registration-result': 't-order-registration-result',
         },
     },
     schemaRegistry: { url: 'http://localhost:8081' },
