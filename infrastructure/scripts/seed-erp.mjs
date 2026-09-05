@@ -351,6 +351,52 @@ async function ensureOrganizationSplitEnabled() {
     `, undefined, session.cookie);
 }
 
+// Issue #70: BranchSettings.defaultPriceTypeId (issue #66) is what PriceResolutionService falls
+// back to for any request with no resolvable customer price (guest, no CustomerPriceType, or no
+// PriceEntry for their price type) — must be seeded so the fallback path is actually testable in
+// local dev, not just theoretically wired. Must run after the counterparty/assignment batches
+// above: the RETAIL PriceType row only exists once CustomerPricingService.assignCustomerPriceTypeByCode
+// has processed a counterparty carrying priceType: "RETAIL" (see docs/pricing.md's "How a
+// customer gets a price type" — there is no standalone erp-import record type for PriceType
+// itself). defaultWarehouseId has no seeded real Warehouse to point at yet (Warehouse rows are
+// Kafka-fed only, see erp-integration's WarehouseStreamHandler — out of #70's scope to seed) —
+// BranchSettings.defaultWarehouseId is a raw, non-FK column (see branch-settings.entity.ts), so
+// a placeholder id is safe here and doesn't affect price resolution at all.
+async function ensureBranchSettingsSeeded() {
+    let session = await adminGraphqlWithSession(`
+        mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
+            ... on CurrentUser { id }
+            ... on InvalidCredentialsError { message }
+        }}
+    `);
+    if (session.data.login.message) throw new Error(`Admin login failed: ${session.data.login.message}`);
+    const cookie = session.cookie;
+
+    const priceTypesRes = await adminGraphqlWithSession(`{ priceTypes { id code } }`, undefined, cookie);
+    const retail = priceTypesRes.data.priceTypes.find(pt => pt.code === 'RETAIL');
+    if (!retail) {
+        console.warn('  ! RETAIL PriceType not found yet — skipping BranchSettings seed');
+        return;
+    }
+
+    await adminGraphqlWithSession(
+        `mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $defaultWarehouseId: String!) {
+            setBranchSettings(
+                branchId: $branchId
+                defaultPriceTypeId: $defaultPriceTypeId
+                defaultWarehouseId: $defaultWarehouseId
+            ) { id branchId defaultPriceTypeId defaultWarehouseId }
+        }`,
+        {
+            branchId: 'branch-central',
+            defaultPriceTypeId: retail.id,
+            defaultWarehouseId: 'seed-placeholder-warehouse',
+        },
+        cookie,
+    );
+    console.log(`  → BranchSettings for branch-central: defaultPriceTypeId=RETAIL (${retail.id})`);
+}
+
 async function main() {
     const categories = loadFixture('categories');
     const products = loadFixture('products');
@@ -464,8 +510,26 @@ async function main() {
         for (const e of xrefResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
-    console.log(`Sending ${prices.length} prices...`);
-    const priceResult = await postBatch(`seed-prices-${run}`, prices.map(data => ({ type: 'price', data })));
+    // Issue #70: RETAIL/SPECIAL need their own PriceEntry rows too, or PriceResolutionService's
+    // getForVariant() returns null for every variant under those price types (no base price to
+    // ever resolve, fallback or not) — derived from the same WHOLESALE fixture rather than a
+    // second hand-maintained price list. RETAIL is a markup (public/no-negotiated-discount
+    // tier); SPECIAL is a deeper negotiated discount than WHOLESALE, per docs/pricing.md's
+    // "named price tier" model — both are business-plausible, not load-bearing beyond that.
+    const wholesalePrices = prices.filter(p => p.priceTypeCode === 'WHOLESALE');
+    const retailPrices = wholesalePrices.map(p => ({
+        sku: p.sku,
+        priceTypeCode: 'RETAIL',
+        price: Math.round(p.price * 1.2 * 100) / 100,
+    }));
+    const specialPrices = wholesalePrices.map(p => ({
+        sku: p.sku,
+        priceTypeCode: 'SPECIAL',
+        price: Math.round(p.price * 0.9 * 100) / 100,
+    }));
+    const allPrices = [...prices, ...retailPrices, ...specialPrices];
+    console.log(`Sending ${allPrices.length} prices...`);
+    const priceResult = await postBatch(`seed-prices-${run}`, allPrices.map(data => ({ type: 'price', data })));
     console.log(`  → status=${priceResult.status} processed=${priceResult.processed} failed=${priceResult.failed}`);
 
     console.log(`Sending ${stock.length} stock records...`);
@@ -679,7 +743,12 @@ async function main() {
             creditLimit: 200000,
             creditBalance: 50000,
             paymentDelayDays: 7,
-            priceType: 'WHOLESALE',
+            // Issue #70: RETAIL is also the branch's fallback default price type (see
+            // ensureBranchSettingsSeeded below) — this counterparty gets it as their OWN
+            // resolved price type, exercising the "non-default customer happens to sit on the
+            // same price type as the fallback" path, distinct from the guest/no-price-type
+            // fallback path itself.
+            priceType: 'RETAIL',
             isActive: true,
             departmentId: 'dept-sales',
             branchId: 'branch-central',
@@ -692,7 +761,10 @@ async function main() {
             creditLimit: 150000,
             creditBalance: 140000,
             paymentDelayDays: 0,
-            priceType: 'WHOLESALE',
+            // Issue #70: a dedicated per-counterparty price type, distinct from WHOLESALE/RETAIL,
+            // so tests can cover a customer whose own resolved price differs from both the
+            // generic wholesale tier and the branch's RETAIL fallback default.
+            priceType: 'SPECIAL',
             isActive: true,
             departmentId: 'dept-sales',
             branchId: 'branch-central',
@@ -815,6 +887,9 @@ async function main() {
     if (assignResult.errors?.length > 0) {
         for (const e of assignResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
+
+    console.log('Ensuring branch-central BranchSettings (default price type RETAIL)...');
+    await ensureBranchSettingsSeeded();
 
     const tradingPoints = [
         { erpId: 'tp-001', counterpartyErpId: 'cnt-001', name: 'Main service point', address: 'Industrial St, 14, building 3', contactName: 'Ivan Petrov', contactPhone: '+7 913 100 0001', workingHours: 'Mon–Fri 08:00–18:00', isActive: true },

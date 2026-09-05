@@ -126,4 +126,15 @@ export class PriceEntryService {
         );
         return rows?.[0]?.code ?? null;
     }
+
+    // Used by PriceResolutionService's fallback-default path (issue #70) — BranchSettings.
+    // defaultPriceTypeId stores a PriceType id, not a code, so the price-entry lookups above
+    // (keyed by code) need this one extra hop.
+    async getPriceTypeCodeById(_ctx: RequestContext, priceTypeId: string): Promise<string | null> {
+        const rows = await this.connection.rawConnection.query(
+            `SELECT code FROM price_type WHERE id::varchar = $1 LIMIT 1`,
+            [priceTypeId],
+        );
+        return rows?.[0]?.code ?? null;
+    }
 }

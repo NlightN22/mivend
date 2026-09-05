@@ -62,6 +62,7 @@ describe('PriceResolutionService', () => {
     let priceEntryService: {
         getPriceTypeCodeForUser: ReturnType<typeof vi.fn>;
         getPriceTypeCodeForCustomer: ReturnType<typeof vi.fn>;
+        getPriceTypeCodeById: ReturnType<typeof vi.fn>;
         getForVariant: ReturnType<typeof vi.fn>;
     };
     let discountRuleService: {
@@ -70,6 +71,7 @@ describe('PriceResolutionService', () => {
     };
     let customerService: { findOneByUserId: ReturnType<typeof vi.fn> };
     let counterpartyService: { getForCustomer: ReturnType<typeof vi.fn> };
+    let branchSettingsService: { resolveEffective: ReturnType<typeof vi.fn> };
     let service: PriceResolutionService;
 
     beforeEach(() => {
@@ -80,6 +82,7 @@ describe('PriceResolutionService', () => {
         priceEntryService = {
             getPriceTypeCodeForUser: vi.fn(async () => 'WHOLESALE'),
             getPriceTypeCodeForCustomer: vi.fn(async () => 'RETAIL'),
+            getPriceTypeCodeById: vi.fn(async () => 'RETAIL'),
             getForVariant: vi.fn(
                 async (_ctx, variantId: string) => pricesByVariantId[variantId] ?? 1000,
             ),
@@ -90,12 +93,16 @@ describe('PriceResolutionService', () => {
         };
         customerService = { findOneByUserId: vi.fn(async () => null) };
         counterpartyService = { getForCustomer: vi.fn(async () => null) };
+        // Default: no BranchSettings configured anywhere (genuine empty-bootstrap) — tests that
+        // exercise the fallback path override this to return a real settings row.
+        branchSettingsService = { resolveEffective: vi.fn(async () => null) };
         service = new PriceResolutionService(
             priceEntryService as unknown as PriceEntryService,
             discountRuleService as unknown as DiscountRuleService,
             mockConnection,
             customerService as unknown as import('@vendure/core').CustomerService,
             counterpartyService as unknown as import('@mivend/plugin-counterparty').CounterpartyService,
+            branchSettingsService as unknown as import('@mivend/plugin-access-control').BranchSettingsService,
         );
     });
 
@@ -186,13 +193,98 @@ describe('PriceResolutionService', () => {
         expect(weightByFacet.get('brand:lukoil')).toBe(500);
     });
 
-    it('returns null prices when the customer has no price type', async () => {
+    it('returns null prices when the customer has no price type and no BranchSettings fallback exists (genuine empty bootstrap)', async () => {
         priceEntryService.getPriceTypeCodeForUser.mockResolvedValue(null);
+        branchSettingsService.resolveEffective.mockResolvedValue(null);
 
         const result = await service.resolve(mockCtx, 'v1');
 
         expect(result).toEqual({ customerPrice: null, compareAtPrice: null });
         expect(discountRuleService.getBestPercent).not.toHaveBeenCalled();
+    });
+
+    describe('issue #70 — fallback default price', () => {
+        it('falls back to the branch default price type when the caller has no resolvable price type (guest/no CustomerPriceType)', async () => {
+            variantsById.v1 = brandVariant('v1', 'lukoil', 100, 500);
+            priceEntryService.getPriceTypeCodeForUser.mockResolvedValue(null);
+            branchSettingsService.resolveEffective.mockResolvedValue({
+                branchId: 'branch-central',
+                defaultPriceTypeId: 'pt-retail-id',
+            });
+            priceEntryService.getPriceTypeCodeById.mockResolvedValue('RETAIL');
+
+            const result = await service.resolve(mockCtx, 'v1');
+
+            expect(priceEntryService.getPriceTypeCodeById).toHaveBeenCalledWith(
+                mockCtx,
+                'pt-retail-id',
+            );
+            expect(priceEntryService.getForVariant).toHaveBeenLastCalledWith(
+                mockCtx,
+                'v1',
+                'RETAIL',
+            );
+            expect(result).toEqual({ customerPrice: 500, compareAtPrice: null });
+        });
+
+        it('scopes the fallback discount lookup to no counterparty (general discounts only), even when the caller does resolve to a counterparty but not a price', async () => {
+            variantsById.v1 = brandVariant('v1', 'lukoil', 100);
+            priceEntryService.getPriceTypeCodeForUser.mockResolvedValue(null);
+            counterpartyService.getForCustomer.mockResolvedValue({
+                id: '7',
+                branchId: 'branch-central',
+            });
+            customerService.findOneByUserId.mockResolvedValue({ id: 'cust-1' });
+            (mockCtx as unknown as { activeUserId: string }).activeUserId = 'user-1';
+            branchSettingsService.resolveEffective.mockResolvedValue({
+                branchId: 'branch-central',
+                defaultPriceTypeId: 'pt-retail-id',
+            });
+            priceEntryService.getPriceTypeCodeById.mockResolvedValue('RETAIL');
+
+            await service.resolve(mockCtx, 'v1');
+
+            expect(branchSettingsService.resolveEffective).toHaveBeenCalledWith(
+                mockCtx,
+                'branch-central',
+            );
+            expect(discountRuleService.getBestPercent).toHaveBeenCalledWith(
+                mockCtx,
+                'RETAIL',
+                expect.anything(),
+                expect.any(Date),
+                expect.anything(),
+                expect.anything(),
+                null,
+            );
+            delete (mockCtx as unknown as { activeUserId?: string }).activeUserId;
+        });
+
+        it('returns null prices when a BranchSettings row resolves but its price type has no PriceEntry for the variant', async () => {
+            variantsById.v1 = brandVariant('v1', 'lukoil', 100);
+            priceEntryService.getPriceTypeCodeForUser.mockResolvedValue(null);
+            branchSettingsService.resolveEffective.mockResolvedValue({
+                branchId: 'branch-central',
+                defaultPriceTypeId: 'pt-retail-id',
+            });
+            priceEntryService.getPriceTypeCodeById.mockResolvedValue('RETAIL');
+            priceEntryService.getForVariant.mockResolvedValue(null);
+
+            const result = await service.resolve(mockCtx, 'v1');
+
+            expect(result).toEqual({ customerPrice: null, compareAtPrice: null });
+            expect(discountRuleService.getBestPercent).not.toHaveBeenCalled();
+        });
+
+        it('does not fall back when the caller already has a resolvable own price (SPECIAL price type)', async () => {
+            variantsById.v1 = brandVariant('v1', 'lukoil', 100, 900);
+            priceEntryService.getPriceTypeCodeForUser.mockResolvedValue('SPECIAL');
+
+            const result = await service.resolve(mockCtx, 'v1');
+
+            expect(branchSettingsService.resolveEffective).not.toHaveBeenCalled();
+            expect(result).toEqual({ customerPrice: 900, compareAtPrice: null });
+        });
     });
 
     it('prices by the order.customerId, not the caller, when pricing a line on a real order', async () => {

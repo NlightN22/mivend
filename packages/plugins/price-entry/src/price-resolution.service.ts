@@ -7,7 +7,8 @@ import {
     TransactionalConnection,
     translateEntity,
 } from '@vendure/core';
-import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { Counterparty, CounterpartyService } from '@mivend/plugin-counterparty';
+import { BranchSettingsService } from '@mivend/plugin-access-control';
 
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService, DiscountTierVM, VariantFacetValue } from './discount-rule.service';
@@ -58,6 +59,7 @@ export class PriceResolutionService {
         private connection: TransactionalConnection,
         private customerService: CustomerService,
         private counterpartyService: CounterpartyService,
+        private branchSettingsService: BranchSettingsService,
     ) {}
 
     async resolve(
@@ -75,17 +77,54 @@ export class PriceResolutionService {
                   String(orderContext.order.customerId),
               )
             : await this.priceEntryService.getPriceTypeCodeForUser(ctx);
-        if (!priceTypeCode) return { customerPrice: null, compareAtPrice: null };
-
-        const basePrice = await this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode);
-        if (basePrice === null) return { customerPrice: null, compareAtPrice: null };
 
         // A customer-scoped DiscountGrant (approval-workflow) must only ever discount the
         // counterparties it was actually granted to — see DiscountRuleService.getBestPercent's
         // grant-scope filter. Resolved the same way `priceTypeCode` is above: order.customerId
         // is authoritative when pricing a real order line, ctx.activeUserId otherwise (catalog
         // display).
-        const counterpartyId = await this.resolveCounterpartyId(ctx, orderContext);
+        const counterparty = await this.resolveCounterparty(ctx, orderContext);
+        const counterpartyId = counterparty ? String(counterparty.id) : null;
+
+        let basePrice: number | null = null;
+        let effectivePriceTypeCode: string | null = null;
+        let effectiveCounterpartyId: string | null = null;
+        if (priceTypeCode) {
+            basePrice = await this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode);
+            if (basePrice !== null) {
+                effectivePriceTypeCode = priceTypeCode;
+                effectiveCounterpartyId = counterpartyId;
+            }
+        }
+
+        // Issue #70: no logged-in/resolvable customer price (guest, no CustomerPriceType, or no
+        // PriceEntry for their price type) must fall back to the branch's default price type
+        // (BranchSettings.defaultPriceTypeId, issue #66) — NEVER a raw search-index price and
+        // NEVER zero. Only general (non-counterparty-scoped) discounts apply on top, so
+        // effectiveCounterpartyId stays null here.
+        if (effectivePriceTypeCode === null) {
+            const branchId = counterparty?.branchId ?? undefined;
+            const branchSettings = await this.branchSettingsService.resolveEffective(ctx, branchId);
+            const defaultPriceTypeCode = branchSettings
+                ? await this.priceEntryService.getPriceTypeCodeById(
+                      ctx,
+                      branchSettings.defaultPriceTypeId,
+                  )
+                : null;
+            if (defaultPriceTypeCode) {
+                basePrice = await this.priceEntryService.getForVariant(
+                    ctx,
+                    variantId,
+                    defaultPriceTypeCode,
+                );
+                effectivePriceTypeCode = basePrice !== null ? defaultPriceTypeCode : null;
+            }
+        }
+
+        if (basePrice === null || effectivePriceTypeCode === null) {
+            return { customerPrice: null, compareAtPrice: null };
+        }
+        const priceTypeCodeForDiscount = effectivePriceTypeCode;
 
         const { facetValues, weight } = await this.getVariantFacetsAndWeight(ctx, variantId);
         const { weightByFacet, amountByFacet } = orderContext
@@ -95,7 +134,7 @@ export class PriceResolutionService {
                   facetValues,
                   weight,
                   basePrice,
-                  priceTypeCode,
+                  priceTypeCodeForDiscount,
                   orderContext,
               )
             : {
@@ -105,12 +144,12 @@ export class PriceResolutionService {
 
         const percent = await this.discountRuleService.getBestPercent(
             ctx,
-            priceTypeCode,
+            priceTypeCodeForDiscount,
             facetValues,
             new Date(),
             weightByFacet,
             amountByFacet,
-            counterpartyId,
+            effectiveCounterpartyId,
         );
 
         if (percent === null) return { customerPrice: basePrice, compareAtPrice: null };
@@ -120,10 +159,14 @@ export class PriceResolutionService {
         };
     }
 
-    private async resolveCounterpartyId(
+    // Resolved the same way `priceTypeCode` is above: order.customerId is authoritative when
+    // pricing a real order line, ctx.activeUserId otherwise (catalog display). Returns the full
+    // Counterparty (not just its id) so the fallback-default path (issue #70) can also read its
+    // branchId without a second lookup.
+    private async resolveCounterparty(
         ctx: RequestContext,
         orderContext?: OrderPricingContext,
-    ): Promise<string | null> {
+    ): Promise<Counterparty | null> {
         let customerId: string | undefined;
         if (orderContext?.order.customerId) {
             customerId = String(orderContext.order.customerId);
@@ -132,8 +175,7 @@ export class PriceResolutionService {
             customerId = customer ? String(customer.id) : undefined;
         }
         if (!customerId) return null;
-        const counterparty = await this.counterpartyService.getForCustomer(ctx, customerId);
-        return counterparty ? String(counterparty.id) : null;
+        return this.counterpartyService.getForCustomer(ctx, customerId);
     }
 
     /**
