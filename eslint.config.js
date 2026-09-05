@@ -211,6 +211,7 @@ export default [
             // override, so a bare `.mjs` Node script otherwise fails lint on ordinary `process`/
             // `console` globals since no Node environment is configured for plain JS files here.
             'packages/e2e/manual-driver.mjs',
+            'packages/e2e/check-page.mjs',
         ],
     },
 ];
