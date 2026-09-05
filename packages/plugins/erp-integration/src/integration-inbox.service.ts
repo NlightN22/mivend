@@ -103,7 +103,7 @@ export class IntegrationInboxService {
 
     // Failure -> back to 'pending' for the next sweep (the retry-with-backoff comes from the
     // sweep interval itself, same as plugin-acquiring), or 'failed' (dead-letter) once
-    // maxAttempts is exhausted (AGENTS.md rules #4/#12 — bounded retry, no silent drops, no
+    // maxAttempts is exhausted (the external-integration-rules skill's no-silent-drops/async-inbox rules — bounded retry, no
     // infinite loop).
     async markFailed(
         id: number,

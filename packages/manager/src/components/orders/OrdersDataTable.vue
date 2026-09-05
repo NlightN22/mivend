@@ -122,7 +122,7 @@ const ALL_COLUMNS = computed<ColumnDef[]>(() => {
     return cols;
 });
 
-// Persisted per admin, per table — column order/width/visibility/sort/pageSize (AGENTS.md
+// Persisted per admin, per table — column order/width/visibility/sort/pageSize (the backend-plugin-rules skill's
 // "personal display preference, not business data" — same reasoning as useColumnVisibility,
 // just the richer PrimeVue-shaped version, see useDataTableState's own doc comment).
 const { state: tableState, resetColumns: resetTableColumns } = useDataTableState(

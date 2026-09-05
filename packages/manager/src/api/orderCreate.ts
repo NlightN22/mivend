@@ -48,8 +48,8 @@ export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
     // CounterpartyService.getForCustomer) — there's no direct reverse field on Counterparty, so
     // it's resolved via one batched lookup filtered to exactly the counterparty ids just fetched
     // above (not a separate, untracked flat cap — that silently dropped customers from this
-    // picker once the customer book passed 200 rows, a real incident, see AGENTS.md's
-    // Pagination section).
+    // picker once the customer book passed 200 rows, a real incident, see the
+    // backend-plugin-rules skill's Pagination section).
     const counterpartyIds = result.counterparties.items.map(c => c.id);
     const customersResult = await adminApi<{
         customers: { items: { id: string; counterparty: { id: string } | null }[] };

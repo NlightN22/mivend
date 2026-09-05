@@ -287,7 +287,7 @@ export async function fetchCustomerIdForCounterparty(
         customers: { items: { id: string }[] };
     }>(
         // counterpartyId is a customField, filterable as a flat StringOperators field (not
-        // IDOperators, even though it holds an id) — same gotcha AGENTS.md documents for Shop
+        // IDOperators, even though it holds an id) — the same gotcha the backend-plugin-rules skill documents for Shop
         // API custom field filters being flat; here it's also typed as plain String, not ID.
         `query CustomerIdForCounterparty($counterpartyId: String!) {
             customers(options: { take: 1, filter: { counterpartyId: { eq: $counterpartyId } } }) {
@@ -455,7 +455,7 @@ export async function fetchOrdersPageForCustomer(
         };
     }
     // Custom fields in Shop/Admin API filters are flat, not nested under a `customFields` key —
-    // see AGENTS.md's Vendure gotcha. Real incident this fixes: `filter.customFields = {...}`
+    // see the backend-plugin-rules skill's Vendure gotcha. Real incident this fixes: `filter.customFields = {...}`
     // isn't a valid `OrderFilterParameter` shape at all — every query using it (reservationState,
     // fulfillmentState, placedByAdministratorId) threw a GraphQL validation error
     // ('Field "customFields" is not defined by type "OrderFilterParameter"') on every request
@@ -609,7 +609,7 @@ export interface CustomerDocument {
 // lifecycle — see plugin-documents/src/entities/document.entity.ts), not ERP-sourced business
 // data — same carve-out as api/orders.ts's ORDER_STATE_OPTIONS. Document.type, unlike status, is
 // real ERP/business-sourced data (invoice/contract/return/reconciliation/anything else the ERP
-// pushes — see the entity's own doc comment) and must NOT be a hardcoded dropdown (AGENTS.md
+// pushes — see the entity's own doc comment) and must NOT be a hardcoded dropdown (the backend-plugin-rules skill's
 // "Business data must live in the database") — but that doesn't rule out a checklist filter, only
 // a *hardcoded* one: fetchDocumentTypes below pulls the real, currently-visible distinct type
 // values from the backend (plugin-documents' new `documentTypes` query, a real bounded DISTINCT,
@@ -623,7 +623,7 @@ export const DOCUMENT_STATUS_OPTIONS = [
     { value: 'failed', label: 'Failed' },
 ] as const;
 
-// Single source of truth for the status badge color (AGENTS.md ui-kit rule) — mirrors
+// Single source of truth for the status badge color (the frontend-rules skill's ui-kit rule) — mirrors
 // PAYMENT_STATUS_BADGE_VARIANT/INVOICE_STATUS_BADGE_VARIANT. Previously an inline variant()
 // function local to CustomerDocumentsTab.vue.
 export const DOCUMENT_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
@@ -649,7 +649,7 @@ export const DEFAULT_CUSTOMER_DOCUMENT_FILTERS: CustomerDocumentFilters = {
     search: '',
 };
 
-// Real server-side pagination (AGENTS.md "Pagination" rule — documents accumulate over a
+// Real server-side pagination (the backend-plugin-rules skill's "Pagination" rule — documents accumulate over a
 // customer's lifetime just like orders/invoices/payments, and aren't exempt just because the
 // tab is small on screen). Replaces an earlier flat `take: 100` fetch with no pagination at all,
 // which silently dropped a long-lived customer's older documents past the 100th row with no way
@@ -813,7 +813,7 @@ export const DISCOUNT_GRANT_STATUS_OPTIONS = [
     { value: 'expired', label: 'Expired' },
 ] as const;
 
-// Single source of truth for the status badge color (AGENTS.md ui-kit rule) — mirrors
+// Single source of truth for the status badge color (the frontend-rules skill's ui-kit rule) — mirrors
 // PAYMENT_STATUS_BADGE_VARIANT/INVOICE_STATUS_BADGE_VARIANT.
 export const DISCOUNT_GRANT_STATUS_BADGE_VARIANT: Record<DiscountGrantStatus, StatusBadgeVariant> =
     {
@@ -861,7 +861,7 @@ export async function fetchDiscountGrantViewCounts(
 // Only grants that actually apply to this counterparty (company-wide or scoped to it) — see
 // DiscountGrantService.findForCounterparty. Using discountRules(priceTypeCode) here would leak
 // grants scoped to a *different* customer that happens to share the same price type. Real
-// server-side pagination (AGENTS.md "Pagination" rule) — this list is not genuinely bounded, it
+// server-side pagination (the backend-plugin-rules skill's "Pagination" rule) — this list is not genuinely bounded, it
 // accumulates one row per approved renewal over the customer's whole lifetime (nothing removes an
 // expired grant).
 export async function fetchDiscountGrantsPage(

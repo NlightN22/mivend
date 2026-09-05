@@ -25,7 +25,7 @@ export class RabbitMQService implements OnModuleDestroy {
     // being nack(requeue=true)'d in a tight, delay-free loop. A real incident traced to exactly
     // that: a poison message (see erp-adapter.stub.ts's productId fix) with no retry cap and no
     // backoff generated an unbounded flood of redeliveries fast enough to OOM the whole host.
-    // AGENTS.md's sync rules already require "retried with backoff and eventually routed to a
+    // the no-silent-drops messaging invariant already requires "retried with backoff and eventually routed to a
     // dead-letter queue" — this was never actually implemented, only documented.
     private readonly retryCounts = new Map<string, number>();
 

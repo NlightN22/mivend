@@ -29,7 +29,7 @@ export class ErpOrderResolver {
         const skip = args.options?.skip ?? 0;
         const search = args.search?.trim();
         // erpStatus already exists on the real, Vendure-generated OrderFilterParameter (Order
-        // customFields are exposed flat, per AGENTS.md) — no custom filter/options type needed.
+        // customFields are exposed flat, per the backend-plugin-rules skill) — no custom filter/options type needed.
         const erpStatuses = (args.options?.filter as { erpStatus?: { in?: string[] } } | undefined)
             ?.erpStatus?.in;
 
@@ -79,7 +79,7 @@ export class ErpOrderResolver {
         if (search) {
             const term = `%${search}%`;
             // Product.name is translatable — not a real column on `product`, only on the
-            // joined `product_translation` table (see AGENTS.md's raw-SQL-in-Brackets gotcha:
+            // joined `product_translation` table (see the backend-plugin-rules skill's raw-SQL-in-Brackets gotcha:
             // this was never actually exercised until now, hence never caught).
             qb.andWhere(
                 new Brackets((bqb: WhereExpressionBuilder) => {

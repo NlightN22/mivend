@@ -5,8 +5,9 @@ import { KafkaConsumerService } from './kafka-consumer.service';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, KAFKA_ENABLED_DEFAULT, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
-// Central-hub-only bootstrap for the Kafka consumer (issue #62 design point 1 / AGENTS.md sync
-// rule #6) — mirrors plugin-sync's ProductConsumer.onModuleInit
+// Central-hub-only bootstrap for the Kafka consumer (issue #62 design point 1 / the
+// external-integration-rules skill's "Branches never call the ERP or Integration Service"
+// rule) — mirrors plugin-sync's ProductConsumer.onModuleInit
 // (`if (this.options.instanceType !== 'branch') return;`), inverted for this central-only
 // direction. A branch instance never starts a Kafka connection to Integration Service.
 //

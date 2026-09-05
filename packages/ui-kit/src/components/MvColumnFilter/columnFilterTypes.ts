@@ -1,7 +1,7 @@
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 
 // Every data-table column filter in the app must declare one of these types explicitly — no
-// implicit/generic fallback (see AGENTS.md's manager-portal rules: a filter's shape must be
+// implicit/generic fallback (see the manager-portal-rules skill: a filter's shape must be
 // known statically, not guessed at render time). `custom` is the one sanctioned escape hatch for
 // a filter that genuinely isn't one of the standard patterns (e.g. Payment's paymentView chips,
 // which drive an entirely different GraphQL query, not a plain OrderFilterParameter field) —

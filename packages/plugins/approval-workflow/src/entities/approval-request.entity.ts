@@ -3,7 +3,7 @@ import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index, VersionColumn } from 'typeorm';
 
 // status is a plain varchar, not a hardcoded GraphQL enum — interpreted by the service layer,
-// per AGENTS.md ("Reservation statuses — stored as varchar"). Values: pending/approved/
+// per the backend-plugin-rules skill ("Reservation statuses — stored as varchar"). Values: pending/approved/
 // rejected/cancelled.
 @Entity()
 export class ApprovalRequest extends VendureEntity {

@@ -11,7 +11,7 @@ export interface ColumnVisibilityDef {
 
 // Per-admin, per-table column visibility, persisted to localStorage — this is personal UI
 // preference (which columns *I* want to see), not business data, so it doesn't need a backend
-// entity (see AGENTS.md "business data must live in the database" — that rule is about domain
+// entity (see the backend-plugin-rules skill's "business data must live in the database" — that rule is about domain
 // facts, not per-user display preference). storageKey should be unique per table+admin, e.g.
 // `orders-columns:${administratorId}`.
 export function useColumnVisibility(

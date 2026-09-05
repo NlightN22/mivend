@@ -21,7 +21,7 @@ const totalItems = ref(0);
 const counterpartyNames = ref<Map<string, string>>(new Map());
 const loading = ref(true);
 
-// Manager portal rule (AGENTS.md): every filtered/sorted/paginated view must be a shareable
+// Manager portal rule (see the manager-portal-rules skill): every filtered/sorted/paginated view must be a shareable
 // URL — including counterpartyId (see api/payments.ts's PaymentFilters shape).
 const { fromQuery, toQuery } = useUrlSyncedState(DEFAULT_PAYMENT_FILTERS);
 fromQuery(filters, page);

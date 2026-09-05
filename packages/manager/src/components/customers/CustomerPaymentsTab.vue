@@ -13,7 +13,7 @@ import {
     type PaymentViewCounts,
 } from '../../api/payments';
 
-// Server-side paginated + filtered (AGENTS.md "Pagination" rule) — same shape as
+// Server-side paginated + filtered (the backend-plugin-rules skill's "Pagination" rule) — same shape as
 // CustomerInvoicesTab.vue. CustomerPaymentsDataTable (built on @mivend/ui-kit's
 // MvAdvancedDataTable) renders both desktop and its own built-in mobile card view — no separate
 // isMobile branch (or the old PaymentsFilterBar/PaymentsTable mobile fallback) needed here
@@ -59,7 +59,7 @@ const activeView = computed<ViewKey>({
     },
 });
 
-// AGENTS.md manager-portal rule: filter/page state must be a shareable URL — see
+// Manager-portal rule (manager-portal-rules skill): filter/page state must be a shareable URL — see
 // CustomerOrdersTab.vue's identical wiring (and its own doc comment on useUrlSyncedState).
 interface PaymentUrlFilters {
     [key: string]: string;

@@ -104,7 +104,7 @@ export const adminApiExtensions: DocumentNode = gql`
 
     extend type Query {
         invoicesForOrder(orderId: ID!): [Invoice!]!
-        "Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (AGENTS.md Dev seed rules exception, see seed-payment-refunds.mjs)."
+        "Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (backend-plugin-rules skill's Dev seed rules exception, see seed-payment-refunds.mjs)."
         capturedOnlinePayments(take: Int): [PaymentAttempt!]!
         "Seed-script idempotency helper only — see seed-payment-refunds.mjs."
         paymentRefundExists(providerRefundId: String!): Boolean!

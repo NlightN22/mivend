@@ -43,11 +43,11 @@ export const adminApiExtensions = gql`
         # the same counterpartyId (see docs/ai/manager-portal-concept.md §3.3 "/documents").
         # counterpartyId/orderId narrow server-side (still intersected with the caller's
         # visible-counterparty scope) — a caller must never fetch an unbounded page and filter
-        # client-side (see AGENTS.md's pagination rule).
+        # client-side (see the backend-plugin-rules skill's pagination rule).
         documents(options: DocumentListOptions, counterpartyId: ID, orderId: ID): DocumentList!
         # Real distinct Document.type values within the caller's visible-counterparty scope
         # (optionally narrowed further to one counterparty) — backs the manager portal's Type
-        # column checklist filter with live data instead of a hardcoded dropdown (AGENTS.md
+        # column checklist filter with live data instead of a hardcoded dropdown (the backend-plugin-rules skill's
         # "Business data must live in the database": document type is free-text ERP data with no
         # fixed value set).
         documentTypes(counterpartyId: ID): [String!]!

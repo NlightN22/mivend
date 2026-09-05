@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SyncEventSchema } from 'shared';
 
 // Contract test for plugin-sync's RabbitMQ envelope — the single highest-risk external boundary
-// per AGENTS.md's sync rules (central <-> branch, and the only wire format `plugin-sync` owns).
+// per the internal-sync-rules skill (central <-> branch, and the only wire format `plugin-sync` owns).
 // SyncEventSchema (packages/shared/src/sync.ts) IS the contract: every producer validates against
 // it before publish (SyncService.publishEntry), every consumer validates against it on receipt
 // (RabbitMQService.subscribe). sync-cycle.test.ts already proves the end-to-end behavior (an

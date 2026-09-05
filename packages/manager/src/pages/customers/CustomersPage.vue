@@ -82,7 +82,7 @@ const DEFAULT_FILTERS: CustomerFiltersState = {
 };
 const filters = reactive<CustomerFiltersState>({ ...DEFAULT_FILTERS });
 
-// Manager portal rule (AGENTS.md): every filtered/sorted/paginated view must be a shareable URL.
+// Manager portal rule (see the manager-portal-rules skill): every filtered/sorted/paginated view must be a shareable URL.
 const { fromQuery, toQuery } = useUrlSyncedState(DEFAULT_FILTERS);
 fromQuery(filters, page);
 

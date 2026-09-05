@@ -13,7 +13,7 @@ import {
 // Sixth consumer of @mivend/ui-kit's MvAdvancedDataTable — see manager-table-standard skill.
 // Unlike every other customer-detail table, a counterparty's team is a genuinely bounded list
 // (Owner + a handful of backup/observer members, see CounterpartyTeamFieldResolver's own doc
-// comment on `teamMembers` — same AGENTS.md "Pagination" exemption as a customer's own trading
+// comment on `teamMembers` — the same backend-plugin-rules skill "Pagination" exemption as a customer's own trading
 // points) — there is no backend list query to page/filter against, `rows` already holds every
 // row. Filtering and pagination below are therefore done entirely client-side against the full
 // `rows` prop, not a stand-in for real server support that's missing — this is the deliberate
@@ -83,7 +83,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     { field: 'phone', header: 'Phone', width: 150, filterConfig: { type: 'none' }, mobile: { hidden: true } },
     // Always "Active" today — no real per-row lifecycle exists yet for a team membership, so a
     // filter here would have exactly one value and mislead the user into thinking it does
-    // something. Revisit once team membership has a real status (AGENTS.md "no hardcoded enums").
+    // something. Revisit once team membership has a real status (AGENTS.md's "What not to do" — no hardcoded enums).
     { field: 'status', header: 'Status', width: 110, filterConfig: { type: 'none' }, mobile: { hidden: true } },
     { field: 'actions', header: 'Actions', width: 110, filterConfig: { type: 'none' } },
 ];

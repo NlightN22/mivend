@@ -2,8 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Org-structure master data — ERP is the source of truth (AGENTS.md "ERP is master for business
-// data"), populated via erp-integration's WarehouseStreamHandler. branchId is a raw column (the
+// Org-structure master data — ERP is the source of truth (the external-integration-rules skill's "ERP is master for
+// business data" rule), populated via erp-integration's WarehouseStreamHandler. branchId is a raw column (the
 // owning Branch's local id, resolved via BranchService by erpId at upsert time) rather than a
 // TypeORM relation — mirrors Branch's own preference for explicit service-layer resolution over
 // deep ORM relation graphs (see AGENTS.md's Warehouse plan, "a raw @Column() branchId!: string

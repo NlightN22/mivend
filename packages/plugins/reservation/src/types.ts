@@ -59,7 +59,8 @@ export interface ReservationPluginOptions {
 export type ReservationCreationMethod = 'manual' | 'auto-prepaid' | 'auto-trust-rule';
 
 // Order.customFields.reservationState — an internal technical enum fixed by app logic, not
-// ERP business data (see AGENTS.md "Business data must live in the database"). See
+// ERP business data (see the backend-plugin-rules skill's "Business data must live in
+// the database"). See
 // docs/order-flow.md "Reservation state (separate from Order.state)".
 export type OrderReservationState =
     | 'NOT_REQUIRED'
@@ -75,7 +76,7 @@ export const DEFAULT_ORDER_RESERVATION_STATE: OrderReservationState = 'NOT_REQUI
 // above: a fixed, small set of internal technical classes that drive the reservation trigger
 // (see docs/order-flow.md "Payment classification (decided)"), not ERP/business data that
 // changes without a deploy. Unlike price types/statuses/categories (which DO belong in the
-// database per AGENTS.md), adding a genuinely new payment classification is a code change in
+// database per the backend-plugin-rules skill), adding a genuinely new payment classification is a code change in
 // its own right — reservation-payment.service.ts would need new branching logic for it
 // regardless of where the label lives, so there is no DB-driven flexibility to gain by moving
 // it out of code. Configured per `PaymentMethod` via this fixed dropdown in the native Vendure

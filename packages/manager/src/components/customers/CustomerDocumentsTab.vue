@@ -11,7 +11,7 @@ import {
     type CustomerDocument,
 } from '../../api/customers';
 
-// Server-side paginated + filtered (AGENTS.md "Pagination" rule) — owns its own fetching, same
+// Server-side paginated + filtered (the backend-plugin-rules skill's "Pagination" rule) — owns its own fetching, same
 // shape as CustomerDiscountsTab.vue.
 const props = defineProps<{ counterpartyId: string }>();
 const authStore = useAuthStore();

@@ -30,7 +30,7 @@ const loadError = ref('');
 const loading = ref(true);
 
 // Warehouses are a bounded ERP org-structure list (a few dozen at most, one per physical/
-// logical warehouse) — exempt from server pagination per AGENTS.md's Pagination section
+// logical warehouse) — exempt from server pagination per the backend-plugin-rules skill's Pagination section
 // ("exempt only if genuinely, structurally bounded"), same exemption class as
 // TeamDirectoryTable's department roster. Still rendered via MvAdvancedDataTable
 // (manager-table-standard point 6: an exempt table still gets the standard rendering/mobile-

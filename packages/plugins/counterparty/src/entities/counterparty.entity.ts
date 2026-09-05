@@ -54,7 +54,7 @@ export class Counterparty extends VendureEntity {
 
     // Portal-approved extension on top of the ERP-sourced paymentDelayDays — never written
     // by erp-import, never mutates paymentDelayDays itself (that field stays ERP master
-    // data, per AGENTS.md sync rules). Set only by CreditTermService once a
+    // data, per the internal-sync-rules skill's CQRS event-stream rule). Set only by CreditTermService once a
     // creditTermApproval(Escalated) request is approved. Real bidirectional ERP sync
     // (pushing this back to 1C) is not wired yet — see CreditTermApprovedEvent.
     @Column({ type: 'int', nullable: true })

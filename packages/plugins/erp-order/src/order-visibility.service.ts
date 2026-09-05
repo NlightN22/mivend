@@ -98,7 +98,7 @@ export class OrderVisibilityService {
                 // metadata; mixing the raw alias with an already-quoted raw column name here
                 // bypasses that pass entirely, so the alias itself must be quoted explicitly or
                 // this becomes `syntax error at or near "order"` at query time (same class of
-                // bug as AGENTS.md's documented Brackets-alias gotcha, but here it hit even
+                // bug as the backend-plugin-rules skill's documented Brackets-alias gotcha, but here it hit even
                 // outside a Brackets callback because of the raw-column mixing).
                 //
                 // `OR ... IS NULL`: a branch-less order is a legitimate, expected state, not an

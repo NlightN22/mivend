@@ -14,7 +14,7 @@ import {
     type DiscountGrantViewCounts,
 } from '../../api/customers';
 
-// Server-side paginated + filtered (AGENTS.md "Pagination" rule) — owns its own fetching, same
+// Server-side paginated + filtered (the backend-plugin-rules skill's "Pagination" rule) — owns its own fetching, same
 // shape as CustomerPaymentsTab.vue. This list previously had no pagination at all under a claim
 // of being "genuinely bounded" — wrong: nothing removes an expired grant, so it accumulates one
 // row per approved renewal over the customer's whole lifetime, same growth pattern as

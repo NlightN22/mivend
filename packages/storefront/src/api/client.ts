@@ -4,7 +4,7 @@ const SHOP_API_URL = '/shop-api';
 // failure, etc. — the browser's fetch() implementation throws a TypeError for these, distinct
 // from a real HTTP/GraphQL error response). Callers (notably the auth store) use this to avoid
 // treating a transient blip — e.g. the dev server mid-restart — as "the user is logged out".
-// See AGENTS.md gotcha on this.
+// See the backend-plugin-rules skill's Vendure gotcha on this.
 export class ApiNetworkError extends Error {}
 
 const RETRY_ATTEMPTS = 3;

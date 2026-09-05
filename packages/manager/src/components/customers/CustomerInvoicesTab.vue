@@ -13,7 +13,7 @@ import {
     type InvoiceViewCounts,
 } from '../../api/invoices';
 
-// Server-side paginated + filtered (AGENTS.md "Pagination" rule) — owns its own fetching, same
+// Server-side paginated + filtered (the backend-plugin-rules skill's "Pagination" rule) — owns its own fetching, same
 // shape as CustomerOrdersTab.vue. CustomerInvoicesDataTable (built on @mivend/ui-kit's
 // MvAdvancedDataTable) renders both desktop and its own built-in mobile card view — no separate
 // isMobile branch needed here anymore (see MvAdvancedMobileCardList.vue in @mivend/ui-kit).
@@ -65,7 +65,7 @@ const activeView = computed<ViewKey>({
     },
 });
 
-// AGENTS.md manager-portal rule: filter/page state must be a shareable URL — see
+// Manager-portal rule (manager-portal-rules skill): filter/page state must be a shareable URL — see
 // CustomerOrdersTab.vue's identical wiring (and its own doc comment on useUrlSyncedState) for the
 // full reasoning. This tab's filter set is small (status, id search), so no array/object
 // flattening is needed beyond pageSize.

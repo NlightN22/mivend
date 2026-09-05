@@ -18,7 +18,7 @@ import { fetchOutstandingBalance, type OutstandingBalance } from '../../api/invo
 import { fetchCounterpartyTeam, type CounterpartyTeamMember } from '../../api/counterpartyTeam';
 import type { EntityRef } from '../../api/history';
 import { Location, Wallet, User } from '@element-plus/icons-vue';
-// Tab icons use Tabler (AGENTS.md "Icon kit" rule) — pick from there first before adding any
+// Tab icons use Tabler (the frontend-rules skill's "Icon kit" rule) — pick from there first before adding any
 // other icon package.
 import {
     IconHome2,

@@ -7,12 +7,12 @@ import {
 } from '@tabler/icons-vue';
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 
-// Document.type is free-text ERP business data (AGENTS.md "Business data must live in the
+// Document.type is free-text ERP business data (the backend-plugin-rules skill's "Business data must live in the
 // database" — see api/customers.ts's DOCUMENT_STATUS_BADGE_VARIANT doc comment for the same
 // carve-out reasoning applied to status). This map is presentation-only: known type strings get
 // a recognizable icon + one of MvStatusBadge's existing StatusBadgeVariant colors, anything else
 // falls back to a neutral default — it never gates filtering, sorting, or any business decision,
-// so it doesn't reintroduce a hardcoded business enum. Icon set is Tabler (AGENTS.md "Icon kit"
+// so it doesn't reintroduce a hardcoded business enum. Icon set is Tabler (the frontend-rules skill's "Icon kit"
 // rule) — pick from there first before adding any other icon package.
 //
 // The 4 keys below are the real values this app actually produces today — see

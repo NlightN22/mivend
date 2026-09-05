@@ -9,7 +9,8 @@ export interface DataTableSortMeta {
 // persisted per admin, per table — one storage blob instead of useColumnVisibility's
 // hidden-keys-only Set, for tables that need the fuller PrimeVue DataTable feature set (see
 // OrdersDataTable.vue, the first adopter). Same "personal display preference, not business
-// data" reasoning as useColumnVisibility (AGENTS.md) — no backend entity, localStorage only.
+// data" reasoning as useColumnVisibility (backend-plugin-rules skill) — no backend entity,
+// localStorage only.
 export interface DataTableState<
     FiltersT extends Record<string, unknown> = Record<string, unknown>,
 > {

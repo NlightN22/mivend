@@ -45,8 +45,9 @@ correctly-but-unhelpfully enter the manual confirmation queue.
 Stages 5–6 are also done:
 
 - **1C outbox** — `plugin-reservation` publishes `ReservationConfirmedEvent`/
-  `ReservationReleasedEvent` (never touches RabbitMQ/outbox directly, per AGENTS.md sync
-  rules); a new `ReservationConsumer` in `plugin-sync` writes `reservation.created`/
+  `ReservationReleasedEvent` (never touches RabbitMQ/outbox directly, per the
+  internal-sync-rules skill's ownership rule); a new `ReservationConsumer` in `plugin-sync`
+  writes `reservation.created`/
   `reservation.released` to `sync_outbox` (`target: 'erp'`), keyed by `Reservation`'s
   `erpOperationId`/`erpReleaseOperationId` (two distinct stable ids — reusing one across both
   commands would collide on `sync_outbox`'s unique `eventId`). `packages/shared/src/sync.ts`'s
@@ -207,7 +208,7 @@ Query directly on `reservationState = AWAITING_CONFIRMATION` (a stored/computed 
 than reconstructing the condition from several indirect signals (no active `Reservation` AND
 not `Cancelled`/`Delivered` AND non-prepaid AND not already being processed, etc.) every time
 the queue is rendered — more reliable and matches this project's existing "push filtering
-into a real, queryable field" convention (see `AGENTS.md` → Pagination section's
+into a real, queryable field" convention (see the `backend-plugin-rules` skill's Pagination section's
 `DiscountRegistryEntry` precedent for the same reasoning).
 
 ### Full-order-only reservation (stage 1)
@@ -246,8 +247,8 @@ most one active reservation per order line + stock location at a time.
 ### 1C integration — outbox, not a shared transaction
 
 Reservation-write (local DB) and the 1C status transition cannot be one transaction across
-two systems. This project already has a hard rule for this exact situation (`AGENTS.md` →
-Sync rules): write to `sync_outbox` in the same local transaction as the reservation, and let
+two systems. This project already has a hard rule for this exact situation (the outbox-pattern
+messaging invariant, see the `internal-sync-rules`/`external-integration-rules` skills): write to `sync_outbox` in the same local transaction as the reservation, and let
 a separate worker deliver the ERP command, retrying with backoff, never silently dropping a
 failure. Each command needs a stable `reservationOperationId` so 1C can safely receive the
 same command twice without creating a duplicate document/reservation.

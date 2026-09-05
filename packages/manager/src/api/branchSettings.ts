@@ -42,7 +42,7 @@ export interface BranchSettingsInput {
 // row per physical/logical warehouse across all branches, expected to be a few dozen at most.
 // No pagination/server-side filter is wired here, mirroring `branches`/`departments` above it in
 // AccessControlResolver: a genuinely bounded org-structure list, not a row that accumulates over
-// the business's lifetime (AGENTS.md's Pagination section exemption test).
+// the business's lifetime (the backend-plugin-rules skill's Pagination section exemption test).
 export async function fetchWarehouses(): Promise<Warehouse[]> {
     const result = await adminApi<{ warehouses: Warehouse[] }>(
         `query Warehouses {

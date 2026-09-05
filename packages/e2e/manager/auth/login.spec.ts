@@ -49,7 +49,7 @@ test.describe('Manager login page', () => {
         expect(sessionCookie?.expires).toBeGreaterThan(0); // persistent, not session-only (-1)
     });
 
-    // See AGENTS.md "A fetch() network failure is not the same as 'logged out'" — regression
+    // See the backend-plugin-rules skill's "A fetch() network failure is not the same as 'logged out'" — regression
     // coverage for the incident that prompted that fix: a real, still-logged-in session must
     // survive a transient admin-api outage instead of being bounced back to /login.
     test('a transient admin-api outage after login does not force a re-login', async ({ page }) => {

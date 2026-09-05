@@ -70,7 +70,7 @@ both see "no existing row" and both execute the command); `InboxService`/`inbox.
 
 - `integration/payment-inbox-claim.int.test.ts` for the inbound-event-dedup level.
 
-**Exceptions**: none — every async/repeatable flow needs this per rule #12/13 in AGENTS.md.
+**Exceptions**: none — every async/repeatable flow needs this per the external-integration-rules skill's async-inbox/external-reference-id rules.
 
 ## Inbox lifecycle
 
@@ -281,7 +281,7 @@ is actually blocked at runtime.
 disallowed mutation is actually rejected at runtime (invoice status left untouched, event
 dead-lettered, `PaymentReconciliationIssue` reported), not just that the check exists.
 
-**Exceptions**: none — this is architecturally non-negotiable per AGENTS.md sync rules #6-#13.
+**Exceptions**: none — this is architecturally non-negotiable per the external-integration-rules/internal-sync-rules skills.
 
 ## Eventual consistency
 

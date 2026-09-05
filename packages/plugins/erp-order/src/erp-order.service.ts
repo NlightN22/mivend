@@ -44,7 +44,7 @@ export class ErpOrderService {
         }
 
         // Denormalized once, here, rather than derived per-request from the order's first
-        // HistoryEntry (see AGENTS.md pagination/frontend-computation session note) — null
+        // HistoryEntry (see the backend-plugin-rules skill's Pagination section) — null
         // stays null for a storefront customer's own checkout (ctx.activeUserId won't resolve
         // to an Administrator in that case), matching the old client-side "(customer)" fallback.
         if (ctx.activeUserId !== undefined) {

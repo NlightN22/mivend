@@ -35,7 +35,7 @@ const PAYMENT_BADGE_VARIANT: Record<PaymentLabel, 'success' | 'warning' | 'neutr
     Unpaid: 'neutral',
 };
 
-// Server-side paginated (AGENTS.md "Pagination" rule) — owns its own fetching, same shape as
+// Server-side paginated (the backend-plugin-rules skill's "Pagination" rule) — owns its own fetching, same shape as
 // EntityHistoryPanel.vue, rather than receiving a pre-loaded array from CustomerDetailPage.
 const props = defineProps<{ customerId: string }>();
 
@@ -119,7 +119,7 @@ const viewChips = computed<FilterChip[]>(() =>
     VIEWS.map(v => ({ key: v.key, label: `${v.label} ${viewCounts.value[v.key]}`, variant: v.variant })),
 );
 
-// AGENTS.md manager-portal rule: every filter/sort/page-controlled list must be a shareable URL.
+// Manager-portal rule (manager-portal-rules skill): every filter/sort/page-controlled list must be a shareable URL.
 // useUrlSyncedState only accepts a flat Record<string,string>, so every non-string ref above
 // (arrays, the dateRange object, numbers, the sort object) is flattened into/out of this shape —
 // same reasoning as OrdersPage.vue's own OrdersFilters, just with more fields since this tab has
@@ -339,8 +339,8 @@ const rows = computed(() =>
         items: String(order.totalQuantity),
         total: money(order),
         // Real ISO code, not just the pre-formatted `total` string — CustomerOrdersDataTable's
-        // Total filter needs the raw code to derive the currency symbol via Intl (see AGENTS.md
-        // "business data must live in the database": never hardcode a currency symbol).
+        // Total filter needs the raw code to derive the currency symbol via Intl (see the backend-plugin-rules skill's
+        // "Business data must live in the database" — never hardcode a currency symbol).
         currencyCode: order.currencyCode,
         // Raw ISO timestamp, not pre-formatted — CustomerOrdersDataTable's #cell-date slot
         // renders it via MvDateTimeCell (date + a smaller time-of-day line), which needs the

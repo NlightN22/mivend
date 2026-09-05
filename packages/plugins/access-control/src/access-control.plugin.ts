@@ -157,7 +157,7 @@ const adminApiSchema = gql`
             },
             {
                 // Owned by @mivend/plugin-sync (registered here since this is where
-                // Administrator's customFields array already lives — see AGENTS.md's
+                // Administrator's customFields array already lives — see the backend-plugin-rules skill's
                 // declaration-merging precedent for reading a field without a package
                 // dependency). Branch-only: correlates a branch's read-only Administrator
                 // replica with its Central source record. Always null on Central itself.

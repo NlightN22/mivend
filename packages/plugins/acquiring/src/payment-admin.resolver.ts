@@ -10,7 +10,7 @@ import { PaymentRefundService } from './payment-refund.service';
 // Ops/seed-only surface: lets `infrastructure/scripts/seed-payment-refunds.mjs` attach
 // realistic-looking refund/dispute rows to existing captured online-acquiring payments, the
 // same way `seed-approvals.mjs` creates ApprovalRequest rows through real Admin mutations
-// instead of a database bypass (AGENTS.md "Dev seed rules" exception clause — refunds/disputes
+// instead of a database bypass (the backend-plugin-rules skill's "Dev seed rules" exception clause — refunds/disputes
 // are payment-provider-reported workflow state, not ERP master data).
 @Resolver()
 export class PaymentAdminResolver {

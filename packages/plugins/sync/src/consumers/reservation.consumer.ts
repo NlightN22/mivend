@@ -12,7 +12,7 @@ import type { SyncPluginOptions } from '../types';
 // still stubs (see that file's TODO) — writes reservation confirm/release commands to
 // sync_outbox for delivery to 1C. See docs/order-flow.md "1C integration — outbox, not a
 // shared transaction". plugin-reservation never touches RabbitMQ/the outbox directly (see
-// AGENTS.md sync rules) — it only publishes these two EventBus events, this consumer (owned by
+// the internal-sync-rules skill's ownership rule) — it only publishes these two EventBus events, this consumer (owned by
 // plugin-sync) does the actual outbox write.
 @Injectable()
 export class ReservationConsumer implements OnApplicationBootstrap {

@@ -47,7 +47,7 @@ export class SavedViewsService {
         const administratorId = await this.requireAdministratorId(ctx);
         // Id from GraphQL input args is already coerced to the entity id strategy's native
         // type (number, under this project's default strategy) — String() it explicitly
-        // before comparing/persisting, per AGENTS.md's ID-coercion gotcha.
+        // before comparing/persisting, per the backend-plugin-rules skill's ID-coercion gotcha.
         const result = await this.connection
             .getRepository(ctx, SavedTableView)
             .delete({ id: String(id) as unknown as number, administratorId });

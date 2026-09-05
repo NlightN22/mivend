@@ -2,7 +2,7 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Org-structure master data — ERP is the source of truth (see AGENTS.md "ERP is master for
+// Org-structure master data — ERP is the source of truth (see the external-integration-rules skill's "ERP is master for
 // business data"), populated via erp-import's BranchRecord, never edited manually. Flat list, no
 // parent/child hierarchy (unlike Department).
 @Entity()

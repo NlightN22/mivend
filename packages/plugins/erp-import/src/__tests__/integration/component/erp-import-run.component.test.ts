@@ -15,7 +15,8 @@ import { ErpImportService } from '../../../erp-import.service';
 import type { BatchImportBody } from '../../../types';
 
 // Component test for the actual createPending → process each record → persist errors → complete
-// chain `make seed` (the only sanctioned way to load dev/test data, per AGENTS.md's "Dev seed
+// chain `make seed` (the only sanctioned way to load dev/test data, per the backend-plugin-rules
+// skill's "Dev seed
 // rules") drives via POST /erp/import/batch. erp-import.service.test.ts already covers per-record-
 // type dispatch and basic error recording with a fully mocked ImportRunService (no DB at all) —
 // this file targets what mocks can't prove: idempotency by exchangeId backed by ImportRun's real

@@ -11,7 +11,7 @@ import { SyncOutboxEntry } from '../../entities/sync-outbox.entity';
 import { SyncService } from '../../sync.service';
 import type { SyncPluginOptions } from '../../types';
 
-// Sync rule #1 (AGENTS.md): an outbox write must be atomic with the transaction it participates
+// The outbox-pattern messaging invariant: an outbox write must be atomic with the transaction it participates
 // in — a rollback must never leave a partial outbox state. plugin-sync's actual write paths
 // (order-sync.service.ts, producer-registry.ts, sync.service.processErpChanges) never pair a
 // business-entity write with an outbox write in the same EntityManager — every business write

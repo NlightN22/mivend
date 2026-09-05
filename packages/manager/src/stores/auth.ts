@@ -40,7 +40,7 @@ type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 
 // Background retry tuning for a network outage that outlasts adminApi's own bounded ~4.2s
 // retry (see api/client.ts) — capped exponential backoff, retried indefinitely rather than
-// ever concluding "logged out" from a network failure alone. See AGENTS.md's "A fetch()
+// ever concluding "logged out" from a network failure alone. See the backend-plugin-rules skill's "A fetch()
 // network failure is not the same as 'logged out'" gotcha.
 const BACKGROUND_RETRY_INITIAL_MS = 2_000;
 const BACKGROUND_RETRY_MAX_MS = 20_000;

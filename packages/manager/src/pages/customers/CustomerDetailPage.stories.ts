@@ -226,8 +226,8 @@ export const Default: Story = {
     }),
 };
 
-// A dedicated sidebar entry pinned to the mobile viewport (see AGENTS.md's "Manager portal
-// rules" tab-overflow pattern) — click straight into this story to see the mobile "3 tabs +
+// A dedicated sidebar entry pinned to the mobile viewport (see the manager-portal-rules
+// skill's tab-overflow pattern) — click straight into this story to see the mobile "3 tabs +
 // More" layout without going through the viewport dropdown first.
 export const Mobile: Story = {
     ...Default,

@@ -29,7 +29,7 @@ import {
 import { PLACED_BY_CUSTOMER_VALUE, type CustomerOrdersView } from '../../api/customers';
 
 // The customer detail Orders table, built on @mivend/ui-kit's MvAdvancedDataTable — the standard
-// table for the manager portal (AGENTS.md), desktop and mobile alike: MvAdvancedDataTable renders
+// table for the manager portal (see manager-table-standard), desktop and mobile alike: MvAdvancedDataTable renders
 // its own built-in mobile card view below its breakpoint (see MvAdvancedMobileCardList.vue),
 // driven by each column's `mobile` hint below, so this component no longer needs its own
 // isMobile branch. Row shaping (fulfillment/payment/placedBy labels) stays in

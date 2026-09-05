@@ -88,7 +88,7 @@ actually cannot tolerate the regulated-job cycle's latency.
 
 An event payload must never carry a sending instance's native (auto-increment) id as the way the
 receiving side finds the corresponding local row — that id is per-instance and meaningless on
-the other side (the same class of gotcha AGENTS.md documents for GraphQL input-arg ids). Every
+the other side (the same class of gotcha the backend-plugin-rules skill documents for GraphQL input-arg ids). Every
 synced entity type needs a stable, cross-instance-safe correlation key, resolved on write:
 
 | Entity                   | Correlation key                                          | Why                                                                                                                                                              |

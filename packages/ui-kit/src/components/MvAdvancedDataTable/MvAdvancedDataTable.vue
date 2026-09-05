@@ -23,7 +23,7 @@ import { useHorizontalScrollFade } from '../../composables/useHorizontalScrollFa
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import type { AdvancedDataTableColumn, AdvancedDataTableSearchConfig, AdvancedDataTableRowClickPayload } from './advancedDataTableTypes';
 
-// The standard desktop table for the manager portal (see AGENTS.md's manager-portal rules) —
+// The standard desktop table for the manager portal (see the manager-portal-rules skill) —
 // column toggle/reorder/resize, per-column typed filters, active filter chips, server pagination,
 // single-column sort, stable scroll height, horizontal scroll-fade. Deliberately knows nothing
 // about Vue Router, GraphQL, Vendure types, money formatting, view-chip business logic, data

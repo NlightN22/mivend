@@ -18,7 +18,7 @@ export interface UseLatestRequest<Args extends unknown[]> {
 //
 // This doesn't cancel the stale network request itself (this project's `adminApi` client has no
 // `AbortSignal` support to cancel through yet — that would be the more complete fix, see
-// AGENTS.md's manager-portal rules) — it only guarantees a stale response is never *applied*.
+// the manager-portal-rules skill) — it only guarantees a stale response is never *applied*.
 // `loading` reflects only the latest call, matching what `run`'s caller actually cares about.
 export function useLatestRequest<T, Args extends unknown[]>(
     fetcher: (...args: Args) => Promise<T>,

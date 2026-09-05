@@ -18,7 +18,7 @@ import { INVOICE_STATUS_OPTIONS, INVOICE_STATUS_BADGE_VARIANT, type InvoiceListI
 // MvAdvancedMobileCardList.vue) — CustomerInvoicesTab.vue no longer needs its own isMobile branch.
 //
 // The base/required column (`number`, "Invoice #") gets both a toolbar search box and its own
-// funnel filter, same as Orders' `code` column — per AGENTS.md's manager-portal rule, every
+// funnel filter, same as Orders' `code` column — per the manager-portal-rules skill, every
 // table's toolbar search defaults to the base column, backed by a real server-side filter
 // (`InvoiceListOptions.search`, a substring match against Invoice.number — this invoice's own
 // generated business number, distinct from the order's own `code`, see that column's own doc

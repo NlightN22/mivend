@@ -1,5 +1,5 @@
 // Slices/filters an in-memory dataset the same way the real server-side paginated resolvers do
-// (see AGENTS.md's Pagination section), so changing filters/search/pagination in a Storybook
+// (see the backend-plugin-rules skill's Pagination section), so changing filters/search/pagination in a Storybook
 // canvas actually changes what renders instead of always returning the same static page.
 export interface ListOptions {
     skip?: number;

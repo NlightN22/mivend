@@ -40,7 +40,7 @@ export const INVOICE_STATUS_OPTIONS = [
     { value: 'cancelled', label: 'Cancelled' },
 ] as const;
 
-// Single source of truth for the Invoice status badge color (AGENTS.md ui-kit "single source of
+// Single source of truth for the Invoice status badge color (the frontend-rules skill's ui-kit "single source of
 // truth" rule) — mirrors api/orders.ts's ORDER_STATE_BADGE_VARIANT. Real incident this fixes:
 // InvoicesTable.vue rendered every status badge with no variant at all (always the default
 // gray), found in the same table-consistency audit that flagged PaymentsTable.vue's identical bug.

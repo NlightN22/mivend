@@ -58,7 +58,8 @@ const CreditTermsUpdatedPayload = z.object({
 
 // Correlation keys are stable, cross-instance identifiers — never the sending instance's native
 // auto-increment ids, which are per-instance and meaningless on the other side (same class of
-// gotcha as Administrator.id, see AGENTS.md). Customer is correlated by emailAddress and
+// gotcha as Administrator.id, see the backend-plugin-rules skill). Customer is correlated by
+// emailAddress and
 // ProductVariant by sku — both already globally unique, ERP-sourced identifiers used as the
 // correlation key elsewhere in this codebase (CustomerHandler, PriceHandler) — no new field
 // needed for either. The order itself has no such natural key, so `sourceOrderId` (the

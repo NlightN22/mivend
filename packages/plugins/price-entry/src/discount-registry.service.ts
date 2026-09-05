@@ -51,8 +51,8 @@ export interface DiscountRuleForRegistry {
 // Dashboard already uses.
 export const EXPIRING_SOON_DAYS = 14;
 
-// The only file in the codebase allowed to touch DiscountRegistryEntry directly (see AGENTS.md
-// "Pagination" — read-model/projection tables). Every other file goes through these methods.
+// The only file in the codebase allowed to touch DiscountRegistryEntry directly (see the backend-plugin-rules skill's
+// "Pagination" section — read-model/projection tables). Every other file goes through these methods.
 @Injectable()
 export class DiscountRegistryService {
     constructor(private connection: TransactionalConnection) {}

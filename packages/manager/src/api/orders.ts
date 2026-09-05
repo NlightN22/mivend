@@ -69,7 +69,7 @@ export const ORDER_RESERVATION_STATE_BADGE_VARIANT: Record<string, StatusBadgeVa
 };
 
 // Order states are Vendure's own OrderProcess state machine — fixed by application logic, not
-// ERP-sourced business data, so a const list is the documented carve-out in AGENTS.md ("internal
+// ERP-sourced business data, so a const list is the documented carve-out in the backend-plugin-rules skill ("internal
 // technical states"), not a hardcoded business enum.
 export const ORDER_STATE_OPTIONS = [
     { value: '', label: 'All statuses' },
@@ -115,7 +115,7 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
     };
     if (filters.state) filter.state = { eq: filters.state };
     if (filters.reservationState) {
-        // Flat, not nested under `customFields` — see AGENTS.md's Vendure gotcha and
+        // Flat, not nested under `customFields` — see the backend-plugin-rules skill's Vendure gotcha and
         // api/customers.ts's identical fix (same bug, same root cause: `filter.customFields`
         // isn't a valid `OrderFilterParameter` shape, so this silently matched nothing).
         filter.reservationState = { eq: filters.reservationState };
@@ -320,7 +320,7 @@ export const ORDER_STATE_LABEL: Record<string, string> = {
 // Single source of truth for Commercial-state badge color — keyed by the raw Order.state
 // (not the label above), so relabeling ORDER_STATE_LABEL never silently breaks this map.
 // Any manager-portal component rendering a Commercial state badge must use this, not its own
-// ad hoc variant — see AGENTS.md's ui-kit "single source of truth" rule and the real incident
+// ad hoc variant — see the frontend-rules skill's ui-kit "single source of truth" rule and the real incident
 // this fixes: OrdersTable.vue/CustomerOrdersTab.vue were each rendering this badge with no
 // variant at all (always the default gray), and Fulfillment separately hardcoded 'info' for
 // every state regardless of value — neither read as intended, and the two tables didn't even

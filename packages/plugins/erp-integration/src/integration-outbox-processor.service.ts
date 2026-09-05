@@ -44,7 +44,7 @@ export class IntegrationOutboxProcessorService {
             entry.retryCount += 1;
             entry.lastError = err instanceof Error ? err.message : String(err);
             entry.lastErrorAt = new Date();
-            // Dead-letter after the bounded attempt count is exhausted (AGENTS.md rules #4/#12) —
+            // Dead-letter after the bounded attempt count is exhausted (the external-integration-rules skill's no-silent-drops/async-inbox rules) —
             // a 'failed' row is terminal and is never picked up by processPendingBatch again
             // (its `where: { status: 'pending' }` excludes it). Below the limit, the row simply
             // stays 'pending' and the next sweep resumes it automatically — no bespoke recovery

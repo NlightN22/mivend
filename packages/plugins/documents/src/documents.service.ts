@@ -22,7 +22,7 @@ export interface DocumentListOptions {
     skip?: number;
     type?: string;
     // Exact-match multi-select, unlike `type` (ILike substring) — populated from real distinct
-    // values returned by findVisibleTypes, never a hardcoded list (AGENTS.md "Business data must
+    // values returned by findVisibleTypes, never a hardcoded list (the backend-plugin-rules skill's "Business data must
     // live in the database"), so an exact match is correct here: the manager portal's Type
     // column filter is a checklist of real values, not a free-text search box. If both `type`
     // and `types` are given, `types` wins (see findVisible).
@@ -97,7 +97,7 @@ export class DocumentsService {
                     counterpartyId: In(counterpartyIds),
                     ...(orderId !== undefined ? { orderId: String(orderId) } : {}),
                     // ILike, not an exact equals — `type` is free-text ERP business data with no
-                    // fixed value set (see DocumentListOptions' doc comment / AGENTS.md "Business
+                    // fixed value set (see DocumentListOptions' doc comment / the backend-plugin-rules skill's "Business
                     // data must live in the database"), rendered in the manager portal as a text
                     // filter box. An exact-match filter behind a text box that looks like search
                     // is a real UX mismatch (typing "inv" would silently match nothing even
@@ -120,7 +120,7 @@ export class DocumentsService {
     }
 
     // Real, bounded server-side aggregate (a small DISTINCT over an already-scoped set of rows,
-    // never "fetch everything and dedupe in JS" — AGENTS.md pagination rule) that backs the
+    // never "fetch everything and dedupe in JS" — the backend-plugin-rules skill's pagination rule) that backs the
     // manager portal's Type column checklist filter. Reusing CounterpartyService.findVisible()
     // scoping mirrors findVisible above — same reasoning, don't re-derive visibility here.
     async findVisibleTypes(ctx: RequestContext, counterpartyId?: ID): Promise<string[]> {

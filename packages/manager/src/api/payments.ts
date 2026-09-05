@@ -51,7 +51,7 @@ export const PAYMENT_STATUS_OPTIONS = [
     { value: 'chargeback', label: 'Chargeback' },
 ] as const;
 
-// Single source of truth for the PaymentAttempt status badge color (AGENTS.md ui-kit "single
+// Single source of truth for the PaymentAttempt status badge color (the frontend-rules skill's ui-kit "single
 // source of truth" rule) — mirrors api/orders.ts's ORDER_STATE_BADGE_VARIANT. Real incident this
 // fixes: PaymentsTable.vue rendered every status badge with no variant at all (always the
 // default gray), found in the same table-consistency audit that flagged InvoicesTable.vue's

@@ -1,7 +1,7 @@
 import { useRoute, useRouter } from 'vue-router';
 import type { Ref } from 'vue';
 
-// First implementation of AGENTS.md's Manager portal rule ("every page with search/filter/
+// First implementation of the manager-portal-rules skill's rule ("every page with search/filter/
 // sort/pagination controls must sync that state to the URL, bidirectionally") — reusable for
 // future page retrofits (see the rule's tracked rollout issue) rather than each page
 // reinventing query-string serialization. Deliberately generic: a flat Record<string, string>

@@ -11,7 +11,7 @@ import type { SyncEventByType } from 'shared';
 //
 // Correlation key: `Administrator.customFields.sourceAdministratorId` — NOT the native
 // auto-increment `Administrator.id`, which is per-instance and meaningless across databases
-// (see AGENTS.md's ID-coercion gotcha). Looked up via raw SQL against the flattened customFields
+// (see the backend-plugin-rules skill's ID-coercion gotcha). Looked up via raw SQL against the flattened customFields
 // column, matching this codebase's established convention (see TradingPointService) rather than
 // TypeORM's embedded-object `where` syntax, which has no precedent here.
 @Injectable()

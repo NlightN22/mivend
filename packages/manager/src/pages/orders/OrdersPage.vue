@@ -141,7 +141,7 @@ function chipFromFilters(f: OrdersFilters): string {
     return 'all';
 }
 
-// Manager portal rule (AGENTS.md): every filtered/sorted/paginated view must be a shareable
+// Manager portal rule (see the manager-portal-rules skill): every filtered/sorted/paginated view must be a shareable
 // URL. useUrlSyncedState reads on mount (below, before the watchers are set up) and writes back
 // on every filter/page change via router.replace.
 const { fromQuery, toQuery } = useUrlSyncedState(DEFAULT_FILTERS);

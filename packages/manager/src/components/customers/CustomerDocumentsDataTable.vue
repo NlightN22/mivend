@@ -21,7 +21,8 @@ import {
 // identifying/required column, backed by a real toolbar search + funnel filter
 // (DocumentListOptions.search, ILIKE against the document's own number — see
 // DocumentsService.findVisible's doc comment). `type` is real ERP business data with no fixed
-// value set (AGENTS.md "Business data must live in the database" — never a hardcoded dropdown),
+// value set (the backend-plugin-rules skill's "Business data must live in the database" — never a
+// hardcoded dropdown),
 // but its checklist filter is populated from real distinct values fetched from the backend
 // (`typeOptions` prop, see CustomerDocumentsTab.vue's fetchDocumentTypes) — the exact same
 // `type: 'status'` filterConfig/MvColumnFilterStatus widget the Status column below already

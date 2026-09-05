@@ -116,8 +116,8 @@ export class DiscountGrantService {
 
         // Vendure's ID scalar coerces GraphQL `[ID!]` input to the entity id strategy's native
         // type (a number, under the default auto-increment strategy) — stringified explicitly
-        // so it always matches what `counterparties()` returns (real string ids). See AGENTS.md
-        // "Vendure-specific gotchas".
+        // so it always matches what `counterparties()` returns (real string ids). See the backend-plugin-rules skill's
+        // Vendure-specific gotchas.
         const counterpartyIds = input.counterpartyIds?.map(String) ?? null;
 
         const payload: DiscountGrantPayload = {
@@ -215,7 +215,7 @@ export class DiscountGrantService {
     // counterparty id. Without this filter, the tab previously showed every DiscountRule
     // matching the customer's price type, including grants scoped to a *different* customer.
     //
-    // Real, server-side paginated + filtered (AGENTS.md "Pagination" rule) — this list is NOT
+    // Real, server-side paginated + filtered (the backend-plugin-rules skill's "Pagination" rule) — this list is NOT
     // genuinely bounded despite an earlier comment here claiming otherwise: nothing ever removes
     // an expired grant, so it accumulates over the customer's whole lifetime the same way orders/
     // invoices/payments do, one row per approved renewal. `search`/`status` mirror

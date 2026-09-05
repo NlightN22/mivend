@@ -10,8 +10,8 @@ export class ErpPaymentReportedEvent extends VendureEvent {
         public readonly ctx: RequestContext,
         public readonly invoiceId: number,
         // The organization the reporting side (1C) believes this payment belongs to — validated
-        // against the target Invoice's real organizationId before applying (AGENTS.md sync rule
-        // #13). Payment allocation is scoped by organization only; branch is a visibility
+        // against the target Invoice's real organizationId before applying (the external-integration-rules
+        // skill's external-reference-id rule). Payment allocation is scoped by organization only; branch is a visibility
         // concern, never an allocation boundary — see docs/payments.md "Organizations".
         public readonly organizationId: number,
         public readonly outcome: ErpPaymentOutcome,

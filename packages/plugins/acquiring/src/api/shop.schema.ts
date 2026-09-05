@@ -54,7 +54,7 @@ export const shopApiExtensions: DocumentNode = gql`
     # Named "PaymentAttempt", not "Payment" — @vendure/core already registers its own "Payment"
     # GraphQL type (tied to Order), and two types sharing a name crashes schema build with
     # "Field already exists in the schema" (same collision class as PaymentRefund/Refund, see
-    # AGENTS.md's Vendure gotchas).
+    # the backend-plugin-rules skill's Vendure gotchas).
     type PaymentAttempt {
         id: ID!
         invoiceId: ID

@@ -16,8 +16,8 @@ import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 // This lets a user recognize "this chip = that badge color" before ever clicking anything, and
 // matches an already-selected chip to its badge at a glance instead of requiring them to read the
 // label. Real incident this fixes: CustomerOrdersTab.vue/CustomerInvoicesTab.vue each had their
-// own bespoke `__view-chip` button + scoped CSS (itself an AGENTS.md "Never style a UI element
-// inside a page component" violation) that was plain white/gray at rest and only ever went green
+// own bespoke `__view-chip` button + scoped CSS (itself a "never style a UI element inside a page component" violation of the
+// frontend-rules skill) that was plain white/gray at rest and only ever went green
 // on selection regardless of what the chip meant, so nothing about a chip's own color hinted at
 // its meaning, and "Unpaid" vs. "Cancelled" only differed by their text. Omit `variant` (or leave
 // it undefined) for a chip with no corresponding status color (e.g. "All") — it keeps the
@@ -61,8 +61,8 @@ const emit = defineEmits<{ select: [key: string] }>();
        the #view-chips slot). A one-sided margin-bottom baked in here shifted the flex item's
        margin box, which pushed its *content* visibly upward relative to sibling toolbar items
        under align-items:center — a real regression caught after MvFilterChips started being
-       used inline. Layout/spacing between blocks belongs at the page/feature level per AGENTS.md
-       ui-kit rules — add it at the call site instead of here. */
+       used inline. Layout/spacing between blocks belongs at the page/feature level per the
+       frontend-rules skill's ui-kit rules — add it at the call site instead of here. */
 }
 
 .mv-filter-chip {

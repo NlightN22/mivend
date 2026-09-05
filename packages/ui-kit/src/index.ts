@@ -128,7 +128,7 @@ export { default as MvScrollFadeOverlay } from './components/MvScrollFadeOverlay
 
 export { default as MvDatePicker } from './components/MvDatePicker/MvDatePicker.vue';
 
-// Typed column-filter system (AGENTS.md manager-portal rules) — every filterable data-table
+// Typed column-filter system (see the manager-portal-rules skill) — every filterable data-table
 // column declares one of these types explicitly; the table resolves the matching component via
 // COLUMN_FILTER_REGISTRY instead of building its own popover/input/select per column.
 export * from './components/MvColumnFilter/columnFilterTypes';
@@ -158,7 +158,7 @@ export {
 export { default as MvActiveFilterChips } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
 export type { ActiveFilterChip } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
 
-// The standard desktop table for the manager portal (AGENTS.md) — see
+// The standard desktop table for the manager portal (see the manager-portal-rules skill) — see
 // MvAdvancedDataTable.vue's own doc comment for the full feature set and component boundary.
 export { default as MvAdvancedDataTable } from './components/MvAdvancedDataTable/MvAdvancedDataTable.vue';
 export type {
