@@ -18,7 +18,10 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         rawConnection: { query: ReturnType<typeof vi.fn> };
     };
     let reservationService: { setOrderReservationState: ReturnType<typeof vi.fn> };
-    let reconciliationIssueService: { report: ReturnType<typeof vi.fn> };
+    let reconciliationIssueService: {
+        reportQuantityMismatch: ReturnType<typeof vi.fn>;
+        reportUnresolvedProductMapping: ReturnType<typeof vi.fn>;
+    };
     let service: ReservationWriteOffSyncService;
     const ctx = {} as unknown as RequestContext;
 
@@ -37,7 +40,10 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rawConnection: { query: rawQuery },
         };
         reservationService = { setOrderReservationState: vi.fn(async () => undefined) };
-        reconciliationIssueService = { report: vi.fn(async () => undefined) };
+        reconciliationIssueService = {
+            reportQuantityMismatch: vi.fn(async () => undefined),
+            reportUnresolvedProductMapping: vi.fn(async () => undefined),
+        };
         service = new ReservationWriteOffSyncService(
             connection as unknown as TransactionalConnection,
             reservationService as unknown as ReservationService,
@@ -50,18 +56,25 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             orderEntityId: null,
             rejected: true,
             reservedLines: [],
+            unresolvedProductIds: [],
         });
         expect(rawQuery).not.toHaveBeenCalled();
         expect(reservationRepo.find).not.toHaveBeenCalled();
     });
 
-    it('is a no-op when no Order is found for orderEntityId', async () => {
+    // mivend.audit.72's LOW finding: previously this silently swallowed a plausible race (the
+    // event arriving before Order.customFields.erpOrderId is set) with no retry — now it must
+    // throw so the inbox's own retry/dead-letter path (not a silent, permanent skip) handles it.
+    it('throws when no Order is found for orderEntityId, instead of silently skipping', async () => {
         rawQuery.mockResolvedValue([]);
-        await service.handleOrderRegistrationResult(ctx, {
-            orderEntityId: 'erp-order-1',
-            rejected: false,
-            reservedLines: [],
-        });
+        await expect(
+            service.handleOrderRegistrationResult(ctx, {
+                orderEntityId: 'erp-order-1',
+                rejected: false,
+                reservedLines: [],
+                unresolvedProductIds: [],
+            }),
+        ).rejects.toThrow(/no Order found/);
         expect(reservationRepo.find).not.toHaveBeenCalled();
     });
 
@@ -70,9 +83,43 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             orderEntityId: 'erp-order-1',
             rejected: true,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
+            unresolvedProductIds: [],
         });
         expect(reservationRepo.find).not.toHaveBeenCalled();
         expect(reservationRepo.save).not.toHaveBeenCalled();
+    });
+
+    // mivend.audit.72's HIGH finding: an unresolvable productId must be reported as its own
+    // discrepancy, never treated as "not confirmed yet" (which would silently block release
+    // forever with no escalation).
+    it('reports an unresolved product mapping as its own discrepancy, distinct from a mismatch', async () => {
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: ['unknown-prod-1'],
+        });
+
+        expect(reconciliationIssueService.reportUnresolvedProductMapping).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                orderId: 'order-1',
+                externalProductId: 'unknown-prod-1',
+                orderEntityId: 'erp-order-1',
+            }),
+        );
+        expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
+    });
+
+    it('reports an unresolved product mapping even on a rejected result', async () => {
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: true,
+            reservedLines: [],
+            unresolvedProductIds: ['unknown-prod-1'],
+        });
+
+        expect(reconciliationIssueService.reportUnresolvedProductMapping).toHaveBeenCalledTimes(1);
     });
 
     it('releases a reservation whose quantity matches the confirmed erp quantity, without an event', async () => {
@@ -91,6 +138,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             orderEntityId: 'erp-order-1',
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
+            unresolvedProductIds: [],
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -99,7 +147,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         expect(saved[0]).toEqual(
             expect.objectContaining({ status: 'released', releasedAt: expect.any(Date) }),
         );
-        expect(reconciliationIssueService.report).not.toHaveBeenCalled();
+        expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
         expect(reservationService.setOrderReservationState).toHaveBeenCalledWith(
             ctx,
             { id: 'order-1' },
@@ -122,10 +170,11 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             orderEntityId: 'erp-order-1',
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 3 }],
+            unresolvedProductIds: [],
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
-        expect(reconciliationIssueService.report).toHaveBeenCalledWith(
+        expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({
                 orderId: 'order-1',
@@ -153,10 +202,11 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             orderEntityId: 'erp-order-1',
             rejected: false,
             reservedLines: [],
+            unresolvedProductIds: [],
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
-        expect(reconciliationIssueService.report).not.toHaveBeenCalled();
+        expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
     });
 
     it('aggregates two reservations for the same variant against one confirmed quantity', async () => {
@@ -182,6 +232,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             orderEntityId: 'erp-order-1',
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
+            unresolvedProductIds: [],
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -204,6 +255,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             orderEntityId: 'erp-order-1',
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
+            unresolvedProductIds: [],
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -217,9 +269,10 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             orderEntityId: 'erp-order-1',
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
+            unresolvedProductIds: [],
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
-        expect(reconciliationIssueService.report).not.toHaveBeenCalled();
+        expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
     });
 });

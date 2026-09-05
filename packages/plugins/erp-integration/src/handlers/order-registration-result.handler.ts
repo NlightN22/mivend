@@ -34,6 +34,11 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
 
         const rawLines = Array.isArray(payload.reservedLines) ? payload.reservedLines : [];
         const reservedLines: Array<{ productVariantId: string; reservedQuantity: number }> = [];
+        // mivend.audit.72's HIGH finding: a productId that never resolves to a ProductVariant
+        // (stale/missing externalId mapping) must be reported, not just dropped — otherwise it's
+        // indistinguishable downstream from "1C hasn't confirmed this line yet" and silently
+        // blocks release forever.
+        const unresolvedProductIds: string[] = [];
         for (const rawLine of rawLines) {
             const line = rawLine as Record<string, unknown>;
             const productId = line.productId != null ? String(line.productId) : '';
@@ -52,6 +57,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
                     `order-registration-result ${entityId}: variant not found for productId=${productId}`,
                     loggerCtx,
                 );
+                unresolvedProductIds.push(productId);
                 continue;
             }
             reservedLines.push({
@@ -64,6 +70,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
             orderEntityId,
             rejected,
             reservedLines,
+            unresolvedProductIds,
         });
     }
 

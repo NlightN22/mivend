@@ -14,6 +14,10 @@ export interface OrderRegistrationResultInput {
     // (erp-integration's OrderRegistrationResultHandler) — this service stays free of the
     // Kafka/protobuf decode concern, same split as ReservationErpSyncService.
     reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>;
+    // 1C productIds from reservedLines that the caller could NOT resolve to a ProductVariant at
+    // all — reported as a distinct ReservationReconciliationIssue (mivend.audit.72's HIGH
+    // finding), never silently folded into "not confirmed in this result yet."
+    unresolvedProductIds: string[];
 }
 
 // Bridges company.orders.events.v1.order-registration-result into the local reservation domain
@@ -48,11 +52,33 @@ export class ReservationWriteOffSyncService {
 
         const orderId = await this.findOrderIdByErpId(input.orderEntityId);
         if (!orderId) {
-            Logger.warn(
-                `order-registration-result: no Order found for orderEntityId=${input.orderEntityId}, skipping`,
+            // mivend.audit.72's LOW finding: never a silent, permanent skip — this order-
+            // registration-result event is a one-shot fact (unlike the catalog streams, it never
+            // arrives again at a higher version for the same entityId), so if Order.customFields
+            // .erpOrderId simply hasn't been set yet (a plausible race between this Kafka event
+            // and the order-status REST callback that sets it), swallowing it here would lose the
+            // release trigger for this order forever. Throwing lets the existing inbox
+            // retry/backoff (IntegrationInboxService.markFailed) retry on the next sweep, and
+            // dead-letter (visible, not silent) only once genuinely exhausted.
+            throw new Error(
+                `order-registration-result: no Order found for orderEntityId=${input.orderEntityId}`,
+            );
+        }
+
+        if (input.unresolvedProductIds.length > 0) {
+            for (const externalProductId of input.unresolvedProductIds) {
+                await this.reconciliationIssueService.reportUnresolvedProductMapping(ctx, {
+                    orderId,
+                    externalProductId,
+                    orderEntityId: input.orderEntityId,
+                });
+            }
+            Logger.error(
+                `order-registration-result: order ${orderId} (erp ${input.orderEntityId}) — ` +
+                    `${input.unresolvedProductIds.length} productId(s) could not be resolved to a ` +
+                    'ProductVariant, reported for staff follow-up',
                 loggerCtx,
             );
-            return;
         }
 
         if (input.rejected) {
@@ -102,7 +128,7 @@ export class ReservationWriteOffSyncService {
             if (erpQuantity === localQuantity) {
                 toRelease.push(...active.filter(r => r.productVariantId === variantId));
             } else {
-                await this.reconciliationIssueService.report(ctx, {
+                await this.reconciliationIssueService.reportQuantityMismatch(ctx, {
                     orderId,
                     productVariantId: variantId,
                     localQuantity,

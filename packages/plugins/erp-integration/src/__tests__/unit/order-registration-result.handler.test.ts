@@ -56,6 +56,7 @@ describe('OrderRegistrationResultHandler', () => {
             orderEntityId: 'erp-order-1',
             rejected: true,
             reservedLines: [],
+            unresolvedProductIds: [],
         });
     });
 
@@ -75,10 +76,13 @@ describe('OrderRegistrationResultHandler', () => {
             orderEntityId: 'erp-order-1',
             rejected: false,
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 3 }],
+            unresolvedProductIds: [],
         });
     });
 
-    it('drops a line whose productId does not resolve to a known variant', async () => {
+    // mivend.audit.72's HIGH finding: this used to silently drop the line with no trace at all —
+    // now the unresolved productId must be surfaced to the sync service, not just discarded.
+    it('reports (does not drop silently) a line whose productId does not resolve to a known variant', async () => {
         const syncService = { handleOrderRegistrationResult: vi.fn() };
         const handler = new OrderRegistrationResultHandler(
             createConnection([undefined]) as never,
@@ -94,10 +98,11 @@ describe('OrderRegistrationResultHandler', () => {
             orderEntityId: 'erp-order-1',
             rejected: false,
             reservedLines: [],
+            unresolvedProductIds: ['unknown-prod'],
         });
     });
 
-    it('drops a line with a missing productId/reservedQuantity', async () => {
+    it('drops (and does not report) a line with a missing productId/reservedQuantity', async () => {
         const syncService = { handleOrderRegistrationResult: vi.fn() };
         const handler = new OrderRegistrationResultHandler(
             createConnection([]) as never,
@@ -113,6 +118,7 @@ describe('OrderRegistrationResultHandler', () => {
             orderEntityId: 'erp-order-1',
             rejected: false,
             reservedLines: [],
+            unresolvedProductIds: [],
         });
     });
 
@@ -131,6 +137,7 @@ describe('OrderRegistrationResultHandler', () => {
             orderEntityId: null,
             rejected: true,
             reservedLines: [],
+            unresolvedProductIds: [],
         });
     });
 });
