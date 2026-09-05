@@ -7,9 +7,14 @@ description: Mandatory rules for hub↔branch synchronization inside mivend itse
 
 This covers sync **between mivend's own instances** — central hub and branch, over RabbitMQ
 (`plugin-sync`). For the external boundary with Integration Service/Kafka or any other outside
-system instead, see the `external-integration-rules` skill. For messaging invariants that apply
-to both (outbox pattern, idempotent consumers, ack-after-commit, no silent drops), see
-AGENTS.md's "Sync rules index" (rules #1-4) — non-negotiable here too, not repeated in full below.
+system instead, see the `external-integration-rules` skill.
+
+**Messaging invariants — non-negotiable, apply here and to the external boundary alike:**
+outbox pattern is mandatory (write to an outbox table in the same DB transaction as the business
+data, never send directly); every consumer must be idempotent (unique index on `eventId`, not
+just an application-level check); ack only after the local DB transaction commits, never before;
+no silent drops (log, retry with backoff, dead-letter after bounded attempts — a `try/catch` that
+swallows a sync error is forbidden).
 
 Full design: `docs/architecture.md`, `docs/sync.md`.
 

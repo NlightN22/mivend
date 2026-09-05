@@ -8,9 +8,14 @@ description: Mandatory rules for anything touching an external system — Integr
 This covers the boundary between mivend and anything **outside** mivend's own hub↔branch
 topology: Integration Service (1C via Kafka), a payment provider, a fiscal registrar/operator,
 or any future external API/webhook. For the hub↔branch RabbitMQ boundary instead, see the
-`internal-sync-rules` skill. For messaging invariants that apply to both (outbox pattern,
-idempotent consumers, ack-after-commit, no silent drops), see AGENTS.md's "Sync rules index"
-(rules #1-4) — those are non-negotiable here too, not repeated in full below.
+`internal-sync-rules` skill.
+
+**Messaging invariants — non-negotiable, apply here and to the internal RabbitMQ boundary
+alike:** outbox pattern is mandatory (write to an outbox table in the same DB transaction as the
+business data, never send directly); every consumer must be idempotent (unique index on
+`eventId`, not just an application-level check); ack only after the local DB transaction
+commits, never before; no silent drops (log, retry with backoff, dead-letter after bounded
+attempts — a `try/catch` that swallows a sync/integration error is forbidden).
 
 Full design: `docs/sync.md`, `docs/payments.md`, `docs/ai/1c-integration-service-decision.md`,
 `docs/environments.md` (local/staging-integration/production contour separation — **never let
