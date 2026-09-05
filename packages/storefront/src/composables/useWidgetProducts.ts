@@ -17,12 +17,14 @@ export type WidgetMode = 'new-arrivals' | 'sales' | 'popular';
 // which now always resolves a real price — the customer's own, or the branch default-price-type
 // fallback — never null except a genuinely unconfigured/pre-bootstrap system), so overwrite
 // `price` with that here instead of trusting the raw field.
-function withResolvedPrice(items: ProductItem[]): ProductItem[] {
+export function withResolvedPrice(items: ProductItem[]): ProductItem[] {
     return items.map(item => ({
         ...item,
         variants: item.variants.map(variant => ({
             ...variant,
-            price: variant.customerPrice ?? 0,
+            // undefined, not 0, when unresolved (audit finding, mivend.audit.70) — same fix as
+            // useProductList.ts, see its ProductVariant.price comment.
+            price: variant.customerPrice ?? undefined,
         })),
     }));
 }

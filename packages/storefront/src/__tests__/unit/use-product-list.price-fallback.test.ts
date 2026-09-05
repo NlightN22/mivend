@@ -116,4 +116,35 @@ describe('useProductList mapItems — issue #70 raw price fallback', () => {
         expect(items.value[0].variants[0].price).toBe(0);
         expect(items.value[0].variants[0].price).not.toBe(9999);
     });
+
+    // Audit finding, mivend.audit.70: `?? 0` made an unresolved (null) customerPrice display as
+    // 0, indistinguishable from a genuinely free product — must surface as undefined instead, so
+    // downstream UI can render "no price" rather than "free".
+    it('maps a null (unresolved) customerPrice to undefined, never 0', async () => {
+        const { useProductList } = await import('../../composables/useProductList');
+        const filters = ref({ facetValueIds: [], inStock: false, priceMin: null, priceMax: null });
+        const { load, items } = useProductList({ pageSize: 24, filters });
+
+        shopApiMock.mockImplementation((query: string) =>
+            isFacetsQuery(query)
+                ? Promise.resolve({ search: { facetValues: [] } })
+                : Promise.resolve({
+                      search: {
+                          totalItems: 1,
+                          items: [
+                              makeSearchItem('SKU-C', {
+                                  priceWithTaxValue: 9999,
+                                  customerPrice: null,
+                              }),
+                          ],
+                          facetValues: [],
+                      },
+                  }),
+        );
+
+        await load();
+
+        expect(items.value[0].variants[0].price).toBeUndefined();
+        expect(items.value[0].variants[0].price).not.toBe(0);
+    });
 });

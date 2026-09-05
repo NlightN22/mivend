@@ -30,7 +30,10 @@ export interface DiscountTierVM {
 interface ProductVariant {
     id: string;
     sku: string;
-    price: number;
+    // undefined, not 0, when unresolved (audit finding, mivend.audit.70: `?? 0` made an
+    // unresolved price look identical to a genuinely free product) — real "no price" state
+    // should only ever be a pre-bootstrap/misconfigured system per docs/pricing.md's #70 fallback.
+    price: number | undefined;
     customerPrice: number | null;
     compareAtPrice: number | null;
     discountTiers: DiscountTierVM[];
@@ -83,7 +86,7 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
                 // The resolver always returns a real price now: the customer's own, or the
                 // branch default-price-type fallback (see docs/pricing.md, issue #70) — so
                 // `customerPrice` is the only field this should ever read.
-                price: item.customerPrice ?? 0,
+                price: item.customerPrice ?? undefined,
                 customerPrice: item.customerPrice ?? null,
                 compareAtPrice: item.compareAtPrice ?? null,
                 discountTiers: item.discountTiers.map(tier => ({

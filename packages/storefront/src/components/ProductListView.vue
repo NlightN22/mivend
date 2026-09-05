@@ -67,7 +67,7 @@ function buildFavoriteItem(p: ProductItem): FavoriteItem {
         name: p.name,
         sku: variant?.sku ?? '',
         brand: getBrand(p),
-        price: variant ? variant.price / 100 : undefined,
+        price: variant && variant.price != null ? variant.price / 100 : undefined,
         currency: variant?.currencyCode ?? 'RUB',
         stockVariant: variant ? stockVariantFor(variant.stockLevel ?? '') : undefined,
         addedAt: 0,
@@ -129,7 +129,7 @@ function handleToggleFavorite(p: ProductItem): void {
                     :name="p.name"
                     :sku="p.variants[0]?.sku ?? ''"
                     :brand="getBrand(p)"
-                    :price="p.variants[0] ? p.variants[0].price / 100 : undefined"
+                    :price="p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined"
                     :customer-price="p.variants[0]?.customerPrice != null ? p.variants[0].customerPrice / 100 : undefined"
                     :old-price="p.variants[0]?.compareAtPrice != null ? p.variants[0].compareAtPrice / 100 : undefined"
                     :discount-tiers="p.variants[0]?.discountTiers"
@@ -157,7 +157,7 @@ function handleToggleFavorite(p: ProductItem): void {
                     :name="p.name"
                     :sku="p.variants[0]?.sku ?? ''"
                     :brand="getBrand(p)"
-                    :price="p.variants[0] ? p.variants[0].price / 100 : undefined"
+                    :price="p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined"
                     :customer-price="p.variants[0]?.customerPrice != null ? p.variants[0].customerPrice / 100 : undefined"
                     :compare-at-price="p.variants[0]?.compareAtPrice != null ? p.variants[0].compareAtPrice / 100 : undefined"
                     :discount-tiers="p.variants[0]?.discountTiers"
