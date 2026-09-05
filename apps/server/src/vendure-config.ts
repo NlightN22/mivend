@@ -31,10 +31,9 @@ const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'bra
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
 const integrationKafkaEnabled = process.env.INTEGRATION_KAFKA_ENABLED === 'true';
 // Issue #68 contour model: the legacy direct-REST ERP intake and the real Kafka/Integration
-// Service path are mutually exclusive per contour, same reasoning as integrationKafkaEnabled
-// above — local/branch (still ERP_IMPORT_TOKEN-driven synthetic seed data) default to enabled;
-// staging-integration/production must explicitly opt out so `/erp/import/batch` can't be used to
-// inject data into a contour whose whole point is "real Kafka data only, DB otherwise empty".
+// Service path are mutually exclusive per contour — set explicitly per env file (true for
+// local/branch dev, false for staging-integration/production), same shape as
+// INTEGRATION_KAFKA_ENABLED above.
 const erpImportEnabled = process.env.ERP_IMPORT_ENABLED !== 'false';
 
 // Issue #68 follow-up: a bare `?? 'mivend-central-hub-local'` fallback would silently apply the
