@@ -6,12 +6,10 @@ import {
     Order,
     RequestContext,
     StockLevel,
-    StockLevelService,
     StockLocation,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { In } from 'typeorm';
 
 import { Reservation } from './entities/reservation.entity';
 import { ReservationConfirmedEvent, ReservationReleasedEvent } from './reservation.events';
@@ -31,7 +29,6 @@ export class ReservationService {
     constructor(
         private connection: TransactionalConnection,
         private eventBus: EventBus,
-        private stockLevelService: StockLevelService,
     ) {}
 
     // Thin wrapper over reserveOrder() for the manual-confirm mutation (see docs/order-flow.md
@@ -73,13 +70,8 @@ export class ReservationService {
             return await this.connection.withTransaction(ctx, async txCtx => {
                 const reservationRepo = this.connection.getRepository(txCtx, Reservation);
 
-                // 'allocated' counts as "already reserved" too (mivend.audit.72 follow-up) — once
-                // 1C confirms a reservation it's converted into stockAllocated and moved out of
-                // 'active' (see ReservationErpSyncService), so checking 'active' alone would let
-                // a second reserveOrder() call for the same order create a duplicate reservation
-                // on top of an already-confirmed one.
                 const existingActive = await reservationRepo.find({
-                    where: { orderId: String(orderId), status: In(['active', 'allocated']) },
+                    where: { orderId: String(orderId), status: 'active' },
                 });
                 if (existingActive.length > 0) {
                     return existingActive;
@@ -206,27 +198,13 @@ export class ReservationService {
 
     async releaseReservations(ctx: RequestContext, orderId: ID): Promise<number> {
         const repo = this.connection.getRepository(ctx, Reservation);
-        const active = await repo.find({
-            where: { orderId: String(orderId), status: In(['active', 'allocated']) },
-        });
+        const active = await repo.find({ where: { orderId: String(orderId), status: 'active' } });
         if (active.length === 0) {
             return 0;
         }
 
         const releasedAt = new Date();
         for (const reservation of active) {
-            // An 'allocated' row already moved its quantity into stockAllocated at confirmation
-            // time (ReservationErpSyncService) — releasing it here (a cancellation arriving after
-            // confirmation but before shipment) must give that quantity back, or it would stay
-            // permanently allocated with no reservation row left to account for it.
-            if (reservation.status === 'allocated') {
-                await this.stockLevelService.updateStockAllocatedForLocation(
-                    ctx,
-                    reservation.productVariantId,
-                    reservation.stockLocationId,
-                    -reservation.quantity,
-                );
-            }
             reservation.status = 'released';
             reservation.releasedAt = releasedAt;
             reservation.erpReleaseOperationId = randomUUID();

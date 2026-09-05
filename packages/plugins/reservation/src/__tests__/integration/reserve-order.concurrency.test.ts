@@ -147,9 +147,7 @@ beforeAll(async () => {
 
     const eventBus = { publish: () => undefined } as unknown as EventBus;
 
-    service = new ReservationService(connectionShim, eventBus, {
-        updateStockAllocatedForLocation: async () => undefined,
-    } as never);
+    service = new ReservationService(connectionShim, eventBus);
 });
 
 afterAll(async () => {

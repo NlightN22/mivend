@@ -4,30 +4,30 @@ import { Column, Entity, Index } from 'typeorm';
 
 import type { ReservationCreationMethod } from '../types';
 
-// 'allocated': 1C confirmed this reservation (RESERVED/CONFIRMED) and its quantity was moved
-// into Vendure's own native StockLevel.stockAllocated (see ReservationErpSyncService) — the
-// industry-standard "soft reservation -> hard allocation" transition, done at confirmation time
-// rather than at physical shipment. No longer counted as an "active reservation" in the ATP
-// formula (ReservationAvailabilityService only sums 'active' rows) since it's now inside
-// stockAllocated instead — never both, to avoid double-subtracting the same held unit.
-export type ReservationStatus = 'active' | 'allocated' | 'released' | 'expired';
+export type ReservationStatus = 'active' | 'released' | 'expired';
 
 // One row per order line — created by ReservationService.reserveOrder() (manual confirm today,
-// auto-prepaid/auto-trust-rule later — see docs/order-flow.md). Starts as a soft reservation
-// (reduces ATP via stockOnHand - stockAllocated - active reservations, never touching
-// stockOnHand/stockAllocated itself); once 1C confirms it, ReservationErpSyncService converts it
-// into Vendure's native stockAllocated and moves this row to 'allocated' (see ReservationStatus's
-// own doc comment) — from that point on, stockAllocated (not this row) is what protects the
-// held quantity, until 1C reports the goods actually shipped (which decrements stockAllocated
-// back down and finally releases this row) or the order is cancelled first.
+// auto-prepaid/auto-trust-rule later — see docs/order-flow.md). Soft reservation only: reduces
+// ATP (stockOnHand - stockAllocated - active reservations) for other orders/catalog, never
+// touches stockOnHand/stockAllocated itself.
+//
+// Released as soon as 1C confirms it (RESERVED/CONFIRMED — see ReservationErpSyncService), not
+// held until physical shipment. Earlier revision of this comment described an intermediate
+// "allocated" status bridging confirmation to shipment through Vendure's native
+// StockLevel.stockAllocated, mirroring the industry-standard "soft reservation -> hard
+// allocation" pattern — reverted (2026-09-05): 1C writes off physical stock as a direct,
+// same-transaction consequence of posting/confirming the order, not at a later shipment step, so
+// holding the quantity locally all the way to SHIPPED/DELIVERED would have meant needlessly
+// blocking sales of stock 1C had already committed elsewhere, for however long its own
+// assembly/shipping logistics chain takes (real business priority: never over-restrict what can
+// be sold). Releasing at confirmation trusts that 1C's own StockChanged will catch up shortly;
+// the short window until it does is the same accepted residual risk #73's nightly reconciliation
+// worker exists to catch, not something this row can close on its own. SHIPPED/DELIVERED also
+// trigger the same release, as an idempotent fallback in case a CONFIRMED callback was missed.
 //
 // At most one active reservation per (orderLineId, stockLocationId) — enforced by the partial
 // unique index below, the DB-level safety net docs/order-flow.md's "Idempotency" section calls
-// for (same idiom as plugin-sync's sync_outbox unique-eventId index). Deliberately still scoped
-// to status='active' only, not 'allocated' too — widening it would need a real migration in a
-// synchronize:false production DB (no migration tooling exists in this repo yet); the
-// application-level idempotency guard in ReservationService.reserveOrder (checks for an existing
-// active OR allocated row) is the actual enforcement point for the allocated state instead.
+// for (same idiom as plugin-sync's sync_outbox unique-eventId index).
 @Index('idx_reservation_active_line_location', ['orderLineId', 'stockLocationId'], {
     unique: true,
     where: `"status" = 'active'`,
