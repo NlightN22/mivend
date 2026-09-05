@@ -4,7 +4,7 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { Dispute, DisputeStatus, DisputeType } from './entities/dispute.entity';
 
 // A chargeback/dispute is its own entity with its own lifecycle, never folded into
-// PaymentAttempt.paymentStatus (AGENTS.md sync rule #11). Only online-acquiring realistically
+// PaymentAttempt.paymentStatus (the external-integration-rules skill). Only online-acquiring realistically
 // produces one today (card-network chargebacks) — see docs/payments.md's refund-feasibility note.
 @Injectable()
 export class DisputeService {

@@ -26,7 +26,7 @@ import { OrderSubmittedListener } from './order-submitted.listener';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
-// Central-hub-only, per AGENTS.md sync rule #6 ("Branches never call the ERP [or Integration
+// Central-hub-only, per the external-integration-rules skill ("Branches never call the ERP [or Integration
 // Service]"). The guard can't live in the providers array itself: @VendurePlugin's decorator body
 // runs at module-import time, before `ErpIntegrationPlugin.options` is set by the static `init()`
 // call in vendure-config.ts — so `options.instanceType` isn't known yet at that point. Instead

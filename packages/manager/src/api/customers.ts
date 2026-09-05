@@ -576,7 +576,7 @@ export async function fetchCustomerOrderViewCounts(
 }
 
 // Real per-order captured-payment total (plugin-acquiring's PaymentAttempt, our actual payment
-// source of truth per AGENTS.md rule #11 — not Vendure's own `Order.payments`). Batched: one
+// source of truth per the external-integration-rules skill — not Vendure's own `Order.payments`). Batched: one
 // query for every order id a table page needs, not one per row. See
 // PaymentAttemptService.sumCapturedAmountsByOrderIds for what "captured" means and what's
 // deliberately not netted out (refunds/disputes/chargebacks).

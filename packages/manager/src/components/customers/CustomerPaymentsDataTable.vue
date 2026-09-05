@@ -24,7 +24,7 @@ import {
 // match against PaymentAttempt.number, this project's own internally-generated business number,
 // same principle as Order.code/Invoice.number/DiscountGrant.number). Deliberately NOT
 // providerPaymentId (the payment's real external reference — acquirer RRN, kassa receipt, ERP
-// payment-doc id) — per AGENTS.md rule #13 the two serve different purposes and must stay
+// payment-doc id) — per the external-integration-rules skill the two serve different purposes and must stay
 // separate fields; providerPaymentId is fetched (PaymentListItem.providerPaymentId) for a future
 // reconciliation-facing column but isn't shown here yet. `amount`/`invoice` still have no filter:
 // the backend genuinely doesn't support filtering by either yet.

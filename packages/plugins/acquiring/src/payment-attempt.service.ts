@@ -66,7 +66,7 @@ export interface PaymentListOptions {
     status?: string;
     channel?: string;
     // Substring match against the payment's own internal number (see PaymentAttempt.number's
-    // doc comment) — never providerPaymentId, the external reference, per AGENTS.md rule #13.
+    // doc comment) — never providerPaymentId, the external reference, per the external-integration-rules skill.
     search?: string;
 }
 
@@ -102,7 +102,7 @@ export class PaymentAttemptService {
     // payment claims which organization it's for) — a direct "pay now" GraphQL call has no
     // externally-claimed scope to validate against, since the caller IS the request context's own
     // organization/counterparty already. Payment allocation is scoped by organization only, never
-    // by branch (branch governs staff visibility — see AGENTS.md sync rule #13, docs/payments.md
+    // by branch (branch governs staff visibility — see the external-integration-rules skill, docs/payments.md
     // "Organizations") — a payment can apply to any invoice within the correct organization
     // regardless of which branch reported it.
     async payInvoice(
@@ -141,7 +141,7 @@ export class PaymentAttemptService {
 
         const paymentStatus = OUTCOME_TO_PAYMENT_STATUS[outcome];
 
-        // Level 3 idempotency (AGENTS.md rule #13): the same (channel, externalReference) must
+        // Level 3 idempotency (the external-integration-rules skill): the same (channel, externalReference) must
         // apply at most once, even across separate payInvoice calls — e.g. the inbox processor
         // retrying an event whose business write already succeeded but whose markProcessed then
         // failed (a genuine partial-failure gap found in this exact method: nothing previously
@@ -214,7 +214,7 @@ export class PaymentAttemptService {
     // (never received at all). Deliberately does NOT net out refunds/disputes/chargebacks here —
     // this is a simple list-badge read, not a reconciliation feature; a fully-refunded order
     // will still sum as fully captured. If this ever backs a real accounting decision instead of
-    // a badge, that gap needs closing first (see AGENTS.md rule #11 on refunds/disputes being
+    // a badge, that gap needs closing first (see the external-integration-rules skill on refunds/disputes being
     // their own lifecycle, never netted against a payment record).
     // Batched (one query for every orderId a table page needs) rather than per-row, to avoid
     // N+1 queries against a list of ~20 orders.

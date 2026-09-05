@@ -37,7 +37,7 @@ import type { ErpIntegrationPluginOptions, InboundStream } from './types';
 // retraction for the full reasoning.
 //
 // Message handling never processes an event inline — it only decodes the protobuf payload and
-// writes it to the inbox (AGENTS.md rule #12). The Kafka offset is only committed (by returning
+// writes it to the inbox (the external-integration-rules skill). The Kafka offset is only committed (by returning
 // from eachMessage without throwing) once that inbox write has resolved, so ack happens strictly
 // after the durable write — never before.
 const CONNECT_MAX_ATTEMPTS = 8;

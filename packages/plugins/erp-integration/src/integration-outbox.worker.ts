@@ -12,7 +12,7 @@ import type { ErpIntegrationPluginOptions } from './types';
 const QUEUE_NAME = 'erp-integration-outbox';
 
 // Central-hub-only, unlike plugin-sync's OutboxWorker (which drains on every instance) — a
-// branch never publishes directly to Integration Service, per AGENTS.md sync rule #6. Also
+// branch never publishes directly to Integration Service, per the external-integration-rules skill. Also
 // gated on kafkaEnabled (issue #68) — a plain `make dev` (local contour) must never publish to a
 // real Integration Service broker. Both checks live in this class's own onModuleInit, same
 // lifecycle-hook-runtime pattern as KafkaConsumerBootstrapService — see erp-integration.plugin.ts

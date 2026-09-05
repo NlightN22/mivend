@@ -95,7 +95,7 @@ const OrderUpdatedPayload = z.object({
 // explicitly reporting one for an order they don't own via `recordWitnessedPayment`). The
 // order's real owner applies it for real (a real `addPaymentToOrder`); every other instance
 // holding only a replica applies it as an informational `customFields.paymentStatus` projection
-// — never a direct mutation of an order it doesn't own (see AGENTS.md sync rule #10).
+// — never a direct mutation of an order it doesn't own (see the internal-sync-rules skill).
 const PaymentRecordedPayload = z.object({
     sourceOrderId: z.string(),
     method: z.string(),
@@ -108,7 +108,7 @@ const PaymentRecordedPayload = z.object({
     invoiceId: z.number().int().positive().optional(),
     // The organization (plugin-documents OrganizationRequisites) this payment is for — mandatory
     // whenever invoiceId/outcome are present, validated against the target Invoice's real
-    // organizationId before the payment is applied (AGENTS.md sync rule #13). Left optional at
+    // organizationId before the payment is applied (the external-integration-rules skill). Left optional at
     // this shared wire-format layer for the same reason rrn is, below.
     organizationId: z.number().int().positive().optional(),
     outcome: z.enum(['success', 'pending', 'fail', 'cancel']).optional(),

@@ -9,7 +9,7 @@ const loggerCtx = 'IntegrationDeferredStreamHandler';
 // in this codebase or in issue #62 itself — the issue explicitly defers the real
 // Seller/Channel/StockLocation migration these would map onto (design point 5, "Explicitly out
 // of scope"). Rather than guess a mapping that would need reworking anyway, these streams are
-// consumed into the inbox (durably recorded, never dropped — AGENTS.md rule #4) and their
+// consumed into the inbox (durably recorded, never dropped — the no-silent-drops messaging invariant) and their
 // handler is a deliberate, logged no-op: the row is marked 'processed' so it isn't endlessly
 // retried for a mapping that doesn't exist yet, but nothing is silently lost — the raw payload
 // stays in `integration_inbox_event` for whenever the real mapping design lands. See the

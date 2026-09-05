@@ -19,7 +19,7 @@ export class ErpPaymentReportedDto {
             'The organization (legal entity, plugin-documents OrganizationRequisites) this ' +
             'payment is for. Validated against the target Invoice.organizationId before the ' +
             'payment is applied — payment allocation is always scoped to one organization, ' +
-            'regardless of which branch or channel reported it (AGENTS.md sync rule #13).',
+            'regardless of which branch or channel reported it (the external-integration-rules skill).',
     })
     organizationId!: number;
 

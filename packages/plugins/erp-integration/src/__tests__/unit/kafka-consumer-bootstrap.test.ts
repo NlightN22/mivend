@@ -35,7 +35,7 @@ function makeProcessContext(isWorker: boolean): never {
     return { isWorker, isServer: !isWorker } as never;
 }
 
-// Central-hub-only guard (AGENTS.md sync rule #6 / issue #62 design point 1) — a branch instance
+// Central-hub-only guard (the external-integration-rules skill / issue #62 design point 1) — a branch instance
 // must never start a Kafka connection to Integration Service. Also worker-process-only (issue
 // #67) — running in both `main.ts` and `worker.ts` joined the same Kafka consumer group twice,
 // triggering a rebalance that silently stalled consumption for the reassigned partitions.

@@ -186,7 +186,7 @@ alongside `payloadHash` and `processedAt` — this is the **inbox** half of inbo
 
 **Implemented** (`plugin-acquiring`) as `IncomingPaymentEvent` (`entities/incoming-payment-event.entity.ts`):
 a real per-row lifecycle (`pending` → `processing` → `processed` | `failed`), not a bare "seen"
-boolean — see AGENTS.md sync rule #12, the general anti-pattern this design exists to avoid.
+boolean — see the external-integration-rules skill, the general anti-pattern this design exists to avoid.
 `InboxService.enqueue()` is the only write path in (dedups on `(provider, providerEventId)`,
 falls back to catching the unique-index violation on a concurrent-enqueue race); `claimBatch()` /
 `markProcessed()` / `markFailed()` are used exclusively by `PaymentInboxProcessorService`'s sweep.
@@ -243,7 +243,7 @@ dedup alone isn't sufficient. A second, business-level uniqueness constraint:
 ### Reliable delivery to the ERP: transactional outbox, same as everywhere else in this codebase
 
 Recording the local payment fact and creating the outbound event for the ERP happen in **one
-local transaction** — this is not a new pattern, it's AGENTS.md sync rule #1 (outbox is
+local transaction** — this is not a new pattern, it's the outbox-pattern messaging invariant (outbox is
 mandatory) applied to payments specifically:
 
 ```sql
@@ -374,7 +374,7 @@ async ERP acknowledgement is not compatible with this.
   belongs to.
 - The organization-per-product mapping (today only known inside 1C's warehouse/storage-location
   data) is imported into the platform as **catalog master data**, the same way `PriceEntry` is
-  (AGENTS.md sync rule #7 — ERP is master; the platform holds a local read replica so checkout
+  (the external-integration-rules skill — ERP is master; the platform holds a local read replica so checkout
   doesn't need a synchronous round-trip to 1C): `ProductVariant.customFields.organizationId`, set
   by `erp-import`'s product record. `OrderLine.customFields.organizationId` is derived from it at
   add-to-cart time.

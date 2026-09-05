@@ -12,7 +12,7 @@ import type { InboundStream } from '../types';
 export type IntegrationInboxEventStatus = 'pending' | 'processing' | 'processed' | 'failed';
 
 // Durable inbox for the inbound half of the Kafka exchange with Integration Service (issue #62
-// Milestone 1, AGENTS.md sync rule #12). The Kafka consumer only ever writes a row here — never
+// Milestone 1, the external-integration-rules skill). The Kafka consumer only ever writes a row here — never
 // processes an event inline — and a separate BullMQ worker sweeps `pending` rows for real
 // processing. `status` is a genuine per-row lifecycle, not a seen-boolean, per rule #12's
 // explicit correction of the plugin-acquiring incident (see IncomingPaymentEvent for the
@@ -42,7 +42,7 @@ export class IntegrationInboxEvent {
     @Column({ type: 'varchar' })
     version!: string;
 
-    // Integration Service's own event/message id (AGENTS.md rule #13 — an external reference
+    // Integration Service's own event/message id (the external-integration-rules skill — an external reference
     // distinct in purpose from the (stream, entityId, version) dedup key above, even though both
     // may end up pointing at "the same" logical event: this field exists so a human/automated
     // process can reconcile a MiVend row against Integration Service's own outbound_commands-style

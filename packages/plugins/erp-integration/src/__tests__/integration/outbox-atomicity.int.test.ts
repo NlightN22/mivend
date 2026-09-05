@@ -14,7 +14,7 @@ import { IntegrationOutboxService } from '../../integration-outbox.service';
 // outbox-atomicity.int.test.ts. IntegrationOutboxEntry writes go through a caller-supplied
 // EntityManager (see integration-outbox.service.ts's doc comment) so they can participate in an
 // existing transaction; this file proves a rollback leaves no orphan row and that the unique
-// eventId index enforces dedup at the DB level (AGENTS.md rule #13's dedup-key requirement).
+// eventId index enforces dedup at the DB level (the external-integration-rules skill's dedup-key requirement).
 let dataSource: DataSource;
 let outboxService: IntegrationOutboxService;
 

@@ -10,7 +10,7 @@ events into the same Postgres that `make seed-all`'s synthetic `erp-import` data
 Pre-existing, unrelated to issue #68. `INSTANCE_TYPE=central|branch` answers "who am I in the
 hub↔branch topology" (see `docs/sync.md`). A branch instance syncs to/from the central hub over
 RabbitMQ; the central hub is also the only instance type allowed to talk to the ERP / Integration
-Service at all (AGENTS.md sync rule #6). This axis does **not** say anything about which data
+Service at all (the external-integration-rules skill). This axis does **not** say anything about which data
 source a given run is actually pointed at — that's axis 2.
 
 Testing the hub↔branch RabbitMQ sync itself (`plugin-sync`) is a separate, not-yet-implemented

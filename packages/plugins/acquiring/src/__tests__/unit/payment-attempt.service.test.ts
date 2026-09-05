@@ -46,7 +46,7 @@ describe('PaymentAttemptService.payInvoice', () => {
         return {
             create: vi.fn(input => input),
             save: vi.fn(async entity => entity),
-            // payInvoice's level-3 idempotency check (AGENTS.md rule #13) — defaults to "no
+            // payInvoice's level-3 idempotency check (the external-integration-rules skill) — defaults to "no
             // existing attempt for this (channel, externalReference)" so these tests exercise the
             // normal create path; tests specifically for the idempotent-retry behavior override
             // this per-test.
@@ -113,7 +113,7 @@ describe('PaymentAttemptService.payInvoice', () => {
         expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
     });
 
-    it('is a no-op when a PaymentAttempt already exists for the same (channel, externalReference) — level 3 idempotency, AGENTS.md rule #13', async () => {
+    it('is a no-op when a PaymentAttempt already exists for the same (channel, externalReference) — level 3 idempotency, the external-integration-rules skill', async () => {
         const invoice = makeInvoice({ status: 'issued' });
         mockInvoiceService.findOne.mockResolvedValueOnce(invoice).mockResolvedValueOnce(invoice);
         mockPaymentAttemptRepo.findOne.mockResolvedValueOnce({ id: 99 } as never);

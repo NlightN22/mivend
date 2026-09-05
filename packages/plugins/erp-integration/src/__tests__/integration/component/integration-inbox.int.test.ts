@@ -10,7 +10,7 @@ import {
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 
-// Inbox idempotency/concurrency pattern (docs/testing-patterns.md, AGENTS.md rule #12) — mirrors
+// Inbox idempotency/concurrency pattern (docs/testing-patterns.md, the external-integration-rules skill) — mirrors
 // plugin-acquiring's InboxService fix for the real claimBatch race (two concurrent sweeps
 // claiming the same row before either committed 'processing'). Real Postgres, not mocked, because
 // SELECT ... FOR UPDATE SKIP LOCKED semantics only exist at the DB level.

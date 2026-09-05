@@ -27,7 +27,7 @@ export type ErpPostingStatus =
 // providerPaymentId alone, since the reference format/values are chosen independently by each
 // channel's own system (acquirer RRN, branch kassa receipt number, ERP payment-document id) and
 // could coincidentally collide across channels. This is the DB-level last line of defense for
-// AGENTS.md rule #13's three-level idempotency requirement (see PaymentAttemptService.payInvoice
+// the external-integration-rules skill's three-level idempotency requirement (see PaymentAttemptService.payInvoice
 // for level 3's application-level check, which this index backs against a race).
 @Entity()
 @Index(['channel', 'providerPaymentId'], { unique: true })
@@ -39,7 +39,7 @@ export class PaymentAttempt extends VendureEntity {
     // The payment's own internal, human-facing business number — generated at creation
     // (PaymentAttemptService.payInvoice), same generation principle as Order.code/Invoice.number/
     // DiscountGrant.number (shared/src/documentCode.ts's generateDocumentCode). Deliberately
-    // distinct from `providerPaymentId` below: per AGENTS.md rule #13, an internally-generated
+    // distinct from `providerPaymentId` below: per the external-integration-rules skill, an internally-generated
     // identity and an external system's own reference serve two different purposes (this
     // project's own document numbering vs. reconciling against the acquirer/kassa/ERP) and must
     // never be conflated into one field, even though both are "a number for this payment."

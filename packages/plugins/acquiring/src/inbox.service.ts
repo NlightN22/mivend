@@ -7,7 +7,7 @@ import { IncomingPaymentEvent } from './entities/incoming-payment-event.entity';
 const POSTGRES_UNIQUE_VIOLATION = '23505';
 
 // After this many failed attempts, an event stops being retried automatically and is
-// dead-lettered ('failed', terminal) for manual inspection (AGENTS.md sync rule #4 — "no silent
+// dead-lettered ('failed', terminal) for manual inspection (the no-silent-drops messaging invariant — "no silent
 // drops... eventually routed to a dead-letter queue"). Chosen to tolerate several sweep cycles
 // of a transient issue (e.g. a brief DB blip) without either giving up too early or retrying a
 // truly broken event forever.
@@ -53,7 +53,7 @@ export class InboxService {
         } catch (err) {
             if (this.isUniqueViolation(err)) {
                 // Lost a race with a concurrent enqueue of the same event — the UNIQUE index is
-                // the hard safety net (AGENTS.md sync rule #2), not just the findOne check above.
+                // the hard safety net (the idempotent-consumer messaging invariant), not just the findOne check above.
                 return (await repo.findOne({ where: { provider, providerEventId } }))!;
             }
             throw err;
@@ -131,7 +131,7 @@ export class InboxService {
 
     // For a payload that is structurally invalid (e.g. missing a mandatory external reference) —
     // dead-letters immediately instead of retrying, since retrying won't fix data the producer
-    // never sent (AGENTS.md sync rule #4: still durably recorded via enqueue() first, never
+    // never sent (the no-silent-drops messaging invariant: still durably recorded via enqueue() first, never
     // silently dropped, just skipped straight to the terminal state instead of wasting sweep
     // cycles on a message that can never become valid on its own).
     async rejectAsInvalid(ctx: RequestContext, id: number, reason: string): Promise<void> {

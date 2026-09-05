@@ -3,7 +3,7 @@ import { RequestContext, VendureEvent } from '@vendure/core';
 export type ErpPaymentOutcome = 'success' | 'pending' | 'fail' | 'cancel';
 
 // A payment fact reported by the ERP for an Invoice (plugin-acquiring's model) — never applied
-// directly here. plugin-acquiring subscribes and durably enqueues it (AGENTS.md sync rule #12);
+// directly here. plugin-acquiring subscribes and durably enqueues it (the external-integration-rules skill);
 // the risky processing (PaymentAttemptService.payInvoice) only ever runs from the inbox worker.
 export class ErpPaymentReportedEvent extends VendureEvent {
     constructor(

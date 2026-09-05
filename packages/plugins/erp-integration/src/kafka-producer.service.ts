@@ -22,7 +22,7 @@ export class KafkaProducerService implements OnModuleDestroy {
     // Publishes one outbox row's payload. Throws on any failure (broker unreachable, Registry
     // unreachable, send rejected) — the caller (IntegrationOutboxWorker) is responsible for
     // catching this and applying the retry/dead-letter policy; this method never swallows an
-    // error itself (AGENTS.md rule #4 — no silent drops).
+    // error itself (the no-silent-drops messaging invariant — no silent drops).
     async publish(
         eventId: string,
         eventType: string,

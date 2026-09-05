@@ -156,46 +156,6 @@ Makefile commands pass; deliberately uncovered risks are reported with a reason.
 
 ---
 
-## Sync rules index (non-negotiable — numbers are stable, don't renumber)
-
-**Numbers below are stable identifiers — a huge number of inline code comments across this repo
-cite them as `AGENTS.md sync rule #N`. Do not renumber even when moving detail elsewhere; add a
-new rule at #14+ instead of inserting.** Each line's "Full detail" names the skill with the
-complete rule. See `docs/sync.md` for the full design.
-
-1. **Outbox pattern is mandatory.** Any data that must reach another instance/system is first
-   written to an outbox table **in the same DB transaction** as the business data. Sending
-   directly to the transport without an outbox record is forbidden — it breaks delivery
-   guarantees.
-2. **Every consumer must be idempotent.** Processing the same `eventId` twice must be a no-op.
-   Use a unique index on `eventId` as a hard safety net, not just application-level checks.
-3. **Ack only after commit.** A message is acked only after the local DB transaction commits
-   successfully. Acking before write risks data loss on crash.
-4. **No silent drops.** Every failure is logged, retried with backoff, and eventually routed to
-   a dead-letter queue for manual inspection. `try/catch` that swallows sync/integration errors
-   is forbidden.
-5. **One plugin owns each transport** — `plugin-sync` owns RabbitMQ (hub↔branch),
-   `plugin-erp-integration` owns Kafka/Integration Service; nothing else touches either
-   directly. Full detail: both skills above (each covers its own half).
-6. **Branches never call the ERP or Integration Service** — central-hub-only. Full detail:
-   `external-integration-rules`.
-7. **ERP is master for business data** (price types, prices, catalog, customer core fields,
-   credit limits) — flows ERP → Hub → Branch, never modified locally on branches. Full detail:
-   `external-integration-rules`.
-8. **Reservations sync Branch → Central only.** Full detail: `internal-sync-rules`.
-9. **An order's originating instance always wins** — never last-write-wins. Full detail:
-   `internal-sync-rules`.
-10. **Order as a read-model — independent event streams per concern (CQRS)** for any
-    cross-instance fact. Full detail: `internal-sync-rules`.
-11. **A payment has four independent sources of truth** — provider/bank, this platform, the
-    ERP, the fiscal registrar — never conflate them. Full detail: `external-integration-rules`.
-12. **Never process a risky inbound event synchronously** — durable inbox first, async
-    worker second. Full detail: `external-integration-rules`.
-13. **Persist the external system's own reference id**, not only an internal id, on any record
-    representing an external fact. Full detail: `external-integration-rules`.
-
----
-
 ## Vendure core
 
 **Never modify Vendure core** (`node_modules/@vendure`) — if it doesn't support something

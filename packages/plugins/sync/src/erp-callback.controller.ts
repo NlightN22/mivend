@@ -42,7 +42,7 @@ export class ErpCallbackController {
     @ApiOperation({
         summary:
             'Receive a payment fact pushed from the ERP (1C) for an Invoice — durably ' +
-            'enqueued by plugin-acquiring, never processed inline (AGENTS.md sync rule #12). ' +
+            'enqueued by plugin-acquiring, never processed inline (the external-integration-rules skill). ' +
             'Also the simulation entry point until a real ERP integration exists.',
     })
     @ApiBody({ type: ErpPaymentReportedDto })

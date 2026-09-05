@@ -133,7 +133,7 @@ export class OrderSyncService {
             // can race its own order.created to this instance (see order.consumer.ts's producer
             // comment on why) — the replica this update targets may simply not exist *yet*, not
             // never. Throwing routes this through RabbitMQService.subscribe's existing
-            // backoff-then-DLQ retry (AGENTS.md sync rule #4, "no silent drops"): a few retries
+            // backoff-then-DLQ retry (the no-silent-drops messaging invariant): a few retries
             // give order.created's slower delivery chain time to land; if the replica genuinely
             // never gets created (e.g. order.created itself failed to resolve a customer/variant
             // — see applyCreate above), this correctly ends up in the DLQ for inspection instead
@@ -158,7 +158,7 @@ export class OrderSyncService {
     }
 
     // Applies a `payment.recorded` fact — see docs/architecture.md's "Order as a read-model:
-    // independent event streams per concern (CQRS)" and AGENTS.md sync rule #10. Two cases,
+    // independent event streams per concern (CQRS)" and the internal-sync-rules skill. Two cases,
     // never a third: either this instance holds only a replica of the order (apply as an
     // informational projection, never touch the real Vendure order), or this instance owns the
     // order for real (apply it as a genuine payment through the normal Vendure API).

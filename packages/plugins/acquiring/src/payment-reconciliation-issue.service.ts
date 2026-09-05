@@ -6,7 +6,7 @@ import {
     PaymentReconciliationIssueType,
 } from './entities/payment-reconciliation-issue.entity';
 
-// A detected cross-system discrepancy, for a human to resolve (AGENTS.md sync rule #11) — never
+// A detected cross-system discrepancy, for a human to resolve (the external-integration-rules skill) — never
 // an automatic pick of whichever number/organization looks right. Kept intentionally minimal
 // (report + list) — resolution/triage tooling is future scope, not part of detecting the issue.
 @Injectable()

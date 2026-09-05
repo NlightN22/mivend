@@ -13,7 +13,7 @@ export interface OutboxWriteInput {
 @Injectable()
 export class IntegrationOutboxService {
     // Caller passes its own EntityManager so this write can participate in an existing
-    // transaction when one is available (AGENTS.md sync rule #1). EventBus-triggered writes
+    // transaction when one is available (the outbox-pattern messaging invariant). EventBus-triggered writes
     // (e.g. OrderStateTransitionEvent) fire after the Order itself already committed via Vendure
     // core — same established precedent as plugin-sync's own EventBus listeners, which are not
     // atomic with the Order write either; see outbox-atomicity.int.test.ts's comment there.

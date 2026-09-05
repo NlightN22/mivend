@@ -125,7 +125,7 @@ export class CentralConsumer implements OnModuleInit {
             event.payload.outcome !== undefined
         ) {
             // Publishes only — the risky work (payInvoice) happens later, in
-            // plugin-acquiring's inbox worker (AGENTS.md sync rule #12).
+            // plugin-acquiring's inbox worker (the external-integration-rules skill).
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
             this.eventBus.publish(
                 new BranchKassaPaymentEvent(

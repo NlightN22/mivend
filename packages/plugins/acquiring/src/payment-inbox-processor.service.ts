@@ -16,7 +16,7 @@ export interface IncomingPaymentPayload {
     // organizationId before applying — a mismatch is a genuine cross-system discrepancy
     // (PaymentReconciliationIssue), not a rejected/dead-lettered event, since the ERP/branch
     // isn't necessarily lying — its own invoiceId reference may simply be stale or wrong, and a
-    // human needs to reconcile which invoice was actually meant (AGENTS.md sync rule #13).
+    // human needs to reconcile which invoice was actually meant (the external-integration-rules skill).
     organizationId: number;
     outcome: PayInvoiceOutcome;
     channel: PaymentChannel;

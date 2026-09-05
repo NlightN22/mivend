@@ -5,7 +5,7 @@ import { PaymentRefund, PaymentRefundStatus } from './entities/payment-refund.en
 
 // Modeled on Robokassa's refund API (docs.robokassa.ru/partner-api/MethodDescription/RefundOperation):
 // a refund is its own operation with its own id (OpKey -> providerRefundId) and its own status,
-// never a negative PaymentAttempt row (AGENTS.md sync rule #11). Only online-acquiring can
+// never a negative PaymentAttempt row (the external-integration-rules skill). Only online-acquiring can
 // realistically produce one today — see docs/payments.md's refund-feasibility note.
 @Injectable()
 export class PaymentRefundService {

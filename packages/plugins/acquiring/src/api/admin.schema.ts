@@ -51,7 +51,7 @@ export const adminApiExtensions: DocumentNode = gql`
 
     type PaymentAttempt {
         id: ID!
-        "The payment's own internal, human-facing business number — generated the same way as Order.code/Invoice.number/DiscountGrant.number. See PaymentAttempt.number's own doc comment (payment-attempt.entity.ts) for why this is distinct from providerPaymentId below (AGENTS.md rule #13)."
+        "The payment's own internal, human-facing business number — generated the same way as Order.code/Invoice.number/DiscountGrant.number. See PaymentAttempt.number's own doc comment (payment-attempt.entity.ts) for why this is distinct from providerPaymentId below (the external-integration-rules skill)."
         number: String!
         createdAt: DateTime!
         "The payment's real external reference — an acquirer RRN, a branch kassa receipt number, an ERP payment-document id, or (until a real acquirer is wired in) a clearly-marked stub value. Mandatory for every channel; used for reconciliation, never as this payment's own displayed identity."
@@ -127,9 +127,9 @@ export const adminApiExtensions: DocumentNode = gql`
     }
 
     extend type Mutation {
-        "Manually runs one payment inbox sweep immediately, instead of waiting for the periodic worker. Ops/test visibility only — does not change the async processing contract (AGENTS.md sync rule #12): this still goes through the same InboxService.claimBatch/PaymentInboxProcessorService path the timer uses, it just runs it on demand."
+        "Manually runs one payment inbox sweep immediately, instead of waiting for the periodic worker. Ops/test visibility only — does not change the async processing contract (the external-integration-rules skill): this still goes through the same InboxService.claimBatch/PaymentInboxProcessorService path the timer uses, it just runs it on demand."
         triggerPaymentInboxSweep: PaymentInboxSweepResult!
-        "Records a real PaymentRefund row (AGENTS.md sync rule #11: a refund is its own entity, never a negative payment record), modeled on Robokassa's RefundOperation API — providerRefundId mirrors Robokassa's OpKey."
+        "Records a real PaymentRefund row (the external-integration-rules skill: a refund is its own entity, never a negative payment record), modeled on Robokassa's RefundOperation API — providerRefundId mirrors Robokassa's OpKey."
         recordPaymentRefund(
             paymentId: ID!
             amount: Int!

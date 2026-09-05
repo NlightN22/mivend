@@ -12,7 +12,7 @@ const loggerCtx = 'PaymentEventListener';
 
 // Storage shape only, distinct from IncomingPaymentPayload — externalReference may be absent
 // here (a payload that's about to be rejected as invalid), but is always durably recorded as
-// received (AGENTS.md sync rule #4), never silently omitted from the row.
+// received (the no-silent-drops messaging invariant), never silently omitted from the row.
 interface StoredPaymentPayload {
     invoiceId: number;
     organizationId: number;

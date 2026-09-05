@@ -48,7 +48,7 @@ function requiredKafkaId(envVar: string): string {
     return 'mivend-central-hub-local';
 }
 
-// Only central talks to the ERP/payment providers (AGENTS.md sync rule #6)
+// Only central talks to the ERP/payment providers (the external-integration-rules skill)
 const instancePlugins =
     instanceType === 'central'
         ? [

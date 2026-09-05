@@ -36,12 +36,10 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
     }
 
     private async handle(event: OrderReadyForErpEvent): Promise<void> {
-        const order = await this.connection
-            .getRepository(event.ctx, Order)
-            .findOne({
-                where: { id: event.orderId },
-                relations: ['lines', 'lines.productVariant'],
-            });
+        const order = await this.connection.getRepository(event.ctx, Order).findOne({
+            where: { id: event.orderId },
+            relations: ['lines', 'lines.productVariant'],
+        });
         if (!order) return;
 
         // organizationId lives on ProductVariant, not Order — an order can legitimately span
@@ -75,7 +73,7 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
             currencyCode: order.currencyCode,
         }));
 
-        // Deliberate, documented deviation from AGENTS.md sync rule #1's letter ("outbox write
+        // Deliberate, documented deviation from the outbox-pattern messaging invariant's letter ("outbox write
         // in the same DB transaction as the business data"): the Order write already committed
         // via Vendure core before OrderReadyForErpEvent fires — there is no open transaction left
         // to join. The rule's actual intent (no window where business data exists without a

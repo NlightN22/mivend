@@ -351,6 +351,6 @@ from `plugin-sync`:
 
 Both event classes live in `plugin-sync` (`erp-payment.events.ts`) and are exported from its
 public `index.ts`; `plugin-acquiring`'s `PaymentEventListener` is the only subscriber, and its
-only job is to durably enqueue the event (never to process it inline) — see AGENTS.md sync rule
-#12 and `docs/payments.md`'s "Idempotency: three independent levels" section for the full
+only job is to durably enqueue the event (never to process it inline) — see the
+external-integration-rules skill and `docs/payments.md`'s "Idempotency: three independent levels" section for the full
 inbox/worker design this event stream feeds into.

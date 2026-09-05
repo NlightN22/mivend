@@ -6,7 +6,7 @@ export interface PaymentListItem {
     number: string;
     createdAt: string;
     // The real external reference (acquirer RRN / kassa receipt / ERP payment-doc id) — kept
-    // distinct from `number` (this project's own internal document id) per AGENTS.md rule #13.
+    // distinct from `number` (this project's own internal document id) per the external-integration-rules skill.
     // Not currently shown as its own column, but available for a future "External ref" field.
     providerPaymentId: string;
     channel: string;

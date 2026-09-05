@@ -288,7 +288,7 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
         expect(paymentAttempts).toHaveLength(1); // exactly one — the failed attempt left nothing behind
     });
 
-    // Level 3 idempotency (AGENTS.md rule #13). Mirrors a real partial-failure gap: the inbox
+    // Level 3 idempotency (the external-integration-rules skill). Mirrors a real partial-failure gap: the inbox
     // processor calls payInvoice with an *explicit* externalReference (not the auto-generated
     // stub), then calls markProcessed — if payInvoice already committed but markProcessed itself
     // then fails, the inbox row is left retryable and the next sweep calls payInvoice again with

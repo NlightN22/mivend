@@ -4,7 +4,7 @@ import { Column, Entity, Index } from 'typeorm';
 
 export type IncomingPaymentEventStatus = 'pending' | 'processing' | 'processed' | 'failed';
 
-// The durable "inbox" half of the inbox/outbox pattern (AGENTS.md sync rule #1, docs/payments.md
+// The durable "inbox" half of the inbox/outbox pattern (the outbox-pattern messaging invariant, docs/payments.md
 // idempotency levels 2-3) for payment events reported by an external source — a real acquirer
 // webhook (once Robokassa/issue #46 lands), a branch till, or an ERP-reported bank transfer.
 //

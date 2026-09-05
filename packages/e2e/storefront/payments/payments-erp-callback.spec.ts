@@ -33,7 +33,7 @@ async function postErpPaymentCallback(
 // The real periodic worker only sweeps once a minute (paymentInboxPollIntervalMs) — too slow for
 // a test. triggerPaymentInboxSweep runs the exact same InboxService.claimBatch /
 // PaymentInboxProcessorService path on demand (an ops "run now" trigger, not a bypass of the
-// async contract — see AGENTS.md sync rule #12) so the test doesn't need to wait or poll.
+// async contract — see the external-integration-rules skill) so the test doesn't need to wait or poll.
 async function triggerSweep(): Promise<{ processed: number; failed: number }> {
     const { token } = await adminGql<{ login: { __typename: string } }>(
         `mutation($u: String!, $p: String!) { login(username: $u, password: $p) { __typename } }`,

@@ -104,7 +104,7 @@ call `claimBatch` at the same moment) and stuck-`processing` recovery (DB-side
 `now() - interval` staleness check — see `inbox.service.ts`'s comment on why it's DB-side, not an
 app-clock `Date` comparison: the app process and DB server clocks are not guaranteed to agree).
 
-**Exceptions**: none — this is the mandatory shape per AGENTS.md rule #12.
+**Exceptions**: none — this is the mandatory shape per the external-integration-rules skill.
 
 ## Outbox atomicity
 
@@ -127,7 +127,7 @@ prove the pair is atomic, not just usually-together.
 
 **mivend example**: `payment-atomicity.int.test.ts` (`plugin-acquiring`).
 
-**Exceptions**: none — mandatory per AGENTS.md sync rule #1.
+**Exceptions**: none — mandatory per the outbox-pattern messaging invariant.
 
 ## Ordering and versions
 
@@ -201,7 +201,7 @@ sweep loop with a failing processor.
 **mivend example**: `PaymentInboxWorker` sweep tests (`plugin-acquiring`); mirrors
 `ReservationExpiryWorker`/`OutboxWorker`.
 
-**Exceptions**: none for anything matching AGENTS.md rule #12's inbox+worker shape.
+**Exceptions**: none for anything matching the external-integration-rules skill's inbox+worker shape.
 
 ## Partial failure
 
