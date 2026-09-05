@@ -124,17 +124,34 @@ export class KafkaConsumerService implements OnModuleDestroy {
 
         await this.connectWithBackoff();
 
-        const topics = Object.values(this.options.kafkaConsumer.topics);
-        for (const topic of topics) {
-            await this.consumer.subscribe({ topic, fromBeginning: true });
+        // Each topic is subscribed independently and a failure (e.g. a Kafka ACL denial for one
+        // topic — observed live against the real Integration Service broker for
+        // storage-location-changed/stock-organization-changed) is isolated to that topic: logged
+        // and skipped, never thrown out of this loop. Before this fix, one bad topic's subscribe()
+        // rejection propagated out of runOnce() before consumer.run() was ever reached, silently
+        // stopping consumption of every OTHER, perfectly healthy topic too — not just the denied
+        // one. streamByTopic is built incrementally, so only actually-subscribed topics are ever
+        // routed to a handler in eachMessage below.
+        const streamByTopic = new Map<string, InboundStream>();
+        for (const [stream, topic] of Object.entries(this.options.kafkaConsumer.topics)) {
+            try {
+                await this.consumer.subscribe({ topic, fromBeginning: true });
+                streamByTopic.set(topic, stream as InboundStream);
+            } catch (err) {
+                Logger.error(
+                    `Failed to subscribe to topic=${topic} (stream=${stream}): ${
+                        err instanceof Error ? err.message : String(err)
+                    } — other topics still consumed`,
+                    loggerCtx,
+                );
+            }
         }
-
-        const streamByTopic = new Map<string, InboundStream>(
-            Object.entries(this.options.kafkaConsumer.topics).map(([stream, topic]) => [
-                topic,
-                stream as InboundStream,
-            ]),
-        );
+        if (streamByTopic.size === 0) {
+            Logger.error(
+                'No topics could be subscribed to — this consumer will receive no messages until at least one succeeds',
+                loggerCtx,
+            );
+        }
 
         await this.consumer.run({
             eachMessage: async (payload: EachMessagePayload) => {
