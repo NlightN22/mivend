@@ -71,6 +71,18 @@ Current assignment, and this must stay unique per contour/instance sharing that 
 Redis, pick the next unused index — reusing one silently shares BullMQ queues/keys between
 contours.
 
+## Testing must stay within the local contour
+
+**`make test`/`make test-int`/`make e2e` run exclusively against the local contour's seeded,
+synthetic data.** Never against staging-integration's real Integration Service data — see
+AGENTS.md's Testing requirements ("Rule: automated tests run only against the local contour's
+seeded/synthetic data") for the full rule. In short: local is seed-only (no external source,
+`INTEGRATION_KAFKA_ENABLED=false`); staging-integration is real-source-only (no manual seeding,
+ever) — each contour has exactly one of "seeded" or "real external data," never both, and
+automated tests only ever run against the seeded one. If a test needs data the local seed set
+doesn't have yet, extend the seed (`erp-import` record type, `seed-erp.mjs`) or the test's own
+fixtures — don't borrow real data from staging-integration to make a test pass.
+
 ## Setting up the staging-integration contour
 
 1. Copy `apps/server/.env.central.staging-integration.example` to

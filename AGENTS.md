@@ -98,6 +98,33 @@ rule belongs in a unit test; a technical seam in an integration test; a full com
 component test; a boundary in a contract test; only a handful of critical end-to-end routes in
 E2E. No unjustified duplication across levels.
 
+**Rule: automated tests run only against the local contour's seeded/synthetic data — never
+against a real external source.** This follows directly from issue #68's contour separation (see
+`docs/environments.md`): `make test`/`make test-int`/`make e2e` all run against `make dev`'s local
+contour (`INTEGRATION_KAFKA_ENABLED=false`, synthetic `erp-import`/`seed-erp.mjs` data), never
+against `make dev-staging-integration`'s real Integration Service Kafka connection. Concretely:
+
+- If a test needs data that doesn't exist yet in the local seed set (a new `PriceType`, a
+  `Warehouse` with a specific shape, a Kafka message payload to feed a handler test), the fix is
+  to **extend the seed data or the test's own fixtures** (a new `erp-import` record type per "Dev
+  seed rules" below, or a synthetic protobuf-encoded message the test constructs itself) — never
+  to point a test at the staging-integration contour to borrow real data from there.
+- `erp-integration`'s Kafka consumer/producer tests mock the broker/Schema Registry client (see
+  `docs/testing-strategy.md`'s mocking strategy — external transport boundaries are exactly what's
+  allowed to be mocked); they never require a live connection to `is.komponent-m.ru`, in any test
+  level, including integration/component tests.
+- The staging-integration contour's own database is deliberately **never seeded** (see
+  "Environments / contours" in `docs/environments.md`) — it exists solely to validate the real
+  contract against Integration Service's actual broker, taking whatever real data arrives as-is.
+  Manually inserting synthetic rows there to make a manual check "work" defeats its entire purpose
+  (masking a real contract mismatch) and reintroduces the exact synthetic/real data mixing #68 was
+  about preventing, just via a different mechanism (manual seeding instead of an accidental Kafka
+  connection).
+- A manual, deliberate verification against the real broker (e.g. confirming a consumer fix
+  actually decodes a real message) belongs in `make dev-staging-integration`, is not part of the
+  automated suite, and is not a substitute for the automated tests above — both are required where
+  applicable, not either/or.
+
 ### Running tests
 
 Always run tests via Makefile, not directly through pnpm:
