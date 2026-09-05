@@ -26,15 +26,24 @@ for root in $roots; do
     all_pids="$all_pids $(collect_descendants "$root") $root"
 done
 
+# Storefront/manager for this contour aren't spawned via dotenv-cli (see
+# dev:storefront:staging-integration/dev:manager:staging-integration in package.json) — they're
+# plain `vite --mode staging-integration` invocations, identified here by that literal substring
+# on their own command line instead of by ancestry.
+vite_pids=$(pgrep -f "vite --mode staging-integration" 2>/dev/null || true)
+all_pids="$all_pids $vite_pids"
+
 if [ -n "$(echo "$all_pids" | tr -d '[:space:]')" ]; then
     # shellcheck disable=SC2086
     kill -9 $all_pids 2>/dev/null || true
 fi
 
 # Catch any straggler still bound to the staging-integration contour's own ports (local uses
-# 3000/3002, branch uses 3001/3003 — see dev-kill.sh/dev-kill-branch.sh; these are
+# 3000/3002/5173/5174, branch uses 3001/3003 — see dev-kill.sh/dev-kill-branch.sh; these are
 # staging-integration-only, safe to force-free).
 fuser -k 3010/tcp 2>/dev/null || true
 fuser -k 3012/tcp 2>/dev/null || true
+fuser -k 5183/tcp 2>/dev/null || true
+fuser -k 5184/tcp 2>/dev/null || true
 
 exit 0
