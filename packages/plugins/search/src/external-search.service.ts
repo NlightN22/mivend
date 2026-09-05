@@ -80,7 +80,7 @@ export class ExternalSearchService {
         const product = await this.productLookup.findByExternalId(ctx, item.partOrProductId);
         if (!product) return null;
 
-        const variant = product.variants[0];
+        const variant = this.productLookup.pickDefaultVariant(product);
         if (!variant) return null;
 
         return {

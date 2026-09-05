@@ -52,6 +52,42 @@ describe('SearchServiceClient.resolveQuery', () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    it('aborts and throws a generic error when the request hangs (audit finding, mivend.audit.70)', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockImplementation((_url, init: RequestInit) => {
+                return new Promise((_resolve, reject) => {
+                    init.signal?.addEventListener('abort', () => {
+                        const err = new Error('aborted');
+                        err.name = 'AbortError';
+                        reject(err);
+                    });
+                });
+            }),
+        );
+        const client = new SearchServiceClient();
+        const pending = expect(client.resolveQuery({ query: 'x' })).rejects.toThrow(/unavailable/);
+        await vi.advanceTimersByTimeAsync(5000);
+        await pending;
+        vi.useRealTimers();
+    });
+
+    it('never leaks the raw error response body to the caller (audit finding, mivend.audit.70)', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue({
+                ok: false,
+                status: 500,
+                text: async () => 'internal stack trace or secret detail',
+            }),
+        );
+        const client = new SearchServiceClient();
+        await expect(client.resolveQuery({ query: 'x' })).rejects.not.toThrow(
+            /internal stack trace or secret detail/,
+        );
+    });
+
     it('empty search-service result is not an error', async () => {
         vi.stubGlobal(
             'fetch',

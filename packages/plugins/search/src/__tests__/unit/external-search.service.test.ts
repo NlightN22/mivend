@@ -35,11 +35,22 @@ function makeProduct(id = 1): Product {
             {
                 id: 10,
                 sku: 'MOT-5W30-4L',
+                enabled: true,
                 translations: [{ languageCode: 'en', name: 'Motor Oil 4L' }],
                 featuredAsset: null,
             },
         ],
     } as unknown as Product;
+}
+
+function makeLookup(product: Product | null): {
+    findByExternalId: ReturnType<typeof vi.fn>;
+    pickDefaultVariant: ReturnType<typeof vi.fn>;
+} {
+    return {
+        findByExternalId: vi.fn().mockResolvedValue(product),
+        pickDefaultVariant: vi.fn().mockImplementation((p: Product) => p.variants[0]),
+    };
 }
 
 // Issue #69, test-design coverage areas 2 and 3.
@@ -48,7 +59,7 @@ describe('ExternalSearchService.search', () => {
         const client = {
             resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
         };
-        const lookup = { findByExternalId: vi.fn().mockResolvedValue(null) };
+        const lookup = makeLookup(null);
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
@@ -64,7 +75,7 @@ describe('ExternalSearchService.search', () => {
         const client = {
             resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
         };
-        const lookup = { findByExternalId: vi.fn().mockResolvedValue(makeProduct()) };
+        const lookup = makeLookup(makeProduct());
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
@@ -89,9 +100,27 @@ describe('ExternalSearchService.search', () => {
         });
     });
 
+    it('skips a matched product with no enabled variant (audit finding, mivend.audit.70)', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+        };
+        const lookup = {
+            findByExternalId: vi.fn().mockResolvedValue(makeProduct()),
+            pickDefaultVariant: vi.fn().mockReturnValue(undefined),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            lookup as unknown as ProductLookupService,
+        );
+
+        const result = await service.search(ctx, { term: 'oil' } as SearchInput);
+
+        expect(result.items).toEqual([]);
+    });
+
     it('returns an empty, valid SearchResponse for an empty search-service result', async () => {
         const client = { resolveQuery: vi.fn().mockResolvedValue({ items: [], total: 0 }) };
-        const lookup = { findByExternalId: vi.fn() };
+        const lookup = makeLookup(null);
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
@@ -105,7 +134,7 @@ describe('ExternalSearchService.search', () => {
 
     it('returns an empty response without calling search-service when the term is empty', async () => {
         const client = { resolveQuery: vi.fn() };
-        const lookup = { findByExternalId: vi.fn() };
+        const lookup = makeLookup(null);
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,

@@ -1,3 +1,5 @@
+import { Logger } from '@vendure/core';
+
 export const loggerCtx = 'SearchPlugin';
 
 export type SearchBackend = 'internal' | 'external';
@@ -13,8 +15,9 @@ export function getSearchBackend(): SearchBackend {
     const raw = process.env.SEARCH_BACKEND;
     if (raw === 'internal' || raw === 'external') return raw;
     if (raw !== undefined) {
-        console.warn(
-            `[${loggerCtx}] Unrecognized SEARCH_BACKEND="${raw}", falling back to "${SEARCH_BACKEND_DEFAULT}"`,
+        Logger.warn(
+            `Unrecognized SEARCH_BACKEND="${raw}", falling back to "${SEARCH_BACKEND_DEFAULT}"`,
+            loggerCtx,
         );
     }
     return SEARCH_BACKEND_DEFAULT;
