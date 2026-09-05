@@ -694,6 +694,39 @@ Use **`make seed-all`** to run the full local seeding order in one command: `see
 
 ---
 
+## Git workflow
+
+**Commit after every completed change — do not wait for an explicit "commit this" request.**
+This applies to every agent working in this repo (Claude Code or otherwise), same as the rest of
+this file.
+
+- "Completed" means: the change satisfies its own task (a fix, a feature slice, a refactor, a
+  doc/config update) and passes the applicable checks — **Mandatory final checks** below for
+  code, or the relevant `make test`/`make lint` subset for a narrower change. Do not commit
+  half-finished or currently-failing work just to checkpoint it.
+- One commit per logical change, not one commit per file and not one giant commit bundling
+  unrelated changes together. If a review/audit round produces several fixes to the same feature,
+  one commit for that whole round is fine (see the commit message convention below).
+- Still follow every other git rule already in place (Claude Code's own tool instructions, and
+  general good practice for any agent): never `--force`-push, never `--amend` a commit that's
+  already been reviewed/pushed, never skip hooks (`--no-verify`), never commit a file that looks
+  like it holds a secret (double-check `git status`/`git diff` contents before staging, especially
+  after a broad `git add`), and never commit a `.env*` file that isn't already tracked as an
+  `*.example` template — `.gitignore`'s `.env.*` pattern exists specifically to keep real
+  credentials (Integration Service Kafka creds, DB passwords, etc.) out of the repo; see
+  `docs/environments.md`.
+- Before committing, run whatever this file's other sections require for the kind of change made
+  (test-design's test plan, final-check's `make lint`/`make test`, access-control-review, etc.) —
+  "commit after every change" does not relax any of those, it just removes the need to ask
+  permission for the commit step itself once they've passed.
+- Commit messages: describe _why_, not just _what_ (see any recent commit in `git log` for the
+  house style); reference the relevant issue number when there is one.
+- This does not authorize pushing to a remote or opening/merging a PR on its own — those remain
+  separate, explicit-request actions unless a specific workflow in this file (or the user) says
+  otherwise.
+
+---
+
 ## Dev process management
 
 Starting the full dev stack is done exclusively via `make dev`. Do not start individual processes (server, storefront, plugin watchers) manually — they will accumulate as orphans and exhaust memory.
