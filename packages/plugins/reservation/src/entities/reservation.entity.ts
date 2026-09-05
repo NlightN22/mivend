@@ -4,16 +4,30 @@ import { Column, Entity, Index } from 'typeorm';
 
 import type { ReservationCreationMethod } from '../types';
 
-export type ReservationStatus = 'active' | 'released' | 'expired';
+// 'allocated': 1C confirmed this reservation (RESERVED/CONFIRMED) and its quantity was moved
+// into Vendure's own native StockLevel.stockAllocated (see ReservationErpSyncService) — the
+// industry-standard "soft reservation -> hard allocation" transition, done at confirmation time
+// rather than at physical shipment. No longer counted as an "active reservation" in the ATP
+// formula (ReservationAvailabilityService only sums 'active' rows) since it's now inside
+// stockAllocated instead — never both, to avoid double-subtracting the same held unit.
+export type ReservationStatus = 'active' | 'allocated' | 'released' | 'expired';
 
 // One row per order line — created by ReservationService.reserveOrder() (manual confirm today,
-// auto-prepaid/auto-trust-rule later — see docs/order-flow.md). Soft reservation only: reduces
-// ATP (stockOnHand - stockAllocated - active reservations) for other orders/catalog, never
-// touches stockOnHand/stockAllocated itself.
+// auto-prepaid/auto-trust-rule later — see docs/order-flow.md). Starts as a soft reservation
+// (reduces ATP via stockOnHand - stockAllocated - active reservations, never touching
+// stockOnHand/stockAllocated itself); once 1C confirms it, ReservationErpSyncService converts it
+// into Vendure's native stockAllocated and moves this row to 'allocated' (see ReservationStatus's
+// own doc comment) — from that point on, stockAllocated (not this row) is what protects the
+// held quantity, until 1C reports the goods actually shipped (which decrements stockAllocated
+// back down and finally releases this row) or the order is cancelled first.
 //
 // At most one active reservation per (orderLineId, stockLocationId) — enforced by the partial
 // unique index below, the DB-level safety net docs/order-flow.md's "Idempotency" section calls
-// for (same idiom as plugin-sync's sync_outbox unique-eventId index).
+// for (same idiom as plugin-sync's sync_outbox unique-eventId index). Deliberately still scoped
+// to status='active' only, not 'allocated' too — widening it would need a real migration in a
+// synchronize:false production DB (no migration tooling exists in this repo yet); the
+// application-level idempotency guard in ReservationService.reserveOrder (checks for an existing
+// active OR allocated row) is the actual enforcement point for the allocated state instead.
 @Index('idx_reservation_active_line_location', ['orderLineId', 'stockLocationId'], {
     unique: true,
     where: `"status" = 'active'`,

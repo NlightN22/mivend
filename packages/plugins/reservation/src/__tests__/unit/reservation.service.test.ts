@@ -136,6 +136,7 @@ describe('ReservationService', () => {
         service = new ReservationService(
             connection as unknown as TransactionalConnection,
             eventBus as unknown as EventBus,
+            { updateStockAllocatedForLocation: vi.fn() } as never,
         );
     });
 
@@ -171,6 +172,17 @@ describe('ReservationService', () => {
 
         it('is idempotent — a second call while an active reservation already exists is a no-op', async () => {
             const existing = [{ id: 'res-1', status: 'active' }];
+            reservationRepo.find.mockResolvedValue(existing);
+
+            const result = await service.confirmOrder(ctx, 'order-1', 3);
+
+            expect(result).toBe(existing);
+            expect(reservationRepo.save).not.toHaveBeenCalled();
+            expect(eventBus.publish).not.toHaveBeenCalled();
+        });
+
+        it('is idempotent — a second call after 1C already confirmed (status: allocated) is also a no-op, not a duplicate reservation', async () => {
+            const existing = [{ id: 'res-1', status: 'allocated' }];
             reservationRepo.find.mockResolvedValue(existing);
 
             const result = await service.confirmOrder(ctx, 'order-1', 3);
@@ -284,6 +296,57 @@ describe('ReservationService', () => {
             const count = await service.releaseReservations(ctx, 'order-1');
             expect(count).toBe(0);
             expect(eventBus.publish).not.toHaveBeenCalled();
+        });
+
+        it('gives back stockAllocated for an already-allocated (1C-confirmed) reservation being cancelled', async () => {
+            const stockLevelService = { updateStockAllocatedForLocation: vi.fn() };
+            const svc = new ReservationService(
+                connection as unknown as TransactionalConnection,
+                eventBus as unknown as EventBus,
+                stockLevelService as never,
+            );
+            const allocatedRow = {
+                id: 'res-1',
+                status: 'allocated',
+                productVariantId: 'variant-1',
+                stockLocationId: 'loc-1',
+                quantity: 4,
+            };
+            reservationRepo.find.mockResolvedValue([allocatedRow]);
+
+            await svc.releaseReservations(ctx, 'order-1');
+
+            expect(stockLevelService.updateStockAllocatedForLocation).toHaveBeenCalledWith(
+                ctx,
+                'variant-1',
+                'loc-1',
+                -4,
+            );
+            expect(reservationRepo.save).toHaveBeenCalledWith([
+                expect.objectContaining({ status: 'released' }),
+            ]);
+        });
+
+        it('does not touch stockAllocated for a merely-active (unconfirmed) reservation being cancelled', async () => {
+            const stockLevelService = { updateStockAllocatedForLocation: vi.fn() };
+            const svc = new ReservationService(
+                connection as unknown as TransactionalConnection,
+                eventBus as unknown as EventBus,
+                stockLevelService as never,
+            );
+            reservationRepo.find.mockResolvedValue([
+                {
+                    id: 'res-1',
+                    status: 'active',
+                    productVariantId: 'variant-1',
+                    stockLocationId: 'loc-1',
+                    quantity: 4,
+                },
+            ]);
+
+            await svc.releaseReservations(ctx, 'order-1');
+
+            expect(stockLevelService.updateStockAllocatedForLocation).not.toHaveBeenCalled();
         });
     });
 
