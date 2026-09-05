@@ -19,11 +19,17 @@ import { EXCHANGE } from '../../types';
 import type { SyncPluginOptions } from '../../types';
 
 const RABBITMQ_URL = process.env['RABBITMQ_URL'] ?? 'amqp://mivend:mivend@localhost:5672';
+// This machine's own docker-postgres/redis (infrastructure/docker/docker-compose.dev.yml) maps
+// redis to host port 6380, not the default 6379 — 6379 is occupied by an unrelated project's own
+// Redis container on this VPS (requires auth, unlike mivend's own). A hardcoded 6379 here
+// previously made this test connect to that other container and time out with
+// "NOAUTH Authentication required" instead of ever reaching mivend's own Redis.
+const REDIS_PORT = Number(process.env['TEST_REDIS_PORT'] ?? 6380);
 
 const HUB_OPTIONS: SyncPluginOptions = {
     instanceType: 'central',
     instanceId: 'hub',
-    redis: { host: 'localhost', port: 6379 },
+    redis: { host: 'localhost', port: REDIS_PORT },
     rabbitmq: { url: RABBITMQ_URL },
     maxRetry: 3,
 };
@@ -241,7 +247,7 @@ describe('OutboxWorker', () => {
             const options: SyncPluginOptions = {
                 instanceType,
                 instanceId: instanceType === 'central' ? 'hub' : 'branch-a',
-                redis: { host: 'localhost', port: 6379, db: 15 },
+                redis: { host: 'localhost', port: REDIS_PORT, db: 15 },
                 rabbitmq: { url: RABBITMQ_URL },
                 outboxPollIntervalMs: 300,
             };
