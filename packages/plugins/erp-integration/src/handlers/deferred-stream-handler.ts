@@ -5,15 +5,15 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationDeferredStreamHandler';
 
-// Organization/Warehouse/PriceType/Offer: no target Vendure entity/mapping is decided anywhere
-// in this codebase or in issue #62 itself — the issue explicitly defers the real
-// Seller/Channel/StockLocation migration these would map onto (design point 5, "Explicitly out
-// of scope"). Rather than guess a mapping that would need reworking anyway, these streams are
-// consumed into the inbox (durably recorded, never dropped — the no-silent-drops messaging invariant) and their
-// handler is a deliberate, logged no-op: the row is marked 'processed' so it isn't endlessly
-// retried for a mapping that doesn't exist yet, but nothing is silently lost — the raw payload
-// stays in `integration_inbox_event` for whenever the real mapping design lands. See the
-// implementation report's "Deliberate omissions" for the follow-up this needs.
+// Streams with no target Vendure entity/mapping decided yet: `offer` (issue #62's design point 5
+// deferred a real Seller/Channel/StockLocation migration for it) and `stock-organization` (its
+// quantity dimension is deferred to issue #72 — see integration-inbox-processor.service.ts's own
+// comment on why it isn't a second organizationId source either). Rather than guess a mapping
+// that would need reworking anyway, these streams are consumed into the inbox (durably recorded,
+// never dropped — the no-silent-drops messaging invariant) and their handler is a deliberate,
+// logged no-op: the row is marked 'processed' so it isn't endlessly retried for a mapping that
+// doesn't exist yet, but nothing is silently lost — the raw payload stays in
+// `integration_inbox_event` for whenever the real mapping design lands.
 //
 // Not @Injectable() — it's constructed manually (one instance per deferred stream, parameterized
 // by stream name) in IntegrationInboxProcessorService, not resolved via Nest DI.

@@ -3,6 +3,7 @@ import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { DocumentsPlugin } from '@mivend/plugin-documents';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
@@ -20,6 +21,8 @@ import { PriceTypeStreamHandler } from './handlers/price-type.handler';
 import { ProductStreamHandler } from './handlers/product.handler';
 import { StockStreamHandler } from './handlers/stock.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
+import { OrganizationStreamHandler } from './handlers/organization.handler';
+import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
@@ -48,6 +51,7 @@ import type { ErpIntegrationPluginOptions } from './types';
         CustomerPricingPlugin,
         PriceEntryPlugin,
         AccessControlPlugin,
+        DocumentsPlugin,
     ],
     entities: [IntegrationOutboxEntry, IntegrationInboxEvent],
     providers: [
@@ -65,6 +69,8 @@ import type { ErpIntegrationPluginOptions } from './types';
         ProductStreamHandler,
         StockStreamHandler,
         WarehouseStreamHandler,
+        OrganizationStreamHandler,
+        StorageLocationStreamHandler,
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,

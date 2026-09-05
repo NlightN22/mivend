@@ -179,6 +179,26 @@ export class DocumentsService {
         return saved;
     }
 
+    // Update-only: erp-integration's OrganizationStreamHandler calls this for the `organization`
+    // Kafka stream, which only ever carries name/isActive — never legalName/inn/legalAddress/bank
+    // details (those stay erp-import's job, see OrganizationRequisitesRecord). Returns false
+    // (does not create a row) when no existing record matches erpId, so this path can never put
+    // fabricated legal/bank data in front of real invoice rendering.
+    async updateActiveStateIfExists(
+        ctx: RequestContext,
+        erpId: string,
+        name: string,
+        isActive: boolean,
+    ): Promise<boolean> {
+        const repo = this.connection.getRepository(ctx, OrganizationRequisites);
+        const entity = await repo.findOne({ where: { erpId } });
+        if (!entity) return false;
+        entity.legalName = name;
+        entity.isActive = isActive;
+        await repo.save(entity);
+        return true;
+    }
+
     async upsertRequisites(
         ctx: RequestContext,
         record: OrganizationRequisitesRecord,
@@ -214,6 +234,16 @@ export class DocumentsService {
     // before the real 1C export exists (see docs/payments.md "Organizations").
     async findAllRequisites(ctx: RequestContext): Promise<OrganizationRequisites[]> {
         return this.connection.getRepository(ctx, OrganizationRequisites).find();
+    }
+
+    // Resolves 1C's own organization GUID (erpId) to this platform's auto-increment id — used by
+    // erp-integration's StorageLocationStreamHandler to populate ProductVariant.customFields
+    // .organizationId from a real StorageLocationChanged event.
+    async findRequisitesIdByErpId(ctx: RequestContext, erpId: string): Promise<number | null> {
+        const entity = await this.connection
+            .getRepository(ctx, OrganizationRequisites)
+            .findOne({ where: { erpId } });
+        return entity ? Number(entity.id) : null;
     }
 
     // Used to render an invoice for one specific organization (plugin-acquiring's Invoice

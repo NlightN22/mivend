@@ -60,6 +60,8 @@ function makeOptions(): ErpIntegrationPluginOptions {
                 offer: 'of',
                 price: 'pr',
                 stock: 's',
+                'storage-location': 'sl',
+                'stock-organization': 'so',
             },
         },
         schemaRegistry: { url: 'http://x' },
@@ -88,7 +90,7 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
 
         expect(createdConsumers).toHaveLength(2);
         expect(createdConsumers[1].connect).toHaveBeenCalledTimes(1);
-        expect(createdConsumers[1].subscribe).toHaveBeenCalledTimes(8);
+        expect(createdConsumers[1].subscribe).toHaveBeenCalledTimes(10);
     });
 
     it('does not schedule its own reconnect when kafkajs itself is restarting (restart: true)', async () => {

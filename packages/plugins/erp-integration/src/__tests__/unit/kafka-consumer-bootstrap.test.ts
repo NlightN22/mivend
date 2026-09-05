@@ -24,6 +24,8 @@ function makeOptions(
                 offer: 'of',
                 price: 'pr',
                 stock: 's',
+                'storage-location': 'sl',
+                'stock-organization': 'so',
             },
         },
         schemaRegistry: { url: 'http://x' },

@@ -9,6 +9,8 @@ import {
     PriceTypeChangedSchema,
     ProductChangedSchema,
     StockChangedSchema,
+    StockOrganizationChangedSchema,
+    StorageLocationChangedSchema,
     WarehouseChangedSchema,
 } from '@nlightn22/event-contracts';
 import { Consumer, Kafka } from 'kafkajs';
@@ -62,6 +64,8 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     offer: OfferChangedSchema,
     price: PriceChangedSchema,
     stock: StockChangedSchema,
+    'storage-location': StorageLocationChangedSchema,
+    'stock-organization': StockOrganizationChangedSchema,
 };
 
 @Injectable()

@@ -566,6 +566,9 @@ importers:
             '@mivend/plugin-customer-pricing':
                 specifier: workspace:*
                 version: link:../customer-pricing
+            '@mivend/plugin-documents':
+                specifier: workspace:*
+                version: link:../documents
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../erp-order

@@ -210,6 +210,21 @@ export const config: VendureConfig = {
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Organization' }],
             },
+            {
+                // The priority of the StorageLocationChanged row that last set organizationId
+                // above — a product can have several storage-location rows (issue #71), each its
+                // own Kafka entity with its own independent version history, so the inbox's
+                // per-entityId ordering guard doesn't by itself pick a winner across them. Lowest
+                // priority wins (see StorageLocationStreamHandler); storing it here lets a later
+                // arrival compare against the current winner instead of last-message-wins.
+                name: 'organizationPriority',
+                type: 'int',
+                nullable: true,
+                public: false,
+                label: [
+                    { languageCode: LanguageCode.en, value: 'Organization assignment priority' },
+                ],
+            },
         ],
         StockLocation: [
             {
@@ -408,6 +423,18 @@ export const config: VendureConfig = {
                     stock:
                         process.env.INTEGRATION_KAFKA_TOPIC_STOCK ??
                         'company.catalog.events.v1.stock-changed',
+                    // Issue #71: product+warehouse+organization storage-location assignment
+                    // (1C's МестаХраненияНоменклатуры register) — the real source for
+                    // ProductVariant.customFields.organizationId, see StorageLocationStreamHandler.
+                    'storage-location':
+                        process.env.INTEGRATION_KAFKA_TOPIC_STORAGE_LOCATION ??
+                        'company.catalog.events.v1.storage-location-changed',
+                    // Organization-level stock split (1C's ТоварыОрганизаций register) — quantity
+                    // dimension deliberately deferred to issue #72, not a second organizationId
+                    // source (StorageLocationChanged is sole source of truth for that).
+                    'stock-organization':
+                        process.env.INTEGRATION_KAFKA_TOPIC_STOCK_ORGANIZATION ??
+                        'company.catalog.events.v1.stock-organization-changed',
                 },
             },
             schemaRegistry: {

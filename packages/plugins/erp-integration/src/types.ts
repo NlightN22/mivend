@@ -8,6 +8,9 @@ declare module '@vendure/core' {
         // GlobalSettings.organizationSplitEnabled / InvoiceService.createInvoicesForOrder), so
         // there is no single per-Order organizationId to read.
         organizationId?: number | null;
+        // The StorageLocationChanged.priority that last won organizationId above — see
+        // StorageLocationStreamHandler and vendure-config.ts's own doc comment on this field.
+        organizationPriority?: number | null;
     }
 
     interface CustomStockLocationFields {
@@ -68,7 +71,9 @@ export type InboundStream =
     | 'product'
     | 'offer'
     | 'price'
-    | 'stock';
+    | 'stock'
+    | 'storage-location'
+    | 'stock-organization';
 
 export interface ErpIntegrationPluginOptions {
     instanceType: 'central' | 'branch';

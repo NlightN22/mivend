@@ -21,6 +21,7 @@
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-documents": "workspace:*",
         "@bufbuild/protobuf": "^2.0.0",
         "@nlightn22/event-contracts": "^0.13.0"
     },

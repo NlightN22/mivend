@@ -5,10 +5,12 @@ import { DataSource } from 'typeorm';
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
 import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
+import { OrganizationStreamHandler } from './handlers/organization.handler';
 import { PriceStreamHandler } from './handlers/price.handler';
 import { PriceTypeStreamHandler } from './handlers/price-type.handler';
 import { ProductStreamHandler } from './handlers/product.handler';
 import { StockStreamHandler } from './handlers/stock.handler';
+import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
@@ -33,16 +35,24 @@ export class IntegrationInboxProcessorService {
         priceTypeHandler: PriceTypeStreamHandler,
         stockHandler: StockStreamHandler,
         warehouseHandler: WarehouseStreamHandler,
+        organizationHandler: OrganizationStreamHandler,
+        storageLocationHandler: StorageLocationStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
             category: categoryHandler,
             price: priceHandler,
             stock: stockHandler,
-            organization: new DeferredStreamHandler('organization'),
+            organization: organizationHandler,
             warehouse: warehouseHandler,
             'price-type': priceTypeHandler,
             offer: new DeferredStreamHandler('offer'),
+            'storage-location': storageLocationHandler,
+            // Quantity dimension deliberately deferred to issue #72 (ATP/reservation-drift
+            // source-of-truth); organization_id here is not authoritative — StorageLocationChanged
+            // above is the sole source for ProductVariant.customFields.organizationId, so this
+            // stream stays a recorded, logged no-op for now, same as `offer`.
+            'stock-organization': new DeferredStreamHandler('stock-organization'),
         };
     }
 

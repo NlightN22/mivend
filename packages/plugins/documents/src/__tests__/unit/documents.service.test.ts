@@ -203,6 +203,62 @@ describe('DocumentsService', () => {
         });
     });
 
+    describe('findRequisitesIdByErpId', () => {
+        it('returns null when no requisites exist for that erpId', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            const result = await service.findRequisitesIdByErpId(mockCtx, 'org-unknown');
+            expect(mockRepo.findOne).toHaveBeenCalledWith({ where: { erpId: 'org-unknown' } });
+            expect(result).toBeNull();
+        });
+
+        it('returns the requisites numeric id for a matching erpId', async () => {
+            mockRepo.findOne.mockResolvedValue({ id: '7' });
+            const result = await service.findRequisitesIdByErpId(mockCtx, 'org-1');
+            expect(result).toBe(7);
+        });
+    });
+
+    describe('updateActiveStateIfExists', () => {
+        it('returns false and saves nothing when no requisites exist for that erpId', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            const result = await service.updateActiveStateIfExists(
+                mockCtx,
+                'org-unknown',
+                'Acme LLC',
+                true,
+            );
+            expect(result).toBe(false);
+            expect(mockRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('updates legalName/isActive on an existing row, never touching inn/legalAddress/bank fields', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'org-1',
+                legalName: 'Old Name',
+                isActive: true,
+                inn: '123456',
+                legalAddress: 'Old address',
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            const result = await service.updateActiveStateIfExists(
+                mockCtx,
+                'org-1',
+                'New Legal Name',
+                false,
+            );
+            expect(result).toBe(true);
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    legalName: 'New Legal Name',
+                    isActive: false,
+                    inn: '123456',
+                    legalAddress: 'Old address',
+                }),
+            );
+        });
+    });
+
     describe('createInvoicePlaceholder', () => {
         it('derives counterpartyId/amount/currency/invoiceId from the given Invoice, not the order', async () => {
             const order = { id: 42, code: 'ORD-1' } as never;

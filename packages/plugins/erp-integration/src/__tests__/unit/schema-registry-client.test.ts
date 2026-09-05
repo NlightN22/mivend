@@ -19,6 +19,8 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             offer: 't-offer',
             price: 't-price',
             stock: 't-stock',
+            'storage-location': 't-storage-location',
+            'stock-organization': 't-stock-organization',
         },
     },
     schemaRegistry: { url: 'http://registry.test' },
