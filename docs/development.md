@@ -38,6 +38,25 @@ pnpm dev:central # run server as central hub (hot-reload)
 pnpm dev:branch  # run server as branch
 ```
 
+## Environments / contours
+
+Beyond the `central`/`branch` instance identity above, the central instance also has three
+**contours** — local (isolated, synthetic data), staging-integration (real Integration Service
+Kafka), and production — each with its own database, Redis DB index, and ports, so they can run
+side by side without colliding. Full design, rationale, and setup steps:
+**[docs/environments.md](./environments.md)**. Quick reference:
+
+| Contour             | `make` target                  | Env file                                       | DB                                       | Redis DB | API port | Storefront | Manager |
+| ------------------- | ------------------------------ | ---------------------------------------------- | ---------------------------------------- | -------- | -------- | ---------- | ------- |
+| local               | `make dev`                     | `apps/server/.env.central`                     | `mivend_central`                         | `0`      | `3000`   | `5173`     | `5174`  |
+| branch              | `make dev-branch`              | `apps/server/.env.branch`                      | `mivend_branch` (own Postgres container) | `1`      | `3001`   | —          | —       |
+| staging-integration | `make dev-staging-integration` | `apps/server/.env.central.staging-integration` | `mivend_central_staging_integration`     | `2`      | `3010`   | `5183`     | `5184`  |
+
+(Branch has no storefront/manager by design — both are central-only, see
+`docs/architecture.md`'s "Storefront hosting: Central-only, not per-branch".) External access
+from outside this box (nginx + ufw port mapping per contour) is documented in
+`docs/environments.md`'s "Reaching a contour from outside this box".
+
 ## Building
 
 ```bash
