@@ -158,17 +158,10 @@ Makefile commands pass; deliberately uncovered risks are reported with a reason.
 
 ## Sync rules index (non-negotiable — numbers are stable, don't renumber)
 
-Full detail for each rule now lives in one of two skills, split by transport boundary — read the
-one that matches what you're touching **before** writing or changing code there:
-
-- **`internal-sync-rules`** — hub↔branch RabbitMQ (`plugin-sync`): rules 5 (internal half), 8, 9, 10.
-- **`external-integration-rules`** — Integration Service/Kafka (`plugin-erp-integration`),
-  payments, fiscal registrar, any future external webhook/API: rules 5 (external half), 6, 7, 11,
-  12, 13.
-
 **Numbers below are stable identifiers — a huge number of inline code comments across this repo
 cite them as `AGENTS.md sync rule #N`. Do not renumber even when moving detail elsewhere; add a
-new rule at #14+ instead of inserting.** See `docs/sync.md` for the full design.
+new rule at #14+ instead of inserting.** Each line's "Full detail" names the skill with the
+complete rule. See `docs/sync.md` for the full design.
 
 1. **Outbox pattern is mandatory.** Any data that must reach another instance/system is first
    written to an outbox table **in the same DB transaction** as the business data. Sending
@@ -203,34 +196,10 @@ new rule at #14+ instead of inserting.** See `docs/sync.md` for the full design.
 
 ---
 
-## Backend plugin development
+## Vendure core
 
-Plugin layout, inter-plugin communication, the business-data-in-DB rule, server-side pagination,
-REST/Swagger DTOs, and accumulated Vendure-specific gotchas all moved to the
-**`backend-plugin-rules`** skill — read it before creating a new plugin, adding a
-resolver/service, or touching any list/pagination query. Never modify Vendure core
-(`node_modules/@vendure`) — if it doesn't support something natively, build a plugin.
-
----
-
-## Where did a section go?
-
-This file was split into domain skills — a number of existing code comments still cite an
-AGENTS.md section by name (not number). This table is the redirect:
-
-| Old AGENTS.md section name                                    | Now lives in                       |
-| ------------------------------------------------------------- | ---------------------------------- |
-| Vendure rules / Plugin structure / Inter-plugin communication | `backend-plugin-rules` skill       |
-| Business data must live in the database / Pagination          | `backend-plugin-rules` skill       |
-| REST endpoint documentation (Swagger/OpenAPI)                 | `backend-plugin-rules` skill       |
-| Vendure-specific gotchas / Dev seed rules                     | `backend-plugin-rules` skill       |
-| Sync rules #5 (RabbitMQ half) / #8 / #9 / #10                 | `internal-sync-rules` skill        |
-| Sync rules #5 (Kafka half) / #6 / #7 / #11 / #12 / #13        | `external-integration-rules` skill |
-| UI kit rules                                                  | `frontend-rules` skill             |
-| Storefront rules                                              | `storefront-rules` skill           |
-| Manager portal rules                                          | `manager-portal-rules` skill       |
-
-Sync rule **numbers** (1-13) didn't change — see "Sync rules index" above.
+**Never modify Vendure core** (`node_modules/@vendure`) — if it doesn't support something
+natively, build a plugin.
 
 ---
 
@@ -277,26 +246,6 @@ Every `package.json` in the monorepo must contain:
 
 This applies to all packages without exception: `apps/*`, `packages/shared`, `packages/plugins/*`.
 Do not use any other license. Do not omit the field.
-
----
-
-## Frontend development
-
-UI-kit-first policy and icon kit conventions (shared by both portals), storefront-specific rules,
-and manager-portal-specific rules all moved to skills — **read `frontend-rules` first for any
-frontend work**, then whichever of `storefront-rules`/`manager-portal-rules` matches the portal
-you're touching. For the step-by-step page-building checklist, see `frontend-page-design`; for
-tables specifically, `manager-table-standard`.
-
----
-
-## Backend: Vendure gotchas and dev seeding
-
-The accumulated Vendure-specific gotchas (GraphQL schema restart requirement, flat customFields
-filters, the `order` SQL-alias quoting trap, paginated-list `<EntityName>List` auto-injection,
-GraphQL id `number`/`string` coercion, etc.) and the dev seed rules (`make seed`/`seed-all`,
-`erp-import`-only, never a direct GraphQL/SQL/TypeORM bypass) both moved to the
-**`backend-plugin-rules`** skill.
 
 ---
 
