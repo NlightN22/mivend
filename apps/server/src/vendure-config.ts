@@ -225,6 +225,19 @@ export const config: VendureConfig = {
                     { languageCode: LanguageCode.en, value: 'Organization assignment priority' },
                 ],
             },
+            {
+                // The StorageLocationChanged entityId (storage_location_id) that currently owns
+                // organizationId/organizationPriority above. Needed for two things a bare priority
+                // number can't do alone: (1) a deterministic tiebreak when two different
+                // storage-location rows arrive with equal priority, and (2) recognizing a delete
+                // of the CURRENT winner so it can be cleared instead of staying permanently
+                // pinned to a now-deleted row (mivend.audit.71 findings).
+                name: 'organizationSourceEntityId',
+                type: 'string',
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Organization assignment source' }],
+            },
         ],
         StockLocation: [
             {

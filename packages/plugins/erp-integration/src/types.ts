@@ -11,6 +11,9 @@ declare module '@vendure/core' {
         // The StorageLocationChanged.priority that last won organizationId above — see
         // StorageLocationStreamHandler and vendure-config.ts's own doc comment on this field.
         organizationPriority?: number | null;
+        // The StorageLocationChanged entityId that currently owns organizationId/
+        // organizationPriority — see vendure-config.ts's own doc comment on this field.
+        organizationSourceEntityId?: string | null;
     }
 
     interface CustomStockLocationFields {

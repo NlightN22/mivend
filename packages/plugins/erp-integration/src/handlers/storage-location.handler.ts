@@ -6,6 +6,11 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationStorageLocationHandler';
 
+interface CurrentAssignment {
+    organizationPriority: number | null;
+    organizationSourceEntityId: string | null;
+}
+
 // Applies Integration Service's `storage-location` stream (StorageLocationChanged, 1C's
 // МестаХраненияНоменклатуры register) — the real source for ProductVariant.customFields
 // .organizationId (docs/payments.md "Organizations": one storage location = one product = one
@@ -16,10 +21,13 @@ const loggerCtx = 'IntegrationStorageLocationHandler';
 //
 // A product can have several storage-location rows, each its OWN Kafka entity (entityId =
 // storage_location_id) with its own independent version history — the inbox's per-entityId
-// ordering guard doesn't pick a winner across different locations for the same product. The
-// contract's own rule is "lowest priority wins"; organizationPriority (persisted alongside
-// organizationId) lets a later-arriving row compare against the current winner instead of
-// last-message-wins.
+// ordering guard doesn't pick a winner across them. The contract's own rule is "lowest priority
+// wins"; organizationSourceEntityId + organizationPriority (persisted alongside organizationId)
+// let a later-arriving row compare against the current winner instead of last-message-wins, tie
+// deterministically on equal priority (mivend.audit.71), and recognize a delete of the current
+// winner so it can be cleared instead of staying pinned to a now-deleted row (mivend.audit.71 —
+// this does NOT re-elect the next-best remaining row, since no per-location table is kept here;
+// clearing to "unassigned" is the safe minimum until another row's event arrives).
 @Injectable()
 export class StorageLocationStreamHandler implements InboundStreamHandler {
     constructor(
@@ -43,11 +51,16 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
             Logger.warn(`storage-location ${entityId}: missing productId, skipping`, loggerCtx);
             return;
         }
-        if (isDeleted || !organizationErpId) {
-            // Deletion, or an address-only row (the ~99.99% case) — nothing to apply for the
-            // organization dimension. Address fields are out of scope (see class doc comment).
+
+        if (isDeleted) {
+            await this.handleDeletion(ctx, entityId, productId);
+            return;
+        }
+        if (!organizationErpId) {
+            // Address-only row (the ~99.99% case) — nothing to apply for the organization
+            // dimension. Address fields are out of scope (see class doc comment).
             Logger.verbose(
-                `storage-location ${entityId}: no organization assignment (deleted=${isDeleted}), skipping`,
+                `storage-location ${entityId}: no organization assignment, skipping`,
                 loggerCtx,
             );
             return;
@@ -79,24 +92,81 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         }
 
         const current = await this.getCurrentAssignment(variantId);
-        if (
-            current &&
-            current.organizationPriority != null &&
-            priority > current.organizationPriority
-        ) {
+        if (current && !this.beatsCurrentWinner(priority, entityId, current)) {
             Logger.verbose(
                 `storage-location ${entityId}: priority ${priority} does not beat current winner ` +
-                    `${current.organizationPriority} for productId=${productId}, skipping`,
+                    `${current.organizationSourceEntityId} (priority=${current.organizationPriority}) ` +
+                    `for productId=${productId}, skipping`,
                 loggerCtx,
             );
             return;
         }
 
         await this.productVariantService.update(ctx, [
-            { id: variantId, customFields: { organizationId, organizationPriority: priority } },
+            {
+                id: variantId,
+                customFields: {
+                    organizationId,
+                    organizationPriority: priority,
+                    organizationSourceEntityId: entityId,
+                },
+            },
         ]);
         Logger.verbose(
-            `Set organizationId=${organizationId} (priority=${priority}) for productId=${productId}`,
+            `Set organizationId=${organizationId} (priority=${priority}, source=${entityId}) for productId=${productId}`,
+            loggerCtx,
+        );
+    }
+
+    // Lower priority wins; on an equal priority from two different entities, the lower entityId
+    // wins — a fixed, arrival-order-independent tiebreak (mivend.audit.71: an arbitrary "last
+    // message wins" tie was non-deterministic across redelivery/replay).
+    private beatsCurrentWinner(
+        priority: number,
+        entityId: string,
+        current: CurrentAssignment,
+    ): boolean {
+        if (current.organizationPriority == null) return true;
+        if (priority !== current.organizationPriority) {
+            return priority < current.organizationPriority;
+        }
+        if (!current.organizationSourceEntityId) return true;
+        return entityId < current.organizationSourceEntityId;
+    }
+
+    private async handleDeletion(
+        ctx: RequestContext,
+        entityId: string,
+        productId: string,
+    ): Promise<void> {
+        const variantId = await this.findVariantId(productId);
+        if (!variantId) return;
+
+        const current = await this.getCurrentAssignment(variantId);
+        if (current?.organizationSourceEntityId !== entityId) {
+            // Not the row currently backing organizationId — nothing to clear (mivend.audit.71:
+            // the earlier version of this handler skipped ALL deletions unconditionally, which
+            // silently left a stale organizationId pinned to a deleted row when it WAS the
+            // winner).
+            Logger.verbose(
+                `storage-location ${entityId}: deleted, not the current winner, skipping`,
+                loggerCtx,
+            );
+            return;
+        }
+
+        await this.productVariantService.update(ctx, [
+            {
+                id: variantId,
+                customFields: {
+                    organizationId: null,
+                    organizationPriority: null,
+                    organizationSourceEntityId: null,
+                },
+            },
+        ]);
+        Logger.verbose(
+            `Cleared organization assignment for productId=${productId} (winning storage-location ${entityId} deleted)`,
             loggerCtx,
         );
     }
@@ -112,14 +182,13 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         return row?.id;
     }
 
-    private async getCurrentAssignment(
-        variantId: string,
-    ): Promise<{ organizationPriority: number | null } | undefined> {
+    private async getCurrentAssignment(variantId: string): Promise<CurrentAssignment | undefined> {
         return this.connection.rawConnection
             .createQueryBuilder()
             .select('pv."customFieldsOrganizationpriority"', 'organizationPriority')
+            .addSelect('pv."customFieldsOrganizationsourceentityid"', 'organizationSourceEntityId')
             .from('product_variant', 'pv')
             .where('pv.id = :variantId', { variantId })
-            .getRawOne<{ organizationPriority: number | null }>();
+            .getRawOne<CurrentAssignment>();
     }
 }
