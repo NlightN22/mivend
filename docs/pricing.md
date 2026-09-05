@@ -15,8 +15,13 @@ charged on an order.
 | `DiscountRule`             | `plugin-price-entry`      | Facet + time-window percentage discount on top of the base price |
 | `Counterparty`             | `plugin-counterparty`     | Legal entity; carries the `priceType` string from the ERP        |
 
-There is **no** concept of a public retail price shown in the storefront. Every price
-shown or charged is resolved per customer via their assigned `PriceType`.
+**Updated (issue #70, 2026-09-05):** the storefront now DOES show a price to a guest or to
+any customer whose own price can't be resolved — the branch's default `PriceType`
+(`BranchSettings.defaultPriceTypeId`, see #66) is shown as a fallback, with only
+general/all-counterparty discounts applied (never a customer-specific one). This is a
+deliberate reversal of this doc's earlier "no public retail price at all" stance — the
+user judged this acceptable (2026-09-05) since the fallback is always a real, branch-
+configured `PriceType` (e.g. `RETAIL`), not an arbitrary/raw index price.
 
 ---
 
@@ -55,11 +60,23 @@ PriceResolutionService.resolve(ctx, variantId)
 1. priceTypeCode = PriceEntryService.getPriceTypeCodeForUser(ctx)
    — raw SQL join: customer_price_type → price_type, keyed by ctx.activeUserId
    — null if the customer has no assigned price type (or is a guest)
-   → if null: { customerPrice: null, compareAtPrice: null }
+   → if null (or step 2 finds no PriceEntry row): fall through to the
+     branch-default fallback (step 1b) instead of returning both null
+
+1b. FALLBACK (#70, when step 1/2 can't resolve the customer's own price):
+    branchId = counterparty's own branchId, else GlobalSettings.defaultBranchId
+    defaultPriceTypeId = BranchSettingsService.resolveEffective(branchId).defaultPriceTypeId
+    basePrice = PriceEntryService.getForVariant(ctx, variantId, defaultPriceTypeId)
+    percent = DiscountRuleService.getBestPercent(ctx, defaultPriceTypeId, facetValues, now,
+              weightByFacet, counterpartyId: null)   — counterpartyId explicitly null,
+              so only general/all-counterparty DiscountRules can match here, never one
+              scoped to a specific customer
+    → only if this ALSO fails to resolve (e.g. empty bootstrap, no BranchSettings yet)
+      does resolve() return { customerPrice: null, compareAtPrice: null }
 
 2. basePrice = PriceEntryService.getForVariant(ctx, variantId, priceTypeCode)
    — reads ProductVariantPriceEntry
-   → if no PriceEntry row exists for this variant+priceType: both null
+   → if no PriceEntry row exists for this variant+priceType: fall through to 1b
 
 3. facetValues = merge(ProductVariant.facetValues, Product.facetValues)
    — erp-import's ProductHandler assigns brand/category facets to the PRODUCT,
