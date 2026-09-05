@@ -9,8 +9,8 @@ This covers the boundary between mivend and anything **outside** mivend's own hu
 topology: Integration Service (1C via Kafka), a payment provider, a fiscal registrar/operator,
 or any future external API/webhook. For the hub↔branch RabbitMQ boundary instead, see the
 `internal-sync-rules` skill. For messaging invariants that apply to both (outbox pattern,
-idempotent consumers, ack-after-commit, no silent drops), see AGENTS.md's "Messaging invariants"
-section — those are non-negotiable here too, not repeated in full below.
+idempotent consumers, ack-after-commit, no silent drops), see AGENTS.md's "Sync rules index"
+(rules #1-4) — those are non-negotiable here too, not repeated in full below.
 
 Full design: `docs/sync.md`, `docs/payments.md`, `docs/ai/1c-integration-service-decision.md`,
 `docs/environments.md` (local/staging-integration/production contour separation — **never let

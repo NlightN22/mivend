@@ -9,7 +9,7 @@ This covers sync **between mivend's own instances** — central hub and branch, 
 (`plugin-sync`). For the external boundary with Integration Service/Kafka or any other outside
 system instead, see the `external-integration-rules` skill. For messaging invariants that apply
 to both (outbox pattern, idempotent consumers, ack-after-commit, no silent drops), see
-AGENTS.md's "Messaging invariants" section — non-negotiable here too, not repeated in full below.
+AGENTS.md's "Sync rules index" (rules #1-4) — non-negotiable here too, not repeated in full below.
 
 Full design: `docs/architecture.md`, `docs/sync.md`.
 
