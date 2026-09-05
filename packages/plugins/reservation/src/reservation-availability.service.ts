@@ -7,6 +7,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import { IsNull } from 'typeorm';
 import { WarehouseService } from '@mivend/plugin-access-control';
 
 import { Reservation } from './entities/reservation.entity';
@@ -22,21 +23,20 @@ export class ReservationAvailabilityService {
         private warehouseService: WarehouseService,
     ) {}
 
-    async getReservedQuantity(
-        ctx: RequestContext,
-        productVariantId: ID,
-        branchId?: string | null,
-    ): Promise<number> {
-        const stockLocationIds = await this.resolveStockLocationIds(ctx, branchId);
-        return this.sumActiveReservations(ctx, productVariantId, stockLocationIds);
-    }
-
-    // ATP = stockOnHand - stockAllocated - activeReservations, summed across every StockLocation
-    // that resolves for the given branchId (its Warehouses' StockLocations — see
-    // BranchStockLocationStrategy/WarehouseService in plugin-erp-integration/plugin-access-
-    // control), no safetyStock term (docs/order-flow.md "ATP formula (decided)"). branchId is
-    // optional and falls back to the single default StockLocation — the pre-multi-warehouse
-    // behavior — for callers that don't yet have a branch to scope by.
+    // ATP = stockOnHand - stockAllocated - unconfirmedActiveReservations, capped per-location at
+    // 1C's own availableQuantity where known (issue #72's revised formula) — 1C is the sole
+    // source of truth for reservations, since it receives holds from other channels that never
+    // reach mivend as events at all. Once 1C confirms a mivend reservation
+    // (Reservation.erpConfirmedAt set, via the existing order-status callback — docs/order-flow.md
+    // stages 5-6), it stops being subtracted locally: 1C's own availableQuantity is trusted to
+    // already reflect it, so it isn't subtracted twice (once locally, once inside 1C's own
+    // number). The cap is applied PER StockLocation, not after summing across locations — 1C's
+    // availableQuantity is itself location-scoped (StockChanged is per warehouse), so capping
+    // after summing would mix numbers from different scopes.
+    //
+    // No cap is applied for a location 1C has never reported a StockChanged for
+    // (erpAvailableQuantity still null) — falls back to the local-only number for that location,
+    // same bootstrap behavior as every other ERP-sourced field in this codebase.
     async getAvailableToPromise(
         ctx: RequestContext,
         productVariantId: ID,
@@ -49,17 +49,31 @@ export class ReservationAvailabilityService {
                 stockLocationId,
             })),
         });
-        const stockOnHand = stockLevels.reduce((sum, level) => sum + level.stockOnHand, 0);
-        const stockAllocated = stockLevels.reduce((sum, level) => sum + level.stockAllocated, 0);
-        const reserved = await this.sumActiveReservations(ctx, productVariantId, stockLocationIds);
-        return stockOnHand - stockAllocated - reserved;
+        const unconfirmedReservedByLocation = await this.sumUnconfirmedReservationsByLocation(
+            ctx,
+            productVariantId,
+            stockLocationIds,
+        );
+
+        let total = 0;
+        for (const level of stockLevels) {
+            const locationId = String(level.stockLocationId);
+            const localFree =
+                level.stockOnHand -
+                level.stockAllocated -
+                (unconfirmedReservedByLocation.get(locationId) ?? 0);
+            const erpCap = level.customFields?.erpAvailableQuantity;
+            total += erpCap != null ? Math.min(localFree, erpCap) : localFree;
+        }
+        return total;
     }
 
-    private async sumActiveReservations(
+    async getReservedQuantity(
         ctx: RequestContext,
         productVariantId: ID,
-        stockLocationIds: string[],
+        branchId?: string | null,
     ): Promise<number> {
+        const stockLocationIds = await this.resolveStockLocationIds(ctx, branchId);
         const rows = await this.connection.getRepository(ctx, Reservation).find({
             where: stockLocationIds.map(stockLocationId => ({
                 productVariantId: String(productVariantId),
@@ -68,6 +82,29 @@ export class ReservationAvailabilityService {
             })),
         });
         return rows.reduce((sum, r) => sum + r.quantity, 0);
+    }
+
+    private async sumUnconfirmedReservationsByLocation(
+        ctx: RequestContext,
+        productVariantId: ID,
+        stockLocationIds: string[],
+    ): Promise<Map<string, number>> {
+        const rows = await this.connection.getRepository(ctx, Reservation).find({
+            where: stockLocationIds.map(stockLocationId => ({
+                productVariantId: String(productVariantId),
+                stockLocationId,
+                status: 'active' as const,
+                erpConfirmedAt: IsNull(),
+            })),
+        });
+        const byLocation = new Map<string, number>();
+        for (const row of rows) {
+            byLocation.set(
+                row.stockLocationId,
+                (byLocation.get(row.stockLocationId) ?? 0) + row.quantity,
+            );
+        }
+        return byLocation;
     }
 
     // No branchId (or no Warehouse resolves for it — e.g. not yet synced): fall back to the

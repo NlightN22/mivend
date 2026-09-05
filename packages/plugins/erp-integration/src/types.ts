@@ -16,6 +16,13 @@ declare module '@vendure/core' {
         organizationSourceEntityId?: string | null;
     }
 
+    interface CustomStockLevelFields {
+        // Owned by apps/server/src/vendure-config.ts's customFields config. 1C's own
+        // availableQuantity (StockChanged) for this (productVariant, stockLocation) — issue #72's
+        // ATP cap. See StockStreamHandler and ReservationAvailabilityService.
+        erpAvailableQuantity?: number | null;
+    }
+
     interface CustomStockLocationFields {
         // Owned by apps/server/src/vendure-config.ts's customFields config. StockLocation has no
         // native external-id field — this is WarehouseStreamHandler's idempotency key

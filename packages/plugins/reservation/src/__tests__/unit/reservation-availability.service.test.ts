@@ -8,11 +8,13 @@ interface StockLevelRow {
     stockLocationId: string;
     stockOnHand: number;
     stockAllocated: number;
+    customFields?: { erpAvailableQuantity?: number | null };
 }
 
 interface ReservationRow {
     stockLocationId: string;
     quantity: number;
+    erpConfirmedAt?: Date | null;
 }
 
 interface Warehouse {
@@ -42,10 +44,24 @@ describe('ReservationAvailabilityService', () => {
         const stockLocations = options.stockLocations ?? [];
 
         const reservationRepo = {
-            find: vi.fn(async ({ where }: { where: Array<{ stockLocationId: string }> }) => {
-                const ids = new Set(where.map(w => w.stockLocationId));
-                return reservations.filter(r => ids.has(r.stockLocationId));
-            }),
+            find: vi.fn(
+                async ({
+                    where,
+                }: {
+                    where: Array<{ stockLocationId: string; erpConfirmedAt?: unknown }>;
+                }) => {
+                    const ids = new Set(where.map(w => w.stockLocationId));
+                    // Only sumUnconfirmedReservationsByLocation's query includes an
+                    // erpConfirmedAt clause (IsNull()) — mirror that filter here so tests can
+                    // distinguish confirmed vs unconfirmed reservations.
+                    const unconfirmedOnly = where.some(w => 'erpConfirmedAt' in w);
+                    return reservations.filter(
+                        r =>
+                            ids.has(r.stockLocationId) &&
+                            (!unconfirmedOnly || r.erpConfirmedAt == null),
+                    );
+                },
+            ),
         };
         const stockLevelRepo = {
             find: vi.fn(async ({ where }: { where: Array<{ stockLocationId: string }> }) => {
@@ -193,5 +209,96 @@ describe('ReservationAvailabilityService', () => {
         });
         const available = await service.getAvailableToPromise(ctx, 'variant-1', 'branch-a');
         expect(available).toBe(5);
+    });
+
+    it('does not subtract a CONFIRMED reservation locally — trusts it is already inside erpAvailableQuantity (issue #72)', async () => {
+        const service = createService({
+            stockLevels: [
+                {
+                    stockLocationId: 'location-1',
+                    stockOnHand: 15,
+                    stockAllocated: 3,
+                    customFields: { erpAvailableQuantity: 20 },
+                },
+            ],
+            reservations: [
+                { stockLocationId: 'location-1', quantity: 4, erpConfirmedAt: new Date() },
+            ],
+        });
+        const available = await service.getAvailableToPromise(ctx, 'variant-1');
+        // 15 - 3 = 12 locally (the confirmed reservation is NOT subtracted again), capped at
+        // erpAvailableQuantity=20 which doesn't bite here -> 12.
+        expect(available).toBe(12);
+    });
+
+    it('still subtracts an UNCONFIRMED reservation locally (1C has not acknowledged it yet)', async () => {
+        const service = createService({
+            stockLevels: [
+                {
+                    stockLocationId: 'location-1',
+                    stockOnHand: 15,
+                    stockAllocated: 3,
+                    customFields: { erpAvailableQuantity: 20 },
+                },
+            ],
+            reservations: [{ stockLocationId: 'location-1', quantity: 4, erpConfirmedAt: null }],
+        });
+        const available = await service.getAvailableToPromise(ctx, 'variant-1');
+        // 15 - 3 - 4 = 8, still below the erpAvailableQuantity cap of 20 -> 8.
+        expect(available).toBe(8);
+    });
+
+    it('caps ATP at erpAvailableQuantity when 1C reports a lower number (a reservation from another channel mivend never saw)', async () => {
+        const service = createService({
+            stockLevels: [
+                {
+                    stockLocationId: 'location-1',
+                    stockOnHand: 15,
+                    stockAllocated: 0,
+                    customFields: { erpAvailableQuantity: 3 },
+                },
+            ],
+            reservations: [],
+        });
+        const available = await service.getAvailableToPromise(ctx, 'variant-1');
+        // Local would be 15, but 1C only reports 3 free (another channel's hold mivend has no
+        // event for) — the lower number wins.
+        expect(available).toBe(3);
+    });
+
+    it('falls back to the local number when 1C has never reported a StockChanged for this location (erpAvailableQuantity null)', async () => {
+        const service = createService({
+            stockLevels: [{ stockLocationId: 'location-1', stockOnHand: 15, stockAllocated: 3 }],
+            reservations: [],
+        });
+        const available = await service.getAvailableToPromise(ctx, 'variant-1');
+        expect(available).toBe(12);
+    });
+
+    it('applies the erpAvailableQuantity cap per StockLocation, not after summing across locations', async () => {
+        const service = createService({
+            warehouses: [
+                { branchId: 'branch-a', erpId: 'wh-1', isActive: true, includedInBranchAtp: true },
+                { branchId: 'branch-a', erpId: 'wh-2', isActive: true, includedInBranchAtp: true },
+            ],
+            stockLocations: [
+                { id: 'loc-1', customFields: { warehouseErpId: 'wh-1' } },
+                { id: 'loc-2', customFields: { warehouseErpId: 'wh-2' } },
+            ],
+            stockLevels: [
+                {
+                    stockLocationId: 'loc-1',
+                    stockOnHand: 10,
+                    stockAllocated: 0,
+                    customFields: { erpAvailableQuantity: 2 },
+                },
+                { stockLocationId: 'loc-2', stockOnHand: 10, stockAllocated: 0 },
+            ],
+            reservations: [],
+        });
+        const available = await service.getAvailableToPromise(ctx, 'variant-1', 'branch-a');
+        // loc-1 capped at 2 (not 10), loc-2 uncapped at 10 -> 2 + 10 = 12. A naive
+        // sum-then-cap (min(20, 2)) would have wrongly produced 2 for the whole branch.
+        expect(available).toBe(12);
     });
 });

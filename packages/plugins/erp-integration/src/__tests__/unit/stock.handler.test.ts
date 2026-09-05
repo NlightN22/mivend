@@ -3,8 +3,12 @@ import type { RequestContext } from '@vendure/core';
 
 import { StockStreamHandler } from '../../handlers/stock.handler';
 
-function createConnection(rows: Array<Record<string, unknown> | undefined>): {
+function createConnection(
+    rows: Array<Record<string, unknown> | undefined>,
+    stockLevelSave = vi.fn(),
+): {
     rawConnection: { createQueryBuilder: () => unknown };
+    getRepository: () => { save: typeof stockLevelSave };
 } {
     let call = 0;
     return {
@@ -21,6 +25,7 @@ function createConnection(rows: Array<Record<string, unknown> | undefined>): {
                 };
             },
         },
+        getRepository: () => ({ save: stockLevelSave }),
     };
 }
 
@@ -117,7 +122,7 @@ describe('StockStreamHandler', () => {
     it('writes the delta between quantity and the current stockOnHand for the resolved location', async () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLevelService = {
-            getStockLevel: vi.fn().mockResolvedValue({ stockOnHand: 3 }),
+            getStockLevel: vi.fn().mockResolvedValue({ id: 'level-1', stockOnHand: 3 }),
             updateStockOnHandForLocation: vi.fn(),
         };
         const handler = new StockStreamHandler(
@@ -140,6 +145,85 @@ describe('StockStreamHandler', () => {
             'loc-1',
             9,
         );
+    });
+
+    it('persists erpAvailableQuantity onto StockLevel.customFields (issue #72)', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLevelService = {
+            getStockLevel: vi
+                .fn()
+                .mockResolvedValue({ id: 'level-1', stockOnHand: 12, customFields: {} }),
+            updateStockOnHandForLocation: vi.fn(),
+        };
+        const stockLevelSave = vi.fn();
+        const handler = new StockStreamHandler(
+            createConnection([{ id: 'loc-1' }, { id: 'variant-1' }], stockLevelSave) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
+
+        await handler.apply(ctx, 'stock-1', {
+            productId: 'prod-1',
+            warehouseId: 'wh-1',
+            quantity: 12,
+            availableQuantity: 10,
+        });
+
+        expect(stockLevelSave).toHaveBeenCalledWith(
+            expect.objectContaining({
+                id: 'level-1',
+                customFields: expect.objectContaining({ erpAvailableQuantity: 10 }),
+            }),
+        );
+    });
+
+    it('does not touch StockLevel when erpAvailableQuantity is already up to date', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLevelService = {
+            getStockLevel: vi.fn().mockResolvedValue({
+                id: 'level-1',
+                stockOnHand: 12,
+                customFields: { erpAvailableQuantity: 10 },
+            }),
+            updateStockOnHandForLocation: vi.fn(),
+        };
+        const stockLevelSave = vi.fn();
+        const handler = new StockStreamHandler(
+            createConnection([{ id: 'loc-1' }, { id: 'variant-1' }], stockLevelSave) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
+
+        await handler.apply(ctx, 'stock-1', {
+            productId: 'prod-1',
+            warehouseId: 'wh-1',
+            quantity: 12,
+            availableQuantity: 10,
+        });
+
+        expect(stockLevelSave).not.toHaveBeenCalled();
+    });
+
+    it('does not touch StockLevel when availableQuantity is absent from the payload', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLevelService = {
+            getStockLevel: vi.fn().mockResolvedValue({ id: 'level-1', stockOnHand: 12 }),
+            updateStockOnHandForLocation: vi.fn(),
+        };
+        const stockLevelSave = vi.fn();
+        const handler = new StockStreamHandler(
+            createConnection([{ id: 'loc-1' }, { id: 'variant-1' }], stockLevelSave) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
+
+        await handler.apply(ctx, 'stock-1', {
+            productId: 'prod-1',
+            warehouseId: 'wh-1',
+            quantity: 12,
+        });
+
+        expect(stockLevelSave).not.toHaveBeenCalled();
     });
 
     it('does not write when the reported quantity already matches stockOnHand', async () => {

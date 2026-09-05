@@ -251,6 +251,20 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'Warehouse ERP ID' }],
             },
         ],
+        StockLevel: [
+            {
+                // 1C's own availableQuantity for this (productVariant, stockLocation) — from
+                // StockChanged (issue #72). Caps ReservationAvailabilityService's own ATP
+                // formula: 1C receives reservations from other channels that never reach mivend
+                // as events, so mivend's own local ledger alone cannot be trusted as the ceiling.
+                // Previously decoded and discarded entirely — see StockStreamHandler.
+                name: 'erpAvailableQuantity',
+                type: 'int',
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP available quantity' }],
+            },
+        ],
         GlobalSettings: [
             {
                 // Admin-controlled toggle (Settings screen in Admin UI — customFields on

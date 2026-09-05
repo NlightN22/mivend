@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RequestContext, StockLevelService, TransactionalConnection } from '@vendure/core';
+import {
+    RequestContext,
+    StockLevel,
+    StockLevelService,
+    TransactionalConnection,
+} from '@vendure/core';
 import { WarehouseService } from '@mivend/plugin-access-control';
 
 import type { InboundStreamHandler } from './inbound-stream-handler';
@@ -11,8 +16,11 @@ const loggerCtx = 'IntegrationStockHandler';
 // migration, replacing the earlier single-default-location simplification): warehouseId resolves
 // to a real StockLocation via Warehouse.erpId -> StockLocation.customFields.warehouseErpId
 // (WarehouseStreamHandler's own idempotency key). `quantity` (the physical on-hand count) maps to
-// StockLevel.stockOnHand — not `availableQuantity`, which already nets out reservations and has
-// no direct StockLevel column of its own.
+// StockLevel.stockOnHand. `availableQuantity` maps to StockLevel.customFields.erpAvailableQuantity
+// (issue #72) — 1C's own ATP number, used by ReservationAvailabilityService to cap mivend's local
+// ATP, since 1C receives reservations from other channels mivend never sees as events.
+// `reservedQuantity` still has no destination — issue #72's revised ATP formula only needs 1C's
+// *available* number as a ceiling, not its own reserved breakdown.
 @Injectable()
 export class StockStreamHandler implements InboundStreamHandler {
     constructor(
@@ -29,6 +37,8 @@ export class StockStreamHandler implements InboundStreamHandler {
         const productId = String(payload.productId ?? '');
         const warehouseId = String(payload.warehouseId ?? '');
         const quantity = Number(payload.quantity ?? NaN);
+        const availableQuantity =
+            payload.availableQuantity != null ? Number(payload.availableQuantity) : null;
         const isDeleted = payload.isDeleted === true;
         if (!productId || !warehouseId || Number.isNaN(quantity)) {
             Logger.warn(
@@ -80,8 +90,19 @@ export class StockStreamHandler implements InboundStreamHandler {
                 change,
             );
         }
+        if (
+            availableQuantity != null &&
+            current.customFields?.erpAvailableQuantity !== Math.round(availableQuantity)
+        ) {
+            current.customFields = {
+                ...current.customFields,
+                erpAvailableQuantity: Math.round(availableQuantity),
+            };
+            await this.connection.getRepository(ctx, StockLevel).save(current);
+        }
         Logger.verbose(
-            `Updated stock productId=${productId} warehouseId=${warehouseId} qty=${stockOnHand}`,
+            `Updated stock productId=${productId} warehouseId=${warehouseId} qty=${stockOnHand} ` +
+                `erpAvailable=${availableQuantity ?? 'n/a'}`,
             loggerCtx,
         );
     }
