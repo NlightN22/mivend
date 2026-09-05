@@ -10,16 +10,6 @@ export interface ResolveQueryRequest {
     availableOnly?: boolean;
 }
 
-export interface MapSearchInputResult {
-    request: ResolveQueryRequest;
-    // True when the incoming SearchInput carried a collection/facet-value/sort field that
-    // search-service cannot honor and that was therefore dropped rather than sent. The caller
-    // (ExternalSearchService) surfaces this so a category/faceted-filter page degrades to an
-    // unfiltered free-text result instead of hard-failing the whole request — see the
-    // audit-history note below for why this is a deliberate degrade, not a silent drop.
-    unsupportedFiltersDropped: boolean;
-}
-
 // search-service's POST /resolve-query has no concept of collection/facet-value filtering or
 // sorting (issue #69 — it's a free-text discovery endpoint only: query/limit/offset/
 // availableOnly).
@@ -53,10 +43,13 @@ function hasUnsupportedFilter(input: SearchInput): boolean {
 }
 
 // Vendure's SearchInput.term/take/skip -> search-service's POST /resolve-query request shape
-// (query/limit/offset). See issue #69.
-export function mapSearchInputToResolveQueryRequest(input: SearchInput): MapSearchInputResult {
-    const unsupportedFiltersDropped = hasUnsupportedFilter(input);
-    if (unsupportedFiltersDropped) {
+// (query/limit/offset). See issue #69. Visibility into a dropped filter is Logger.warn only
+// (audit finding, mivend.audit.70, round 4/LOW) — an earlier version also returned an
+// `unsupportedFiltersDropped` flag "for the call site", but nothing ever read it (dead field);
+// removed rather than wired up further, since no caller currently has anywhere to surface it
+// beyond the log line (no GraphQL extension/metric exists for this yet).
+export function mapSearchInputToResolveQueryRequest(input: SearchInput): ResolveQueryRequest {
+    if (hasUnsupportedFilter(input)) {
         Logger.warn(
             'search-service (SEARCH_BACKEND=external) does not support collection/facet ' +
                 'filtering or sorting — ignoring these SearchInput fields and running a plain ' +
@@ -66,11 +59,8 @@ export function mapSearchInputToResolveQueryRequest(input: SearchInput): MapSear
     }
 
     return {
-        request: {
-            query: input.term ?? '',
-            limit: input.take ?? undefined,
-            offset: input.skip ?? undefined,
-        },
-        unsupportedFiltersDropped,
+        query: input.term ?? '',
+        limit: input.take ?? undefined,
+        offset: input.skip ?? undefined,
     };
 }

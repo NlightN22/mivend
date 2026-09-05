@@ -56,7 +56,7 @@ export class ExternalSearchService {
     ) {}
 
     async search(ctx: RequestContext, input: SearchInput): Promise<ExternalSearchResponse> {
-        const { request } = mapSearchInputToResolveQueryRequest(input);
+        const request = mapSearchInputToResolveQueryRequest(input);
         if (!request.query) {
             return { items: [], totalItems: 0, facetValues: [], collections: [] };
         }

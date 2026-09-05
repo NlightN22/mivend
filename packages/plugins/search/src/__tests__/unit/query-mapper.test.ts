@@ -9,17 +9,16 @@ import { mapSearchInputToResolveQueryRequest } from '../../query-mapper';
 // query/limit/offset request shape.
 describe('mapSearchInputToResolveQueryRequest', () => {
     it('maps term/take/skip to query/limit/offset', () => {
-        const { request, unsupportedFiltersDropped } = mapSearchInputToResolveQueryRequest({
+        const request = mapSearchInputToResolveQueryRequest({
             term: 'brake pad',
             take: 10,
             skip: 20,
         });
         expect(request).toEqual({ query: 'brake pad', limit: 10, offset: 20 });
-        expect(unsupportedFiltersDropped).toBe(false);
     });
 
     it('maps a missing term to an empty query string, and missing take/skip to undefined', () => {
-        const { request } = mapSearchInputToResolveQueryRequest({});
+        const request = mapSearchInputToResolveQueryRequest({});
         expect(request).toEqual({ query: '', limit: undefined, offset: undefined });
     });
 
@@ -27,7 +26,7 @@ describe('mapSearchInputToResolveQueryRequest', () => {
     // support. A prior fix made this throw, which turned every real facet-filter click under
     // SEARCH_BACKEND=external into a hard shop-api failure (a production availability
     // regression) — the resolution is to degrade instead: drop the field, still run the
-    // free-text query, and flag it so the caller/logs know filtering was skipped.
+    // free-text query, and log a warning so operators/monitoring can see it happened.
     it.each([
         ['collectionId', { collectionId: 'coll-1' }],
         ['collectionIds', { collectionIds: ['coll-1'] }],
@@ -40,13 +39,12 @@ describe('mapSearchInputToResolveQueryRequest', () => {
     ])(
         'drops an unsupported filter (%s) and still runs the free-text query, without throwing',
         (_label, extra) => {
-            const { request, unsupportedFiltersDropped } = mapSearchInputToResolveQueryRequest({
+            const request = mapSearchInputToResolveQueryRequest({
                 term: 'brake pad',
                 ...extra,
             } as never);
 
             expect(request).toEqual({ query: 'brake pad', limit: undefined, offset: undefined });
-            expect(unsupportedFiltersDropped).toBe(true);
         },
     );
 
