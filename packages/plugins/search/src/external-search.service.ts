@@ -41,6 +41,10 @@ export interface ExternalSearchResponse {
 // Backend for SEARCH_BACKEND=external (issue #69): resolves the shop-api `search` query against
 // search-service instead of Elasticsearch. facetValues/collections have no search-service
 // equivalent and are always returned empty (see the storefront facet-sidebar note in the issue).
+// Incoming collection/facet-value/sort filters are also unsupported (search-service is
+// free-text discovery only) — mapSearchInputToResolveQueryRequest throws rather than silently
+// ignoring them (audit finding, mivend.audit.70). Category/faceted-filter storefront pages need
+// their own follow-up design against this backend, not covered by issue #69's scope.
 @Injectable()
 export class ExternalSearchService {
     constructor(
