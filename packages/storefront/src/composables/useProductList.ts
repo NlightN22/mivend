@@ -78,8 +78,12 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
             {
                 id: item.productVariantId,
                 sku: item.sku,
-                price:
-                    'value' in item.priceWithTax ? item.priceWithTax.value : item.priceWithTax.min,
+                // Never the raw search-index price (`priceWithTax`) — it's a placeholder under
+                // SEARCH_BACKEND=external and, even on the internal backend, is customer-agnostic.
+                // The resolver always returns a real price now: the customer's own, or the
+                // branch default-price-type fallback (see docs/pricing.md, issue #70) — so
+                // `customerPrice` is the only field this should ever read.
+                price: item.customerPrice ?? 0,
                 customerPrice: item.customerPrice ?? null,
                 compareAtPrice: item.compareAtPrice ?? null,
                 discountTiers: item.discountTiers.map(tier => ({

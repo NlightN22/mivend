@@ -109,7 +109,7 @@ onMounted(() => { fetchData(route.params.slug as string); });
 
         <ProductBuyPanel
           class="product-page__side"
-          :price="variant ? (variant.customerPrice ?? variant.price) / 100 : undefined"
+          :price="variant?.customerPrice != null ? variant.customerPrice / 100 : undefined"
           :compare-at-price="variant?.compareAtPrice != null ? variant.compareAtPrice / 100 : undefined"
           :currency="variant?.currencyCode ?? 'RUB'"
           :stock-level="variant?.stockLevel"
