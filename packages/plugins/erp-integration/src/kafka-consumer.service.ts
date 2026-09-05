@@ -44,6 +44,15 @@ const CONNECT_MAX_ATTEMPTS = 8;
 const CONNECT_BASE_DELAY_MS = 1000;
 const CONNECT_MAX_DELAY_MS = 60_000;
 
+// Issue #71: kafkajs's own Runner only auto-restarts a crashed consumer.run() for a *retriable*
+// error (see kafkajs's onCrash/isErrorRetriable) — a non-retriable crash (e.g.
+// KafkaJSGroupCoordinatorNotFound from a Kafka ACL rejecting the consumer group) is left
+// permanently dead with no further attempts, even after the external cause is fixed. This mirrors
+// connectWithBackoff's own capped-backoff shape so recovery from a fixed-externally condition
+// doesn't require a full app process restart.
+const CRASH_RETRY_BASE_DELAY_MS = 1000;
+const CRASH_RETRY_MAX_DELAY_MS = 60_000;
+
 const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> = {
     category: CategoryChangedSchema,
     organization: OrganizationChangedSchema,
@@ -59,6 +68,9 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
 export class KafkaConsumerService implements OnModuleDestroy {
     private consumer: Consumer | undefined;
     private connected = false;
+    private destroyed = false;
+    private crashRetryTimeout: NodeJS.Timeout | undefined;
+    private crashRetryAttempt = 0;
 
     constructor(
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
@@ -71,6 +83,14 @@ export class KafkaConsumerService implements OnModuleDestroy {
     }
 
     async start(): Promise<void> {
+        await this.runOnce();
+    }
+
+    // One full connect+subscribe+run cycle against a fresh Kafka/Consumer instance. Called once
+    // by start(), and again by the crash supervisor below whenever kafkajs itself gives up on a
+    // non-retriable crash — a crashed Consumer instance is never reused, matching kafkajs's own
+    // internal restart behavior (it always tears down and recreates on restart too).
+    private async runOnce(): Promise<void> {
         const kafka = new Kafka({
             clientId: this.options.kafkaConsumer.clientId,
             brokers: this.options.kafkaConsumer.brokers,
@@ -81,9 +101,19 @@ export class KafkaConsumerService implements OnModuleDestroy {
 
         this.consumer.on(this.consumer.events.CONNECT, () => {
             this.connected = true;
+            this.crashRetryAttempt = 0;
         });
         this.consumer.on(this.consumer.events.DISCONNECT, () => {
             this.connected = false;
+        });
+        // e.restart is kafkajs's own decision (isErrorRetriable — see kafkajs's onCrash): true
+        // means kafkajs is already restarting the same Consumer instance itself, so scheduling a
+        // second, competing reconnect here would join the consumer group twice (issue #67's
+        // rebalance-stall bug). Only step in when kafkajs decided restart:false.
+        this.consumer.on(this.consumer.events.CRASH, ({ payload }) => {
+            this.connected = false;
+            if (payload.restart) return;
+            this.scheduleCrashRetry();
         });
 
         await this.connectWithBackoff();
@@ -107,6 +137,30 @@ export class KafkaConsumerService implements OnModuleDestroy {
                 await this.handleMessage(stream, payload);
             },
         });
+    }
+
+    private scheduleCrashRetry(): void {
+        if (this.destroyed) return;
+        this.crashRetryAttempt += 1;
+        const delay = Math.min(
+            CRASH_RETRY_BASE_DELAY_MS * 2 ** (this.crashRetryAttempt - 1),
+            CRASH_RETRY_MAX_DELAY_MS,
+        );
+        Logger.warn(
+            `Kafka consumer crashed without kafkajs auto-restart (non-retriable), reconnecting in ${delay}ms (attempt ${this.crashRetryAttempt})`,
+            loggerCtx,
+        );
+        this.crashRetryTimeout = setTimeout(() => {
+            if (this.destroyed) return;
+            this.runOnce().catch(err => {
+                Logger.error(
+                    `Kafka consumer crash-retry failed to reconnect: ${
+                        err instanceof Error ? err.message : String(err)
+                    }`,
+                    loggerCtx,
+                );
+            });
+        }, delay);
     }
 
     // Never throws — an undecodable message must not crash the consumer or block partition
@@ -176,6 +230,8 @@ export class KafkaConsumerService implements OnModuleDestroy {
     }
 
     async onModuleDestroy(): Promise<void> {
+        this.destroyed = true;
+        if (this.crashRetryTimeout) clearTimeout(this.crashRetryTimeout);
         await this.consumer?.disconnect();
     }
 }
