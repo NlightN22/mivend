@@ -2,7 +2,7 @@ import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { Logger, ProcessContext } from '@vendure/core';
 
 import { KafkaConsumerService } from './kafka-consumer.service';
-import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
+import { ERP_INTEGRATION_PLUGIN_OPTIONS, KAFKA_ENABLED_DEFAULT, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
 // Central-hub-only bootstrap for the Kafka consumer (issue #62 design point 1 / AGENTS.md sync
@@ -28,6 +28,7 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
 
     async onApplicationBootstrap(): Promise<void> {
         if (this.options.instanceType !== 'central') return;
+        if (!(this.options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return;
         if (!this.processContext.isWorker) return;
         try {
             await this.kafkaConsumer.start();

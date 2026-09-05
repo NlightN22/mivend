@@ -29,6 +29,24 @@ import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
+const integrationKafkaEnabled = process.env.INTEGRATION_KAFKA_ENABLED === 'true';
+
+// Issue #68 follow-up: a bare `?? 'mivend-central-hub-local'` fallback would silently apply the
+// *local* contour's Kafka identity to staging-integration/production too if one of these env vars
+// is ever left unset there — exactly the kind of silent cross-contour identity collision this
+// suffixing exists to prevent. Once Kafka is actually enabled, every id must be explicit; only the
+// disabled (local) case gets a safe default.
+function requiredKafkaId(envVar: string): string {
+    const value = process.env[envVar];
+    if (value) return value;
+    if (integrationKafkaEnabled) {
+        throw new Error(
+            `${envVar} must be set explicitly when INTEGRATION_KAFKA_ENABLED=true — there is no ` +
+                "safe per-contour default (see docs/environments.md's Kafka clientId/groupId naming section).",
+        );
+    }
+    return 'mivend-central-hub-local';
+}
 
 // Only central talks to the ERP/payment providers (AGENTS.md sync rule #6)
 const instancePlugins =
@@ -303,9 +321,13 @@ export const config: VendureConfig = {
         }),
         ErpIntegrationPlugin.init({
             instanceType,
+            // Issue #68: separate axis from instanceType — a real Integration Service broker
+            // connection must be explicitly opted into per contour (local/staging-integration/prod), never
+            // implied by instanceType === 'central' alone. See docs/environments.md.
+            kafkaEnabled: integrationKafkaEnabled,
             kafka: {
                 brokers: (process.env.INTEGRATION_KAFKA_BROKERS ?? 'localhost:9094').split(','),
-                clientId: process.env.INTEGRATION_KAFKA_CLIENT_ID ?? 'mivend-central-hub',
+                clientId: requiredKafkaId('INTEGRATION_KAFKA_CLIENT_ID'),
                 ssl: process.env.INTEGRATION_KAFKA_CA_PATH
                     ? {
                           ca: [
@@ -331,8 +353,8 @@ export const config: VendureConfig = {
             },
             kafkaConsumer: {
                 brokers: (process.env.INTEGRATION_KAFKA_BROKERS ?? 'localhost:9094').split(','),
-                clientId: process.env.INTEGRATION_KAFKA_CONSUMER_CLIENT_ID ?? 'mivend-central-hub',
-                groupId: process.env.INTEGRATION_KAFKA_CONSUMER_GROUP_ID ?? 'mivend-central-hub',
+                clientId: requiredKafkaId('INTEGRATION_KAFKA_CONSUMER_CLIENT_ID'),
+                groupId: requiredKafkaId('INTEGRATION_KAFKA_CONSUMER_GROUP_ID'),
                 ssl: process.env.INTEGRATION_KAFKA_CA_PATH
                     ? {
                           ca: [

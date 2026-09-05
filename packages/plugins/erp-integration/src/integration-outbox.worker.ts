@@ -2,15 +2,21 @@ import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { Queue, Worker } from 'bullmq';
 
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
-import { ERP_INTEGRATION_PLUGIN_OPTIONS, OUTBOX_POLL_INTERVAL_DEFAULT } from './types';
+import {
+    ERP_INTEGRATION_PLUGIN_OPTIONS,
+    KAFKA_ENABLED_DEFAULT,
+    OUTBOX_POLL_INTERVAL_DEFAULT,
+} from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
 const QUEUE_NAME = 'erp-integration-outbox';
 
 // Central-hub-only, unlike plugin-sync's OutboxWorker (which drains on every instance) — a
-// branch never publishes directly to Integration Service, per AGENTS.md sync rule #6. Guarded at
-// the plugin module level (see erp-integration.plugin.ts), not here, so this class stays a plain
-// worker with no instance-type conditional of its own.
+// branch never publishes directly to Integration Service, per AGENTS.md sync rule #6. Also
+// gated on kafkaEnabled (issue #68) — a plain `make dev` (local contour) must never publish to a
+// real Integration Service broker. Both checks live in this class's own onModuleInit, same
+// lifecycle-hook-runtime pattern as KafkaConsumerBootstrapService — see erp-integration.plugin.ts
+// for why the guard can't live at the module/providers level instead.
 @Injectable()
 export class IntegrationOutboxWorker implements OnModuleInit, OnModuleDestroy {
     private queue: Queue | undefined;
@@ -24,6 +30,9 @@ export class IntegrationOutboxWorker implements OnModuleInit, OnModuleDestroy {
 
     async onModuleInit(): Promise<void> {
         if (this.options.instanceType !== 'central') return;
+        // Issue #68: never publish to a real Integration Service broker unless the contour
+        // explicitly opts in — this worker is what drives KafkaProducerService.publish().
+        if (!(this.options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return;
 
         const connection = {
             host: this.options.redis.host,

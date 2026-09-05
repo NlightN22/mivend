@@ -15,7 +15,7 @@ export
         e2e e2e-smoke e2e-ui e2e-report \
         docker-build docker-push \
         prod-up prod-down \
-        dev dev-fresh dev-reset dev-branch seed seed-access-roles seed-approvals seed-payment-refunds \
+        dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-access-roles seed-approvals seed-payment-refunds \
         seed-customer-detail seed-all \
         verify-branch-scope \
         storybook storybook-ui-kit storybook-manager storybook-storefront storybook-down \
@@ -67,6 +67,26 @@ dev-branch:
 		|| docker exec docker-postgres-branch-1 psql -U postgres -c "CREATE DATABASE mivend_branch"
 	pnpm build:plugins
 	pnpm dev:branch-all
+
+# Deliberately-launched staging-integration contour (issue #68) — the ONLY way to validate the
+# real Kafka contract against Integration Service's actual staging broker. Never the default
+# `make dev` target. Its own database (mivend_central_staging_integration) and REDIS_DB=2, so it
+# can never share state with `make dev`'s synthetic local contour (REDIS_DB=0) or
+# `make dev-branch` (REDIS_DB=1) — see apps/server/.env.central.staging-integration and
+# docs/environments.md. Requires apps/server/.env.central.staging-integration to exist (copy from
+# .env.central.staging-integration.example and fill in real credentials) — never commit that file.
+# Does NOT run its own `tsc -b --watch` plugin compiler — dist/ is shared across contours and
+# running a second watcher alongside `make dev`'s is exactly the duplicate-process/stale-dist
+# hazard AGENTS.md's "Monorepo dist/ and dev watching" warns about; this target does a one-shot
+# `pnpm build:plugins` instead, sufficient whether or not `make dev` is already watching it.
+dev-staging-integration:
+	@test -f apps/server/.env.central.staging-integration || (echo "Missing apps/server/.env.central.staging-integration — copy .env.central.staging-integration.example and fill in real credentials" && exit 1)
+	@bash infrastructure/scripts/dev-kill-staging-integration.sh
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait
+	@docker exec docker-postgres-central-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_central_staging_integration'" | grep -q 1 \
+		|| docker exec docker-postgres-central-1 psql -U postgres -c "CREATE DATABASE mivend_central_staging_integration"
+	pnpm build:plugins
+	pnpm dev:staging-integration-all
 
 seed:
 	@echo "Waiting for server on :3000..."

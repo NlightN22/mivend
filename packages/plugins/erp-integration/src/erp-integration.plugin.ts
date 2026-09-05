@@ -35,6 +35,12 @@ import type { ErpIntegrationPluginOptions } from './types';
 // `if (this.options.instanceType !== 'branch') return;`. On a branch instance the providers are
 // still constructed (cheap, no I/O in their constructors), but never start a Kafka connection,
 // never schedule the BullMQ worker, and never subscribe to the order-submitted EventBus stream.
+//
+// Separately (issue #68), `options.kafkaEnabled` gates the same Kafka-touching services even on
+// a central instance — `instanceType === 'central'` says "this instance is allowed to talk to
+// Integration Service", not "this specific run should". A plain `make dev` (local contour) must
+// never reach a real broker just because it happens to run as central; only a deliberately
+// launched staging-integration/production contour sets `kafkaEnabled: true`. See docs/environments.md.
 @VendurePlugin({
     imports: [
         PluginCommonModule,

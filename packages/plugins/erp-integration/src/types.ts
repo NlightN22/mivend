@@ -72,6 +72,11 @@ export type InboundStream =
 
 export interface ErpIntegrationPluginOptions {
     instanceType: 'central' | 'branch';
+    // Issue #68: separate axis from `instanceType`. A plain `make dev` must never reach a real
+    // Integration Service broker just because `instanceType === 'central'` — this must be
+    // explicitly opted into per contour (see docs/environments.md). Defaults to `false` when
+    // unset (KAFKA_ENABLED_DEFAULT) so any config site that forgets to set it fails safe.
+    kafkaEnabled?: boolean;
     kafka: KafkaConfig;
     kafkaConsumer: KafkaConsumerConfig;
     schemaRegistry: SchemaRegistryConfig;
@@ -82,6 +87,7 @@ export interface ErpIntegrationPluginOptions {
 }
 
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
+export const KAFKA_ENABLED_DEFAULT = false;
 export const MAX_RETRY_DEFAULT = 5;
 export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_POLL_INTERVAL_DEFAULT = 5000;
