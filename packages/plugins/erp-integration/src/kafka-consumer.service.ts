@@ -88,8 +88,18 @@ export class KafkaConsumerService implements OnModuleDestroy {
         return this.connected;
     }
 
+    // A start() failure (e.g. connectWithBackoff exhausting CONNECT_MAX_ATTEMPTS against a
+    // broker that's down at boot) must not leave the consumer permanently dead — it schedules
+    // the same self-perpetuating crash-retry loop as a later runtime CRASH before rethrowing, so
+    // KafkaConsumerBootstrapService's own log ("Kafka consumer failed to start") stays accurate
+    // for this first attempt while recovery keeps happening in the background regardless.
     async start(): Promise<void> {
-        await this.runOnce();
+        try {
+            await this.runOnce();
+        } catch (err) {
+            this.scheduleCrashRetry();
+            throw err;
+        }
     }
 
     // One full connect+subscribe+run cycle against a fresh Kafka/Consumer instance. Called once
@@ -182,6 +192,12 @@ export class KafkaConsumerService implements OnModuleDestroy {
                     }`,
                     loggerCtx,
                 );
+                // Self-perpetuating: a retry that itself fails (broker still unreachable) must
+                // schedule the NEXT retry, not go silent — this used to be a one-shot attempt,
+                // so a broker outage longer than a single backoff window left the consumer
+                // permanently dead until a full process restart, no different from never having
+                // this crash-retry supervisor at all.
+                this.scheduleCrashRetry();
             });
         }, delay);
     }
