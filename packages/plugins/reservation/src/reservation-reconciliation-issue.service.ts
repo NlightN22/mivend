@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { IsNull } from 'typeorm';
 
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
 
@@ -67,6 +68,27 @@ export class ReservationReconciliationIssueService {
         >,
     ): Promise<ReservationReconciliationIssue> {
         const repo = this.connection.getRepository(ctx, ReservationReconciliationIssue);
+
+        // mivend.audit.72's MEDIUM finding: handleOrderRegistrationResult isn't atomic — a
+        // partial failure after this report already landed but before the inbox row is marked
+        // processed causes a retry to re-run the whole handler from scratch (same shape as any
+        // other inbox handler, see integration-inbox-processor.service.ts). Without this check,
+        // that retry would insert a second, duplicate issue for the exact same drift. Scoped to
+        // still-open issues only: a resolved one for the same keys is a genuinely new, distinct
+        // occurrence worth its own row.
+        const existing = await repo.findOne({
+            where: {
+                issueType: fields.issueType,
+                orderId: fields.orderId,
+                productVariantId: fields.productVariantId ?? IsNull(),
+                externalProductId: fields.externalProductId ?? IsNull(),
+                status: 'open',
+            },
+        });
+        if (existing) {
+            return existing;
+        }
+
         return repo.save(
             repo.create({
                 ...fields,
