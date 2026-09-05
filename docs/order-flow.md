@@ -56,7 +56,13 @@ Stages 5–6 are also done:
   `POST /erp/callback/order-status` → `ErpOrderStatusEvent` is now also consumed by
   `plugin-reservation` — `RESERVED`/`CONFIRMED` sets `Reservation.erpConfirmedAt`;
   `CANCELLED` releases the local hold (1C wins conflicts, per this project's explicit
-  decision). Filed [#43](https://github.com/NlightN22/mivend/issues/43) — the general gap that
+  decision). **Deliberately does NOT release on RESERVED/CONFIRMED/SHIPPED/DELIVERED** (tried
+  and reverted same-day, issue #72, 2026-09-05) — those are bare status labels with no reliable
+  guarantee 1C has actually written off physical stock yet; releasing on an unverified status
+  reopens an oversell window with no backstop (issue #73 isn't built). The real release trigger
+  needs `company.orders.events.v1.order-registration-result`'s per-line `reservedLines` (not
+  consumed yet — issue #72/#74), which is emitted as a direct, same-transaction consequence of
+  1C actually posting the document. Filed [#43](https://github.com/NlightN22/mivend/issues/43) — the general gap that
   most other `SyncEventSchema` event types still have no real outbound producer
   (`order.consumer.ts`'s `OrderReadyForErpEvent` handler is still a stub); this round only
   fixes it for reservations, as a template.

@@ -11,19 +11,13 @@ export type ReservationStatus = 'active' | 'released' | 'expired';
 // ATP (stockOnHand - stockAllocated - active reservations) for other orders/catalog, never
 // touches stockOnHand/stockAllocated itself.
 //
-// Released as soon as 1C confirms it (RESERVED/CONFIRMED — see ReservationErpSyncService), not
-// held until physical shipment. Earlier revision of this comment described an intermediate
-// "allocated" status bridging confirmation to shipment through Vendure's native
-// StockLevel.stockAllocated, mirroring the industry-standard "soft reservation -> hard
-// allocation" pattern — reverted (2026-09-05): 1C writes off physical stock as a direct,
-// same-transaction consequence of posting/confirming the order, not at a later shipment step, so
-// holding the quantity locally all the way to SHIPPED/DELIVERED would have meant needlessly
-// blocking sales of stock 1C had already committed elsewhere, for however long its own
-// assembly/shipping logistics chain takes (real business priority: never over-restrict what can
-// be sold). Releasing at confirmation trusts that 1C's own StockChanged will catch up shortly;
-// the short window until it does is the same accepted residual risk #73's nightly reconciliation
-// worker exists to catch, not something this row can close on its own. SHIPPED/DELIVERED also
-// trigger the same release, as an idempotent fallback in case a CONFIRMED callback was missed.
+// Stays `active` (and keeps being subtracted from ATP) through RESERVED/CONFIRMED — those are
+// bare status labels on the generic order-status callback with no reliable guarantee that 1C has
+// actually written off physical stock yet (see ReservationErpSyncService's own doc comment for
+// the full reasoning and the two abandoned approaches this settled on instead of). Only a real
+// CANCELLED releases it today; the actual "1C really wrote this off" release trigger — 1C's
+// per-line reservedLines on company.orders.events.v1.order-registration-result — is not consumed
+// yet (issue #72/#74).
 //
 // At most one active reservation per (orderLineId, stockLocationId) — enforced by the partial
 // unique index below, the DB-level safety net docs/order-flow.md's "Idempotency" section calls

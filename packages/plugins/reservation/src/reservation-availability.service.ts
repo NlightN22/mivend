@@ -39,9 +39,11 @@ export class ReservationAvailabilityService {
     // numbers — so there was never anything to protect against. Keeping the local subtraction
     // permanent for the reservation's whole active lifetime closes that window entirely: the
     // held unit is accounted for locally from the moment it's created until it's actually
-    // released or converted to stockAllocated, with 1C's own number only ever tightening the
-    // cap further (for holds from OTHER channels mivend has no reservation row for at all), never
-    // being the sole thing standing between "held" and "shown as free".
+    // released (today: only a real CANCELLED does that — see ReservationErpSyncService, which
+    // deliberately does NOT release on RESERVED/CONFIRMED/SHIPPED/DELIVERED either, for the same
+    // "don't trust an unverified status" reasoning), with 1C's own number only ever tightening
+    // the cap further (for holds from OTHER channels mivend has no reservation row for at all),
+    // never being the sole thing standing between "held" and "shown as free".
     //
     // The cap is applied PER StockLocation, not after summing across locations — 1C's
     // availableQuantity is itself location-scoped (StockChanged is per warehouse), so capping
