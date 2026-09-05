@@ -36,48 +36,37 @@ The only exception: individual files explicitly requested to be in Russian by th
 
 ---
 
-## Monorepo structure
+## Monorepo structure — principles, not a tree
 
-**Kept accurate on purpose — if you edit the actual layout, update this tree in the same
-change.** One Vendure codebase (`apps/server`), not per-instance app directories: central hub vs.
-branch is an _env-driven identity_ (`INSTANCE_TYPE`/`INSTANCE_ID`), not a separate app — see
-`docs/environments.md`.
+**Don't maintain a literal folder tree here — it goes stale the moment anyone adds a plugin or
+moves a file, and a stale tree actively misleads (this file's own tree drifted to describe
+directories, `apps/central`/`apps/branch`/`packages/admin-ui`, that never existed on disk).**
+Discover the actual current layout with `ls`/`find` when you need it — these are the structural
+_principles_ that don't change from one plugin/page/file to the next:
 
-```
-mivend/
-├── apps/
-│   └── server/                # The one Vendure codebase — central hub or branch is decided by
-│                               # INSTANCE_TYPE/INSTANCE_ID at runtime, see docs/environments.md
-├── packages/
-│   ├── plugins/                # Vendure plugins — one package per plugin, see current list
-│   │   │                       # under packages/plugins/ (not enumerated here — it changes
-│   │   │                       # often enough that a fixed list here would just go stale again)
-│   │   └── ...
-│   ├── storefront/             # Vue 3 + TypeScript — customer-facing client portal
-│   ├── manager/                # Vue 3 + TypeScript — B2B/backoffice manager portal (this is
-│   │                           # NOT Vendure's built-in Admin UI — that's mounted under /admin
-│   │                           # on apps/server itself, no separate package; see
-│   │                           # docs/environments.md's "Reaching a contour from outside this
-│   │                           # box" for the distinction)
-│   ├── ui-kit/                 # Shared component library — ONE package for both storefront
-│   │                           # and manager, not two separate kits
-│   ├── shared/                 # Shared TypeScript types and contracts
-│   └── e2e/                    # Playwright E2E suite
-├── infrastructure/
-│   ├── docker/
-│   └── scripts/
-├── docs/                       # Architecture, domain, decisions
-├── AGENTS.md
-├── pnpm-workspace.yaml
-└── package.json
-```
+- **One Vendure codebase, one process type per role.** `apps/server` is the only Vendure app —
+  central hub vs. branch is an _env-driven identity_ (`INSTANCE_TYPE`/`INSTANCE_ID`), never a
+  separate app directory. See `docs/environments.md` for the full local/staging-integration/
+  production contour model layered on top of that identity.
+- **One package per Vendure plugin**, all under `packages/plugins/`, each self-contained per the
+  `backend-plugin-rules` skill's required layout. No fixed list is kept here — see
+  `packages/plugins/` directly.
+- **Two independent Vue 3 frontends**, each its own package: a customer-facing client portal and
+  a B2B/backoffice manager portal (see the `frontend-rules`/`storefront-rules`/
+  `manager-portal-rules` skills for what's common vs. portal-specific). Neither is Vendure's own
+  built-in Admin UI — that's mounted under `/admin` on `apps/server` itself, not a separate
+  package (see `docs/environments.md`'s "Reaching a contour from outside this box").
+- **One shared UI-kit package** for both frontends — never two parallel component libraries.
+- **Shared cross-cutting code** (TypeScript types/contracts used by more than one package, e2e
+  tests) each get their own package, not folded into a plugin or a frontend.
+- `infrastructure/` (Docker, scripts) and `docs/` (architecture, domain, decisions) sit alongside
+  the code, not inside any package.
 
-**Known naming inconsistency, deliberately not fixed yet**: `packages/storefront` and
-`packages/manager` don't share a naming pattern (one is a role-ish English word, the other a
-literal portal name) — a rename to something symmetrical (e.g. `client`/`manager`) has been
-discussed but is explicitly parked, not scheduled. Don't rename either package without raising it
-first — it touches pnpm workspace refs, Vite/nginx config, CI, and `docs/environments.md`'s port
-tables everywhere.
+**Known naming inconsistency, deliberately not fixed yet**: the two frontend packages don't share
+a naming pattern (one is a role-ish English word, the other a literal portal name) — a rename to
+something symmetrical has been discussed but is explicitly parked, not scheduled. Don't rename
+either package without raising it first — it touches pnpm workspace refs, Vite/nginx config, CI,
+and `docs/environments.md`'s port tables everywhere.
 
 ---
 
@@ -222,8 +211,12 @@ REST/Swagger DTOs, and accumulated Vendure-specific gotchas all moved to the
 resolver/service, or touching any list/pagination query. Never modify Vendure core
 (`node_modules/@vendure`) — if it doesn't support something natively, build a plugin.
 
-**Where did a section go?** A number of code comments cite an AGENTS.md section by name (not
-number) that moved during this reorganization — this table is the redirect:
+---
+
+## Where did a section go?
+
+This file was split into domain skills — a number of existing code comments still cite an
+AGENTS.md section by name (not number). This table is the redirect:
 
 | Old AGENTS.md section name                                    | Now lives in                       |
 | ------------------------------------------------------------- | ---------------------------------- |
@@ -233,6 +226,9 @@ number) that moved during this reorganization — this table is the redirect:
 | Vendure-specific gotchas / Dev seed rules                     | `backend-plugin-rules` skill       |
 | Sync rules #5 (RabbitMQ half) / #8 / #9 / #10                 | `internal-sync-rules` skill        |
 | Sync rules #5 (Kafka half) / #6 / #7 / #11 / #12 / #13        | `external-integration-rules` skill |
+| UI kit rules                                                  | `frontend-rules` skill             |
+| Storefront rules                                              | `storefront-rules` skill           |
+| Manager portal rules                                          | `manager-portal-rules` skill       |
 
 Sync rule **numbers** (1-13) didn't change — see "Sync rules index" above.
 
@@ -284,151 +280,13 @@ Do not use any other license. Do not omit the field.
 
 ---
 
-## UI kit rules
+## Frontend development
 
-`packages/ui-kit` is the single source of truth for all visual components.
-
-**Never style a UI element inside a page or feature component.** If a button, tag, input, table,
-or any other visual element needs to look different — change it in the ui-kit component, not at
-the call site.
-
-Allowed at the page/feature level:
-
-- Layout and positioning (`display`, `flex`, `grid`, `gap`, `margin`, `padding` for spacing between blocks)
-- Page-specific slot content passed into ui-kit components
-- Conditional visibility (`v-if`, `v-show`)
-
-Forbidden at the page/feature level:
-
-- Overriding colors, fonts, borders, shadows of ui-kit components via scoped CSS
-- Duplicating a ui-kit component with a slightly different style instead of extending the original
-- Using raw Element Plus components (`ElButton`, `ElTable`, etc.) directly in pages — always use the `Mv*` wrapper
-
-If a ui-kit component does not support a required variant, **add the variant to the ui-kit** and use it everywhere.
-This keeps the design consistent and changes visible across the whole application.
-
-### Icon kit
-
-**`@tabler/icons-vue` is the recommended first source for any new icon.** Check it before adding
-an icon from any other package. It has a much larger, more visually distinct set than
-`@element-plus/icons-vue` (already used for a handful of pre-existing spots, e.g.
-`CustomerDetailPage.vue`'s info-row icons — not worth migrating those retroactively, but new
-icon needs should reach for Tabler first). Only fall back to a different icon package if Tabler
-genuinely has no reasonable icon for the concept — and if so, document why in the component that
-adds it. Reference usage: `MvDocumentTypeChip` (`packages/ui-kit/src/components/MvDocumentTypeChip`)
-for a colored icon+label chip keyed off free-text business data with a neutral fallback, and
-`CustomerDetailPage.vue`'s `TAB_ICONS` for per-tab icons.
-
----
-
-## Storefront rules
-
-See `docs/frontend.md` for the full architecture. Critical rules:
-
-1. **Pages are thin.** No business logic in `pages/` — all logic goes to composables or stores.
-   A page component should only compose: layout + components + store calls.
-
-2. **Never edit `src/api/generated/`** — it is overwritten by codegen on every run.
-   Run `pnpm --filter @mivend/storefront codegen` after changing `.graphql` operation files.
-
-3. **All GraphQL operations must be typed via codegen.** Raw string queries with hand-written
-   types are forbidden. Every query/mutation lives in a `.graphql` file next to the page or
-   component that uses it.
-
-4. **No hardcoded UI strings in templates.** Use `$t('key')` from vue-i18n.
-   All strings are defined in `src/i18n/ru.ts`.
-
-5. **Virtual scroll for long lists.** Use `ElTableV2` for any list that may exceed 100 rows.
-   Standard `ElTable` only for short static lists (e.g. cart items).
-
-6. **One Pinia store per domain.** Stores do not import each other.
-   Cross-domain logic belongs in a composable, not in a store.
-
----
-
-## Manager portal rules
-
-1. **Every page with search/filter/sort/pagination controls must sync that state to the URL
-   query string, bidirectionally.** On mount, read initial filter values from `route.query`
-   (via `useRoute()`); on every filter change, write them back via `router.replace({ query })`
-   (use `replace`, not `push`, so filter tweaks don't spam browser history — only real
-   navigation should create a history entry). The goal: any filtered/sorted/paginated view is a
-   shareable link that reproduces exactly what the sender was looking at — "send me the
-   overdue orders for branch X" should be a URL, not a screenshot with verbal instructions.
-    - **A one-off mount-time read of a single param (e.g. reading `?search=` once to prefill a
-      field, or `?unassigned=true` to preselect a filter) is not compliant** — it's one-way and
-      silently drops every other filter field, and typically doesn't even survive the _user's
-      own_ subsequent filter changes back into the URL. Real compliance is symmetric: every
-      filter field that has a value is reflected in the query string, and every filter field
-      supported by the query string is restored on load.
-    - Applies to search inputs, status/enum selects, manager/branch/department pickers, chip
-      filters, sort column/direction, and the current page number — not to transient UI-only
-      state (e.g. a form being open, a hover state).
-    - See issue tracking the page-by-page rollout of this rule (existing pages predate it and
-      need retrofitting one at a time) for the current status per page.
-
-2. **A tab bar must never be a plain unwrapped flex/scroll row once it holds more than ~4-5
-   tabs on a mobile viewport.** Industry consensus (Material Design 3, Apple HIG, and general
-   mobile nav UX guidance) puts the practical ceiling at 4-6 tabs before touch targets get
-   cramped or the row stops fitting — past that, collapsing extra tabs behind a "More" control
-   is the standard fix, not a wider/scrollable bar. Real incident: `CustomerDetailPage.vue`'s
-   7-tab row (Overview/Orders/Invoices/Payments/Discounts/Documents/History) had no
-   `overflow-x` handling at all, so on a narrow mobile viewport the overflowing buttons
-   stretched the _entire document_ horizontally — which, combined with `position: fixed` on
-   `MvAppMobileNav`, dragged the app's bottom navigation bar out of the visible viewport
-   entirely. A horizontally-scrollable row with edge-fade affordance (the pattern already used
-   by `MvKpiCarousel`) fixes the document-overflow bug but doesn't fix the underlying UX
-   problem — a scrollable row with no visible affordance is easy to miss, and 7 tabs is past
-   the point where scrolling is the right answer anyway.
-   **Fix pattern**: keep the 3-4 most-used tabs visible, collapse the rest into a "More ▾"
-   control that opens a small dropdown menu — the same primary/overflow split
-   `DefaultLayout.vue` already uses for the mobile bottom nav (5 slots + a "More" sheet for
-   everything else). **This collapse is mobile-only** — desktop has room to show the full row,
-   so gate it on the same `max-width: 800px` breakpoint `MvAppTopbar`/`MvAppMobileNav` already
-   use (via a `window.matchMedia` listener, not a CSS-only `display:none` trick, since which
-   tabs are "primary" vs "overflow" changes what actually renders, not just what's visible) —
-   collapsing on desktop too was an early mistake in the reference implementation, caught by
-   the developer noticing "More" showing up in the normal desktop view where all 7 tabs fit
-   comfortably in one row. See `CustomerDetailPage.vue`'s `primaryTabs`/`overflowTabs`/`isMobile`
-   for the reference implementation — `team/TeamPage.vue`'s department tabs follow the same
-   shape (`primaryDepartments`/`overflowDepartments`), replacing an earlier `flex-wrap: wrap`
-   row that avoided the overflow bug but didn't match this pattern. That makes **two** inline
-   copies; if a third page needs this same pattern, extract it into a shared `ui-kit` component
-   instead of copying the markup a third time (per the ui-kit "single source of truth" rule
-   above) — two concrete instances isn't quite enough yet to know the right generic shape
-   (fixed enum of tabs vs. a dynamic list like departments), so a bespoke component would still
-   be premature.
-
-3. **A list page's toolbar search box defaults to searching only that list's own non-hideable
-   identifying column** (e.g. `Order #`/`code` for orders, an invoice number, a payment
-   reference) — never silently promise cross-column search the backend doesn't do. Concretely:
-   that column is declared `required: true` in the table's own column config (never hideable via
-   the column-toggle), and the search input is wired to that one column only. Real, full
-   multi-column search (matching against status/state/payment/etc., not just the identifier) is
-   a deliberate per-table opt-in — each list's own DB columns and enum/label mapping need their
-   own backend query change (an `OR` across real columns, pushed into SQL per the pagination rule
-   above — never "fetch everything, filter client-side") — and is out of scope until requested
-   for that specific list. See `CustomerOrdersDataTable.vue`'s `CODE_COLUMN` for the reference
-   shape.
-
-4. **Any reactive-params-driven fetch (page/filter/sort change → refetch) must guard against an
-   out-of-order response overwriting fresher state — use `useLatestRequest` (`@mivend/ui-kit`),
-   never a bare `async function load() { ... }` with no ordering guard.** Real incident: neither
-   `CustomerOrdersTab.vue` nor `CustomerInvoicesTab.vue` had this originally — PrimeVue's paginator
-   doesn't disable itself while a page fetch is in flight, so a second page-change click (or just
-   real network latency through a VPN/proxy, which a local `localhost` dev loopback never
-   surfaces) can start a second fetch before the first one's response resolves; whichever response
-   arrives _last_ wins by default, not whichever was requested last, so a user could see "page 2"
-   showing page 3's rows with page 3 itself empty. `useLatestRequest(fetcher, onResult)` returns
-   `{ loading, run }`: `run()` is what a `watch([...deps], () => void run())` should call, and only
-   the _latest_ call's result is ever applied — a stale response is silently discarded, not
-   applied. If a fetch needs a second `await` afterward (e.g. Orders' per-page payment-summary
-   lookup), fold it into the same `fetcher` function as one atomic unit — a second, independent
-   `await` performed outside `fetcher` (e.g. inside `onResult`) is not covered by the guard.
-   This is a "latest-wins" guard, not true cancellation — it doesn't abort the stale network
-   request itself (this project's `adminApi` client has no `AbortSignal` support to cancel
-   through yet); adding that would be the more complete fix if wasted stale requests become a
-   real cost, not just a correctness bug.
+UI-kit-first policy and icon kit conventions (shared by both portals), storefront-specific rules,
+and manager-portal-specific rules all moved to skills — **read `frontend-rules` first for any
+frontend work**, then whichever of `storefront-rules`/`manager-portal-rules` matches the portal
+you're touching. For the step-by-step page-building checklist, see `frontend-page-design`; for
+tables specifically, `manager-table-standard`.
 
 ---
 

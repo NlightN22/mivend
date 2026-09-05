@@ -55,16 +55,16 @@ tab or a top-level `*Page.vue`.
       `amount`/`order` columns) — not as a default for "haven't checked yet."
 
 4. **A status/enum-shaped column gets a `status`-type filter with real badge variants**, driven by
-   a single-source-of-truth `*_BADGE_VARIANT` map in the relevant `api/*.ts` file (AGENTS.md's
-   ui-kit rule) — never a plain unstyled `<select>` for something that renders as a colored badge
+   a single-source-of-truth `*_BADGE_VARIANT` map in the relevant `api/*.ts` file (the
+   `frontend-rules` skill's ui-kit rule) — never a plain unstyled `<select>` for something that renders as a colored badge
    in the cells.
 
 4a. **A quick-filter "view chip" row above the table (the segmented All/Unpaid/Partially paid/…
 pills — see `CustomerOrdersTab.vue`'s `#view-chips` slot) that represents the same states as a
 colored row badge must reuse `@mivend/ui-kit`'s `MvFilterChips` with each chip's `variant` set
 from that same `*_BADGE_VARIANT` map from point 4 — never a bespoke `<button>` + scoped CSS in
-the page/tab component (that's both a duplicate of `MvFilterChips` and an AGENTS.md ui-kit
-rule violation), and never a chip row that's always green-when-active regardless of what it
+the page/tab component (that's both a duplicate of `MvFilterChips` and a `frontend-rules`
+ui-kit rule violation), and never a chip row that's always green-when-active regardless of what it
 represents. Real incident this fixes: `CustomerOrdersTab.vue`'s and
 `CustomerInvoicesTab.vue`'s view chips each had their own bespoke button styling that only
 ever went green on selection, while the row badge one column over for that exact same status
@@ -77,7 +77,7 @@ request with an alias per chip — see `api/invoices.ts`'s `fetchInvoiceViewCoun
 `api/customers.ts`'s `fetchCustomerOrderViewCounts`/`fetchDiscountGrantViewCounts`,
 `api/payments.ts`'s `fetchPaymentViewCounts`), never a count derived client-side from
 whatever page happens to be loaded (that's the same "fetch everything, compute in JS"
-antipattern AGENTS.md's Pagination section forbids, just applied to a count instead of a
+antipattern the `backend-plugin-rules` skill's Pagination rule forbids, just applied to a count instead of a
 list).
 **If the status enum has more than ~5-6 values, curate the chip set instead of one chip per
 enum value\** — a chip row isn't a replacement for the column's own status filter dropdown,
@@ -110,15 +110,15 @@ bottom margin shifts the visible content off-center within it.
       shape, and `CustomerOrdersDataTable.vue`'s `ALL_COLUMNS` for a full worked example with all
       three hints in use.
 
-6. **Server-side pagination unless the list is genuinely, structurally bounded** — see AGENTS.md's
-   "Pagination" section for the exemption test (a fixed small set vs. anything that accumulates
+6. **Server-side pagination unless the list is genuinely, structurally bounded** — see the
+   `backend-plugin-rules` skill's "Pagination" rule for the exemption test (a fixed small set vs. anything that accumulates
    over the business's lifetime). If a table is exempt, say so explicitly in a code comment (see
    `CustomerDiscountsTab.vue`'s doc comment on `DiscountGrantResolver`) — don't let "no pagination"
    be silently indistinguishable from "forgot pagination." An exempt table still uses
    `MvAdvancedDataTable` for its rendering/mobile-card-view/visual consistency; it just doesn't
    need real `skip`/`take` wiring behind it.
 
-7. **URL query-string sync for filters/sort/page** — see AGENTS.md's manager-portal rule and
+7. **URL query-string sync for filters/sort/page** — see the `manager-portal-rules` skill and
    `useUrlSyncedState` (`packages/manager/src/composables/useUrlSyncedState.ts`). A table that's
    exempt from pagination (point 6) is not automatically exempt from this — if it has real filters
    a user would want to share/bookmark, sync them too.
@@ -156,7 +156,7 @@ bottom margin shifts the visible content off-center within it.
    table has view chips above it, confirm they reuse the row badge's `*_BADGE_VARIANT` map (point
    4a) instead of a bespoke color/style.
 5. Confirm pagination is either real (server `skip`/`take`) or explicitly exempted with a comment
-   explaining why, per AGENTS.md's bounded-list test.
+   explaining why, per the `backend-plugin-rules` skill's bounded-list test.
 6. Confirm filter/page state is URL-synced if the table has real, user-facing filters.
 7. Confirm the primary action button lives in `#toolbar-end` (point 9) and there's no separate
    header block with a title/row-count above the table.

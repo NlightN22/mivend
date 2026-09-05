@@ -15,8 +15,8 @@ writing code, not by more skill after the fact.
 
 **`@mivend/ui-kit` is a single shared package for both `packages/manager` and
 `packages/storefront`** (not two separate kits) — the component library is one source of truth,
-but the two portals have genuinely different navigation/layout/copy conventions (see AGENTS.md's
-separate "Storefront rules" and "Manager portal rules" sections). This skill has one shared core
+but the two portals have genuinely different navigation/layout/copy conventions (see the
+`storefront-rules` and `manager-portal-rules` skills). This skill has one shared core
 checklist plus a portal-specific branch — do not duplicate this file per portal, extend the
 branch instead if a new project-wide rule is needed.
 
@@ -49,15 +49,16 @@ user or check recent git history for pages nobody has complained about — don't
 
 ## Step 2 — ui-kit-first checklist (both portals, no exceptions)
 
-Per AGENTS.md's "UI kit rules": never style a raw element, never use a raw Element Plus component
-directly, never duplicate a ui-kit component with page-level style overrides.
+Per the `frontend-rules` skill's ui-kit-first policy: never style a raw element, never use a raw
+Element Plus component directly, never duplicate a ui-kit component with page-level style
+overrides.
 
 1. **Before writing a single template tag**, `ls packages/ui-kit/src/components/` (or grep for
    the concept you need — card, panel, form field, multi-select, notice, badge, empty state) and
    read the real component's props/slots. Do not assume an API — read it.
 2. If a ui-kit component that looks like what you need already exists but seems to be missing a
-   variant, **add the variant to ui-kit and use it everywhere** (AGENTS.md's explicit instruction)
-   — don't work around it with page-level CSS.
+   variant, **add the variant to ui-kit and use it everywhere** (`frontend-rules`' explicit
+   instruction) — don't work around it with page-level CSS.
 3. If you truly find no ui-kit component for a common, reusable concept (not a one-off), that's a
    real gap — flag it explicitly in your report rather than silently inventing a page-local
    component that looks like it should be shared.
@@ -71,8 +72,8 @@ directly, never duplicate a ui-kit component with page-level style overrides.
 
 ### Manager portal (`packages/manager`)
 
-Read AGENTS.md's "Manager portal rules" section in full before implementing. Highlights (not a
-replacement for reading the real section):
+Read the **`manager-portal-rules`** skill in full before implementing. Highlights (not a
+replacement for reading the real skill):
 
 - URL query-string sync for any filter/search/sort/page state (`useUrlSyncedState`).
 - Tab bars collapse to a "More ▾" control past ~4-5 tabs on mobile only (`max-width: 800px`
@@ -84,7 +85,7 @@ replacement for reading the real section):
 
 ### Storefront (`packages/storefront`)
 
-Read AGENTS.md's "Storefront rules" section in full before implementing. Highlights:
+Read the **`storefront-rules`** skill in full before implementing. Highlights:
 
 - Pages are thin — logic goes in composables/stores, never in `pages/`.
 - Never edit `src/api/generated/` — run codegen after changing `.graphql` files.
