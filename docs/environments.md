@@ -99,8 +99,9 @@ fixtures — don't borrow real data from staging-integration to make a test pass
 
 It does not run its own `tsc -b --watch` plugin compiler — `dist/` is shared across contours, and
 a second watcher alongside `make dev`'s would be the exact duplicate-process/stale-dist hazard
-AGENTS.md's "Monorepo dist/ and dev watching" warns about. It runs a one-shot `pnpm build:plugins`
-instead, which is sufficient whether or not `make dev` is already watching plugins.
+the `backend-plugin-rules` skill's "Monorepo `dist/` and dev watching" section warns about. It
+runs a one-shot `pnpm build:plugins` instead, which is sufficient whether or not `make dev` is
+already watching plugins.
 
 ## Reaching a contour from outside this box
 

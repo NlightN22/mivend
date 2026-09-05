@@ -43,8 +43,8 @@ export const Default: Story = {
     }),
 };
 
-// A dedicated sidebar entry pinned to the mobile viewport (see AGENTS.md's "Manager portal
-// rules" tab-overflow pattern), seeded with enough departments to actually trigger the "More"
+// A dedicated sidebar entry pinned to the mobile viewport (see the manager-portal-rules skill's
+// tab-overflow pattern), seeded with enough departments to actually trigger the "More"
 // collapse — Default's single department never exercises it.
 export const Mobile: Story = {
     loaders: [

@@ -122,7 +122,7 @@ export const Empty: Story = {
     loaders: [async () => mockCustomerOrders([])],
 };
 
-// See AGENTS.md's "Manager portal rules" tab-overflow pattern discussion — this tab is the
+// See the manager-portal-rules skill's tab-overflow pattern discussion — this tab is the
 // current baseline being redesigned against tasks/design/b2b_portal/
 // mivend_customer_orders_concept_v5.html; keep a mobile bookmark to compare against the
 // concept's mobile card layout as the redesign lands.

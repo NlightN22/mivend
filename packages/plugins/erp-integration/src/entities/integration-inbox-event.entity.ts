@@ -42,8 +42,9 @@ export class IntegrationInboxEvent {
     @Column({ type: 'varchar' })
     version!: string;
 
-    // Integration Service's own event/message id (the external-integration-rules skill — an external reference
-    // distinct in purpose from the (stream, entityId, version) dedup key above, even though both
+    // Integration Service's own event/message id (per the external-integration-rules skill —
+    // this field is an external reference distinct in purpose from the (stream, entityId,
+    // version) dedup key above, even though both
     // may end up pointing at "the same" logical event: this field exists so a human/automated
     // process can reconcile a MiVend row against Integration Service's own outbound_commands-style
     // ledger, independent of whether dedup is still needed).

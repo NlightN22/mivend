@@ -113,7 +113,7 @@ const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
 // for the two real regressions this replaced.
 const { activeTab, selectTab: selectTabInternal } = useTabSync<CustomerDetailTab>(TABS, 'overview');
 
-// Mobile-only tab-overflow pattern, see AGENTS.md's "Manager portal rules" — 7 tabs don't fit a
+// Mobile-only tab-overflow pattern, see the manager-portal-rules skill — 7 tabs don't fit a
 // mobile row; the first 3 (most used day-to-day) stay visible, the rest collapse into "More",
 // mirroring the same primary/overflow split DefaultLayout.vue already uses for the bottom nav.
 // Desktop has room for the full row, so it's shown in full there — same breakpoint as

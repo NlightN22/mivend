@@ -4,8 +4,8 @@ This document exists because a live incident showed the manager portal had no sh
 understanding of what "order confirmation" means, and no design doc described the order
 lifecycle end to end. It captures what's actually implemented today, researched industry
 patterns, and the target architecture agreed with the client before implementing a
-role-specific "orders awaiting confirmation" view for Manager/Operator (see AGENTS.md →
-Manager portal rules).
+role-specific "orders awaiting confirmation" view for Manager/Operator (see the
+manager-portal-rules skill).
 
 **Status: stages 1–6 implemented and verified (`make lint`/`make test`/plugin builds/integration
 tests all green). Only stage 7 (deliberately deferred, no target date) remains.** See
@@ -27,7 +27,7 @@ needed for correct eligibility), `expireDueReservations()` now also returns an o
 flipped `Reservation.status`), and the manager portal's `OrdersPage.vue` got a new "Awaiting
 confirmation" chip plus a first, reusable URL-sync composable
 (`packages/manager/src/composables/useUrlSyncedState.ts`) retrofitting the whole page per
-AGENTS.md's Manager portal rules. `ReservationPanel.vue`'s confirm/release buttons are now
+the manager-portal-rules skill. `ReservationPanel.vue`'s confirm/release buttons are now
 gated on the `ConfirmOrder` permission in the UI too.
 
 Stage 4 is also done — `PaymentMethod.customFields.reservationTtlDays` override (falls back to

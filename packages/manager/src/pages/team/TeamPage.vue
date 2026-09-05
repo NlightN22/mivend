@@ -36,7 +36,7 @@ const membersInActiveDepartment = computed(() =>
     members.value.filter(m => m.departmentId === activeDepartmentId.value),
 );
 
-// Mobile-only tab-overflow pattern, see AGENTS.md's "Manager portal rules" — a plain flex-wrap
+// Mobile-only tab-overflow pattern, see the manager-portal-rules skill — a plain flex-wrap
 // row (the old behaviour here) avoids the document-overflow bug but still isn't the standard
 // pattern once there are more departments than a mobile row comfortably fits; same
 // primary/overflow split as CustomerDetailPage.vue, gated on the same `max-width: 800px`
