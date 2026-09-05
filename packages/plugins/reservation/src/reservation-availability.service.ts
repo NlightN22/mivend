@@ -7,7 +7,6 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { IsNull } from 'typeorm';
 import { WarehouseService } from '@mivend/plugin-access-control';
 
 import { Reservation } from './entities/reservation.entity';
@@ -23,29 +22,33 @@ export class ReservationAvailabilityService {
         private warehouseService: WarehouseService,
     ) {}
 
-    // ATP = stockOnHand - stockAllocated - unconfirmedActiveReservations, capped per-location at
-    // 1C's own availableQuantity where known (issue #72's revised formula) — 1C is the sole
-    // source of truth for reservations, since it receives holds from other channels that never
-    // reach mivend as events at all. Once 1C confirms a mivend reservation
-    // (Reservation.erpConfirmedAt set, via the existing order-status callback — docs/order-flow.md
-    // stages 5-6), it stops being subtracted locally: 1C's own availableQuantity is trusted to
-    // already reflect it, so it isn't subtracted twice (once locally, once inside 1C's own
-    // number). The cap is applied PER StockLocation, not after summing across locations — 1C's
+    // ATP = stockOnHand - stockAllocated - activeReservations, capped per-location at 1C's own
+    // availableQuantity where known (issue #72's revised formula) — 1C is the sole source of
+    // truth for reservations, since it receives holds from other channels that never reach
+    // mivend as events at all, so its own number is the only defense against those.
+    //
+    // A local Reservation is subtracted for as long as it stays `status: 'active'` — REGARDLESS
+    // of erpConfirmedAt. An earlier revision of this method stopped subtracting a reservation
+    // once 1C confirmed it, reasoning that 1C's own availableQuantity would already reflect the
+    // hold by then and double-subtracting would understate ATP. That reasoning solved a minor,
+    // harmless problem (a slightly-too-conservative number) by creating a real one: if 1C's own
+    // StockChanged confirming the hold was itself delayed or dropped, NEITHER number reflected
+    // the held unit for that whole window — a genuine oversell risk (mivend.audit.72 HIGH).
+    // Reverted per the same reasoning that makes the cap below safe in the first place: min() by
+    // definition never double-subtracts, it only ever picks the more conservative of the two
+    // numbers — so there was never anything to protect against. Keeping the local subtraction
+    // permanent for the reservation's whole active lifetime closes that window entirely: the
+    // held unit is accounted for locally from the moment it's created until it's actually
+    // released or converted to stockAllocated, with 1C's own number only ever tightening the
+    // cap further (for holds from OTHER channels mivend has no reservation row for at all), never
+    // being the sole thing standing between "held" and "shown as free".
+    //
+    // The cap is applied PER StockLocation, not after summing across locations — 1C's
     // availableQuantity is itself location-scoped (StockChanged is per warehouse), so capping
-    // after summing would mix numbers from different scopes.
-    //
-    // No cap is applied for a location 1C has never reported a StockChanged for
-    // (erpAvailableQuantity still null) — falls back to the local-only number for that location,
-    // same bootstrap behavior as every other ERP-sourced field in this codebase.
-    //
-    // KNOWN RESIDUAL RISK (mivend.audit.72 HIGH, deliberately not fixed here): a real oversell
-    // window exists if 1C's StockChanged confirming a hold is delayed or dropped after
-    // erpConfirmedAt is set — neither the (now-excluded) local reservation nor erpAvailableQuantity
-    // reflects the held unit until 1C's own event catches up. This is the direct tradeoff of
-    // "trust 1C once confirmed" (the decided design, see issue #72's discussion) — fixing it
-    // properly needs either a bounded grace-period fallback or #73's nightly reconciliation
-    // worker to catch and correct the drift, not a change to this method alone. Flagged for a
-    // deliberate decision, not silently patched.
+    // after summing would mix numbers from different scopes. No cap is applied for a location 1C
+    // has never reported a StockChanged for (erpAvailableQuantity still null) — falls back to the
+    // local-only number for that location, same bootstrap behavior as every other ERP-sourced
+    // field in this codebase.
     async getAvailableToPromise(
         ctx: RequestContext,
         productVariantId: ID,
@@ -58,7 +61,7 @@ export class ReservationAvailabilityService {
                 stockLocationId,
             })),
         });
-        const unconfirmedReservedByLocation = await this.sumUnconfirmedReservationsByLocation(
+        const reservedByLocation = await this.sumActiveReservationsByLocation(
             ctx,
             productVariantId,
             stockLocationIds,
@@ -70,7 +73,7 @@ export class ReservationAvailabilityService {
             const localFree =
                 level.stockOnHand -
                 level.stockAllocated -
-                (unconfirmedReservedByLocation.get(locationId) ?? 0);
+                (reservedByLocation.get(locationId) ?? 0);
             const erpCap = level.customFields?.erpAvailableQuantity;
             const capped = erpCap != null ? Math.min(localFree, erpCap) : localFree;
             // Floored at 0 (mivend.audit.72 LOW) — a malformed/negative erpAvailableQuantity from
@@ -82,30 +85,21 @@ export class ReservationAvailabilityService {
         return total;
     }
 
-    // Sums ALL active reservations regardless of erpConfirmedAt (mivend.audit.72 MEDIUM: this is
-    // deliberately NOT the same set getAvailableToPromise subtracts, which only counts
-    // *unconfirmed* ones — confirmed reservations are trusted to already be inside 1C's own
-    // availableQuantity, see that method's own comment). This method answers "how much do we
-    // currently hold, full stop" (informational/reporting), not "how much should still be
-    // subtracted from ATP." Do not reuse this for an ATP-adjacent calculation without checking
-    // which of the two questions is actually being asked.
     async getReservedQuantity(
         ctx: RequestContext,
         productVariantId: ID,
         branchId?: string | null,
     ): Promise<number> {
         const stockLocationIds = await this.resolveStockLocationIds(ctx, branchId);
-        const rows = await this.connection.getRepository(ctx, Reservation).find({
-            where: stockLocationIds.map(stockLocationId => ({
-                productVariantId: String(productVariantId),
-                stockLocationId,
-                status: 'active' as const,
-            })),
-        });
-        return rows.reduce((sum, r) => sum + r.quantity, 0);
+        const byLocation = await this.sumActiveReservationsByLocation(
+            ctx,
+            productVariantId,
+            stockLocationIds,
+        );
+        return [...byLocation.values()].reduce((sum, qty) => sum + qty, 0);
     }
 
-    private async sumUnconfirmedReservationsByLocation(
+    private async sumActiveReservationsByLocation(
         ctx: RequestContext,
         productVariantId: ID,
         stockLocationIds: string[],
@@ -115,7 +109,6 @@ export class ReservationAvailabilityService {
                 productVariantId: String(productVariantId),
                 stockLocationId,
                 status: 'active' as const,
-                erpConfirmedAt: IsNull(),
             })),
         });
         const byLocation = new Map<string, number>();

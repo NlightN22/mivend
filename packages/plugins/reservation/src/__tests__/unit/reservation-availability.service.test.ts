@@ -44,24 +44,10 @@ describe('ReservationAvailabilityService', () => {
         const stockLocations = options.stockLocations ?? [];
 
         const reservationRepo = {
-            find: vi.fn(
-                async ({
-                    where,
-                }: {
-                    where: Array<{ stockLocationId: string; erpConfirmedAt?: unknown }>;
-                }) => {
-                    const ids = new Set(where.map(w => w.stockLocationId));
-                    // Only sumUnconfirmedReservationsByLocation's query includes an
-                    // erpConfirmedAt clause (IsNull()) — mirror that filter here so tests can
-                    // distinguish confirmed vs unconfirmed reservations.
-                    const unconfirmedOnly = where.some(w => 'erpConfirmedAt' in w);
-                    return reservations.filter(
-                        r =>
-                            ids.has(r.stockLocationId) &&
-                            (!unconfirmedOnly || r.erpConfirmedAt == null),
-                    );
-                },
-            ),
+            find: vi.fn(async ({ where }: { where: Array<{ stockLocationId: string }> }) => {
+                const ids = new Set(where.map(w => w.stockLocationId));
+                return reservations.filter(r => ids.has(r.stockLocationId));
+            }),
         };
         const stockLevelRepo = {
             find: vi.fn(async ({ where }: { where: Array<{ stockLocationId: string }> }) => {
@@ -211,7 +197,7 @@ describe('ReservationAvailabilityService', () => {
         expect(available).toBe(5);
     });
 
-    it('does not subtract a CONFIRMED reservation locally — trusts it is already inside erpAvailableQuantity (issue #72)', async () => {
+    it('keeps subtracting a CONFIRMED reservation locally too — erpConfirmedAt no longer stops local subtraction (mivend.audit.72 HIGH fix)', async () => {
         const service = createService({
             stockLevels: [
                 {
@@ -226,12 +212,13 @@ describe('ReservationAvailabilityService', () => {
             ],
         });
         const available = await service.getAvailableToPromise(ctx, 'variant-1');
-        // 15 - 3 = 12 locally (the confirmed reservation is NOT subtracted again), capped at
-        // erpAvailableQuantity=20 which doesn't bite here -> 12.
-        expect(available).toBe(12);
+        // 15 - 3 - 4 = 8, regardless of confirm state — closes the oversell window that existed
+        // when a confirmed reservation stopped being subtracted locally while waiting for 1C's
+        // own StockChanged to catch up.
+        expect(available).toBe(8);
     });
 
-    it('still subtracts an UNCONFIRMED reservation locally (1C has not acknowledged it yet)', async () => {
+    it('subtracts an UNCONFIRMED reservation locally exactly the same way as a confirmed one', async () => {
         const service = createService({
             stockLevels: [
                 {
@@ -244,7 +231,6 @@ describe('ReservationAvailabilityService', () => {
             reservations: [{ stockLocationId: 'location-1', quantity: 4, erpConfirmedAt: null }],
         });
         const available = await service.getAvailableToPromise(ctx, 'variant-1');
-        // 15 - 3 - 4 = 8, still below the erpAvailableQuantity cap of 20 -> 8.
         expect(available).toBe(8);
     });
 
