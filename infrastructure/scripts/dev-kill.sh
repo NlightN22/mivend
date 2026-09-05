@@ -16,6 +16,20 @@
 # (e.g. concurrently's argv literally contains the string "pnpm dev:central:staging-integration";
 # vite's contains "--mode staging-integration") — a plain substring filter is correct for those
 # two specifically.
+# Primary kill path (see dev-run-tracked.sh's own comment for the incident this fixes): if the
+# last `make dev` was launched through it, its whole process group is recorded here — kill the
+# group in one shot, which works even if intermediate children were since reparented to init.
+# The ancestry-based walk below stays as a defense-in-depth fallback for anything this doesn't
+# cover (e.g. a run started before this mechanism existed).
+PGID_FILE="/tmp/mivend-dev.pgid"
+if [ -f "$PGID_FILE" ]; then
+    pgid=$(cat "$PGID_FILE" 2>/dev/null || true)
+    if [ -n "$pgid" ]; then
+        kill -9 -- "-$pgid" 2>/dev/null || true
+    fi
+    rm -f "$PGID_FILE"
+fi
+
 collect_descendants() {
     local pid=$1
     local children

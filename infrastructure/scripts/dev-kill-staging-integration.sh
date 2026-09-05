@@ -9,6 +9,20 @@
 # dev:central:staging-integration/dev:worker:staging-integration), so find those root PIDs first,
 # then kill their full descendant tree.
 
+# Primary kill path — see dev-run-tracked.sh's own comment for the exact incident this fixes
+# (this contour's own, live-observed one: a duplicate ts-node-dev whose dotenv-cli ancestor had
+# already died went untraced by the ancestry walk below, kept fighting a fresh instance for
+# :3010/the Kafka consumer group for hours). Kept as defense-in-depth fallback for anything
+# predating this mechanism.
+PGID_FILE="/tmp/mivend-dev-staging-integration.pgid"
+if [ -f "$PGID_FILE" ]; then
+    pgid=$(cat "$PGID_FILE" 2>/dev/null || true)
+    if [ -n "$pgid" ]; then
+        kill -9 -- "-$pgid" 2>/dev/null || true
+    fi
+    rm -f "$PGID_FILE"
+fi
+
 collect_descendants() {
     local pid=$1
     local children

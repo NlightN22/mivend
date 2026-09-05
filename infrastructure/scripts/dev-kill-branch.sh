@@ -9,6 +9,18 @@
 # so we find those root PIDs first, then kill their full descendant tree (ts-node-dev spawns a
 # child node process whose own command line has no branch-identifying marker at all).
 
+# Primary kill path — see dev-run-tracked.sh's own comment for the incident this fixes (an
+# orphaned ts-node-dev whose dotenv-cli ancestor already died was untraceable by the
+# ancestry-based walk below). Kept as defense-in-depth fallback for anything predating this.
+PGID_FILE="/tmp/mivend-dev-branch.pgid"
+if [ -f "$PGID_FILE" ]; then
+    pgid=$(cat "$PGID_FILE" 2>/dev/null || true)
+    if [ -n "$pgid" ]; then
+        kill -9 -- "-$pgid" 2>/dev/null || true
+    fi
+    rm -f "$PGID_FILE"
+fi
+
 collect_descendants() {
     local pid=$1
     local children

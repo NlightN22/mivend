@@ -45,7 +45,7 @@ dev:
 	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait
 	@docker exec docker-postgres-central-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_central'" | grep -q 1 \
 		|| docker exec docker-postgres-central-1 psql -U postgres -c "CREATE DATABASE mivend_central"
-	pnpm dev:all
+	bash infrastructure/scripts/dev-run-tracked.sh /tmp/mivend-dev.pgid pnpm dev:all
 
 # Wipe DB volumes, re-seed via native server, then launch full stack
 dev-fresh:
@@ -66,7 +66,7 @@ dev-branch:
 	@docker exec docker-postgres-branch-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_branch'" | grep -q 1 \
 		|| docker exec docker-postgres-branch-1 psql -U postgres -c "CREATE DATABASE mivend_branch"
 	pnpm build:plugins
-	pnpm dev:branch-all
+	bash infrastructure/scripts/dev-run-tracked.sh /tmp/mivend-dev-branch.pgid pnpm dev:branch-all
 
 # Deliberately-launched staging-integration contour (issue #68) — the ONLY way to validate the
 # real Kafka contract against Integration Service's actual staging broker. Never the default
@@ -86,7 +86,7 @@ dev-staging-integration:
 	@docker exec docker-postgres-central-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_central_staging_integration'" | grep -q 1 \
 		|| docker exec docker-postgres-central-1 psql -U postgres -c "CREATE DATABASE mivend_central_staging_integration"
 	pnpm build:plugins
-	pnpm dev:staging-integration-all
+	bash infrastructure/scripts/dev-run-tracked.sh /tmp/mivend-dev-staging-integration.pgid pnpm dev:staging-integration-all
 
 seed:
 	@echo "Waiting for server on :3000..."
