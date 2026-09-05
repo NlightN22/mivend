@@ -12,7 +12,7 @@ import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { ErpImportPlugin } from '@mivend/plugin-erp-import';
 import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
-import { SearchPlugin, elasticsearchPlugin } from '@mivend/plugin-search';
+import { searchPlugins } from '@mivend/plugin-search';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { SyncPlugin, StubErpAdapter } from '@mivend/plugin-sync';
 import { ErpIntegrationPlugin, BranchStockLocationStrategy } from '@mivend/plugin-erp-integration';
@@ -302,8 +302,7 @@ export const config: VendureConfig = {
         DocumentsPlugin,
         ErpImportPlugin,
         CrossReferencePlugin,
-        elasticsearchPlugin,
-        SearchPlugin,
+        ...searchPlugins,
         ErpOrderPlugin,
         PopularProductsPlugin,
         SyncPlugin.init({

@@ -27,6 +27,14 @@ Three contours, always for a **central** instance (branches never touch Integrat
 | **staging-integration** (external Kafka) | `apps/server/.env.central.staging-integration` | `make dev-staging-integration` | `mivend_central_staging_integration` | Yes, deliberately — validates the real Kafka contract against Integration Service's actual staging broker. |
 | **production**                           | real prod env (deploy pipeline)                | (deploy pipeline)              | prod DB                              | Yes, real prod Integration Service.                                                                        |
 
+**Storefront search backend per contour (issue #69)**: `local` uses `internal` (`ElasticsearchPlugin`
+against local Elasticsearch, `SEARCH_BACKEND=internal` or unset); `staging-integration` and
+`production` use `external` (search-service's `POST /resolve-query`, `SEARCH_BACKEND=external` +
+required `SEARCH_SERVICE_URL`). `SearchBackend` (`SEARCH_BACKEND_DEFAULT` in
+`packages/plugins/search/src/types.ts`) is decided once at bootstrap in `search.plugin.ts` — a
+per-contour deployment choice, never an admin-configurable runtime toggle, and the two backends
+are never registered together.
+
 `ErpIntegrationPluginOptions.kafkaEnabled` (`INTEGRATION_KAFKA_ENABLED` env var, default `false`
 when unset — `KAFKA_ENABLED_DEFAULT` in `packages/plugins/erp-integration/src/types.ts`) is what
 actually encodes this axis in code. It gates, in addition to the existing `instanceType ===
