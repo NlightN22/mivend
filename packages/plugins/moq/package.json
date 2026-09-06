@@ -15,7 +15,7 @@
         "@vendure/core": "^3.7.3"
     },
     "devDependencies": {
-        "@vendure/common": "^3.6.4",
+        "@vendure/common": "^3.7.3",
         "typescript": "^5.4.0",
         "vitest": "^4.1.9"
     }

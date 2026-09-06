@@ -258,8 +258,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -307,8 +307,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -344,8 +344,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -390,8 +390,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -424,8 +424,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -455,8 +455,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -513,8 +513,8 @@ importers:
                 specifier: ^4.17.0
                 version: 4.17.25
             '@vendure/common':
-                specifier: ^3.6.4
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             typescript:
                 specifier: ^5.4.0
                 version: 5.9.3
@@ -620,8 +620,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -672,8 +672,8 @@ importers:
                 specifier: ^4.17.0
                 version: 4.17.25
             '@vendure/common':
-                specifier: ^3.6.4
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             typeorm:
                 specifier: ^0.3.0
                 version: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
@@ -691,8 +691,8 @@ importers:
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
         devDependencies:
             '@vendure/common':
-                specifier: ^3.6.4
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             typescript:
                 specifier: ^5.4.0
                 version: 5.9.3
@@ -728,8 +728,8 @@ importers:
                 specifier: ^4.17.0
                 version: 4.17.25
             '@vendure/common':
-                specifier: ^3.6.4
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             typescript:
                 specifier: ^5.4.0
                 version: 5.9.3
@@ -762,8 +762,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -802,8 +802,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -836,8 +836,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -876,8 +876,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -916,8 +916,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -971,8 +971,8 @@ importers:
                 specifier: ^4.17.0
                 version: 4.17.25
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -1005,8 +1005,8 @@ importers:
                 specifier: ^13.0.0
                 version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/common':
-                specifier: ^3.0.0
-                version: 3.6.4
+                specifier: ^3.7.3
+                version: 3.7.3
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
@@ -6502,12 +6502,6 @@ packages:
         resolution:
             {
                 integrity: sha512-cJVTA2e0R9KG3kX6VFSL3RuqABZgh9EuFdrCUm7hXHi5A4psNPOQPs7fIknGaj0Ft2Xb+Fl+FMhuOVMozsIj2g==,
-            }
-
-    '@vendure/common@3.6.4':
-        resolution:
-            {
-                integrity: sha512-O/P25oB7EOp5NMACbx73lw27t5k1pSNPx/ytWzGUW9m58Vj3Whgc7Y/cnYDSQwUxt3YMsjBGHQHd5v6pR5JbyA==,
             }
 
     '@vendure/common@3.7.3':
@@ -18069,8 +18063,6 @@ snapshots:
             sharp: 0.34.5
         transitivePeerDependencies:
             - supports-color
-
-    '@vendure/common@3.6.4': {}
 
     '@vendure/common@3.7.3': {}
 
