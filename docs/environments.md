@@ -184,3 +184,8 @@ loops back via `lo` and proves nothing).
 2026-09-04" contract-drift finding) should ideally run against whatever
 `@nlightn22/event-contracts` version staging/prod actually use, not just whatever happens to be
 locally pinned — not yet implemented, tracked under issue #68's checklist.
+
+`packages/dashboard` (issue #77) has no production build/serve story yet — every contour
+(including staging-integration) currently serves it via the raw Vite dev server, same as
+`packages/storefront`/`packages/manager` today. `vite build`/`vite preview` scripts exist but
+nothing runs them; deliberately deferred, not scheduled.
