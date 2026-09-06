@@ -64,10 +64,37 @@ const adminApiSchema = gql`
         maxExtraDays: Int!
     }
 
+    type ReservationReconciliationIssue {
+        id: ID!
+        issueType: String!
+        orderId: ID!
+        productVariantId: ID
+        localQuantity: Int
+        erpQuantity: Int
+        externalProductId: String
+        orderEntityId: ID!
+        detectedAt: DateTime!
+        status: String!
+    }
+
+    type ReservationReconciliationIssueList {
+        items: [ReservationReconciliationIssue!]!
+        totalItems: Int!
+    }
+
+    input OpenReservationReconciliationIssueListOptions {
+        take: Int
+        skip: Int
+    }
+
     extend type Query {
         orderReservations(orderId: ID!): [Reservation!]!
         availableStock(productVariantId: ID!): Int!
         reservationExtensionLimit(roleCode: String!): ReservationExtensionLimit
+        "Open reservation/1C drift issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76)."
+        openReservationReconciliationIssues(
+            options: OpenReservationReconciliationIssueListOptions
+        ): ReservationReconciliationIssueList!
     }
 
     extend type Mutation {

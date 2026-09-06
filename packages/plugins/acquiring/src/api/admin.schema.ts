@@ -96,6 +96,32 @@ export const adminApiExtensions: DocumentNode = gql`
         amount: Int!
     }
 
+    type PaymentReconciliationIssue {
+        id: ID!
+        issueType: String!
+        paymentId: ID
+        invoiceId: ID
+        organizationId: ID
+        providerPaymentId: String
+        erpDocumentId: String
+        expectedAmount: Int
+        actualAmount: Int
+        expectedCurrency: String
+        actualCurrency: String
+        detectedAt: DateTime!
+        status: String!
+    }
+
+    type PaymentReconciliationIssueList {
+        items: [PaymentReconciliationIssue!]!
+        totalItems: Int!
+    }
+
+    input OpenPaymentReconciliationIssueListOptions {
+        take: Int
+        skip: Int
+    }
+
     type OrderPaymentSummary {
         orderId: ID!
         "Sum of paymentStatus='captured' PaymentAttempt rows for this order — see PaymentAttemptService.sumCapturedAmountsByOrderIds for what's deliberately not netted out (refunds/disputes)."
@@ -124,6 +150,10 @@ export const adminApiExtensions: DocumentNode = gql`
             paymentView: String!
             options: OrderListOptions
         ): OrderList!
+        "Open payment reconciliation issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76)."
+        openPaymentReconciliationIssues(
+            options: OpenPaymentReconciliationIssueListOptions
+        ): PaymentReconciliationIssueList!
     }
 
     extend type Mutation {

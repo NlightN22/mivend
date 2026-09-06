@@ -15,6 +15,7 @@ import { IntegrationOutboxWorker } from './integration-outbox.worker';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
 import { IntegrationInboxWorker } from './integration-inbox.worker';
+import { IntegrationInboxEventResolver } from './integration-inbox-event.resolver';
 import { KafkaConsumerService } from './kafka-consumer.service';
 import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.service';
 import { KafkaStatusController } from './kafka-status.controller';
@@ -32,6 +33,7 @@ import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
+import { adminApiExtensions } from './api/admin.schema';
 
 // Central-hub-only, per the external-integration-rules skill ("Branches never call the ERP [or Integration
 // Service]"). The guard can't live in the providers array itself: @VendurePlugin's decorator body
@@ -86,6 +88,10 @@ import type { ErpIntegrationPluginOptions } from './types';
             useFactory: (): ErpIntegrationPluginOptions => ErpIntegrationPlugin.options,
         },
     ],
+    adminApiExtensions: {
+        schema: adminApiExtensions,
+        resolvers: [IntegrationInboxEventResolver],
+    },
     compatibility: '>0.0.0',
 })
 export class ErpIntegrationPlugin {

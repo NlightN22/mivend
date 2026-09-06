@@ -1,13 +1,18 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/core';
+import { Allow, Ctx, PaginatedList, Permission, RequestContext, Transaction } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
+import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
 import { ReservationExtensionService } from './reservation-extension.service';
+import {
+    OpenReservationReconciliationIssueListOptions,
+    ReservationReconciliationIssueService,
+} from './reservation-reconciliation-issue.service';
 import { ReservationService } from './reservation.service';
 
 @Resolver()
@@ -17,6 +22,7 @@ export class ReservationResolver {
         private availabilityService: ReservationAvailabilityService,
         private extensionService: ReservationExtensionService,
         private extensionLimitService: ReservationExtensionLimitService,
+        private reconciliationIssueService: ReservationReconciliationIssueService,
     ) {}
 
     @Query()
@@ -44,6 +50,15 @@ export class ReservationResolver {
         @Args() args: { roleCode: string },
     ): Promise<ReservationExtensionLimit | null> {
         return this.extensionLimitService.getLimit(ctx, args.roleCode);
+    }
+
+    @Query()
+    @Allow(Permission.ReadOrder)
+    async openReservationReconciliationIssues(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: OpenReservationReconciliationIssueListOptions },
+    ): Promise<PaginatedList<ReservationReconciliationIssue>> {
+        return this.reconciliationIssueService.findOpen(ctx, args.options);
     }
 
     // ConfirmOrder covers both confirm and release — one staff action from the operator's

@@ -1,8 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { IsNull } from 'typeorm';
 
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
+
+const OPEN_ISSUES_MAX_TAKE = 100;
+
+export interface OpenReservationReconciliationIssueListOptions {
+    take?: number;
+    skip?: number;
+}
 
 // Reports a detected reservation/1C drift for a human to resolve — kept intentionally minimal
 // (report only), same as plugin-acquiring's PaymentReconciliationIssueService.
@@ -52,6 +59,28 @@ export class ReservationReconciliationIssueService {
             externalProductId: details.externalProductId,
             orderEntityId: details.orderEntityId,
         });
+    }
+
+    // Dashboard/ops read model (issue #76) — open issues need a human to resolve; never
+    // auto-resolved from this query.
+    async findOpen(
+        ctx: RequestContext,
+        options?: OpenReservationReconciliationIssueListOptions,
+    ): Promise<PaginatedList<ReservationReconciliationIssue>> {
+        const take = Math.min(options?.take ?? 20, OPEN_ISSUES_MAX_TAKE);
+        const skip = options?.skip ?? 0;
+
+        const [items, totalItems] = await this.connection
+            .getRepository(ctx, ReservationReconciliationIssue)
+            .createQueryBuilder('issue')
+            .where('issue.status = :status', { status: 'open' })
+            .orderBy('issue.detectedAt', 'DESC')
+            .addOrderBy('issue.id', 'DESC')
+            .take(take)
+            .skip(skip)
+            .getManyAndCount();
+
+        return { items, totalItems };
     }
 
     private async save(

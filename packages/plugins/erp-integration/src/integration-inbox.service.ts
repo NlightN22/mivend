@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { PaginatedList } from '@vendure/core';
 import { Brackets, DataSource } from 'typeorm';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
@@ -11,12 +12,19 @@ const POSTGRES_UNIQUE_VIOLATION = '23505';
 // the next sweep. Mirrors plugin-acquiring's InboxService (STUCK_PROCESSING_THRESHOLD_MS).
 const STUCK_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000;
 
+const FAILED_EVENTS_MAX_TAKE = 100;
+
 export interface EnqueueInboxEventInput {
     stream: InboundStream;
     entityId: string;
     version: string;
     sourceEventId: string;
     payload: Record<string, unknown>;
+}
+
+export interface FailedInboxEventListOptions {
+    take?: number;
+    skip?: number;
 }
 
 // The durable inbox for inbound Kafka events from Integration Service (issue #62 Milestone 1).
@@ -121,6 +129,27 @@ export class IntegrationInboxService {
                 status: attempts >= maxAttempts ? 'failed' : 'pending',
             },
         );
+    }
+
+    // Dashboard/ops read model (issue #76) — 'failed' rows are dead-lettered (markFailed above)
+    // and need a human to notice and act; never fed back into claimBatch automatically.
+    async findFailed(
+        options?: FailedInboxEventListOptions,
+    ): Promise<PaginatedList<IntegrationInboxEvent>> {
+        const take = Math.min(options?.take ?? 20, FAILED_EVENTS_MAX_TAKE);
+        const skip = options?.skip ?? 0;
+
+        const [items, totalItems] = await this.dataSource
+            .getRepository(IntegrationInboxEvent)
+            .createQueryBuilder('event')
+            .where('event.status = :status', { status: 'failed' })
+            .orderBy('event.updatedAt', 'DESC')
+            .addOrderBy('event.id', 'DESC')
+            .take(take)
+            .skip(skip)
+            .getManyAndCount();
+
+        return { items, totalItems };
     }
 
     private isUniqueViolation(err: unknown): boolean {

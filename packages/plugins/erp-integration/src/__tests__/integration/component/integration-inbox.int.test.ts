@@ -169,4 +169,86 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(updated.status).toBe('processed');
         expect(updated.processedAt).not.toBeNull();
     });
+
+    // issue #76's dashboard read model — recent dead-lettered events for a manager to notice.
+    describe('findFailed', () => {
+        it('returns a failed row', async () => {
+            const row = await inboxService.enqueue({
+                stream: 'product',
+                entityId: 'p-failed',
+                version: '1',
+                sourceEventId: 'evt-failed',
+                payload: { sku: 'SKU-FAILED' },
+            });
+            await inboxService.markFailed(row.id, new Error('boom'), 1);
+
+            const result = await inboxService.findFailed();
+            expect(result.items.map(i => i.id)).toContain(row.id);
+            expect(result.totalItems).toBe(1);
+        });
+
+        it('does not return a pending/processed row', async () => {
+            await inboxService.enqueue({
+                stream: 'product',
+                entityId: 'p-pending',
+                version: '1',
+                sourceEventId: 'evt-pending',
+                payload: { sku: 'SKU-PENDING' },
+            });
+            const processedRow = await inboxService.enqueue({
+                stream: 'product',
+                entityId: 'p-processed',
+                version: '1',
+                sourceEventId: 'evt-processed',
+                payload: { sku: 'SKU-PROCESSED' },
+            });
+            await inboxService.markProcessed(processedRow.id);
+
+            const result = await inboxService.findFailed();
+            expect(result.items).toEqual([]);
+            expect(result.totalItems).toBe(0);
+        });
+
+        it('paginates with take/skip', async () => {
+            for (let i = 0; i < 5; i++) {
+                const row = await inboxService.enqueue({
+                    stream: 'product',
+                    entityId: `p-page-${i}`,
+                    version: '1',
+                    sourceEventId: `evt-page-${i}`,
+                    payload: { sku: `SKU-PAGE-${i}` },
+                });
+                await inboxService.markFailed(row.id, new Error('boom'), 1);
+            }
+
+            const page1 = await inboxService.findFailed({ take: 2, skip: 0 });
+            const page2 = await inboxService.findFailed({ take: 2, skip: 2 });
+            expect(page1.totalItems).toBe(5);
+            expect(page2.totalItems).toBe(5);
+            expect(page1.items).toHaveLength(2);
+            expect(page2.items).toHaveLength(2);
+            const page1Ids = page1.items.map(i => i.id);
+            const page2Ids = page2.items.map(i => i.id);
+            expect(page1Ids.some(id => page2Ids.includes(id))).toBe(false);
+        });
+
+        it('orders newest-updated first, with id as a tiebreaker', async () => {
+            const rows = [];
+            for (let i = 0; i < 3; i++) {
+                const row = await inboxService.enqueue({
+                    stream: 'product',
+                    entityId: `p-order-${i}`,
+                    version: '1',
+                    sourceEventId: `evt-order-${i}`,
+                    payload: { sku: `SKU-ORDER-${i}` },
+                });
+                await inboxService.markFailed(row.id, new Error('boom'), 1);
+                rows.push(row);
+            }
+
+            const result = await inboxService.findFailed();
+            const resultIds = result.items.map(i => i.id);
+            expect(resultIds).toEqual([...rows.map(r => r.id)].reverse());
+        });
+    });
 });
