@@ -20,6 +20,18 @@ function makeConnection(existingId: string | undefined): {
     };
 }
 
+function makeTaxCategoryService(
+    items: Array<{ id: string; isDefault: boolean; customFields: { erpVatCode?: string | null } }>,
+): { findAll: ReturnType<typeof vi.fn> } {
+    return { findAll: vi.fn().mockResolvedValue({ items, totalItems: items.length }) };
+}
+
+function makeProductTaxCodeFlagService(): { report: ReturnType<typeof vi.fn> } {
+    return { report: vi.fn().mockResolvedValue(undefined) };
+}
+
+const DEFAULT_TAX_CATEGORY = { id: 'tax-default', isDefault: true, customFields: {} };
+
 describe('ProductStreamHandler', () => {
     const ctx = {} as RequestContext;
 
@@ -31,10 +43,14 @@ describe('ProductStreamHandler', () => {
             create: vi.fn(),
             update: vi.fn(),
         };
+        const taxCategoryService = makeTaxCategoryService([DEFAULT_TAX_CATEGORY]);
+        const productTaxCodeFlagService = makeProductTaxCodeFlagService();
         const handler = new ProductStreamHandler(
             connection as never,
             productService as never,
             productVariantService as never,
+            taxCategoryService as never,
+            productTaxCodeFlagService as never,
         );
 
         await handler.apply(ctx, 'p-1', { sku: '', name: 'Widget' });
@@ -54,10 +70,14 @@ describe('ProductStreamHandler', () => {
             create: vi.fn().mockResolvedValue([{ id: '20' }]),
             update: vi.fn(),
         };
+        const taxCategoryService = makeTaxCategoryService([DEFAULT_TAX_CATEGORY]);
+        const productTaxCodeFlagService = makeProductTaxCodeFlagService();
         const handler = new ProductStreamHandler(
             connection as never,
             productService as never,
             productVariantService as never,
+            taxCategoryService as never,
+            productTaxCodeFlagService as never,
         );
 
         await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget', isActive: false });
@@ -67,7 +87,11 @@ describe('ProductStreamHandler', () => {
             expect.objectContaining({ enabled: false, customFields: { externalId: 'p-1' } }),
         );
         expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
-            expect.objectContaining({ productId: '10', sku: 'SKU-1' }),
+            expect.objectContaining({
+                productId: '10',
+                sku: 'SKU-1',
+                taxCategoryId: 'tax-default',
+            }),
         ]);
     });
 
@@ -79,10 +103,14 @@ describe('ProductStreamHandler', () => {
             create: vi.fn(),
             update: vi.fn().mockResolvedValue([{}]),
         };
+        const taxCategoryService = makeTaxCategoryService([DEFAULT_TAX_CATEGORY]);
+        const productTaxCodeFlagService = makeProductTaxCodeFlagService();
         const handler = new ProductStreamHandler(
             connection as never,
             productService as never,
             productVariantService as never,
+            taxCategoryService as never,
+            productTaxCodeFlagService as never,
         );
 
         await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget', isActive: true });
@@ -92,9 +120,67 @@ describe('ProductStreamHandler', () => {
             expect.objectContaining({ id: 'existing-product-id', enabled: true }),
         );
         expect(productVariantService.update).toHaveBeenCalledWith(ctx, [
-            { id: 'variant-1', enabled: true },
+            { id: 'variant-1', enabled: true, taxCategoryId: 'tax-default' },
         ]);
-        const updateCallArg = productVariantService.update.mock.calls[0][1][0];
-        expect(updateCallArg).not.toHaveProperty('customFields');
+    });
+
+    it('resolves a recognized VAT code to its matching TaxCategory, without a flag', async () => {
+        const connection = makeConnection(undefined);
+        const productService = { create: vi.fn().mockResolvedValue({ id: '10' }), update: vi.fn() };
+        const productVariantService = {
+            getVariantsByProductId: vi.fn(),
+            create: vi.fn().mockResolvedValue([{ id: '20' }]),
+            update: vi.fn(),
+        };
+        const taxCategoryService = makeTaxCategoryService([
+            DEFAULT_TAX_CATEGORY,
+            { id: 'tax-nds10', isDefault: false, customFields: { erpVatCode: 'NDS10' } },
+        ]);
+        const productTaxCodeFlagService = makeProductTaxCodeFlagService();
+        const handler = new ProductStreamHandler(
+            connection as never,
+            productService as never,
+            productVariantService as never,
+            taxCategoryService as never,
+            productTaxCodeFlagService as never,
+        );
+
+        await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget', vatCode: 'НДС10' });
+
+        expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
+            expect.objectContaining({ taxCategoryId: 'tax-nds10' }),
+        ]);
+        expect(productTaxCodeFlagService.report).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the default TaxCategory and reports a flag for an unrecognized VAT code', async () => {
+        const connection = makeConnection(undefined);
+        const productService = { create: vi.fn().mockResolvedValue({ id: '10' }), update: vi.fn() };
+        const productVariantService = {
+            getVariantsByProductId: vi.fn(),
+            create: vi.fn().mockResolvedValue([{ id: '20' }]),
+            update: vi.fn(),
+        };
+        const taxCategoryService = makeTaxCategoryService([DEFAULT_TAX_CATEGORY]);
+        const productTaxCodeFlagService = makeProductTaxCodeFlagService();
+        const handler = new ProductStreamHandler(
+            connection as never,
+            productService as never,
+            productVariantService as never,
+            taxCategoryService as never,
+            productTaxCodeFlagService as never,
+        );
+
+        await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget', vatCode: 'НДС999' });
+
+        expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
+            expect.objectContaining({ taxCategoryId: 'tax-default' }),
+        ]);
+        expect(productTaxCodeFlagService.report).toHaveBeenCalledWith(
+            ctx,
+            'p-1',
+            'НДС999',
+            expect.objectContaining({ reason: 'unrecognized' }),
+        );
     });
 });

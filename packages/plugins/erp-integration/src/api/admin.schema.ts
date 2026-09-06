@@ -21,10 +21,31 @@ export const adminApiExtensions: DocumentNode = gql`
         skip: Int
     }
 
+    type ProductTaxCodeFlag {
+        id: ID!
+        externalProductId: String!
+        rawVatCode: String!
+        reason: String!
+        detail: String!
+        detectedAt: DateTime!
+    }
+
+    type ProductTaxCodeFlagList {
+        items: [ProductTaxCodeFlag!]!
+        totalItems: Int!
+    }
+
+    input ProductTaxCodeFlagListOptions {
+        take: Int
+        skip: Int
+    }
+
     extend type Query {
         "Dead-lettered inbound Kafka events, newest first — for the manager-portal dashboard's integration-health panel (issue #76)."
         failedIntegrationInboxEvents(
             options: FailedIntegrationInboxEventListOptions
         ): FailedIntegrationInboxEventList!
+        "Non-blocking VAT-code review flags raised while importing products, newest first (issue #79)."
+        recentProductTaxCodeFlags(options: ProductTaxCodeFlagListOptions): ProductTaxCodeFlagList!
     }
 `;

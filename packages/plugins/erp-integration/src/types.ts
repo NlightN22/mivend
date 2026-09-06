@@ -23,6 +23,13 @@ declare module '@vendure/core' {
         erpAvailableQuantity?: number | null;
     }
 
+    interface CustomTaxCategoryFields {
+        // Owned by apps/server/src/vendure-config.ts's customFields config. Stable ERP-side VAT
+        // code (issue #79) — ProductStreamHandler resolves the TaxCategory to assign by this
+        // field, never by name.
+        erpVatCode?: string | null;
+    }
+
     interface CustomStockLocationFields {
         // Owned by apps/server/src/vendure-config.ts's customFields config. StockLocation has no
         // native external-id field — this is WarehouseStreamHandler's idempotency key

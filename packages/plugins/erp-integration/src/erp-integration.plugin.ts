@@ -9,6 +9,9 @@ import { ReservationPlugin } from '@mivend/plugin-reservation';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
+import { ProductTaxCodeFlag } from './entities/product-tax-code-flag.entity';
+import { ProductTaxCodeFlagService } from './product-tax-code-flag.service';
+import { ProductTaxCodeFlagResolver } from './product-tax-code-flag.resolver';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
 import { IntegrationOutboxWorker } from './integration-outbox.worker';
@@ -60,7 +63,12 @@ import { adminApiExtensions } from './api/admin.schema';
         DocumentsPlugin,
         ReservationPlugin,
     ],
-    entities: [IntegrationOutboxEntry, IntegrationInboxEvent, KafkaConsumerStatus],
+    entities: [
+        IntegrationOutboxEntry,
+        IntegrationInboxEvent,
+        KafkaConsumerStatus,
+        ProductTaxCodeFlag,
+    ],
     controllers: [KafkaStatusController],
     providers: [
         IntegrationOutboxService,
@@ -83,6 +91,7 @@ import { adminApiExtensions } from './api/admin.schema';
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,
+        ProductTaxCodeFlagService,
         {
             provide: ERP_INTEGRATION_PLUGIN_OPTIONS,
             useFactory: (): ErpIntegrationPluginOptions => ErpIntegrationPlugin.options,
@@ -90,7 +99,7 @@ import { adminApiExtensions } from './api/admin.schema';
     ],
     adminApiExtensions: {
         schema: adminApiExtensions,
-        resolvers: [IntegrationInboxEventResolver],
+        resolvers: [IntegrationInboxEventResolver, ProductTaxCodeFlagResolver],
     },
     compatibility: '>0.0.0',
 })

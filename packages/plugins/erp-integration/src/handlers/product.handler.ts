@@ -4,9 +4,12 @@ import {
     ProductService,
     ProductVariantService,
     RequestContext,
+    TaxCategoryService,
     TransactionalConnection,
 } from '@vendure/core';
 
+import { ProductTaxCodeFlagService } from '../product-tax-code-flag.service';
+import { resolveVatCode } from '../vat-code-resolver';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationProductHandler';
@@ -26,6 +29,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         private readonly connection: TransactionalConnection,
         private readonly productService: ProductService,
         private readonly productVariantService: ProductVariantService,
+        private readonly taxCategoryService: TaxCategoryService,
+        private readonly productTaxCodeFlagService: ProductTaxCodeFlagService,
     ) {}
 
     async apply(
@@ -41,6 +46,14 @@ export class ProductStreamHandler implements InboundStreamHandler {
         }
 
         const isActive = payload.isActive !== false;
+        // `vatCode` isn't in @nlightn22/event-contracts' ProductChangedSchema yet (verified
+        // against 0.13.0's product_changed_pb.d.ts — no VAT field at all). Reading it here
+        // anyway, defensively: until that contract is extended this always resolves via the
+        // 'unset' branch below, which is exactly the intended non-blocking fallback (issue #79),
+        // not a bug — the moment the contract gains the field, real codes flow through with no
+        // further changes needed here.
+        const rawVatCode = String(payload.vatCode ?? '');
+        const taxCategoryId = await this.resolveTaxCategoryId(ctx, entityId, rawVatCode);
 
         const existing = await this.connection.rawConnection
             .createQueryBuilder()
@@ -61,10 +74,14 @@ export class ProductStreamHandler implements InboundStreamHandler {
             );
             if (variants.items.length > 0) {
                 await this.productVariantService.update(ctx, [
-                    { id: variants.items[0].id, enabled: isActive },
+                    {
+                        id: variants.items[0].id,
+                        enabled: isActive,
+                        ...(taxCategoryId ? { taxCategoryId } : {}),
+                    },
                 ]);
             } else {
-                await this.createDefaultVariant(ctx, existing.id, sku, name);
+                await this.createDefaultVariant(ctx, existing.id, sku, name, taxCategoryId);
             }
             Logger.verbose(`Updated product externalId=${entityId}`, loggerCtx);
             return;
@@ -75,8 +92,51 @@ export class ProductStreamHandler implements InboundStreamHandler {
             translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
             customFields: { externalId: entityId },
         });
-        await this.createDefaultVariant(ctx, String(created.id), sku, name);
+        await this.createDefaultVariant(ctx, String(created.id), sku, name, taxCategoryId);
         Logger.verbose(`Created product externalId=${entityId}`, loggerCtx);
+    }
+
+    // Resolves the raw VAT code to a TaxCategory id via the pure resolveVatCode function,
+    // persisting a non-blocking review flag when the resolution isn't a clean match (issue #79).
+    // Returns undefined only when there is no default TaxCategory configured at all yet (a
+    // completely unconfigured environment) — in that case the variant create/update below omits
+    // taxCategoryId entirely, same as this handler's pre-#79 behavior.
+    private async resolveTaxCategoryId(
+        ctx: RequestContext,
+        entityId: string,
+        rawVatCode: string,
+    ): Promise<string | undefined> {
+        const taxCategories = await this.taxCategoryService.findAll(ctx);
+        const defaultTaxCategory = taxCategories.items.find(tc => tc.isDefault);
+        if (!defaultTaxCategory) {
+            Logger.warn(
+                `product ${entityId}: no default TaxCategory configured, leaving taxCategoryId unset`,
+                loggerCtx,
+            );
+            return undefined;
+        }
+
+        const taxCategoryIdByErpVatCode = new Map(
+            taxCategories.items
+                .filter(tc => !!tc.customFields.erpVatCode)
+                .map(tc => [tc.customFields.erpVatCode as string, String(tc.id)]),
+        );
+
+        const resolution = resolveVatCode(
+            rawVatCode,
+            taxCategoryIdByErpVatCode,
+            String(defaultTaxCategory.id),
+        );
+
+        if (resolution.flag) {
+            Logger.log(
+                `product ${entityId}: VAT code '${rawVatCode}' — ${resolution.flag.detail}`,
+                loggerCtx,
+            );
+            await this.productTaxCodeFlagService.report(ctx, entityId, rawVatCode, resolution.flag);
+        }
+
+        return resolution.taxCategoryId;
     }
 
     // A Product with zero variants can't be priced/stocked/ordered — one default variant per
@@ -89,6 +149,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         productId: string,
         sku: string,
         name: string,
+        taxCategoryId: string | undefined,
     ): Promise<void> {
         await this.productVariantService.create(ctx, [
             {
@@ -96,6 +157,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 sku,
                 translations: [{ languageCode: LanguageCode.en, name }],
                 trackInventory: 'TRUE' as never,
+                ...(taxCategoryId ? { taxCategoryId } : {}),
             },
         ]);
     }

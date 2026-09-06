@@ -93,6 +93,18 @@ export const config: VendureConfig = {
         database: process.env.DB_NAME ?? 'mivend',
     },
     customFields: {
+        TaxCategory: [
+            {
+                // Stable ERP-side code (see 1C's Catalog_Номенклатура.СтавкаНДС enum) that
+                // packages/plugins/erp-integration's product handler resolves against — never
+                // matched by `name`, which is free text an admin can rename/localize at will.
+                // See issue #79.
+                name: 'erpVatCode',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP VAT Code' }],
+            },
+        ],
         Order: [
             {
                 name: 'erpOrderId',
