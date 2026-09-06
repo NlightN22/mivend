@@ -126,18 +126,23 @@ directly from outside (no `ufw allow` for them).
 | API (Admin+Shop) | local               | `3000`                 | `8003`                                           |
 | Storefront       | local               | `5173`                 | `8004`                                           |
 | Manager          | local               | `5174`                 | `8005`                                           |
+| Dashboard        | local               | `5175`                 | `8006`                                           |
 | API (Admin+Shop) | staging-integration | `3010`                 | `8013`                                           |
 | Storefront       | staging-integration | `5183`                 | `8014`                                           |
 | Manager          | staging-integration | `5184`                 | `8015`                                           |
+| Dashboard        | staging-integration | `5185`                 | `8016`                                           |
 
-**No separate Admin UI port.** `AdminUiPlugin.init({ port: ADMIN_UI_PORT, ... })`'s `port` option
-looks like it should mean "the Admin UI listens here" — it doesn't, in this setup. Verified
-directly: nothing ever listens on `ADMIN_UI_PORT` (`ss -tlnp` shows no such socket), and `/admin`
-responds with the real UI on the main API port instead. So the Admin UI for any contour is just
-`<that contour's external API port>/admin` — e.g. `https://devof.komponent-m.ru:8003/admin` for
-local, `:8013/admin` once staging-integration is running. Don't add a dedicated nginx block for
-it; a first attempt at this table did, pointing at `ADMIN_UI_PORT`, and it 502'd because nothing
-was listening there.
+**Dashboard has its own port, unlike the old Admin UI.** The Angular `@vendure/admin-ui-plugin`
+used to be mounted inline on the API process (`AdminUiPlugin.init({ port: ADMIN_UI_PORT, ... })`)
+and, despite its `port` option, never actually listened on that port — `/admin` was served on the
+main API port instead (verified: `ss -tlnp` showed no socket on `ADMIN_UI_PORT`). Issue #77
+replaced it with `@vendure/dashboard`, deployed as a genuinely separate standalone Vite app
+(`packages/dashboard`, same pattern as storefront/manager), not mounted on the server via
+`DashboardPlugin.init()`. So unlike the old setup, the Dashboard **does** need and get its own
+port (`5175`/`8006` local, `5185`/`8016` staging-integration) — it's a real process listening on
+that port, not a dead config option. The server side only needs CORS configured to accept it
+(`apiOptions.cors` in `apps/server/src/vendure-config.ts`, `DASHBOARD_CORS_ORIGINS` env var) since
+the Dashboard calls admin-api directly rather than through a same-origin dev proxy.
 
 Step of 10 between contours is deliberate — the next contour after staging-integration (or a
 branch instance that ever needs its own external access, which it doesn't today per

@@ -85,7 +85,7 @@ jobs:
             # incident: this literally happened — see git history around this comment) could fail
             # the whole integration job even though nothing it actually needs was affected.
             - name: Build plugins
-              run: pnpm --filter '!@mivend/manager' --filter '!@mivend/storefront' -r build
+              run: pnpm --filter '!@mivend/manager' --filter '!@mivend/storefront' --filter '!@mivend/dashboard' -r build
 
             - name: Run integration tests
               run: pnpm --filter "{packages/**}" --no-bail test:integration

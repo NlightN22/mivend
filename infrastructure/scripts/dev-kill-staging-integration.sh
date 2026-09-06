@@ -59,5 +59,6 @@ fuser -k 3010/tcp 2>/dev/null || true
 fuser -k 3012/tcp 2>/dev/null || true
 fuser -k 5183/tcp 2>/dev/null || true
 fuser -k 5184/tcp 2>/dev/null || true
+fuser -k 5185/tcp 2>/dev/null || true
 
 exit 0
