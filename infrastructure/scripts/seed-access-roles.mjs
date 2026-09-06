@@ -191,6 +191,11 @@ const ROLES = [
             'RequestCreditTermApproval',
             'ApproveDiscountRequest',
             'ApproveSecurityLimit',
+            // Native Vendure permission gating zones/taxCategories/taxRates/shippingMethods/
+            // paymentMethods (@vendure/core's Allow() lists are OR'd, so this one permission
+            // covers all of them) — required for the manager portal's Settings > System health
+            // page (issue #76) to read Vendure's own base configuration.
+            'ReadSettings',
         ],
         accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all', invoice: 'all' },
     },
