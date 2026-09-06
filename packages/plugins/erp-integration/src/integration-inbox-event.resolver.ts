@@ -1,5 +1,6 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { Allow, PaginatedList, Permission } from '@vendure/core';
+import { Allow, PaginatedList } from '@vendure/core';
+import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { FailedInboxEventListOptions, IntegrationInboxService } from './integration-inbox.service';
@@ -9,7 +10,7 @@ export class IntegrationInboxEventResolver {
     constructor(private integrationInboxService: IntegrationInboxService) {}
 
     @Query()
-    @Allow(Permission.SuperAdmin)
+    @Allow(CustomPermission.ManageAccessControl.Permission)
     async failedIntegrationInboxEvents(
         @Args() args: { options?: FailedInboxEventListOptions },
     ): Promise<PaginatedList<IntegrationInboxEvent>> {

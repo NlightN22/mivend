@@ -97,7 +97,7 @@ onMounted(async () => {
         const [dashboard, grants, failedEvents, reconReservations, reconPayments] = await Promise.all([
             fetchDashboardData(),
             fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
-            authStore.hasPermission('SuperAdmin')
+            authStore.hasPermission('ManageAccessControl')
                 ? fetchFailedIntegrationInboxEvents(HEALTH_PANEL_TAKE).catch(e => {
                       console.warn('[dashboard] could not load failed integration inbox events:', e);
                       return [];
@@ -204,7 +204,7 @@ onMounted(async () => {
                     <ApprovalStatusList :approvals="data.recentApprovals.slice(0, 5)" />
                 </MvPanel>
 
-                <MvPanel v-if="authStore.hasPermission('SuperAdmin')" title="Integration inbox errors">
+                <MvPanel v-if="authStore.hasPermission('ManageAccessControl')" title="Integration inbox errors">
                     <IntegrationInboxErrorsPanel :events="failedInboxEvents" />
                 </MvPanel>
 

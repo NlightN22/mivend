@@ -29,12 +29,12 @@ async function load(): Promise<void> {
 }
 
 onMounted(() => {
-    if (authStore.hasPermission('SuperAdmin')) void load();
+    if (authStore.hasPermission('ManageAccessControl')) void load();
 });
 </script>
 
 <template>
-    <div v-if="!authStore.hasPermission('SuperAdmin')" class="system-health-page__not-authorized">
+    <div v-if="!authStore.hasPermission('ManageAccessControl')" class="system-health-page__not-authorized">
         <h1>Not authorized</h1>
         <p>You don't have permission to view system health.</p>
     </div>
