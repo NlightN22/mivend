@@ -69,7 +69,11 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
     });
 
     it('subscribes to every topic and calls run() when all succeed (no regression)', async () => {
-        const service = new KafkaConsumerService(makeOptions(), { enqueue: vi.fn() } as never);
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
         await service.start();
 
         expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(11);
@@ -80,7 +84,11 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
     // used to throw out of the whole subscribe loop before consumer.run() was ever reached,
     // silently halting consumption of every other, perfectly healthy topic too.
     it('skips a topic whose subscribe() rejects (e.g. ACL denial) and still consumes the rest', async () => {
-        const service = new KafkaConsumerService(makeOptions(), { enqueue: vi.fn() } as never);
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
         const consumerPromise = service.start();
 
         // subscribeImpl is only assigned once the fake Consumer exists — start() awaits connect()
@@ -102,7 +110,11 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
     });
 
     it('still calls run() (idle, not a crash) when every topic fails to subscribe', async () => {
-        const service = new KafkaConsumerService(makeOptions(), { enqueue: vi.fn() } as never);
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
         const consumerPromise = service.start();
 
         await Promise.resolve();

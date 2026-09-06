@@ -578,6 +578,9 @@ importers:
             '@mivend/plugin-reservation':
                 specifier: workspace:*
                 version: link:../reservation
+            '@nestjs/swagger':
+                specifier: ^11.0.0
+                version: 11.4.5(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(reflect-metadata@0.2.2)
             '@nlightn22/event-contracts':
                 specifier: ^0.13.0
                 version: 0.13.0

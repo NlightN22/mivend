@@ -8,6 +8,7 @@ import { ReservationPlugin } from '@mivend/plugin-reservation';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
+import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
 import { IntegrationOutboxWorker } from './integration-outbox.worker';
@@ -16,6 +17,7 @@ import { IntegrationInboxProcessorService } from './integration-inbox-processor.
 import { IntegrationInboxWorker } from './integration-inbox.worker';
 import { KafkaConsumerService } from './kafka-consumer.service';
 import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.service';
+import { KafkaStatusController } from './kafka-status.controller';
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { PriceStreamHandler } from './handlers/price.handler';
 import { PriceTypeStreamHandler } from './handlers/price-type.handler';
@@ -56,7 +58,8 @@ import type { ErpIntegrationPluginOptions } from './types';
         DocumentsPlugin,
         ReservationPlugin,
     ],
-    entities: [IntegrationOutboxEntry, IntegrationInboxEvent],
+    entities: [IntegrationOutboxEntry, IntegrationInboxEvent, KafkaConsumerStatus],
+    controllers: [KafkaStatusController],
     providers: [
         IntegrationOutboxService,
         IntegrationOutboxProcessorService,

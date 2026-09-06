@@ -27,6 +27,10 @@ class FakeConsumer extends EventEmitter {
             payload: { restart, error: new Error('x'), groupId: 'g' },
         });
     }
+
+    emitConnect(): void {
+        this.emit(CONSUMER_EVENTS.CONNECT);
+    }
 }
 
 const createdConsumers: FakeConsumer[] = [];
@@ -90,7 +94,11 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
     });
 
     it('reconnects with a fresh consumer after a non-retriable crash (restart: false)', async () => {
-        const service = new KafkaConsumerService(makeOptions(), { enqueue: vi.fn() } as never);
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
         await service.start();
         expect(createdConsumers).toHaveLength(1);
 
@@ -103,7 +111,11 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
     });
 
     it('does not schedule its own reconnect when kafkajs itself is restarting (restart: true)', async () => {
-        const service = new KafkaConsumerService(makeOptions(), { enqueue: vi.fn() } as never);
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
         await service.start();
 
         createdConsumers[0].emitCrash(true);
@@ -113,7 +125,11 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
     });
 
     it('caps backoff at 60s across repeated non-retriable crashes', async () => {
-        const service = new KafkaConsumerService(makeOptions(), { enqueue: vi.fn() } as never);
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
         await service.start();
 
         for (let i = 0; i < 8; i++) {
@@ -126,7 +142,11 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
     });
 
     it('cancels a pending crash-retry on module destroy — no reconnect after shutdown', async () => {
-        const service = new KafkaConsumerService(makeOptions(), { enqueue: vi.fn() } as never);
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
         await service.start();
 
         createdConsumers[0].emitCrash(false);
@@ -144,7 +164,11 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
         nextConnectImpl = async () => {
             throw new Error('broker down');
         };
-        const service = new KafkaConsumerService(makeOptions(), { enqueue: vi.fn() } as never);
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
 
         const startPromise = service.start();
         startPromise.catch(() => undefined);
@@ -168,7 +192,11 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
     // permanent, silent death (identical to having no crash-retry supervisor at all) rather than
     // a transient setback. This proves the loop keeps going past one failed retry.
     it('keeps retrying indefinitely — a retry that itself fails schedules another retry, not silence', async () => {
-        const service = new KafkaConsumerService(makeOptions(), { enqueue: vi.fn() } as never);
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
         await service.start();
         expect(createdConsumers).toHaveLength(1);
 
@@ -189,5 +217,31 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
         await vi.advanceTimersByTimeAsync(2000);
         expect(createdConsumers).toHaveLength(3);
         expect(createdConsumers[2].connect).toHaveBeenCalledTimes(1);
+    });
+
+    // KafkaStatusController (served by the main HTTP process) reads this row instead of
+    // isConnected()'s in-memory flag, which is invisible from that separate process — see
+    // kafka-consumer-status.entity.ts's own doc comment.
+    it('persists connected: true on CONNECT and connected: false on CRASH', async () => {
+        const upsert = vi.fn().mockResolvedValue(undefined);
+        const dataSource = { getRepository: () => ({ upsert }) };
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue: vi.fn() } as never,
+            dataSource as never,
+        );
+
+        await service.start();
+        createdConsumers[0].emitConnect();
+        expect(upsert).toHaveBeenCalledWith(
+            { key: 'default', connected: true },
+            { conflictPaths: ['key'] },
+        );
+
+        createdConsumers[0].emitCrash(false);
+        expect(upsert).toHaveBeenCalledWith(
+            { key: 'default', connected: false },
+            { conflictPaths: ['key'] },
+        );
     });
 });

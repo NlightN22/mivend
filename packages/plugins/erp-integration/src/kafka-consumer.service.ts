@@ -1,6 +1,7 @@
 import { fromBinary, toJson } from '@bufbuild/protobuf';
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Logger } from '@vendure/core';
+import { DataSource } from 'typeorm';
 import {
     CategoryChangedSchema,
     OfferChangedSchema,
@@ -17,9 +18,16 @@ import {
 import { Consumer, Kafka } from 'kafkajs';
 import type { EachMessagePayload, SASLOptions } from 'kafkajs';
 
+import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions, InboundStream } from './types';
+
+// Fixed id for the single status row — KafkaConsumerService only ever runs in the worker
+// process, while KafkaStatusController is served by the main HTTP process (separate Node
+// processes, no shared memory) — this row is what actually bridges isConnected()'s in-memory
+// flag across that boundary. See kafka-consumer-status.entity.ts's own doc comment.
+const STATUS_KEY = 'default';
 
 // Reference shape: Integration Service's own search-service kafka-consumer.service.ts (issue
 // #62's "Researched" section) — one Consumer, one groupId, subscribed to every configured topic,
@@ -82,10 +90,25 @@ export class KafkaConsumerService implements OnModuleDestroy {
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
         private readonly inbox: IntegrationInboxService,
+        private readonly dataSource: DataSource,
     ) {}
 
     isConnected(): boolean {
         return this.connected;
+    }
+
+    // Fire-and-forget: a DB hiccup here must never crash Kafka message handling — this is a
+    // best-effort status mirror, not a business-critical write.
+    private persistStatus(connected: boolean): void {
+        const repo = this.dataSource.getRepository(KafkaConsumerStatus);
+        repo.upsert({ key: STATUS_KEY, connected }, { conflictPaths: ['key'] }).catch(err => {
+            Logger.error(
+                `Failed to persist Kafka consumer status: ${
+                    err instanceof Error ? err.message : String(err)
+                }`,
+                loggerCtx,
+            );
+        });
     }
 
     // A start() failure (e.g. connectWithBackoff exhausting CONNECT_MAX_ATTEMPTS against a
@@ -118,9 +141,11 @@ export class KafkaConsumerService implements OnModuleDestroy {
         this.consumer.on(this.consumer.events.CONNECT, () => {
             this.connected = true;
             this.crashRetryAttempt = 0;
+            this.persistStatus(true);
         });
         this.consumer.on(this.consumer.events.DISCONNECT, () => {
             this.connected = false;
+            this.persistStatus(false);
         });
         // e.restart is kafkajs's own decision (isErrorRetriable — see kafkajs's onCrash): true
         // means kafkajs is already restarting the same Consumer instance itself, so scheduling a
@@ -128,6 +153,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
         // rebalance-stall bug). Only step in when kafkajs decided restart:false.
         this.consumer.on(this.consumer.events.CRASH, ({ payload }) => {
             this.connected = false;
+            this.persistStatus(false);
             if (payload.restart) return;
             this.scheduleCrashRetry();
         });
