@@ -35,6 +35,14 @@ required `SEARCH_SERVICE_URL`). `SearchBackend` (`SEARCH_BACKEND_DEFAULT` in
 per-contour deployment choice, never an admin-configurable runtime toggle, and the two backends
 are never registered together.
 
+**`packages/plugins/search/package.json` pins `@vendure/elasticsearch-plugin` to `^3.5.7`**, not
+`^3.7.3` like every other `@vendure/*` dependency after #77's core upgrade — confirmed via `pnpm
+view @vendure/elasticsearch-plugin versions` that `3.5.7` is the newest stable release this package
+has ever published (no `3.6.x`/`3.7.x` stable exists upstream, only unpublished
+`3.6.0-minor-*`/nightly tags). This is a deliberate, currently-unfixable upstream lag, not an
+overlooked version-unification gap — do not "fix" it to match `^3.7.3` without first checking
+whether Vendure has published a newer `@vendure/elasticsearch-plugin` release.
+
 `ErpIntegrationPluginOptions.kafkaEnabled` (`INTEGRATION_KAFKA_ENABLED` env var, default `false`
 when unset — `KAFKA_ENABLED_DEFAULT` in `packages/plugins/erp-integration/src/types.ts`) is what
 actually encodes this axis in code. It gates, in addition to the existing `instanceType ===
