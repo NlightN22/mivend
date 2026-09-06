@@ -12,6 +12,7 @@
     "dependencies": {
         "@nestjs/common": "^11.0.0",
         "@nestjs/swagger": "^11.0.0",
+        "@nestjs/terminus": "^11.1.1",
         "@vendure/asset-server-plugin": "^3.7.3",
         "@vendure/core": "^3.7.3",
         "@vendure/dashboard": "^3.7.3",
