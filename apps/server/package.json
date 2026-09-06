@@ -12,10 +12,9 @@
     "dependencies": {
         "@nestjs/common": "^11.0.0",
         "@nestjs/swagger": "^11.0.0",
-        "@vendure/admin-ui-plugin": "^3.0.0",
-        "@vendure/asset-server-plugin": "^3.0.0",
-        "@vendure/core": "^3.0.0",
-        "@vendure/job-queue-plugin": "^3.0.0",
+        "@vendure/asset-server-plugin": "^3.7.3",
+        "@vendure/core": "^3.7.3",
+        "@vendure/job-queue-plugin": "^3.7.3",
         "bullmq": "^5.0.0",
         "pg": "^8.11.0",
         "shared": "workspace:*",

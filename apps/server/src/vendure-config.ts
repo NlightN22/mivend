@@ -4,7 +4,6 @@ import { LanguageCode, VendureConfig } from '@vendure/core';
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { offlineTermsPaymentHandler, onlineStubPaymentHandler } from './payment-method-handlers';
-import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import { BullMQJobQueuePlugin } from '@vendure/job-queue-plugin/package/bullmq';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
@@ -72,6 +71,14 @@ export const config: VendureConfig = {
         port: parseInt(process.env.PORT ?? '3000'),
         adminApiPath: 'admin-api',
         shopApiPath: 'shop-api',
+        // Storefront/manager are same-origin via their own Vite dev proxy (see their
+        // vite.config.ts), so they never needed CORS. The dashboard (issue #77) is a
+        // standalone Vite app that calls admin-api directly, so it needs to be an
+        // explicitly allowed origin.
+        cors: {
+            origin: (process.env.DASHBOARD_CORS_ORIGINS ?? 'http://localhost:5175').split(','),
+            credentials: true,
+        },
     },
     authOptions: {
         tokenMethod: ['bearer', 'cookie'],
@@ -323,14 +330,6 @@ export const config: VendureConfig = {
                 port: parseInt(process.env.REDIS_PORT ?? '6379'),
                 db: redisDb,
                 maxRetriesPerRequest: null,
-            },
-        }),
-        AdminUiPlugin.init({
-            route: 'admin',
-            port: parseInt(process.env.ADMIN_UI_PORT ?? '3002'),
-            adminUiConfig: {
-                defaultLanguage: LanguageCode.ru,
-                availableLanguages: [LanguageCode.en, LanguageCode.ru],
             },
         }),
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),

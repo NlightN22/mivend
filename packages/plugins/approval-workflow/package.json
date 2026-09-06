@@ -11,7 +11,7 @@
         "test:integration": "vitest run --config vitest.integration.config.ts"
     },
     "peerDependencies": {
-        "@vendure/core": "^3.0.0"
+        "@vendure/core": "^3.7.3"
     },
     "dependencies": {
         "@mivend/plugin-access-control": "workspace:*",
@@ -22,7 +22,7 @@
         "@nestjs/common": "^11.0.0",
         "@nestjs/graphql": "^13.0.0",
         "@vendure/common": "^3.0.0",
-        "@vendure/core": "^3.0.0",
+        "@vendure/core": "^3.7.3",
         "shared": "workspace:*",
         "graphql": "^16.0.0",
         "typeorm": "^0.3.0",

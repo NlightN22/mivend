@@ -10,13 +10,13 @@
         "dev": "tsc --watch"
     },
     "peerDependencies": {
-        "@vendure/core": "^3.0.0"
+        "@vendure/core": "^3.7.3"
     },
     "devDependencies": {
         "@nestjs/common": "^11.0.0",
         "@nestjs/graphql": "^13.0.0",
         "@vendure/common": "^3.0.0",
-        "@vendure/core": "^3.0.0",
+        "@vendure/core": "^3.7.3",
         "graphql": "^16.0.0",
         "typeorm": "^0.3.0",
         "typescript": "^5.4.0"

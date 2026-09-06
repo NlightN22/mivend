@@ -14,7 +14,7 @@
         "@mivend/plugin-counterparty": "workspace:*",
         "@nestjs/common": "^11.0.0",
         "@nestjs/core": "^11.0.0",
-        "@vendure/core": "^3.6.4",
+        "@vendure/core": "^3.7.3",
         "graphql": "^16.0.0",
         "graphql-tag": "^2.12.6",
         "@nestjs/graphql": "^13.0.0",
