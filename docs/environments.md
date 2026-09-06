@@ -144,6 +144,12 @@ that port, not a dead config option. The server side only needs CORS configured 
 (`apiOptions.cors` in `apps/server/src/vendure-config.ts`, `DASHBOARD_CORS_ORIGINS` env var) since
 the Dashboard calls admin-api directly rather than through a same-origin dev proxy.
 
+The server's `plugins` array also registers `DashboardPlugin` (from `@vendure/dashboard/plugin`)
+with no `.init()` call — same "standalone deployment" caveat the old `AdminUiPlugin` had for its
+own `metricSummary` query: without it, the Dashboard's Insights page has no server-side
+`dashboardMetricSummary` GraphQL field to query and its order-metrics chart silently renders
+empty (no error surfaced beyond a 400 in the browser console).
+
 Step of 10 between contours is deliberate — the next contour after staging-integration (or a
 branch instance that ever needs its own external access, which it doesn't today per
 `docs/architecture.md`'s "Storefront hosting: Central-only, not per-branch") takes the next free
