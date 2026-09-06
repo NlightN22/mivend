@@ -138,20 +138,22 @@ async function ensureTaxSetup() {
         }
     `, { zoneId, catId: taxCategoryId }, cookie);
 
-    // Assign tax zone to the default channel
+    // Assign tax zone to the default channel. pricesIncludeTax: true because the ERP (1C) sends
+    // gross prices (already including VAT) — without this, Vendure treats every incoming price
+    // as net and adds tax on top a second time at checkout. See docs/ai/PROJECT_CONTEXT.md.
     const channelRes = await adminGraphqlWithSession(`{ channels { items { id } } }`, undefined, cookie);
     const channelId = channelRes.data.channels.items[0]?.id;
     if (channelId) {
         await adminGraphqlWithSession(`
             mutation($id: ID!, $zoneId: ID!) {
-                updateChannel(input: { id: $id, defaultTaxZoneId: $zoneId }) {
+                updateChannel(input: { id: $id, defaultTaxZoneId: $zoneId, pricesIncludeTax: true }) {
                     ... on Channel { id }
                 }
             }
         `, { id: channelId, zoneId }, cookie);
     }
 
-    console.log('  Created default tax zone and 0% tax rate.');
+    console.log('  Created default tax zone and 0% tax rate (pricesIncludeTax: true).');
 }
 
 // ShippingMethod and PaymentMethod are Vendure system config — cannot go through
