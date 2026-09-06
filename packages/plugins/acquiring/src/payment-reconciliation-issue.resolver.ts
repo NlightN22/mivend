@@ -1,5 +1,6 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { Allow, Ctx, PaginatedList, Permission, RequestContext } from '@vendure/core';
+import { Allow, Ctx, PaginatedList, RequestContext } from '@vendure/core';
+import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { PaymentReconciliationIssue } from './entities/payment-reconciliation-issue.entity';
 import {
@@ -12,7 +13,7 @@ export class PaymentReconciliationIssueResolver {
     constructor(private paymentReconciliationIssueService: PaymentReconciliationIssueService) {}
 
     @Query()
-    @Allow(Permission.ReadPayment)
+    @Allow(CustomPermission.ReadPayment.Permission)
     async openPaymentReconciliationIssues(
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: OpenPaymentReconciliationIssueListOptions },
