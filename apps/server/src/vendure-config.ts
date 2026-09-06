@@ -5,6 +5,7 @@ import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { offlineTermsPaymentHandler, onlineStubPaymentHandler } from './payment-method-handlers';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
+import { DashboardPlugin } from '@vendure/dashboard/plugin';
 import { BullMQJobQueuePlugin } from '@vendure/job-queue-plugin/package/bullmq';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
@@ -332,6 +333,11 @@ export const config: VendureConfig = {
                 maxRetriesPerRequest: null,
             },
         }),
+        // No .init() — the dashboard is served as its own standalone app (packages/dashboard),
+        // not mounted here. This plugin is only registered to expose the `metricSummary` GraphQL
+        // query the dashboard's Insights page needs, per @vendure/dashboard's own documented
+        // standalone-deployment pattern.
+        DashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({

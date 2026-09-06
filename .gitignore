@@ -29,6 +29,7 @@ Thumbs.db
 
 # GraphQL codegen output
 src/api/generated/
+packages/dashboard/gql/
 
 # Claude Code local state — but NOT .claude/skills/ or the shared settings.json: skills are the
 # canonical, repo-wide procedure source (AGENTS.md's "Testing requirements" points every agent,

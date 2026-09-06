@@ -206,6 +206,9 @@ export default [
             // Codegen output (packages/storefront/codegen.ts) — never hand-edited, regenerated
             // from the schema + .graphql operation files.
             'packages/storefront/src/api/generated/**',
+            // Codegen output (@vendure/dashboard's gql-tada introspection, gqlOutputPath in
+            // packages/dashboard/vite.config.ts) — never hand-edited, regenerated on dev/build.
+            'packages/dashboard/gql/**',
             // Plain Node CLI scripts (not app source, no `.ts`/tsconfig coverage) — same reasoning
             // as infrastructure/scripts/** above: only `**/*.ts` gets the `no-undef: 'off'`
             // override, so a bare `.mjs` Node script otherwise fails lint on ordinary `process`/

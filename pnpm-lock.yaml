@@ -121,6 +121,9 @@ importers:
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+            '@vendure/dashboard':
+                specifier: ^3.7.3
+                version: 3.7.3(@date-fns/tz@1.5.0)(@floating-ui/dom@1.8.0)(@sinclair/typebox@0.27.10)(@standard-schema/spec@1.1.0)(@tanstack/router-core@1.171.27)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/extensions@3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3))(@types/node@20.19.43)(ajv-formats@2.1.1(ajv@8.18.0))(ajv@8.18.0)(csstype@3.2.3)(esbuild@0.28.2)(eslint@9.39.4(jiti@2.7.0)(supports-color@8.1.1))(express@5.2.1(supports-color@8.1.1))(jiti@2.7.0)(lightningcss@1.32.0)(rolldown@1.1.3)(rollup@4.62.2)(supports-color@8.1.1)(typescript@5.9.3)(yaml@2.9.0)
             '@vendure/job-queue-plugin':
                 specifier: ^3.7.3
                 version: 3.7.3(bullmq@5.79.1(supports-color@8.1.1))(ioredis@5.10.1(supports-color@8.1.1))
@@ -17515,7 +17518,7 @@ snapshots:
 
     '@tiptap/extension-bubble-menu@3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3)':
         dependencies:
-            '@floating-ui/dom': 1.7.6
+            '@floating-ui/dom': 1.8.0
             '@tiptap/core': 3.31.3(@tiptap/pm@3.31.3)
             '@tiptap/pm': 3.31.3
         optional: true
