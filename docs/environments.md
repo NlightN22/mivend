@@ -140,9 +140,18 @@ replaced it with `@vendure/dashboard`, deployed as a genuinely separate standalo
 (`packages/dashboard`, same pattern as storefront/manager), not mounted on the server via
 `DashboardPlugin.init()`. So unlike the old setup, the Dashboard **does** need and get its own
 port (`5175`/`8006` local, `5185`/`8016` staging-integration) — it's a real process listening on
-that port, not a dead config option. The server side only needs CORS configured to accept it
-(`apiOptions.cors` in `apps/server/src/vendure-config.ts`, `DASHBOARD_CORS_ORIGINS` env var) since
-the Dashboard calls admin-api directly rather than through a same-origin dev proxy.
+that port, not a dead config option.
+
+**Same-origin dev proxy, not a cross-origin direct call.** An earlier version of
+`packages/dashboard/vite.config.ts` set `@vendure/dashboard`'s `api.host`/`api.port` to a literal
+`VITE_API_TARGET` host:port, baked into the served bundle — this broke for anyone reaching the
+Dashboard through its published external port (e.g. `:8006`), since their browser then tried to
+fetch its own local machine's `http://localhost:3000/admin-api` instead of this box's. Fixed by
+setting `api.host`/`api.port` to `'auto'` (derives the admin-api origin from `window.location` at
+request time) plus a `/admin-api` (and `/assets`) dev proxy in `vite.config.ts`, same pattern as
+`packages/storefront`/`packages/manager`'s own vite proxies — every viewer's request now lands
+back on whichever origin they're actually looking at, same-origin, no server-side CORS needed at
+all (the `apiOptions.cors` config this doc used to mention has been removed).
 
 The server's `plugins` array also registers `DashboardPlugin` (from `@vendure/dashboard/plugin`)
 with no `.init()` call — same "standalone deployment" caveat the old `AdminUiPlugin` had for its

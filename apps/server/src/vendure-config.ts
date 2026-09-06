@@ -72,14 +72,6 @@ export const config: VendureConfig = {
         port: parseInt(process.env.PORT ?? '3000'),
         adminApiPath: 'admin-api',
         shopApiPath: 'shop-api',
-        // Storefront/manager are same-origin via their own Vite dev proxy (see their
-        // vite.config.ts), so they never needed CORS. The dashboard (issue #77) is a
-        // standalone Vite app that calls admin-api directly, so it needs to be an
-        // explicitly allowed origin.
-        cors: {
-            origin: (process.env.DASHBOARD_CORS_ORIGINS ?? 'http://localhost:5175').split(','),
-            credentials: true,
-        },
     },
     authOptions: {
         tokenMethod: ['bearer', 'cookie'],
