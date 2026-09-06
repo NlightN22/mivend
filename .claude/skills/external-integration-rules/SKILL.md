@@ -42,6 +42,48 @@ credit limits flow ERP → Hub → Branch and are never modified locally on bran
 means "ERP via Integration Service." This ownership rule is unchanged by which transport carries
 it.
 
+## Kafka consumer resilience patterns
+
+Live incident, 2026-09-05: `plugin-erp-integration`'s Kafka consumer (`KafkaConsumerService`)
+went fully dark against the real Integration Service broker — an ACL denial on two topics
+(`storage-location-changed`/`stock-organization-changed`) took down consumption of every OTHER,
+perfectly healthy topic too, and once the consumer did crash, a single failed reconnect attempt
+left it permanently, silently dead. Both root causes are now fixed in the code and are
+**mandatory patterns for any future change to this consumer** (or any new Kafka/queue consumer
+added to this codebase):
+
+1. **Subscribe to each topic in its own isolated `try/catch`, never a bare loop.** One denied/
+   unavailable topic must never prevent `consumer.run()` from being reached for the topics that
+   ARE healthy. Log and skip the failing topic; build the topic→stream routing map incrementally
+   from whatever actually succeeded. If literally zero topics subscribe, log that explicitly
+   (don't let it look identical to "working, just no traffic yet").
+2. **The crash-retry/reconnect loop must be self-perpetuating — a failure at ANY point
+   (including the very first `start()`, and including a scheduled retry's own failure) must
+   schedule ANOTHER retry, not log-and-give-up.** A one-shot retry is functionally identical to
+   having no retry supervisor at all the moment the broker is down for longer than one backoff
+   window. Capped exponential backoff, looping until success (which resets the attempt counter)
+   or an explicit `onModuleDestroy()`/shutdown — never a bounded attempt count for a connection
+   supervisor (unlike the inbox's own dead-letter-after-N-attempts, which IS correct — a
+   reconnect loop and a business-event retry loop have different termination semantics; don't
+   copy one's bound onto the other).
+3. **A message handler (`eachMessage`) must never throw for a decode or business-logic
+   failure** — wrap it in `try/catch`, log, and either let the offset commit (a genuinely
+   malformed payload can't be retried into validity) or route through the inbox's own retry/
+   dead-letter path (a downstream processing failure). Only a genuine transport-level issue
+   should ever reach kafkajs's own crash/retry machinery.
+4. **Only one process may hold membership in a given consumer group.** If both `main.ts` and
+   `worker.ts` bootstrap the same plugin, gate the actual `consumer.connect()`/`subscribe()`/
+   `run()` call behind `ProcessContext.isWorker` (or equivalent) — two independent members in one
+   group triggers a partition rebalance that can silently stall consumption for the reassigned
+   partitions (issue #67). This also means any state the consumer needs to expose (e.g. "am I
+   connected") must be **persisted** (DB row, not an in-memory flag) if anything outside the
+   worker process (an admin endpoint served by `main.ts`) needs to read it — the two processes
+   share no memory. See `KafkaConsumerStatus`/`GET /erp/kafka-status` for the reference shape.
+
+Reference implementation for all four: `packages/plugins/erp-integration/src/kafka-consumer.service.ts`
+and its `kafka-consumer-crash-retry.test.ts`/`kafka-consumer-topic-subscribe.test.ts` unit tests —
+read these before touching this file or writing a new Kafka/queue consumer anywhere in this repo.
+
 ## Payments — four independent sources of truth, never conflate them
 
 A payment touches: the payment provider/branch kassa/bank (owns `paymentStatus`, the real money
