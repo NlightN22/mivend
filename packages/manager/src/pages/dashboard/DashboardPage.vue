@@ -13,6 +13,14 @@ import { adminApi } from '../../api/client';
 import { fetchDashboardData, buildActivityFeed, type DashboardData } from '../../api/dashboard';
 import { getDashboardKpiCards } from '../../api/dashboard-config';
 import { fetchExpiringDiscountGrants } from '../../api/discounts';
+import {
+    fetchFailedIntegrationInboxEvents,
+    fetchOpenPaymentReconciliationIssues,
+    fetchOpenReservationReconciliationIssues,
+    type FailedIntegrationInboxEvent,
+    type PaymentReconciliationIssue,
+    type ReservationReconciliationIssue,
+} from '../../api/integration-health';
 import RecentOrdersTable from '../../components/dashboard/RecentOrdersTable.vue';
 import ApprovalStatusList from '../../components/dashboard/ApprovalStatusList.vue';
 import ExpiringDiscountsBanner, {
@@ -20,12 +28,22 @@ import ExpiringDiscountsBanner, {
 } from '../../components/dashboard/ExpiringDiscountsBanner.vue';
 import QuickActionsPanel from '../../components/dashboard/QuickActionsPanel.vue';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.vue';
+import IntegrationInboxErrorsPanel from '../../components/dashboard/IntegrationInboxErrorsPanel.vue';
+import ReservationReconciliationPanel from '../../components/dashboard/ReservationReconciliationPanel.vue';
+import PaymentReconciliationPanel from '../../components/dashboard/PaymentReconciliationPanel.vue';
 
 const authStore = useAuthStore();
 const data = ref<DashboardData | null>(null);
 const departmentName = ref<string | null>(null);
 const expiringDiscounts = ref<ExpiringDiscount[]>([]);
+const failedInboxEvents = ref<FailedIntegrationInboxEvent[]>([]);
+const reservationIssues = ref<ReservationReconciliationIssue[]>([]);
+const paymentIssues = ref<PaymentReconciliationIssue[]>([]);
 const loading = ref(true);
+
+// Small, fixed row cap for dashboard attention panels — these are "is anything on fire" widgets,
+// not paginated lists (there is no "view all" target page for any of the three yet).
+const HEALTH_PANEL_TAKE = 10;
 
 // Same placeholder threshold used on /discounts (docs/ai/manager-portal-concept.md §8.2 — no
 // exact "expiring soon" window has been decided yet).
@@ -73,11 +91,35 @@ const pendingBreakdown = computed(() => {
 
 onMounted(async () => {
     try {
-        const [dashboard, grants] = await Promise.all([
+        // Each of these three health panels comes from a plugin's own new query — caught
+        // individually so one plugin's outage (or, right now, one query not deployed yet) never
+        // blanks the whole dashboard, same reasoning as the department-name fetch below.
+        const [dashboard, grants, failedEvents, reconReservations, reconPayments] = await Promise.all([
             fetchDashboardData(),
             fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
+            authStore.hasPermission('SuperAdmin')
+                ? fetchFailedIntegrationInboxEvents(HEALTH_PANEL_TAKE).catch(e => {
+                      console.warn('[dashboard] could not load failed integration inbox events:', e);
+                      return [];
+                  })
+                : Promise.resolve([]),
+            authStore.hasPermission('ReadOrder')
+                ? fetchOpenReservationReconciliationIssues(HEALTH_PANEL_TAKE).catch(e => {
+                      console.warn('[dashboard] could not load reservation reconciliation issues:', e);
+                      return [];
+                  })
+                : Promise.resolve([]),
+            authStore.hasPermission('ReadPayment')
+                ? fetchOpenPaymentReconciliationIssues(HEALTH_PANEL_TAKE).catch(e => {
+                      console.warn('[dashboard] could not load payment reconciliation issues:', e);
+                      return [];
+                  })
+                : Promise.resolve([]),
         ]);
         data.value = dashboard;
+        failedInboxEvents.value = failedEvents;
+        reservationIssues.value = reconReservations;
+        paymentIssues.value = reconPayments;
         // One grant can list several customers (see DiscountGrant.counterparties) — the banner
         // shows one line per customer, same shape as the design mock.
         expiringDiscounts.value = grants.flatMap(grant =>
@@ -160,6 +202,18 @@ onMounted(async () => {
                         <RouterLink to="/approvals">Open submitted</RouterLink>
                     </template>
                     <ApprovalStatusList :approvals="data.recentApprovals.slice(0, 5)" />
+                </MvPanel>
+
+                <MvPanel v-if="authStore.hasPermission('SuperAdmin')" title="Integration inbox errors">
+                    <IntegrationInboxErrorsPanel :events="failedInboxEvents" />
+                </MvPanel>
+
+                <MvPanel v-if="authStore.hasPermission('ReadOrder')" title="Reservation reconciliation">
+                    <ReservationReconciliationPanel :issues="reservationIssues" />
+                </MvPanel>
+
+                <MvPanel v-if="authStore.hasPermission('ReadPayment')" title="Payment reconciliation">
+                    <PaymentReconciliationPanel :issues="paymentIssues" />
                 </MvPanel>
             </div>
 

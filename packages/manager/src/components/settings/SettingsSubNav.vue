@@ -2,7 +2,7 @@
 // Shared tab bar between the Settings sub-pages (Roles & Access, Team, Branches) — styled like
 // CustomerDetailPage.vue's in-page tabs, but these are real routes (RouterLink), not
 // activeTab toggles, since each section is its own page with its own data loading.
-defineProps<{ active: 'roles' | 'team' | 'security' | 'branches' }>();
+defineProps<{ active: 'roles' | 'team' | 'security' | 'branches' | 'system-health' }>();
 </script>
 
 <template>
@@ -11,6 +11,7 @@ defineProps<{ active: 'roles' | 'team' | 'security' | 'branches' }>();
         <RouterLink to="/settings/team" :class="{ active: active === 'team' }">Team</RouterLink>
         <RouterLink to="/settings/branches" :class="{ active: active === 'branches' }">Branches</RouterLink>
         <RouterLink to="/settings/security" :class="{ active: active === 'security' }">Security</RouterLink>
+        <RouterLink to="/settings/system-health" :class="{ active: active === 'system-health' }">System health</RouterLink>
     </div>
 </template>
 

@@ -126,6 +126,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'settings/system-health',
+                    name: 'settings-system-health',
+                    component: () => import('../pages/settings/SystemHealthPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'team',
                     name: 'team',
                     component: () => import('../pages/team/TeamPage.vue'),
