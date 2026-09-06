@@ -22,7 +22,11 @@ export default defineConfig(() => {
             vendureDashboardPlugin({
                 vendureConfigPath: resolve(__dirname, '../../apps/server/src/vendure-config.ts'),
                 api: {
-                    host: apiTarget.hostname,
+                    // `api.host` is used verbatim as `scheme://host` by the dashboard runtime
+                    // when not 'auto' (see @vendure/dashboard's use-job-queue-polling chunk) —
+                    // a bare hostname here breaks every admin-api fetch with
+                    // "URL scheme 'localhost' is not supported".
+                    host: `${apiTarget.protocol}//${apiTarget.hostname}`,
                     port: Number(apiTarget.port) || undefined,
                     adminApiPath: 'admin-api',
                     tokenMethod: 'bearer',
