@@ -26,6 +26,7 @@ import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { AcquiringPlugin } from '@mivend/plugin-acquiring';
 import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
+import { SystemHealthDashboardPlugin } from './system-health-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
@@ -330,6 +331,25 @@ export const config: VendureConfig = {
         // query the dashboard's Insights page needs, per @vendure/dashboard's own documented
         // standalone-deployment pattern.
         DashboardPlugin,
+        // Issue #76 follow-up, unblocked by #77: surfaces the same 6-item system-config
+        // checklist as packages/manager's Settings → System health page, but as a
+        // @vendure/dashboard alert (see src/dashboard/system-health/index.ts) — the first login
+        // on a fresh instance (native `superadmin`, no manager-portal accounts yet) happens
+        // here, not in the manager portal.
+        //
+        // Not a packages/plugins/* package despite backend-plugin-rules' usual "one package per
+        // plugin" convention: this plugin has zero business logic (no entities/resolvers/
+        // services), and @vendure/dashboard's static plugin-discovery step (which globs
+        // node_modules for a compiled `dashboard: '...'` decorator property) cannot see a
+        // pnpm-workspace-symlinked package's dashboard extension at all — it classifies any
+        // symlinked local package as a "local plugin" and only ever registers its dashboard
+        // extension when that plugin's *compiled* JS also lands inside the dashboard's own
+        // introspection temp dir, which only happens for files reachable via a genuine relative
+        // import from vendure-config.ts. Verified directly (fast-glob probes + a manual acorn
+        // AST-walk against the compiled output) while debugging why the alert never appeared
+        // (`Analyzed plugins and found 0 dashboard extensions`) — see the alert file's own
+        // comment for the confirmed detection mechanism this relies on instead.
+        SystemHealthDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({
