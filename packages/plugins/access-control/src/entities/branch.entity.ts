@@ -2,9 +2,12 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Org-structure master data — ERP is the source of truth (see the external-integration-rules skill's "ERP is master for
-// business data"), populated via erp-import's BranchRecord, never edited manually. Flat list, no
-// parent/child hierarchy (unlike Department).
+// mivend's own org-structure grouping — deliberately independent of whatever org unit 1C's data
+// represents (unlike Department, which is genuinely ERP master data). Populated either via
+// erp-import's BranchRecord (erpId = a real 1C GUID) or manually via BranchService.createManual
+// (erpId = a synthetic "mivend-manual:<uuid>", never a real 1C GUID) — see that method's own
+// comment for why staff need the manual path on any contour where the REST sync never runs.
+// Flat list, no parent/child hierarchy (unlike Department).
 @Entity()
 export class Branch extends VendureEntity {
     constructor(input?: DeepPartial<Branch>) {
