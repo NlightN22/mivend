@@ -28,6 +28,7 @@ import { AcquiringPlugin } from '@mivend/plugin-acquiring';
 import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
 import { SystemHealthDashboardPlugin } from './system-health-dashboard.plugin';
 import { DefaultSuperadminAlertDashboardPlugin } from './default-superadmin-alert-dashboard.plugin';
+import { BranchConsolidationAlertDashboardPlugin } from './branch-consolidation-alert-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
@@ -361,6 +362,9 @@ export const config: VendureConfig = {
         // pnpm-workspace-symlink discovery limitation) — see
         // src/dashboard/default-superadmin-account/index.ts.
         DefaultSuperadminAlertDashboardPlugin,
+        // Same shape/reasoning as SystemHealthDashboardPlugin above — see
+        // src/dashboard/branch-consolidation/index.ts.
+        BranchConsolidationAlertDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({}),
