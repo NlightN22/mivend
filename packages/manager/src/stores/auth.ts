@@ -19,6 +19,7 @@ interface ActiveAdministrator {
         branchId: string | null;
     };
     user: {
+        identifier: string;
         roles: AdministratorRole[];
     };
 }
@@ -31,10 +32,16 @@ const ACTIVE_ADMINISTRATOR_QUERY = `
             lastName
             emailAddress
             customFields { departmentId branchId }
-            user { roles { code description permissions } }
+            user { identifier roles { code description permissions } }
         }
     }
 `;
+
+// The identifier every contour ships with (SUPERADMIN_USERNAME, same literal value in every
+// apps/server/.env.* — see docs/environments.md) — used only to warn that this session is still
+// on the built-in account, never to gate any actual permission (that stays permission-based, see
+// hasPermission below).
+const DEFAULT_SUPERADMIN_IDENTIFIER = 'superadmin';
 
 type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 
@@ -96,6 +103,16 @@ export const useAuthStore = defineStore('auth', () => {
     function hasPermission(name: string): boolean {
         return permissions.value.includes(name);
     }
+
+    // Real incident (2026-09-12): a fresh contour's only administrator is the built-in
+    // superadmin/superadmin account (SUPERADMIN_USERNAME/PASSWORD env vars, identical literal
+    // value across every apps/server/.env.* file) — nothing in this codebase ever prompts anyone
+    // to change it. Surfaced as a dashboard warning (DefaultLayout.vue) linking to
+    // /settings/security's new "Change password" panel, never blocking — see that panel's own
+    // doc comment for why a stricter, forced-change gate isn't implemented here.
+    const isDefaultSuperadminAccount = computed(
+        () => administrator.value?.user.identifier === DEFAULT_SUPERADMIN_IDENTIFIER,
+    );
 
     function init(): Promise<void> {
         if (!initPromise) {
@@ -244,6 +261,7 @@ export const useAuthStore = defineStore('auth', () => {
         roleCode,
         permissions,
         hasPermission,
+        isDefaultSuperadminAccount,
         init,
         login,
         logout,

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { MvButton, MvNotice, MvPanel } from '@mivend/ui-kit';
+import { MvButton, MvFormField, MvNotice, MvPanel, MvPasswordInput } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import { endAllSessions, endSession, fetchMySessions, type SessionSummary } from '../../api/sessions';
+import { changeOwnPassword } from '../../api/account';
 
 const authStore = useAuthStore();
 
@@ -11,6 +12,42 @@ const sessions = ref<SessionSummary[]>([]);
 const loading = ref(true);
 const error = ref('');
 const endingId = ref<string | null>(null);
+
+// Real incident (2026-09-12): the default superadmin/superadmin account had no way to change its
+// own password anywhere in the manager portal at all — DefaultLayout.vue's warning banner links
+// here. Deliberately a plain self-service form, not a forced-change gate on login: this portal
+// has no concept yet of a "must change password" flag on Administrator, and adding one is a
+// separate, larger access-control change (a new customField + a login-flow redirect), not
+// something to bolt onto this narrow fix.
+const newPassword = ref('');
+const confirmPassword = ref('');
+const passwordSubmitting = ref(false);
+const passwordError = ref('');
+const passwordSuccess = ref(false);
+
+async function handleChangePassword(): Promise<void> {
+    passwordError.value = '';
+    passwordSuccess.value = false;
+    if (newPassword.value.length < 8) {
+        passwordError.value = 'Password must be at least 8 characters.';
+        return;
+    }
+    if (newPassword.value !== confirmPassword.value) {
+        passwordError.value = 'Passwords do not match.';
+        return;
+    }
+    passwordSubmitting.value = true;
+    try {
+        await changeOwnPassword(newPassword.value);
+        passwordSuccess.value = true;
+        newPassword.value = '';
+        confirmPassword.value = '';
+    } catch (e) {
+        passwordError.value = e instanceof Error ? e.message : 'Could not change the password';
+    } finally {
+        passwordSubmitting.value = false;
+    }
+}
 
 async function load(): Promise<void> {
     loading.value = true;
@@ -76,6 +113,26 @@ async function handleSignOutEverywhere(): Promise<void> {
             <p v-else class="security-page__empty">No active sessions.</p>
         </MvPanel>
 
+        <MvPanel title="Change password">
+            <MvNotice v-if="authStore.isDefaultSuperadminAccount" variant="warning">
+                You're currently using the default <strong>superadmin</strong> account and its
+                default password — set a new password below.
+            </MvNotice>
+            <form class="security-page__password-form" @submit.prevent="handleChangePassword">
+                <MvFormField label="New password" required>
+                    <MvPasswordInput v-model="newPassword" placeholder="At least 8 characters" />
+                </MvFormField>
+                <MvFormField label="Confirm new password" required>
+                    <MvPasswordInput v-model="confirmPassword" placeholder="Repeat the new password" />
+                </MvFormField>
+                <MvNotice v-if="passwordError" variant="error">{{ passwordError }}</MvNotice>
+                <MvNotice v-if="passwordSuccess" variant="success">Password changed.</MvNotice>
+                <div class="security-page__password-actions">
+                    <MvButton native-type="submit" :loading="passwordSubmitting">Change password</MvButton>
+                </div>
+            </form>
+        </MvPanel>
+
         <MvPanel v-if="!loading" title="Sign out">
             <div class="security-page__danger">
                 <p>Sign out from all devices, including this one.</p>
@@ -138,5 +195,17 @@ async function handleSignOutEverywhere(): Promise<void> {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+}
+
+.security-page__password-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 360px;
+}
+
+.security-page__password-actions {
+    display: flex;
+    justify-content: flex-end;
 }
 </style>

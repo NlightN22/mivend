@@ -193,4 +193,44 @@ describe('useAuthStore', () => {
         expect(store.administrator).toBeNull();
         expect(store.authStatus).toBe('unauthenticated');
     });
+
+    // Real incident (2026-09-12): nothing ever warned that a contour's only administrator was
+    // still the built-in superadmin/superadmin account.
+    it('flags the built-in superadmin account via isDefaultSuperadminAccount', async () => {
+        const { useAuthStore } = await import('../../stores/auth');
+        adminApiMock.mockResolvedValue({
+            activeAdministrator: {
+                id: '1',
+                firstName: 'Super',
+                lastName: 'Admin',
+                emailAddress: 'superadmin',
+                customFields: { departmentId: null, branchId: null },
+                user: { identifier: 'superadmin', roles: [] },
+            },
+        });
+
+        const store = useAuthStore();
+        await store.fetchActiveAdministrator();
+
+        expect(store.isDefaultSuperadminAccount).toBe(true);
+    });
+
+    it('does not flag a regular administrator as the default superadmin account', async () => {
+        const { useAuthStore } = await import('../../stores/auth');
+        adminApiMock.mockResolvedValue({
+            activeAdministrator: {
+                id: '2',
+                firstName: 'Ivan',
+                lastName: 'Operator',
+                emailAddress: 'ivan.operator@mivend.dev',
+                customFields: { departmentId: null, branchId: null },
+                user: { identifier: 'ivan.operator@mivend.dev', roles: [] },
+            },
+        });
+
+        const store = useAuthStore();
+        await store.fetchActiveAdministrator();
+
+        expect(store.isDefaultSuperadminAccount).toBe(false);
+    });
 });

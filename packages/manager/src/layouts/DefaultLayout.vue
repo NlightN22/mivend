@@ -139,6 +139,15 @@ async function handleLogout(): Promise<void> {
                 <MvNotice v-if="authStore.isReconnecting" variant="warning" class="layout__reconnecting">
                     Reconnecting to the server… your session is still active.
                 </MvNotice>
+                <MvNotice
+                    v-if="authStore.isDefaultSuperadminAccount"
+                    variant="warning"
+                    class="layout__default-account"
+                >
+                    You're signed in with the default <strong>superadmin</strong> account and its
+                    default password.
+                    <RouterLink to="/settings/security">Change the password</RouterLink>
+                </MvNotice>
                 <RouterView />
             </main>
         </div>
@@ -198,6 +207,17 @@ async function handleLogout(): Promise<void> {
 
 .layout__reconnecting {
     margin-bottom: 16px;
+}
+
+.layout__default-account {
+    margin-bottom: 16px;
+}
+
+.layout__default-account a {
+    margin-left: 6px;
+    font-weight: 600;
+    color: inherit;
+    text-decoration: underline;
 }
 
 @media (max-width: 800px) {
