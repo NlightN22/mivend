@@ -18,6 +18,7 @@ import { createIntegrationOutboxTask } from './integration-outbox.scheduled-task
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
 import { createIntegrationInboxTask } from './integration-inbox.scheduled-task';
+import { createCollectionFiltersRecomputeTask } from './collection-filters-recompute.scheduled-task';
 import { IntegrationInboxEventResolver } from './integration-inbox-event.resolver';
 import { KafkaConsumerService } from './kafka-consumer.service';
 import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.service';
@@ -105,6 +106,7 @@ import { adminApiExtensions } from './api/admin.schema';
             ...(config.schedulerOptions.tasks ?? []),
             createIntegrationInboxTask(ErpIntegrationPlugin.options),
             createIntegrationOutboxTask(ErpIntegrationPlugin.options),
+            createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
         ];
         return config;
     },

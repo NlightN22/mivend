@@ -99,6 +99,13 @@ export interface ErpIntegrationPluginOptions {
     maxRetry?: number;
     outboxPollIntervalMs?: number;
     inboxPollIntervalMs?: number;
+    // How often the batched Collection-filter recompute runs (see
+    // collection-filters-recompute.scheduled-task.ts) — compensates for
+    // setApplyAllFiltersOnProductUpdates(false), which KafkaConsumerBootstrapService disables so
+    // the Kafka-driven product stream doesn't enqueue its own apply-collection-filters job per
+    // event (a real incident: tens of thousands of individual jobs, one per product, each
+    // recomputing every Collection).
+    collectionFiltersRecomputeIntervalMs?: number;
 }
 
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
@@ -107,4 +114,5 @@ export const MAX_RETRY_DEFAULT = 5;
 export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_MAX_ATTEMPTS_DEFAULT = 5;
+export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
 export const loggerCtx = 'ErpIntegrationPlugin';

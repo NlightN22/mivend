@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { Logger, ProcessContext } from '@vendure/core';
+import { CollectionService, Logger, ProcessContext } from '@vendure/core';
 
 import { KafkaConsumerService } from './kafka-consumer.service';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, KAFKA_ENABLED_DEFAULT, loggerCtx } from './types';
@@ -23,6 +23,7 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
     constructor(
         private readonly kafkaConsumer: KafkaConsumerService,
         private readonly processContext: ProcessContext,
+        private readonly collectionService: CollectionService,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
     ) {}
@@ -31,6 +32,17 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
         if (this.options.instanceType !== 'central') return;
         if (!(this.options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return;
         if (!this.processContext.isWorker) return;
+
+        // Real incident: Vendure's default 50ms-debounced per-ProductEvent recompute enqueued
+        // tens of thousands of individual apply-collection-filters jobs (one per product,
+        // each recomputing every Collection) once real Kafka product traffic started flowing at
+        // scale — the job queue could never drain. Disabled here (worker process only, matching
+        // where ProductStreamHandler's Kafka-driven product creates/updates actually happen) and
+        // replaced by createCollectionFiltersRecomputeTask's own batched, periodic recompute.
+        // Manual admin/manager-portal product edits are unaffected — those run in the SERVER
+        // process, which has its own separate CollectionService instance with this still enabled.
+        this.collectionService.setApplyAllFiltersOnProductUpdates(false);
+
         try {
             await this.kafkaConsumer.start();
             Logger.info('erp-integration Kafka consumer started', loggerCtx);
