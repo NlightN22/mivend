@@ -27,6 +27,7 @@ import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { AcquiringPlugin } from '@mivend/plugin-acquiring';
 import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
 import { SystemHealthDashboardPlugin } from './system-health-dashboard.plugin';
+import { DefaultSuperadminAlertDashboardPlugin } from './default-superadmin-alert-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
@@ -356,6 +357,10 @@ export const config: VendureConfig = {
         // (`Analyzed plugins and found 0 dashboard extensions`) — see the alert file's own
         // comment for the confirmed detection mechanism this relies on instead.
         SystemHealthDashboardPlugin,
+        // Same shape/reasoning as SystemHealthDashboardPlugin just above (issue #76's own
+        // pnpm-workspace-symlink discovery limitation) — see
+        // src/dashboard/default-superadmin-account/index.ts.
+        DefaultSuperadminAlertDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({}),
