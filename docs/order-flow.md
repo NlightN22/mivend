@@ -230,9 +230,10 @@ a confirmed business need for it.
 
 Defaults: **30 days for prepaid**, **7 days for non-prepaid**. Configurable, not hardcoded —
 stored as `PaymentMethod.customFields` (`reservationTtlDays`, nullable int; falls back to the
-30/7 default per classification when unset) so it's editable per payment method in the
-**native Vendure Admin UI (port 3000)** — Vendure's admin-ui auto-renders customFields for
-`PaymentMethod` out of the box, no bespoke Angular admin-ui-plugin extension needed for this.
+30/7 default per classification when unset) so it's editable per payment method in
+**`@vendure/dashboard`** (see `docs/environments.md`'s port table — a standalone app, not
+mounted on the API process) — Vendure's dashboard auto-renders customFields for `PaymentMethod`
+out of the box, no bespoke UI extension needed for this.
 Per-channel/per-customer-segment overrides are not needed for stage 1.
 
 **On expiry**:
