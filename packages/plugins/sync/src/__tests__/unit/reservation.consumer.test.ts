@@ -13,7 +13,6 @@ describe('ReservationConsumer', () => {
     const options: SyncPluginOptions = {
         instanceType: 'central',
         instanceId: 'hub',
-        redis: { host: 'localhost', port: 6379 },
         rabbitmq: { url: 'amqp://localhost' },
     };
 

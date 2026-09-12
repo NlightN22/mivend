@@ -23,20 +23,9 @@ export interface RabbitMQConfig {
     dlx?: string;
 }
 
-export interface RedisConfig {
-    host: string;
-    port: number;
-    password?: string;
-    // Logical Redis DB index — must differ between a central and a branch instance sharing
-    // the same physical Redis server, otherwise their BullMQ queues (fixed names, e.g.
-    // 'sync-outbox') collide and one instance's worker can pick up the other's job.
-    db?: number;
-}
-
 export interface SyncPluginOptions {
     instanceType: 'central' | 'branch';
     instanceId: string;
-    redis: RedisConfig;
     rabbitmq: RabbitMQConfig;
     erpAdapter?: ErpAdapter;
     maxRetry?: number;

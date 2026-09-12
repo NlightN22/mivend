@@ -44,15 +44,6 @@ export const DEFAULT_PREPAID_RESERVATION_TTL_DAYS = 30;
 export const EXPIRY_POLL_INTERVAL_DEFAULT = 60_000;
 
 export interface ReservationPluginOptions {
-    redis: {
-        host: string;
-        port: number;
-        password?: string;
-        // Logical Redis DB index — must differ between a central and a branch instance sharing
-        // the same physical Redis server, otherwise the fixed-name 'reservation-expiry' BullMQ
-        // queue collides and one instance's worker can pick up the other's job.
-        db?: number;
-    };
     // Staff-facing default shown when confirming an order — see Order.customFields.reservationDays.
     defaultReservationDays?: number;
     expiryPollIntervalMs?: number;

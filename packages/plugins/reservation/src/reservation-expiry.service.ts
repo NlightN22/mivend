@@ -5,7 +5,7 @@ import { DataSource, In, LessThanOrEqual } from 'typeorm';
 import { Reservation } from './entities/reservation.entity';
 import { loggerCtx } from './types';
 
-// Called by ReservationExpiryWorker on a timer — split out of ReservationService to keep that
+// Called by the reservation-expiry ScheduledTask on a timer — split out of ReservationService to keep that
 // file under AGENTS.md's ~300-line guideline. Runs outside any HTTP request, so it uses the raw
 // DataSource/EntityManager directly rather than TransactionalConnection (same pattern as
 // SyncService.processOutbox — see packages/plugins/sync/src/sync.service.ts).

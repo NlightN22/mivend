@@ -12,7 +12,7 @@ import { subscribeAndLog } from 'shared';
 
 import { SessionManagementResolver } from './api/session-management.resolver';
 import { sessionManagementSchema } from './api/session-management.schema';
-import { SessionCleanupWorker } from './session-cleanup.worker';
+import { createSessionCleanupTask } from './session-cleanup.scheduled-task';
 import { SessionLoginListenerService } from './session-login-listener.service';
 import { SessionManagementService } from './session-management.service';
 import { SESSION_MANAGEMENT_PLUGIN_OPTIONS } from './session.types';
@@ -23,7 +23,6 @@ import type { SessionManagementPluginOptions } from './session.types';
     providers: [
         SessionManagementService,
         SessionLoginListenerService,
-        SessionCleanupWorker,
         {
             provide: SESSION_MANAGEMENT_PLUGIN_OPTIONS,
             useFactory: (): SessionManagementPluginOptions => SessionManagementPlugin.options,
@@ -47,6 +46,10 @@ import type { SessionManagementPluginOptions } from './session.types';
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'User agent' }],
             },
+        ];
+        config.schedulerOptions.tasks = [
+            ...(config.schedulerOptions.tasks ?? []),
+            createSessionCleanupTask(SessionManagementPlugin.options),
         ];
         return config;
     },

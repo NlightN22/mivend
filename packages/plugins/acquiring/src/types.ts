@@ -9,16 +9,6 @@ export const ACQUIRING_PLUGIN_OPTIONS = Symbol('ACQUIRING_PLUGIN_OPTIONS');
 export const PAYMENT_INBOX_POLL_INTERVAL_DEFAULT = 60_000;
 
 export interface AcquiringPluginOptions {
-    redis: {
-        host: string;
-        port: number;
-        password?: string;
-        // Logical Redis DB index — must differ between a central and a branch instance sharing
-        // the same physical Redis server, same reasoning as ReservationPluginOptions.redis.db
-        // (packages/plugins/reservation/src/types.ts): otherwise the fixed-name 'payment-inbox'
-        // BullMQ queue collides and one instance's worker can pick up the other's job.
-        db?: number;
-    };
     paymentInboxPollIntervalMs?: number;
 }
 

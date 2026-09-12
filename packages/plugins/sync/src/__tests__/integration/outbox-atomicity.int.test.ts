@@ -25,7 +25,6 @@ import type { SyncPluginOptions } from '../../types';
 const HUB_OPTIONS: SyncPluginOptions = {
     instanceType: 'central',
     instanceId: 'hub',
-    redis: { host: 'localhost', port: 6379 },
     rabbitmq: { url: 'amqp://mivend:mivend@localhost:5672' },
     maxRetry: 3,
 };

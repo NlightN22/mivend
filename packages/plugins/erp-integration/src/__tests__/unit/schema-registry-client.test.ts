@@ -25,7 +25,6 @@ const OPTIONS: ErpIntegrationPluginOptions = {
         },
     },
     schemaRegistry: { url: 'http://registry.test' },
-    redis: { host: 'localhost', port: 6379 },
 };
 
 afterEach(() => {

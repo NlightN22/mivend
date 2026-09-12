@@ -30,7 +30,6 @@ const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), dlq: vi.fn() 
 const options: SyncPluginOptions = {
     instanceType: 'central',
     instanceId: 'hub',
-    redis: { host: 'localhost', port: 6379 },
     rabbitmq: { url: 'amqp://localhost' },
     maxRetry: MAX_RETRY_DEFAULT,
 };

@@ -21,7 +21,7 @@ import { ReservationReconciliationIssue } from './entities/reservation-reconcili
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
 import { ReservationExpiryService } from './reservation-expiry.service';
-import { ReservationExpiryWorker } from './reservation-expiry.worker';
+import { createReservationExpiryTask } from './reservation-expiry.scheduled-task';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
 import { ReservationExtensionService } from './reservation-extension.service';
 import { ReservationPaymentService } from './reservation-payment.service';
@@ -121,7 +121,6 @@ const adminApiSchema = gql`
         ReservationExpiryService,
         ReservationAvailabilityService,
         ReservationExtensionLimitService,
-        ReservationExpiryWorker,
         {
             provide: RESERVATION_PLUGIN_OPTIONS,
             useFactory: (): ReservationPluginOptions => ReservationPlugin.options,
@@ -215,6 +214,10 @@ const adminApiSchema = gql`
                     },
                 ],
             },
+        ];
+        config.schedulerOptions.tasks = [
+            ...(config.schedulerOptions.tasks ?? []),
+            createReservationExpiryTask(ReservationPlugin.options),
         ];
         return config;
     },

@@ -18,7 +18,7 @@ import { ErpCallbackController } from './erp-callback.controller';
 import { ErpOrderStatusController } from './erp-order-status.controller';
 import { SyncOutboxEntry } from './entities/sync-outbox.entity';
 import { SyncProcessedEvent } from './entities/sync-processed-event.entity';
-import { OutboxWorker } from './outbox.worker';
+import { createSyncErpPollTask, createSyncOutboxTask } from './outbox.scheduled-task';
 import { RabbitMQService } from './rabbitmq.service';
 import { SyncLogger } from './sync-logger';
 import { SyncService } from './sync.service';
@@ -48,7 +48,6 @@ const adminApiSchema = gql`
         SyncLogger,
         RabbitMQService,
         SyncService,
-        OutboxWorker,
         ProductConsumer,
         CentralConsumer,
         OrderConsumer,
@@ -77,6 +76,11 @@ const adminApiSchema = gql`
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),
             new ReplicaOrderProcess(),
+        ];
+        config.schedulerOptions.tasks = [
+            ...(config.schedulerOptions.tasks ?? []),
+            createSyncOutboxTask(SyncPlugin.options),
+            createSyncErpPollTask(SyncPlugin.options),
         ];
         return config;
     },

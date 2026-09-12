@@ -39,7 +39,6 @@ const OPTIONS: ErpIntegrationPluginOptions = {
         },
     },
     schemaRegistry: { url: 'http://localhost:8081' },
-    redis: { host: 'localhost', port: 6379 },
     maxRetry: 3,
 };
 

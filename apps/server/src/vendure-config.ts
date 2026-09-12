@@ -1,6 +1,6 @@
 import path from 'path';
 import { readFileSync } from 'fs';
-import { LanguageCode, VendureConfig } from '@vendure/core';
+import { DefaultSchedulerPlugin, LanguageCode, VendureConfig } from '@vendure/core';
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { offlineTermsPaymentHandler, onlineStubPaymentHandler } from './payment-method-handlers';
@@ -55,18 +55,7 @@ function requiredKafkaId(envVar: string): string {
 }
 
 // Only central talks to the ERP/payment providers (the external-integration-rules skill)
-const instancePlugins =
-    instanceType === 'central'
-        ? [
-              AcquiringPlugin.init({
-                  redis: {
-                      host: process.env.REDIS_HOST ?? 'localhost',
-                      port: parseInt(process.env.REDIS_PORT ?? '6379'),
-                      db: redisDb,
-                  },
-              }),
-          ]
-        : [];
+const instancePlugins = instanceType === 'central' ? [AcquiringPlugin.init({})] : [];
 
 export const config: VendureConfig = {
     apiOptions: {
@@ -338,6 +327,11 @@ export const config: VendureConfig = {
                 maxRetriesPerRequest: null,
             },
         }),
+        // Issue #80: the standard for all recurring/periodic plugin work (sweeps, cleanups,
+        // polling) — see the backend-plugin-rules skill's "Recurring/periodic work" section.
+        // Runs worker-process-only and DB-locked out of the box (DefaultSchedulerStrategy), and
+        // gives enable/disable + run-now via the admin API without any custom code.
+        DefaultSchedulerPlugin.init({}),
         // No .init() — the dashboard is served as its own standalone app (packages/dashboard),
         // not mounted here. This plugin is only registered to expose the `metricSummary` GraphQL
         // query the dashboard's Insights page needs, per @vendure/dashboard's own documented
@@ -364,13 +358,7 @@ export const config: VendureConfig = {
         SystemHealthDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
-        SessionManagementPlugin.init({
-            redis: {
-                host: process.env.REDIS_HOST ?? 'localhost',
-                port: parseInt(process.env.REDIS_PORT ?? '6379'),
-                db: redisDb,
-            },
-        }),
+        SessionManagementPlugin.init({}),
         ApprovalWorkflowPlugin,
         VersioningPlugin,
         CounterpartyPlugin,
@@ -384,11 +372,6 @@ export const config: VendureConfig = {
         SyncPlugin.init({
             instanceType,
             instanceId: process.env.INSTANCE_ID ?? 'central',
-            redis: {
-                host: process.env.REDIS_HOST ?? 'localhost',
-                port: parseInt(process.env.REDIS_PORT ?? '6379'),
-                db: redisDb,
-            },
             rabbitmq: {
                 url: process.env.RABBITMQ_URL ?? 'amqp://mivend:mivend@localhost:5672',
             },
@@ -504,19 +487,8 @@ export const config: VendureConfig = {
             schemaRegistry: {
                 url: process.env.INTEGRATION_SCHEMA_REGISTRY_URL ?? 'http://localhost:8081',
             },
-            redis: {
-                host: process.env.REDIS_HOST ?? 'localhost',
-                port: parseInt(process.env.REDIS_PORT ?? '6379'),
-                db: redisDb,
-            },
         }),
-        ReservationPlugin.init({
-            redis: {
-                host: process.env.REDIS_HOST ?? 'localhost',
-                port: parseInt(process.env.REDIS_PORT ?? '6379'),
-                db: redisDb,
-            },
-        }),
+        ReservationPlugin.init({}),
         MoqPlugin,
         SavedViewsPlugin,
         ...instancePlugins,

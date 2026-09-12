@@ -11,12 +11,13 @@ import {
 import { Reservation } from '../../../entities/reservation.entity';
 import { ReservationExpiryService } from '../../../reservation-expiry.service';
 
-// Component test for the actual sweep→expire→release chain ReservationExpiryWorker triggers on
-// a timer (packages/plugins/reservation/src/reservation-expiry.worker.ts) — the worker itself is
-// thin BullMQ wiring around ReservationExpiryService.expireDueReservations(), so this file calls
-// that method directly against real Postgres (no Redis/BullMQ needed — see docs/testing-
-// strategy.md's "Worker testing": the queue/scheduler wiring gets one separate, minimal
-// integration check, not exercised by every component test). Unit tests already cover the
+// Component test for the actual sweep→expire→release chain the reservation-expiry ScheduledTask
+// triggers on a timer (packages/plugins/reservation/src/reservation-expiry.scheduled-task.ts) —
+// the task itself is thin Vendure ScheduledTask wiring around
+// ReservationExpiryService.expireDueReservations(), so this file calls that method directly
+// against real Postgres (no scheduler wiring needed — see docs/testing-strategy.md's "Worker
+// testing": the scheduler wiring gets one separate, minimal integration check, not exercised by
+// every component test). Unit tests already cover the
 // manual/auto-trust-rule/auto-prepaid/already-flagged branching with mocks
 // (reservation-expiry.service.test.ts) — this file only proves the real-DB transaction and
 // concurrency behavior, which mocks can't.

@@ -8,7 +8,6 @@ import type { SyncPluginOptions } from '../../types';
 const CENTRAL_OPTIONS: SyncPluginOptions = {
     instanceType: 'central',
     instanceId: 'hub',
-    redis: { host: 'localhost', port: 6379 },
     rabbitmq: { url: 'amqp://localhost' },
 };
 

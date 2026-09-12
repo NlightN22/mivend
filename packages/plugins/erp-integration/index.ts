@@ -16,7 +16,6 @@ export type {
     KafkaConfig,
     KafkaConsumerConfig,
     SchemaRegistryConfig,
-    RedisConfig,
     InboundStream,
 } from './src/types';
 export type { OrderSubmittedPayload } from './src/schemas/order-submitted.schema';

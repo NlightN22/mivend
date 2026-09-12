@@ -1,4 +1,4 @@
-import { PluginCommonModule, Type, VendurePlugin } from '@vendure/core';
+import { PluginCommonModule, RuntimeVendureConfig, Type, VendurePlugin } from '@vendure/core';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
@@ -14,10 +14,10 @@ import { ProductTaxCodeFlagService } from './product-tax-code-flag.service';
 import { ProductTaxCodeFlagResolver } from './product-tax-code-flag.resolver';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
-import { IntegrationOutboxWorker } from './integration-outbox.worker';
+import { createIntegrationOutboxTask } from './integration-outbox.scheduled-task';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
-import { IntegrationInboxWorker } from './integration-inbox.worker';
+import { createIntegrationInboxTask } from './integration-inbox.scheduled-task';
 import { IntegrationInboxEventResolver } from './integration-inbox-event.resolver';
 import { KafkaConsumerService } from './kafka-consumer.service';
 import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.service';
@@ -42,11 +42,12 @@ import { adminApiExtensions } from './api/admin.schema';
 // Service]"). The guard can't live in the providers array itself: @VendurePlugin's decorator body
 // runs at module-import time, before `ErpIntegrationPlugin.options` is set by the static `init()`
 // call in vendure-config.ts — so `options.instanceType` isn't known yet at that point. Instead
-// every service that does real work (worker, listener) checks `instanceType` at its own
-// lifecycle-hook runtime, same as plugin-sync's `ProductConsumer.onModuleInit`'s
+// every service/task that does real work (ScheduledTask, listener) checks `instanceType` at its
+// own runtime, same as plugin-sync's `ProductConsumer.onModuleInit`'s
 // `if (this.options.instanceType !== 'branch') return;`. On a branch instance the providers are
 // still constructed (cheap, no I/O in their constructors), but never start a Kafka connection,
-// never schedule the BullMQ worker, and never subscribe to the order-submitted EventBus stream.
+// the ScheduledTasks skip their own work, and it never subscribes to the order-submitted
+// EventBus stream.
 //
 // Separately (issue #68), `options.kafkaEnabled` gates the same Kafka-touching services even on
 // a central instance — `instanceType === 'central'` says "this instance is allowed to talk to
@@ -73,10 +74,8 @@ import { adminApiExtensions } from './api/admin.schema';
     providers: [
         IntegrationOutboxService,
         IntegrationOutboxProcessorService,
-        IntegrationOutboxWorker,
         IntegrationInboxService,
         IntegrationInboxProcessorService,
-        IntegrationInboxWorker,
         KafkaConsumerService,
         KafkaConsumerBootstrapService,
         CategoryStreamHandler,
@@ -100,6 +99,14 @@ import { adminApiExtensions } from './api/admin.schema';
     adminApiExtensions: {
         schema: adminApiExtensions,
         resolvers: [IntegrationInboxEventResolver, ProductTaxCodeFlagResolver],
+    },
+    configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
+        config.schedulerOptions.tasks = [
+            ...(config.schedulerOptions.tasks ?? []),
+            createIntegrationInboxTask(ErpIntegrationPlugin.options),
+            createIntegrationOutboxTask(ErpIntegrationPlugin.options),
+        ];
+        return config;
     },
     compatibility: '>0.0.0',
 })

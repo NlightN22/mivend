@@ -56,13 +56,6 @@ export interface SchemaRegistryConfig {
     password?: string;
 }
 
-export interface RedisConfig {
-    host: string;
-    port: number;
-    password?: string;
-    db?: number;
-}
-
 export interface KafkaConsumerConfig {
     brokers: string[];
     clientId: string;
@@ -103,7 +96,6 @@ export interface ErpIntegrationPluginOptions {
     kafka: KafkaConfig;
     kafkaConsumer: KafkaConsumerConfig;
     schemaRegistry: SchemaRegistryConfig;
-    redis: RedisConfig;
     maxRetry?: number;
     outboxPollIntervalMs?: number;
     inboxPollIntervalMs?: number;

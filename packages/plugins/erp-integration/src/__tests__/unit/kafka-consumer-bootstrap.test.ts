@@ -30,7 +30,6 @@ function makeOptions(
             },
         },
         schemaRegistry: { url: 'http://x' },
-        redis: { host: 'x', port: 1 },
     };
 }
 

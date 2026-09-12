@@ -1,4 +1,4 @@
-import { PluginCommonModule, Type, VendurePlugin } from '@vendure/core';
+import { PluginCommonModule, RuntimeVendureConfig, Type, VendurePlugin } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
@@ -18,7 +18,7 @@ import { InboxService } from './inbox.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentAttemptService } from './payment-attempt.service';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
-import { PaymentInboxWorker } from './payment-inbox.worker';
+import { createPaymentInboxTask } from './payment-inbox.scheduled-task';
 import { PaymentEventListener } from './payment-event.listener';
 import { PaymentReconciliationIssueService } from './payment-reconciliation-issue.service';
 import { PaymentRefundService } from './payment-refund.service';
@@ -61,7 +61,6 @@ import type { AcquiringPluginOptions } from './types';
         PaymentAttemptService,
         SettlementEntryService,
         PaymentInboxProcessorService,
-        PaymentInboxWorker,
         PaymentEventListener,
         PaymentReconciliationIssueService,
         PaymentRefundService,
@@ -103,6 +102,13 @@ import type { AcquiringPluginOptions } from './types';
             PaymentShopResolver,
             PaymentFieldResolver,
         ],
+    },
+    configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
+        config.schedulerOptions.tasks = [
+            ...(config.schedulerOptions.tasks ?? []),
+            createPaymentInboxTask(AcquiringPlugin.options),
+        ];
+        return config;
     },
     compatibility: '>0.0.0',
 })

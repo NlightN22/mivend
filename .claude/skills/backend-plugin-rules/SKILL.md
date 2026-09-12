@@ -185,6 +185,96 @@ Checklist for any change that touches a REST payload:
 
 ---
 
+## Recurring/periodic work
+
+**Any recurring/periodic plugin work (sweeps, cleanups, polling, retries-on-a-timer) must be a
+Vendure `ScheduledTask`, registered via the plugin's own `configuration(config)` hook pushing
+into `config.schedulerOptions.tasks`. This is a mandatory requirement, not a preference** — issue
+#80/#81 found six plugins that had each independently hand-rolled a raw BullMQ `Queue`+`Worker`
+pair with `upsertJobScheduler` for this instead (a real, live pattern that had spread by
+copy-paste comment: "mirrors X's own Queue+Worker shape"). That pattern:
+
+- had no process-placement guarantee at all (ran with no `ProcessContext` gate, an audit-confirmed
+  landmine for horizontal scaling — see docs/architecture.md's HA section);
+- gave **no way to manage it through Vendure's own admin API** — no enable/disable, no run-now, no
+  per-task status. Vendure's Job Queue admin API (`cancelJob`, `jobs`, `jobQueues`) does not help
+  here either: `cancelJob` is a **cooperative** cancellation of one already-created job instance
+  (the job must poll a flag itself; it does not stop a recurring scheduler or kill a stuck
+  process), and there is no `runJobNow`/`pauseQueue`/`restartWorker` mutation in that API at all.
+
+`ScheduledTask` (`@vendure/core`, since 3.3.0) is the actual first-class Vendure mechanism for
+this and solves both problems at once, with zero custom code:
+
+```ts
+import { ScheduledTask } from '@vendure/core';
+
+export function createFooSweepTask(options: FooPluginOptions): ScheduledTask {
+    const everyMs = options.sweepIntervalMs ?? SWEEP_INTERVAL_DEFAULT;
+    return new ScheduledTask({
+        id: 'foo-sweep', // must be globally unique across all plugins
+        description: 'One sentence a staff member reading the admin panel would understand.',
+        schedule: `*/${Math.max(1, Math.round(everyMs / 1000))} * * * * *`, // 6-field cron, seconds included
+        execute: async ({ injector, scheduledContext }) => {
+            return injector.get(FooService).sweep(scheduledContext);
+        },
+    });
+}
+```
+
+Register it in the plugin's `configuration` hook (same place other plugins already extend
+`customFields`/`orderOptions` — see `reservation.plugin.ts`/`sync.plugin.ts` for the established
+shape):
+
+```ts
+configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
+    config.schedulerOptions.tasks = [
+        ...(config.schedulerOptions.tasks ?? []),
+        createFooSweepTask(FooPlugin.options),
+    ];
+    return config;
+},
+```
+
+`apps/server/src/vendure-config.ts` registers `DefaultSchedulerPlugin.init({})` once, globally —
+do not add a second scheduler plugin/strategy per plugin. With it:
+
+- **Worker-process-only and DB-locked, automatically.** `DefaultSchedulerStrategy` only executes
+  tasks in the worker process (`ProcessContext.isWorker`) and takes a DB lock
+  (`ScheduledTaskRecord`) before running — safe even with multiple worker replicas, with no
+  `ProcessContext` check needed in plugin code.
+- **Full admin-API management for free**: `Query.scheduledTasks` (schedule, `lastExecutedAt`,
+  `nextExecutionAt`, `isRunning`, `lastResult`, `enabled`), `Mutation.updateScheduledTask({id,
+enabled})` (enable/disable without a deploy), `Mutation.runScheduledTask(id)` (trigger it right
+  now). This is the actual "can we manage this job through Vendure's interface" answer — use it
+  instead of building a bespoke panel/mutation for job control.
+
+**What this does _not_ replace:** container/process-level control (restarting a hung or crashed
+Node process, rolling out new code) is a completely different layer — `ScheduledTask` only
+manages work _inside_ an already-running process. That's the separate, legitimate scope of
+issue #81's Docker-based external process management.
+
+**What `ScheduledTask` is _not_ for:** one-shot, on-demand work triggered by a user action or
+event (generate this one report now, reindex after this one product change) — that's
+`JobQueueService.add()`, Vendure's other, separate job mechanism (`activeQueues` process grouping
+applies only to that one). Don't reach for `ScheduledTask` for a job that isn't inherently
+periodic, and don't reach for a raw BullMQ `Queue`/`Worker` for either case — there is no
+justification left in this codebase for hand-rolling either one.
+
+**Audit checklist for any new or changed periodic work:**
+
+- [ ] Is it a `ScheduledTask` (not a raw `new Worker()`/`new Queue()`, not a bare
+      `setInterval`/`setTimeout` loop)?
+- [ ] Does its `id` collide with an existing task anywhere else in the repo (`grep -rn "id: '"`
+      across `**/*.scheduled-task.ts`)?
+- [ ] Is it registered via `config.schedulerOptions.tasks` in the plugin's own `configuration`
+      hook, not a bare `providers` entry with a manual `onModuleInit`?
+- [ ] Does its `description` read like something an admin/staff user would understand from the
+      `scheduledTasks` panel (no internal jargon)?
+- [ ] Any instance/feature-flag gating (e.g. central-only, `kafkaEnabled`) checked inside
+      `execute()` itself, not assumed from where the plugin happens to be registered?
+- [ ] No leftover raw-BullMQ/Redis wiring (a `redis:` plugin option, an unused `RedisConfig`
+      type) left behind after migrating a worker to `ScheduledTask`.
+
 ## Vendure-specific gotchas
 
 - **GraphQL schema requires server restart.** Vendure builds the GraphQL schema once at startup. Any change to `customFields`, plugin schemas, or resolvers requires a server restart — hot reload does not apply.
