@@ -1,4 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ProcessContext } from '@vendure/core';
 import { Queue, Worker } from 'bullmq';
 
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
@@ -17,6 +18,8 @@ const QUEUE_NAME = 'erp-integration-outbox';
 // real Integration Service broker. Both checks live in this class's own onModuleInit, same
 // lifecycle-hook-runtime pattern as KafkaConsumerBootstrapService — see erp-integration.plugin.ts
 // for why the guard can't live at the module/providers level instead.
+// Also gated on ProcessContext.isWorker (issue #80), same worker-process convention as
+// IntegrationInboxWorker/KafkaConsumerBootstrapService.
 @Injectable()
 export class IntegrationOutboxWorker implements OnModuleInit, OnModuleDestroy {
     private queue: Queue | undefined;
@@ -24,6 +27,7 @@ export class IntegrationOutboxWorker implements OnModuleInit, OnModuleDestroy {
 
     constructor(
         private readonly processor: IntegrationOutboxProcessorService,
+        private readonly processContext: ProcessContext,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
     ) {}
@@ -33,6 +37,7 @@ export class IntegrationOutboxWorker implements OnModuleInit, OnModuleDestroy {
         // Issue #68: never publish to a real Integration Service broker unless the contour
         // explicitly opts in — this worker is what drives KafkaProducerService.publish().
         if (!(this.options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return;
+        if (!this.processContext.isWorker) return;
 
         const connection = {
             host: this.options.redis.host,

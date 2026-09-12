@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Logger } from '@vendure/core';
+import { Logger, ProcessContext } from '@vendure/core';
 import { Queue, Worker } from 'bullmq';
 
 import { SessionManagementService } from './session-management.service';
@@ -16,6 +16,9 @@ const QUEUE_NAME = 'session-cleanup';
 // — raw BullMQ Queue+Worker with upsertJobScheduler for periodic execution, the established
 // pattern for recurring jobs in this codebase (no plugin uses Vendure's JobQueueService or its
 // native ScheduledTask API for this).
+//
+// Gated on ProcessContext.isWorker (issue #80) — recurring background sweep, belongs on the
+// worker process only, matching KafkaConsumerBootstrapService's convention.
 @Injectable()
 export class SessionCleanupWorker implements OnModuleInit, OnModuleDestroy {
     private queue!: Queue;
@@ -23,11 +26,14 @@ export class SessionCleanupWorker implements OnModuleInit, OnModuleDestroy {
 
     constructor(
         private readonly sessionManagementService: SessionManagementService,
+        private readonly processContext: ProcessContext,
         @Inject(SESSION_MANAGEMENT_PLUGIN_OPTIONS)
         private readonly options: SessionManagementPluginOptions,
     ) {}
 
     async onModuleInit(): Promise<void> {
+        if (!this.processContext.isWorker) return;
+
         const connection = {
             host: this.options.redis.host,
             port: this.options.redis.port,

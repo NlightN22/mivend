@@ -1,4 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ProcessContext } from '@vendure/core';
 import { Queue, Worker } from 'bullmq';
 
 import { SyncService } from './sync.service';
@@ -8,6 +9,10 @@ import type { SyncPluginOptions } from './types';
 
 const QUEUE_NAME = 'sync-outbox';
 
+// Gated on ProcessContext.isWorker (issue #80) — orthogonal to the every-instance requirement
+// below (branch vs central, see that comment): this still runs on every instance, just on each
+// instance's worker process rather than its server process, matching
+// KafkaConsumerBootstrapService's convention.
 @Injectable()
 export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
     private queue!: Queue;
@@ -16,10 +21,13 @@ export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
     constructor(
         private readonly syncService: SyncService,
         private readonly logger: SyncLogger,
+        private readonly processContext: ProcessContext,
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
     ) {}
 
     async onModuleInit(): Promise<void> {
+        if (!this.processContext.isWorker) return;
+
         // Draining `sync_outbox` → RabbitMQ (the 'scan' job) must run on EVERY instance, not
         // just central — a branch-placed order's `order.created` (target: 'central', see
         // OrderConsumer) is written to the *branch's own* outbox and needs the branch's own

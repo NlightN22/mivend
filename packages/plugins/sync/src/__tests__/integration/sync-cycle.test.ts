@@ -253,7 +253,12 @@ describe('OutboxWorker', () => {
             };
             const rabbitmq = instanceType === 'central' ? hubRabbitMQ : branchRabbitMQ;
             const svc = new SyncService(dataSource, rabbitmq, options, mockLogger as never);
-            const worker = new OutboxWorker(svc, mockLogger as never, options);
+            const worker = new OutboxWorker(
+                svc,
+                mockLogger as never,
+                { isWorker: true } as never,
+                options,
+            );
 
             const eventId = randomUUID();
             await dataSource.transaction(em =>

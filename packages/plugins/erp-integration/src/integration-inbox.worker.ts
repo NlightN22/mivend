@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Logger } from '@vendure/core';
+import { Logger, ProcessContext } from '@vendure/core';
 import { Queue, Worker } from 'bullmq';
 
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
@@ -14,6 +14,10 @@ const QUEUE_NAME = 'erp-integration-inbox';
 // kafka-consumer-bootstrap.service.ts. Same BullMQ Queue+Worker+upsertJobScheduler shape as
 // PaymentInboxWorker/ReservationExpiryWorker/OutboxWorker — no plugin uses Vendure's
 // JobQueueService for recurring work.
+//
+// Also gated on ProcessContext.isWorker (issue #80) — this class's own doc comment previously
+// claimed a "worker-process convention" that didn't actually exist in code; this gate makes that
+// true, matching KafkaConsumerBootstrapService.
 @Injectable()
 export class IntegrationInboxWorker implements OnModuleInit, OnModuleDestroy {
     private queue: Queue | undefined;
@@ -21,12 +25,14 @@ export class IntegrationInboxWorker implements OnModuleInit, OnModuleDestroy {
 
     constructor(
         private readonly processor: IntegrationInboxProcessorService,
+        private readonly processContext: ProcessContext,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
     ) {}
 
     async onModuleInit(): Promise<void> {
         if (this.options.instanceType !== 'central') return;
+        if (!this.processContext.isWorker) return;
 
         const connection = {
             host: this.options.redis.host,

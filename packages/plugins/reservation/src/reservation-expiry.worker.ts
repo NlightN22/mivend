@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Logger } from '@vendure/core';
+import { Logger, ProcessContext } from '@vendure/core';
 import { Queue, Worker } from 'bullmq';
 
 import { ReservationExpiryService } from './reservation-expiry.service';
@@ -11,6 +11,9 @@ const QUEUE_NAME = 'reservation-expiry';
 // Mirrors OutboxWorker (packages/plugins/sync/src/outbox.worker.ts) — raw BullMQ Queue+Worker
 // with upsertJobScheduler for periodic execution, not Vendure's JobQueueService (no plugin in
 // this codebase uses that API; this is the established pattern to follow).
+//
+// Gated on ProcessContext.isWorker (issue #80) — recurring background sweep, belongs on the
+// worker process only, matching KafkaConsumerBootstrapService's convention.
 @Injectable()
 export class ReservationExpiryWorker implements OnModuleInit, OnModuleDestroy {
     private queue!: Queue;
@@ -18,10 +21,13 @@ export class ReservationExpiryWorker implements OnModuleInit, OnModuleDestroy {
 
     constructor(
         private readonly reservationExpiryService: ReservationExpiryService,
+        private readonly processContext: ProcessContext,
         @Inject(RESERVATION_PLUGIN_OPTIONS) private readonly options: ReservationPluginOptions,
     ) {}
 
     async onModuleInit(): Promise<void> {
+        if (!this.processContext.isWorker) return;
+
         const connection = {
             host: this.options.redis.host,
             port: this.options.redis.port,
