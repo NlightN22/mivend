@@ -202,8 +202,13 @@ copy-paste comment: "mirrors X's own Queue+Worker shape"). That pattern:
   (the job must poll a flag itself; it does not stop a recurring scheduler or kill a stuck
   process), and there is no `runJobNow`/`pauseQueue`/`restartWorker` mutation in that API at all.
 
-`ScheduledTask` (`@vendure/core`, since 3.3.0) is the actual first-class Vendure mechanism for
-this and solves both problems at once, with zero custom code:
+**Vendure version: `ScheduledTask`/`SchedulerStrategy`/`DefaultSchedulerPlugin` shipped in
+`@vendure/core` 3.3.0** (this project runs 3.7.3, confirmed installed — `node_modules/@vendure/
+core/package.json`). Any plugin work targeting an older pinned `@vendure/core` would not have
+this API available and must not silently fall back to raw BullMQ — flag that as a blocker instead.
+
+`ScheduledTask` is the actual first-class Vendure mechanism for periodic work and solves both
+problems above at once, with zero custom code:
 
 ```ts
 import { ScheduledTask } from '@vendure/core';
@@ -242,11 +247,25 @@ do not add a second scheduler plugin/strategy per plugin. With it:
   tasks in the worker process (`ProcessContext.isWorker`) and takes a DB lock
   (`ScheduledTaskRecord`) before running — safe even with multiple worker replicas, with no
   `ProcessContext` check needed in plugin code.
-- **Full admin-API management for free**: `Query.scheduledTasks` (schedule, `lastExecutedAt`,
-  `nextExecutionAt`, `isRunning`, `lastResult`, `enabled`), `Mutation.updateScheduledTask({id,
-enabled})` (enable/disable without a deploy), `Mutation.runScheduledTask(id)` (trigger it right
-  now). This is the actual "can we manage this job through Vendure's interface" answer — use it
-  instead of building a bespoke panel/mutation for job control.
+- **Full admin-API management for free** — this is the complete, exhaustive set of job-control
+  primitives Vendure's native scheduler admin API exposes (`@vendure/core/dist/api/schema/
+admin-api/scheduled-task.api.graphql` + `scheduled-task.resolver.ts`); there is no other
+  management surface to add on top for a `ScheduledTask` — a bespoke mutation/panel duplicating
+  any of these is scope creep, not a gap to fill:
+    - `Query.scheduledTasks: [ScheduledTask!]!` — every registered task's `id`, `description`,
+      `schedule`, `scheduleDescription`, `lastExecutedAt`, `nextExecutionAt`, `isRunning`,
+      `lastResult`, `enabled`. Permission: `ReadSettings`/`ReadSystem`.
+    - `Mutation.updateScheduledTask(input: { id, enabled }): ScheduledTask!` — enable/disable a
+      task without a deploy. Permission: `UpdateSettings`/`UpdateSystem`.
+    - `Mutation.runScheduledTask(id: String!): Success!` — trigger it right now, out of schedule
+      (cooperative — sets a DB flag the strategy's own poll loop picks up, same
+      `manualTriggerCheckInterval` mechanism regardless of which task). Permission:
+      `UpdateSettings`/`UpdateSystem`.
+    - There is **no** `deleteScheduledTask`/`removeScheduledTask` — a task's lifecycle is tied to
+      the plugin code that registers it (remove the `ScheduledTask` from
+      `config.schedulerOptions.tasks` to retire it, not an admin-API call).
+      This is the actual "can we manage this job through Vendure's interface" answer — use it instead
+      of building a bespoke panel/mutation for job control.
 
 **What this does _not_ replace:** container/process-level control (restarting a hung or crashed
 Node process, rolling out new code) is a completely different layer — `ScheduledTask` only
@@ -260,7 +279,9 @@ applies only to that one). Don't reach for `ScheduledTask` for a job that isn't 
 periodic, and don't reach for a raw BullMQ `Queue`/`Worker` for either case — there is no
 justification left in this codebase for hand-rolling either one.
 
-**Audit checklist for any new or changed periodic work:**
+**Audit checklist for any new or changed periodic work** — this list is mandatory and must be
+gone through explicitly (not skimmed) in the issue's final audit pass (AGENTS.md's "Final audit —
+separate session" step), for every `ScheduledTask` touched by the change, not just the newest one:
 
 - [ ] Is it a `ScheduledTask` (not a raw `new Worker()`/`new Queue()`, not a bare
       `setInterval`/`setTimeout` loop)?
@@ -274,6 +295,21 @@ justification left in this codebase for hand-rolling either one.
       `execute()` itself, not assumed from where the plugin happens to be registered?
 - [ ] No leftover raw-BullMQ/Redis wiring (a `redis:` plugin option, an unused `RedisConfig`
       type) left behind after migrating a worker to `ScheduledTask`.
+- [ ] **All three native admin-API job-control primitives verified working for this specific
+      task, not merely assumed from the mechanism being generic** — actually query/call each one
+      (via the admin GraphQL playground or an integration test) rather than trusting that
+      registering a `ScheduledTask` is automatically enough:
+    - [ ] `Query.scheduledTasks` returns this task's `id` with a correct `schedule`/
+          `scheduleDescription` (confirms the cron string parses as intended — a malformed
+          `*/N * * * * *` string fails silently into `getPattern()` returning falsy, logged only
+          as a `Logger.warn` that's easy to miss, and the task never actually gets scheduled).
+    - [ ] `Mutation.updateScheduledTask({ id, enabled: false })` then `scheduledTasks` shows
+          `enabled: false` and the task stops firing; re-enabling brings it back.
+    - [ ] `Mutation.runScheduledTask(id)` actually invokes `execute()` out of schedule (check
+          `lastExecutedAt`/`lastResult` update, or the side effect it performs).
+    - [ ] Required permission for each (`ReadSettings`/`ReadSystem` for the query,
+          `UpdateSettings`/`UpdateSystem` for both mutations) matches which admin roles are
+          actually expected to manage this task — not assumed to be SuperAdmin-only by default.
 
 ## Vendure-specific gotchas
 
