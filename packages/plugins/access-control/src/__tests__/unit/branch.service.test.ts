@@ -44,4 +44,22 @@ describe('BranchService', () => {
         await service.findAll(ctx);
         expect(repo.find).toHaveBeenCalledWith({ order: { name: 'ASC' } });
     });
+
+    it('createManual generates a prefixed erpId that can never collide with a real 1C GUID', async () => {
+        const branch = await service.createManual(ctx, 'Warehouse district A');
+        expect(repo.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Warehouse district A',
+                erpId: expect.stringMatching(/^mivend-manual:/),
+            }),
+        );
+        expect(repo.save).toHaveBeenCalled();
+        expect((branch as { name: string }).name).toBe('Warehouse district A');
+    });
+
+    it('createManual generates a different erpId on each call', async () => {
+        const a = await service.createManual(ctx, 'Branch A');
+        const b = await service.createManual(ctx, 'Branch B');
+        expect((a as { erpId: string }).erpId).not.toBe((b as { erpId: string }).erpId);
+    });
 });

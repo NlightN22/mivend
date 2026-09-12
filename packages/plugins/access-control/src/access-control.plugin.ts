@@ -104,6 +104,7 @@ const adminApiSchema = gql`
             defaultWarehouseId: String!
             visibleWarehouseIds: [String!]
         ): BranchSettings!
+        createBranch(name: String!): Branch!
     }
 `;
 

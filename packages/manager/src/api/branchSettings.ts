@@ -66,6 +66,20 @@ export async function fetchBranchOptions(): Promise<BranchOption[]> {
     return result.branches;
 }
 
+export async function createBranch(name: string): Promise<BranchOption> {
+    const result = await adminApi<{ createBranch: BranchOption }>(
+        `mutation CreateBranch($name: String!) {
+            createBranch(name: $name) {
+                id
+                erpId
+                name
+            }
+        }`,
+        { name },
+    );
+    return result.createBranch;
+}
+
 export async function fetchPriceTypeOptions(): Promise<PriceTypeOption[]> {
     const result = await adminApi<{ priceTypes: PriceTypeOption[] }>(
         `query PriceTypeOptions { priceTypes { id code name } }`,

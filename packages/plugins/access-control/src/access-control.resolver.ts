@@ -123,6 +123,18 @@ export class AccessControlResolver {
         return this.branchService.findAll(ctx);
     }
 
+    // mivend's own branch consolidation, independent of any ERP-provided org unit — see
+    // BranchService.createManual's own comment.
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ManageAccessControl.Permission)
+    async createBranch(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { name: string },
+    ): Promise<Branch> {
+        return this.branchService.createManual(ctx, args.name);
+    }
+
     // Curation source list for the Warehouse↔Branch admin surface (issue #66) — view-only for
     // any authenticated administrator, same as departments/branches above.
     @Query()
