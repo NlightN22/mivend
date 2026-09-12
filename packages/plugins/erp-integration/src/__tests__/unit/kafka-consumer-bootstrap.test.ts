@@ -27,6 +27,7 @@ function makeOptions(
                 'storage-location': 'sl',
                 'stock-organization': 'so',
                 'order-registration-result': 'orr',
+                department: 'dept',
             },
         },
         schemaRegistry: { url: 'http://x' },

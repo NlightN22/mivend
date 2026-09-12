@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
+import { DepartmentStreamHandler } from './handlers/department.handler';
 import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrganizationStreamHandler } from './handlers/organization.handler';
@@ -37,6 +38,7 @@ export class IntegrationInboxProcessorService {
         stockHandler: StockStreamHandler,
         warehouseHandler: WarehouseStreamHandler,
         organizationHandler: OrganizationStreamHandler,
+        departmentHandler: DepartmentStreamHandler,
         storageLocationHandler: StorageLocationStreamHandler,
         orderRegistrationResultHandler: OrderRegistrationResultHandler,
     ) {
@@ -47,6 +49,7 @@ export class IntegrationInboxProcessorService {
             stock: stockHandler,
             organization: organizationHandler,
             warehouse: warehouseHandler,
+            department: departmentHandler,
             'price-type': priceTypeHandler,
             offer: new DeferredStreamHandler('offer'),
             'storage-location': storageLocationHandler,

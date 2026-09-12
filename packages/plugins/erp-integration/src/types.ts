@@ -84,7 +84,11 @@ export type InboundStream =
     | 'stock'
     | 'storage-location'
     | 'stock-organization'
-    | 'order-registration-result';
+    | 'order-registration-result'
+    // 1C's "Подразделение" (org-structure division) — feeds the existing, previously-unfed
+    // Department entity in @mivend/plugin-access-control. Different domain than the 10 streams
+    // above (company.customers, not company.catalog/orders) — see DepartmentStreamHandler.
+    | 'department';
 
 export interface ErpIntegrationPluginOptions {
     instanceType: 'central' | 'branch';

@@ -487,6 +487,12 @@ export const config: VendureConfig = {
                     'order-registration-result':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_REGISTRATION_RESULT ??
                         'company.orders.events.v1.order-registration-result',
+                    // 1C's "Подразделение" — feeds the Department entity in
+                    // @mivend/plugin-access-control. Different domain (company.customers) than
+                    // the catalog/orders streams above — see DepartmentStreamHandler.
+                    department:
+                        process.env.INTEGRATION_KAFKA_TOPIC_DEPARTMENT ??
+                        'company.customers.events.v1.department-changed',
                 },
             },
             schemaRegistry: {

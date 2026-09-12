@@ -30,6 +30,7 @@ import { ProductStreamHandler } from './handlers/product.handler';
 import { StockStreamHandler } from './handlers/stock.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { OrganizationStreamHandler } from './handlers/organization.handler';
+import { DepartmentStreamHandler } from './handlers/department.handler';
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { KafkaProducerService } from './kafka-producer.service';
@@ -86,6 +87,7 @@ import { adminApiExtensions } from './api/admin.schema';
         StockStreamHandler,
         WarehouseStreamHandler,
         OrganizationStreamHandler,
+        DepartmentStreamHandler,
         StorageLocationStreamHandler,
         OrderRegistrationResultHandler,
         KafkaProducerService,
