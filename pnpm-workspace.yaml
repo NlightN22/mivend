@@ -14,3 +14,14 @@ allowBuilds:
     vue-demi: true
 minimumReleaseAgeExclude:
     - '@nlightn22/event-contracts@0.4.0 || 0.5.0 || 0.13.0'
+overrides:
+    # 2026-09-12 incident: graphql-upload@17 (a transitive dep, likely pulled in via
+    # @nestjs/graphql/@vendure/dashboard) resolves @types/express@5.0.6 alongside every plugin's
+    # own explicit ^4.17.0 pin (plugin-sync/erp-import/documents/erp-order/popular-products) —
+    # pnpm's hoisting layout let both coexist until a routine `pnpm install` reshuffled it enough
+    # for tsc -b to start resolving the two declaration sets against each other in the same
+    # build graph (ErpCallbackController/ErpOrderStatusController/ErpImportController's Express
+    # `Request` param), breaking `make dev-staging-integration`'s plugin build outright. Since
+    # every real workspace package wants v4 and @types/* are compile-time only (no runtime
+    # behavior difference), force a single resolved version everywhere.
+    '@types/express': ^4.17.0
