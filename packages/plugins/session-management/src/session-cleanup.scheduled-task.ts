@@ -1,4 +1,5 @@
 import { Logger, ScheduledTask } from '@vendure/core';
+import { cronEveryMs } from 'shared';
 
 import { SessionManagementService } from './session-management.service';
 import { CLEANUP_POLL_INTERVAL_DEFAULT, loggerCtx } from './session.types';
@@ -13,7 +14,7 @@ export function createSessionCleanupTask(options: SessionManagementPluginOptions
     return new ScheduledTask({
         id: 'session-cleanup',
         description: 'Deletes expired customer/administrator sessions.',
-        schedule: `*/${Math.max(1, Math.round(everyMs / 1000))} * * * * *`,
+        schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             const deleted = await injector.get(SessionManagementService).deleteExpiredSessions();
             if (deleted > 0) {

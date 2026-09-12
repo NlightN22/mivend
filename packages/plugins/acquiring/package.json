@@ -19,7 +19,6 @@
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-sync": "workspace:*",
-        "bullmq": "^5.0.0",
         "graphql-tag": "^2.12.6",
         "shared": "workspace:*"
     },

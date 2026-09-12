@@ -15,7 +15,6 @@
     },
     "dependencies": {
         "amqplib": "^0.10.4",
-        "bullmq": "^5.0.0",
         "graphql-tag": "^2.12.6",
         "shared": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",

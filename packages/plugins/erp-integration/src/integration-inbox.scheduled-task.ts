@@ -1,4 +1,5 @@
 import { Logger, ScheduledTask } from '@vendure/core';
+import { cronEveryMs } from 'shared';
 
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
 import { INBOX_POLL_INTERVAL_DEFAULT, loggerCtx } from './types';
@@ -14,7 +15,7 @@ export function createIntegrationInboxTask(options: ErpIntegrationPluginOptions)
     return new ScheduledTask({
         id: 'erp-integration-inbox',
         description: 'Processes pending Integration Service inbox records (central hub only).',
-        schedule: `*/${Math.max(1, Math.round(everyMs / 1000))} * * * * *`,
+        schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
 

@@ -1,4 +1,5 @@
 import { Logger, ScheduledTask } from '@vendure/core';
+import { cronEveryMs } from 'shared';
 
 import { ReservationExpiryService } from './reservation-expiry.service';
 import { EXPIRY_POLL_INTERVAL_DEFAULT, loggerCtx } from './types';
@@ -13,7 +14,7 @@ export function createReservationExpiryTask(options: ReservationPluginOptions): 
     return new ScheduledTask({
         id: 'reservation-expiry',
         description: 'Expires reservations past their expiresAt and releases their stock.',
-        schedule: `*/${Math.max(1, Math.round(everyMs / 1000))} * * * * *`,
+        schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             const expired = await injector.get(ReservationExpiryService).expireDueReservations();
             if (expired > 0) {

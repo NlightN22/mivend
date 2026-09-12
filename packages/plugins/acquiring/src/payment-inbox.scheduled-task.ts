@@ -1,4 +1,5 @@
 import { Logger, ScheduledTask } from '@vendure/core';
+import { cronEveryMs } from 'shared';
 
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
 import { PAYMENT_INBOX_POLL_INTERVAL_DEFAULT, loggerCtx } from './types';
@@ -14,7 +15,7 @@ export function createPaymentInboxTask(options: AcquiringPluginOptions): Schedul
         id: 'payment-inbox',
         description:
             'Recovery sweep for incoming payment events that failed or arrived while something was down.',
-        schedule: `*/${Math.max(1, Math.round(everyMs / 1000))} * * * * *`,
+        schedule: cronEveryMs(everyMs),
         execute: async ({ injector, scheduledContext }) => {
             const { processed, failed } = await injector
                 .get(PaymentInboxProcessorService)

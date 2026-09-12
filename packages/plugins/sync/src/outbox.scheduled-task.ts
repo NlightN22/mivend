@@ -1,4 +1,5 @@
 import { ScheduledTask } from '@vendure/core';
+import { cronEveryMs } from 'shared';
 
 import { SyncLogger } from './sync-logger';
 import { SyncService } from './sync.service';
@@ -21,7 +22,7 @@ export function createSyncOutboxTask(options: SyncPluginOptions): ScheduledTask 
     return new ScheduledTask({
         id: 'sync-outbox',
         description: 'Drains sync_outbox to RabbitMQ.',
-        schedule: `*/${Math.max(1, Math.round(everyMs / 1000))} * * * * *`,
+        schedule: cronEveryMs(everyMs),
         execute: ({ injector }) => injector.get(SyncService).processOutbox(),
     });
 }
@@ -33,7 +34,7 @@ export function createSyncErpPollTask(options: SyncPluginOptions): ScheduledTask
     return new ScheduledTask({
         id: 'sync-erp-poll',
         description: 'Polls the ERP adapter for changes (central hub only).',
-        schedule: `*/${Math.max(1, Math.round(everyMs / 1000))} * * * * *`,
+        schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central' || !options.erpAdapter) return { skipped: true };
 

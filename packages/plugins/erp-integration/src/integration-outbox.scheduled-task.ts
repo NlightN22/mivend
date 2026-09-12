@@ -1,4 +1,5 @@
 import { ScheduledTask } from '@vendure/core';
+import { cronEveryMs } from 'shared';
 
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
 import { KAFKA_ENABLED_DEFAULT, OUTBOX_POLL_INTERVAL_DEFAULT } from './types';
@@ -19,7 +20,7 @@ export function createIntegrationOutboxTask(options: ErpIntegrationPluginOptions
         id: 'erp-integration-outbox',
         description:
             'Publishes pending outbound records to Integration Service (central hub only).',
-        schedule: `*/${Math.max(1, Math.round(everyMs / 1000))} * * * * *`,
+        schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
             if (!(options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return { skipped: true };

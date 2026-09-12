@@ -212,19 +212,22 @@ problems above at once, with zero custom code:
 
 ```ts
 import { ScheduledTask } from '@vendure/core';
+import { cronEveryMs } from 'shared';
 
 export function createFooSweepTask(options: FooPluginOptions): ScheduledTask {
     const everyMs = options.sweepIntervalMs ?? SWEEP_INTERVAL_DEFAULT;
     return new ScheduledTask({
         id: 'foo-sweep', // must be globally unique across all plugins
         description: 'One sentence a staff member reading the admin panel would understand.',
-        schedule: `*/${Math.max(1, Math.round(everyMs / 1000))} * * * * *`, // 6-field cron, seconds included
+        schedule: cronEveryMs(everyMs), // never hand-roll `*/${seconds} * * * * *` — see below
         execute: async ({ injector, scheduledContext }) => {
             return injector.get(FooService).sweep(scheduledContext);
         },
     });
 }
 ```
+
+**Always build the `schedule` string via `cronEveryMs(ms)` (`packages/shared/src/scheduled-task-cron.ts`), never a hand-rolled `` `*/${seconds} * * * * *` `` template literal.** Real, confirmed-live bug (issue #80's final audit): a naive seconds-field template breaks for any interval over 60s — croner (the cron lib `ScheduledTask` uses) rejects a step greater than a field's own max (`CronPattern: Syntax error, steps cannot be greater than maximum value of part (60)`) for `*/3600 * * * * *` (session-management's hourly cleanup, `3600_000`ms naively converted). That throw happens inside `SchedulerService.onApplicationBootstrap`, which is **not per-task try/caught** — one bad schedule string crash-loops the entire scheduler bootstrap, in both the server and worker process, taking every other plugin's `ScheduledTask` down with it (confirmed live: neither process ever opened its port on a clean `make dev`). `cronEveryMs` cascades an interval over 60s into the minutes field, then the hours field, so no field's step ever exceeds its own max.
 
 Register it in the plugin's `configuration` hook (same place other plugins already extend
 `customFields`/`orderOptions` — see `reservation.plugin.ts`/`sync.plugin.ts` for the established
@@ -251,21 +254,17 @@ do not add a second scheduler plugin/strategy per plugin. With it:
   primitives Vendure's native scheduler admin API exposes (`@vendure/core/dist/api/schema/
 admin-api/scheduled-task.api.graphql` + `scheduled-task.resolver.ts`); there is no other
   management surface to add on top for a `ScheduledTask` — a bespoke mutation/panel duplicating
-  any of these is scope creep, not a gap to fill:
-    - `Query.scheduledTasks: [ScheduledTask!]!` — every registered task's `id`, `description`,
-      `schedule`, `scheduleDescription`, `lastExecutedAt`, `nextExecutionAt`, `isRunning`,
-      `lastResult`, `enabled`. Permission: `ReadSettings`/`ReadSystem`.
-    - `Mutation.updateScheduledTask(input: { id, enabled }): ScheduledTask!` — enable/disable a
-      task without a deploy. Permission: `UpdateSettings`/`UpdateSystem`.
-    - `Mutation.runScheduledTask(id: String!): Success!` — trigger it right now, out of schedule
-      (cooperative — sets a DB flag the strategy's own poll loop picks up, same
-      `manualTriggerCheckInterval` mechanism regardless of which task). Permission:
-      `UpdateSettings`/`UpdateSystem`.
-    - There is **no** `deleteScheduledTask`/`removeScheduledTask` — a task's lifecycle is tied to
-      the plugin code that registers it (remove the `ScheduledTask` from
-      `config.schedulerOptions.tasks` to retire it, not an admin-API call).
-      This is the actual "can we manage this job through Vendure's interface" answer — use it instead
-      of building a bespoke panel/mutation for job control.
+  any of these is scope creep, not a gap to fill: - `Query.scheduledTasks: [ScheduledTask!]!` — every registered task's `id`, `description`,
+  `schedule`, `scheduleDescription`, `lastExecutedAt`, `nextExecutionAt`, `isRunning`,
+  `lastResult`, `enabled`. Permission: `ReadSettings`/`ReadSystem`. - `Mutation.updateScheduledTask(input: { id, enabled }): ScheduledTask!` — enable/disable a
+  task without a deploy. Permission: `UpdateSettings`/`UpdateSystem`. - `Mutation.runScheduledTask(id: String!): Success!` — trigger it right now, out of schedule
+  (cooperative — sets a DB flag the strategy's own poll loop picks up, same
+  `manualTriggerCheckInterval` mechanism regardless of which task). Permission:
+  `UpdateSettings`/`UpdateSystem`. - There is **no** `deleteScheduledTask`/`removeScheduledTask` — a task's lifecycle is tied to
+  the plugin code that registers it (remove the `ScheduledTask` from
+  `config.schedulerOptions.tasks` to retire it, not an admin-API call).
+  This is the actual "can we manage this job through Vendure's interface" answer — use it instead
+  of building a bespoke panel/mutation for job control.
 
 **What this does _not_ replace:** container/process-level control (restarting a hung or crashed
 Node process, rolling out new code) is a completely different layer — `ScheduledTask` only
@@ -285,6 +284,13 @@ separate session" step), for every `ScheduledTask` touched by the change, not ju
 
 - [ ] Is it a `ScheduledTask` (not a raw `new Worker()`/`new Queue()`, not a bare
       `setInterval`/`setTimeout` loop)?
+- [ ] Does its `schedule` come from `cronEveryMs(ms)` (`shared`), never a hand-rolled
+      `` `*/${seconds} * * * * *` `` template — verify by actually restarting the app (a clean
+      `make dev`) and confirming both `server` and `worker` finish bootstrapping (open their
+      ports / respond to a health check), not just that the file compiles. A bad cron string
+      here crash-loops the _entire_ scheduler for _every_ plugin, not just this one — a green
+      `make test`/`make lint` does not catch it, since neither exercises
+      `SchedulerService.onApplicationBootstrap` end-to-end.
 - [ ] Does its `id` collide with an existing task anywhere else in the repo (`grep -rn "id: '"`
       across `**/*.scheduled-task.ts`)?
 - [ ] Is it registered via `config.schedulerOptions.tasks` in the plugin's own `configuration`
