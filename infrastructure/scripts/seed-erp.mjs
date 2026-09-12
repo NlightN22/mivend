@@ -381,22 +381,30 @@ async function ensureBranchSettingsSeeded() {
         return;
     }
 
-    await adminGraphqlWithSession(
-        `mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $defaultWarehouseId: String!) {
-            setBranchSettings(
-                branchId: $branchId
-                defaultPriceTypeId: $defaultPriceTypeId
-                defaultWarehouseId: $defaultWarehouseId
-            ) { id branchId defaultPriceTypeId defaultWarehouseId }
-        }`,
-        {
-            branchId: 'branch-central',
-            defaultPriceTypeId: retail.id,
-            defaultWarehouseId: 'seed-placeholder-warehouse',
-        },
-        cookie,
-    );
-    console.log(`  → BranchSettings for branch-central: defaultPriceTypeId=RETAIL (${retail.id})`);
+    // One row per seeded branch (user request, 2026-09-05: branch-east added alongside
+    // branch-central) — defaultWarehouseId stays a placeholder per-branch id here too, matching
+    // the comment above: this column is a raw, non-FK string, and each branch's real warehouse(s)
+    // get seeded separately via seed-warehouses-via-inbox.mjs, which does not depend on this
+    // placeholder value at all.
+    const branchIds = ['branch-central', 'branch-east'];
+    for (const branchId of branchIds) {
+        await adminGraphqlWithSession(
+            `mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $defaultWarehouseId: String!) {
+                setBranchSettings(
+                    branchId: $branchId
+                    defaultPriceTypeId: $defaultPriceTypeId
+                    defaultWarehouseId: $defaultWarehouseId
+                ) { id branchId defaultPriceTypeId defaultWarehouseId }
+            }`,
+            {
+                branchId,
+                defaultPriceTypeId: retail.id,
+                defaultWarehouseId: `seed-placeholder-warehouse-${branchId}`,
+            },
+            cookie,
+        );
+        console.log(`  → BranchSettings for ${branchId}: defaultPriceTypeId=RETAIL (${retail.id})`);
+    }
 }
 
 async function main() {
@@ -409,7 +417,12 @@ async function main() {
     // dedup-by-exchangeId (ImportRunService.findByExchangeId) makes reseeding a no-op
     // instead of piling up a new erp_import_run row every time. Bump to 'v2' etc. only
     // when fixture data actually changes and must be reapplied.
-    const run = 'v3';
+    // v4 (#70): RETAIL/SPECIAL PriceType fixture data (cnt-002/cnt-003's priceType, RETAIL/
+    // SPECIAL PriceEntry rows) — bumping this was required to actually re-run against a DB
+    // already seeded at v3, since the exchangeId dedup above made a bare `make seed` at v3 a
+    // silent no-op (real incident: v3 data reseeded 0 new PriceType rows until this bump).
+    // v5 (2026-09-05, user request): added branch-east to the `branches` fixture.
+    const run = 'v5';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
@@ -957,7 +970,16 @@ async function main() {
         for (const e of departmentResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
-    const branches = [{ erpId: 'branch-central', name: 'Central branch' }];
+    const branches = [
+        { erpId: 'branch-central', name: 'Central branch' },
+        // Second branch (user request, 2026-09-05) so branch-scoped UI/flows (Settings >
+        // Branches select, warehouse curation, BranchSettings per branch) have more than one
+        // real row to exercise locally — see ensureBranchSettingsSeeded below for its own
+        // BranchSettings row, and infrastructure/scripts/seed-warehouses-via-inbox.mjs for its
+        // warehouses (Warehouse is Kafka-fed only, no erp-import record type for it — see that
+        // script's own header for why a live broker isn't needed to seed it anyway).
+        { erpId: 'branch-east', name: 'East branch' },
+    ];
     console.log(`Sending ${branches.length} branches...`);
     const branchResult = await postBatch(`seed-branches-${run}`, branches.map(data => ({ type: 'branch', data })));
     console.log(`  → status=${branchResult.status} processed=${branchResult.processed} failed=${branchResult.failed}`);
