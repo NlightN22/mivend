@@ -7,12 +7,16 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 const loggerCtx = 'IntegrationOrganizationHandler';
 
 // Applies Integration Service's `organization` stream (OrganizationChanged). This stream only
-// carries name/isActive/isDeleted — never legalName/inn/legalAddress/bank details, which stay
-// erp-import's own job (plugin-documents' OrganizationRequisitesRecord, a richer REST record —
-// see docs/payments.md "Organizations"). So this handler only ever UPDATES an existing
-// OrganizationRequisites row found by erpId, never creates one: fabricating the required
-// legalName/inn/legalAddress columns from data this stream doesn't have would put fake legal/bank
-// data in front of real invoice/PDF rendering (documents.service.ts's getRequisitesById).
+// carries name/isActive/isDeleted — never inn/legalAddress/bank details, which stay erp-import's
+// own job (plugin-documents' OrganizationRequisitesRecord, a richer REST record — see
+// docs/payments.md "Organizations"). Issue #88: previously update-only (skipped entirely when no
+// existing OrganizationRequisites row matched erpId), which meant an organization mivend only
+// knows about via Kafka (e.g. the staging-integration contour, which never runs erp-import at
+// all — issue #68) was invisible forever with no local row and no way to reconcile against it
+// (issue #84's ErpReconciliationIssue for `organization` always showed a full 0-vs-N gap). Now
+// always creates/updates a row via legalName=name; inn/legalAddress/bank fields stay null until
+// erp-import's own record arrives, if it ever does in this contour — never fabricated here.
+// PdfGeneratorService refuses to render an invoice/contract against a still-partial row.
 @Injectable()
 export class OrganizationStreamHandler implements InboundStreamHandler {
     constructor(private readonly documentsService: DocumentsService) {}
@@ -29,20 +33,7 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
         }
         const isActive = payload.isActive !== false;
 
-        const updated = await this.documentsService.updateActiveStateIfExists(
-            ctx,
-            entityId,
-            name,
-            isActive,
-        );
-        if (!updated) {
-            Logger.verbose(
-                `organization ${entityId}: no OrganizationRequisites found yet (awaiting erp-import's ` +
-                    `full legal requisites) — skipping`,
-                loggerCtx,
-            );
-            return;
-        }
-        Logger.verbose(`Updated organization erpId=${entityId}`, loggerCtx);
+        await this.documentsService.upsertActiveState(ctx, entityId, name, isActive);
+        Logger.verbose(`Upserted organization erpId=${entityId}`, loggerCtx);
     }
 }

@@ -218,17 +218,22 @@ describe('DocumentsService', () => {
         });
     });
 
-    describe('updateActiveStateIfExists', () => {
-        it('returns false and saves nothing when no requisites exist for that erpId', async () => {
+    describe('upsertActiveState', () => {
+        it('creates a partial row (issue #88) when no requisites exist for that erpId, never fabricating inn/legalAddress', async () => {
             mockRepo.findOne.mockResolvedValue(null);
-            const result = await service.updateActiveStateIfExists(
-                mockCtx,
-                'org-unknown',
-                'Acme LLC',
-                true,
+            await service.upsertActiveState(mockCtx, 'org-unknown', 'Acme LLC', true);
+            expect(mockRepo.create).toHaveBeenCalledWith({
+                erpId: 'org-unknown',
+                legalName: 'Acme LLC',
+                isActive: true,
+            });
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    erpId: 'org-unknown',
+                    legalName: 'Acme LLC',
+                    isActive: true,
+                }),
             );
-            expect(result).toBe(false);
-            expect(mockRepo.save).not.toHaveBeenCalled();
         });
 
         it('updates legalName/isActive on an existing row, never touching inn/legalAddress/bank fields', async () => {
@@ -241,13 +246,7 @@ describe('DocumentsService', () => {
                 legalAddress: 'Old address',
             };
             mockRepo.findOne.mockResolvedValue(entity);
-            const result = await service.updateActiveStateIfExists(
-                mockCtx,
-                'org-1',
-                'New Legal Name',
-                false,
-            );
-            expect(result).toBe(true);
+            await service.upsertActiveState(mockCtx, 'org-1', 'New Legal Name', false);
             expect(mockRepo.save).toHaveBeenCalledWith(
                 expect.objectContaining({
                     legalName: 'New Legal Name',
@@ -256,6 +255,38 @@ describe('DocumentsService', () => {
                     legalAddress: 'Old address',
                 }),
             );
+        });
+    });
+
+    describe('assertRequisitesComplete', () => {
+        it('throws when inn is missing', () => {
+            expect(() =>
+                service.assertRequisitesComplete({
+                    erpId: 'org-1',
+                    inn: null,
+                    legalAddress: 'Some address',
+                } as never),
+            ).toThrow(/missing legal requisites/);
+        });
+
+        it('throws when legalAddress is missing', () => {
+            expect(() =>
+                service.assertRequisitesComplete({
+                    erpId: 'org-1',
+                    inn: '123456',
+                    legalAddress: null,
+                } as never),
+            ).toThrow(/missing legal requisites/);
+        });
+
+        it('does not throw when both are present', () => {
+            expect(() =>
+                service.assertRequisitesComplete({
+                    erpId: 'org-1',
+                    inn: '123456',
+                    legalAddress: 'Some address',
+                } as never),
+            ).not.toThrow();
         });
     });
 

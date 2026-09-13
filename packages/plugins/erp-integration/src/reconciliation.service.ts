@@ -93,6 +93,8 @@ export class ReconciliationService {
                     triggeredByAdministratorId: input.triggeredByAdministratorId ?? null,
                 });
                 issuesFound += 1;
+            } else {
+                await this.autoResolveIfOpen(ctx, aggregateType);
             }
         }
 
@@ -128,6 +130,20 @@ export class ReconciliationService {
         issue.status = 'resolved';
         issue.resolution = input.resolution;
         return repo.save(issue);
+    }
+
+    // Without this, a stale open issue lingers forever showing outdated counts once the
+    // underlying drift is actually gone — recordIssue only ever runs when a mismatch is
+    // detected, never when one disappears. Auto-closing here isn't "guessing which number is
+    // right" (the thing this service's design otherwise refuses to do) — both counts have just
+    // been independently re-verified to agree, so there is nothing left to guess.
+    private async autoResolveIfOpen(ctx: RequestContext, aggregateType: string): Promise<void> {
+        const repo = this.connection.getRepository(ctx, ErpReconciliationIssue);
+        const existing = await repo.findOne({ where: { aggregateType, status: 'open' } });
+        if (!existing) return;
+        existing.status = 'resolved';
+        existing.resolution = 'Auto-resolved: counts matched on a later reconciliation run.';
+        await repo.save(existing);
     }
 
     // Without this dedupe, a persistent drift (the exact scenario this issue was written for —

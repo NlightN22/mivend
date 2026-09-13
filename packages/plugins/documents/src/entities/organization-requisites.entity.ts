@@ -15,8 +15,13 @@ export class OrganizationRequisites extends VendureEntity {
     @Column({ type: 'varchar' })
     legalName!: string;
 
-    @Column({ type: 'varchar' })
-    inn!: string;
+    // Nullable (issue #88): a partial row can now be created from just the `organization` Kafka
+    // stream's name/isActive (see DocumentsService.upsertActiveState) — inn/legalAddress still
+    // only ever arrive via erp-import's richer OrganizationRequisitesRecord. Never fabricate a
+    // placeholder value here; document generation must refuse rather than render a blank/fake one
+    // (see PdfGeneratorService's own guard).
+    @Column({ type: 'varchar', nullable: true })
+    inn!: string | null;
 
     @Column({ type: 'varchar', nullable: true })
     kpp!: string | null;
@@ -24,8 +29,8 @@ export class OrganizationRequisites extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     ogrn!: string | null;
 
-    @Column({ type: 'varchar' })
-    legalAddress!: string;
+    @Column({ type: 'varchar', nullable: true })
+    legalAddress!: string | null;
 
     @Column({ type: 'varchar', nullable: true })
     bankName!: string | null;

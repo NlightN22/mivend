@@ -146,6 +146,7 @@ export class PdfGeneratorService implements OnModuleInit {
                 );
             }
             requisites = await this.documentsService.getRequisitesById(ctx, invoice.organizationId);
+            this.documentsService.assertRequisitesComplete(requisites);
             const orgLines = await this.invoiceService.getLinesForInvoice(ctx, invoice);
             source = {
                 documentNumber: document.number,
@@ -156,6 +157,7 @@ export class PdfGeneratorService implements OnModuleInit {
             };
         } else {
             requisites = await this.documentsService.getActiveRequisites(ctx);
+            this.documentsService.assertRequisitesComplete(requisites);
             source = {
                 documentNumber: order.code,
                 issueDate: new Date(order.orderPlacedAt ?? order.createdAt),
@@ -174,6 +176,7 @@ export class PdfGeneratorService implements OnModuleInit {
 
     private async buildContractHtml(ctx: RequestContext, document: Document): Promise<string> {
         const requisites = await this.documentsService.getActiveRequisites(ctx);
+        this.documentsService.assertRequisitesComplete(requisites);
         const buyerLegalName = await this.getBuyerLegalName(ctx, document.counterpartyId);
         const logoDataUri = await this.getLogoDataUri(ctx, requisites);
         return renderContractHtml(

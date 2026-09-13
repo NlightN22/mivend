@@ -131,6 +131,37 @@ describe('ReconciliationService.runComparison', () => {
         expect(save).not.toHaveBeenCalled();
     });
 
+    it('auto-resolves a previously open issue once counts agree again (no stale drift left showing)', async () => {
+        const existing = { id: '9', status: 'open', aggregateType: COMPARED_AGGREGATE_TYPES[0] };
+        const save = vi.fn().mockResolvedValue(undefined);
+        const findOne = vi.fn().mockResolvedValue(existing);
+        const connection = {
+            getRepository: () => ({ save, findOne, createQueryBuilder: vi.fn() }),
+        };
+        const requestContextService = { create: vi.fn().mockResolvedValue({}) };
+        const summaryClient = {
+            fetchSummaries: async (aggregateType?: string) => [makeSummary(aggregateType ?? '', 5)],
+        };
+        const localCounts = { getLocalActiveCount: async () => 5 };
+        const notificationService = { create: vi.fn() };
+        const service = new ReconciliationService(
+            connection as never,
+            requestContextService as never,
+            summaryClient as never,
+            localCounts as never,
+            notificationService as never,
+        );
+
+        await service.runComparison({ triggeredBy: 'scheduled' });
+
+        expect(save).toHaveBeenCalledTimes(COMPARED_AGGREGATE_TYPES.length);
+        expect(save.mock.calls[0][0]).toMatchObject({
+            id: '9',
+            status: 'resolved',
+            resolution: expect.stringMatching(/auto-resolved/i),
+        });
+    });
+
     it('skips a type whose summary fetch fails, without crashing the whole run or treating it as zero discrepancies', async () => {
         let calls = 0;
         const { service, save } = makeService({
