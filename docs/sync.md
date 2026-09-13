@@ -303,6 +303,40 @@ Use a unique index on `eventId` in any processed-events log table as a hard safe
 
 ---
 
+## Reconciliation against Integration Service (issue #84)
+
+Idempotent consumers and outbox/inbox retries (above) guarantee no message is silently dropped,
+but they don't detect a gap that never arrived as a message in the first place (e.g. a stalled
+upstream publish, or a very large backlog that takes hours to drain — see #82/#84's own incident
+write-up). `plugin-erp-integration` runs a periodic reconciliation check against Integration
+Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
+(`is.komponent-m.ru`, `X-Api-Key` auth via `INTEGRATION_SERVICE_API_KEY`), comparing its
+`activeCount` per entity type against mivend's own local count for the same type.
+
+- **Scope**: only `category`, `organization`, `warehouse`, `priceType`, `product` are compared —
+  the other supported types (`offer`, `stockOrganization`, `unit`, `storageLocation`, `price`,
+  `stock`) don't currently have a meaningful local equivalent to compare against (see
+  `reconciliation-local-counts.service.ts`'s own comments for why each is excluded).
+- **Two discrepancy classes only** (the summary endpoint has no per-entity diff, only aggregate
+  counts): `upstream-higher` (Integration Service has more active entities than mivend — flag for
+  a human to request a replay via Search Platform's own operator-only tooling) and `local-higher`
+  (mivend has more than Integration Service — flag for review, never auto-deleted).
+- **Where to see it**: the manager portal's Dashboard shows an "ERP reconciliation" panel listing
+  open discrepancies (`ErpReconciliationPanel.vue`), gated by the `ManageErpIntegration`
+  permission.
+- **Automatic run**: a daily `ScheduledTask` (central hub only, only when `kafkaEnabled`) runs the
+  same comparison Vendure's own `scheduledTasks` admin API can inspect/enable/disable/run-now.
+- **Manual run**: the same Dashboard panel has a "Run reconciliation now" button
+  (`runErpReconciliation` mutation) — calls the exact same `ReconciliationService.runComparison`
+  method the scheduled task uses, immediately, for verifying a fix or checking after a known
+  incident without waiting for the next nightly run.
+- **Resolving a discrepancy**: `resolveErpReconciliationIssue(id, resolution)` marks it resolved
+  with a required note — never auto-resolved. An open issue for the same `aggregateType` is
+  updated in place on every re-detection rather than duplicated, so a persistent drift produces
+  one row, not one per day.
+
+---
+
 ## What is never synced
 
 - Admin sessions, API tokens — never leave the instance that issued them.
