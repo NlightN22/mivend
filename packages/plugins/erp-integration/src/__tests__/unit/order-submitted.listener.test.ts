@@ -24,10 +24,8 @@ function makeOrder(lines: TestLine[]): {
 
 function makeListener(options: {
     order: ReturnType<typeof makeOrder> | null;
-    allocations: Array<{
-        orderLine: { id: string };
-        stockLocation: { customFields?: { warehouseErpId?: string } };
-    }>;
+    reservations: Array<{ orderLineId: string; stockLocationId: string; status: string }>;
+    warehouseErpIdByLocationId: Record<string, string>;
     productExternalIds: Record<string, string>;
     counterparty: { erpId: string } | null;
     priceType: { externalId: string | null } | null;
@@ -37,23 +35,29 @@ function makeListener(options: {
     dataSource: { transaction: ReturnType<typeof vi.fn> };
 } {
     const orderRepo = { findOne: vi.fn().mockResolvedValue(options.order) };
-    const allocationRepo = { find: vi.fn().mockResolvedValue(options.allocations) };
     const connection = {
-        getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
-            entity && entity.name === 'Allocation' ? allocationRepo : orderRepo,
-        ),
+        getRepository: vi.fn(() => orderRepo),
         rawConnection: {
             createQueryBuilder: vi.fn(() => {
-                const rows = Object.entries(options.productExternalIds).map(([id, externalId]) => ({
-                    id,
-                    externalId,
-                }));
                 const qb = {
+                    __from: '',
                     select: vi.fn().mockReturnThis(),
                     addSelect: vi.fn().mockReturnThis(),
-                    from: vi.fn().mockReturnThis(),
+                    from: vi.fn(function (this: typeof qb, table: string) {
+                        this.__from = table;
+                        return this;
+                    }),
                     where: vi.fn().mockReturnThis(),
-                    getRawMany: vi.fn().mockResolvedValue(rows),
+                    getRawMany: vi.fn(async function (this: typeof qb) {
+                        if (qb.__from === 'stock_location') {
+                            return Object.entries(options.warehouseErpIdByLocationId).map(
+                                ([id, warehouseErpId]) => ({ id, warehouseErpId }),
+                            );
+                        }
+                        return Object.entries(options.productExternalIds).map(
+                            ([id, externalId]) => ({ id, externalId }),
+                        );
+                    }),
                 };
                 return qb;
             }),
@@ -68,6 +72,9 @@ function makeListener(options: {
     const customerPricingService = {
         getCustomerPriceType: vi.fn().mockResolvedValue(options.priceType),
     };
+    const reservationService = {
+        findForOrder: vi.fn().mockResolvedValue(options.reservations),
+    };
     const eventBus = { ofType: vi.fn(() => ({ subscribe: vi.fn() })) };
 
     const listener = new OrderSubmittedListener(
@@ -77,18 +84,19 @@ function makeListener(options: {
         outboxService as never,
         counterpartyService as never,
         customerPricingService as never,
+        reservationService as never,
         { instanceType: 'central' } as never,
     );
 
     return { listener, writeToOutbox, dataSource };
 }
 
-// order-submitted.listener.ts's Allocation repository is looked up via
-// connection.getRepository(ctx, Allocation) — the mocked connection above dispatches by the
-// entity class's own `name` (real Vendure Allocation class name), avoiding a full @vendure/core
-// bootstrap for a unit test, per docs/testing-strategy.md's Unit level. Product.customFields
-// .externalId is read via raw SQL (same as price.handler.ts/stock.handler.ts), mocked via
-// rawConnection.createQueryBuilder above.
+// order-submitted.listener.ts (mivend#85) sources warehouseId from plugin-reservation's
+// Reservation entity (via ReservationService.findForOrder), not Vendure's native Allocation —
+// see the listener's own doc comment. Product.customFields.externalId and
+// StockLocation.customFields.warehouseErpId are both read via raw SQL (same as every other
+// cross-plugin customField read in this codebase), mocked via rawConnection.createQueryBuilder
+// above, dispatching on the queried table name.
 const ctx = {} as RequestContext;
 const event = { ctx, orderId: 'order-1', orderCode: 'ORD-001' };
 
@@ -97,7 +105,8 @@ describe('OrderSubmittedListener', () => {
         const order = makeOrder([]);
         const { listener, writeToOutbox } = makeListener({
             order,
-            allocations: [],
+            reservations: [],
+            warehouseErpIdByLocationId: {},
             productExternalIds: {},
             counterparty: null,
             priceType: null,
@@ -125,16 +134,11 @@ describe('OrderSubmittedListener', () => {
         const order = makeOrder([goodLine, missingOrgLine]);
         const { listener, writeToOutbox } = makeListener({
             order,
-            allocations: [
-                {
-                    orderLine: { id: 'line-1' },
-                    stockLocation: { customFields: { warehouseErpId: 'wh-1' } },
-                },
-                {
-                    orderLine: { id: 'line-2' },
-                    stockLocation: { customFields: { warehouseErpId: 'wh-1' } },
-                },
+            reservations: [
+                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+                { orderLineId: 'line-2', stockLocationId: 'location-1', status: 'active' },
             ],
+            warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
             productExternalIds: {
                 'variant-product-1': 'product-1',
                 'variant-product-2': 'product-2',
@@ -160,6 +164,29 @@ describe('OrderSubmittedListener', () => {
         ]);
     });
 
+    it('ignores a released/expired reservation — only active ones count', async () => {
+        const line: TestLine = {
+            id: 'line-1',
+            quantity: 2,
+            productVariant: { productId: 'variant-1', customFields: { organizationId: 1 } },
+        };
+        const order = makeOrder([line]);
+        const { listener, writeToOutbox } = makeListener({
+            order,
+            reservations: [
+                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'released' },
+            ],
+            warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
+            productExternalIds: { 'variant-1': 'product-1' },
+            counterparty: { erpId: 'counterparty-1' },
+            priceType: null,
+        });
+
+        await (listener as unknown as { handle: (e: typeof event) => Promise<void> }).handle(event);
+
+        expect(writeToOutbox).not.toHaveBeenCalled();
+    });
+
     it('fans out into one payload per distinct (organizationId, warehouseId) combination', async () => {
         const lineOrgAWhA: TestLine = {
             id: 'line-1',
@@ -179,20 +206,12 @@ describe('OrderSubmittedListener', () => {
         const order = makeOrder([lineOrgAWhA, lineOrgAWhB, lineOrgB]);
         const { listener, writeToOutbox } = makeListener({
             order,
-            allocations: [
-                {
-                    orderLine: { id: 'line-1' },
-                    stockLocation: { customFields: { warehouseErpId: 'wh-A' } },
-                },
-                {
-                    orderLine: { id: 'line-2' },
-                    stockLocation: { customFields: { warehouseErpId: 'wh-B' } },
-                },
-                {
-                    orderLine: { id: 'line-3' },
-                    stockLocation: { customFields: { warehouseErpId: 'wh-A' } },
-                },
+            reservations: [
+                { orderLineId: 'line-1', stockLocationId: 'location-A', status: 'active' },
+                { orderLineId: 'line-2', stockLocationId: 'location-B', status: 'active' },
+                { orderLineId: 'line-3', stockLocationId: 'location-A', status: 'active' },
             ],
+            warehouseErpIdByLocationId: { 'location-A': 'wh-A', 'location-B': 'wh-B' },
             productExternalIds: {
                 'variant-1': 'product-1',
                 'variant-2': 'product-2',

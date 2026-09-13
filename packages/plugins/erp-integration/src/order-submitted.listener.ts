@@ -1,9 +1,9 @@
 import { Injectable, OnApplicationBootstrap, Inject } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { DataSource, In } from 'typeorm';
-import { Allocation, EventBus, Logger, Order, TransactionalConnection } from '@vendure/core';
+import { DataSource } from 'typeorm';
+import { EventBus, Logger, Order, TransactionalConnection } from '@vendure/core';
 import type { ID } from '@vendure/common/lib/shared-types';
-import { OrderReadyForErpEvent } from '@mivend/plugin-erp-order';
+import { OrderReservedEvent, ReservationService } from '@mivend/plugin-reservation';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { subscribeAndLog } from 'shared';
@@ -21,9 +21,14 @@ interface OrderSubmittedGroup {
     lines: OrderSubmittedLine[];
 }
 
-// OrderReadyForErpEvent already exists as this codebase's own "order was just placed, ERP-facing
-// side needs to know" signal (see plugin-erp-order's ErpOrderService.onOrderPlaced) — reused here
-// rather than adding a second listener on OrderStateTransitionEvent for the same moment.
+// mivend#85: triggers off plugin-reservation's OrderReservedEvent, not plugin-erp-order's
+// OrderReadyForErpEvent — this project's real per-line warehouse fact is the custom Reservation
+// entity (see docs/order-flow.md's two-stage reservation model), not Vendure's native
+// Allocation, and it doesn't exist yet at OrderReadyForErpEvent's (much earlier) firing point.
+// ReservationService.reserveOrder() already gates on every field this listener needs
+// (customerId/productId/warehouseId — see ErpExportDataMissingError) before writing any
+// Reservation at all, so by the time OrderReservedEvent fires, all of it should already resolve;
+// this listener's own skip/log path below is a should-never-happen safety net, not a normal path.
 @Injectable()
 export class OrderSubmittedListener implements OnApplicationBootstrap {
     constructor(
@@ -33,6 +38,7 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
         private readonly outboxService: IntegrationOutboxService,
         private readonly counterpartyService: CounterpartyService,
         private readonly customerPricingService: CustomerPricingService,
+        private readonly reservationService: ReservationService,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
     ) {}
@@ -42,26 +48,27 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
 
         subscribeAndLog(
             this.eventBus,
-            OrderReadyForErpEvent,
+            OrderReservedEvent,
             event => this.handle(event),
             OrderSubmittedListener.name,
         );
     }
 
-    private async handle(event: OrderReadyForErpEvent): Promise<void> {
+    private async handle(event: OrderReservedEvent): Promise<void> {
         const order = await this.connection.getRepository(event.ctx, Order).findOne({
             where: { id: event.orderId },
             relations: ['lines', 'lines.productVariant'],
         });
         if (!order) return;
 
-        // customerId (mivend#85): Counterparty.erpId for the order's customer — the direct
-        // Customer.customFields.counterpartyId link (CounterpartyService.getForCustomer), not a
-        // TradingPoint hop. No customer at all (a guest checkout) or no Counterparty resolved
-        // (e.g. a TradingPoint not yet ERP-synced) means there is no valid customerId to report
-        // yet — matches this listener's existing tolerance for unresolved data at this point.
+        // customerId: Counterparty.erpId for the order's customer — the direct
+        // Customer.customFields.counterpartyId link (CounterpartyService.getForCustomer).
+        // Already verified resolvable by reserveOrder()'s gate; re-checked here defensively.
         if (!order.customerId) {
-            Logger.verbose(`order ${order.id}: no customer, skipping order.submitted`, loggerCtx);
+            Logger.warn(
+                `order ${order.id}: OrderReservedEvent fired with no customer — should be unreachable, reserveOrder() gates on this`,
+                loggerCtx,
+            );
             return;
         }
         const customerVendureId = order.customerId;
@@ -70,8 +77,8 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
             customerVendureId,
         );
         if (!counterparty) {
-            Logger.verbose(
-                `order ${order.id}: no Counterparty resolved for customer ${String(order.customerId)}, skipping order.submitted`,
+            Logger.warn(
+                `order ${order.id}: no Counterparty resolved for customer ${String(order.customerId)} — should be unreachable, reserveOrder() gates on this`,
                 loggerCtx,
             );
             return;
@@ -86,21 +93,33 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
         );
         const priceTypeId = priceType?.externalId ?? null;
 
-        // warehouseId (mivend#85) is resolved per OrderLine, not per Order — one order can
-        // allocate across multiple StockLocations/warehouses (see BranchStockLocationStrategy).
-        // First Allocation wins if a line was ever split across locations, mirroring
-        // BranchStockLocationStrategy.forAllocation's own one-location-per-line result.
+        // warehouseId (mivend#85): sourced from this project's own Reservation entity, not
+        // Vendure's native Allocation — see this file's own doc comment above and
+        // docs/order-flow.md's two-stage reservation model. Only 'active' reservations count;
+        // a released/expired one no longer reflects where this order's stock actually sits.
+        const reservations = (
+            await this.reservationService.findForOrder(event.ctx, event.orderId)
+        ).filter(r => r.status === 'active');
         const warehouseIdByLineId = new Map<string, string>();
-        if (order.lines.length > 0) {
-            const allocations = await this.connection.getRepository(event.ctx, Allocation).find({
-                where: { orderLine: { id: In(order.lines.map(line => line.id)) } },
-                relations: ['orderLine', 'stockLocation'],
-            });
-            for (const allocation of allocations) {
-                const lineId = String(allocation.orderLine.id);
-                const warehouseErpId = allocation.stockLocation?.customFields?.warehouseErpId;
-                if (warehouseErpId && !warehouseIdByLineId.has(lineId)) {
-                    warehouseIdByLineId.set(lineId, warehouseErpId);
+        if (reservations.length > 0) {
+            const stockLocationIds = [...new Set(reservations.map(r => r.stockLocationId))];
+            const rows = await this.connection.rawConnection
+                .createQueryBuilder()
+                .select('sl.id', 'id')
+                .addSelect('sl."customFieldsWarehouseerpid"', 'warehouseErpId')
+                .from('stock_location', 'sl')
+                .where('sl.id IN (:...ids)', { ids: stockLocationIds })
+                .getRawMany<{ id: string; warehouseErpId: string | null }>();
+            const warehouseErpIdByLocationId = new Map<string, string>();
+            for (const row of rows) {
+                if (row.warehouseErpId) {
+                    warehouseErpIdByLocationId.set(String(row.id), row.warehouseErpId);
+                }
+            }
+            for (const reservation of reservations) {
+                const warehouseErpId = warehouseErpIdByLocationId.get(reservation.stockLocationId);
+                if (warehouseErpId) {
+                    warehouseIdByLineId.set(reservation.orderLineId, warehouseErpId);
                 }
             }
         }
@@ -147,10 +166,12 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
                 ? productExternalIdByProductId.get(String(line.productVariant.productId))
                 : undefined;
             if (organizationId == null || !warehouseId || !productId) {
-                // Missing organization, warehouse, or ERP product id for this line — cannot be
-                // reported yet. Skipped, never fabricated; logged so a stuck line stays visible.
-                Logger.warn(
-                    `orderLine ${line.id}: cannot build order.submitted line ` +
+                // Should be unreachable — reserveOrder()'s ERP-export-readiness gate already
+                // verified productId/warehouseId for every line before this event could ever
+                // fire. Skipped, never fabricated; logged loudly so a real divergence between
+                // that gate and this listener is never silently swallowed.
+                Logger.error(
+                    `orderLine ${line.id}: cannot build order.submitted line despite reserveOrder()'s gate ` +
                         `(organizationId=${String(organizationId)}, warehouseId=${warehouseId}, productId=${String(productId)})`,
                     loggerCtx,
                 );
@@ -167,15 +188,12 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
         }
 
         if (groups.size === 0) {
-            // No line resolved organization+warehouse+product yet — nothing to report to
-            // Integration Service about. Not an error: matches ErpOrderService.onOrderPlaced's
-            // own tolerance for a missing trading point/branch at placement time.
             return;
         }
 
         const payloads: OrderSubmittedPayload[] = [...groups.values()].map(group => ({
             eventId: randomUUID(),
-            orderId: event.orderId,
+            orderId: String(event.orderId),
             orderCode: event.orderCode,
             organizationId: group.organizationId,
             customerId,
@@ -186,21 +204,18 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
             currencyCode: order.currencyCode,
         }));
 
-        // Deliberate, documented deviation from the outbox-pattern messaging invariant's letter ("outbox write
-        // in the same DB transaction as the business data"): the Order write already committed
-        // via Vendure core before OrderReadyForErpEvent fires — there is no open transaction left
-        // to join. The rule's actual intent (no window where business data exists without a
-        // corresponding outbox record, or vice versa) is not achievable here for the same reason
-        // it isn't for plugin-sync's own EventBus-triggered outbox writes (see
-        // outbox-atomicity.int.test.ts's doc comment there): the write happens in its own
-        // transaction, is at-least-once (a crash between commit and event delivery means this
-        // handler may simply never run for that order — no retry mechanism re-fires
-        // OrderReadyForErpEvent), and is a known, accepted gap shared with the rest of this
-        // codebase's EventBus-reactive outbox producers, not something this plugin introduces
-        // new. A stronger guarantee would require moving this write inside
-        // ErpOrderService.onOrderPlaced's own transaction (a cross-plugin coupling this issue's
-        // milestone scope deliberately avoided) or a periodic reconciliation sweep — neither
-        // implemented here.
+        // Deliberate, documented deviation from the outbox-pattern messaging invariant's letter
+        // ("outbox write in the same DB transaction as the business data"): the Reservation write
+        // already committed via ReservationService.reserveOrder() before OrderReservedEvent
+        // fires — there is no open transaction left to join. The rule's actual intent (no window
+        // where business data exists without a corresponding outbox record, or vice versa) is
+        // not achievable here for the same reason it isn't for plugin-sync's own EventBus-
+        // triggered outbox writes (see outbox-atomicity.int.test.ts's doc comment there): the
+        // write happens in its own transaction, is at-least-once (a crash between commit and
+        // event delivery means this handler may simply never run for that order — no retry
+        // mechanism re-fires OrderReservedEvent), and is a known, accepted gap shared with the
+        // rest of this codebase's EventBus-reactive outbox producers, not something this plugin
+        // introduces new.
         //
         // All groups for one order are written in a single transaction: a partial publish
         // (order reported to Integration Service for one group but not another) is a worse,

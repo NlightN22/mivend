@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+import { Logger, RequestContext, StockLocation, TransactionalConnection } from '@vendure/core';
+import { In } from 'typeorm';
 
 import { Branch } from './entities/branch.entity';
 import { Warehouse } from './entities/warehouse.entity';
@@ -72,6 +73,36 @@ export class WarehouseService {
 
     async findByErpId(ctx: RequestContext, erpId: string): Promise<Warehouse | null> {
         return this.connection.getRepository(ctx, Warehouse).findOne({ where: { erpId } });
+    }
+
+    // Shared branch->StockLocation join, extracted so every caller that needs "which
+    // StockLocations belong to this order's branch" (erp-integration's
+    // BranchStockLocationStrategy, plugin-reservation's ReservationService) resolves it the same
+    // way instead of each re-deriving it — a branch can have several warehouses/StockLocations,
+    // never exactly one. Reads StockLocation.customFields.warehouseErpId via raw SQL, same as
+    // every other cross-plugin customField read in this codebase (that field isn't declared in
+    // this package's own TS project, so the typed entity doesn't expose it here).
+    async findActiveStockLocationsForBranch(
+        ctx: RequestContext,
+        branchId: string,
+    ): Promise<StockLocation[]> {
+        const warehouses = (await this.findAll(ctx)).filter(
+            w => w.branchId === branchId && w.isActive,
+        );
+        const warehouseErpIds = warehouses.map(w => w.erpId);
+        if (warehouseErpIds.length === 0) return [];
+
+        const rows = await this.connection.rawConnection
+            .createQueryBuilder()
+            .select('sl.id', 'id')
+            .from('stock_location', 'sl')
+            .where('sl."customFieldsWarehouseerpid" IN (:...erpIds)', { erpIds: warehouseErpIds })
+            .getRawMany<{ id: string }>();
+        if (rows.length === 0) return [];
+
+        return this.connection
+            .getRepository(ctx, StockLocation)
+            .find({ where: { id: In(rows.map(r => r.id)) } });
     }
 
     // Manager-portal curation (issue #66) — staff confirm/override the branch a Warehouse

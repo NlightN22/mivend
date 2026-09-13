@@ -30,6 +30,7 @@ import { InsufficientStockError } from '../../reservation-errors';
 @Entity('reservation_test_order')
 class TestOrder {
     @PrimaryGeneratedColumn('uuid') id!: string;
+    @Column({ type: 'varchar', nullable: true }) customerId!: string | null;
     @Column({ type: 'jsonb', default: {} }) customFields!: Record<string, unknown>;
     @OneToMany(() => TestOrderLine, line => line.order) lines!: TestOrderLine[];
 }
@@ -37,6 +38,12 @@ class TestOrder {
 @Entity('reservation_test_product_variant')
 class TestProductVariant {
     @PrimaryGeneratedColumn('uuid') id!: string;
+    // Fixed to a single value across every test row — mivend#85's ERP-export-readiness gate
+    // (Counterparty/Product.externalId/warehouse resolution) is already covered by
+    // reservation.service.test.ts's unit tests; this integration suite is only about real-
+    // Postgres StockLevel locking/concurrency, so warehouseService/counterpartyService/the raw
+    // product-externalId query are all shimmed below to unconditionally pass that gate.
+    @Column({ type: 'varchar', default: 'product-x' }) productId!: string;
     @Column({ type: 'jsonb', default: {} }) customFields!: Record<string, unknown>;
 }
 
@@ -133,7 +140,23 @@ beforeAll(async () => {
     await dataSource.initialize();
 
     const connectionShim = {
-        rawConnection: dataSource,
+        // Only reservation.service.ts's mivend#85 ERP-export-readiness gate reads
+        // rawConnection.createQueryBuilder() (for Product.customFields.externalId) — shimmed to
+        // unconditionally resolve every productId to a fake externalId, see TestProductVariant's
+        // doc comment above. dataSource.transaction() (used by withTransaction below) doesn't go
+        // through this field.
+        rawConnection: {
+            createQueryBuilder: () => {
+                const qb = {
+                    select: () => qb,
+                    addSelect: () => qb,
+                    from: () => qb,
+                    where: () => qb,
+                    getRawMany: async () => [{ id: 'product-x', externalId: 'ext-product-x' }],
+                };
+                return qb;
+            },
+        },
         getRepository: (ctx: RequestContext, entity: { name: string }) => {
             const manager = (ctx as unknown as { __manager?: EntityManager }).__manager;
             const target = entityMap[entity.name as keyof typeof entityMap];
@@ -146,8 +169,19 @@ beforeAll(async () => {
     } as unknown as TransactionalConnection;
 
     const eventBus = { publish: () => undefined } as unknown as EventBus;
+    const warehouseServiceShim = {
+        findActiveStockLocationsForBranch: async () => [location],
+    } as never;
+    const counterpartyServiceShim = {
+        getForCustomer: async () => ({ erpId: 'counterparty-x' }),
+    } as never;
 
-    service = new ReservationService(connectionShim, eventBus);
+    service = new ReservationService(
+        connectionShim,
+        eventBus,
+        warehouseServiceShim,
+        counterpartyServiceShim,
+    );
 });
 
 afterAll(async () => {
@@ -155,13 +189,14 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-// ReservationService caches the default StockLocation id for the lifetime of the singleton
-// (correct in production, where exactly one StockLocation ever exists) — so the test suite
-// must create it once, not per-test, to match that assumption.
+// warehouseServiceShim (above) always resolves to this one location regardless of branch — so
+// it only needs creating once, not per-test.
 let location: TestStockLocation;
+let productVariant: TestProductVariant;
 
 beforeAll(async () => {
     location = await dataSource.getRepository(TestStockLocation).save({});
+    productVariant = await dataSource.getRepository(TestProductVariant).save({});
 });
 
 beforeEach(async () => {
@@ -180,15 +215,25 @@ describe('ReservationService.reserveOrder (integration, real Postgres, concurren
             stockAllocated: 0,
         });
 
-        const orderA = await dataSource.getRepository(TestOrder).save({ customFields: {} });
-        await dataSource
-            .getRepository(TestOrderLine)
-            .save({ orderId: orderA.id, productVariantId: 'variant-1', quantity: 3 });
+        const orderA = await dataSource
+            .getRepository(TestOrder)
+            .save({ customerId: 'customer-1', customFields: { branchId: 'branch-1' } });
+        await dataSource.getRepository(TestOrderLine).save({
+            orderId: orderA.id,
+            productVariantId: 'variant-1',
+            productVariantEntityId: productVariant.id,
+            quantity: 3,
+        });
 
-        const orderB = await dataSource.getRepository(TestOrder).save({ customFields: {} });
-        await dataSource
-            .getRepository(TestOrderLine)
-            .save({ orderId: orderB.id, productVariantId: 'variant-1', quantity: 3 });
+        const orderB = await dataSource
+            .getRepository(TestOrder)
+            .save({ customerId: 'customer-1', customFields: { branchId: 'branch-1' } });
+        await dataSource.getRepository(TestOrderLine).save({
+            orderId: orderB.id,
+            productVariantId: 'variant-1',
+            productVariantEntityId: productVariant.id,
+            quantity: 3,
+        });
 
         const results = await Promise.allSettled([
             service.reserveOrder(mockCtx, orderA.id, 7, 'manual'),
@@ -218,10 +263,15 @@ describe('ReservationService.reserveOrder (integration, real Postgres, concurren
             stockOnHand: 10,
             stockAllocated: 0,
         });
-        const order = await dataSource.getRepository(TestOrder).save({ customFields: {} });
-        await dataSource
-            .getRepository(TestOrderLine)
-            .save({ orderId: order.id, productVariantId: 'variant-2', quantity: 4 });
+        const order = await dataSource
+            .getRepository(TestOrder)
+            .save({ customerId: 'customer-1', customFields: { branchId: 'branch-1' } });
+        await dataSource.getRepository(TestOrderLine).save({
+            orderId: order.id,
+            productVariantId: 'variant-2',
+            productVariantEntityId: productVariant.id,
+            quantity: 4,
+        });
 
         const first = await service.reserveOrder(mockCtx, order.id, 7, 'manual');
         const second = await service.reserveOrder(mockCtx, order.id, 7, 'manual');

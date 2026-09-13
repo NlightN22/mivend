@@ -77,15 +77,14 @@ export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
         const branchId = await this.getOrderBranchId(ctx, orderLine);
         if (!branchId) return [];
 
-        const warehouses = (await this.warehouseService.findAll(ctx)).filter(
-            w => w.branchId === branchId && w.isActive,
+        const branchLocationIds = new Set(
+            (await this.warehouseService.findActiveStockLocationsForBranch(ctx, branchId)).map(l =>
+                String(l.id),
+            ),
         );
-        const warehouseErpIds = new Set(warehouses.map(w => w.erpId));
-        if (warehouseErpIds.size === 0) return [];
+        if (branchLocationIds.size === 0) return [];
 
-        return stockLocations.filter(location =>
-            warehouseErpIds.has(location.customFields?.warehouseErpId ?? ''),
-        );
+        return stockLocations.filter(location => branchLocationIds.has(String(location.id)));
     }
 
     private async getOrderBranchId(

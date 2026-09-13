@@ -4,11 +4,16 @@ import type { EventBus, RequestContext, TransactionalConnection } from '@vendure
 
 import { ReservationService } from '../../reservation.service';
 import {
+    ErpExportDataMissingError,
     InsufficientStockError,
     InvalidMultiplicityError,
     OrderNotEligibleError,
 } from '../../reservation-errors';
-import { ReservationConfirmedEvent, ReservationReleasedEvent } from '../../reservation.events';
+import {
+    OrderReservedEvent,
+    ReservationConfirmedEvent,
+    ReservationReleasedEvent,
+} from '../../reservation.events';
 
 function createMockReservationRepo(): {
     find: ReturnType<typeof vi.fn>;
@@ -57,44 +62,59 @@ function createMockStockLevelRepo(
     };
 }
 
-function createMockStockLocationRepo(): { createQueryBuilder: ReturnType<typeof vi.fn> } {
-    return {
-        createQueryBuilder: vi.fn(() => ({
-            getOne: vi.fn(async () => ({ id: 'location-1' })),
-        })),
-    };
+// mivend#85's ERP-export-readiness gate reads Product.customFields.externalId via raw SQL
+// (select/addSelect/from/where/getRawMany) — this mock defaults to resolving every productId to
+// its own `ext-<productId>` externalId; tests that need a missing productId override
+// getRawMany to omit that row.
+function createMockRawQueryBuilder(
+    productExternalIds: Record<string, string>,
+): ReturnType<typeof vi.fn> {
+    return vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        addSelect: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        getRawMany: vi.fn(async () =>
+            Object.entries(productExternalIds).map(([id, externalId]) => ({ id, externalId })),
+        ),
+    }));
 }
 
 describe('ReservationService', () => {
     let reservationRepo: ReturnType<typeof createMockReservationRepo>;
     let orderRepo: ReturnType<typeof createMockOrderRepo>;
     let stockLevelRepo: ReturnType<typeof createMockStockLevelRepo>;
-    let stockLocationRepo: ReturnType<typeof createMockStockLocationRepo>;
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
         withTransaction: ReturnType<typeof vi.fn>;
-        rawConnection: { query: ReturnType<typeof vi.fn> };
+        rawConnection: {
+            query: ReturnType<typeof vi.fn>;
+            createQueryBuilder: ReturnType<typeof vi.fn>;
+        };
     };
     let eventBus: { publish: ReturnType<typeof vi.fn> };
+    let warehouseService: { findActiveStockLocationsForBranch: ReturnType<typeof vi.fn> };
+    let counterpartyService: { getForCustomer: ReturnType<typeof vi.fn> };
     let service: ReservationService;
     const ctx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
     const order = {
         id: 'order-1',
         code: 'ORD-1',
-        customFields: {},
+        customerId: 'customer-1',
+        customFields: { branchId: 'branch-1' },
         lines: [
             {
                 id: 'line-1',
                 productVariantId: 'variant-1',
                 quantity: 2,
-                productVariant: { customFields: {} },
+                productVariant: { productId: 'product-1', customFields: {} },
             },
             {
                 id: 'line-2',
                 productVariantId: 'variant-2',
                 quantity: 5,
-                productVariant: { customFields: {} },
+                productVariant: { productId: 'product-2', customFields: {} },
             },
         ],
     };
@@ -103,8 +123,13 @@ describe('ReservationService', () => {
         reservationRepo = createMockReservationRepo();
         orderRepo = createMockOrderRepo(order);
         stockLevelRepo = createMockStockLevelRepo(20);
-        stockLocationRepo = createMockStockLocationRepo();
         eventBus = { publish: vi.fn() };
+        warehouseService = {
+            findActiveStockLocationsForBranch: vi.fn(async () => [{ id: 'location-1' }]),
+        };
+        counterpartyService = {
+            getForCustomer: vi.fn(async () => ({ erpId: 'counterparty-erp-1' })),
+        };
         connection = {
             getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) => {
                 switch (entity?.name) {
@@ -112,8 +137,6 @@ describe('ReservationService', () => {
                         return orderRepo;
                     case 'StockLevel':
                         return stockLevelRepo;
-                    case 'StockLocation':
-                        return stockLocationRepo;
                     default:
                         return reservationRepo;
                 }
@@ -121,26 +144,32 @@ describe('ReservationService', () => {
             withTransaction: vi.fn(async (txCtx: unknown, work: (c: unknown) => unknown) =>
                 work(txCtx),
             ),
-            // setOrderReservationState's self-verifying retry loop reads this back — echo the
-            // most recent update() call's target state so it always matches on the first
-            // attempt and the test doesn't pay the real setTimeout delay.
             rawConnection: {
+                // setOrderReservationState's self-verifying retry loop reads this back — echo the
+                // most recent update() call's target state so it always matches on the first
+                // attempt and the test doesn't pay the real setTimeout delay.
                 query: vi.fn(async () => {
                     const lastCall = orderRepo.update.mock.calls.at(-1) as
                         | [unknown, { customFields?: { reservationState?: string } }]
                         | undefined;
                     return [{ state: lastCall?.[1]?.customFields?.reservationState }];
                 }),
+                createQueryBuilder: createMockRawQueryBuilder({
+                    'product-1': 'ext-product-1',
+                    'product-2': 'ext-product-2',
+                }),
             },
         };
         service = new ReservationService(
             connection as unknown as TransactionalConnection,
             eventBus as unknown as EventBus,
+            warehouseService as never,
+            counterpartyService as never,
         );
     });
 
     describe('reserveOrder / confirmOrder', () => {
-        it('creates one reservation per order line with a shared expiry and publishes ReservationConfirmedEvent', async () => {
+        it('creates one reservation per order line with a shared expiry and publishes ReservationConfirmedEvent + OrderReservedEvent', async () => {
             await service.confirmOrder(ctx, 'order-1', 3);
 
             expect(reservationRepo.save).toHaveBeenCalledWith([
@@ -163,10 +192,13 @@ describe('ReservationService', () => {
             ]);
             expect(orderRepo.update).toHaveBeenCalledWith(
                 order.id,
-                expect.objectContaining({ customFields: { reservationState: 'RESERVED' } }),
+                expect.objectContaining({
+                    customFields: { branchId: 'branch-1', reservationState: 'RESERVED' },
+                }),
             );
-            expect(eventBus.publish).toHaveBeenCalledTimes(2);
+            expect(eventBus.publish).toHaveBeenCalledTimes(3);
             expect(eventBus.publish.mock.calls[0][0]).toBeInstanceOf(ReservationConfirmedEvent);
+            expect(eventBus.publish.mock.calls[2][0]).toBeInstanceOf(OrderReservedEvent);
         });
 
         it('is idempotent — a second call while an active reservation already exists is a no-op', async () => {
@@ -209,7 +241,9 @@ describe('ReservationService', () => {
             expect(reservationRepo.save).not.toHaveBeenCalled();
             expect(orderRepo.update).toHaveBeenCalledWith(
                 order.id,
-                expect.objectContaining({ customFields: { reservationState: 'FAILED' } }),
+                expect.objectContaining({
+                    customFields: { branchId: 'branch-1', reservationState: 'FAILED' },
+                }),
             );
         });
 
@@ -221,7 +255,10 @@ describe('ReservationService', () => {
                         id: 'line-1',
                         productVariantId: 'variant-1',
                         quantity: 5,
-                        productVariant: { customFields: { multiplicity: 4 } },
+                        productVariant: {
+                            productId: 'product-1',
+                            customFields: { multiplicity: 4 },
+                        },
                     },
                 ],
             };
@@ -251,13 +288,124 @@ describe('ReservationService', () => {
                         id: 'line-1',
                         productVariantId: 'variant-1',
                         quantity: 3,
-                        productVariant: { customFields: { multiplicity: -1 } },
+                        productVariant: {
+                            productId: 'product-1',
+                            customFields: { multiplicity: -1 },
+                        },
                     },
                 ],
             };
             orderRepo.findOne.mockResolvedValue(orderWithBadData);
 
             await expect(service.confirmOrder(ctx, 'order-1', 3)).resolves.toBeDefined();
+        });
+
+        // mivend#85: ReservationService.reserveOrder() gates on the same data
+        // erp-integration's order.submitted event needs, so a reservation the outbound event
+        // could never report never gets written in the first place (see
+        // ErpExportDataMissingError's doc comment).
+        it('rejects the whole order when the customer has no Counterparty', async () => {
+            counterpartyService.getForCustomer.mockResolvedValue(null);
+
+            const error = await service
+                .confirmOrder(ctx, 'order-1', 3)
+                .catch((e: unknown) => e as ErpExportDataMissingError);
+
+            expect(error).toBeInstanceOf(ErpExportDataMissingError);
+            expect((error as ErpExportDataMissingError).missingCustomerId).toBe(true);
+            expect(reservationRepo.save).not.toHaveBeenCalled();
+            expect(orderRepo.update).toHaveBeenCalledWith(
+                order.id,
+                expect.objectContaining({
+                    customFields: { branchId: 'branch-1', reservationState: 'FAILED' },
+                }),
+            );
+        });
+
+        it('rejects the whole order when the order has no customer at all', async () => {
+            orderRepo.findOne.mockResolvedValue({ ...order, customerId: null });
+
+            const error = await service
+                .confirmOrder(ctx, 'order-1', 3)
+                .catch((e: unknown) => e as ErpExportDataMissingError);
+
+            expect(error).toBeInstanceOf(ErpExportDataMissingError);
+            expect((error as ErpExportDataMissingError).missingCustomerId).toBe(true);
+            expect(counterpartyService.getForCustomer).not.toHaveBeenCalled();
+        });
+
+        it('rejects every line as missing warehouseId when the branch has no active StockLocation', async () => {
+            warehouseService.findActiveStockLocationsForBranch.mockResolvedValue([]);
+
+            const error = await service
+                .confirmOrder(ctx, 'order-1', 3)
+                .catch((e: unknown) => e as ErpExportDataMissingError);
+
+            expect(error).toBeInstanceOf(ErpExportDataMissingError);
+            expect((error as ErpExportDataMissingError).lines).toEqual([
+                { orderLineId: 'line-1', productVariantId: 'variant-1', missing: ['warehouseId'] },
+                { orderLineId: 'line-2', productVariantId: 'variant-2', missing: ['warehouseId'] },
+            ]);
+        });
+
+        it('rejects only the line whose product has no ERP externalId', async () => {
+            connection.rawConnection.createQueryBuilder = createMockRawQueryBuilder({
+                'product-1': 'ext-product-1',
+                // product-2 deliberately omitted — not yet ERP-synced.
+            });
+
+            const error = await service
+                .confirmOrder(ctx, 'order-1', 3)
+                .catch((e: unknown) => e as ErpExportDataMissingError);
+
+            expect(error).toBeInstanceOf(ErpExportDataMissingError);
+            expect((error as ErpExportDataMissingError).lines).toEqual([
+                { orderLineId: 'line-2', productVariantId: 'variant-2', missing: ['productId'] },
+            ]);
+        });
+
+        it('picks the candidate StockLocation with the most available stock per line', async () => {
+            warehouseService.findActiveStockLocationsForBranch.mockResolvedValue([
+                { id: 'location-a' },
+                { id: 'location-b' },
+            ]);
+            const availableByLocation: Record<string, number> = {
+                'location-a': 3,
+                'location-b': 10,
+            };
+            stockLevelRepo.createQueryBuilder = vi.fn(() => {
+                const builder = {
+                    __locationId: '',
+                    setLock: vi.fn().mockReturnThis(),
+                    where: vi.fn().mockReturnThis(),
+                    andWhere: vi.fn(function (
+                        this: typeof builder,
+                        _clause: string,
+                        params: { stockLocationId: string },
+                    ) {
+                        this.__locationId = params.stockLocationId;
+                        return this;
+                    }),
+                    getOne: vi.fn(async function (this: typeof builder) {
+                        return {
+                            stockOnHand: availableByLocation[this.__locationId] ?? 0,
+                            stockAllocated: 0,
+                        };
+                    }),
+                };
+                return builder;
+            });
+
+            await service.confirmOrder(ctx, 'order-1', 3);
+
+            expect(reservationRepo.save).toHaveBeenCalledWith(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        orderLineId: 'line-1',
+                        stockLocationId: 'location-b',
+                    }),
+                ]),
+            );
         });
     });
 

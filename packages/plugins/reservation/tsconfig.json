@@ -8,6 +8,7 @@
     "include": ["src/**/*", "index.ts"],
     "references": [
         { "path": "../access-control" },
+        { "path": "../counterparty" },
         { "path": "../erp-order" },
         { "path": "../../shared" }
     ]

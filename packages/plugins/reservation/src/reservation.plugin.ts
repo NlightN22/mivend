@@ -13,6 +13,7 @@ import {
 import gql from 'graphql-tag';
 import { subscribeAndLog } from 'shared';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
@@ -109,7 +110,7 @@ const adminApiSchema = gql`
 `;
 
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin],
+    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
     entities: [Reservation, ReservationExtensionLimit, ReservationReconciliationIssue],
     providers: [
         ReservationService,

@@ -20,6 +20,31 @@ export class OrderNotEligibleError extends Error {
     readonly code = 'ORDER_NOT_ELIGIBLE';
 }
 
+export interface ErpExportDataMissingLine {
+    orderLineId: string;
+    productVariantId: string;
+    missing: Array<'productId' | 'warehouseId'>;
+}
+
+// mivend#85: reserveOrder() is the actual commit point for "which warehouse does this order's
+// stock come from" (see docs/order-flow.md's two-stage reservation model — Reservation, not
+// Vendure's native Allocation, is this project's real per-line warehouse fact). If the data
+// erp-integration's order.submitted event needs (a Counterparty for the customer, an ERP
+// externalId for the product, an ERP-synced warehouse for the resolved StockLocation) isn't
+// available yet, the order must not be reservable at all — surfacing this as a silently-skipped
+// outbound event later is what mivend#85 explicitly decided against. Full-order-only, same as
+// InsufficientStockError/InvalidMultiplicityError: nothing is written until every line resolves.
+export class ErpExportDataMissingError extends Error {
+    readonly code = 'ERP_EXPORT_DATA_MISSING';
+
+    constructor(
+        public readonly missingCustomerId: boolean,
+        public readonly lines: ErpExportDataMissingLine[],
+    ) {
+        super('Order is missing ERP-export data required before it can be reserved');
+    }
+}
+
 export interface InvalidMultiplicityLine {
     orderLineId: string;
     productVariantId: string;

@@ -5,11 +5,18 @@ import { BranchStockLocationStrategy } from '../../branch-stock-location.strateg
 
 function makeStrategy(options: {
     branchId: string | null;
-    warehouses: Array<{ erpId: string; branchId: string; isActive: boolean }>;
+    // Ids of the StockLocations that belong to this branch's active warehouses — mirrors what
+    // WarehouseService.findActiveStockLocationsForBranch (packages/plugins/access-control) now
+    // resolves; the strategy just intersects this against the given stockLocations candidates.
+    activeLocationIds: string[];
     stockLevels: Record<string, { stockOnHand: number; stockAllocated: number }>;
 }): BranchStockLocationStrategy {
     const strategy = new BranchStockLocationStrategy();
-    const warehouseService = { findAll: vi.fn().mockResolvedValue(options.warehouses) };
+    const warehouseService = {
+        findActiveStockLocationsForBranch: vi
+            .fn()
+            .mockResolvedValue(options.activeLocationIds.map(id => ({ id }))),
+    };
     const connection = {
         rawConnection: {
             createQueryBuilder: () => ({
@@ -52,10 +59,7 @@ describe('BranchStockLocationStrategy', () => {
     it('allocates from the branch-scoped location with the most available stock', async () => {
         const strategy = makeStrategy({
             branchId: 'branch-1',
-            warehouses: [
-                { erpId: 'wh-a', branchId: 'branch-1', isActive: true },
-                { erpId: 'wh-b', branchId: 'branch-1', isActive: true },
-            ],
+            activeLocationIds: ['loc-a', 'loc-b'],
             stockLevels: {
                 'loc-a': { stockOnHand: 5, stockAllocated: 0 },
                 'loc-b': { stockOnHand: 20, stockAllocated: 2 },
@@ -71,7 +75,7 @@ describe('BranchStockLocationStrategy', () => {
     it('excludes locations belonging to a different branch', async () => {
         const strategy = makeStrategy({
             branchId: 'branch-1',
-            warehouses: [{ erpId: 'wh-a', branchId: 'branch-1', isActive: true }],
+            activeLocationIds: ['loc-a'],
             stockLevels: { 'loc-a': { stockOnHand: 5, stockAllocated: 0 } },
         });
         const stockLocations = [location('loc-a', 'wh-a'), location('loc-other', 'wh-other')];
@@ -82,7 +86,7 @@ describe('BranchStockLocationStrategy', () => {
     });
 
     it('falls back to the first stock location when the order has no resolved branchId', async () => {
-        const strategy = makeStrategy({ branchId: null, warehouses: [], stockLevels: {} });
+        const strategy = makeStrategy({ branchId: null, activeLocationIds: [], stockLevels: {} });
         const stockLocations = [location('loc-a', 'wh-a'), location('loc-b', 'wh-b')];
 
         const result = await strategy.forAllocation(ctx, stockLocations, orderLine, 1);
@@ -93,7 +97,7 @@ describe('BranchStockLocationStrategy', () => {
     it('falls back to the first stock location when the branch has no matching warehouses', async () => {
         const strategy = makeStrategy({
             branchId: 'branch-1',
-            warehouses: [{ erpId: 'wh-a', branchId: 'other-branch', isActive: true }],
+            activeLocationIds: [],
             stockLevels: {},
         });
         const stockLocations = [location('loc-a', 'wh-a')];

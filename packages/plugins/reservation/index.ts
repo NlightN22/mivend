@@ -14,7 +14,11 @@ export type {
 export { ReservationExpiryService } from './src/reservation-expiry.service';
 export { ReservationAvailabilityService } from './src/reservation-availability.service';
 export { ReservationExtensionLimitService } from './src/reservation-extension-limit.service';
-export { ReservationConfirmedEvent, ReservationReleasedEvent } from './src/reservation.events';
+export {
+    OrderReservedEvent,
+    ReservationConfirmedEvent,
+    ReservationReleasedEvent,
+} from './src/reservation.events';
 export { Reservation } from './src/entities/reservation.entity';
 export type { ReservationStatus } from './src/entities/reservation.entity';
 export { ReservationExtensionLimit } from './src/entities/reservation-extension-limit.entity';

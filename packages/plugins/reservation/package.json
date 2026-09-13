@@ -26,6 +26,7 @@
     "dependencies": {
         "graphql-tag": "^2.12.6",
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "shared": "workspace:*"
     }
