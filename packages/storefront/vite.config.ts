@@ -30,6 +30,13 @@ export default defineConfig(() => {
                     target: apiTarget,
                     changeOrigin: true,
                 },
+                // WS subscriptions transport (issue #87 part 6) — see
+                // apps/server/src/subscriptions.ts's mountNotificationSubscriptions('/shop-api-subscriptions').
+                '/shop-api-subscriptions': {
+                    target: apiTarget,
+                    changeOrigin: true,
+                    ws: true,
+                },
                 // Assets are served with a root-relative assetUrlPrefix (see
                 // apps/server/src/vendure-config.ts) specifically so they resolve
                 // against whatever origin the browser is on — this proxy is what

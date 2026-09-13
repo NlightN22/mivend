@@ -1,5 +1,16 @@
 const SHOP_API_URL = '/shop-api';
 
+// Storefront auth is cookie-based (see the shop-api response's set-cookie), but the WS
+// subscriptions transport (graphql-ws) has no cookie jar of its own and authenticates via
+// connectionParams.authorization instead (see apps/server/src/subscriptions.ts) — captured here
+// from the same vendure-auth-token response header Vendure sends regardless of tokenMethod.
+const AUTH_TOKEN_HEADER = 'vendure-auth-token';
+let capturedAuthToken: string | null = null;
+
+export function getCapturedAuthToken(): string | null {
+    return capturedAuthToken;
+}
+
 // Thrown only when the request never reached the server at all (connection refused, DNS
 // failure, etc. — the browser's fetch() implementation throws a TypeError for these, distinct
 // from a real HTTP/GraphQL error response). Callers (notably the auth store) use this to avoid
@@ -54,6 +65,11 @@ export async function shopApi<
         credentials: 'include',
         body: JSON.stringify({ query, variables }),
     });
+
+    const authToken = response.headers.get(AUTH_TOKEN_HEADER);
+    if (authToken) {
+        capturedAuthToken = authToken;
+    }
 
     if (!response.ok) {
         throw new Error(`Shop API error: ${response.status}`);

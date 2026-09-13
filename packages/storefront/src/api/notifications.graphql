@@ -1,0 +1,37 @@
+fragment NotificationFields on Notification {
+    id
+    kind
+    sourceType
+    sourceId
+    title
+    message
+    status
+    readAt
+    resolvedAt
+    resolution
+    createdAt
+}
+
+query Notifications($status: NotificationStatus) {
+    notifications(status: $status) {
+        ...NotificationFields
+    }
+}
+
+mutation MarkNotificationRead($id: ID!) {
+    markNotificationRead(id: $id) {
+        ...NotificationFields
+    }
+}
+
+mutation ResolveNotification($id: ID!, $resolution: String!) {
+    resolveNotification(id: $id, resolution: $resolution) {
+        ...NotificationFields
+    }
+}
+
+subscription NotificationReceived {
+    notificationReceived {
+        ...NotificationFields
+    }
+}

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { MvNotificationBell, MvNotificationPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
 import { useCatalogStore } from '../stores/catalog';
 import { useFavoritesStore } from '../stores/favorites';
+import { useNotificationsStore } from '../stores/notifications';
 
 const router = useRouter();
 const route = useRoute();
@@ -12,7 +14,23 @@ const authStore = useAuthStore();
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
 const favoritesStore = useFavoritesStore();
+const notificationPanelOpen = ref(false);
 const searchQuery = ref((route.query.q as string) ?? '');
+
+// notifications query/subscription require an authenticated customer (Permission.Owner) —
+// unlike the manager portal (always-authenticated layout), this header also renders for
+// signed-out visitors, so the store (and its eager fetch+subscribe inside useNotifications) is
+// only created once a session exists.
+const notificationsStore = shallowRef<ReturnType<typeof useNotificationsStore> | null>(null);
+watch(
+    () => authStore.isLoggedIn,
+    loggedIn => {
+        if (loggedIn && !notificationsStore.value) {
+            notificationsStore.value = useNotificationsStore();
+        }
+    },
+    { immediate: true },
+);
 
 watch(() => route.query.q, (q) => {
     searchQuery.value = (q as string) ?? '';
@@ -159,6 +177,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     </template>
                 </nav>
 
+                <MvNotificationBell
+                    v-if="notificationsStore"
+                    :unread-count="notificationsStore.unreadCount"
+                    @click="notificationPanelOpen = !notificationPanelOpen"
+                />
+
                 <RouterLink v-if="authStore.isLoggedIn" to="/cart" class="app-header__cart">
                     <span>&#128722;</span>
                     <span class="app-header__cart-text">
@@ -199,6 +223,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 @navigate="navigateToCollection"
             />
         </header>
+
+        <div v-if="notificationPanelOpen && notificationsStore" class="app-header__notification-panel">
+            <MvNotificationPanel
+                :notifications="notificationsStore.notifications"
+                :loading="notificationsStore.loading"
+                @mark-read="notificationsStore.markRead"
+                @resolve="notificationsStore.resolve"
+                @close="notificationPanelOpen = false"
+            />
+        </div>
 
         <div
             v-if="catalogOpen || mobileNavOpen"
@@ -455,6 +489,15 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
 .app-header__delivery-address { color: #a8b8b2; }
 .app-header__delivery-hint { color: #a8b8b2; font-style: italic; }
+
+.app-header__notification-panel {
+    position: fixed;
+    top: 72px;
+    right: 24px;
+    z-index: 1200;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+}
 
 .app-header__backdrop {
     position: fixed;

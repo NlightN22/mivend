@@ -32,6 +32,7 @@ export type AddItemInput = {
 };
 
 export type AddPaymentToOrderResult =
+    | CouponRemovedDuringCheckoutError
     | IneligiblePaymentMethodError
     | NoActiveOrderError
     | Order
@@ -402,6 +403,25 @@ export type CouponCodeLimitError = ErrorResult & {
     errorCode: ErrorCode;
     limit: Scalars['Int']['output'];
     message: Scalars['String']['output'];
+};
+
+/**
+ * Returned by `addPaymentToOrder` when one or more coupon codes were removed
+ * from the Order during payment-time revalidation and the removal would have
+ * increased the amount the customer is charged. Refusing the payment in this
+ * case prevents silently charging the customer more than they agreed to. The
+ * most common trigger is a usage-limited coupon's slot being claimed by a
+ * concurrent checkout, but the same protection applies when a coupon is
+ * stripped because the order no longer meets the promotion's eligibility
+ * conditions or because the promotion was disabled mid-checkout.
+ */
+export type CouponRemovedDuringCheckoutError = ErrorResult & {
+    currencyCode: CurrencyCode;
+    errorCode: ErrorCode;
+    message: Scalars['String']['output'];
+    newTotalWithTax: Scalars['Money']['output'];
+    previousTotalWithTax: Scalars['Money']['output'];
+    removedCouponCodes: Array<Scalars['String']['output']>;
 };
 
 /**
@@ -1024,6 +1044,7 @@ export enum ErrorCode {
     CouponCodeExpiredError = 'COUPON_CODE_EXPIRED_ERROR',
     CouponCodeInvalidError = 'COUPON_CODE_INVALID_ERROR',
     CouponCodeLimitError = 'COUPON_CODE_LIMIT_ERROR',
+    CouponRemovedDuringCheckoutError = 'COUPON_REMOVED_DURING_CHECKOUT_ERROR',
     EmailAddressConflictError = 'EMAIL_ADDRESS_CONFLICT_ERROR',
     GuestCheckoutError = 'GUEST_CHECKOUT_ERROR',
     IdentifierChangeTokenExpiredError = 'IDENTIFIER_CHANGE_TOKEN_EXPIRED_ERROR',
@@ -1879,11 +1900,12 @@ export type Mutation = {
     login: NativeAuthenticationResult;
     /** End the current authenticated session */
     logout: Success;
+    markNotificationRead: Notification;
     payInvoice: Invoice;
     /** Regenerate and send a verification token for a new Customer registration. Only applicable if `authOptions.requireVerification` is set to true. */
     refreshCustomerVerification: RefreshCustomerVerificationResult;
     /**
-     * Register a Customer account with the given credentials. There are three possible registration flows:
+     * Register a Customer account with the given credentials. There are four possible registration flows:
      *
      * _If `authOptions.requireVerification` is set to `true`:_
      *
@@ -1897,6 +1919,19 @@ export type Mutation = {
      * _If `authOptions.requireVerification` is set to `false`:_
      *
      * 3. The Customer _must_ be registered _with_ a password. No further action is needed - the Customer is able to authenticate immediately.
+     *
+     * _Whatever the setting, if an account already exists for the email address through another authentication strategy
+     * (for example an SSO provider) and has no password yet:_
+     *
+     * 4. **The supplied password is never stored.** A verificationToken is created and emailed to the address, and this mutation
+     *    answers with a generic success so that it does not reveal whether the account exists. The password is set only when that
+     *    token is passed to the `verifyCustomerAccount` mutation _with_ the chosen password, which proves the caller controls the
+     *    mailbox. This holds even when `requireVerification` is `false`, so the Customer cannot be authenticated straight after
+     *    registering. Registering again issues a fresh token and sends the email again.
+     *
+     * In every flow the caller-supplied `firstName`, `lastName`, `phoneNumber` and custom fields are ignored whenever a User already
+     * exists for the email address, since the caller has not proven they own it. This includes an account an administrator created
+     * earlier. A Customer with no User, such as one left by a guest checkout, is not an account and its details are still filled in.
      */
     registerCustomerAccount: RegisterCustomerAccountResult;
     /** Remove all OrderLine from the Order */
@@ -1916,6 +1951,7 @@ export type Mutation = {
     requestUpdateCustomerEmailAddress: RequestUpdateCustomerEmailAddressResult;
     /** Resets a Customer's password based on the provided token */
     resetPassword: ResetPasswordResult;
+    resolveNotification: Notification;
     /** Sets the currency code for the active Order */
     setCurrencyCodeForOrder: UpdateOrderItemsResult;
     /** Set the Customer for the Order. Required only if the Customer is not currently logged in */
@@ -1953,7 +1989,9 @@ export type Mutation = {
     updateCustomerPassword: UpdateCustomerPasswordResult;
     updateTradingPointComment: TradingPoint;
     /**
-     * Verify a Customer email address with the token sent to that address. Only applicable if `authOptions.requireVerification` is set to true.
+     * Verify a Customer email address with the token sent to that address. Applicable whenever a verificationToken was issued:
+     * that is when `authOptions.requireVerification` is set to true, and also when a password was registered against an account
+     * that already existed through another authentication strategy, whatever that setting is.
      *
      * If the Customer was not registered with a password in the `registerCustomerAccount` mutation, the password _must_ be
      * provided here.
@@ -2035,6 +2073,10 @@ export type MutationLoginArgs = {
     username: Scalars['String']['input'];
 };
 
+export type MutationMarkNotificationReadArgs = {
+    id: Scalars['ID']['input'];
+};
+
 export type MutationPayInvoiceArgs = {
     channel?: InputMaybe<Scalars['String']['input']>;
     invoiceId: Scalars['ID']['input'];
@@ -2069,6 +2111,11 @@ export type MutationRequestUpdateCustomerEmailAddressArgs = {
 export type MutationResetPasswordArgs = {
     password: Scalars['String']['input'];
     token: Scalars['String']['input'];
+};
+
+export type MutationResolveNotificationArgs = {
+    id: Scalars['ID']['input'];
+    resolution: Scalars['String']['input'];
 };
 
 export type MutationSetCurrencyCodeForOrderArgs = {
@@ -2174,6 +2221,33 @@ export type NotVerifiedError = ErrorResult & {
     errorCode: ErrorCode;
     message: Scalars['String']['output'];
 };
+
+export type Notification = {
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    kind: NotificationKind;
+    message: Scalars['String']['output'];
+    readAt?: Maybe<Scalars['DateTime']['output']>;
+    resolution?: Maybe<Scalars['String']['output']>;
+    resolvedAt?: Maybe<Scalars['DateTime']['output']>;
+    sourceId?: Maybe<Scalars['String']['output']>;
+    sourceType: Scalars['String']['output'];
+    status: NotificationStatus;
+    title: Scalars['String']['output'];
+};
+
+export enum NotificationKind {
+    Error = 'error',
+    Info = 'info',
+    Success = 'success',
+    Warning = 'warning',
+}
+
+export enum NotificationStatus {
+    Read = 'read',
+    Resolved = 'resolved',
+    Unread = 'unread',
+}
 
 /** Operators for filtering on a list of Number fields */
 export type NumberListOperators = {
@@ -2286,8 +2360,10 @@ export type OrderCustomFields = {
 export type OrderFilterParameter = {
     _and?: InputMaybe<Array<OrderFilterParameter>>;
     _or?: InputMaybe<Array<OrderFilterParameter>>;
+    /** An order is active as long as the payment process has not been completed */
     active?: InputMaybe<BooleanOperators>;
     branchId?: InputMaybe<StringOperators>;
+    /** A unique code for the Order */
     code?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
     currencyCode?: InputMaybe<StringOperators>;
@@ -2296,6 +2372,10 @@ export type OrderFilterParameter = {
     erpStatusAt?: InputMaybe<DateOperators>;
     id?: InputMaybe<IdOperators>;
     latestFulfillmentState?: InputMaybe<StringOperators>;
+    /**
+     * The date & time that the Order was placed, i.e. the Customer
+     * completed the checkout and the Order is no longer "active"
+     */
     orderPlacedAt?: InputMaybe<DateOperators>;
     paymentStatus?: InputMaybe<StringOperators>;
     placedByAdministratorId?: InputMaybe<StringOperators>;
@@ -2303,10 +2383,19 @@ export type OrderFilterParameter = {
     shippingWithTax?: InputMaybe<NumberOperators>;
     sourceOrderId?: InputMaybe<StringOperators>;
     state?: InputMaybe<StringOperators>;
+    /**
+     * The subTotal is the total of all OrderLines in the Order. This figure also includes any Order-level
+     * discounts which have been prorated (proportionally distributed) amongst the items of each OrderLine.
+     * To get a total of all OrderLines which does not account for prorated discounts, use the
+     * sum of `OrderLine.discountedLinePrice` values.
+     */
     subTotal?: InputMaybe<NumberOperators>;
+    /** Same as subTotal, but inclusive of tax */
     subTotalWithTax?: InputMaybe<NumberOperators>;
+    /** Equal to subTotal plus shipping */
     total?: InputMaybe<NumberOperators>;
     totalQuantity?: InputMaybe<NumberOperators>;
+    /** The final payable amount. Equal to subTotalWithTax plus shippingWithTax */
     totalWithTax?: InputMaybe<NumberOperators>;
     tradingPointId?: InputMaybe<StringOperators>;
     type?: InputMaybe<StringOperators>;
@@ -2434,6 +2523,7 @@ export type OrderPaymentStateError = ErrorResult & {
 
 export type OrderSortParameter = {
     branchId?: InputMaybe<SortOrder>;
+    /** A unique code for the Order */
     code?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
     erpOrderId?: InputMaybe<SortOrder>;
@@ -2441,6 +2531,10 @@ export type OrderSortParameter = {
     erpStatusAt?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     latestFulfillmentState?: InputMaybe<SortOrder>;
+    /**
+     * The date & time that the Order was placed, i.e. the Customer
+     * completed the checkout and the Order is no longer "active"
+     */
     orderPlacedAt?: InputMaybe<SortOrder>;
     paymentStatus?: InputMaybe<SortOrder>;
     placedByAdministratorId?: InputMaybe<SortOrder>;
@@ -2448,10 +2542,19 @@ export type OrderSortParameter = {
     shippingWithTax?: InputMaybe<SortOrder>;
     sourceOrderId?: InputMaybe<SortOrder>;
     state?: InputMaybe<SortOrder>;
+    /**
+     * The subTotal is the total of all OrderLines in the Order. This figure also includes any Order-level
+     * discounts which have been prorated (proportionally distributed) amongst the items of each OrderLine.
+     * To get a total of all OrderLines which does not account for prorated discounts, use the
+     * sum of `OrderLine.discountedLinePrice` values.
+     */
     subTotal?: InputMaybe<SortOrder>;
+    /** Same as subTotal, but inclusive of tax */
     subTotalWithTax?: InputMaybe<SortOrder>;
+    /** Equal to subTotal plus shipping */
     total?: InputMaybe<SortOrder>;
     totalQuantity?: InputMaybe<SortOrder>;
+    /** The final payable amount. Equal to subTotalWithTax plus shippingWithTax */
     totalWithTax?: InputMaybe<SortOrder>;
     tradingPointId?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
@@ -2788,6 +2891,8 @@ export enum Permission {
     ManageApprovalWorkflows = 'ManageApprovalWorkflows',
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
     ManageCounterpartyTeam = 'ManageCounterpartyTeam',
+    /** Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84) */
+    ManageErpIntegration = 'ManageErpIntegration',
     /** Owner means the user owns this entity, e.g. a Customer's own Order */
     Owner = 'Owner',
     /** Public means any unauthenticated user may perform the operation */
@@ -2814,6 +2919,8 @@ export enum Permission {
     ReadCustomer = 'ReadCustomer',
     /** Grants permission to read CustomerGroup */
     ReadCustomerGroup = 'ReadCustomerGroup',
+    /** Grants permission to read DashboardGlobalViews */
+    ReadDashboardGlobalViews = 'ReadDashboardGlobalViews',
     /** Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves */
     ReadEntityHistory = 'ReadEntityHistory',
     /** Grants permission to read Facet */
@@ -2908,6 +3015,8 @@ export enum Permission {
     UpdateTaxRate = 'UpdateTaxRate',
     /** Grants permission to update Zone */
     UpdateZone = 'UpdateZone',
+    /** Grants permission to write DashboardGlobalViews */
+    WriteDashboardGlobalViews = 'WriteDashboardGlobalViews',
 }
 
 /** The price range where the result has more than one price */
@@ -3266,6 +3375,8 @@ export type Query = {
     myTradingPoints: Array<TradingPoint>;
     /** Returns the possible next states that the activeOrder can transition to */
     nextOrderStates: Array<Scalars['String']['output']>;
+    /** The calling customer's own notifications, newest first (issue #87). */
+    notifications: Array<Notification>;
     /**
      * Returns an Order based on the id. Note that in the Shop API, only orders belonging to the
      * currently-authenticated User may be queried.
@@ -3325,6 +3436,10 @@ export type QueryMyOrdersArgs = {
 
 export type QueryMyPaymentsArgs = {
     options?: InputMaybe<PaymentListOptions>;
+};
+
+export type QueryNotificationsArgs = {
+    status?: InputMaybe<NotificationStatus>;
 };
 
 export type QueryOrderArgs = {
@@ -3737,6 +3852,11 @@ export type StructFieldConfig =
     | StringStructFieldConfig
     | TextStructFieldConfig;
 
+export type Subscription = {
+    /** Fires for the connected customer's own notifications only. */
+    notificationReceived: Notification;
+};
+
 /** Indicates that an operation succeeded, where we do not want to return any more specific information. */
 export type Success = {
     success: Scalars['Boolean']['output'];
@@ -3768,11 +3888,15 @@ export type TagList = PaginatedList & {
 
 export type TaxCategory = Node & {
     createdAt: Scalars['DateTime']['output'];
-    customFields?: Maybe<Scalars['JSON']['output']>;
+    customFields?: Maybe<TaxCategoryCustomFields>;
     id: Scalars['ID']['output'];
     isDefault: Scalars['Boolean']['output'];
     name: Scalars['String']['output'];
     updatedAt: Scalars['DateTime']['output'];
+};
+
+export type TaxCategoryCustomFields = {
+    erpVatCode?: Maybe<Scalars['String']['output']>;
 };
 
 export type TaxLine = {
@@ -3990,6 +4114,99 @@ export type Zone = Node & {
     members: Array<Region>;
     name: Scalars['String']['output'];
     updatedAt: Scalars['DateTime']['output'];
+};
+
+export type NotificationFieldsFragment = {
+    id: string;
+    kind: NotificationKind;
+    sourceType: string;
+    sourceId?: string | null;
+    title: string;
+    message: string;
+    status: NotificationStatus;
+    readAt?: any | null;
+    resolvedAt?: any | null;
+    resolution?: string | null;
+    createdAt: any;
+};
+
+export type NotificationsQueryVariables = Exact<{
+    status?: InputMaybe<NotificationStatus>;
+}>;
+
+export type NotificationsQuery = {
+    notifications: Array<{
+        id: string;
+        kind: NotificationKind;
+        sourceType: string;
+        sourceId?: string | null;
+        title: string;
+        message: string;
+        status: NotificationStatus;
+        readAt?: any | null;
+        resolvedAt?: any | null;
+        resolution?: string | null;
+        createdAt: any;
+    }>;
+};
+
+export type MarkNotificationReadMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type MarkNotificationReadMutation = {
+    markNotificationRead: {
+        id: string;
+        kind: NotificationKind;
+        sourceType: string;
+        sourceId?: string | null;
+        title: string;
+        message: string;
+        status: NotificationStatus;
+        readAt?: any | null;
+        resolvedAt?: any | null;
+        resolution?: string | null;
+        createdAt: any;
+    };
+};
+
+export type ResolveNotificationMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    resolution: Scalars['String']['input'];
+}>;
+
+export type ResolveNotificationMutation = {
+    resolveNotification: {
+        id: string;
+        kind: NotificationKind;
+        sourceType: string;
+        sourceId?: string | null;
+        title: string;
+        message: string;
+        status: NotificationStatus;
+        readAt?: any | null;
+        resolvedAt?: any | null;
+        resolution?: string | null;
+        createdAt: any;
+    };
+};
+
+export type NotificationReceivedSubscriptionVariables = Exact<{ [key: string]: never }>;
+
+export type NotificationReceivedSubscription = {
+    notificationReceived: {
+        id: string;
+        kind: NotificationKind;
+        sourceType: string;
+        sourceId?: string | null;
+        title: string;
+        message: string;
+        status: NotificationStatus;
+        readAt?: any | null;
+        resolvedAt?: any | null;
+        resolution?: string | null;
+        createdAt: any;
+    };
 };
 
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
@@ -4693,6 +4910,7 @@ export type CompleteOfflinePaymentMutationVariables = Exact<{ [key: string]: nev
 
 export type CompleteOfflinePaymentMutation = {
     addPaymentToOrder:
+        | { __typename: 'CouponRemovedDuringCheckoutError'; errorCode: ErrorCode; message: string }
         | { __typename: 'IneligiblePaymentMethodError'; errorCode: ErrorCode; message: string }
         | { __typename: 'NoActiveOrderError'; errorCode: ErrorCode; message: string }
         | { __typename: 'Order' }
@@ -4708,6 +4926,7 @@ export type CompleteOnlinePaymentMutationVariables = Exact<{
 
 export type CompleteOnlinePaymentMutation = {
     addPaymentToOrder:
+        | { __typename: 'CouponRemovedDuringCheckoutError'; errorCode: ErrorCode; message: string }
         | { __typename: 'IneligiblePaymentMethodError'; errorCode: ErrorCode; message: string }
         | { __typename: 'NoActiveOrderError'; errorCode: ErrorCode; message: string }
         | { __typename: 'Order' }
@@ -4760,6 +4979,24 @@ export class TypedDocumentString<TResult, TVariables>
         return this.value;
     }
 }
+export const NotificationFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}
+    `,
+    { fragmentName: 'NotificationFields' },
+) as unknown as TypedDocumentString<NotificationFieldsFragment, unknown>;
 export const ProductWidgetFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment ProductWidgetFields on Product {
@@ -4792,6 +5029,91 @@ export const ProductWidgetFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'ProductWidgetFields' },
 ) as unknown as TypedDocumentString<ProductWidgetFieldsFragment, unknown>;
+export const NotificationsDocument = new TypedDocumentString(`
+    query Notifications($status: NotificationStatus) {
+  notifications(status: $status) {
+    ...NotificationFields
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<NotificationsQuery, NotificationsQueryVariables>;
+export const MarkNotificationReadDocument = new TypedDocumentString(`
+    mutation MarkNotificationRead($id: ID!) {
+  markNotificationRead(id: $id) {
+    ...NotificationFields
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<
+    MarkNotificationReadMutation,
+    MarkNotificationReadMutationVariables
+>;
+export const ResolveNotificationDocument = new TypedDocumentString(`
+    mutation ResolveNotification($id: ID!, $resolution: String!) {
+  resolveNotification(id: $id, resolution: $resolution) {
+    ...NotificationFields
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<
+    ResolveNotificationMutation,
+    ResolveNotificationMutationVariables
+>;
+export const NotificationReceivedDocument = new TypedDocumentString(`
+    subscription NotificationReceived {
+  notificationReceived {
+    ...NotificationFields
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<
+    NotificationReceivedSubscription,
+    NotificationReceivedSubscriptionVariables
+>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {
