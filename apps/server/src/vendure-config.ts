@@ -502,6 +502,11 @@ export const config: VendureConfig = {
             schemaRegistry: {
                 url: process.env.INTEGRATION_SCHEMA_REGISTRY_URL ?? 'http://localhost:8081',
             },
+            // Issue #84: reconciliation summary API — separate REST boundary from the Kafka
+            // streams above, same host/API key family as Integration Service's Ingestion API.
+            reconciliationApiUrl:
+                process.env.INTEGRATION_SERVICE_BASE_URL ?? 'https://is.komponent-m.ru',
+            reconciliationApiKey: process.env.INTEGRATION_SERVICE_API_KEY ?? '',
         }),
         ReservationPlugin.init({}),
         MoqPlugin,

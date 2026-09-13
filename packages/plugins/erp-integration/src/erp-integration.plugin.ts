@@ -11,6 +11,7 @@ import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.enti
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 import { ProductTaxCodeFlag } from './entities/product-tax-code-flag.entity';
+import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import { ProductTaxCodeFlagService } from './product-tax-code-flag.service';
 import { ProductTaxCodeFlagResolver } from './product-tax-code-flag.resolver';
 import { IntegrationOutboxService } from './integration-outbox.service';
@@ -40,6 +41,11 @@ import { OrderSubmittedListener } from './order-submitted.listener';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 import { adminApiExtensions } from './api/admin.schema';
+import { ReconciliationSummaryClient } from './reconciliation-summary.client';
+import { ReconciliationLocalCountsService } from './reconciliation-local-counts.service';
+import { ReconciliationService } from './reconciliation.service';
+import { ReconciliationResolver } from './reconciliation.resolver';
+import { createReconciliationTask } from './reconciliation.scheduled-task';
 
 // Central-hub-only, per the external-integration-rules skill ("Branches never call the ERP [or Integration
 // Service]"). The guard can't live in the providers array itself: @VendurePlugin's decorator body
@@ -73,6 +79,7 @@ import { adminApiExtensions } from './api/admin.schema';
         IntegrationInboxEvent,
         KafkaConsumerStatus,
         ProductTaxCodeFlag,
+        ErpReconciliationIssue,
     ],
     controllers: [KafkaStatusController],
     providers: [
@@ -96,6 +103,9 @@ import { adminApiExtensions } from './api/admin.schema';
         SchemaRegistryClient,
         OrderSubmittedListener,
         ProductTaxCodeFlagService,
+        ReconciliationSummaryClient,
+        ReconciliationLocalCountsService,
+        ReconciliationService,
         {
             provide: ERP_INTEGRATION_PLUGIN_OPTIONS,
             useFactory: (): ErpIntegrationPluginOptions => ErpIntegrationPlugin.options,
@@ -103,7 +113,11 @@ import { adminApiExtensions } from './api/admin.schema';
     ],
     adminApiExtensions: {
         schema: adminApiExtensions,
-        resolvers: [IntegrationInboxEventResolver, ProductTaxCodeFlagResolver],
+        resolvers: [
+            IntegrationInboxEventResolver,
+            ProductTaxCodeFlagResolver,
+            ReconciliationResolver,
+        ],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
         config.schedulerOptions.tasks = [
@@ -111,6 +125,7 @@ import { adminApiExtensions } from './api/admin.schema';
             createIntegrationInboxTask(ErpIntegrationPlugin.options),
             createIntegrationOutboxTask(ErpIntegrationPlugin.options),
             createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
+            createReconciliationTask(ErpIntegrationPlugin.options),
         ];
         return config;
     },

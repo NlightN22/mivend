@@ -110,6 +110,16 @@ export interface ErpIntegrationPluginOptions {
     // event (a real incident: tens of thousands of individual jobs, one per product, each
     // recomputing every Collection).
     collectionFiltersRecomputeIntervalMs?: number;
+    // Issue #84: Integration Service's reconciliation summary API base URL (e.g.
+    // https://is.komponent-m.ru) and its X-Api-Key. Reused for both the daily ScheduledTask and
+    // the manual-trigger mutation — never hardcoded, never logged. Optional (like
+    // schemaRegistry.url) so every other existing plugin config fixture doesn't need updating;
+    // ReconciliationSummaryClient falls back to RECONCILIATION_API_URL_DEFAULT/an empty key,
+    // which only matters on a contour that actually enables kafkaEnabled+central (see the
+    // ScheduledTask's own gate) — a plain `make dev` never reaches this code path at all.
+    reconciliationApiUrl?: string;
+    reconciliationApiKey?: string;
+    reconciliationIntervalMs?: number;
 }
 
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
@@ -119,4 +129,7 @@ export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_MAX_ATTEMPTS_DEFAULT = 5;
 export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
+// Once daily — no sub-day freshness requirement raised for this (issue #84).
+export const RECONCILIATION_INTERVAL_DEFAULT = 24 * 60 * 60 * 1000;
+export const RECONCILIATION_API_URL_DEFAULT = 'https://is.komponent-m.ru';
 export const loggerCtx = 'ErpIntegrationPlugin';

@@ -83,4 +83,9 @@ export const CustomPermission = {
         description:
             'Read payment records for the manager portal — a resource derived from Invoice, scoped the same way (AccessScopeService.resolveInvoiceScope)',
     }),
+    ManageErpIntegration: new PermissionDefinition({
+        name: 'ManageErpIntegration',
+        description:
+            'Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84)',
+    }),
 } as const;

@@ -9,6 +9,9 @@ import { adminApi } from './client';
 // openReservationReconciliationIssues, openPaymentReconciliationIssues) are being added by a
 // separate backend agent in parallel and may not be merged yet — field names below are the ones
 // specified for this task; if the actual schema differs, this file needs a follow-up update.
+//
+// openErpReconciliationIssues / runErpReconciliation (issue #84) mirror the same field-names-per-
+// backend-schema approach — see packages/plugins/erp-integration/src/api/admin.schema.ts.
 
 export interface FailedIntegrationInboxEvent {
     id: string;
@@ -108,4 +111,66 @@ export async function fetchOpenPaymentReconciliationIssues(
         { options: { take } },
     );
     return result.openPaymentReconciliationIssues.items;
+}
+
+// Entity-completeness discrepancies against Integration Service's reconciliation summary
+// (issue #84) — a different domain from the two reservation/payment quantity-mismatch issue
+// types above, hence its own ErpReconciliationIssue type rather than reusing either shape.
+export interface ErpReconciliationIssue {
+    id: string;
+    issueType: string;
+    aggregateType: string;
+    ourCount: number;
+    theirActiveCount: number;
+    detectedAt: string;
+    status: string;
+    resolution: string | null;
+    triggeredBy: string;
+    triggeredByAdministratorId: string | null;
+}
+
+export async function fetchOpenErpReconciliationIssues(
+    take: number,
+): Promise<ErpReconciliationIssue[]> {
+    const result = await adminApi<{
+        openErpReconciliationIssues: { items: ErpReconciliationIssue[] };
+    }>(
+        `query OpenErpReconciliationIssues($options: OpenErpReconciliationIssueListOptions) {
+            openErpReconciliationIssues(options: $options) {
+                items {
+                    id
+                    issueType
+                    aggregateType
+                    ourCount
+                    theirActiveCount
+                    detectedAt
+                    status
+                    resolution
+                    triggeredBy
+                    triggeredByAdministratorId
+                }
+            }
+        }`,
+        { options: { take } },
+    );
+    return result.openErpReconciliationIssues.items;
+}
+
+export interface ErpReconciliationRunResult {
+    checked: number;
+    issuesFound: number;
+    skipped: string[];
+}
+
+export async function runErpReconciliation(): Promise<ErpReconciliationRunResult> {
+    const result = await adminApi<{ runErpReconciliation: ErpReconciliationRunResult }>(
+        `mutation RunErpReconciliation {
+            runErpReconciliation {
+                checked
+                issuesFound
+                skipped
+            }
+        }`,
+    );
+    return result.runErpReconciliation;
 }

@@ -17,9 +17,11 @@ import {
     fetchFailedIntegrationInboxEvents,
     fetchOpenPaymentReconciliationIssues,
     fetchOpenReservationReconciliationIssues,
+    fetchOpenErpReconciliationIssues,
     type FailedIntegrationInboxEvent,
     type PaymentReconciliationIssue,
     type ReservationReconciliationIssue,
+    type ErpReconciliationIssue,
 } from '../../api/integration-health';
 import RecentOrdersTable from '../../components/dashboard/RecentOrdersTable.vue';
 import ApprovalStatusList from '../../components/dashboard/ApprovalStatusList.vue';
@@ -31,6 +33,7 @@ import ActivityFeed from '../../components/dashboard/ActivityFeed.vue';
 import IntegrationInboxErrorsPanel from '../../components/dashboard/IntegrationInboxErrorsPanel.vue';
 import ReservationReconciliationPanel from '../../components/dashboard/ReservationReconciliationPanel.vue';
 import PaymentReconciliationPanel from '../../components/dashboard/PaymentReconciliationPanel.vue';
+import ErpReconciliationPanel from '../../components/dashboard/ErpReconciliationPanel.vue';
 
 const authStore = useAuthStore();
 const data = ref<DashboardData | null>(null);
@@ -39,6 +42,7 @@ const expiringDiscounts = ref<ExpiringDiscount[]>([]);
 const failedInboxEvents = ref<FailedIntegrationInboxEvent[]>([]);
 const reservationIssues = ref<ReservationReconciliationIssue[]>([]);
 const paymentIssues = ref<PaymentReconciliationIssue[]>([]);
+const erpIssues = ref<ErpReconciliationIssue[]>([]);
 const loading = ref(true);
 
 // Small, fixed row cap for dashboard attention panels — these are "is anything on fire" widgets,
@@ -94,7 +98,7 @@ onMounted(async () => {
         // Each of these three health panels comes from a plugin's own new query — caught
         // individually so one plugin's outage (or, right now, one query not deployed yet) never
         // blanks the whole dashboard, same reasoning as the department-name fetch below.
-        const [dashboard, grants, failedEvents, reconReservations, reconPayments] = await Promise.all([
+        const [dashboard, grants, failedEvents, reconReservations, reconPayments, reconErp] = await Promise.all([
             fetchDashboardData(),
             fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
             authStore.hasPermission('ManageAccessControl')
@@ -115,11 +119,18 @@ onMounted(async () => {
                       return [];
                   })
                 : Promise.resolve([]),
+            authStore.hasPermission('ManageErpIntegration')
+                ? fetchOpenErpReconciliationIssues(HEALTH_PANEL_TAKE).catch(e => {
+                      console.warn('[dashboard] could not load ERP reconciliation issues:', e);
+                      return [];
+                  })
+                : Promise.resolve([]),
         ]);
         data.value = dashboard;
         failedInboxEvents.value = failedEvents;
         reservationIssues.value = reconReservations;
         paymentIssues.value = reconPayments;
+        erpIssues.value = reconErp;
         // One grant can list several customers (see DiscountGrant.counterparties) — the banner
         // shows one line per customer, same shape as the design mock.
         expiringDiscounts.value = grants.flatMap(grant =>
@@ -214,6 +225,15 @@ onMounted(async () => {
 
                 <MvPanel v-if="authStore.hasPermission('ReadPayment')" title="Payment reconciliation">
                     <PaymentReconciliationPanel :issues="paymentIssues" />
+                </MvPanel>
+
+                <MvPanel v-if="authStore.hasPermission('ManageErpIntegration')" title="ERP reconciliation">
+                    <ErpReconciliationPanel
+                        :issues="erpIssues"
+                        @refresh="
+                            fetchOpenErpReconciliationIssues(HEALTH_PANEL_TAKE).then(v => (erpIssues = v))
+                        "
+                    />
                 </MvPanel>
             </div>
 

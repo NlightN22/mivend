@@ -40,6 +40,35 @@ export const adminApiExtensions: DocumentNode = gql`
         skip: Int
     }
 
+    type ErpReconciliationIssue {
+        id: ID!
+        issueType: String!
+        aggregateType: String!
+        ourCount: Int!
+        theirActiveCount: Int!
+        detectedAt: DateTime!
+        status: String!
+        resolution: String
+        triggeredBy: String!
+        triggeredByAdministratorId: ID
+    }
+
+    type ErpReconciliationIssueList {
+        items: [ErpReconciliationIssue!]!
+        totalItems: Int!
+    }
+
+    input OpenErpReconciliationIssueListOptions {
+        take: Int
+        skip: Int
+    }
+
+    type ErpReconciliationRunResult {
+        checked: Int!
+        issuesFound: Int!
+        skipped: [String!]!
+    }
+
     extend type Query {
         "Dead-lettered inbound Kafka events, newest first — for the manager-portal dashboard's integration-health panel (issue #76)."
         failedIntegrationInboxEvents(
@@ -47,5 +76,14 @@ export const adminApiExtensions: DocumentNode = gql`
         ): FailedIntegrationInboxEventList!
         "Non-blocking VAT-code review flags raised while importing products, newest first (issue #79)."
         recentProductTaxCodeFlags(options: ProductTaxCodeFlagListOptions): ProductTaxCodeFlagList!
+        "Open entity-completeness discrepancies against Integration Service's reconciliation summary (issue #84), newest first."
+        openErpReconciliationIssues(
+            options: OpenErpReconciliationIssueListOptions
+        ): ErpReconciliationIssueList!
+    }
+
+    extend type Mutation {
+        "Manually runs the reconciliation comparison against Integration Service immediately, instead of waiting for the daily ScheduledTask (issue #84) — same ReconciliationService.runComparison the scheduled run uses, recorded with triggeredBy='manual' and the calling administrator's id."
+        runErpReconciliation: ErpReconciliationRunResult!
     }
 `;
