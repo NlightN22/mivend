@@ -8560,6 +8560,12 @@ export type ZoneSortParameter = {
     updatedAt?: InputMaybe<SortOrder>;
 };
 
+export type ChangeOwnPasswordMutationVariables = Exact<{
+    password: Scalars['String']['input'];
+}>;
+
+export type ChangeOwnPasswordMutation = { updateActiveAdministrator: { id: string } };
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -8602,6 +8608,16 @@ export class TypedDocumentString<TResult, TVariables>
     }
 }
 
+export const ChangeOwnPasswordDocument = new TypedDocumentString(`
+    mutation ChangeOwnPassword($password: String!) {
+  updateActiveAdministrator(input: {password: $password}) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ChangeOwnPasswordMutation,
+    ChangeOwnPasswordMutationVariables
+>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {

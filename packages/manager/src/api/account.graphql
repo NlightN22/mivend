@@ -1,0 +1,5 @@
+mutation ChangeOwnPassword($password: String!) {
+    updateActiveAdministrator(input: { password: $password }) {
+        id
+    }
+}
