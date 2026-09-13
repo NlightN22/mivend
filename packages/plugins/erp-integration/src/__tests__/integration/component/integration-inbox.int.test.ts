@@ -43,7 +43,7 @@ afterAll(async () => {
 });
 
 describe('IntegrationInboxService (integration, real Postgres)', () => {
-    it('enqueues a new (stream, entityId, version) as a pending row', async () => {
+    it('enqueues a new (stream, sourceEventId) as a pending row', async () => {
         const row = await inboxService.enqueue({
             stream: 'product',
             entityId: 'p-1',
@@ -55,7 +55,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(row.attempts).toBe(0);
     });
 
-    it('is a no-op on a duplicate (stream, entityId, version) — dedup key', async () => {
+    it('is a no-op on a duplicate (stream, sourceEventId) — dedup key', async () => {
         const first = await inboxService.enqueue({
             stream: 'product',
             entityId: 'p-1',
@@ -67,7 +67,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             stream: 'product',
             entityId: 'p-1',
             version: '1',
-            sourceEventId: 'evt-1-redelivered',
+            sourceEventId: 'evt-1',
             payload: { sku: 'SKU-1' },
         });
         expect(second.id).toBe(first.id);
@@ -76,6 +76,33 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             .getRepository(IntegrationInboxEvent)
             .find({ where: { stream: 'product', entityId: 'p-1' } });
         expect(rows).toHaveLength(1);
+    });
+
+    // Issue #89: this is the actual regression test for the live bug — a Search Platform backfill
+    // event collided on `version` with an earlier, unrelated event for the same entity, and the
+    // old (stream, entityId, version) dedup key silently discarded it. Two distinct sourceEventIds
+    // sharing the same version must both persist.
+    it('does not conflate two distinct events for the same entity that happen to share a version', async () => {
+        const first = await inboxService.enqueue({
+            stream: 'product',
+            entityId: 'p-1',
+            version: '2026-09-12T14:13:47Z',
+            sourceEventId: 'evt-original-update',
+            payload: { sku: 'SKU-1' },
+        });
+        const second = await inboxService.enqueue({
+            stream: 'product',
+            entityId: 'p-1',
+            version: '2026-09-12T14:13:47Z',
+            sourceEventId: 'evt-backfilled-deactivation',
+            payload: { sku: 'SKU-1', isActive: false },
+        });
+        expect(second.id).not.toBe(first.id);
+
+        const rows = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .find({ where: { stream: 'product', entityId: 'p-1' } });
+        expect(rows).toHaveLength(2);
     });
 
     it('survives a concurrent duplicate enqueue racing the unique index (not just the app-level check)', async () => {

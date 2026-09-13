@@ -35,12 +35,20 @@ export class IntegrationInboxService {
     constructor(private readonly dataSource: DataSource) {}
 
     // Called from the Kafka consumer only — never processes anything itself. Returns the
-    // existing row (a no-op) on a duplicate (stream, entityId, version), so the consumer can ack
-    // the Kafka message unconditionally after this resolves without throwing.
+    // existing row (a no-op) on a duplicate (stream, sourceEventId), so the consumer can ack the
+    // Kafka message unconditionally after this resolves without throwing.
+    //
+    // Issue #89: dedup key is (stream, sourceEventId), not (stream, entityId, version) — `version`
+    // is Integration Service's own entity-level timestamp, not a per-message id, and two distinct
+    // events for the same entity can legitimately share a version value (confirmed live: a
+    // backfilled deactivation event collided with an earlier, unrelated update's version — the old
+    // key silently discarded the newer message). `sourceEventId` is the real per-message identity;
+    // `version` stays the separate out-of-order/regression guard used by
+    // isSupersededByNewerVersion (integration-inbox-processor.service.ts), untouched by this key.
     async enqueue(input: EnqueueInboxEventInput): Promise<IntegrationInboxEvent> {
         const repo = this.dataSource.getRepository(IntegrationInboxEvent);
         const existing = await repo.findOne({
-            where: { stream: input.stream, entityId: input.entityId, version: input.version },
+            where: { stream: input.stream, sourceEventId: input.sourceEventId },
         });
         if (existing) return existing;
 
@@ -59,11 +67,7 @@ export class IntegrationInboxService {
         } catch (err) {
             if (this.isUniqueViolation(err)) {
                 return (await repo.findOne({
-                    where: {
-                        stream: input.stream,
-                        entityId: input.entityId,
-                        version: input.version,
-                    },
+                    where: { stream: input.stream, sourceEventId: input.sourceEventId },
                 }))!;
             }
             throw err;

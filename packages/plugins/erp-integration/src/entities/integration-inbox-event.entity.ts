@@ -18,12 +18,22 @@ export type IntegrationInboxEventStatus = 'pending' | 'processing' | 'processed'
 // explicit correction of the plugin-acquiring incident (see IncomingPaymentEvent for the
 // original reference fix this mirrors).
 //
-// Unique on (stream, entityId, version) per issue #62's design section 2 — this is both the
-// consumer's dedup key (a redelivered/duplicate Kafka message for the same entity version is a
-// no-op) and the ordering guard: a handler must reject/ignore a version lower than what it has
-// already applied for that (stream, entityId), so out-of-order redelivery never regresses state.
+// Unique on (stream, sourceEventId) — issue #89: previously (stream, entityId, version), which
+// conflated two different jobs. `version` alone is not a safe uniqueness key: it's Integration
+// Service's own entity-level timestamp, not a per-message id, and two genuinely different events
+// for the same entity can carry an identical version value (confirmed live: a Search Platform
+// backfill's deactivation event for a product shared its `version` with an earlier, unrelated
+// update already stored for that entity — the old dedup key silently discarded the newer message
+// with zero logging, because it only compared (stream, entityId, version), never payload
+// content). `sourceEventId` is Integration Service's own real per-message event id (set from
+// `record.eventId`/the Kafka message key — see kafka-consumer.service.ts) and is what a
+// redelivered/duplicate message actually shares — the correct dedup key. `version` remains the
+// out-of-order/regression guard (isSupersededByNewerVersion in
+// integration-inbox-processor.service.ts still compares by (stream, entityId) + version, unrelated
+// to this uniqueness constraint) — the two jobs were only ever conflated by living in the same
+// index, not because they need the same key.
 @Entity('integration_inbox_event')
-@Index('integration_inbox_event_dedup', ['stream', 'entityId', 'version'], { unique: true })
+@Index('integration_inbox_event_dedup', ['stream', 'sourceEventId'], { unique: true })
 @Index('integration_inbox_event_pending', ['status', 'createdAt'])
 export class IntegrationInboxEvent {
     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
