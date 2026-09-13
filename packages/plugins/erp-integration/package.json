@@ -21,6 +21,7 @@
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-documents": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
         "@bufbuild/protobuf": "^2.0.0",

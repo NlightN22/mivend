@@ -3,6 +3,7 @@ import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
 
@@ -63,6 +64,7 @@ import { adminApiExtensions } from './api/admin.schema';
         CustomerPricingPlugin,
         PriceEntryPlugin,
         AccessControlPlugin,
+        CounterpartyPlugin,
         DocumentsPlugin,
         ReservationPlugin,
     ],

@@ -11,6 +11,7 @@
         { "path": "../erp-order" },
         { "path": "../customer-pricing" },
         { "path": "../price-entry" },
-        { "path": "../access-control" }
+        { "path": "../access-control" },
+        { "path": "../counterparty" }
     ]
 }

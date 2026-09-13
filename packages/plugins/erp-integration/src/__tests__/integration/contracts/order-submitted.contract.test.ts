@@ -20,6 +20,19 @@ describe('order.submitted contract', () => {
         currencyCode: 'RUB',
     };
 
+    // mivend#85: customerId/warehouseId/lines, confirmed with search-platform's
+    // OrderRegistrationRequestDto/OrderLineDto — additive, so a fixture without them (above)
+    // must still validate against the schema's required list unchanged.
+    const FIXTURE_WITH_LINES: OrderSubmittedPayload = {
+        ...FIXTURE,
+        customerId: 'counterparty-1',
+        warehouseId: 'warehouse-1',
+        lines: [
+            { productId: 'product-1', quantity: 2, priceTypeId: 'price-type-wholesale' },
+            { productId: 'product-2', quantity: 1, priceTypeId: null },
+        ],
+    };
+
     it('declares every currently-required field', () => {
         expect(ORDER_SUBMITTED_SCHEMA.required).toEqual([
             'eventId',
@@ -28,6 +41,12 @@ describe('order.submitted contract', () => {
             'organizationId',
             'submittedAt',
         ]);
+    });
+
+    it('keeps customerId/warehouseId/lines optional (additive evolution, mivend#85)', () => {
+        expect(ORDER_SUBMITTED_SCHEMA.required).not.toEqual(
+            expect.arrayContaining(['customerId', 'warehouseId', 'lines']),
+        );
     });
 
     it('tolerates unknown extra fields (forward compatibility)', () => {
@@ -45,8 +64,26 @@ describe('order.submitted contract', () => {
                 'submittedAt',
                 'totalWithTax',
                 'currencyCode',
+                'customerId',
+                'warehouseId',
+                'lines',
             ]),
         );
+    });
+
+    it('declares productId/quantity as the only required OrderLineDto fields', () => {
+        expect(ORDER_SUBMITTED_SCHEMA.properties.lines.items.required).toEqual([
+            'productId',
+            'quantity',
+        ]);
+    });
+
+    it('encodes a fixture payload with customerId/warehouseId/lines with the same envelope', () => {
+        const encoded = encodeConfluentMessage(7, FIXTURE_WITH_LINES);
+
+        expect(encoded.readUInt8(0)).toBe(0);
+        expect(encoded.readUInt32BE(1)).toBe(7);
+        expect(JSON.parse(encoded.subarray(5).toString('utf-8'))).toEqual(FIXTURE_WITH_LINES);
     });
 
     it('encodes a fixed fixture payload with the Confluent wire-format envelope header', () => {
