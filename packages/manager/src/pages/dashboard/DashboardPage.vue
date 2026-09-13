@@ -15,14 +15,10 @@ import { getDashboardKpiCards } from '../../api/dashboard-config';
 import { fetchExpiringDiscountGrants } from '../../api/discounts';
 import {
     fetchFailedIntegrationInboxEvents,
-    fetchOpenPaymentReconciliationIssues,
-    fetchOpenReservationReconciliationIssues,
-    fetchOpenErpReconciliationIssues,
     type FailedIntegrationInboxEvent,
-    type PaymentReconciliationIssue,
-    type ReservationReconciliationIssue,
-    type ErpReconciliationIssue,
 } from '../../api/integration-health';
+import { fetchNotifications } from '../../api/notifications';
+import type { NotificationItem } from '@mivend/ui-kit';
 import RecentOrdersTable from '../../components/dashboard/RecentOrdersTable.vue';
 import ApprovalStatusList from '../../components/dashboard/ApprovalStatusList.vue';
 import ExpiringDiscountsBanner, {
@@ -40,9 +36,9 @@ const data = ref<DashboardData | null>(null);
 const departmentName = ref<string | null>(null);
 const expiringDiscounts = ref<ExpiringDiscount[]>([]);
 const failedInboxEvents = ref<FailedIntegrationInboxEvent[]>([]);
-const reservationIssues = ref<ReservationReconciliationIssue[]>([]);
-const paymentIssues = ref<PaymentReconciliationIssue[]>([]);
-const erpIssues = ref<ErpReconciliationIssue[]>([]);
+const reservationIssues = ref<NotificationItem[]>([]);
+const paymentIssues = ref<NotificationItem[]>([]);
+const erpIssues = ref<NotificationItem[]>([]);
 const loading = ref(true);
 
 // Small, fixed row cap for dashboard attention panels — these are "is anything on fire" widgets,
@@ -98,14 +94,12 @@ onMounted(async () => {
         // Each of these three health panels comes from a plugin's own new query — caught
         // individually so one plugin's outage (or, right now, one query not deployed yet) never
         // blanks the whole dashboard, same reasoning as the department-name fetch below.
-        const [
-            dashboard,
-            grants,
-            failedEvents,
-            reconReservations,
-            reconPayments,
-            reconErp,
-        ] = await Promise.all([
+        const wantsReconciliationPanels =
+            authStore.hasPermission('ReadOrder') ||
+            authStore.hasPermission('ReadPayment') ||
+            authStore.hasPermission('ManageErpIntegration');
+
+        const [dashboard, grants, failedEvents, unreadNotifications] = await Promise.all([
             fetchDashboardData(),
             fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
             authStore.hasPermission('ManageAccessControl')
@@ -114,30 +108,29 @@ onMounted(async () => {
                       return [];
                   })
                 : Promise.resolve([]),
-            authStore.hasPermission('ReadOrder')
-                ? fetchOpenReservationReconciliationIssues(HEALTH_PANEL_TAKE).catch(e => {
-                      console.warn('[dashboard] could not load reservation reconciliation issues:', e);
-                      return [];
+            // The three reconciliation panels below all read from this single generic
+            // notifications(status: 'unread') query (issue #87), filtered client-side by
+            // sourceType — see ReservationReconciliationPanel/PaymentReconciliationPanel/
+            // ErpReconciliationPanel and the sourceType strings each plugin's reconciliation
+            // service writes.
+            wantsReconciliationPanels
+                ? fetchNotifications('unread').catch(e => {
+                      console.warn('[dashboard] could not load notifications:', e);
+                      return [] as NotificationItem[];
                   })
-                : Promise.resolve([]),
-            authStore.hasPermission('ReadPayment')
-                ? fetchOpenPaymentReconciliationIssues(HEALTH_PANEL_TAKE).catch(e => {
-                      console.warn('[dashboard] could not load payment reconciliation issues:', e);
-                      return [];
-                  })
-                : Promise.resolve([]),
-            authStore.hasPermission('ManageErpIntegration')
-                ? fetchOpenErpReconciliationIssues(HEALTH_PANEL_TAKE).catch(e => {
-                      console.warn('[dashboard] could not load ERP reconciliation issues:', e);
-                      return [];
-                  })
-                : Promise.resolve([]),
+                : Promise.resolve([] as NotificationItem[]),
         ]);
         data.value = dashboard;
         failedInboxEvents.value = failedEvents;
-        reservationIssues.value = reconReservations;
-        paymentIssues.value = reconPayments;
-        erpIssues.value = reconErp;
+        reservationIssues.value = unreadNotifications
+            .filter(n => n.sourceType === 'reservation-reconciliation')
+            .slice(0, HEALTH_PANEL_TAKE);
+        paymentIssues.value = unreadNotifications
+            .filter(n => n.sourceType === 'payment-reconciliation')
+            .slice(0, HEALTH_PANEL_TAKE);
+        erpIssues.value = unreadNotifications
+            .filter(n => n.sourceType === 'erp-reconciliation')
+            .slice(0, HEALTH_PANEL_TAKE);
         // One grant can list several customers (see DiscountGrant.counterparties) — the banner
         // shows one line per customer, same shape as the design mock.
         expiringDiscounts.value = grants.flatMap(grant =>
@@ -227,18 +220,23 @@ onMounted(async () => {
                 </MvPanel>
 
                 <MvPanel v-if="authStore.hasPermission('ReadOrder')" title="Reservation reconciliation">
-                    <ReservationReconciliationPanel :issues="reservationIssues" />
+                    <ReservationReconciliationPanel :notifications="reservationIssues" />
                 </MvPanel>
 
                 <MvPanel v-if="authStore.hasPermission('ReadPayment')" title="Payment reconciliation">
-                    <PaymentReconciliationPanel :issues="paymentIssues" />
+                    <PaymentReconciliationPanel :notifications="paymentIssues" />
                 </MvPanel>
 
                 <MvPanel v-if="authStore.hasPermission('ManageErpIntegration')" title="ERP reconciliation">
                     <ErpReconciliationPanel
-                        :issues="erpIssues"
+                        :notifications="erpIssues"
                         @refresh="
-                            fetchOpenErpReconciliationIssues(HEALTH_PANEL_TAKE).then(v => (erpIssues = v))
+                            fetchNotifications('unread').then(
+                                items =>
+                                    (erpIssues = items
+                                        .filter(n => n.sourceType === 'erp-reconciliation')
+                                        .slice(0, HEALTH_PANEL_TAKE)),
+                            )
                         "
                     />
                 </MvPanel>

@@ -1,21 +1,25 @@
 <script setup lang="ts">
 import { MvStatusBadge } from '@mivend/ui-kit';
-import type { ReservationReconciliationIssue } from '../../api/integration-health';
+import type { NotificationItem } from '@mivend/ui-kit';
 
-defineProps<{ issues: ReservationReconciliationIssue[] }>();
+defineProps<{ notifications: NotificationItem[] }>();
 </script>
 
 <template>
     <ul class="reservation-reconciliation">
-        <li v-if="!issues.length" class="reservation-reconciliation__empty">No open reservation issues</li>
-        <li v-for="issue in issues.slice(0, 5)" :key="issue.id" class="reservation-reconciliation__item">
+        <li v-if="!notifications.length" class="reservation-reconciliation__empty">
+            No open reservation issues
+        </li>
+        <li
+            v-for="notification in notifications.slice(0, 5)"
+            :key="notification.id"
+            class="reservation-reconciliation__item"
+        >
             <div class="reservation-reconciliation__main">
-                <span class="reservation-reconciliation__title">Order #{{ issue.orderId }}</span>
-                <span class="reservation-reconciliation__detail">
-                    local {{ issue.localQuantity ?? '—' }} / ERP {{ issue.erpQuantity ?? '—' }}
-                </span>
+                <span class="reservation-reconciliation__title">{{ notification.title }}</span>
+                <span class="reservation-reconciliation__detail">{{ notification.message }}</span>
             </div>
-            <MvStatusBadge variant="warning">{{ issue.issueType }}</MvStatusBadge>
+            <MvStatusBadge variant="warning">{{ notification.status }}</MvStatusBadge>
         </li>
     </ul>
 </template>

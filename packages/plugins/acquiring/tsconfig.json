@@ -11,6 +11,7 @@
         { "path": "../counterparty" },
         { "path": "../erp-order" },
         { "path": "../sync" },
+        { "path": "../notification" },
         { "path": "../../shared" }
     ]
 }

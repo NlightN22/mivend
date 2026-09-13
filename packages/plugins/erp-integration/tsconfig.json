@@ -12,6 +12,7 @@
         { "path": "../customer-pricing" },
         { "path": "../price-entry" },
         { "path": "../access-control" },
-        { "path": "../counterparty" }
+        { "path": "../counterparty" },
+        { "path": "../notification" }
     ]
 }

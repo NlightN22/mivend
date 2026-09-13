@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { MvButton, MvStatusBadge } from '@mivend/ui-kit';
-import {
-    runErpReconciliation,
-    type ErpReconciliationIssue,
-} from '../../api/integration-health';
+import type { NotificationItem } from '@mivend/ui-kit';
+import { runErpReconciliation } from '../../api/integration-health';
 
-defineProps<{ issues: ErpReconciliationIssue[] }>();
+defineProps<{ notifications: NotificationItem[] }>();
 const emit = defineEmits<{ refresh: [] }>();
 
 const running = ref(false);
@@ -28,7 +26,6 @@ async function handleRunNow(): Promise<void> {
         running.value = false;
     }
 }
-
 </script>
 
 <template>
@@ -42,16 +39,22 @@ async function handleRunNow(): Promise<void> {
         </div>
 
         <ul class="erp-reconciliation__list">
-            <li v-if="!issues.length" class="erp-reconciliation__empty">No open ERP discrepancies</li>
-            <li v-for="issue in issues.slice(0, 5)" :key="issue.id" class="erp-reconciliation__item">
+            <li v-if="!notifications.length" class="erp-reconciliation__empty">
+                No open ERP discrepancies
+            </li>
+            <li
+                v-for="notification in notifications.slice(0, 5)"
+                :key="notification.id"
+                class="erp-reconciliation__item"
+            >
                 <div class="erp-reconciliation__main">
-                    <span class="erp-reconciliation__title">{{ issue.aggregateType }}</span>
+                    <span class="erp-reconciliation__title">{{ notification.title }}</span>
                     <span class="erp-reconciliation__detail">
-                        ours {{ issue.ourCount }} / theirs {{ issue.theirActiveCount }} · detected
-                        {{ new Date(issue.detectedAt).toLocaleString() }} · via {{ issue.triggeredBy }}
+                        {{ notification.message }} · detected
+                        {{ new Date(notification.createdAt).toLocaleString() }}
                     </span>
                 </div>
-                <MvStatusBadge variant="warning">{{ issue.issueType }}</MvStatusBadge>
+                <MvStatusBadge variant="warning">{{ notification.status }}</MvStatusBadge>
             </li>
         </ul>
     </div>

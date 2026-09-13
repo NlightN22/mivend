@@ -17,6 +17,7 @@
         { "path": "./erp-integration" },
         { "path": "./erp-import" },
         { "path": "./reservation" },
+        { "path": "./notification" },
         { "path": "./moq" },
         { "path": "./versioning" },
         { "path": "./session-management" },

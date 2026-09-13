@@ -23,6 +23,13 @@ export default defineConfig(() => {
                     target: apiTarget,
                     changeOrigin: true,
                 },
+                // WS subscriptions transport (issue #87 part 5) — see
+                // apps/server/src/subscriptions.ts for the endpoint this proxies to.
+                '/admin-api-subscriptions': {
+                    target: apiTarget,
+                    changeOrigin: true,
+                    ws: true,
+                },
                 // See packages/storefront/vite.config.ts for why this needs to be proxied
                 // through the app's own dev origin rather than hit directly.
                 '/assets': {

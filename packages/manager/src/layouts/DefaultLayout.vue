@@ -9,12 +9,20 @@ import {
     MvFab,
     MvScrollNav,
     MvNotice,
+    MvNotificationBell,
+    MvNotificationPanel,
+    useNotifications,
     type AppSidebarItem,
     type AppMobileNavItem,
     type AppMobileSheetItem,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
 import { adminApi } from '../api/client';
+import { notificationTransport } from '../api/notifications';
+
+const { notifications, unreadCount, loading: notificationsLoading, markRead, resolve } =
+    useNotifications(notificationTransport);
+const notificationPanelOpen = ref(false);
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -130,9 +138,22 @@ async function handleLogout(): Promise<void> {
             @logout="handleLogout"
         >
             <template #actions>
+                <MvNotificationBell
+                    :unread-count="unreadCount"
+                    @click="notificationPanelOpen = !notificationPanelOpen"
+                />
                 <RouterLink class="layout__new-order" to="/orders/new">+ New order</RouterLink>
             </template>
         </MvAppTopbar>
+        <div v-if="notificationPanelOpen" class="layout__notification-panel">
+            <MvNotificationPanel
+                :notifications="notifications"
+                :loading="notificationsLoading"
+                @mark-read="markRead"
+                @resolve="resolve"
+                @close="notificationPanelOpen = false"
+            />
+        </div>
         <div class="layout__body">
             <MvAppSidebar :items="menuItems" section-title="Workspace" />
             <main class="layout__content" :class="{ 'layout__content--with-fab': showCreateOrderFab }">
@@ -174,6 +195,15 @@ async function handleLogout(): Promise<void> {
     flex-direction: column;
     min-height: 100vh;
     background: var(--el-bg-color-page, #f6f8fb);
+}
+
+.layout__notification-panel {
+    position: fixed;
+    top: 64px;
+    right: 24px;
+    z-index: 1200;
+    width: 360px;
+    max-width: calc(100vw - 32px);
 }
 
 .layout__body {

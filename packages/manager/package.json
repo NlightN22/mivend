@@ -21,6 +21,7 @@
         "@primevue/themes": "4.5.4",
         "@tabler/icons-vue": "^3.45.0",
         "element-plus": "^2.9.0",
+        "graphql-ws": "^6.0.8",
         "pinia": "^2.2.0",
         "primevue": "^4.5.4",
         "shared": "workspace:*",

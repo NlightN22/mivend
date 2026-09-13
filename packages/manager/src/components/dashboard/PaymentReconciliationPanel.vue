@@ -1,21 +1,25 @@
 <script setup lang="ts">
 import { MvStatusBadge } from '@mivend/ui-kit';
-import type { PaymentReconciliationIssue } from '../../api/integration-health';
+import type { NotificationItem } from '@mivend/ui-kit';
 
-defineProps<{ issues: PaymentReconciliationIssue[] }>();
+defineProps<{ notifications: NotificationItem[] }>();
 </script>
 
 <template>
     <ul class="payment-reconciliation">
-        <li v-if="!issues.length" class="payment-reconciliation__empty">No open payment issues</li>
-        <li v-for="issue in issues.slice(0, 5)" :key="issue.id" class="payment-reconciliation__item">
+        <li v-if="!notifications.length" class="payment-reconciliation__empty">
+            No open payment issues
+        </li>
+        <li
+            v-for="notification in notifications.slice(0, 5)"
+            :key="notification.id"
+            class="payment-reconciliation__item"
+        >
             <div class="payment-reconciliation__main">
-                <span class="payment-reconciliation__title">Invoice {{ issue.invoiceId ?? '—' }}</span>
-                <span class="payment-reconciliation__detail">
-                    expected {{ issue.expectedAmount ?? '—' }} / actual {{ issue.actualAmount ?? '—' }}
-                </span>
+                <span class="payment-reconciliation__title">{{ notification.title }}</span>
+                <span class="payment-reconciliation__detail">{{ notification.message }}</span>
             </div>
-            <MvStatusBadge variant="warning">{{ issue.issueType }}</MvStatusBadge>
+            <MvStatusBadge variant="warning">{{ notification.status }}</MvStatusBadge>
         </li>
     </ul>
 </template>

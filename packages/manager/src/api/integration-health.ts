@@ -1,17 +1,14 @@
 import { adminApi } from './client';
 
-// Three independent, unrelated-plugin "system health" panels for the dashboard (issue #76) —
-// kept in one file per the task's own file-size guidance, not folded into the big shared
-// DASHBOARD_QUERY in dashboard.ts since each comes from a different plugin and is gated on a
-// different permission.
+// Dashboard "system health" panel for the failed-inbox-events widget (issue #76) — kept in one
+// file per the task's own file-size guidance. The reservation/payment/ERP reconciliation issue
+// queries this file used to hand-roll were migrated to the generic notifications(status:) query
+// (see api/notifications.ts) once plugin-notification started producing a Notification row for
+// each of these issue types (issue #87) — see ReservationReconciliationPanel.vue,
+// PaymentReconciliationPanel.vue and ErpReconciliationPanel.vue.
 //
-// NOTE: these three Admin API queries (failedIntegrationInboxEvents,
-// openReservationReconciliationIssues, openPaymentReconciliationIssues) are being added by a
-// separate backend agent in parallel and may not be merged yet — field names below are the ones
-// specified for this task; if the actual schema differs, this file needs a follow-up update.
-//
-// openErpReconciliationIssues / runErpReconciliation (issue #84) mirror the same field-names-per-
-// backend-schema approach — see packages/plugins/erp-integration/src/api/admin.schema.ts.
+// runErpReconciliation (issue #84) is a manual-trigger mutation, out of scope for #87 (read/notify
+// side only) — kept here untouched.
 
 export interface FailedIntegrationInboxEvent {
     id: string;
@@ -43,117 +40,6 @@ export async function fetchFailedIntegrationInboxEvents(
         { options: { take } },
     );
     return result.failedIntegrationInboxEvents.items;
-}
-
-export interface ReservationReconciliationIssue {
-    id: string;
-    issueType: string;
-    orderId: string;
-    productVariantId: string | null;
-    localQuantity: number | null;
-    erpQuantity: number | null;
-    detectedAt: string;
-}
-
-export async function fetchOpenReservationReconciliationIssues(
-    take: number,
-): Promise<ReservationReconciliationIssue[]> {
-    const result = await adminApi<{
-        openReservationReconciliationIssues: { items: ReservationReconciliationIssue[] };
-    }>(
-        `query OpenReservationReconciliationIssues($options: OpenReservationReconciliationIssueListOptions) {
-            openReservationReconciliationIssues(options: $options) {
-                items {
-                    id
-                    issueType
-                    orderId
-                    productVariantId
-                    localQuantity
-                    erpQuantity
-                    detectedAt
-                }
-            }
-        }`,
-        { options: { take } },
-    );
-    return result.openReservationReconciliationIssues.items;
-}
-
-export interface PaymentReconciliationIssue {
-    id: string;
-    issueType: string;
-    paymentId: string | null;
-    invoiceId: string | null;
-    expectedAmount: number | null;
-    actualAmount: number | null;
-    detectedAt: string;
-}
-
-export async function fetchOpenPaymentReconciliationIssues(
-    take: number,
-): Promise<PaymentReconciliationIssue[]> {
-    const result = await adminApi<{
-        openPaymentReconciliationIssues: { items: PaymentReconciliationIssue[] };
-    }>(
-        `query OpenPaymentReconciliationIssues($options: OpenPaymentReconciliationIssueListOptions) {
-            openPaymentReconciliationIssues(options: $options) {
-                items {
-                    id
-                    issueType
-                    paymentId
-                    invoiceId
-                    expectedAmount
-                    actualAmount
-                    detectedAt
-                }
-            }
-        }`,
-        { options: { take } },
-    );
-    return result.openPaymentReconciliationIssues.items;
-}
-
-// Entity-completeness discrepancies against Integration Service's reconciliation summary
-// (issue #84) — a different domain from the two reservation/payment quantity-mismatch issue
-// types above, hence its own ErpReconciliationIssue type rather than reusing either shape.
-export interface ErpReconciliationIssue {
-    id: string;
-    issueType: string;
-    aggregateType: string;
-    ourCount: number;
-    theirActiveCount: number;
-    detectedAt: string;
-    status: string;
-    resolution: string | null;
-    triggeredBy: string;
-    triggeredByAdministratorId: string | null;
-}
-
-export async function fetchOpenErpReconciliationIssues(
-    take: number,
-): Promise<ErpReconciliationIssue[]> {
-    const result = await adminApi<{
-        openErpReconciliationIssues: { items: ErpReconciliationIssue[] };
-    }>(
-        `query OpenErpReconciliationIssues($options: OpenErpReconciliationIssueListOptions) {
-            openErpReconciliationIssues(options: $options) {
-                items {
-                    id
-                    issueType
-                    aggregateType
-                    ourCount
-                    theirActiveCount
-                    detectedAt
-                    status
-                    resolution
-                    triggeredBy
-                    triggeredByAdministratorId
-                }
-            }
-        }`,
-        { options: { take } },
-    );
-    return result.openErpReconciliationIssues.items;
 }
 
 export interface ErpReconciliationRunResult {

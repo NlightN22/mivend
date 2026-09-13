@@ -1,5 +1,17 @@
 const ADMIN_API_URL = '/admin-api';
 
+// The manager portal authenticates over the cookie session (tokenMethod: ['bearer', 'cookie']
+// in vendure-config.ts), but Vendure still echoes the equivalent bearer token on every response
+// via this header. Captured here so the WS subscriptions transport (notifications.ts) — which
+// has no cookie jar of its own, since graphql-ws speaks connectionParams, not HTTP cookies — can
+// authenticate the same session without a separate login flow.
+const AUTH_TOKEN_HEADER = 'vendure-auth-token';
+let capturedAuthToken: string | null = null;
+
+export function getCapturedAuthToken(): string | null {
+    return capturedAuthToken;
+}
+
 // Thrown only when the request never reached the server at all (connection refused, DNS
 // failure, etc. — the browser's fetch() implementation throws a TypeError for these, distinct
 // from a real HTTP/GraphQL error response). Callers (notably the auth store) use this to avoid
@@ -41,6 +53,11 @@ export async function adminApi<T = unknown>(
         credentials: 'include',
         body: JSON.stringify({ query, variables }),
     });
+
+    const authToken = response.headers?.get(AUTH_TOKEN_HEADER);
+    if (authToken) {
+        capturedAuthToken = authToken;
+    }
 
     if (!response.ok) {
         throw new Error(`Admin API error: ${response.status}`);
