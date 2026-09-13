@@ -117,6 +117,23 @@ export class ReconciliationService {
         return { items, totalItems };
     }
 
+    async resolve(
+        ctx: RequestContext,
+        input: { id: string; resolution: string },
+    ): Promise<ErpReconciliationIssue> {
+        const repo = this.connection.getRepository(ctx, ErpReconciliationIssue);
+        const issue = await repo.findOneOrFail({ where: { id: input.id } });
+        issue.status = 'resolved';
+        issue.resolution = input.resolution;
+        return repo.save(issue);
+    }
+
+    // Without this dedupe, a persistent drift (the exact scenario this issue was written for —
+    // see the commit message) would insert a brand-new open row every single day forever, since
+    // runComparison re-detects the same drift on every scheduled run (mivend.audit.85 HIGH
+    // finding). Update the existing open issue for this aggregateType in place instead of
+    // inserting a duplicate; a genuinely new occurrence only gets its own row once the previous
+    // one has been resolved.
     private async recordIssue(
         ctx: RequestContext,
         params: {
@@ -128,18 +145,26 @@ export class ReconciliationService {
         },
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, ErpReconciliationIssue);
-        await repo.save(
-            new ErpReconciliationIssue({
-                issueType: classifyDiscrepancy(params.ourCount, params.theirActiveCount),
-                aggregateType: params.aggregateType,
-                ourCount: params.ourCount,
-                theirActiveCount: params.theirActiveCount,
-                detectedAt: new Date(),
-                status: 'open',
-                resolution: null,
-                triggeredBy: params.triggeredBy,
-                triggeredByAdministratorId: params.triggeredByAdministratorId,
-            }),
-        );
+        const existing = await repo.findOne({
+            where: { aggregateType: params.aggregateType, status: 'open' },
+        });
+
+        const fields = {
+            issueType: classifyDiscrepancy(params.ourCount, params.theirActiveCount),
+            aggregateType: params.aggregateType,
+            ourCount: params.ourCount,
+            theirActiveCount: params.theirActiveCount,
+            detectedAt: new Date(),
+            status: 'open' as const,
+            resolution: null,
+            triggeredBy: params.triggeredBy,
+            triggeredByAdministratorId: params.triggeredByAdministratorId,
+        };
+
+        if (existing) {
+            await repo.save(Object.assign(existing, fields));
+            return;
+        }
+        await repo.save(new ErpReconciliationIssue(fields));
     }
 }

@@ -98,7 +98,14 @@ onMounted(async () => {
         // Each of these three health panels comes from a plugin's own new query — caught
         // individually so one plugin's outage (or, right now, one query not deployed yet) never
         // blanks the whole dashboard, same reasoning as the department-name fetch below.
-        const [dashboard, grants, failedEvents, reconReservations, reconPayments, reconErp] = await Promise.all([
+        const [
+            dashboard,
+            grants,
+            failedEvents,
+            reconReservations,
+            reconPayments,
+            reconErp,
+        ] = await Promise.all([
             fetchDashboardData(),
             fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
             authStore.hasPermission('ManageAccessControl')

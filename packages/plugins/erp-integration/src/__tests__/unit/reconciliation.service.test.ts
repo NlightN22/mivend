@@ -17,8 +17,9 @@ describe('ReconciliationService.runComparison', () => {
         getLocalActiveCount?: (ctx: unknown, aggregateType: string) => Promise<number>;
     }) {
         const save = vi.fn().mockResolvedValue(undefined);
+        const findOne = vi.fn().mockResolvedValue(undefined);
         const connection = {
-            getRepository: () => ({ save, createQueryBuilder: vi.fn() }),
+            getRepository: () => ({ save, findOne, createQueryBuilder: vi.fn() }),
         };
         const requestContextService = { create: vi.fn().mockResolvedValue({}) };
         const summaryClient = {
@@ -122,5 +123,61 @@ describe('ReconciliationService.runComparison', () => {
 
         expect(result.skipped).toEqual([...COMPARED_AGGREGATE_TYPES]);
         expect(result.checked).toBe(0);
+    });
+
+    it('updates the existing open issue for the same aggregateType instead of inserting a duplicate (mivend.audit.85 HIGH)', async () => {
+        const existing = { id: '7', status: 'open', aggregateType: COMPARED_AGGREGATE_TYPES[0] };
+        const save = vi.fn().mockResolvedValue(undefined);
+        const findOne = vi.fn().mockResolvedValue(existing);
+        const connection = {
+            getRepository: () => ({ save, findOne, createQueryBuilder: vi.fn() }),
+        };
+        const requestContextService = { create: vi.fn().mockResolvedValue({}) };
+        const summaryClient = {
+            fetchSummaries: async (aggregateType?: string) => [
+                makeSummary(aggregateType ?? '', 10),
+            ],
+        };
+        const localCounts = { getLocalActiveCount: async () => 4 };
+        const service = new ReconciliationService(
+            connection as never,
+            requestContextService as never,
+            summaryClient as never,
+            localCounts as never,
+        );
+
+        await service.runComparison({ triggeredBy: 'scheduled' });
+
+        expect(save).toHaveBeenCalledTimes(COMPARED_AGGREGATE_TYPES.length);
+        expect(save.mock.calls[0][0]).toMatchObject({
+            id: '7',
+            issueType: 'upstream-higher',
+            ourCount: 4,
+            theirActiveCount: 10,
+        });
+    });
+});
+
+describe('ReconciliationService.resolve', () => {
+    it('marks the issue resolved with the given resolution note, never auto-picked', async () => {
+        const issue = { id: '3', status: 'open', resolution: null };
+        const save = vi.fn().mockImplementation(async (x: typeof issue) => x);
+        const findOneOrFail = vi.fn().mockResolvedValue(issue);
+        const connection = {
+            getRepository: () => ({ save, findOneOrFail }),
+        };
+        const service = new ReconciliationService(
+            connection as never,
+            { create: vi.fn() } as never,
+            {} as never,
+            {} as never,
+        );
+
+        const result = await service.resolve({} as never, {
+            id: '3',
+            resolution: 'stale seed row',
+        });
+
+        expect(result).toMatchObject({ status: 'resolved', resolution: 'stale seed row' });
     });
 });

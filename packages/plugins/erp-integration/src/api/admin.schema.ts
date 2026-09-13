@@ -85,5 +85,7 @@ export const adminApiExtensions: DocumentNode = gql`
     extend type Mutation {
         "Manually runs the reconciliation comparison against Integration Service immediately, instead of waiting for the daily ScheduledTask (issue #84) — same ReconciliationService.runComparison the scheduled run uses, recorded with triggeredBy='manual' and the calling administrator's id."
         runErpReconciliation: ErpReconciliationRunResult!
+        "Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved."
+        resolveErpReconciliationIssue(id: ID!, resolution: String!): ErpReconciliationIssue!
     }
 `;

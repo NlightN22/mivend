@@ -30,4 +30,13 @@ export class ReconciliationResolver {
             triggeredByAdministratorId: ctx.activeUserId ? String(ctx.activeUserId) : undefined,
         });
     }
+
+    @Mutation()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async resolveErpReconciliationIssue(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string; resolution: string },
+    ): Promise<ErpReconciliationIssue> {
+        return this.reconciliationService.resolve(ctx, args);
+    }
 }
