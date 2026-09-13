@@ -22,34 +22,42 @@ export class WarehouseNotFoundError extends Error {
 export class WarehouseService {
     constructor(private connection: TransactionalConnection) {}
 
-    // Out-of-order delivery guard: a Warehouse's owning Branch may not have been synced yet
-    // (branch/warehouse are independent Kafka streams — no delivery-order guarantee across
-    // streams). Log and skip rather than creating a dangling warehouse with no resolvable
-    // branch — a later retry of this same event (or a later Warehouse update) resolves it once
-    // the branch exists, same shape as PriceStreamHandler's not-found handling.
-    async upsert(ctx: RequestContext, record: WarehouseRecordInput): Promise<Warehouse | null> {
+    // Out-of-order delivery guard, relaxed (issue #80 follow-up): a Warehouse's owning Branch
+    // may not have been synced yet (branch/warehouse are independent Kafka streams — no
+    // delivery-order guarantee across streams), or mivend's own Branch consolidation may be
+    // entirely independent of whatever branch id the ERP sends (a manually-created Branch's
+    // erpId never matches a real ERP GUID at all — see BranchService.createManual). Either way,
+    // the Warehouse itself must still be created/updated — leaving branchId null rather than
+    // skipping the whole row is what lets staff assign it manually afterwards (manager portal's
+    // WarehouseCurationTable). Previously this returned null and created nothing, which meant a
+    // warehouse could never appear at all until a matching ERP-sourced Branch existed — a real,
+    // live-found dead end for any Branch created manually instead.
+    async upsert(ctx: RequestContext, record: WarehouseRecordInput): Promise<Warehouse> {
         const branch = await this.connection
             .getRepository(ctx, Branch)
             .findOne({ where: { erpId: record.branchErpId } });
         if (!branch) {
             Logger.warn(
-                `Skipping warehouse erpId=${record.erpId}: branch erpId=${record.branchErpId} not found`,
+                `warehouse erpId=${record.erpId}: branch erpId=${record.branchErpId} not found — ` +
+                    `creating/updating unassigned (staff can assign a branch manually)`,
                 loggerCtx,
             );
-            return null;
         }
 
         const repo = this.connection.getRepository(ctx, Warehouse);
+        const branchId = branch ? String(branch.id) : null;
         let warehouse = await repo.findOne({ where: { erpId: record.erpId } });
         if (warehouse) {
             warehouse.name = record.name;
-            warehouse.branchId = String(branch.id);
+            // Never clobber a branch staff already assigned manually just because this later ERP
+            // event still can't resolve one — only advance branchId when we actually have one.
+            if (branchId) warehouse.branchId = branchId;
             warehouse.isActive = record.isActive;
         } else {
             warehouse = repo.create({
                 erpId: record.erpId,
                 name: record.name,
-                branchId: String(branch.id),
+                branchId,
                 isActive: record.isActive,
             });
         }

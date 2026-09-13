@@ -24,7 +24,7 @@ function createConnection(existingLocation: { id: string } | undefined): {
 describe('WarehouseStreamHandler', () => {
     const ctx = {} as RequestContext;
 
-    it('skips when name/branchId are missing', async () => {
+    it('skips when name is missing', async () => {
         const warehouseService = { upsert: vi.fn() };
         const stockLocationService = { create: vi.fn(), update: vi.fn() };
         const handler = new WarehouseStreamHandler(
@@ -33,7 +33,7 @@ describe('WarehouseStreamHandler', () => {
             createConnection(undefined) as never,
         );
 
-        await handler.apply(ctx, 'wh-1', { name: 'Main' });
+        await handler.apply(ctx, 'wh-1', { branchId: 'branch-guid' });
 
         expect(warehouseService.upsert).not.toHaveBeenCalled();
     });
@@ -80,8 +80,10 @@ describe('WarehouseStreamHandler', () => {
         expect(stockLocationService.create).not.toHaveBeenCalled();
     });
 
-    it('does not touch StockLocation when the branch is not found (warehouseService returns null)', async () => {
-        const warehouseService = { upsert: vi.fn().mockResolvedValue(null) };
+    it('still creates the StockLocation when the branch cannot be resolved (warehouse comes back unassigned, not null)', async () => {
+        const warehouseService = {
+            upsert: vi.fn().mockResolvedValue({ id: 'w1', branchId: null }),
+        };
         const stockLocationService = { create: vi.fn(), update: vi.fn() };
         const handler = new WarehouseStreamHandler(
             warehouseService as never,
@@ -91,7 +93,31 @@ describe('WarehouseStreamHandler', () => {
 
         await handler.apply(ctx, 'wh-1', { name: 'Main warehouse', branchId: 'unknown-branch' });
 
-        expect(stockLocationService.create).not.toHaveBeenCalled();
-        expect(stockLocationService.update).not.toHaveBeenCalled();
+        expect(stockLocationService.create).toHaveBeenCalledWith(ctx, {
+            name: 'Main warehouse',
+            customFields: { warehouseErpId: 'wh-1' },
+        });
+    });
+
+    it('still creates the StockLocation when branchId is entirely absent from the payload', async () => {
+        const warehouseService = {
+            upsert: vi.fn().mockResolvedValue({ id: 'w1', branchId: null }),
+        };
+        const stockLocationService = { create: vi.fn(), update: vi.fn() };
+        const handler = new WarehouseStreamHandler(
+            warehouseService as never,
+            stockLocationService as never,
+            createConnection(undefined) as never,
+        );
+
+        await handler.apply(ctx, 'wh-1', { name: 'Main warehouse' });
+
+        expect(warehouseService.upsert).toHaveBeenCalledWith(ctx, {
+            erpId: 'wh-1',
+            name: 'Main warehouse',
+            branchErpId: '',
+            isActive: true,
+        });
+        expect(stockLocationService.create).toHaveBeenCalled();
     });
 });

@@ -60,17 +60,35 @@ describe('WarehouseService', () => {
         );
     });
 
-    it('logs and skips (returns null, does not write) when the branch does not exist yet', async () => {
+    it('creates the warehouse unassigned (branchId null) when the branch does not exist yet, never skipping the row', async () => {
         branchRepo.findOne.mockResolvedValue(null);
+        warehouseRepo.findOne.mockResolvedValue(null);
         const result = await service.upsert(ctx, {
             erpId: 'wh-1',
             name: 'Main warehouse',
             branchErpId: 'unknown-branch',
             isActive: true,
         });
-        expect(result).toBeNull();
-        expect(warehouseRepo.findOne).not.toHaveBeenCalled();
-        expect(warehouseRepo.save).not.toHaveBeenCalled();
+        expect(warehouseRepo.create).toHaveBeenCalledWith(
+            expect.objectContaining({ erpId: 'wh-1', branchId: null, isActive: true }),
+        );
+        expect(warehouseRepo.save).toHaveBeenCalled();
+        expect(result).not.toBeNull();
+    });
+
+    it('never clobbers a manually-assigned branchId just because a later ERP event still cannot resolve one', async () => {
+        branchRepo.findOne.mockResolvedValue(null);
+        const existing = { erpId: 'wh-1', name: 'Old', branchId: 'branch-manual', isActive: true };
+        warehouseRepo.findOne.mockResolvedValue(existing);
+        await service.upsert(ctx, {
+            erpId: 'wh-1',
+            name: 'Main warehouse',
+            branchErpId: 'unknown-branch',
+            isActive: true,
+        });
+        expect(warehouseRepo.save).toHaveBeenCalledWith(
+            expect.objectContaining({ branchId: 'branch-manual' }),
+        );
     });
 
     it('findByErpId queries by erpId', async () => {

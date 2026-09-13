@@ -5,6 +5,8 @@ import {
     graphql,
 } from '@vendure/dashboard';
 
+import { BranchesPage } from './branches-page';
+
 // See ../system-health/index.ts's own doc comment for why this file sits under
 // apps/server/src instead of a packages/plugins/* package (pnpm-workspace-symlink
 // dashboard-discovery limitation).
@@ -41,11 +43,34 @@ export const branchConsolidationAlert: DashboardAlertDefinition<number> = {
     title: 'No branches defined yet',
     description:
         'No warehouse can be assigned to a branch until at least one branch exists. ' +
-        'Add one in the manager portal (Settings → Branches) — this is a mivend-only grouping, ' +
-        'independent of any ERP data, so it never depends on an ERP sync having run.',
+        'Add one in the manager portal — this is a mivend-only grouping, independent of any ' +
+        'ERP data, so it never depends on an ERP sync having run.',
+    actions: [
+        {
+            label: 'Add a branch',
+            onClick: ({ dismiss }) => {
+                dismiss();
+                // /branches is this same extension's own route (registered below) — a real
+                // in-app navigation, same origin, no port-guessing needed.
+                window.location.href = '/branches';
+            },
+        },
+    ],
     recheckInterval: 60_000,
 };
 
 defineDashboardExtension({
     alerts: [branchConsolidationAlert],
+    routes: [
+        {
+            path: '/branches',
+            component: BranchesPage,
+            navMenuItem: {
+                sectionId: 'system',
+                id: 'branches',
+                title: 'Branches',
+                url: '/branches',
+            },
+        },
+    ],
 });

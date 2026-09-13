@@ -26,25 +26,23 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         payload: Record<string, unknown>,
     ): Promise<void> {
         const name = String(payload.name ?? '');
-        const branchId = String(payload.branchId ?? '');
-        if (!name || !branchId) {
-            Logger.warn(`warehouse ${entityId}: missing name/branchId, skipping`, loggerCtx);
+        if (!name) {
+            Logger.warn(`warehouse ${entityId}: missing name, skipping`, loggerCtx);
             return;
         }
+        // An empty/missing branchId (malformed payload) is handled the same as an unresolvable
+        // one — WarehouseService.upsert leaves branchId null either way, never a reason to skip
+        // creating the Warehouse itself.
+        const branchId = String(payload.branchId ?? '');
         const isActive = payload.isActive !== false;
         const isDeleted = payload.isDeleted === true;
 
-        const warehouse = await this.warehouseService.upsert(ctx, {
+        await this.warehouseService.upsert(ctx, {
             erpId: entityId,
             name,
             branchErpId: branchId,
             isActive: isActive && !isDeleted,
         });
-        if (!warehouse) {
-            // Branch not synced yet — WarehouseService already logged this. No StockLocation to
-            // create without a resolved Warehouse.
-            return;
-        }
 
         await this.ensureStockLocation(ctx, entityId, name);
         Logger.verbose(`Upserted warehouse erpId=${entityId}`, loggerCtx);

@@ -124,10 +124,17 @@ export class AccessControlResolver {
     }
 
     // mivend's own branch consolidation, independent of any ERP-provided org unit — see
-    // BranchService.createManual's own comment.
+    // BranchService.createManual's own comment. Deliberately SuperAdmin, NOT the broader
+    // ManageAccessControl this file's other mutations use (setCreditTermLimit,
+    // setRoleAccessScopeConfig, updateWarehouseBranchAssignment) — those are legitimate
+    // day-to-day manager-portal business settings that portal-admin/general-director roles hold;
+    // this one is the org-structure precondition that blocks warehouse ingestion for the entire
+    // system if misused, so it's restricted to a real superadmin and only ever exposed through
+    // the native Dashboard (src/dashboard/branch-consolidation/branches-page.tsx), never the
+    // manager portal.
     @Transaction()
     @Mutation()
-    @Allow(CustomPermission.ManageAccessControl.Permission)
+    @Allow(Permission.SuperAdmin)
     async createBranch(
         @Ctx() ctx: RequestContext,
         @Args() args: { name: string },

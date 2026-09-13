@@ -10,7 +10,7 @@ export interface Warehouse {
     id: string;
     erpId: string;
     name: string;
-    branchId: string;
+    branchId: string | null;
     isActive: boolean;
     includedInBranchAtp: boolean;
 }
@@ -64,20 +64,6 @@ export async function fetchBranchOptions(): Promise<BranchOption[]> {
         `query BranchOptions { branches { id erpId name } }`,
     );
     return result.branches;
-}
-
-export async function createBranch(name: string): Promise<BranchOption> {
-    const result = await adminApi<{ createBranch: BranchOption }>(
-        `mutation CreateBranch($name: String!) {
-            createBranch(name: $name) {
-                id
-                erpId
-                name
-            }
-        }`,
-        { name },
-    );
-    return result.createBranch;
 }
 
 export async function fetchPriceTypeOptions(): Promise<PriceTypeOption[]> {

@@ -42,9 +42,14 @@ const emit = defineEmits<{
     'update:page-size': [size: number];
 }>();
 
-const branchOptions = computed<SelectOption[]>(() =>
-    props.branches.map(b => ({ value: b.id, label: b.name })),
-);
+// Leading blank option (issue #80 follow-up): a Warehouse can now exist with no branch at all
+// (its ERP-reported branch never resolved, or there simply wasn't one yet when it synced) — see
+// WarehouseService.upsert's own comment. Without this option the native <select> falls back to
+// silently showing its first real branch as if selected, even though nothing has been assigned.
+const branchOptions = computed<SelectOption[]>(() => [
+    { value: '', label: 'Unassigned' },
+    ...props.branches.map(b => ({ value: b.id, label: b.name })),
+]);
 
 const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
@@ -114,7 +119,7 @@ interface WarehouseRow {
     erpId: string;
     erpIsActive: boolean;
     erpIsActiveVariant: StatusBadgeVariant;
-    assignedBranchId: string;
+    assignedBranchId: string | null;
     includedInBranchAtp: boolean;
 }
 const rows = computed<WarehouseRow[]>(() =>

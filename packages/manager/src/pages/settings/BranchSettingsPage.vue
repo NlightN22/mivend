@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { MvButton, MvInput, MvNotice, MvPanel, MvSelect } from '@mivend/ui-kit';
+import { MvNotice, MvPanel, MvSelect } from '@mivend/ui-kit';
 import type { SelectOption } from '@mivend/ui-kit';
 import { useLatestRequest } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
@@ -9,7 +9,6 @@ import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import WarehouseCurationTable from '../../components/settings/WarehouseCurationTable.vue';
 import BranchSettingsForm from '../../components/settings/BranchSettingsForm.vue';
 import {
-    createBranch,
     fetchBranchOptions,
     fetchBranchSettings,
     fetchPriceTypeOptions,
@@ -83,29 +82,6 @@ function onWarehouseFilters(filters: { search: string }): void {
 
 const savingWarehouseId = ref<string | null>(null);
 const reassignError = ref('');
-
-// mivend's own branch consolidation, independent of ERP data — see BranchService.createManual's
-// own comment. Needed because Branch has historically only ever been ERP-populated, leaving it
-// permanently empty (and this whole page unusable) on any contour where that REST sync never ran.
-const newBranchName = ref('');
-const creatingBranch = ref(false);
-const createBranchError = ref('');
-
-async function onCreateBranch(): Promise<void> {
-    const name = newBranchName.value.trim();
-    if (!name) return;
-    creatingBranch.value = true;
-    createBranchError.value = '';
-    try {
-        const branch = await createBranch(name);
-        branches.value = [...branches.value, branch].sort((a, b) => a.name.localeCompare(b.name));
-        newBranchName.value = '';
-    } catch (e) {
-        createBranchError.value = e instanceof Error ? e.message : 'Could not create branch';
-    } finally {
-        creatingBranch.value = false;
-    }
-}
 
 async function loadAll(): Promise<void> {
     loading.value = true;
@@ -225,31 +201,6 @@ onMounted(loadAll);
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>
 
-        <MvPanel title="Add branch">
-            <template #subheader>
-                <p class="branch-settings-page__description">
-                    mivend's own branch list — not tied to 1C's org structure. Add a branch here,
-                    then assign warehouses to it below.
-                </p>
-            </template>
-
-            <MvNotice v-if="createBranchError" variant="error">{{ createBranchError }}</MvNotice>
-            <div class="branch-settings-page__add-branch">
-                <MvInput
-                    v-model="newBranchName"
-                    placeholder="Branch name"
-                    :disabled="creatingBranch"
-                    @keyup.enter="onCreateBranch"
-                />
-                <MvButton
-                    :disabled="creatingBranch || !newBranchName.trim()"
-                    @click="onCreateBranch"
-                >
-                    Add branch
-                </MvButton>
-            </div>
-        </MvPanel>
-
         <MvPanel title="Warehouse assignment">
             <template #subheader>
                 <p class="branch-settings-page__description">
@@ -318,17 +269,6 @@ onMounted(loadAll);
     height: 1px;
     margin: 14px 0;
     background: var(--el-border-color, #e4e7ec);
-}
-
-.branch-settings-page__add-branch {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    max-width: 420px;
-}
-
-.branch-settings-page__add-branch > :first-child {
-    flex: 1;
 }
 
 .branch-settings-page__breadcrumb {

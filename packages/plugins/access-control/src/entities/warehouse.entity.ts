@@ -21,8 +21,12 @@ export class Warehouse extends VendureEntity {
     @Column({ type: 'varchar' })
     name!: string;
 
-    @Column({ type: 'varchar' })
-    branchId!: string;
+    // Nullable (issue #80 follow-up): a Warehouse is always created/updated regardless of
+    // whether its ERP-reported branch resolves — see WarehouseService.upsert's own comment.
+    // Unassigned warehouses surface in the manager portal's WarehouseCurationTable for staff to
+    // assign manually, instead of never existing at all.
+    @Column({ type: 'varchar', nullable: true })
+    branchId!: string | null;
 
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;

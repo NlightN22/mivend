@@ -40,7 +40,9 @@ const adminApiSchema = gql`
         id: ID!
         erpId: String!
         name: String!
-        branchId: String!
+        # Nullable (issue #80 follow-up) — a Warehouse always exists even when its ERP-reported
+        # branch never resolved; staff assign one manually via updateWarehouseBranchAssignment.
+        branchId: String
         isActive: Boolean!
         includedInBranchAtp: Boolean!
     }
