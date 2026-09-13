@@ -95,6 +95,40 @@ describe('ProductStreamHandler', () => {
         ]);
     });
 
+    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
+    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
+    // explicitly, only as an absent key (confirmed live with Search Platform, mivend#89's
+    // follow-up — a real production/staging incident, not a hypothetical). Absent must read as
+    // false (disabled), not true.
+    it('treats isActive absent from the payload as disabled (proto3 omits the false zero-value)', async () => {
+        const connection = makeConnection(undefined);
+        const productService = {
+            create: vi.fn().mockResolvedValue({ id: '10' }),
+            update: vi.fn(),
+        };
+        const productVariantService = {
+            getVariantsByProductId: vi.fn(),
+            create: vi.fn().mockResolvedValue([{ id: '20' }]),
+            update: vi.fn(),
+        };
+        const taxCategoryService = makeTaxCategoryService([DEFAULT_TAX_CATEGORY]);
+        const productTaxCodeFlagService = makeProductTaxCodeFlagService();
+        const handler = new ProductStreamHandler(
+            connection as never,
+            productService as never,
+            productVariantService as never,
+            taxCategoryService as never,
+            productTaxCodeFlagService as never,
+        );
+
+        await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' });
+
+        expect(productService.create).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ enabled: false, customFields: { externalId: 'p-1' } }),
+        );
+    });
+
     it('on update, toggles the existing variant using isActive and does not read organizationId', async () => {
         const connection = makeConnection('existing-product-id');
         const productService = { create: vi.fn(), update: vi.fn().mockResolvedValue({}) };

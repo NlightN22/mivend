@@ -34,7 +34,9 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         // one — WarehouseService.upsert leaves branchId null either way, never a reason to skip
         // creating the Warehouse itself.
         const branchId = String(payload.branchId ?? '');
-        const isActive = payload.isActive !== false;
+        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
+        // zero-value omission).
+        const isActive = payload.isActive === true;
         const isDeleted = payload.isDeleted === true;
 
         await this.warehouseService.upsert(ctx, {

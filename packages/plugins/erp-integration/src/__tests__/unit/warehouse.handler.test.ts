@@ -38,6 +38,11 @@ describe('WarehouseStreamHandler', () => {
         expect(warehouseService.upsert).not.toHaveBeenCalled();
     });
 
+    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
+    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
+    // explicitly, only as an absent key (confirmed live with Search Platform, mivend#89's
+    // follow-up). Absent must read as false, not true — this test previously asserted the
+    // opposite (the actual bug).
     it('creates a new StockLocation when the warehouse upserts and no location exists yet', async () => {
         const warehouseService = { upsert: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLocationService = { create: vi.fn(), update: vi.fn() };
@@ -47,7 +52,11 @@ describe('WarehouseStreamHandler', () => {
             createConnection(undefined) as never,
         );
 
-        await handler.apply(ctx, 'wh-1', { name: 'Main warehouse', branchId: 'branch-guid' });
+        await handler.apply(ctx, 'wh-1', {
+            name: 'Main warehouse',
+            branchId: 'branch-guid',
+            isActive: true,
+        });
 
         expect(warehouseService.upsert).toHaveBeenCalledWith(ctx, {
             erpId: 'wh-1',
@@ -80,6 +89,30 @@ describe('WarehouseStreamHandler', () => {
         expect(stockLocationService.create).not.toHaveBeenCalled();
     });
 
+    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
+    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
+    // explicitly, only as an absent key (confirmed live with Search Platform, mivend#89's
+    // follow-up — a real incident: a business-db deactivation backfill's replayed events had no
+    // isActive key at all, and the old `!== false` check silently kept treating them as active).
+    it('treats isActive absent from the payload as inactive (proto3 omits the false zero-value)', async () => {
+        const warehouseService = { upsert: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLocationService = { create: vi.fn(), update: vi.fn() };
+        const handler = new WarehouseStreamHandler(
+            warehouseService as never,
+            stockLocationService as never,
+            createConnection(undefined) as never,
+        );
+
+        await handler.apply(ctx, 'wh-1', { name: 'Main warehouse', branchId: 'branch-guid' });
+
+        expect(warehouseService.upsert).toHaveBeenCalledWith(ctx, {
+            erpId: 'wh-1',
+            name: 'Main warehouse',
+            branchErpId: 'branch-guid',
+            isActive: false,
+        });
+    });
+
     it('still creates the StockLocation when the branch cannot be resolved (warehouse comes back unassigned, not null)', async () => {
         const warehouseService = {
             upsert: vi.fn().mockResolvedValue({ id: 'w1', branchId: null }),
@@ -110,7 +143,7 @@ describe('WarehouseStreamHandler', () => {
             createConnection(undefined) as never,
         );
 
-        await handler.apply(ctx, 'wh-1', { name: 'Main warehouse' });
+        await handler.apply(ctx, 'wh-1', { name: 'Main warehouse', isActive: true });
 
         expect(warehouseService.upsert).toHaveBeenCalledWith(ctx, {
             erpId: 'wh-1',

@@ -90,6 +90,19 @@ export type InboundStream =
     // above (company.customers, not company.catalog/orders) — see DepartmentStreamHandler.
     | 'department';
 
+// Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
+// false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
+// follow-up investigation): Integration Service's published contracts declare isActive/isDeleted
+// as plain (non-optional) proto3 bool fields. Under proto3, `false` is a scalar field's
+// zero-value, and the @bufbuild/protobuf JSON encoder they use OMITS any non-optional scalar
+// field equal to its zero-value — `isActive:false` is therefore NEVER sent as an explicit
+// `false`, only as an absent key, for every stream using this contract shape. A handler reading
+// `payload.isActive !== false` (defaulting an absent key to "active") can never detect a real
+// deactivation at all — this was a live, silent bug affecting product/warehouse/price/priceType/
+// organization since inception, not something introduced by any one incident. The correct read is
+// `payload.isActive === true`. isDeleted is unaffected (its own zero-value is false too, so an
+// explicit `true` is always sent) — only isActive-style "defaults to true" flags need this fix.
+
 export interface ErpIntegrationPluginOptions {
     instanceType: 'central' | 'branch';
     // Issue #68: separate axis from `instanceType`. A plain `make dev` must never reach a real

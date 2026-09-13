@@ -29,7 +29,11 @@ describe('OrganizationStreamHandler', () => {
         );
     });
 
-    it('defaults isActive to true when absent', async () => {
+    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
+    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
+    // explicitly, only as an absent key (confirmed live with Search Platform, mivend#89's
+    // follow-up). Absent must read as false, not true.
+    it('defaults isActive to false when absent (proto3 omits the false zero-value)', async () => {
         const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
         const handler = new OrganizationStreamHandler(documentsService as never);
 
@@ -39,7 +43,7 @@ describe('OrganizationStreamHandler', () => {
             ctx,
             'org-1',
             'Acme LLC',
-            true,
+            false,
         );
     });
 
@@ -54,7 +58,7 @@ describe('OrganizationStreamHandler', () => {
             ctx,
             'org-unknown',
             'Not yet synced',
-            true,
+            false,
         );
     });
 });

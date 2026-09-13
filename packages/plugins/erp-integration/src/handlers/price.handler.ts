@@ -26,7 +26,9 @@ export class PriceStreamHandler implements InboundStreamHandler {
         const productId = String(payload.productId ?? '');
         const priceTypeId = String(payload.priceTypeId ?? '');
         const value = Number.parseFloat(String(payload.value ?? ''));
-        const isActive = payload.isActive !== false;
+        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
+        // zero-value omission).
+        const isActive = payload.isActive === true;
         const isDeleted = payload.isDeleted === true;
 
         if (!productId || !priceTypeId || Number.isNaN(value)) {

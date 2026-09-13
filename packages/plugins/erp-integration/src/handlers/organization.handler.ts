@@ -31,7 +31,9 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
             Logger.warn(`organization ${entityId}: missing name, skipping`, loggerCtx);
             return;
         }
-        const isActive = payload.isActive !== false;
+        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
+        // zero-value omission).
+        const isActive = payload.isActive === true;
 
         await this.documentsService.upsertActiveState(ctx, entityId, name, isActive);
         Logger.verbose(`Upserted organization erpId=${entityId}`, loggerCtx);

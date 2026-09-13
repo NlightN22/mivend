@@ -25,7 +25,9 @@ export class PriceTypeStreamHandler implements InboundStreamHandler {
             Logger.warn(`price-type ${entityId}: missing name, skipping`, loggerCtx);
             return;
         }
-        const isActive = payload.isActive !== false;
+        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
+        // zero-value omission).
+        const isActive = payload.isActive === true;
         await this.customerPricingService.upsertPriceTypeByExternalId(
             ctx,
             entityId,

@@ -45,7 +45,9 @@ export class ProductStreamHandler implements InboundStreamHandler {
             return;
         }
 
-        const isActive = payload.isActive !== false;
+        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
+        // bool zero-value omission).
+        const isActive = payload.isActive === true;
         // `vatCode` isn't in @nlightn22/event-contracts' ProductChangedSchema yet (verified
         // against 0.13.0's product_changed_pb.d.ts — no VAT field at all). Reading it here
         // anyway, defensively: until that contract is extended this always resolves via the
