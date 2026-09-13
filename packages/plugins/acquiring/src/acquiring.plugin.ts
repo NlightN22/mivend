@@ -2,6 +2,7 @@ import { PluginCommonModule, RuntimeVendureConfig, Type, VendurePlugin } from '@
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
+import { NotificationPlugin } from '@mivend/plugin-notification';
 
 import { Dispute } from './entities/dispute.entity';
 import { FiscalReceipt } from './entities/fiscal-receipt.entity';
@@ -42,7 +43,13 @@ import { ACQUIRING_PLUGIN_OPTIONS } from './types';
 import type { AcquiringPluginOptions } from './types';
 
 @VendurePlugin({
-    imports: [PluginCommonModule, CounterpartyPlugin, AccessControlPlugin, ErpOrderPlugin],
+    imports: [
+        PluginCommonModule,
+        CounterpartyPlugin,
+        AccessControlPlugin,
+        ErpOrderPlugin,
+        NotificationPlugin,
+    ],
     entities: [
         Invoice,
         PaymentAttempt,

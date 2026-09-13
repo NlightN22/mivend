@@ -5,6 +5,7 @@ import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
+import { NotificationPlugin } from '@mivend/plugin-notification';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
@@ -73,6 +74,7 @@ import { createReconciliationTask } from './reconciliation.scheduled-task';
         CounterpartyPlugin,
         DocumentsPlugin,
         ReservationPlugin,
+        NotificationPlugin,
     ],
     entities: [
         IntegrationOutboxEntry,

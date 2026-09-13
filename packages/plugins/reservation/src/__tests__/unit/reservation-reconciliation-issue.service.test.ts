@@ -10,6 +10,8 @@ describe('ReservationReconciliationIssueService', () => {
         save: ReturnType<typeof vi.fn>;
     };
     let connection: { getRepository: ReturnType<typeof vi.fn> };
+    let notificationService: { create: ReturnType<typeof vi.fn> };
+    let notificationRecipientService: { getCurrentAdministrator: ReturnType<typeof vi.fn> };
     let service: ReservationReconciliationIssueService;
     const ctx = {} as unknown as RequestContext;
 
@@ -20,8 +22,12 @@ describe('ReservationReconciliationIssueService', () => {
             save: vi.fn(async (row: unknown) => row),
         };
         connection = { getRepository: vi.fn(() => repo) };
+        notificationService = { create: vi.fn(async () => ({})) };
+        notificationRecipientService = { getCurrentAdministrator: vi.fn(async () => null) };
         service = new ReservationReconciliationIssueService(
             connection as unknown as TransactionalConnection,
+            notificationService as never,
+            notificationRecipientService as never,
         );
     });
 
@@ -62,6 +68,62 @@ describe('ReservationReconciliationIssueService', () => {
                 status: 'open',
             }),
         );
+    });
+
+    it('does not create a Notification when no administrator is resolvable from ctx (system-triggered path)', async () => {
+        await service.reportQuantityMismatch(ctx, {
+            orderId: 'order-1',
+            productVariantId: 'v-1',
+            localQuantity: 5,
+            erpQuantity: 3,
+            orderEntityId: 'erp-order-1',
+        });
+
+        expect(notificationRecipientService.getCurrentAdministrator).toHaveBeenCalledWith(ctx);
+        expect(notificationService.create).not.toHaveBeenCalled();
+    });
+
+    it('creates a warning Notification for the resolved administrator when a new issue is recorded', async () => {
+        notificationRecipientService.getCurrentAdministrator.mockResolvedValue({
+            recipientType: 'administrator',
+            recipientId: 'admin-1',
+        });
+
+        await service.reportQuantityMismatch(ctx, {
+            orderId: 'order-1',
+            productVariantId: 'v-1',
+            localQuantity: 5,
+            erpQuantity: 3,
+            orderEntityId: 'erp-order-1',
+        });
+
+        expect(notificationService.create).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                recipientType: 'administrator',
+                recipientId: 'admin-1',
+                kind: 'warning',
+                sourceType: 'reservation-reconciliation',
+            }),
+        );
+    });
+
+    it('does not create a Notification when reporting an already-open issue (dedupe path)', async () => {
+        repo.findOne.mockResolvedValue({ id: 'issue-1' });
+        notificationRecipientService.getCurrentAdministrator.mockResolvedValue({
+            recipientType: 'administrator',
+            recipientId: 'admin-1',
+        });
+
+        await service.reportQuantityMismatch(ctx, {
+            orderId: 'order-1',
+            productVariantId: 'v-1',
+            localQuantity: 5,
+            erpQuantity: 3,
+            orderEntityId: 'erp-order-1',
+        });
+
+        expect(notificationService.create).not.toHaveBeenCalled();
     });
 
     it('reportUnresolvedProductMapping dedupes on externalProductId, not productVariantId', async () => {

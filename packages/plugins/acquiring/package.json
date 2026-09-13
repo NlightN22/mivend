@@ -18,6 +18,7 @@
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
+        "@mivend/plugin-notification": "workspace:*",
         "@mivend/plugin-sync": "workspace:*",
         "graphql-tag": "^2.12.6",
         "shared": "workspace:*"

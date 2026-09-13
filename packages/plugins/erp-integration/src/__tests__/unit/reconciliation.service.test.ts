@@ -30,13 +30,15 @@ describe('ReconciliationService.runComparison', () => {
         const localCounts = {
             getLocalActiveCount: overrides?.getLocalActiveCount ?? (async () => 1),
         };
+        const notificationService = { create: vi.fn().mockResolvedValue({}) };
         const service = new ReconciliationService(
             connection as never,
             requestContextService as never,
             summaryClient as never,
             localCounts as never,
+            notificationService as never,
         );
-        return { service, save };
+        return { service, save, notificationService };
     }
 
     it('records an upstream-higher issue when Integration Service has more active entities', async () => {
@@ -57,6 +59,42 @@ describe('ReconciliationService.runComparison', () => {
             theirActiveCount: 10,
             triggeredBy: 'scheduled',
         });
+    });
+
+    // issue #87 Part 2: unlike reservation/payment reconciliation, a manual re-run always carries
+    // the requesting administrator, so this is the one of the four sites with a real recipient.
+    it('does not create a Notification for a scheduled run (no administrator to notify)', async () => {
+        const { service, notificationService } = makeService({
+            fetchSummaries: async (aggregateType?: string) => [
+                makeSummary(aggregateType ?? '', 10),
+            ],
+            getLocalActiveCount: async () => 4,
+        });
+
+        await service.runComparison({ triggeredBy: 'scheduled' });
+
+        expect(notificationService.create).not.toHaveBeenCalled();
+    });
+
+    it('creates a warning Notification addressed to the requesting administrator for a manual run', async () => {
+        const { service, notificationService } = makeService({
+            fetchSummaries: async (aggregateType?: string) => [
+                makeSummary(aggregateType ?? '', 10),
+            ],
+            getLocalActiveCount: async () => 4,
+        });
+
+        await service.runComparison({ triggeredBy: 'manual', triggeredByAdministratorId: '42' });
+
+        expect(notificationService.create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                recipientType: 'administrator',
+                recipientId: '42',
+                kind: 'warning',
+                sourceType: 'erp-reconciliation',
+            }),
+        );
     });
 
     it('records a local-higher issue when mivend has more active entities than Integration Service', async () => {
@@ -139,11 +177,13 @@ describe('ReconciliationService.runComparison', () => {
             ],
         };
         const localCounts = { getLocalActiveCount: async () => 4 };
+        const notificationService = { create: vi.fn().mockResolvedValue({}) };
         const service = new ReconciliationService(
             connection as never,
             requestContextService as never,
             summaryClient as never,
             localCounts as never,
+            notificationService as never,
         );
 
         await service.runComparison({ triggeredBy: 'scheduled' });
@@ -171,6 +211,7 @@ describe('ReconciliationService.resolve', () => {
             { create: vi.fn() } as never,
             {} as never,
             {} as never,
+            { create: vi.fn() } as never,
         );
 
         const result = await service.resolve({} as never, {

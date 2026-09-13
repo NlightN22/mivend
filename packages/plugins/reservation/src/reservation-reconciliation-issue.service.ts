@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
+import { NotificationRecipientService, NotificationService } from '@mivend/plugin-notification';
 import { IsNull } from 'typeorm';
 
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
@@ -16,7 +17,11 @@ export interface OpenReservationReconciliationIssueListOptions {
 // Resolution/triage tooling is future scope, not part of detecting the issue.
 @Injectable()
 export class ReservationReconciliationIssueService {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private notificationService: NotificationService,
+        private notificationRecipientService: NotificationRecipientService,
+    ) {}
 
     async reportQuantityMismatch(
         ctx: RequestContext,
@@ -118,7 +123,7 @@ export class ReservationReconciliationIssueService {
             return existing;
         }
 
-        return repo.save(
+        const saved = await repo.save(
             repo.create({
                 ...fields,
                 detectedAt: new Date(),
@@ -126,5 +131,29 @@ export class ReservationReconciliationIssueService {
                 resolution: null,
             }),
         );
+
+        // handleOrderRegistrationResult (reservation-write-off-sync.service.ts) runs from an
+        // inbox handler, i.e. no signed-in administrator — ctx.activeUserId is unset there, so
+        // getCurrentAdministrator resolves to null and no Notification row is created. There is
+        // no broadcast-to-all-admins-with-permission concept in the notification plugin yet
+        // (see NotificationRecipientService), so this call is a no-op on every current call path
+        // until either a real caller identity exists or a broadcast recipient model is added.
+        const recipient = await this.notificationRecipientService.getCurrentAdministrator(ctx);
+        if (recipient) {
+            await this.notificationService.create(ctx, {
+                recipientType: recipient.recipientType,
+                recipientId: recipient.recipientId,
+                kind: 'warning',
+                sourceType: 'reservation-reconciliation',
+                // Same dedupe key as `save()`'s own `existing` lookup above, not `saved.id` — a
+                // repeated occurrence of the same drift must update the one open notification,
+                // not spawn a new one per row.
+                sourceId: `${fields.issueType}:${fields.orderId}:${fields.productVariantId ?? ''}:${fields.externalProductId ?? ''}`,
+                title: 'Reservation/ERP drift detected',
+                message: `${fields.issueType} for order ${fields.orderId}`,
+            });
+        }
+
+        return saved;
     }
 }

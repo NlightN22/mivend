@@ -79,6 +79,12 @@ export class ReservationExpiryService {
                         loggerCtx,
                     );
                 }
+                // issue #87 Part 2 open question, deliberately not wired here: this sweep runs on
+                // a timer with no signed-in administrator and no per-reservation "owning admin"
+                // concept, so there is no real recipientId to give NotificationService.create —
+                // creating one would mean inventing a broadcast-to-all-admins-with-permission
+                // recipient model that doesn't exist yet in plugin-notification. Flagged back to
+                // the issue rather than guessed at; see conversation/report for this task.
             }
 
             return nonPrepaidDue.length + prepaidDue.length;

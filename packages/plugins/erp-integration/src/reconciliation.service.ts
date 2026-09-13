@@ -5,6 +5,7 @@ import {
     RequestContextService,
     TransactionalConnection,
 } from '@vendure/core';
+import { NotificationService } from '@mivend/plugin-notification';
 
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import type { ErpReconciliationTrigger } from './entities/erp-reconciliation-issue.entity';
@@ -46,6 +47,7 @@ export class ReconciliationService {
         private readonly requestContextService: RequestContextService,
         private readonly summaryClient: ReconciliationSummaryClient,
         private readonly localCounts: ReconciliationLocalCountsService,
+        private readonly notificationService: NotificationService,
     ) {}
 
     async runComparison(input: RunComparisonInput): Promise<RunComparisonResult> {
@@ -163,8 +165,25 @@ export class ReconciliationService {
 
         if (existing) {
             await repo.save(Object.assign(existing, fields));
-            return;
+        } else {
+            await repo.save(new ErpReconciliationIssue(fields));
         }
-        await repo.save(new ErpReconciliationIssue(fields));
+
+        // Unlike the reservation/payment reconciliation issues, a manual re-run
+        // (triggeredBy: 'manual') always carries the administrator who requested it — the one
+        // case among these four call sites where a real recipient is known without inventing a
+        // broadcast model. A 'scheduled' run has no administrator to notify, so it stays a
+        // detected-but-unnotified issue, same as the other reconciliation plugins today.
+        if (params.triggeredByAdministratorId) {
+            await this.notificationService.create(ctx, {
+                recipientType: 'administrator',
+                recipientId: params.triggeredByAdministratorId,
+                kind: 'warning',
+                sourceType: 'erp-reconciliation',
+                sourceId: params.aggregateType,
+                title: 'ERP reconciliation drift detected',
+                message: `${fields.issueType} for ${params.aggregateType} (ours=${params.ourCount}, theirs=${params.theirActiveCount})`,
+            });
+        }
     }
 }

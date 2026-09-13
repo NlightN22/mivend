@@ -15,6 +15,7 @@ import { subscribeAndLog } from 'shared';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
+import { NotificationPlugin } from '@mivend/plugin-notification';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
@@ -110,7 +111,7 @@ const adminApiSchema = gql`
 `;
 
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
+    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin, NotificationPlugin],
     entities: [Reservation, ReservationExtensionLimit, ReservationReconciliationIssue],
     providers: [
         ReservationService,

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
+import { NotificationRecipientService, NotificationService } from '@mivend/plugin-notification';
 
 import {
     PaymentReconciliationIssue,
@@ -18,7 +19,11 @@ export interface OpenPaymentReconciliationIssueListOptions {
 // (report + list) — resolution/triage tooling is future scope, not part of detecting the issue.
 @Injectable()
 export class PaymentReconciliationIssueService {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private notificationService: NotificationService,
+        private notificationRecipientService: NotificationRecipientService,
+    ) {}
 
     async report(
         ctx: RequestContext,
@@ -30,7 +35,7 @@ export class PaymentReconciliationIssueService {
         },
     ): Promise<PaymentReconciliationIssue> {
         const repo = this.connection.getRepository(ctx, PaymentReconciliationIssue);
-        return repo.save(
+        const saved = await repo.save(
             repo.create({
                 issueType,
                 paymentId: null,
@@ -47,6 +52,25 @@ export class PaymentReconciliationIssueService {
                 resolution: null,
             }),
         );
+
+        // PaymentAttemptService (the only caller) runs from webhook/inbox processing, so there is
+        // no signed-in administrator on ctx — getCurrentAdministrator resolves to null and this
+        // is a no-op today. Same limitation as ReservationReconciliationIssueService.save: no
+        // broadcast-to-admins recipient model exists yet in plugin-notification.
+        const recipient = await this.notificationRecipientService.getCurrentAdministrator(ctx);
+        if (recipient) {
+            await this.notificationService.create(ctx, {
+                recipientType: recipient.recipientType,
+                recipientId: recipient.recipientId,
+                kind: 'warning',
+                sourceType: 'payment-reconciliation',
+                sourceId: `${issueType}:${details.invoiceId ?? ''}:${details.organizationId ?? ''}:${details.providerPaymentId ?? ''}`,
+                title: 'Payment/ERP drift detected',
+                message: `${issueType} (invoice ${details.invoiceId ?? 'n/a'})`,
+            });
+        }
+
+        return saved;
     }
 
     // Dashboard/ops read model (issue #76) — open issues need a human to resolve; never

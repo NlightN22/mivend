@@ -308,6 +308,9 @@ importers:
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../erp-order
+            '@mivend/plugin-notification':
+                specifier: workspace:*
+                version: link:../notification
             '@mivend/plugin-sync':
                 specifier: workspace:*
                 version: link:../sync
@@ -609,6 +612,9 @@ importers:
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../erp-order
+            '@mivend/plugin-notification':
+                specifier: workspace:*
+                version: link:../notification
             '@mivend/plugin-price-entry':
                 specifier: workspace:*
                 version: link:../price-entry
@@ -843,6 +849,9 @@ importers:
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../erp-order
+            '@mivend/plugin-notification':
+                specifier: workspace:*
+                version: link:../notification
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)
