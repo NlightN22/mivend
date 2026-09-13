@@ -2,6 +2,7 @@ import { bootstrap } from '@vendure/core';
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { config } from './vendure-config';
+import { mountNotificationSubscriptions } from './subscriptions';
 
 // Documents only the custom REST endpoints (ERP import/callback) — Shop/Admin
 // APIs are GraphQL and already self-documenting via introspection. See issue
@@ -29,7 +30,15 @@ function mountApiDocs(app: INestApplication): void {
     SwaggerModule.setup('api-docs', app, document);
 }
 
-bootstrap(config, { onBeforeAppListen: mountApiDocs }).catch(err => {
+bootstrap(config, {
+    onBeforeAppListen: app => {
+        mountApiDocs(app);
+        // Needs the plain Node HTTP server before app.listen() takes it over with Apollo's own
+        // upgrade handling — see subscriptions.ts's own comment for why this can't go through
+        // Vendure's ApiOptions.
+        mountNotificationSubscriptions(app);
+    },
+}).catch(err => {
     console.error(err);
     process.exit(1);
 });
