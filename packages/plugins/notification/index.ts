@@ -9,3 +9,6 @@ export type {
     NotificationRecipientType,
     NotificationStatus,
 } from './src/entities/notification.entity';
+export type { NotificationReceivedEvent } from './src/types';
+export { administratorNotificationSubscriptionFilter } from './src/notification-admin.resolver';
+export { customerNotificationSubscriptionFilter } from './src/notification-shop.resolver';

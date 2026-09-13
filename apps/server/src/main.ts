@@ -2,10 +2,7 @@ import { bootstrap } from '@vendure/core';
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { config } from './vendure-config';
-import {
-    mountNotificationSubscriptionsSchemas,
-    mountNotificationSubscriptionsUpgradeHandling,
-} from './subscriptions';
+import { mountNotificationSubscriptions } from './subscriptions';
 
 // Documents only the custom REST endpoints (ERP import/callback) — Shop/Admin
 // APIs are GraphQL and already self-documenting via introspection. See issue
@@ -36,18 +33,13 @@ function mountApiDocs(app: INestApplication): void {
 bootstrap(config, {
     onBeforeAppListen: app => {
         mountApiDocs(app);
-        // Needs the plain Node HTTP server before app.listen() takes it over with Apollo's own
-        // upgrade handling — see subscriptions.ts's own comment for why this can't go through
-        // Vendure's ApiOptions.
-        mountNotificationSubscriptionsUpgradeHandling(app);
+        // Needs the plain Node HTTP server before app.listen() takes it over — see
+        // subscriptions.ts's own comment for why this can't go through Vendure's ApiOptions, and
+        // for why (unlike an earlier version of this call) it no longer needs a second phase
+        // after bootstrap() resolves.
+        mountNotificationSubscriptions(app);
     },
-})
-    .then(() => {
-        // GraphQLSchemaHost#schema only exists after app.listen() finishes — see
-        // subscriptions.ts's own comment.
-        mountNotificationSubscriptionsSchemas();
-    })
-    .catch(err => {
-        console.error(err);
-        process.exit(1);
-    });
+}).catch(err => {
+    console.error(err);
+    process.exit(1);
+});

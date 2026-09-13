@@ -55,6 +55,9 @@ importers:
 
     apps/server:
         dependencies:
+            '@graphql-tools/schema':
+                specifier: ^10.0.23
+                version: 10.0.33(graphql@16.14.2)
             '@mivend/plugin-access-control':
                 specifier: workspace:*
                 version: link:../../packages/plugins/access-control
@@ -1111,6 +1114,9 @@ importers:
             element-plus:
                 specifier: ^2.9.0
                 version: 2.14.2(vue@3.5.39(typescript@5.9.3))
+            graphql-ws:
+                specifier: ^6.0.8
+                version: 6.0.8(graphql@16.14.2)(ws@8.21.0)
             pinia:
                 specifier: ^2.2.0
                 version: 2.3.1(typescript@5.9.3)(vue@3.5.39(typescript@5.9.3))

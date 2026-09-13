@@ -9,6 +9,22 @@ import { NotificationRecipientService } from './notification-recipient.service';
 import { NOTIFICATION_PUB_SUB } from './notification-pub-sub';
 import { NOTIFICATION_RECEIVED, NotificationReceivedEvent } from './types';
 
+// Extracted and exported for the same reason as NotificationAdminResolver's
+// administratorNotificationSubscriptionFilter — reused directly by apps/server's standalone
+// subscriptions schema (see that file's own comment for why it doesn't reuse this @Subscription
+// decorator's own filter wiring).
+export function customerNotificationSubscriptionFilter(
+    payload: NotificationReceivedEvent,
+    _variables: unknown,
+    context: unknown,
+): boolean {
+    const identity = context as { recipientType?: string; recipientId?: string } | undefined;
+    return (
+        identity?.recipientType === 'customer' &&
+        identity.recipientId === payload.notificationReceived.recipientId
+    );
+}
+
 // Permission.Owner mirrors plugin-acquiring's PaymentShopResolver/InvoiceResolver convention for
 // "any logged-in customer, scoped to their own data" — no new role-based permission, per
 // docs/access-control.md.
@@ -58,15 +74,7 @@ export class NotificationShopResolver {
 
     // See NotificationAdminResolver's identical comment — same WS-context fallback here.
     @Subscription('notificationReceived', {
-        filter: (payload: NotificationReceivedEvent, _variables: unknown, context: unknown) => {
-            const identity = context as
-                | { recipientType?: string; recipientId?: string }
-                | undefined;
-            return (
-                identity?.recipientType === 'customer' &&
-                identity.recipientId === payload.notificationReceived.recipientId
-            );
-        },
+        filter: customerNotificationSubscriptionFilter,
     })
     notificationReceived(@Context() context: unknown): AsyncIterableIterator<unknown> {
         if (!(context as { recipientType?: string })?.recipientType) {

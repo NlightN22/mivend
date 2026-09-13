@@ -95,6 +95,15 @@ export class NotificationService {
         return saved;
     }
 
+    // Exposed so apps/server's standalone WS-subscriptions schema (subscriptions.ts) can attach
+    // to the same PubSub instance this service publishes to without resolving the
+    // NOTIFICATION_PUB_SUB DI token directly from outside this plugin's module graph — that
+    // token lookup was found to be unreliable via `app.get()` from a bootstrap hook, whereas
+    // resolving this already-injected, already-working service is not.
+    subscribeToReceived(): AsyncIterableIterator<unknown> {
+        return this.pubSub.asyncIterableIterator(NOTIFICATION_RECEIVED);
+    }
+
     async findOne(ctx: RequestContext, id: string): Promise<Notification | null> {
         const repo = this.connection.getRepository(ctx, Notification);
         return repo.findOne({ where: { id } });
