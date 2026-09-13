@@ -1,37 +1,58 @@
 import { Injectable } from '@nestjs/common';
-import { CollectionService, ProductService, RequestContext } from '@vendure/core';
+import {
+    CollectionService,
+    ProductService,
+    RequestContext,
+    StockLevel,
+    TransactionalConnection,
+} from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { WarehouseService } from '@mivend/plugin-access-control';
 import { DocumentsService } from '@mivend/plugin-documents';
+import { ProductVariantPriceEntry } from '@mivend/plugin-price-entry';
 
-// Which of the 11 aggregateType values the summary endpoint supports actually have a meaningful,
-// countable local equivalent — decided per issue #84's "Comparison scope", confirmed by reading
-// the actual inbound stream wiring rather than assumed from the issue text:
+// Which of the 11 aggregateType values the summary endpoint supports have a meaningful,
+// countable local equivalent — decided per issue #84's "Comparison scope" and revisited per the
+// user's request that reconciliation cover "everything mivend actually loads and uses," even in
+// simplified form. Confirmed by reading the actual inbound stream wiring rather than assumed:
 //
 // - 'offer' / 'stockOrganization': IntegrationInboxProcessorService registers both as
 //   DeferredStreamHandler (see integration-inbox-processor.service.ts) — recorded, logged no-ops,
-//   no local entity is ever created/updated from either stream. No local count exists to compare.
+//   no local entity is EVER created/updated from either stream. There is genuinely nothing to
+//   count locally — "simplify the comparison" can't manufacture an entity that doesn't exist.
+//   Making these comparable is a real feature (build real handling for these two streams first),
+//   not a reconciliation tweak — track separately if/when that's prioritized.
 // - 'unit': no InboundStream member for it at all (types.ts's InboundStream union has no 'unit'
 //   entry) — mivend never receives or stores unit-of-measure data as its own countable entity.
+//   Same as above: nothing exists yet to count.
 // - 'storageLocation': StorageLocationStreamHandler's own doc comment states no per-location
 //   table is kept locally — every row folds into ProductVariant.customFields.organizationId
 //   (last-priority-wins), so there is no local "storage location count" to compare against
 //   Integration Service's count at all, independent of the activeCount-is-null special case.
 //
-// The remaining 7 do have a real, already-owned local entity with an isActive/enabled concept:
-// category (Collection, one per category minus the root), organization (OrganizationRequisites),
-// warehouse (Warehouse), priceType (PriceType), product (Product), price (CustomerPriceType
-// disabled — see note below), stock (StockLevel). Of these, 'price' and 'stock' are per-
-// (product, priceType)/(product, warehouse) facts with no single existing count-yielding service
-// method and a materially larger aggregation design (which local rows count as "the same fact"
-// upstream counts) — deferred rather than bolted on hastily, same as this project's own
-// known-technical-debt entries in docs/testing-strategy.md. Only the 5 types below are wired up.
+// The remaining 7 (of the 11 Integration Service supports today) DO have a real, already-owned
+// local entity to count — including 'price'/'stock', simplified per the user's request rather
+// than deferred: a plain row count, not the fuller "which local rows count as the same fact
+// upstream counts" aggregation design originally sketched (that fuller design stays a possible
+// future refinement, not a blocker for a first, useful signal now):
+// - category → Collection (one per category minus the root)
+// - organization → OrganizationRequisites
+// - warehouse → Warehouse
+// - priceType → PriceType
+// - product → Product
+// - price → ProductVariantPriceEntry (a plain row count — this doesn't yet reconcile "the same
+//   (product, priceType) fact", just how many price rows mivend holds vs Integration Service's
+//   own price record count; still a real, useful signal for a gross mismatch)
+// - stock → StockLevel (same simplification: total row count, not netted against zero-quantity
+//   rows or matched per (product, warehouse) pair)
 export const COMPARED_AGGREGATE_TYPES = [
     'category',
     'organization',
     'warehouse',
     'priceType',
     'product',
+    'price',
+    'stock',
 ] as const;
 export type ComparedAggregateType = (typeof COMPARED_AGGREGATE_TYPES)[number];
 
@@ -43,6 +64,7 @@ export class ReconciliationLocalCountsService {
         private readonly customerPricingService: CustomerPricingService,
         private readonly warehouseService: WarehouseService,
         private readonly documentsService: DocumentsService,
+        private readonly connection: TransactionalConnection,
     ) {}
 
     async getLocalActiveCount(
@@ -60,6 +82,10 @@ export class ReconciliationLocalCountsService {
                 return this.countActivePriceTypes(ctx);
             case 'product':
                 return this.countActiveProducts(ctx);
+            case 'price':
+                return this.connection.getRepository(ctx, ProductVariantPriceEntry).count();
+            case 'stock':
+                return this.connection.getRepository(ctx, StockLevel).count();
         }
     }
 

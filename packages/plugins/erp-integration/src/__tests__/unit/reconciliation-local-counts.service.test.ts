@@ -9,6 +9,8 @@ describe('ReconciliationLocalCountsService', () => {
         organizations?: Array<{ isActive: boolean }>;
         warehouses?: Array<{ isActive: boolean }>;
         priceTypes?: Array<{ isActive: boolean }>;
+        priceEntryCount?: number;
+        stockLevelCount?: number;
     }) {
         const collectionService = {
             findAll: async () => ({ items: [], totalItems: overrides.collectionTotalItems ?? 0 }),
@@ -25,12 +27,21 @@ describe('ReconciliationLocalCountsService', () => {
         const documentsService = {
             findAllRequisites: async () => overrides.organizations ?? [],
         };
+        const connection = {
+            getRepository: (_ctx: unknown, entity: { name: string }) => ({
+                count: async () =>
+                    entity.name === 'ProductVariantPriceEntry'
+                        ? (overrides.priceEntryCount ?? 0)
+                        : (overrides.stockLevelCount ?? 0),
+            }),
+        };
         return new ReconciliationLocalCountsService(
             collectionService as never,
             productService as never,
             customerPricingService as never,
             warehouseService as never,
             documentsService as never,
+            connection as never,
         );
     }
 
@@ -68,5 +79,15 @@ describe('ReconciliationLocalCountsService', () => {
     it('uses the enabled-product totalItems directly (already filtered server-side)', async () => {
         const service = makeService({ productTotalItems: 123 });
         expect(await service.getLocalActiveCount({} as never, 'product')).toBe(123);
+    });
+
+    it('counts price rows as a plain row count (simplified, not per-fact matched)', async () => {
+        const service = makeService({ priceEntryCount: 456 });
+        expect(await service.getLocalActiveCount({} as never, 'price')).toBe(456);
+    });
+
+    it('counts stock rows as a plain row count (simplified, not per-fact matched)', async () => {
+        const service = makeService({ stockLevelCount: 789 });
+        expect(await service.getLocalActiveCount({} as never, 'stock')).toBe(789);
     });
 });
