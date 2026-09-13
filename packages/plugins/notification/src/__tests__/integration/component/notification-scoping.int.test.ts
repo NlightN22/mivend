@@ -360,3 +360,132 @@ describe('NotificationService.findForRecipient — broadcast permission scoping 
         expect(withNoPermissions.items.map(n => n.sourceId)).toContain('perm-5');
     });
 });
+
+// mivend.audit.85 (second pass): pagination (skip/take/MAX_LIST_TAKE clamp) was added in the same
+// commit as the broadcast permission gating above but was never itself asserted — neither the
+// ordering/slicing, the clamp, nor totalItems' interaction with the gating's SQL-level Brackets
+// exclusion. Direct-repo inserts (bypassing notificationService.create) are used here specifically
+// to control createdAt explicitly, since findForRecipient orders by createdAt DESC, id DESC and
+// notificationService.create always stamps "now()" — insertion order alone isn't a reliable proxy
+// for query order at this resolution.
+describe('NotificationService.findForRecipient — pagination (component, real Postgres)', () => {
+    async function insertNotification(overrides: Partial<TestNotification>): Promise<void> {
+        await dataSource.getRepository(TestNotification).save(
+            dataSource.getRepository(TestNotification).create({
+                recipientType: 'administrator',
+                recipientId: 'admin-page',
+                kind: 'info',
+                sourceType: 'reservation.expiring',
+                sourceId: 'x',
+                title: 'x',
+                message: 'x',
+                status: 'unread',
+                readAt: null,
+                resolvedAt: null,
+                resolution: null,
+                ...overrides,
+            }),
+        );
+    }
+
+    it('skip/take return the correct slice in createdAt DESC order, not a reshuffled one', async () => {
+        const base = new Date('2026-01-01T00:00:00Z').getTime();
+        for (let i = 1; i <= 5; i++) {
+            await insertNotification({
+                sourceId: `page-${i}`,
+                title: `N${i}`,
+                createdAt: new Date(base + i * 1000),
+            });
+        }
+
+        // Newest-first order is N5, N4, N3, N2, N1 — take:2 skip:2 should land on N3, N2.
+        const page = await notificationService.findForRecipient(
+            fakeAdminCtx(),
+            'administrator',
+            'admin-page',
+            { take: 2, skip: 2 },
+        );
+
+        expect(page.items.map(n => n.title)).toEqual(['N3', 'N2']);
+        expect(page.totalItems).toBe(5);
+    });
+
+    it('clamps take above MAX_LIST_TAKE (100) instead of returning every row', async () => {
+        const base = new Date('2026-02-01T00:00:00Z').getTime();
+        for (let i = 1; i <= 105; i++) {
+            await insertNotification({
+                sourceId: `clamp-${i}`,
+                title: `C${i}`,
+                createdAt: new Date(base + i * 1000),
+            });
+        }
+
+        const page = await notificationService.findForRecipient(
+            fakeAdminCtx(),
+            'administrator',
+            'admin-page',
+            { take: 500 },
+        );
+
+        expect(page.items).toHaveLength(100);
+        expect(page.totalItems).toBe(105);
+    });
+
+    it('totalItems counts only rows visible to the caller, excluding gated broadcasts they lack permission for', async () => {
+        await notificationService.create({} as never, {
+            recipientType: 'administrator',
+            recipientId: 'admin-total',
+            kind: 'info',
+            sourceType: 'reservation.expiring',
+            sourceId: 'total-own-1',
+            title: 'Own 1',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator',
+            recipientId: 'admin-total',
+            kind: 'info',
+            sourceType: 'reservation.expiring',
+            sourceId: 'total-own-2',
+            title: 'Own 2',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'info',
+            sourceType: 'some-future-broadcast-type',
+            sourceId: 'total-ungated',
+            title: 'Ungated broadcast',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'reservation-intervention',
+            sourceId: 'total-allowed',
+            title: 'Allowed gated broadcast',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'payment-reconciliation',
+            sourceId: 'total-denied',
+            title: 'Denied gated broadcast',
+            message: 'x',
+        });
+
+        const page = await notificationService.findForRecipient(
+            fakeAdminCtx(['ReadOrder']),
+            'administrator',
+            'admin-total',
+        );
+
+        // 2 own + 1 ungated + 1 allowed gated (ReadOrder) = 4, excluding the ReadPayment-gated row
+        // — totalItems must reflect the SQL-level Brackets exclusion, not the raw table count (5).
+        expect(page.totalItems).toBe(4);
+        expect(page.items.map(n => n.sourceId).sort()).toEqual(
+            ['total-allowed', 'total-own-1', 'total-own-2', 'total-ungated'].sort(),
+        );
+    });
+});
