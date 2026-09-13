@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
-import type { TransactionalConnection } from '@vendure/core';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestSchema,
     dropTestSchema,
@@ -9,6 +9,19 @@ import {
 } from 'shared';
 
 import { NotificationService } from '../../../notification.service';
+
+// findForRecipient's administrator path now calls ctx.userHasPermissions() to gate broadcast
+// sourceTypes (issue #87 audit, mivend.audit.85) — a fake ctx exposing that one method is enough
+// for this suite, which never touches any other RequestContext behavior. Default: every
+// permission granted, matching the pre-fix "any administrator sees every broadcast" behavior, so
+// existing scoping assertions in this file don't have to know about the new gate unless they are
+// specifically testing it.
+function fakeAdminCtx(grantedPermissions: string[] | 'all' = 'all'): RequestContext {
+    return {
+        userHasPermissions: (permissions: string[]) =>
+            grantedPermissions === 'all' || permissions.some(p => grantedPermissions.includes(p)),
+    } as unknown as RequestContext;
+}
 
 // Vendure's VendureEntity relies on an EntityIdStrategy registered during bootstrap() to generate
 // its primary column — a standalone DataSource can't use the real Notification class directly
@@ -101,13 +114,13 @@ describe('NotificationService.findForRecipient (component, real Postgres)', () =
         });
 
         const own = await notificationService.findForRecipient(
-            {} as never,
+            fakeAdminCtx(),
             'administrator',
             'admin-1',
         );
 
-        expect(own).toHaveLength(1);
-        expect(own[0].title).toBe('For admin 1');
+        expect(own.items).toHaveLength(1);
+        expect(own.items[0].title).toBe('For admin 1');
     });
 
     it('filters by status without crossing recipients', async () => {
@@ -141,14 +154,14 @@ describe('NotificationService.findForRecipient (component, real Postgres)', () =
         });
 
         const unreadForAdmin3 = await notificationService.findForRecipient(
-            {} as never,
+            fakeAdminCtx(),
             'administrator',
             'admin-3',
             { status: 'unread' },
         );
 
-        expect(unreadForAdmin3).toHaveLength(1);
-        expect(unreadForAdmin3[0].sourceId).toBe('variant-2');
+        expect(unreadForAdmin3.items).toHaveLength(1);
+        expect(unreadForAdmin3.items[0].sourceId).toBe('variant-2');
     });
 });
 
@@ -183,12 +196,12 @@ describe('NotificationService.findForRecipient — administrator-broadcast (comp
         });
 
         const forAdmin5 = await notificationService.findForRecipient(
-            {} as never,
+            fakeAdminCtx(),
             'administrator',
             'admin-5',
         );
 
-        const titles = forAdmin5.map(n => n.title).sort();
+        const titles = forAdmin5.items.map(n => n.title).sort();
         expect(titles).toEqual(['Broadcast notification', 'Own notification']);
     });
 
@@ -217,8 +230,8 @@ describe('NotificationService.findForRecipient — administrator-broadcast (comp
             'admin-5',
         );
 
-        expect(forCustomer).toHaveLength(1);
-        expect(forCustomer[0].title).toBe('For customer sharing id admin-5');
+        expect(forCustomer.items).toHaveLength(1);
+        expect(forCustomer.items[0].title).toBe('For customer sharing id admin-5');
     });
 
     it('a repeated broadcast create() for the same source updates one shared row (no fan-out)', async () => {
@@ -260,12 +273,90 @@ describe('NotificationService.findForRecipient — administrator-broadcast (comp
         await notificationService.resolve({} as never, String(created.id), 'handled by admin-A');
 
         const forAnyAdmin = await notificationService.findForRecipient(
-            {} as never,
+            fakeAdminCtx(),
             'administrator',
             'admin-does-not-matter',
         );
-        const resolved = forAnyAdmin.find(n => n.sourceId === 'res-11');
+        const resolved = forAnyAdmin.items.find(n => n.sourceId === 'res-11');
         expect(resolved?.status).toBe('resolved');
         expect(resolved?.resolution).toBe('handled by admin-A');
+    });
+});
+
+// issue #87 audit (mivend.audit.85): broadcast visibility must be permission-scoped by
+// sourceType, not just authentication-scoped — an administrator lacking the resource's own read
+// permission must not see that sourceType's broadcast rows at all.
+describe('NotificationService.findForRecipient — broadcast permission scoping (component, real Postgres)', () => {
+    it('excludes a gated broadcast sourceType when the caller lacks its permission', async () => {
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'reservation-intervention',
+            sourceId: 'perm-1',
+            title: 'Reservation intervention broadcast',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'payment-reconciliation',
+            sourceId: 'perm-2',
+            title: 'Payment reconciliation broadcast',
+            message: 'x',
+        });
+
+        const withNoPermissions = await notificationService.findForRecipient(
+            fakeAdminCtx([]),
+            'administrator',
+            'admin-no-perms',
+        );
+
+        expect(withNoPermissions.items).toHaveLength(0);
+    });
+
+    it('includes only the gated sourceTypes the caller actually has permission for', async () => {
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'reservation-intervention',
+            sourceId: 'perm-3',
+            title: 'Reservation intervention broadcast',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'payment-reconciliation',
+            sourceId: 'perm-4',
+            title: 'Payment reconciliation broadcast',
+            message: 'x',
+        });
+
+        const withOnlyReadOrder = await notificationService.findForRecipient(
+            fakeAdminCtx(['ReadOrder']),
+            'administrator',
+            'admin-read-order-only',
+        );
+
+        expect(withOnlyReadOrder.items.map(n => n.sourceId)).toEqual(['perm-3']);
+    });
+
+    it('never excludes an ungated broadcast sourceType, regardless of permissions', async () => {
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'info',
+            sourceType: 'some-future-broadcast-type',
+            sourceId: 'perm-5',
+            title: 'Ungated broadcast',
+            message: 'x',
+        });
+
+        const withNoPermissions = await notificationService.findForRecipient(
+            fakeAdminCtx([]),
+            'administrator',
+            'admin-no-perms-2',
+        );
+
+        expect(withNoPermissions.items.map(n => n.sourceId)).toContain('perm-5');
     });
 });

@@ -34,9 +34,9 @@ function toNotificationItem(fragment: NotificationFieldsFragment): NotificationI
 
 export async function fetchNotifications(status?: NotificationStatus): Promise<NotificationItem[]> {
     const result = await shopApi(NotificationsDocument, {
-        status: status as GeneratedNotificationStatus | undefined,
+        options: status ? { status: status as GeneratedNotificationStatus } : undefined,
     });
-    return result.notifications.map(toNotificationItem);
+    return result.notifications.items.map(toNotificationItem);
 }
 
 function subscribeToNotifications(onReceived: (item: NotificationItem) => void): () => void {

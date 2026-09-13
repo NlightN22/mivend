@@ -1,37 +1,25 @@
 import { gql } from 'graphql-tag';
 import type { DocumentNode } from 'graphql';
 
+import { notificationTypeSDL } from './notification-type.schema';
+
 export const adminApiExtensions: DocumentNode = gql`
-    enum NotificationKind {
-        info
-        success
-        warning
-        error
+    ${notificationTypeSDL}
+
+    type NotificationList {
+        items: [Notification!]!
+        totalItems: Int!
     }
 
-    enum NotificationStatus {
-        unread
-        read
-        resolved
-    }
-
-    type Notification {
-        id: ID!
-        kind: NotificationKind!
-        sourceType: String!
-        sourceId: String
-        title: String!
-        message: String!
-        status: NotificationStatus!
-        readAt: DateTime
-        resolvedAt: DateTime
-        resolution: String
-        createdAt: DateTime!
+    input NotificationListOptions {
+        status: NotificationStatus
+        take: Int
+        skip: Int
     }
 
     extend type Query {
-        "The calling administrator's own notifications, newest first (issue #87)."
-        notifications(status: NotificationStatus): [Notification!]!
+        "The calling administrator's own notifications plus visible broadcast notifications, newest first, server-paginated (issue #87)."
+        notifications(options: NotificationListOptions): NotificationList!
     }
 
     extend type Mutation {
@@ -42,7 +30,7 @@ export const adminApiExtensions: DocumentNode = gql`
     # Vendure's base schema defines no Subscription root type, so this declares it rather than
     # extending it (an "extend type Subscription" would fail schema build with no base to extend).
     type Subscription {
-        "Fires for the connected administrator's own notifications, plus every broadcast-to-all-administrators notification."
+        "Fires for the connected administrator's own notifications, plus every broadcast-to-all-administrators notification this administrator has permission to see."
         notificationReceived: Notification!
     }
 `;

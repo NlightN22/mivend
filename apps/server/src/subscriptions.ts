@@ -3,12 +3,15 @@ import type { Duplex } from 'stream';
 import type { INestApplication } from '@nestjs/common';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import type { GraphQLSchema } from 'graphql';
-import { RequestContextService, SessionService } from '@vendure/core';
+import { ChannelService, RequestContext, SessionService } from '@vendure/core';
 import {
     administratorNotificationSubscriptionFilter,
     customerNotificationSubscriptionFilter,
+    notificationTypeSDL,
     NotificationRecipientService,
     NotificationService,
+    resolveBroadcastVisibility,
+    type AdministratorSubscriptionIdentity,
     type NotificationReceivedEvent,
 } from '@mivend/plugin-notification';
 import { withFilter } from 'graphql-subscriptions';
@@ -41,32 +44,7 @@ import { useServer } from 'graphql-ws/use/ws';
 const notificationSubscriptionSDL = `
     scalar DateTime
 
-    enum NotificationKind {
-        info
-        success
-        warning
-        error
-    }
-
-    enum NotificationStatus {
-        unread
-        read
-        resolved
-    }
-
-    type Notification {
-        id: ID!
-        kind: NotificationKind!
-        sourceType: String!
-        sourceId: String
-        title: String!
-        message: String!
-        status: NotificationStatus!
-        readAt: DateTime
-        resolvedAt: DateTime
-        resolution: String
-        createdAt: DateTime!
-    }
+    ${notificationTypeSDL}
 
     type Subscription {
         notificationReceived: Notification!
@@ -117,7 +95,7 @@ export function mountNotificationSubscriptions(app: INestApplication): void {
     const notificationService = app.get(NotificationService);
     const recipientService = app.get(NotificationRecipientService);
     const sessionService = app.get(SessionService);
-    const requestContextService = app.get(RequestContextService);
+    const channelService = app.get(ChannelService);
 
     mountOne('/admin-api-subscriptions', 'admin');
     mountOne('/shop-api-subscriptions', 'shop');
@@ -135,25 +113,44 @@ export function mountNotificationSubscriptions(app: INestApplication): void {
         useServer(
             {
                 schema,
-                context: async (ctx: { connectionParams?: Record<string, unknown> }) => {
+                context: async (ctx: {
+                    connectionParams?: Record<string, unknown>;
+                }): Promise<AdministratorSubscriptionIdentity | Record<string, never>> => {
                     const token = (ctx.connectionParams?.authorization as string | undefined)
                         ?.replace(/^Bearer\s+/i, '')
                         .trim();
                     if (!token) return {};
                     const session = await sessionService.getSessionFromToken(token);
                     const user = (session as { user?: { id: string } } | undefined)?.user;
-                    if (!user) return {};
-                    const requestContext = await requestContextService.create({ apiType });
-                    const recipient =
-                        apiType === 'admin'
-                            ? await recipientService.getCurrentAdministratorByUserId(
-                                  requestContext,
-                                  user.id,
-                              )
-                            : await recipientService.getCurrentCustomerByUserId(
-                                  requestContext,
-                                  user.id,
-                              );
+                    if (!user || !session) return {};
+                    // A real RequestContext built from the session (rather than
+                    // requestContextService.create({ apiType }) with no user) so
+                    // ctx.userHasPermissions() below reflects this connection's ACTUAL
+                    // administrator, not an anonymous/permission-less context — required for
+                    // resolveBroadcastVisibility() to gate broadcast sourceTypes correctly
+                    // (issue #87 audit, mivend.audit.85). See RequestContext's own constructor
+                    // signature: it accepts a CachedSession directly for exactly this case.
+                    const channel = await channelService.getDefaultChannel();
+                    const requestContext = new RequestContext({
+                        apiType,
+                        channel,
+                        session,
+                        isAuthorized: true,
+                        authorizedAsOwnerOnly: false,
+                    });
+                    if (apiType === 'admin') {
+                        const recipient = await recipientService.getCurrentAdministratorByUserId(
+                            requestContext,
+                            user.id,
+                        );
+                        if (!recipient) return {};
+                        const { deniedSourceTypes } = resolveBroadcastVisibility(requestContext);
+                        return { ...recipient, deniedBroadcastSourceTypes: deniedSourceTypes };
+                    }
+                    const recipient = await recipientService.getCurrentCustomerByUserId(
+                        requestContext,
+                        user.id,
+                    );
                     return recipient ?? {};
                 },
             },

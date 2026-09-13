@@ -1,37 +1,25 @@
 import { gql } from 'graphql-tag';
 import type { DocumentNode } from 'graphql';
 
+import { notificationTypeSDL } from './notification-type.schema';
+
 export const shopApiExtensions: DocumentNode = gql`
-    enum NotificationKind {
-        info
-        success
-        warning
-        error
+    ${notificationTypeSDL}
+
+    type NotificationList {
+        items: [Notification!]!
+        totalItems: Int!
     }
 
-    enum NotificationStatus {
-        unread
-        read
-        resolved
-    }
-
-    type Notification {
-        id: ID!
-        kind: NotificationKind!
-        sourceType: String!
-        sourceId: String
-        title: String!
-        message: String!
-        status: NotificationStatus!
-        readAt: DateTime
-        resolvedAt: DateTime
-        resolution: String
-        createdAt: DateTime!
+    input NotificationListOptions {
+        status: NotificationStatus
+        take: Int
+        skip: Int
     }
 
     extend type Query {
-        "The calling customer's own notifications, newest first (issue #87)."
-        notifications(status: NotificationStatus): [Notification!]!
+        "The calling customer's own notifications, newest first, server-paginated (issue #87)."
+        notifications(options: NotificationListOptions): NotificationList!
     }
 
     extend type Mutation {

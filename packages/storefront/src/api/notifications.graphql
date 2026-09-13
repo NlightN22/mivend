@@ -12,9 +12,12 @@ fragment NotificationFields on Notification {
     createdAt
 }
 
-query Notifications($status: NotificationStatus) {
-    notifications(status: $status) {
-        ...NotificationFields
+query Notifications($options: NotificationListOptions) {
+    notifications(options: $options) {
+        items {
+            ...NotificationFields
+        }
+        totalItems
     }
 }
 

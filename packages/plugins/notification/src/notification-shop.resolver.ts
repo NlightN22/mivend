@@ -3,11 +3,16 @@ import { Allow, Ctx, ForbiddenError, Permission, RequestContext } from '@vendure
 import { Inject } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
 
-import { Notification, NotificationStatus } from './entities/notification.entity';
+import { Notification } from './entities/notification.entity';
 import { NotificationService } from './notification.service';
 import { NotificationRecipientService } from './notification-recipient.service';
 import { NOTIFICATION_PUB_SUB } from './notification-pub-sub';
-import { NOTIFICATION_RECEIVED, NotificationReceivedEvent } from './types';
+import {
+    NOTIFICATION_RECEIVED,
+    NotificationList,
+    NotificationListOptions,
+    NotificationReceivedEvent,
+} from './types';
 
 // Extracted and exported for the same reason as NotificationAdminResolver's
 // administratorNotificationSubscriptionFilter — reused directly by apps/server's standalone
@@ -40,15 +45,15 @@ export class NotificationShopResolver {
     @Allow(Permission.Owner)
     async notifications(
         @Ctx() ctx: RequestContext,
-        @Args() args: { status?: NotificationStatus },
-    ): Promise<Notification[]> {
+        @Args() args: { options?: NotificationListOptions },
+    ): Promise<NotificationList> {
         const recipient = await this.recipientService.getCurrentCustomer(ctx);
-        if (!recipient) return [];
+        if (!recipient) return { items: [], totalItems: 0 };
         return this.notificationService.findForRecipient(
             ctx,
             recipient.recipientType,
             recipient.recipientId,
-            { status: args.status },
+            args.options ?? {},
         );
     }
 

@@ -732,6 +732,9 @@ importers:
 
     packages/plugins/notification:
         dependencies:
+            '@mivend/plugin-access-control':
+                specifier: workspace:*
+                version: link:../access-control
             graphql-subscriptions:
                 specifier: ^3.0.0
                 version: 3.0.0(graphql@16.14.2)

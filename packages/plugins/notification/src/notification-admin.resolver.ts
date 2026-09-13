@@ -3,28 +3,51 @@ import { Allow, Ctx, ForbiddenError, Permission, RequestContext } from '@vendure
 import { Inject } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
 
-import { Notification, NotificationStatus } from './entities/notification.entity';
+import { Notification } from './entities/notification.entity';
 import { NotificationService } from './notification.service';
 import { NotificationRecipientService } from './notification-recipient.service';
 import { NOTIFICATION_PUB_SUB } from './notification-pub-sub';
-import { NOTIFICATION_RECEIVED, NotificationReceivedEvent } from './types';
+import {
+    NOTIFICATION_RECEIVED,
+    NotificationList,
+    NotificationListOptions,
+    NotificationReceivedEvent,
+} from './types';
+import { NOTIFICATION_SOURCE_PERMISSIONS } from './notification-source-permissions';
+
+// The WS identity attached by apps/server/src/subscriptions.ts — for administrators this also
+// carries deniedBroadcastSourceTypes, computed once per connection via the same
+// resolveBroadcastVisibility() the query path uses (see notification-source-permissions.ts), so a
+// broadcast row an administrator can't read via the `notifications` query can also never arrive
+// over their subscription (issue #87 audit, mivend.audit.85). A denylist (rather than an
+// allowlist of every visible sourceType) is used because ungated sourceTypes are unbounded and
+// visible by default — only the small, fixed set of gated sourceTypes this admin lacks
+// permission for needs to travel with the connection identity.
+export interface AdministratorSubscriptionIdentity {
+    recipientType?: string;
+    recipientId?: string;
+    deniedBroadcastSourceTypes?: string[];
+}
 
 // Extracted to a named, directly-testable function rather than an inline lambda — mirrors
 // NotificationService.findForRecipient's OR-condition: a connected administrator receives their
-// own notifications AND every 'administrator-broadcast' event, not just events addressed to them
-// by id. Customers have no broadcast concept.
+// own notifications AND every 'administrator-broadcast' event they have permission to see, not
+// just events addressed to them by id. Customers have no broadcast concept.
 export function administratorNotificationSubscriptionFilter(
     payload: NotificationReceivedEvent,
     _variables: unknown,
     context: unknown,
 ): boolean {
-    const identity = context as { recipientType?: string; recipientId?: string } | undefined;
+    const identity = context as AdministratorSubscriptionIdentity | undefined;
     if (identity?.recipientType !== 'administrator') return false;
-    const { recipientType, recipientId } = payload.notificationReceived;
-    return (
-        recipientType === 'administrator-broadcast' ||
-        (recipientType === 'administrator' && recipientId === identity.recipientId)
-    );
+    const { recipientType, recipientId, sourceType } = payload.notificationReceived;
+    if (recipientType === 'administrator') {
+        return recipientId === identity.recipientId;
+    }
+    if (recipientType === 'administrator-broadcast') {
+        return !(identity.deniedBroadcastSourceTypes ?? []).includes(sourceType);
+    }
+    return false;
 }
 
 // Authenticated-only, no role-based Permission — per docs/access-control.md's "permission = action
@@ -42,15 +65,15 @@ export class NotificationAdminResolver {
     @Allow(Permission.Authenticated)
     async notifications(
         @Ctx() ctx: RequestContext,
-        @Args() args: { status?: NotificationStatus },
-    ): Promise<Notification[]> {
+        @Args() args: { options?: NotificationListOptions },
+    ): Promise<NotificationList> {
         const recipient = await this.recipientService.getCurrentAdministrator(ctx);
-        if (!recipient) return [];
+        if (!recipient) return { items: [], totalItems: 0 };
         return this.notificationService.findForRecipient(
             ctx,
             recipient.recipientType,
             recipient.recipientId,
-            { status: args.status },
+            args.options ?? {},
         );
     }
 
@@ -90,7 +113,10 @@ export class NotificationAdminResolver {
     }
 
     // Any authenticated administrator may act on a broadcast notification (it has no single
-    // owner) as well as their own — mirrors NotificationService.findForRecipient's OR-condition.
+    // owner) as well as their own — mirrors NotificationService.findForRecipient's OR-condition —
+    // but only if they hold the sourceType's own gating permission (same rule as the `notifications`
+    // query/subscription, see notification-source-permissions.ts): an admin who can't even see a
+    // broadcast row must not be able to act on it by guessing its id either.
     private async assertOwnNotification(ctx: RequestContext, id: string): Promise<void> {
         const recipient = await this.recipientService.getCurrentAdministrator(ctx);
         const notification = recipient ? await this.notificationService.findOne(ctx, id) : null;
@@ -98,8 +124,13 @@ export class NotificationAdminResolver {
             !!notification &&
             notification.recipientType === recipient?.recipientType &&
             notification.recipientId === recipient.recipientId;
-        const isBroadcast = notification?.recipientType === 'administrator-broadcast';
-        if (!recipient || !notification || (!isOwn && !isBroadcast)) {
+        const requiredPermission = notification
+            ? NOTIFICATION_SOURCE_PERMISSIONS[notification.sourceType]
+            : undefined;
+        const isPermittedBroadcast =
+            notification?.recipientType === 'administrator-broadcast' &&
+            (!requiredPermission || ctx.userHasPermissions([requiredPermission]));
+        if (!recipient || !notification || (!isOwn && !isPermittedBroadcast)) {
             throw new ForbiddenError();
         }
     }

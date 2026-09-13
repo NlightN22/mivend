@@ -15,7 +15,8 @@
     },
     "dependencies": {
         "graphql-tag": "^2.12.6",
-        "graphql-subscriptions": "^3.0.0"
+        "graphql-subscriptions": "^3.0.0",
+        "@mivend/plugin-access-control": "workspace:*"
     },
     "devDependencies": {
         "shared": "workspace:*",

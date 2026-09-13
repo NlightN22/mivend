@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { IsNull } from 'typeorm';
+import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
+import { Brackets, IsNull } from 'typeorm';
 import { PubSub } from 'graphql-subscriptions';
 
 import {
@@ -11,6 +11,7 @@ import {
 } from './entities/notification.entity';
 import { NOTIFICATION_PUB_SUB } from './notification-pub-sub';
 import { NOTIFICATION_RECEIVED } from './types';
+import { resolveBroadcastVisibility } from './notification-source-permissions';
 
 export interface CreateNotificationInput {
     recipientType: NotificationRecipientType;
@@ -27,9 +28,11 @@ export interface CreateNotificationInput {
 export interface FindForRecipientOptions {
     status?: NotificationStatus;
     take?: number;
+    skip?: number;
 }
 
 const DEFAULT_LIST_TAKE = 50;
+const MAX_LIST_TAKE = 100;
 
 @Injectable()
 export class NotificationService {
@@ -110,29 +113,82 @@ export class NotificationService {
     }
 
     // For recipientType === 'administrator', this also returns every 'administrator-broadcast'
-    // row (issue #87 Part 2 / #42) — any authenticated administrator sees all broadcast
-    // notifications, in addition to their own. Customers have no broadcast concept: a customer
+    // row (issue #87 Part 2 / #42) — an authenticated administrator sees all broadcast
+    // notifications THEY HAVE PERMISSION FOR, in addition to their own (issue #87 audit,
+    // mivend.audit.85: a broadcast sourceType gated by NOTIFICATION_SOURCE_PERMISSIONS is excluded
+    // at the SQL level for an administrator lacking that permission — never loaded and filtered in
+    // JS, so pagination/totalItems stay accurate). Customers have no broadcast concept: a customer
     // query never includes broadcast rows.
     async findForRecipient(
         ctx: RequestContext,
         recipientType: NotificationRecipientType,
         recipientId: string,
         opts: FindForRecipientOptions = {},
-    ): Promise<Notification[]> {
-        const repo = this.connection.getRepository(ctx, Notification);
-        const statusFilter = opts.status ? { status: opts.status } : {};
-        const where =
-            recipientType === 'administrator'
-                ? [
-                      { recipientType: 'administrator' as const, recipientId, ...statusFilter },
-                      { recipientType: 'administrator-broadcast' as const, ...statusFilter },
-                  ]
-                : { recipientType, recipientId, ...statusFilter };
-        return repo.find({
-            where,
-            order: { createdAt: 'DESC' },
-            take: opts.take ?? DEFAULT_LIST_TAKE,
-        });
+    ): Promise<PaginatedList<Notification>> {
+        const take = Math.min(opts.take ?? DEFAULT_LIST_TAKE, MAX_LIST_TAKE);
+        const skip = opts.skip ?? 0;
+
+        const qb = this.connection
+            .getRepository(ctx, Notification)
+            .createQueryBuilder('notification');
+
+        if (recipientType === 'administrator') {
+            const { gatedSourceTypes, allowedGatedSourceTypes } = resolveBroadcastVisibility(ctx);
+            qb.where(
+                new Brackets(qbInner => {
+                    qbInner
+                        .where(
+                            'notification.recipientType = :ownType AND notification.recipientId = :recipientId',
+                            { ownType: 'administrator', recipientId },
+                        )
+                        .orWhere(
+                            new Brackets(broadcastQb => {
+                                broadcastQb.where('notification.recipientType = :broadcastType', {
+                                    broadcastType: 'administrator-broadcast',
+                                });
+                                if (gatedSourceTypes.length > 0) {
+                                    broadcastQb.andWhere(
+                                        new Brackets(gateQb => {
+                                            gateQb
+                                                .where(
+                                                    'notification.sourceType NOT IN (:...gatedSourceTypes)',
+                                                    { gatedSourceTypes },
+                                                )
+                                                .orWhere(
+                                                    allowedGatedSourceTypes.length > 0
+                                                        ? 'notification.sourceType IN (:...allowedGatedSourceTypes)'
+                                                        : '1 = 0',
+                                                    { allowedGatedSourceTypes },
+                                                );
+                                        }),
+                                    );
+                                }
+                            }),
+                        );
+                }),
+            );
+        } else {
+            qb.where(
+                'notification.recipientType = :recipientType AND notification.recipientId = :recipientId',
+                {
+                    recipientType,
+                    recipientId,
+                },
+            );
+        }
+
+        if (opts.status) {
+            qb.andWhere('notification.status = :status', { status: opts.status });
+        }
+
+        const [items, totalItems] = await qb
+            .orderBy('notification.createdAt', 'DESC')
+            .addOrderBy('notification.id', 'DESC')
+            .take(take)
+            .skip(skip)
+            .getManyAndCount();
+
+        return { items, totalItems };
     }
 
     async markRead(ctx: RequestContext, id: string): Promise<Notification> {

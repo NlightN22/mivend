@@ -16,16 +16,35 @@ describe('administratorNotificationSubscriptionFilter', () => {
             id: 'n-1',
             recipientType: 'administrator-broadcast',
             recipientId: null,
+            sourceType: 'reservation-intervention',
+        },
+    };
+    const ungatedBroadcastPayload: NotificationReceivedEvent = {
+        notificationReceived: {
+            id: 'n-4',
+            recipientType: 'administrator-broadcast',
+            recipientId: null,
+            sourceType: 'some-ungated-type',
         },
     };
     const ownPayload: NotificationReceivedEvent = {
-        notificationReceived: { id: 'n-2', recipientType: 'administrator', recipientId: 'admin-1' },
+        notificationReceived: {
+            id: 'n-2',
+            recipientType: 'administrator',
+            recipientId: 'admin-1',
+            sourceType: 'reservation.expiring',
+        },
     };
     const customerPayload: NotificationReceivedEvent = {
-        notificationReceived: { id: 'n-3', recipientType: 'customer', recipientId: 'cust-1' },
+        notificationReceived: {
+            id: 'n-3',
+            recipientType: 'customer',
+            recipientId: 'cust-1',
+            sourceType: 'order.shipped',
+        },
     };
 
-    it('delivers a broadcast event to every connected administrator, regardless of id', () => {
+    it('delivers a broadcast event to every connected administrator without a denylist for its sourceType', () => {
         expect(
             administratorNotificationSubscriptionFilter(
                 broadcastPayload,
@@ -43,6 +62,38 @@ describe('administratorNotificationSubscriptionFilter', () => {
                 {
                     recipientType: 'administrator',
                     recipientId: 'admin-2',
+                    deniedBroadcastSourceTypes: [],
+                },
+            ),
+        ).toBe(true);
+    });
+
+    it('withholds a broadcast event from an administrator whose deniedBroadcastSourceTypes includes it (issue #87 audit, mivend.audit.85)', () => {
+        expect(
+            administratorNotificationSubscriptionFilter(
+                broadcastPayload,
+                {},
+                {
+                    recipientType: 'administrator',
+                    recipientId: 'admin-1',
+                    deniedBroadcastSourceTypes: ['reservation-intervention'],
+                },
+            ),
+        ).toBe(false);
+    });
+
+    it('still delivers an ungated-sourceType broadcast even when other sourceTypes are denied', () => {
+        expect(
+            administratorNotificationSubscriptionFilter(
+                ungatedBroadcastPayload,
+                {},
+                {
+                    recipientType: 'administrator',
+                    recipientId: 'admin-1',
+                    deniedBroadcastSourceTypes: [
+                        'reservation-intervention',
+                        'payment-reconciliation',
+                    ],
                 },
             ),
         ).toBe(true);
@@ -169,5 +220,38 @@ describe('NotificationAdminResolver — assertOwnNotification with broadcast row
         await resolver.markNotificationRead({} as RequestContext, { id: 'n-5' });
 
         expect(notificationService.markRead).toHaveBeenCalledWith({}, 'n-5');
+    });
+
+    // issue #87 audit (mivend.audit.85): a gated broadcast sourceType must not be actionable by an
+    // administrator lacking the resource's own read permission, even if they know its id.
+    it('rejects acting on a gated-sourceType broadcast when the caller lacks the required permission', async () => {
+        const { resolver, notificationService } = makeResolver({
+            id: 'n-6',
+            recipientType: 'administrator-broadcast',
+            recipientId: null,
+            sourceType: 'payment-reconciliation',
+        });
+        const noPermissionsCtx = { userHasPermissions: () => false } as unknown as RequestContext;
+
+        await expect(
+            resolver.markNotificationRead(noPermissionsCtx, { id: 'n-6' }),
+        ).rejects.toThrow();
+        expect(notificationService.markRead).not.toHaveBeenCalled();
+    });
+
+    it('allows acting on a gated-sourceType broadcast when the caller holds the required permission', async () => {
+        const { resolver, notificationService } = makeResolver({
+            id: 'n-7',
+            recipientType: 'administrator-broadcast',
+            recipientId: null,
+            sourceType: 'payment-reconciliation',
+        });
+        const withPermissionCtx = {
+            userHasPermissions: () => true,
+        } as unknown as RequestContext;
+
+        await resolver.markNotificationRead(withPermissionCtx, { id: 'n-7' });
+
+        expect(notificationService.markRead).toHaveBeenCalledWith(withPermissionCtx, 'n-7');
     });
 });

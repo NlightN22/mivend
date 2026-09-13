@@ -4130,24 +4130,36 @@ export type NotificationFieldsFragment = {
     createdAt: any;
 };
 
-export type NotificationsQueryVariables = Exact<{
+/** Manually added (hand-edited, not re-generated — see notification service Task 2 commit for
+ * why): mirrors the notification plugin's NotificationListOptions input added alongside
+ * NotificationList's server-side pagination. */
+export type NotificationListOptions = {
+    skip?: InputMaybe<Scalars['Int']['input']>;
     status?: InputMaybe<NotificationStatus>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type NotificationsQueryVariables = Exact<{
+    options?: InputMaybe<NotificationListOptions>;
 }>;
 
 export type NotificationsQuery = {
-    notifications: Array<{
-        id: string;
-        kind: NotificationKind;
-        sourceType: string;
-        sourceId?: string | null;
-        title: string;
-        message: string;
-        status: NotificationStatus;
-        readAt?: any | null;
-        resolvedAt?: any | null;
-        resolution?: string | null;
-        createdAt: any;
-    }>;
+    notifications: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            kind: NotificationKind;
+            sourceType: string;
+            sourceId?: string | null;
+            title: string;
+            message: string;
+            status: NotificationStatus;
+            readAt?: any | null;
+            resolvedAt?: any | null;
+            resolution?: string | null;
+            createdAt: any;
+        }>;
+    };
 };
 
 export type MarkNotificationReadMutationVariables = Exact<{
@@ -5030,9 +5042,12 @@ export const ProductWidgetFieldsFragmentDoc = new TypedDocumentString(
     { fragmentName: 'ProductWidgetFields' },
 ) as unknown as TypedDocumentString<ProductWidgetFieldsFragment, unknown>;
 export const NotificationsDocument = new TypedDocumentString(`
-    query Notifications($status: NotificationStatus) {
-  notifications(status: $status) {
-    ...NotificationFields
+    query Notifications($options: NotificationListOptions) {
+  notifications(options: $options) {
+    items {
+      ...NotificationFields
+    }
+    totalItems
   }
 }
     fragment NotificationFields on Notification {

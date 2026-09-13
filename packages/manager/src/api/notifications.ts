@@ -46,15 +46,20 @@ const NOTIFICATION_FIELDS = `
 `;
 
 export async function fetchNotifications(status?: NotificationStatus): Promise<NotificationItem[]> {
-    const result = await adminApi<{ notifications: NotificationItem[] }>(
-        `query Notifications($status: NotificationStatus) {
-            notifications(status: $status) {
-                ${NOTIFICATION_FIELDS}
+    const result = await adminApi<{
+        notifications: { items: NotificationItem[]; totalItems: number };
+    }>(
+        `query Notifications($options: NotificationListOptions) {
+            notifications(options: $options) {
+                items {
+                    ${NOTIFICATION_FIELDS}
+                }
+                totalItems
             }
         }`,
-        { status },
+        { options: status ? { status } : undefined },
     );
-    return result.notifications;
+    return result.notifications.items;
 }
 
 function subscribeToNotifications(onReceived: (item: NotificationItem) => void): () => void {
