@@ -59,6 +59,17 @@ export { default as MvToastContainer } from './components/MvToast/MvToastContain
 export { useToast, toast, dismissToast } from './composables/useToast';
 export type { ToastItem } from './composables/useToast';
 
+export { default as MvNotificationBell } from './components/MvNotificationBell/MvNotificationBell.vue';
+export { default as MvNotificationPanel } from './components/MvNotificationPanel/MvNotificationPanel.vue';
+export { useNotifications } from './composables/useNotifications';
+export type { UseNotifications } from './composables/useNotifications';
+export type {
+    NotificationItem,
+    NotificationKind,
+    NotificationStatus,
+    NotificationTransport,
+} from './composables/notificationTypes';
+
 export { default as MvModal } from './components/MvModal/MvModal.vue';
 
 export { default as MvLogo } from './components/MvLogo/MvLogo.vue';
