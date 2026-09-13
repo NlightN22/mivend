@@ -100,9 +100,15 @@ export class WarehouseService {
             .getRawMany<{ id: string }>();
         if (rows.length === 0) return [];
 
+        // Ordered by id: ReservationService.reserveOrder() takes a `FOR UPDATE` lock on every
+        // candidate location's StockLevel row per line (mivend#85 audit finding) — without a
+        // stable order here, two concurrent reserveOrder() calls could lock the same two
+        // candidate locations in opposite order and Postgres-deadlock (40P01). BranchStockLocationStrategy
+        // doesn't lock, but a stable order here costs nothing and keeps this shared join's output
+        // deterministic for every caller.
         return this.connection
             .getRepository(ctx, StockLocation)
-            .find({ where: { id: In(rows.map(r => r.id)) } });
+            .find({ where: { id: In(rows.map(r => r.id)) }, order: { id: 'ASC' } });
     }
 
     // Manager-portal curation (issue #66) — staff confirm/override the branch a Warehouse
