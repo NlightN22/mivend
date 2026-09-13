@@ -1,4 +1,4 @@
-import { OrganizationRequisites } from '../entities/organization-requisites.entity';
+import { CompleteOrganizationRequisites } from '../entities/organization-requisites.entity';
 import { renderLogoMarkup } from './invoice-template';
 
 export interface ContractTemplateData {
@@ -17,7 +17,7 @@ export interface ContractTemplateData {
 
 export function buildContractTemplateData(
     documentNumber: string,
-    requisites: OrganizationRequisites,
+    requisites: CompleteOrganizationRequisites,
     buyerLegalName: string,
     logoDataUri: string | null = null,
 ): ContractTemplateData {

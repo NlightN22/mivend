@@ -60,3 +60,11 @@ export class OrganizationRequisites extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     logoAssetId!: string | null;
 }
+
+// Narrowed type document generation actually needs — DocumentsService.assertRequisitesComplete is
+// the one place that proves inn/legalAddress are non-null (a type predicate), so PdfGeneratorService
+// and the invoice/contract templates never have to re-check them.
+export type CompleteOrganizationRequisites = OrganizationRequisites & {
+    inn: string;
+    legalAddress: string;
+};

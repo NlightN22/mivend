@@ -14,7 +14,10 @@ import { Invoice } from '@mivend/plugin-acquiring';
 
 import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
-import { OrganizationRequisites } from './entities/organization-requisites.entity';
+import {
+    OrganizationRequisites,
+    CompleteOrganizationRequisites,
+} from './entities/organization-requisites.entity';
 import { DocumentRecord, OrganizationRequisitesRecord } from './types';
 
 export interface DocumentListOptions {
@@ -209,7 +212,9 @@ export class DocumentsService {
     // PdfGeneratorService's guard before rendering any document against a given
     // OrganizationRequisites row — a partial row (issue #88, created from Kafka name/isActive
     // alone) must never be used to generate a real invoice/contract with blank/fake legal fields.
-    assertRequisitesComplete(requisites: OrganizationRequisites): void {
+    assertRequisitesComplete(
+        requisites: OrganizationRequisites,
+    ): asserts requisites is CompleteOrganizationRequisites {
         if (requisites.inn === null || requisites.legalAddress === null) {
             throw new Error(
                 `Cannot generate a document for organization erpId=${requisites.erpId}: ` +

@@ -1,4 +1,4 @@
-import { OrganizationRequisites } from '../entities/organization-requisites.entity';
+import { CompleteOrganizationRequisites } from '../entities/organization-requisites.entity';
 
 export interface InvoiceLineData {
     name: string;
@@ -58,7 +58,7 @@ function formatMoney(minorUnits: number, currencySymbol: string): string {
 
 export function buildInvoiceTemplateData(
     source: InvoiceSource,
-    requisites: OrganizationRequisites,
+    requisites: CompleteOrganizationRequisites,
     buyerLegalName: string,
     logoDataUri: string | null = null,
 ): InvoiceTemplateData {

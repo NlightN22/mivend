@@ -4,7 +4,7 @@ import {
     renderInvoiceHtml,
     InvoiceSource,
 } from '../../pdf/invoice-template';
-import type { OrganizationRequisites } from '../../entities/organization-requisites.entity';
+import type { CompleteOrganizationRequisites } from '../../entities/organization-requisites.entity';
 
 function makeSource(overrides: Partial<InvoiceSource> = {}): InvoiceSource {
     return {
@@ -24,7 +24,9 @@ function makeSource(overrides: Partial<InvoiceSource> = {}): InvoiceSource {
     };
 }
 
-function makeRequisites(overrides: Partial<OrganizationRequisites> = {}): OrganizationRequisites {
+function makeRequisites(
+    overrides: Partial<CompleteOrganizationRequisites> = {},
+): CompleteOrganizationRequisites {
     return {
         legalName: 'Demo Trading Co.',
         legalAddress: '1 Demo Ave',
@@ -35,7 +37,7 @@ function makeRequisites(overrides: Partial<OrganizationRequisites> = {}): Organi
         bankAccount: '000000000',
         bankBik: '000000000',
         ...overrides,
-    } as OrganizationRequisites;
+    } as CompleteOrganizationRequisites;
 }
 
 describe('buildInvoiceTemplateData', () => {
