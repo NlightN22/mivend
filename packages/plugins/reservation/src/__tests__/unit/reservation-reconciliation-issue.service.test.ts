@@ -11,7 +11,6 @@ describe('ReservationReconciliationIssueService', () => {
     };
     let connection: { getRepository: ReturnType<typeof vi.fn> };
     let notificationService: { create: ReturnType<typeof vi.fn> };
-    let notificationRecipientService: { getCurrentAdministrator: ReturnType<typeof vi.fn> };
     let service: ReservationReconciliationIssueService;
     const ctx = {} as unknown as RequestContext;
 
@@ -23,11 +22,9 @@ describe('ReservationReconciliationIssueService', () => {
         };
         connection = { getRepository: vi.fn(() => repo) };
         notificationService = { create: vi.fn(async () => ({})) };
-        notificationRecipientService = { getCurrentAdministrator: vi.fn(async () => null) };
         service = new ReservationReconciliationIssueService(
             connection as unknown as TransactionalConnection,
             notificationService as never,
-            notificationRecipientService as never,
         );
     });
 
@@ -70,25 +67,10 @@ describe('ReservationReconciliationIssueService', () => {
         );
     });
 
-    it('does not create a Notification when no administrator is resolvable from ctx (system-triggered path)', async () => {
-        await service.reportQuantityMismatch(ctx, {
-            orderId: 'order-1',
-            productVariantId: 'v-1',
-            localQuantity: 5,
-            erpQuantity: 3,
-            orderEntityId: 'erp-order-1',
-        });
-
-        expect(notificationRecipientService.getCurrentAdministrator).toHaveBeenCalledWith(ctx);
-        expect(notificationService.create).not.toHaveBeenCalled();
-    });
-
-    it('creates a warning Notification for the resolved administrator when a new issue is recorded', async () => {
-        notificationRecipientService.getCurrentAdministrator.mockResolvedValue({
-            recipientType: 'administrator',
-            recipientId: 'admin-1',
-        });
-
+    // handleOrderRegistrationResult runs from an inbox handler with no signed-in administrator —
+    // rather than skip notifying (the old behavior), this now broadcasts to every administrator
+    // (issue #87 Part 2).
+    it('creates an administrator-broadcast Notification when a new issue is recorded (no signed-in administrator)', async () => {
         await service.reportQuantityMismatch(ctx, {
             orderId: 'order-1',
             productVariantId: 'v-1',
@@ -100,8 +82,7 @@ describe('ReservationReconciliationIssueService', () => {
         expect(notificationService.create).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({
-                recipientType: 'administrator',
-                recipientId: 'admin-1',
+                recipientType: 'administrator-broadcast',
                 kind: 'warning',
                 sourceType: 'reservation-reconciliation',
             }),
@@ -110,10 +91,6 @@ describe('ReservationReconciliationIssueService', () => {
 
     it('does not create a Notification when reporting an already-open issue (dedupe path)', async () => {
         repo.findOne.mockResolvedValue({ id: 'issue-1' });
-        notificationRecipientService.getCurrentAdministrator.mockResolvedValue({
-            recipientType: 'administrator',
-            recipientId: 'admin-1',
-        });
 
         await service.reportQuantityMismatch(ctx, {
             orderId: 'order-1',

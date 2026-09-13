@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Order } from '@vendure/core';
+import { Order, RequestContextService } from '@vendure/core';
+import { NotificationService } from '@mivend/plugin-notification';
 import { DataSource, In, LessThanOrEqual } from 'typeorm';
 
 import { Reservation } from './entities/reservation.entity';
@@ -8,10 +9,17 @@ import { loggerCtx } from './types';
 // Called by the reservation-expiry ScheduledTask on a timer — split out of ReservationService to keep that
 // file under AGENTS.md's ~300-line guideline. Runs outside any HTTP request, so it uses the raw
 // DataSource/EntityManager directly rather than TransactionalConnection (same pattern as
-// SyncService.processOutbox — see packages/plugins/sync/src/sync.service.ts).
+// SyncService.processOutbox — see packages/plugins/sync/src/sync.service.ts). NotificationService
+// still needs a real RequestContext (TransactionalConnection.getRepository requires one), built
+// fresh here via RequestContextService — mirrors ReconciliationService.runComparison's own
+// scheduled-task ctx construction (packages/plugins/erp-integration).
 @Injectable()
 export class ReservationExpiryService {
-    constructor(private dataSource: DataSource) {}
+    constructor(
+        private dataSource: DataSource,
+        private requestContextService: RequestContextService,
+        private notificationService: NotificationService,
+    ) {}
 
     // Branches by creationMethod (see docs/order-flow.md "On expiry"):
     //  - non-prepaid ('manual'/'auto-trust-rule'): expire the Reservation and return the order
@@ -79,12 +87,21 @@ export class ReservationExpiryService {
                         loggerCtx,
                     );
                 }
-                // issue #87 Part 2 open question, deliberately not wired here: this sweep runs on
-                // a timer with no signed-in administrator and no per-reservation "owning admin"
-                // concept, so there is no real recipientId to give NotificationService.create —
-                // creating one would mean inventing a broadcast-to-all-admins-with-permission
-                // recipient model that doesn't exist yet in plugin-notification. Flagged back to
-                // the issue rather than guessed at; see conversation/report for this task.
+
+                // issue #42/#87 Part 2: this sweep runs on a timer with no signed-in
+                // administrator and no per-reservation "owning admin" concept — broadcast to
+                // every administrator instead of guessing a recipient.
+                const ctx = await this.requestContextService.create({ apiType: 'admin' });
+                for (const row of prepaidDue) {
+                    await this.notificationService.create(ctx, {
+                        recipientType: 'administrator-broadcast',
+                        kind: 'error',
+                        sourceType: 'reservation-intervention',
+                        sourceId: String(row.id),
+                        title: 'Prepaid reservation needs manual intervention',
+                        message: `Reservation ${String(row.id)} (order ${row.orderId}) expired at ${row.expiresAt.toISOString()} without release.`,
+                    });
+                }
             }
 
             return nonPrepaidDue.length + prepaidDue.length;

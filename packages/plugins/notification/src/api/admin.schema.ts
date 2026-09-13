@@ -42,7 +42,7 @@ export const adminApiExtensions: DocumentNode = gql`
     # Vendure's base schema defines no Subscription root type, so this declares it rather than
     # extending it (an "extend type Subscription" would fail schema build with no base to extend).
     type Subscription {
-        "Fires for the connected administrator's own notifications only."
+        "Fires for the connected administrator's own notifications, plus every broadcast-to-all-administrators notification."
         notificationReceived: Notification!
     }
 `;

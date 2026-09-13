@@ -24,7 +24,7 @@ class TestNotification {
     @Column({ type: 'timestamp', default: () => 'now()' }) createdAt!: Date;
     @Column({ type: 'timestamp', default: () => 'now()' }) updatedAt!: Date;
     @Column({ type: 'varchar' }) recipientType!: string;
-    @Column({ type: 'varchar' }) recipientId!: string;
+    @Column({ type: 'varchar', nullable: true }) recipientId!: string | null;
     @Column({ type: 'varchar' }) kind!: string;
     @Column({ type: 'varchar' }) sourceType!: string;
     @Column({ type: 'varchar', nullable: true }) sourceId!: string | null;
@@ -149,5 +149,123 @@ describe('NotificationService.findForRecipient (component, real Postgres)', () =
 
         expect(unreadForAdmin3).toHaveLength(1);
         expect(unreadForAdmin3[0].sourceId).toBe('variant-2');
+    });
+});
+
+// issue #87 Part 2 / #42: broadcast-to-all-administrators recipient model.
+describe('NotificationService.findForRecipient — administrator-broadcast (component, real Postgres)', () => {
+    it('an administrator query returns both their own rows and every broadcast row', async () => {
+        await notificationService.create({} as never, {
+            recipientType: 'administrator',
+            recipientId: 'admin-5',
+            kind: 'info',
+            sourceType: 'reservation.expiring',
+            sourceId: 'res-5',
+            title: 'Own notification',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'reservation-intervention',
+            sourceId: 'res-6',
+            title: 'Broadcast notification',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator',
+            recipientId: 'admin-6',
+            kind: 'info',
+            sourceType: 'reservation.expiring',
+            sourceId: 'res-7',
+            title: 'Another admin only',
+            message: 'x',
+        });
+
+        const forAdmin5 = await notificationService.findForRecipient(
+            {} as never,
+            'administrator',
+            'admin-5',
+        );
+
+        const titles = forAdmin5.map(n => n.title).sort();
+        expect(titles).toEqual(['Broadcast notification', 'Own notification']);
+    });
+
+    it('never leaks a broadcast row into a customer recipientType query', async () => {
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'reservation-intervention',
+            sourceId: 'res-8',
+            title: 'Broadcast notification',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'customer',
+            recipientId: 'admin-5',
+            kind: 'info',
+            sourceType: 'order.shipped',
+            sourceId: 'order-9',
+            title: 'For customer sharing id admin-5',
+            message: 'x',
+        });
+
+        const forCustomer = await notificationService.findForRecipient(
+            {} as never,
+            'customer',
+            'admin-5',
+        );
+
+        expect(forCustomer).toHaveLength(1);
+        expect(forCustomer[0].title).toBe('For customer sharing id admin-5');
+    });
+
+    it('a repeated broadcast create() for the same source updates one shared row (no fan-out)', async () => {
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'reservation-intervention',
+            sourceId: 'res-10',
+            title: 'First',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'reservation-intervention',
+            sourceId: 'res-10',
+            title: 'Second',
+            message: 'x',
+        });
+
+        const rows = await dataSource
+            .getRepository(TestNotification)
+            .find({ where: { sourceType: 'reservation-intervention', sourceId: 'res-10' } });
+
+        expect(rows).toHaveLength(1);
+        expect(rows[0].title).toBe('Second');
+    });
+
+    it('resolving a broadcast notification affects the single shared row for every administrator', async () => {
+        const created = await notificationService.create({} as never, {
+            recipientType: 'administrator-broadcast',
+            kind: 'error',
+            sourceType: 'reservation-intervention',
+            sourceId: 'res-11',
+            title: 'Shared state check',
+            message: 'x',
+        });
+
+        await notificationService.resolve({} as never, String(created.id), 'handled by admin-A');
+
+        const forAnyAdmin = await notificationService.findForRecipient(
+            {} as never,
+            'administrator',
+            'admin-does-not-matter',
+        );
+        const resolved = forAnyAdmin.find(n => n.sourceId === 'res-11');
+        expect(resolved?.status).toBe('resolved');
+        expect(resolved?.resolution).toBe('handled by admin-A');
     });
 });

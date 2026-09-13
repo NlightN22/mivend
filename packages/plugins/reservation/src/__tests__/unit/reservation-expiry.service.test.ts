@@ -11,6 +11,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         service: ReservationExpiryService;
         txReservationRepo: { find: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
         txOrderRepo: { find: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+        notificationService: { create: ReturnType<typeof vi.fn> };
     } {
         const txReservationRepo = {
             find: vi.fn(async () => dueRows),
@@ -28,10 +29,17 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         const dataSource = {
             transaction: vi.fn(async (work: (m: unknown) => unknown) => work(manager)),
         } as unknown as DataSource;
+        const requestContextService = { create: vi.fn(async () => ({})) };
+        const notificationService = { create: vi.fn(async () => ({})) };
         return {
-            service: new ReservationExpiryService(dataSource),
+            service: new ReservationExpiryService(
+                dataSource,
+                requestContextService as never,
+                notificationService as never,
+            ),
             txReservationRepo,
             txOrderRepo,
+            notificationService,
         };
     }
 
@@ -87,6 +95,33 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         expect(txOrderRepo.update).not.toHaveBeenCalled();
     });
 
+    // issue #42/#87 Part 2: this sweep has no signed-in administrator, so the intervention flag
+    // now broadcasts to every administrator instead of being silently unnotified.
+    it('creates an administrator-broadcast Notification when flagging a prepaid reservation for intervention', async () => {
+        const dueRows = [
+            {
+                id: 'res-1',
+                orderId: 'order-1',
+                creationMethod: 'auto-prepaid',
+                interventionFlaggedAt: null,
+                expiresAt: new Date('2026-01-01'),
+            },
+        ];
+        const { service, notificationService } = createService(dueRows);
+
+        await service.expireDueReservations();
+
+        expect(notificationService.create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                recipientType: 'administrator-broadcast',
+                kind: 'error',
+                sourceType: 'reservation-intervention',
+                sourceId: 'res-1',
+            }),
+        );
+    });
+
     it('does not re-flag an auto-prepaid reservation already flagged', async () => {
         const dueRows = [
             {
@@ -96,11 +131,12 @@ describe('ReservationExpiryService.expireDueReservations', () => {
                 interventionFlaggedAt: new Date('2026-01-01'),
             },
         ];
-        const { service, txReservationRepo } = createService(dueRows);
+        const { service, txReservationRepo, notificationService } = createService(dueRows);
 
         const count = await service.expireDueReservations();
 
         expect(count).toBe(0);
         expect(txReservationRepo.update).not.toHaveBeenCalled();
+        expect(notificationService.create).not.toHaveBeenCalled();
     });
 });

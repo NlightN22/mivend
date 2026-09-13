@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { NotificationRecipientService, NotificationService } from '@mivend/plugin-notification';
+import { NotificationService } from '@mivend/plugin-notification';
 
 import {
     PaymentReconciliationIssue,
@@ -22,7 +22,6 @@ export class PaymentReconciliationIssueService {
     constructor(
         private connection: TransactionalConnection,
         private notificationService: NotificationService,
-        private notificationRecipientService: NotificationRecipientService,
     ) {}
 
     async report(
@@ -54,21 +53,16 @@ export class PaymentReconciliationIssueService {
         );
 
         // PaymentAttemptService (the only caller) runs from webhook/inbox processing, so there is
-        // no signed-in administrator on ctx — getCurrentAdministrator resolves to null and this
-        // is a no-op today. Same limitation as ReservationReconciliationIssueService.save: no
-        // broadcast-to-admins recipient model exists yet in plugin-notification.
-        const recipient = await this.notificationRecipientService.getCurrentAdministrator(ctx);
-        if (recipient) {
-            await this.notificationService.create(ctx, {
-                recipientType: recipient.recipientType,
-                recipientId: recipient.recipientId,
-                kind: 'warning',
-                sourceType: 'payment-reconciliation',
-                sourceId: `${issueType}:${details.invoiceId ?? ''}:${details.organizationId ?? ''}:${details.providerPaymentId ?? ''}`,
-                title: 'Payment/ERP drift detected',
-                message: `${issueType} (invoice ${details.invoiceId ?? 'n/a'})`,
-            });
-        }
+        // no signed-in administrator on ctx — getCurrentAdministrator would resolve to null.
+        // Broadcast to every administrator instead (issue #87 Part 2) rather than skip notifying.
+        await this.notificationService.create(ctx, {
+            recipientType: 'administrator-broadcast',
+            kind: 'warning',
+            sourceType: 'payment-reconciliation',
+            sourceId: `${issueType}:${details.invoiceId ?? ''}:${details.organizationId ?? ''}:${details.providerPaymentId ?? ''}`,
+            title: 'Payment/ERP drift detected',
+            message: `${issueType} (invoice ${details.invoiceId ?? 'n/a'})`,
+        });
 
         return saved;
     }

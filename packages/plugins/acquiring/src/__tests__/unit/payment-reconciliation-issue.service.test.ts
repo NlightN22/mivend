@@ -18,49 +18,32 @@ describe('PaymentReconciliationIssueService.report — Notification wiring', () 
     function createMockNotificationService() {
         return { create: vi.fn(async () => ({})) };
     }
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    function createMockNotificationRecipientService() {
-        return { getCurrentAdministrator: vi.fn(async () => null as unknown) };
-    }
 
     let repo: ReturnType<typeof createMockRepo>;
     let notificationService: ReturnType<typeof createMockNotificationService>;
-    let notificationRecipientService: ReturnType<typeof createMockNotificationRecipientService>;
     let service: PaymentReconciliationIssueService;
     const ctx = {} as unknown as RequestContext;
 
     beforeEach(() => {
         repo = createMockRepo();
         notificationService = createMockNotificationService();
-        notificationRecipientService = createMockNotificationRecipientService();
         const connection = { getRepository: vi.fn(() => repo) };
         service = new PaymentReconciliationIssueService(
             connection as unknown as TransactionalConnection,
             notificationService as never,
-            notificationRecipientService as never,
         );
     });
 
-    it('does not create a Notification when no administrator is resolvable from ctx (webhook/inbox-triggered path)', async () => {
-        await service.report(ctx, 'AMOUNT_MISMATCH', { invoiceId: 1 });
-
-        expect(notificationRecipientService.getCurrentAdministrator).toHaveBeenCalledWith(ctx);
-        expect(notificationService.create).not.toHaveBeenCalled();
-    });
-
-    it('creates a warning Notification for the resolved administrator', async () => {
-        notificationRecipientService.getCurrentAdministrator.mockResolvedValue({
-            recipientType: 'administrator',
-            recipientId: 'admin-1',
-        } as never);
-
+    // PaymentAttemptService (the only caller) runs from webhook/inbox processing with no
+    // signed-in administrator — rather than skip notifying, this broadcasts to every
+    // administrator instead (issue #87 Part 2).
+    it('creates an administrator-broadcast Notification (webhook/inbox-triggered path, no signed-in administrator)', async () => {
         await service.report(ctx, 'AMOUNT_MISMATCH', { invoiceId: 1 });
 
         expect(notificationService.create).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({
-                recipientType: 'administrator',
-                recipientId: 'admin-1',
+                recipientType: 'administrator-broadcast',
                 kind: 'warning',
                 sourceType: 'payment-reconciliation',
             }),

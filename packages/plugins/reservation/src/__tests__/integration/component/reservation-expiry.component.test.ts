@@ -104,7 +104,18 @@ beforeAll(async () => {
             realDataSource.transaction(manager => work(wrapManager(manager))),
     };
 
-    service = new ReservationExpiryService(dataSourceShim as never);
+    // RequestContextService/NotificationService are exercised by plugin-notification's own tests
+    // and by the reservation-expiry unit tests (mocked) — this component test is only about the
+    // real-Postgres transaction/concurrency behavior of the reservation/order tables, so both are
+    // stubbed here to no-ops.
+    const requestContextServiceShim = { create: async () => ({}) };
+    const notificationServiceShim = { create: async () => ({}) };
+
+    service = new ReservationExpiryService(
+        dataSourceShim as never,
+        requestContextServiceShim as never,
+        notificationServiceShim as never,
+    );
 });
 
 afterAll(async () => {

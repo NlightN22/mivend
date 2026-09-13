@@ -9,6 +9,24 @@ import { NotificationRecipientService } from './notification-recipient.service';
 import { NOTIFICATION_PUB_SUB } from './notification-pub-sub';
 import { NOTIFICATION_RECEIVED, NotificationReceivedEvent } from './types';
 
+// Extracted to a named, directly-testable function rather than an inline lambda — mirrors
+// NotificationService.findForRecipient's OR-condition: a connected administrator receives their
+// own notifications AND every 'administrator-broadcast' event, not just events addressed to them
+// by id. Customers have no broadcast concept.
+export function administratorNotificationSubscriptionFilter(
+    payload: NotificationReceivedEvent,
+    _variables: unknown,
+    context: unknown,
+): boolean {
+    const identity = context as { recipientType?: string; recipientId?: string } | undefined;
+    if (identity?.recipientType !== 'administrator') return false;
+    const { recipientType, recipientId } = payload.notificationReceived;
+    return (
+        recipientType === 'administrator-broadcast' ||
+        (recipientType === 'administrator' && recipientId === identity.recipientId)
+    );
+}
+
 // Authenticated-only, no role-based Permission — per docs/access-control.md's "permission = action
 // only, scope = service layer": any signed-in administrator may read/act on their OWN
 // notifications, and NotificationRecipientService (never client input) is what determines "own".
@@ -62,15 +80,7 @@ export class NotificationAdminResolver {
     // context object carries the resolved identity instead, attached by
     // apps/server/src/subscriptions.ts's connection `context` factory.
     @Subscription('notificationReceived', {
-        filter: (payload: NotificationReceivedEvent, _variables: unknown, context: unknown) => {
-            const identity = context as
-                | { recipientType?: string; recipientId?: string }
-                | undefined;
-            return (
-                identity?.recipientType === 'administrator' &&
-                identity.recipientId === payload.notificationReceived.recipientId
-            );
-        },
+        filter: administratorNotificationSubscriptionFilter,
     })
     notificationReceived(@Context() context: unknown): AsyncIterableIterator<unknown> {
         if (!(context as { recipientType?: string })?.recipientType) {
@@ -79,15 +89,17 @@ export class NotificationAdminResolver {
         return this.pubSub.asyncIterableIterator(NOTIFICATION_RECEIVED);
     }
 
+    // Any authenticated administrator may act on a broadcast notification (it has no single
+    // owner) as well as their own — mirrors NotificationService.findForRecipient's OR-condition.
     private async assertOwnNotification(ctx: RequestContext, id: string): Promise<void> {
         const recipient = await this.recipientService.getCurrentAdministrator(ctx);
         const notification = recipient ? await this.notificationService.findOne(ctx, id) : null;
-        if (
-            !recipient ||
-            !notification ||
-            notification.recipientType !== recipient.recipientType ||
-            notification.recipientId !== recipient.recipientId
-        ) {
+        const isOwn =
+            !!notification &&
+            notification.recipientType === recipient?.recipientType &&
+            notification.recipientId === recipient.recipientId;
+        const isBroadcast = notification?.recipientType === 'administrator-broadcast';
+        if (!recipient || !notification || (!isOwn && !isBroadcast)) {
             throw new ForbiddenError();
         }
     }

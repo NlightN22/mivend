@@ -164,6 +164,48 @@ describe('NotificationService.markRead', () => {
     });
 });
 
+describe('NotificationService.create — administrator-broadcast (issue #87 Part 2 / #42)', () => {
+    const broadcastInput = {
+        recipientType: 'administrator-broadcast' as const,
+        kind: 'error' as const,
+        sourceType: 'reservation-intervention',
+        sourceId: 'reservation-1',
+        title: 'Needs intervention',
+        message: 'x',
+    };
+
+    it('creates a single row with recipientId null, ignoring any recipientId passed in', async () => {
+        const { service, save } = makeService(null);
+
+        const result = await service.create({} as never, {
+            ...broadcastInput,
+            recipientId: 'admin-should-be-ignored',
+        });
+
+        expect(save).toHaveBeenCalledTimes(1);
+        expect(result.recipientType).toBe('administrator-broadcast');
+        expect(result.recipientId).toBeNull();
+    });
+
+    it('a repeated create() call for the same source updates the one row instead of fanning out', async () => {
+        const existing = new Notification({
+            id: 'broadcast-1',
+            ...broadcastInput,
+            recipientId: null,
+            status: 'unread',
+            readAt: null,
+            resolvedAt: null,
+            resolution: null,
+        });
+        const { service, save } = makeService(existing);
+
+        const result = await service.create({} as never, broadcastInput);
+
+        expect(save).toHaveBeenCalledTimes(1);
+        expect(result.id).toBe('broadcast-1');
+    });
+});
+
 describe('NotificationService.resolve', () => {
     it('transitions to resolved and records the resolution', async () => {
         const existing = new Notification({
