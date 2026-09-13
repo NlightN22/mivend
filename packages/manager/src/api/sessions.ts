@@ -1,30 +1,24 @@
 import { adminApi } from './client';
+import {
+    EndAllSessionsDocument,
+    EndSessionDocument,
+    MySessionsDocument,
+    type MySessionsQuery,
+} from './generated/graphql';
 
-export interface SessionSummary {
-    id: string;
-    userAgent: string | null;
-    deviceLabel: string;
-    createdAt: string;
-    expires: string;
-    current: boolean;
-}
+export type SessionSummary = MySessionsQuery['mySessions'][number];
 
 export async function fetchMySessions(): Promise<SessionSummary[]> {
-    const result = await adminApi<{ mySessions: SessionSummary[] }>(
-        `query MySessions { mySessions { id userAgent deviceLabel createdAt expires current } }`,
-    );
+    const result = await adminApi(MySessionsDocument);
     return result.mySessions;
 }
 
 export async function endSession(id: string): Promise<boolean> {
-    const result = await adminApi<{ endSession: boolean }>(
-        `mutation EndSession($id: ID!) { endSession(id: $id) }`,
-        { id },
-    );
+    const result = await adminApi(EndSessionDocument, { id });
     return result.endSession;
 }
 
 export async function endAllSessions(): Promise<boolean> {
-    const result = await adminApi<{ endAllSessions: boolean }>(`mutation { endAllSessions }`);
+    const result = await adminApi(EndAllSessionsDocument);
     return result.endAllSessions;
 }

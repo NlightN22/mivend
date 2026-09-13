@@ -6,6 +6,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
+        "codegen": "graphql-codegen",
         "storybook": "storybook dev -p 6016",
         "storybook:host": "storybook dev -p 6016 --host 0.0.0.0",
         "build-storybook": "storybook build",
@@ -17,6 +18,7 @@
     },
     "dependencies": {
         "@element-plus/icons-vue": "^2.3.0",
+        "@graphql-typed-document-node/core": "^3.2.0",
         "@mivend/ui-kit": "workspace:*",
         "@primevue/themes": "4.5.4",
         "@tabler/icons-vue": "^3.45.0",
@@ -29,6 +31,10 @@
         "vue-router": "^4.4.0"
     },
     "devDependencies": {
+        "@graphql-codegen/cli": "^5.0.0",
+        "@graphql-codegen/typed-document-node": "^5.1.0",
+        "@graphql-codegen/typescript": "^4.1.0",
+        "@graphql-codegen/typescript-operations": "^4.6.0",
         "@storybook/addon-essentials": "^8.6.18",
         "@storybook/addon-viewport": "^8.6.18",
         "@storybook/vue3": "^8.6.18",

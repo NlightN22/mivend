@@ -43,10 +43,27 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
     throw new ApiNetworkError(lastError instanceof Error ? lastError.message : 'Network error');
 }
 
-export async function adminApi<T = unknown>(
-    query: string,
-    variables?: Record<string, unknown>,
-): Promise<T> {
+// Accepts either a raw query string (pre-codegen callers, migrating one file at a time per
+// issue #86) or a generated TypedDocumentNode-like value (documentMode: 'string' in codegen.ts,
+// so the generated Document constants are actual GraphQL strings with a phantom result/variables
+// type attached) — same shape as packages/storefront/src/api/client.ts's shopApi().
+interface TypedDocumentLike<TResult, TVariables> {
+    toString(): string;
+    __apiType?: (variables: TVariables) => TResult;
+}
+
+// TVariables defaults to the loose `Record<string, unknown> | undefined` (not `undefined`) so
+// existing not-yet-migrated callers that only specify `<TResult>` explicitly (raw query string +
+// a plain variables object) keep type-checking during the incremental migration (issue #86) —
+// once a call site passes a real TypedDocumentLike, TVariables is inferred from it instead.
+export async function adminApi<
+    TResult = unknown,
+    TVariables extends Record<string, unknown> | undefined = Record<string, unknown> | undefined,
+>(
+    document: TypedDocumentLike<TResult, TVariables> | string,
+    variables?: TVariables,
+): Promise<TResult> {
+    const query = typeof document === 'string' ? document : document.toString();
     const response = await fetchWithRetry(ADMIN_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,11 +80,11 @@ export async function adminApi<T = unknown>(
         throw new Error(`Admin API error: ${response.status}`);
     }
 
-    const json = (await response.json()) as { data?: T; errors?: { message: string }[] };
+    const json = (await response.json()) as { data?: TResult; errors?: { message: string }[] };
 
     if (json.errors?.length) {
         throw new Error(json.errors.map(e => e.message).join('; '));
     }
 
-    return json.data as T;
+    return json.data as TResult;
 }

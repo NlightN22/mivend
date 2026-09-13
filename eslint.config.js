@@ -206,6 +206,9 @@ export default [
             // Codegen output (packages/storefront/codegen.ts) — never hand-edited, regenerated
             // from the schema + .graphql operation files.
             'packages/storefront/src/api/generated/**',
+            // Codegen output (packages/manager/codegen.ts, issue #86) — same reasoning as
+            // storefront's above.
+            'packages/manager/src/api/generated/**',
             // Codegen output (@vendure/dashboard's gql-tada introspection, gqlOutputPath in
             // packages/dashboard/vite.config.ts) — never hand-edited, regenerated on dev/build.
             'packages/dashboard/gql/**',
