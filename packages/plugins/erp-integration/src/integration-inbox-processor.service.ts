@@ -62,14 +62,24 @@ export class IntegrationInboxProcessorService {
         };
     }
 
-    async processPendingBatch(maxAttempts = INBOX_MAX_ATTEMPTS_DEFAULT): Promise<{
+    // `streams`/`batchSize` implement the priority-lane split (issue #93): the critical lane
+    // (order-registration-result) and the bulk lane (everything else) each pass their own
+    // disjoint stream set and batch size, so a large bulk backlog can never delay a critical row
+    // — see integration-inbox.scheduled-task.ts, which owns the two lanes' schedules and the bulk
+    // lane's immediate-reclaim-while-full loop.
+    async processPendingBatch(
+        maxAttempts = INBOX_MAX_ATTEMPTS_DEFAULT,
+        streams?: InboundStream[],
+        batchSize = 20,
+    ): Promise<{
         processed: number;
         failed: number;
+        claimed: number;
     }> {
-        const rows = await this.inbox.claimBatch(20);
+        const rows = await this.inbox.claimBatch(batchSize, streams);
         let processed = 0;
         let failed = 0;
-        if (rows.length === 0) return { processed, failed };
+        if (rows.length === 0) return { processed, failed, claimed: 0 };
 
         // claimBatch orders by createdAt (claim fairness), not by (stream, entityId, version) —
         // two versions of the same entity landing in one batch have no guaranteed relative order
@@ -90,7 +100,7 @@ export class IntegrationInboxProcessorService {
             if (ok) processed += 1;
             else failed += 1;
         }
-        return { processed, failed };
+        return { processed, failed, claimed: rows.length };
     }
 
     private async processOne(

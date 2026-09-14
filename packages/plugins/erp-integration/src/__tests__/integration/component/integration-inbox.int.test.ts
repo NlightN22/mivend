@@ -278,4 +278,80 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             expect(resultIds).toEqual([...rows.map(r => r.id)].reverse());
         });
     });
+
+    // Issue #93: claimBatch's stream filter is what makes the priority-lane split possible —
+    // each lane's ScheduledTask passes its own disjoint stream set.
+    describe('claimBatch stream filter', () => {
+        it('claims only rows matching the given streams, leaving others pending', async () => {
+            await inboxService.enqueue({
+                stream: 'price',
+                entityId: 'pr-1',
+                version: '1',
+                sourceEventId: 'evt-price-1',
+                payload: {},
+            });
+            const critical = await inboxService.enqueue({
+                stream: 'order-registration-result',
+                entityId: 'order-1',
+                version: '1',
+                sourceEventId: 'evt-order-1',
+                payload: {},
+            });
+
+            const claimed = await inboxService.claimBatch(20, ['order-registration-result']);
+            expect(claimed.map(r => r.id)).toEqual([critical.id]);
+
+            const priceRow = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .findOneOrFail({ where: { stream: 'price' } });
+            expect(priceRow.status).toBe('pending');
+        });
+
+        it('claims across all matching streams when given more than one', async () => {
+            await inboxService.enqueue({
+                stream: 'price',
+                entityId: 'pr-2',
+                version: '1',
+                sourceEventId: 'evt-price-2',
+                payload: {},
+            });
+            await inboxService.enqueue({
+                stream: 'stock',
+                entityId: 'st-1',
+                version: '1',
+                sourceEventId: 'evt-stock-1',
+                payload: {},
+            });
+            await inboxService.enqueue({
+                stream: 'order-registration-result',
+                entityId: 'order-2',
+                version: '1',
+                sourceEventId: 'evt-order-2',
+                payload: {},
+            });
+
+            const claimed = await inboxService.claimBatch(20, ['price', 'stock']);
+            expect(claimed.map(r => r.stream).sort()).toEqual(['price', 'stock']);
+        });
+
+        it('claims across every stream when no filter is given (unchanged pre-#93 behavior)', async () => {
+            await inboxService.enqueue({
+                stream: 'price',
+                entityId: 'pr-3',
+                version: '1',
+                sourceEventId: 'evt-price-3',
+                payload: {},
+            });
+            await inboxService.enqueue({
+                stream: 'order-registration-result',
+                entityId: 'order-3',
+                version: '1',
+                sourceEventId: 'evt-order-3',
+                payload: {},
+            });
+
+            const claimed = await inboxService.claimBatch(20);
+            expect(claimed.length).toBe(2);
+        });
+    });
 });

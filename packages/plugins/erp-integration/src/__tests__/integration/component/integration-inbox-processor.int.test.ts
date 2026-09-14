@@ -173,4 +173,70 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
             { sku: 'SKU-ORDER', stockOnHand: 10 },
         ]);
     });
+
+    // Issue #93: the critical lane's stream filter must claim/process order-registration-result
+    // promptly regardless of how large the bulk-stream backlog is — this is the actual incident
+    // (a 275k-row price/stock resync starving reservation-release-blocking messages).
+    it("processes only the requested lane's streams even with a large backlog of other streams pending", async () => {
+        const apply = vi.fn().mockResolvedValue(undefined);
+        for (let i = 0; i < 25; i++) {
+            await inboxService.enqueue({
+                stream: 'price',
+                entityId: `bulk-${i}`,
+                version: '1',
+                sourceEventId: `evt-bulk-${i}`,
+                payload: { sku: `SKU-${i}` },
+            });
+        }
+        await inboxService.enqueue({
+            stream: 'order-registration-result',
+            entityId: 'order-1',
+            version: '1',
+            sourceEventId: 'evt-critical',
+            payload: { orderCode: 'ORD-1' },
+        });
+
+        const { processed, claimed } = await makeProcessor(apply).processPendingBatch(
+            undefined,
+            ['order-registration-result'],
+            20,
+        );
+        expect(claimed).toBe(1);
+        expect(processed).toBe(1);
+        expect(apply).toHaveBeenCalledTimes(1);
+        expect(apply).toHaveBeenCalledWith(expect.anything(), 'order-1', { orderCode: 'ORD-1' });
+
+        const pendingBulk = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .find({ where: { stream: 'price' } });
+        expect(pendingBulk.every(row => row.status === 'pending')).toBe(true);
+    });
+
+    // Issue #93: the bulk lane's scheduled task loops processPendingBatch while `claimed` comes
+    // back equal to the requested batch size, draining more than one batch worth of backlog
+    // within a single tick instead of waiting for the next poll interval.
+    it("reports claimed === batchSize when more pending rows remain, enabling the bulk lane's immediate-reclaim loop", async () => {
+        const apply = vi.fn().mockResolvedValue(undefined);
+        for (let i = 0; i < 5; i++) {
+            await inboxService.enqueue({
+                stream: 'price',
+                entityId: `p-${i}`,
+                version: '1',
+                sourceEventId: `evt-p-${i}`,
+                payload: { sku: `SKU-${i}` },
+            });
+        }
+
+        const processor = makeProcessor(apply);
+        const first = await processor.processPendingBatch(undefined, ['price'], 3);
+        expect(first.claimed).toBe(3);
+        expect(first.processed).toBe(3);
+
+        const second = await processor.processPendingBatch(undefined, ['price'], 3);
+        expect(second.claimed).toBe(2);
+        expect(second.processed).toBe(2);
+
+        const third = await processor.processPendingBatch(undefined, ['price'], 3);
+        expect(third.claimed).toBe(0);
+    });
 });

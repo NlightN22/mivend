@@ -135,11 +135,43 @@ export interface ErpIntegrationPluginOptions {
     reconciliationIntervalMs?: number;
 }
 
+// Every InboundStream, kept in sync by hand with the union type above (same approach as
+// KafkaConsumerConfig.topics/IntegrationInboxProcessorService.handlers, both already keyed by
+// InboundStream with no separate "list of all streams" helper) — used only to derive the bulk
+// lane's stream set below (INBOX_CRITICAL_STREAMS is exhaustively subtracted from it).
+const ALL_INBOUND_STREAMS: readonly InboundStream[] = [
+    'category',
+    'organization',
+    'warehouse',
+    'price-type',
+    'product',
+    'offer',
+    'price',
+    'stock',
+    'storage-location',
+    'stock-organization',
+    'order-registration-result',
+    'department',
+];
+
+// Issue #93: order-registration-result is reservation-release-blocking (see
+// OrderRegistrationResultHandler) and must never sit behind a bulk catalog/price/stock backlog —
+// it gets its own claim/process lane. Every other InboundStream is the bulk lane.
+export const INBOX_CRITICAL_STREAMS: readonly InboundStream[] = ['order-registration-result'];
+export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.filter(
+    stream => !INBOX_CRITICAL_STREAMS.includes(stream),
+);
+
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
 export const KAFKA_ENABLED_DEFAULT = false;
 export const MAX_RETRY_DEFAULT = 5;
 export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_POLL_INTERVAL_DEFAULT = 5000;
+export const INBOX_CRITICAL_BATCH_SIZE_DEFAULT = 20;
+// Bigger than the critical lane's batch for bulk throughput, but not jumped straight to
+// 200-500 — keeps the SELECT ... FOR UPDATE SKIP LOCKED transaction size reasonable (issue #93
+// decision). Tune based on real measurement if still insufficient.
+export const INBOX_BULK_BATCH_SIZE_DEFAULT = 100;
 export const INBOX_MAX_ATTEMPTS_DEFAULT = 5;
 export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
 // Once daily — no sub-day freshness requirement raised for this (issue #84).

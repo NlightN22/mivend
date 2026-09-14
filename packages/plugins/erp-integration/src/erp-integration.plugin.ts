@@ -20,7 +20,10 @@ import { IntegrationOutboxProcessorService } from './integration-outbox-processo
 import { createIntegrationOutboxTask } from './integration-outbox.scheduled-task';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
-import { createIntegrationInboxTask } from './integration-inbox.scheduled-task';
+import {
+    createIntegrationInboxBulkTask,
+    createIntegrationInboxCriticalTask,
+} from './integration-inbox.scheduled-task';
 import { createCollectionFiltersRecomputeTask } from './collection-filters-recompute.scheduled-task';
 import { IntegrationInboxEventResolver } from './integration-inbox-event.resolver';
 import { KafkaConsumerService } from './kafka-consumer.service';
@@ -124,7 +127,8 @@ import { createReconciliationTask } from './reconciliation.scheduled-task';
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
-            createIntegrationInboxTask(ErpIntegrationPlugin.options),
+            createIntegrationInboxCriticalTask(ErpIntegrationPlugin.options),
+            createIntegrationInboxBulkTask(ErpIntegrationPlugin.options),
             createIntegrationOutboxTask(ErpIntegrationPlugin.options),
             createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
             createReconciliationTask(ErpIntegrationPlugin.options),

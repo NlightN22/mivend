@@ -79,20 +79,25 @@ export class IntegrationInboxService {
     // actually prevents two concurrent sweeps from claiming the same row (same fix as
     // plugin-acquiring's InboxService.claimBatch, referenced by AGENTS.md's test-design guidance
     // for this issue).
-    async claimBatch(limit = 20): Promise<IntegrationInboxEvent[]> {
+    // `streams`, when given, restricts claiming to those streams only — the priority-lane split
+    // (issue #93): each lane's own scheduled task passes its own disjoint stream set, so a large
+    // bulk backlog can never be claimed ahead of (or in the same batch as) a critical-lane row.
+    async claimBatch(limit = 20, streams?: InboundStream[]): Promise<IntegrationInboxEvent[]> {
         const outerRepo = this.dataSource.getRepository(IntegrationInboxEvent);
         return outerRepo.manager.transaction(async manager => {
             const repo = manager.getRepository(outerRepo.target);
-            const rows = await repo
-                .createQueryBuilder('event')
-                .where(
-                    new Brackets(qb => {
-                        qb.where('event.status = :pending', { pending: 'pending' }).orWhere(
-                            `event.status = :processing AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval`,
-                            { processing: 'processing', staleMs: STUCK_PROCESSING_THRESHOLD_MS },
-                        );
-                    }),
-                )
+            const qb = repo.createQueryBuilder('event').where(
+                new Brackets(qb => {
+                    qb.where('event.status = :pending', { pending: 'pending' }).orWhere(
+                        `event.status = :processing AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval`,
+                        { processing: 'processing', staleMs: STUCK_PROCESSING_THRESHOLD_MS },
+                    );
+                }),
+            );
+            if (streams && streams.length > 0) {
+                qb.andWhere('event.stream IN (:...streams)', { streams });
+            }
+            const rows = await qb
                 .orderBy('event.createdAt', 'ASC')
                 .take(limit)
                 .setLock('pessimistic_write')
