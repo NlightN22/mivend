@@ -69,12 +69,21 @@ files) — the failure was going around it.
    local contour and took out an already-running staging-integration stack with it;
    `make up` + `make dev-staging-integration` recovered it, data survived because
    `down` doesn't pass `-v`, but the staging-integration server/worker still crashed
-   and had to be manually restarted). Given that, **never call `make down` without
-   first checking whether a `make dev` stack is currently relying on that infra.**
-   Check `pgrep -f "ts-node-dev|tsc -b|tsc --watch|vite"` first. If dev processes are
-   running that you did not start yourself in this exact task, assume they belong to
-   the user (or another task) and treat the Docker infra as **shared and off-limits to
-   tear down** — even transiently. This applies in particular to:
+   and had to be manually restarted). Following that incident, `make down` and
+   `make dev-reset` (the `-v` variant) now **self-guard**: each refuses to run (exit 1,
+   prints the offending processes) if any `ts-node-dev|tsc -b|tsc --watch|vite`
+   process is still running anywhere, requiring an explicit `make down FORCE=1` /
+   `make dev-reset FORCE=1` to proceed anyway. This is a safety net, not a replacement
+   for judgment — **never reach for `FORCE=1` just to get past the refusal**; it exists
+   for the rare case you've already confirmed (via `pgrep -af` + checking each
+   process's env/port, same as rule 2's contour-identification steps) that what's
+   running is stale or genuinely yours to tear down. Given all that, **never call
+   `make down` without first checking whether a `make dev` stack is currently relying
+   on that infra** even though the guard exists — it catches processes, not intent.
+   If dev processes are running that you did not start yourself in this exact task,
+   assume they belong to the user (or another task) and treat the Docker infra as
+   **shared and off-limits to tear down** — even transiently. This applies in
+   particular to:
     - Running `make test-int` — it calls `make up` automatically, but do **not** let it
       (or any script) end with `make down` if a pre-existing dev stack is still up.
       If `make test-int`'s own tooling tears infra down as part of its normal flow,

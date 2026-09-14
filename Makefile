@@ -26,7 +26,27 @@ export
 up:
 	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --build
 
+# infrastructure/docker/docker-compose.dev.yml is ONE shared stack for every contour (local,
+# branch, staging-integration) — see docs/environments.md. `down` has no way to tell "my own
+# contour's infra" from "some other contour's infra" apart, so the only safe check is: is ANY
+# contour's dev stack (server/worker/watcher) still running right now? If so, refuse — tearing
+# down here would kill it out from under whoever/whatever started it (real incident: this exact
+# thing happened once, see the dev-environment skill's rule 4). Override with `make down FORCE=1`
+# once you've confirmed nothing else needs this infra (e.g. you just ran the matching
+# dev-kill*.sh yourself, or you checked and it's stale).
 down:
+ifndef FORCE
+	@running="$$(pgrep -af 'ts-node-dev|tsc -b|tsc --watch|vite' 2>/dev/null | grep -v 'make down' || true)"; \
+	if [ -n "$$running" ]; then \
+		echo "Refusing: dev processes are still running (possibly a different contour — down" >&2; \
+		echo "tears down infra shared by ALL contours, see the dev-environment skill):" >&2; \
+		echo "$$running" >&2; \
+		echo "" >&2; \
+		echo "Stop them first (the matching make target's own dev-kill*.sh), or if you're sure" >&2; \
+		echo "this is safe, run: make down FORCE=1" >&2; \
+		exit 1; \
+	fi
+endif
 	$(COMPOSE_DEV) down
 
 logs:
@@ -51,8 +71,22 @@ dev:
 dev-fresh:
 	bash infrastructure/scripts/dev-fresh.sh
 
-# Tear down infra containers AND volumes — next up gets a clean DB
+# Tear down infra containers AND volumes — next up gets a clean DB. Same cross-contour blast
+# radius as `down` above (shared docker-compose.dev.yml), plus it wipes every contour's data —
+# refuse under the same guard, override with FORCE=1 once confirmed safe.
 dev-reset:
+ifndef FORCE
+	@running="$$(pgrep -af 'ts-node-dev|tsc -b|tsc --watch|vite' 2>/dev/null | grep -v 'make dev-reset' || true)"; \
+	if [ -n "$$running" ]; then \
+		echo "Refusing: dev processes are still running (possibly a different contour — dev-reset" >&2; \
+		echo "wipes infra AND data shared by ALL contours, see the dev-environment skill):" >&2; \
+		echo "$$running" >&2; \
+		echo "" >&2; \
+		echo "Stop them first (the matching make target's own dev-kill*.sh), or if you're sure" >&2; \
+		echo "this is safe, run: make dev-reset FORCE=1" >&2; \
+		exit 1; \
+	fi
+endif
 	$(COMPOSE_DEV) down -v
 
 # Minimal branch-instance test stack: server + worker only (no separate storefront/manager dev
