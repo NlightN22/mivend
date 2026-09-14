@@ -52,13 +52,24 @@ export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
         orderLine: OrderLine,
         quantity: number,
     ): Promise<LocationWithQuantity[]> {
+        // Fail loudly instead of guessing (issue #95). By the time native allocation runs, every
+        // real order should already have passed ReservationService's ErpExportDataMissingError
+        // gate (issue #85) — so an empty stockLocations, or a non-empty stockLocations with zero
+        // branch-scoped matches, both mean something is actually broken (a manually-created
+        // order, a data race, or a genuine bug elsewhere), not a normal case to paper over by
+        // allocating onto an arbitrary, non-branch-scoped StockLocation.
+        if (stockLocations.length === 0) {
+            const message = `orderLine ${orderLine.id}: cannot allocate stock, no StockLocation exists at all`;
+            Logger.error(message, loggerCtx);
+            throw new Error(message);
+        }
+
         const branchLocations = await this.getBranchStockLocations(ctx, orderLine, stockLocations);
         if (branchLocations.length === 0) {
-            Logger.warn(
-                `orderLine ${orderLine.id}: no branch-scoped StockLocation resolved, falling back to first available location`,
-                loggerCtx,
-            );
-            return stockLocations.length > 0 ? [{ location: stockLocations[0], quantity }] : [];
+            const branchId = await this.getOrderBranchId(ctx, orderLine);
+            const message = `orderLine ${orderLine.id}: no branch-scoped StockLocation resolved for branchId=${branchId ?? 'null'}`;
+            Logger.error(message, loggerCtx);
+            throw new Error(message);
         }
 
         const best = await this.pickLocationWithMostAvailableStock(

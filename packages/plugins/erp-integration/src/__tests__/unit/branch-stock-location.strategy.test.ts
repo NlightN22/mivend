@@ -85,16 +85,16 @@ describe('BranchStockLocationStrategy', () => {
         expect(result).toEqual([{ location: stockLocations[0], quantity: 1 }]);
     });
 
-    it('falls back to the first stock location when the order has no resolved branchId', async () => {
+    it('throws instead of falling back when the order has no resolved branchId', async () => {
         const strategy = makeStrategy({ branchId: null, activeLocationIds: [], stockLevels: {} });
         const stockLocations = [location('loc-a', 'wh-a'), location('loc-b', 'wh-b')];
 
-        const result = await strategy.forAllocation(ctx, stockLocations, orderLine, 1);
-
-        expect(result).toEqual([{ location: stockLocations[0], quantity: 1 }]);
+        await expect(strategy.forAllocation(ctx, stockLocations, orderLine, 1)).rejects.toThrow(
+            /orderLine line-1/,
+        );
     });
 
-    it('falls back to the first stock location when the branch has no matching warehouses', async () => {
+    it('throws instead of falling back when the branch has no matching warehouses', async () => {
         const strategy = makeStrategy({
             branchId: 'branch-1',
             activeLocationIds: [],
@@ -102,8 +102,20 @@ describe('BranchStockLocationStrategy', () => {
         });
         const stockLocations = [location('loc-a', 'wh-a')];
 
-        const result = await strategy.forAllocation(ctx, stockLocations, orderLine, 1);
+        await expect(strategy.forAllocation(ctx, stockLocations, orderLine, 1)).rejects.toThrow(
+            /orderLine line-1/,
+        );
+    });
 
-        expect(result).toEqual([{ location: stockLocations[0], quantity: 1 }]);
+    it('throws instead of returning an empty result when no StockLocation exists at all', async () => {
+        const strategy = makeStrategy({
+            branchId: 'branch-1',
+            activeLocationIds: [],
+            stockLevels: {},
+        });
+
+        await expect(strategy.forAllocation(ctx, [], orderLine, 1)).rejects.toThrow(
+            /no StockLocation exists at all/,
+        );
     });
 });
