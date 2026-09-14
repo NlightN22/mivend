@@ -131,6 +131,52 @@ beyond payments: any future webhook/callback surface must follow the same shape.
 still processes synchronously inline. Flagged, not refactored — don't copy this pattern into new
 code.
 
+## Cross-entity dependencies — a missing reference must retry, never silently skip
+
+Real incident (issue #95's investigation): several `plugin-erp-integration` stream handlers
+(`stock`, `price`, `storage-location`, `order-registration-result`, at least) resolve a foreign
+reference to another 1C entity synced via a _different_ Kafka stream (a `Warehouse` by erpId, a
+`PriceType`, a `ProductVariant` by external id). When that lookup came back empty — most commonly
+because the referenced entity's own stream hasn't delivered it yet, an ordinary race with no
+topic-level sequencing guarantee in Kafka — the handler logged a warning and `return`ed normally.
+`processOne()` then called `markProcessed()` on a `return`, exactly as if the row had been handled
+correctly: the event was **silently and permanently dropped**, with zero retry, the moment the
+dependent entity simply hadn't arrived yet.
+
+**Kafka gives no cross-topic ordering or consumption-priority mechanism** — do not try to build
+one (a "wait for the warehouse topic before the stock topic" scheduler). The correct fix is always
+retry-with-backoff, treated as an ordinary eventual-consistency problem, never sequencing.
+
+**Rule: a stream handler must distinguish two failure classes, never conflate them:**
+
+1. **Malformed/incomplete payload** (a required field is missing or invalid on the message
+   itself) — not retryable, no amount of waiting fixes it. Keep the existing pattern: log a
+   warning and return normally; the inbox row is marked `processed` (there is nothing to retry
+   toward).
+2. **Missing cross-entity dependency** (a foreign lookup — `Warehouse.findByErpId`, a
+   `ProductVariant` by external id, a `PriceType`, etc. — returns nothing) — this is a **retryable
+   condition**. The handler must `throw` (never warn-and-return) so `processOne()`'s existing
+   `catch` block routes it through the inbox's retry/dead-letter path instead of marking it
+   `processed`.
+
+**When adding or reviewing any stream handler that does a foreign lookup into data owned by
+another stream, check: does a failed lookup throw, or does it swallow the failure and return?** A
+swallowed failure here is the same class of bug as #95's silent StockLocation fallback — a
+required condition wasn't met, and the code proceeded (or, worse, quietly gave up) instead of
+failing loudly into the retry mechanism that already exists for exactly this case.
+
+**Concrete retry shape for this failure class** (see `IntegrationInboxEvent`/
+`IntegrationInboxService` for the mechanism): exponential backoff via a `nextRetryAt` column
+consulted by `claimBatch`'s claim query — base 30s, ×2 per attempt, capped at 30 minutes per
+retry, ±20% jitter (avoids a large batch of simultaneously-eligible rows thundering the DB at
+once). Give up (`failed`, terminal, for manual inspection) once the row has been sitting unresolved
+for **24 hours** wall-clock since `createdAt` — a time-based budget, not a fixed attempt count,
+mirroring issue #93's own wall-clock-budget pattern for the bulk lane's reclaim loop (a fixed
+attempt count stops meaning anything once backoff is capped — 24h is the actual guarantee being
+made, so bound on that directly). This is a distinct, longer budget from the default
+`INBOX_MAX_ATTEMPTS_DEFAULT`-based retry used for genuine processing bugs / malformed data, which
+should stay short (fail fast, a human needs to look at it, more waiting won't help).
+
 ## External reference id — always persist the source system's own identifier
 
 Any record representing a fact from an external system must capture that system's own unique
