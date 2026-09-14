@@ -167,6 +167,14 @@ If these commands are unavailable, inspect the project scripts and use the close
 
 Do not claim verification passed unless it actually passed.
 
+## Closing out finished work
+
+If this context save is happening because a task/issue is actually done (not just a mid-task
+checkpoint), also invoke the global `finish-task` skill — it pushes the branch and closes the
+GitHub issue(s) the work implements, with a summary comment. Skip it if the work is only a
+checkpoint, not finished, or you're unsure — this context file update is not itself permission to
+push/close if the task isn't actually complete.
+
 ## Final response
 
 After updating the file, respond with:
