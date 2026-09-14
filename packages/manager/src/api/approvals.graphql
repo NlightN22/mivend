@@ -1,0 +1,118 @@
+fragment ApprovalStepFields on ApprovalStep {
+    id
+    stepIndex
+    requiredRole
+    approverAdministratorId
+    wasEscalated
+    escalatedByAdministratorId
+    escalatedToAdministratorId
+    decision
+    comment
+    decidedAt
+}
+
+fragment ApprovalRequestSummaryFields on ApprovalRequest {
+    id
+    requestType
+    status
+    currentStepIndex
+    currentStepRole
+    stepRoles
+    totalSteps
+    requestedByAdministratorId
+    createdAt
+    decidedAt
+    payload
+    steps {
+        ...ApprovalStepFields
+    }
+}
+
+fragment ApprovalRequestPageFields on ApprovalRequestList {
+    items {
+        ...ApprovalRequestSummaryFields
+    }
+    totalItems
+}
+
+query ApprovalsInbox(
+    $awaitingOptions: ApprovalListOptions
+    $allInvolvedOptions: ApprovalListOptions
+) {
+    myApprovalsInbox(
+        awaitingOptions: $awaitingOptions
+        allInvolvedOptions: $allInvolvedOptions
+    ) {
+        awaitingMyDecision {
+            ...ApprovalRequestPageFields
+        }
+        allInvolved {
+            ...ApprovalRequestPageFields
+        }
+    }
+}
+
+query ApprovalDetail($id: ID!) {
+    approvalRequest(id: $id) {
+        ...ApprovalRequestSummaryFields
+        escalatesTo
+    }
+}
+
+mutation DecidePriceAdjustmentRequest($requestId: ID!, $decision: String!, $comment: String) {
+    decidePriceAdjustmentRequest(requestId: $requestId, decision: $decision, comment: $comment) {
+        id
+    }
+}
+
+mutation DecideDiscountGrantRequest($requestId: ID!, $decision: String!, $comment: String) {
+    decideDiscountGrantRequest(requestId: $requestId, decision: $decision, comment: $comment) {
+        id
+    }
+}
+
+mutation DecideCreditTermRequest($requestId: ID!, $decision: String!, $comment: String) {
+    decideCreditTermRequest(requestId: $requestId, decision: $decision, comment: $comment) {
+        id
+    }
+}
+
+query ApprovalOrderReferences($ids: [String!]!) {
+    visibleOrders(options: { take: 200, filter: { id: { in: $ids } } }) {
+        items {
+            id
+            code
+            customer {
+                firstName
+                lastName
+            }
+            lines {
+                id
+                quantity
+                unitPriceWithTax
+                productVariant {
+                    name
+                    sku
+                }
+            }
+        }
+    }
+}
+
+query ApprovalCounterparties {
+    counterparties(options: { take: 500 }) {
+        items {
+            erpId
+            shortName
+        }
+    }
+}
+
+mutation EscalateApprovalRequest($requestId: ID!, $escalateToAdministratorId: ID!) {
+    escalateApprovalRequest(
+        requestId: $requestId
+        escalateToAdministratorId: $escalateToAdministratorId
+    ) {
+        id
+    }
+}

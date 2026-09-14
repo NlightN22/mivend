@@ -1,35 +1,26 @@
 import { adminApi } from './client';
+import {
+    ApprovalCounterpartiesDocument,
+    ApprovalDetailDocument,
+    ApprovalOrderReferencesDocument,
+    ApprovalsInboxDocument,
+    DecideCreditTermRequestDocument,
+    DecideDiscountGrantRequestDocument,
+    DecidePriceAdjustmentRequestDocument,
+    EscalateApprovalRequestDocument,
+    type ApprovalRequestPageFieldsFragment,
+    type ApprovalRequestSummaryFieldsFragment,
+    type ApprovalStepFieldsFragment,
+} from './generated/graphql';
 
-export interface ApprovalStepAudit {
-    id: string;
-    stepIndex: number;
-    requiredRole: string;
-    approverAdministratorId: string | null;
-    wasEscalated: boolean;
-    escalatedByAdministratorId: string | null;
-    escalatedToAdministratorId: string | null;
-    decision: string | null;
-    comment: string | null;
-    decidedAt: string | null;
-}
+export type ApprovalStepAudit = ApprovalStepFieldsFragment;
+export type ApprovalRequestSummary = ApprovalRequestSummaryFieldsFragment;
+export type ApprovalRequestDetail = ApprovalRequestSummary & { escalatesTo: string[] };
+export type ApprovalRequestPage = ApprovalRequestPageFieldsFragment;
 
-export interface ApprovalRequestSummary {
-    id: string;
-    requestType: string;
-    status: string;
-    currentStepIndex: number;
-    currentStepRole: string | null;
-    stepRoles: string[];
-    totalSteps: number;
-    requestedByAdministratorId: string | null;
-    createdAt: string;
-    decidedAt: string | null;
-    payload: string;
-    steps: ApprovalStepAudit[];
-}
-
-export interface ApprovalRequestDetail extends ApprovalRequestSummary {
-    escalatesTo: string[];
+export interface ApprovalsInbox {
+    awaitingMyDecision: ApprovalRequestPage;
+    allInvolved: ApprovalRequestPage;
 }
 
 // requestType is fixed by the workflow engine, not ERP business data (see
@@ -43,38 +34,15 @@ export const REQUEST_TYPE_LABEL: Record<string, string> = {
     creditTermApprovalEscalated: 'Payment term extension (escalated)',
 };
 
-const DECIDE_MUTATION_BY_REQUEST_TYPE: Record<string, string> = {
-    priceAdjustmentApproval: 'decidePriceAdjustmentRequest',
-    discountGrantApproval: 'decideDiscountGrantRequest',
-    creditTermApproval: 'decideCreditTermRequest',
-    creditTermApprovalEscalated: 'decideCreditTermRequest',
-};
-
-const SUMMARY_FIELDS = `
-    id
-    requestType
-    status
-    currentStepIndex
-    currentStepRole
-    stepRoles
-    totalSteps
-    requestedByAdministratorId
-    createdAt
-    decidedAt
-    payload
-    steps {
-        id
-        stepIndex
-        requiredRole
-        approverAdministratorId
-        wasEscalated
-        escalatedByAdministratorId
-        escalatedToAdministratorId
-        decision
-        comment
-        decidedAt
-    }
-`;
+// Each requestType's decide mutation is a distinct, statically-named GraphQL operation (codegen
+// requires this — no dynamic mutation-name string interpolation) — dispatch by generated
+// Document instead of by mutation-name string.
+const DECIDE_DOCUMENT_BY_REQUEST_TYPE = {
+    priceAdjustmentApproval: DecidePriceAdjustmentRequestDocument,
+    discountGrantApproval: DecideDiscountGrantRequestDocument,
+    creditTermApproval: DecideCreditTermRequestDocument,
+    creditTermApprovalEscalated: DecideCreditTermRequestDocument,
+} as const;
 
 // Mirrors the backend's ApprovalListOptions (packages/plugins/approval-workflow/src/types.ts) —
 // eligibility/pagination/filtering now all happen server-side, see approval-request.service.ts's
@@ -88,18 +56,6 @@ export interface ApprovalListOptions {
     status?: string;
 }
 
-export interface ApprovalRequestPage {
-    items: ApprovalRequestSummary[];
-    totalItems: number;
-}
-
-export interface ApprovalsInbox {
-    awaitingMyDecision: ApprovalRequestPage;
-    allInvolved: ApprovalRequestPage;
-}
-
-const PAGE_FIELDS = `items { ${SUMMARY_FIELDS} } totalItems`;
-
 // One request returns both tabs so the "Awaiting my decision" badge count stays accurate no
 // matter which tab is active — pass { take: 0 } for whichever tab isn't currently displayed to
 // fetch only its totalItems, not a page of rows nobody's looking at.
@@ -107,29 +63,13 @@ export async function fetchApprovalsInbox(
     awaitingOptions: ApprovalListOptions,
     allInvolvedOptions: ApprovalListOptions,
 ): Promise<ApprovalsInbox> {
-    const result = await adminApi<{ myApprovalsInbox: ApprovalsInbox }>(
-        `query ApprovalsInbox($awaitingOptions: ApprovalListOptions, $allInvolvedOptions: ApprovalListOptions) {
-            myApprovalsInbox(awaitingOptions: $awaitingOptions, allInvolvedOptions: $allInvolvedOptions) {
-                awaitingMyDecision { ${PAGE_FIELDS} }
-                allInvolved { ${PAGE_FIELDS} }
-            }
-        }`,
-        { awaitingOptions, allInvolvedOptions },
-    );
+    const result = await adminApi(ApprovalsInboxDocument, { awaitingOptions, allInvolvedOptions });
     return result.myApprovalsInbox;
 }
 
 export async function fetchApprovalDetail(id: string): Promise<ApprovalRequestDetail | null> {
-    const result = await adminApi<{ approvalRequest: ApprovalRequestDetail | null }>(
-        `query ApprovalDetail($id: ID!) {
-            approvalRequest(id: $id) {
-                ${SUMMARY_FIELDS}
-                escalatesTo
-            }
-        }`,
-        { id },
-    );
-    return result.approvalRequest;
+    const result = await adminApi(ApprovalDetailDocument, { id });
+    return result.approvalRequest ?? null;
 }
 
 export async function decideApprovalRequest(
@@ -138,14 +78,11 @@ export async function decideApprovalRequest(
     decision: 'approved' | 'rejected',
     comment?: string,
 ): Promise<void> {
-    const mutationName = DECIDE_MUTATION_BY_REQUEST_TYPE[requestType];
-    if (!mutationName) throw new Error(`No decide mutation known for requestType "${requestType}"`);
-    await adminApi(
-        `mutation($requestId: ID!, $decision: String!, $comment: String) {
-            ${mutationName}(requestId: $requestId, decision: $decision, comment: $comment) { id }
-        }`,
-        { requestId, decision, comment },
-    );
+    const document = DECIDE_DOCUMENT_BY_REQUEST_TYPE[
+        requestType as keyof typeof DECIDE_DOCUMENT_BY_REQUEST_TYPE
+    ] as typeof DecidePriceAdjustmentRequestDocument | undefined;
+    if (!document) throw new Error(`No decide mutation known for requestType "${requestType}"`);
+    await adminApi(document, { requestId, decision, comment: comment ?? null });
 }
 
 export interface OrderReferenceLine {
@@ -171,35 +108,7 @@ export async function fetchOrderReferences(
     orderIds: string[],
 ): Promise<Map<string, OrderReference>> {
     if (!orderIds.length) return new Map();
-    const result = await adminApi<{
-        visibleOrders: {
-            items: {
-                id: string;
-                code: string;
-                customer: { firstName: string; lastName: string } | null;
-                lines: {
-                    id: string;
-                    quantity: number;
-                    unitPriceWithTax: number;
-                    productVariant: { name: string; sku: string };
-                }[];
-            }[];
-        };
-    }>(
-        `query ApprovalOrderReferences($ids: [String!]!) {
-            visibleOrders(options: { take: 200, filter: { id: { in: $ids } } }) {
-                items {
-                    id code
-                    customer { firstName lastName }
-                    lines {
-                        id quantity unitPriceWithTax
-                        productVariant { name sku }
-                    }
-                }
-            }
-        }`,
-        { ids: orderIds },
-    );
+    const result = await adminApi(ApprovalOrderReferencesDocument, { ids: orderIds });
     return new Map(
         result.visibleOrders.items.map(o => [
             o.id,
@@ -231,11 +140,7 @@ export interface CounterpartyReference {
 export async function fetchCounterpartyReferencesByErpId(): Promise<
     Map<string, CounterpartyReference>
 > {
-    const result = await adminApi<{
-        counterparties: { items: { erpId: string; shortName: string }[] };
-    }>(
-        `query ApprovalCounterparties { counterparties(options: { take: 500 }) { items { erpId shortName } } }`,
-    );
+    const result = await adminApi(ApprovalCounterpartiesDocument);
     return new Map(result.counterparties.items.map(c => [c.erpId, c]));
 }
 
@@ -243,13 +148,5 @@ export async function escalateApprovalRequest(
     requestId: string,
     escalateToAdministratorId: string,
 ): Promise<void> {
-    await adminApi(
-        `mutation($requestId: ID!, $escalateToAdministratorId: ID!) {
-            escalateApprovalRequest(
-                requestId: $requestId
-                escalateToAdministratorId: $escalateToAdministratorId
-            ) { id }
-        }`,
-        { requestId, escalateToAdministratorId },
-    );
+    await adminApi(EscalateApprovalRequestDocument, { requestId, escalateToAdministratorId });
 }
