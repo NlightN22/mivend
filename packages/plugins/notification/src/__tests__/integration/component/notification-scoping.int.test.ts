@@ -488,4 +488,29 @@ describe('NotificationService.findForRecipient — pagination (component, real P
             ['total-allowed', 'total-own-1', 'total-own-2', 'total-ungated'].sort(),
         );
     });
+
+    // mivend.issue.90 audit (LOW): a negative take/skip previously reached TypeORM as-is
+    // (`LIMIT -1`/`OFFSET -1`), which Postgres rejects as a syntax error — a raw 500 instead of a
+    // clean, empty-safe page.
+    it('clamps a negative take/skip instead of passing them through to the query', async () => {
+        for (let i = 1; i <= 3; i++) {
+            await insertNotification({ sourceId: `neg-${i}`, title: `NEG${i}` });
+        }
+
+        const negativeTake = await notificationService.findForRecipient(
+            fakeAdminCtx(),
+            'administrator',
+            'admin-page',
+            { take: -1 },
+        );
+        expect(negativeTake.items.length).toBeGreaterThanOrEqual(0);
+
+        const negativeSkip = await notificationService.findForRecipient(
+            fakeAdminCtx(),
+            'administrator',
+            'admin-page',
+            { skip: -1 },
+        );
+        expect(negativeSkip.items.length).toBeGreaterThanOrEqual(0);
+    });
 });

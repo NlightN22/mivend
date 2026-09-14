@@ -125,8 +125,11 @@ export class NotificationService {
         recipientId: string,
         opts: FindForRecipientOptions = {},
     ): Promise<PaginatedList<Notification>> {
-        const take = Math.min(opts.take ?? DEFAULT_LIST_TAKE, MAX_LIST_TAKE);
-        const skip = opts.skip ?? 0;
+        // Clamp against both a negative client-supplied value (would otherwise reach TypeORM as
+        // e.g. `LIMIT -1`, a Postgres syntax error surfaced as a raw GraphQL 500 instead of a
+        // clean empty page — mivend.issue.90 audit) and the upper MAX_LIST_TAKE bound.
+        const take = Math.min(Math.max(opts.take ?? DEFAULT_LIST_TAKE, 0), MAX_LIST_TAKE);
+        const skip = Math.max(opts.skip ?? 0, 0);
 
         const qb = this.connection
             .getRepository(ctx, Notification)
