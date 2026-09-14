@@ -13,6 +13,7 @@
         "useDefineForClassFields": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
+        "noEmit": true,
         "types": ["vite/client"]
     },
     "include": ["src/**/*", "src/**/*.vue"],

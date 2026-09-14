@@ -159,7 +159,7 @@ const rows = computed<WarehouseRow[]>(() =>
         </template>
         <template #cell-assignedBranchId="{ data }">
             <MvSelect
-                :model-value="(data as WarehouseRow).assignedBranchId"
+                :model-value="(data as WarehouseRow).assignedBranchId ?? ''"
                 :options="branchOptions"
                 :disabled="savingWarehouseId === (data as WarehouseRow).id"
                 @update:model-value="
@@ -180,7 +180,7 @@ const rows = computed<WarehouseRow[]>(() =>
                     (value: boolean) =>
                         emit('reassign', {
                             warehouseId: (data as WarehouseRow).id,
-                            branchId: (data as WarehouseRow).assignedBranchId,
+                            branchId: (data as WarehouseRow).assignedBranchId ?? '',
                             includedInBranchAtp: value,
                         })
                 "

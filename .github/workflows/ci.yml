@@ -39,6 +39,9 @@ jobs:
             - name: Type check (storefront)
               run: pnpm --filter @mivend/storefront exec vue-tsc --noEmit
 
+            - name: Type check (manager)
+              run: pnpm --filter @mivend/manager exec vue-tsc --noEmit
+
             - name: Type check (dashboard)
               run: pnpm --filter @mivend/dashboard exec tsc --noEmit
 

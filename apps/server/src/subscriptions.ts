@@ -77,11 +77,16 @@ function buildNotificationSubscriptionSchema(
                 notificationReceived: {
                     subscribe: withFilter(
                         () => notificationService.subscribeToReceived(),
+                        // graphql-subscriptions' FilterFn types payload as possibly undefined
+                        // (an async iterator can yield no value at stream end) — filter() itself
+                        // assumes a real event, so short-circuit here rather than loosen its
+                        // signature for a case that only happens after the stream is already
+                        // done.
                         (
-                            payload: NotificationReceivedEvent,
+                            payload: NotificationReceivedEvent | undefined,
                             variables: unknown,
                             context: unknown,
-                        ) => filter(payload, variables, context),
+                        ) => payload !== undefined && filter(payload, variables, context),
                     ),
                     resolve: (payload: NotificationReceivedEvent) => payload.notificationReceived,
                 },
