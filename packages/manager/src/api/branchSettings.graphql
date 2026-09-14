@@ -1,0 +1,77 @@
+fragment WarehouseFields on Warehouse {
+    id
+    erpId
+    name
+    branchId
+    isActive
+    includedInBranchAtp
+}
+
+fragment BranchSettingsFields on BranchSettings {
+    id
+    branchId
+    defaultPriceTypeId
+    visiblePriceTypeIds
+    defaultWarehouseId
+    visibleWarehouseIds
+}
+
+query Warehouses {
+    warehouses {
+        ...WarehouseFields
+    }
+}
+
+query BranchOptions {
+    branches {
+        id
+        erpId
+        name
+    }
+}
+
+query PriceTypeOptions {
+    priceTypes {
+        id
+        code
+        name
+    }
+}
+
+mutation UpdateWarehouseBranchAssignment(
+    $warehouseId: ID!
+    $branchId: String!
+    $includedInBranchAtp: Boolean!
+) {
+    updateWarehouseBranchAssignment(
+        warehouseId: $warehouseId
+        branchId: $branchId
+        includedInBranchAtp: $includedInBranchAtp
+    ) {
+        ...WarehouseFields
+    }
+}
+
+query BranchSettingsForBranch($branchId: String!) {
+    branchSettings(branchId: $branchId) {
+        ...BranchSettingsFields
+    }
+}
+
+mutation SetBranchSettings(
+    $branchId: String!
+    $defaultPriceTypeId: String!
+    $visiblePriceTypeIds: [String!]
+    $defaultWarehouseId: String!
+    $visibleWarehouseIds: [String!]
+) {
+    setBranchSettings(
+        branchId: $branchId
+        defaultPriceTypeId: $defaultPriceTypeId
+        visiblePriceTypeIds: $visiblePriceTypeIds
+        defaultWarehouseId: $defaultWarehouseId
+        visibleWarehouseIds: $visibleWarehouseIds
+    ) {
+        ...BranchSettingsFields
+    }
+}

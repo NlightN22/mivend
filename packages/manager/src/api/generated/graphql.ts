@@ -8790,6 +8790,102 @@ export type EscalateApprovalRequestMutationVariables = Exact<{
 
 export type EscalateApprovalRequestMutation = { escalateApprovalRequest: { id: string } };
 
+export type WarehouseFieldsFragment = {
+    id: string;
+    erpId: string;
+    name: string;
+    branchId: string | null;
+    isActive: boolean;
+    includedInBranchAtp: boolean;
+};
+
+export type BranchSettingsFieldsFragment = {
+    id: string;
+    branchId: string;
+    defaultPriceTypeId: string;
+    visiblePriceTypeIds: Array<string> | null;
+    defaultWarehouseId: string;
+    visibleWarehouseIds: Array<string> | null;
+};
+
+export type WarehousesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type WarehousesQuery = {
+    warehouses: Array<{
+        id: string;
+        erpId: string;
+        name: string;
+        branchId: string | null;
+        isActive: boolean;
+        includedInBranchAtp: boolean;
+    }>;
+};
+
+export type BranchOptionsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type BranchOptionsQuery = { branches: Array<{ id: string; erpId: string; name: string }> };
+
+export type PriceTypeOptionsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PriceTypeOptionsQuery = {
+    priceTypes: Array<{ id: string; code: string; name: string }>;
+};
+
+export type UpdateWarehouseBranchAssignmentMutationVariables = Exact<{
+    warehouseId: Scalars['ID']['input'];
+    branchId: Scalars['String']['input'];
+    includedInBranchAtp: Scalars['Boolean']['input'];
+}>;
+
+export type UpdateWarehouseBranchAssignmentMutation = {
+    updateWarehouseBranchAssignment: {
+        id: string;
+        erpId: string;
+        name: string;
+        branchId: string | null;
+        isActive: boolean;
+        includedInBranchAtp: boolean;
+    };
+};
+
+export type BranchSettingsForBranchQueryVariables = Exact<{
+    branchId: Scalars['String']['input'];
+}>;
+
+export type BranchSettingsForBranchQuery = {
+    branchSettings: {
+        id: string;
+        branchId: string;
+        defaultPriceTypeId: string;
+        visiblePriceTypeIds: Array<string> | null;
+        defaultWarehouseId: string;
+        visibleWarehouseIds: Array<string> | null;
+    } | null;
+};
+
+export type SetBranchSettingsMutationVariables = Exact<{
+    branchId: Scalars['String']['input'];
+    defaultPriceTypeId: Scalars['String']['input'];
+    visiblePriceTypeIds?: InputMaybe<
+        Array<Scalars['String']['input']> | Scalars['String']['input']
+    >;
+    defaultWarehouseId: Scalars['String']['input'];
+    visibleWarehouseIds?: InputMaybe<
+        Array<Scalars['String']['input']> | Scalars['String']['input']
+    >;
+}>;
+
+export type SetBranchSettingsMutation = {
+    setBranchSettings: {
+        id: string;
+        branchId: string;
+        defaultPriceTypeId: string;
+        visiblePriceTypeIds: Array<string> | null;
+        defaultWarehouseId: string;
+        visibleWarehouseIds: Array<string> | null;
+    };
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -8918,6 +9014,32 @@ fragment ApprovalRequestSummaryFields on ApprovalRequest {
 }`,
     { fragmentName: 'ApprovalRequestPageFields' },
 ) as unknown as TypedDocumentString<ApprovalRequestPageFieldsFragment, unknown>;
+export const WarehouseFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment WarehouseFields on Warehouse {
+  id
+  erpId
+  name
+  branchId
+  isActive
+  includedInBranchAtp
+}
+    `,
+    { fragmentName: 'WarehouseFields' },
+) as unknown as TypedDocumentString<WarehouseFieldsFragment, unknown>;
+export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment BranchSettingsFields on BranchSettings {
+  id
+  branchId
+  defaultPriceTypeId
+  visiblePriceTypeIds
+  defaultWarehouseId
+  visibleWarehouseIds
+}
+    `,
+    { fragmentName: 'BranchSettingsFields' },
+) as unknown as TypedDocumentString<BranchSettingsFieldsFragment, unknown>;
 export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     mutation ChangeOwnPassword($password: String!) {
   updateActiveAdministrator(input: {password: $password}) {
@@ -9104,6 +9226,99 @@ export const EscalateApprovalRequestDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     EscalateApprovalRequestMutation,
     EscalateApprovalRequestMutationVariables
+>;
+export const WarehousesDocument = new TypedDocumentString(`
+    query Warehouses {
+  warehouses {
+    ...WarehouseFields
+  }
+}
+    fragment WarehouseFields on Warehouse {
+  id
+  erpId
+  name
+  branchId
+  isActive
+  includedInBranchAtp
+}`) as unknown as TypedDocumentString<WarehousesQuery, WarehousesQueryVariables>;
+export const BranchOptionsDocument = new TypedDocumentString(`
+    query BranchOptions {
+  branches {
+    id
+    erpId
+    name
+  }
+}
+    `) as unknown as TypedDocumentString<BranchOptionsQuery, BranchOptionsQueryVariables>;
+export const PriceTypeOptionsDocument = new TypedDocumentString(`
+    query PriceTypeOptions {
+  priceTypes {
+    id
+    code
+    name
+  }
+}
+    `) as unknown as TypedDocumentString<PriceTypeOptionsQuery, PriceTypeOptionsQueryVariables>;
+export const UpdateWarehouseBranchAssignmentDocument = new TypedDocumentString(`
+    mutation UpdateWarehouseBranchAssignment($warehouseId: ID!, $branchId: String!, $includedInBranchAtp: Boolean!) {
+  updateWarehouseBranchAssignment(
+    warehouseId: $warehouseId
+    branchId: $branchId
+    includedInBranchAtp: $includedInBranchAtp
+  ) {
+    ...WarehouseFields
+  }
+}
+    fragment WarehouseFields on Warehouse {
+  id
+  erpId
+  name
+  branchId
+  isActive
+  includedInBranchAtp
+}`) as unknown as TypedDocumentString<
+    UpdateWarehouseBranchAssignmentMutation,
+    UpdateWarehouseBranchAssignmentMutationVariables
+>;
+export const BranchSettingsForBranchDocument = new TypedDocumentString(`
+    query BranchSettingsForBranch($branchId: String!) {
+  branchSettings(branchId: $branchId) {
+    ...BranchSettingsFields
+  }
+}
+    fragment BranchSettingsFields on BranchSettings {
+  id
+  branchId
+  defaultPriceTypeId
+  visiblePriceTypeIds
+  defaultWarehouseId
+  visibleWarehouseIds
+}`) as unknown as TypedDocumentString<
+    BranchSettingsForBranchQuery,
+    BranchSettingsForBranchQueryVariables
+>;
+export const SetBranchSettingsDocument = new TypedDocumentString(`
+    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!]) {
+  setBranchSettings(
+    branchId: $branchId
+    defaultPriceTypeId: $defaultPriceTypeId
+    visiblePriceTypeIds: $visiblePriceTypeIds
+    defaultWarehouseId: $defaultWarehouseId
+    visibleWarehouseIds: $visibleWarehouseIds
+  ) {
+    ...BranchSettingsFields
+  }
+}
+    fragment BranchSettingsFields on BranchSettings {
+  id
+  branchId
+  defaultPriceTypeId
+  visiblePriceTypeIds
+  defaultWarehouseId
+  visibleWarehouseIds
+}`) as unknown as TypedDocumentString<
+    SetBranchSettingsMutation,
+    SetBranchSettingsMutationVariables
 >;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {

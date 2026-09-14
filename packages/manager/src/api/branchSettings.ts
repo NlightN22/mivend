@@ -1,4 +1,14 @@
 import { adminApi } from './client';
+import {
+    BranchOptionsDocument,
+    BranchSettingsForBranchDocument,
+    PriceTypeOptionsDocument,
+    SetBranchSettingsDocument,
+    UpdateWarehouseBranchAssignmentDocument,
+    WarehousesDocument,
+    type BranchSettingsFieldsFragment,
+    type WarehouseFieldsFragment,
+} from './generated/graphql';
 
 export interface BranchOption {
     id: string;
@@ -6,14 +16,7 @@ export interface BranchOption {
     name: string;
 }
 
-export interface Warehouse {
-    id: string;
-    erpId: string;
-    name: string;
-    branchId: string | null;
-    isActive: boolean;
-    includedInBranchAtp: boolean;
-}
+export type Warehouse = WarehouseFieldsFragment;
 
 export interface PriceTypeOption {
     id: string;
@@ -21,14 +24,7 @@ export interface PriceTypeOption {
     name: string;
 }
 
-export interface BranchSettings {
-    id: string;
-    branchId: string;
-    defaultPriceTypeId: string;
-    visiblePriceTypeIds: string[] | null;
-    defaultWarehouseId: string;
-    visibleWarehouseIds: string[] | null;
-}
+export type BranchSettings = BranchSettingsFieldsFragment;
 
 export interface BranchSettingsInput {
     branchId: string;
@@ -44,32 +40,17 @@ export interface BranchSettingsInput {
 // AccessControlResolver: a genuinely bounded org-structure list, not a row that accumulates over
 // the business's lifetime (the backend-plugin-rules skill's Pagination section exemption test).
 export async function fetchWarehouses(): Promise<Warehouse[]> {
-    const result = await adminApi<{ warehouses: Warehouse[] }>(
-        `query Warehouses {
-            warehouses {
-                id
-                erpId
-                name
-                branchId
-                isActive
-                includedInBranchAtp
-            }
-        }`,
-    );
+    const result = await adminApi(WarehousesDocument);
     return result.warehouses;
 }
 
 export async function fetchBranchOptions(): Promise<BranchOption[]> {
-    const result = await adminApi<{ branches: BranchOption[] }>(
-        `query BranchOptions { branches { id erpId name } }`,
-    );
+    const result = await adminApi(BranchOptionsDocument);
     return result.branches;
 }
 
 export async function fetchPriceTypeOptions(): Promise<PriceTypeOption[]> {
-    const result = await adminApi<{ priceTypes: PriceTypeOption[] }>(
-        `query PriceTypeOptions { priceTypes { id code name } }`,
-    );
+    const result = await adminApi(PriceTypeOptionsDocument);
     return result.priceTypes;
 }
 
@@ -78,72 +59,20 @@ export async function updateWarehouseBranchAssignment(
     branchId: string,
     includedInBranchAtp: boolean,
 ): Promise<Warehouse> {
-    const result = await adminApi<{ updateWarehouseBranchAssignment: Warehouse }>(
-        `mutation UpdateWarehouseBranchAssignment(
-            $warehouseId: ID!
-            $branchId: String!
-            $includedInBranchAtp: Boolean!
-        ) {
-            updateWarehouseBranchAssignment(
-                warehouseId: $warehouseId
-                branchId: $branchId
-                includedInBranchAtp: $includedInBranchAtp
-            ) {
-                id
-                erpId
-                name
-                branchId
-                isActive
-                includedInBranchAtp
-            }
-        }`,
-        { warehouseId, branchId, includedInBranchAtp },
-    );
+    const result = await adminApi(UpdateWarehouseBranchAssignmentDocument, {
+        warehouseId,
+        branchId,
+        includedInBranchAtp,
+    });
     return result.updateWarehouseBranchAssignment;
 }
 
 export async function fetchBranchSettings(branchId: string): Promise<BranchSettings | null> {
-    const result = await adminApi<{ branchSettings: BranchSettings | null }>(
-        `query BranchSettingsForBranch($branchId: String!) {
-            branchSettings(branchId: $branchId) {
-                id
-                branchId
-                defaultPriceTypeId
-                visiblePriceTypeIds
-                defaultWarehouseId
-                visibleWarehouseIds
-            }
-        }`,
-        { branchId },
-    );
-    return result.branchSettings;
+    const result = await adminApi(BranchSettingsForBranchDocument, { branchId });
+    return result.branchSettings ?? null;
 }
 
 export async function saveBranchSettings(input: BranchSettingsInput): Promise<BranchSettings> {
-    const result = await adminApi<{ setBranchSettings: BranchSettings }>(
-        `mutation SetBranchSettings(
-            $branchId: String!
-            $defaultPriceTypeId: String!
-            $visiblePriceTypeIds: [String!]
-            $defaultWarehouseId: String!
-            $visibleWarehouseIds: [String!]
-        ) {
-            setBranchSettings(
-                branchId: $branchId
-                defaultPriceTypeId: $defaultPriceTypeId
-                visiblePriceTypeIds: $visiblePriceTypeIds
-                defaultWarehouseId: $defaultWarehouseId
-                visibleWarehouseIds: $visibleWarehouseIds
-            ) {
-                id
-                branchId
-                defaultPriceTypeId
-                visiblePriceTypeIds
-                defaultWarehouseId
-                visibleWarehouseIds
-            }
-        }`,
-        { ...input },
-    );
+    const result = await adminApi(SetBranchSettingsDocument, { ...input });
     return result.setBranchSettings;
 }
