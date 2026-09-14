@@ -9444,6 +9444,62 @@ export type RunErpReconciliationMutation = {
     runErpReconciliation: { checked: number; issuesFound: number; skipped: Array<string> };
 };
 
+export type InvoiceListItemFieldsFragment = {
+    id: string;
+    number: string;
+    createdAt: any;
+    orderId: string;
+    counterpartyId: string;
+    amount: number;
+    currencyCode: string;
+    status: string;
+    branchId: string | null;
+    order: { code: string };
+};
+
+export type InvoicesPageQueryVariables = Exact<{
+    options?: InputMaybe<InvoiceListOptions>;
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type InvoicesPageQuery = {
+    visibleInvoices: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            number: string;
+            createdAt: any;
+            orderId: string;
+            counterpartyId: string;
+            amount: number;
+            currencyCode: string;
+            status: string;
+            branchId: string | null;
+            order: { code: string };
+        }>;
+    };
+};
+
+export type InvoiceViewCountsQueryVariables = Exact<{
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type InvoiceViewCountsQuery = {
+    all: { totalItems: number };
+    pending: { totalItems: number };
+    issued: { totalItems: number };
+    paid: { totalItems: number };
+    cancelled: { totalItems: number };
+};
+
+export type InvoiceOutstandingBalanceQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+}>;
+
+export type InvoiceOutstandingBalanceQuery = {
+    invoiceOutstandingBalance: { amount: number; currencyCode: string } | null;
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -9664,6 +9720,25 @@ export const CustomerOrderItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'CustomerOrderItemFields' },
 ) as unknown as TypedDocumentString<CustomerOrderItemFieldsFragment, unknown>;
+export const InvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment InvoiceListItemFields on Invoice {
+  id
+  number
+  createdAt
+  orderId
+  counterpartyId
+  amount
+  currencyCode
+  status
+  branchId
+  order {
+    code
+  }
+}
+    `,
+    { fragmentName: 'InvoiceListItemFields' },
+) as unknown as TypedDocumentString<InvoiceListItemFieldsFragment, unknown>;
 export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     mutation ChangeOwnPassword($password: String!) {
   updateActiveAdministrator(input: {password: $password}) {
@@ -10667,6 +10742,71 @@ export const RunErpReconciliationDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     RunErpReconciliationMutation,
     RunErpReconciliationMutationVariables
+>;
+export const InvoicesPageDocument = new TypedDocumentString(`
+    query InvoicesPage($options: InvoiceListOptions, $counterpartyId: ID) {
+  visibleInvoices(options: $options, counterpartyId: $counterpartyId) {
+    totalItems
+    items {
+      ...InvoiceListItemFields
+    }
+  }
+}
+    fragment InvoiceListItemFields on Invoice {
+  id
+  number
+  createdAt
+  orderId
+  counterpartyId
+  amount
+  currencyCode
+  status
+  branchId
+  order {
+    code
+  }
+}`) as unknown as TypedDocumentString<InvoicesPageQuery, InvoicesPageQueryVariables>;
+export const InvoiceViewCountsDocument = new TypedDocumentString(`
+    query InvoiceViewCounts($counterpartyId: ID) {
+  all: visibleInvoices(options: {take: 0}, counterpartyId: $counterpartyId) {
+    totalItems
+  }
+  pending: visibleInvoices(
+    options: {take: 0, status: "pending"}
+    counterpartyId: $counterpartyId
+  ) {
+    totalItems
+  }
+  issued: visibleInvoices(
+    options: {take: 0, status: "issued"}
+    counterpartyId: $counterpartyId
+  ) {
+    totalItems
+  }
+  paid: visibleInvoices(
+    options: {take: 0, status: "paid"}
+    counterpartyId: $counterpartyId
+  ) {
+    totalItems
+  }
+  cancelled: visibleInvoices(
+    options: {take: 0, status: "cancelled"}
+    counterpartyId: $counterpartyId
+  ) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<InvoiceViewCountsQuery, InvoiceViewCountsQueryVariables>;
+export const InvoiceOutstandingBalanceDocument = new TypedDocumentString(`
+    query InvoiceOutstandingBalance($counterpartyId: ID!) {
+  invoiceOutstandingBalance(counterpartyId: $counterpartyId) {
+    amount
+    currencyCode
+  }
+}
+    `) as unknown as TypedDocumentString<
+    InvoiceOutstandingBalanceQuery,
+    InvoiceOutstandingBalanceQueryVariables
 >;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {

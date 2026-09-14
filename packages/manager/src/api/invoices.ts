@@ -1,18 +1,13 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
+import {
+    InvoiceOutstandingBalanceDocument,
+    InvoicesPageDocument,
+    InvoiceViewCountsDocument,
+    type InvoiceListItemFieldsFragment,
+} from './generated/graphql';
 
-export interface InvoiceListItem {
-    id: string;
-    number: string;
-    createdAt: string;
-    orderId: string;
-    counterpartyId: string;
-    amount: number;
-    currencyCode: string;
-    status: string;
-    branchId: string | null;
-    order: { code: string };
-}
+export type InvoiceListItem = InvoiceListItemFieldsFragment;
 
 export interface InvoiceFilters {
     // Index signature lets InvoiceFilters satisfy useUrlSyncedState's generic Record<string,
@@ -51,43 +46,20 @@ export const INVOICE_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = 
     cancelled: 'danger',
 };
 
-const INVOICE_ITEM_FIELDS = `
-    id
-    number
-    createdAt
-    orderId
-    counterpartyId
-    amount
-    currencyCode
-    status
-    branchId
-    order { code }
-`;
-
 export async function fetchInvoicesPage(
     filters: InvoiceFilters,
     page: number,
     pageSize: number,
 ): Promise<{ items: InvoiceListItem[]; totalItems: number }> {
-    const result = await adminApi<{
-        visibleInvoices: { items: InvoiceListItem[]; totalItems: number };
-    }>(
-        `query InvoicesPage($options: InvoiceListOptions, $counterpartyId: ID) {
-            visibleInvoices(options: $options, counterpartyId: $counterpartyId) {
-                totalItems
-                items { ${INVOICE_ITEM_FIELDS} }
-            }
-        }`,
-        {
-            options: {
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                status: filters.status || undefined,
-                search: filters.search || undefined,
-            },
-            counterpartyId: filters.counterpartyId || undefined,
+    const result = await adminApi(InvoicesPageDocument, {
+        options: {
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+            status: filters.status || undefined,
+            search: filters.search || undefined,
         },
-    );
+        counterpartyId: filters.counterpartyId || undefined,
+    });
     return result.visibleInvoices;
 }
 
@@ -103,22 +75,7 @@ export interface InvoiceViewCounts {
 // api/customers.ts's fetchCustomerOrderViewCounts, so chip counts reflect the whole visible set,
 // not just the currently-loaded page.
 export async function fetchInvoiceViewCounts(counterpartyId: string): Promise<InvoiceViewCounts> {
-    const result = await adminApi<{
-        all: { totalItems: number };
-        pending: { totalItems: number };
-        issued: { totalItems: number };
-        paid: { totalItems: number };
-        cancelled: { totalItems: number };
-    }>(
-        `query InvoiceViewCounts($counterpartyId: ID) {
-            all: visibleInvoices(options: { take: 0 }, counterpartyId: $counterpartyId) { totalItems }
-            pending: visibleInvoices(options: { take: 0, status: "pending" }, counterpartyId: $counterpartyId) { totalItems }
-            issued: visibleInvoices(options: { take: 0, status: "issued" }, counterpartyId: $counterpartyId) { totalItems }
-            paid: visibleInvoices(options: { take: 0, status: "paid" }, counterpartyId: $counterpartyId) { totalItems }
-            cancelled: visibleInvoices(options: { take: 0, status: "cancelled" }, counterpartyId: $counterpartyId) { totalItems }
-        }`,
-        { counterpartyId },
-    );
+    const result = await adminApi(InvoiceViewCountsDocument, { counterpartyId });
     return {
         all: result.all.totalItems,
         pending: result.pending.totalItems,
@@ -136,11 +93,6 @@ export interface OutstandingBalance {
 export async function fetchOutstandingBalance(
     counterpartyId: string,
 ): Promise<OutstandingBalance | null> {
-    const result = await adminApi<{ invoiceOutstandingBalance: OutstandingBalance | null }>(
-        `query($counterpartyId: ID!) {
-            invoiceOutstandingBalance(counterpartyId: $counterpartyId) { amount currencyCode }
-        }`,
-        { counterpartyId },
-    );
-    return result.invoiceOutstandingBalance;
+    const result = await adminApi(InvoiceOutstandingBalanceDocument, { counterpartyId });
+    return result.invoiceOutstandingBalance ?? null;
 }

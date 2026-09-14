@@ -1,0 +1,57 @@
+fragment InvoiceListItemFields on Invoice {
+    id
+    number
+    createdAt
+    orderId
+    counterpartyId
+    amount
+    currencyCode
+    status
+    branchId
+    order {
+        code
+    }
+}
+
+query InvoicesPage($options: InvoiceListOptions, $counterpartyId: ID) {
+    visibleInvoices(options: $options, counterpartyId: $counterpartyId) {
+        totalItems
+        items {
+            ...InvoiceListItemFields
+        }
+    }
+}
+
+query InvoiceViewCounts($counterpartyId: ID) {
+    all: visibleInvoices(options: { take: 0 }, counterpartyId: $counterpartyId) {
+        totalItems
+    }
+    pending: visibleInvoices(
+        options: { take: 0, status: "pending" }
+        counterpartyId: $counterpartyId
+    ) {
+        totalItems
+    }
+    issued: visibleInvoices(
+        options: { take: 0, status: "issued" }
+        counterpartyId: $counterpartyId
+    ) {
+        totalItems
+    }
+    paid: visibleInvoices(options: { take: 0, status: "paid" }, counterpartyId: $counterpartyId) {
+        totalItems
+    }
+    cancelled: visibleInvoices(
+        options: { take: 0, status: "cancelled" }
+        counterpartyId: $counterpartyId
+    ) {
+        totalItems
+    }
+}
+
+query InvoiceOutstandingBalance($counterpartyId: ID!) {
+    invoiceOutstandingBalance(counterpartyId: $counterpartyId) {
+        amount
+        currencyCode
+    }
+}
