@@ -24,12 +24,21 @@ export async function setCategoryVisibilityOverride(
     id: string,
     visibilityOverride: string | null,
 ): Promise<CategoryVisibilityCollection> {
+    // Collection.isPrivate is a non-nullable boolean column — Vendure's patchEntity treats an
+    // explicit `null` variable as "set this field to null" (distinct from `undefined`, which it
+    // leaves untouched), so clearing the override (visibilityOverride: null) must OMIT isPrivate
+    // from the variables entirely rather than send null, or the save fails against the non-
+    // nullable column instead of leaving isPrivate alone for the next feed event to set.
     const isPrivate =
-        visibilityOverride === 'hidden' ? true : visibilityOverride === 'visible' ? false : null;
+        visibilityOverride === 'hidden'
+            ? true
+            : visibilityOverride === 'visible'
+              ? false
+              : undefined;
     const result = await adminApi(SetCategoryVisibilityOverrideDocument, {
         id,
         visibilityOverride,
-        isPrivate,
+        ...(isPrivate === undefined ? {} : { isPrivate }),
     });
     return result.updateCollection;
 }

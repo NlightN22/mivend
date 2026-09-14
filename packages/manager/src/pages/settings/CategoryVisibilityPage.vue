@@ -49,7 +49,11 @@ onMounted(loadAll);
 </script>
 
 <template>
-    <div v-if="!authStore.hasPermission('ManageAccessControl')" class="category-visibility-page__not-authorized">
+    <!-- Gated on UpdateCatalog, not ManageAccessControl (Settings' own sidebar-level gate) —
+    that's the permission setCategoryVisibilityOverride's updateCollection mutation actually
+    requires, per mivend.audit.90. Today portal-admin is the only role with either, but checking
+    the permission the page truly needs keeps this page correct if that ever changes. -->
+    <div v-if="!authStore.hasPermission('UpdateCatalog')" class="category-visibility-page__not-authorized">
         <h1>Not authorized</h1>
         <p>You don't have permission to manage category visibility.</p>
     </div>

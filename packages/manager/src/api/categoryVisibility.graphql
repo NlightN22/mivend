@@ -8,6 +8,9 @@ fragment CategoryCollectionFields on Collection {
     }
 }
 
+# take: 999, no cursor — known limitation (mivend.audit.90 MEDIUM), not a final decision: if the
+# category count ever exceeds this, the extras silently don't appear in the table. Revisit with
+# real server-side pagination if/when that becomes a real risk.
 query CategoryVisibilityCollections {
     collections(options: { filter: { slug: { contains: "cat-" } }, take: 999 }) {
         items {
