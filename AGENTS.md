@@ -316,3 +316,9 @@ session's own `<project>.<issue-number-or-description>` naming. The audit sessio
 varies per task, so don't assume a fixed one; ask, or check recently-active sessions, if you need
 to hand off to it and don't already know its name. Report the audit's findings back to the
 implementation session/user; fix anything it flags before considering the work done.
+
+Once the audit has no remaining objections: if the work implements a GitHub issue, push the
+branch and close that issue (with a summary comment) — use the `finish-task` skill for this, it
+handles both and skips cleanly if there's no remote or no linked issue. A local `make lint`/
+`make test` pass and an audit sign-off are not the end of the workflow by themselves — the issue
+being implemented is not actually done while it sits open on GitHub and the commits sit unpushed.
