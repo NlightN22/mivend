@@ -2,6 +2,12 @@ import { createClient } from 'graphql-ws';
 import type { Client } from 'graphql-ws';
 import type { NotificationItem, NotificationStatus, NotificationTransport } from '@mivend/ui-kit';
 import { adminApi, getCapturedAuthToken } from './client';
+import {
+    MarkNotificationReadDocument,
+    NotificationReceivedDocument,
+    NotificationsDocument,
+    ResolveNotificationDocument,
+} from './generated/graphql';
 
 // Same-origin WS endpoint proxied by vite.config.ts in dev (and by the production reverse
 // proxy) to apps/server's mountNotificationSubscriptions('/admin-api-subscriptions', 'admin').
@@ -31,46 +37,16 @@ function getWsClient(): Client {
     return wsClient;
 }
 
-const NOTIFICATION_FIELDS = `
-    id
-    kind
-    sourceType
-    sourceId
-    title
-    message
-    status
-    readAt
-    resolvedAt
-    resolution
-    createdAt
-`;
-
 export async function fetchNotifications(status?: NotificationStatus): Promise<NotificationItem[]> {
-    const result = await adminApi<{
-        notifications: { items: NotificationItem[]; totalItems: number };
-    }>(
-        `query Notifications($options: NotificationListOptions) {
-            notifications(options: $options) {
-                items {
-                    ${NOTIFICATION_FIELDS}
-                }
-                totalItems
-            }
-        }`,
-        { options: status ? { status } : undefined },
-    );
-    return result.notifications.items;
+    const result = await adminApi(NotificationsDocument, {
+        options: status ? { status } : undefined,
+    });
+    return result.notifications.items as NotificationItem[];
 }
 
 function subscribeToNotifications(onReceived: (item: NotificationItem) => void): () => void {
     return getWsClient().subscribe<{ notificationReceived: NotificationItem }>(
-        {
-            query: `subscription NotificationReceived {
-                notificationReceived {
-                    ${NOTIFICATION_FIELDS}
-                }
-            }`,
-        },
+        { query: NotificationReceivedDocument.toString() },
         {
             next: result => {
                 if (result.data) {
@@ -86,27 +62,13 @@ function subscribeToNotifications(onReceived: (item: NotificationItem) => void):
 }
 
 async function markNotificationRead(id: string): Promise<NotificationItem> {
-    const result = await adminApi<{ markNotificationRead: NotificationItem }>(
-        `mutation MarkNotificationRead($id: ID!) {
-            markNotificationRead(id: $id) {
-                ${NOTIFICATION_FIELDS}
-            }
-        }`,
-        { id },
-    );
-    return result.markNotificationRead;
+    const result = await adminApi(MarkNotificationReadDocument, { id });
+    return result.markNotificationRead as NotificationItem;
 }
 
 async function resolveNotification(id: string, resolution: string): Promise<NotificationItem> {
-    const result = await adminApi<{ resolveNotification: NotificationItem }>(
-        `mutation ResolveNotification($id: ID!, $resolution: String!) {
-            resolveNotification(id: $id, resolution: $resolution) {
-                ${NOTIFICATION_FIELDS}
-            }
-        }`,
-        { id, resolution },
-    );
-    return result.resolveNotification;
+    const result = await adminApi(ResolveNotificationDocument, { id, resolution });
+    return result.resolveNotification as NotificationItem;
 }
 
 export const notificationTransport: NotificationTransport = {

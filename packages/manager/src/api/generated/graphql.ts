@@ -9550,6 +9550,102 @@ export type InvoiceOutstandingBalanceQuery = {
     invoiceOutstandingBalance: { amount: number; currencyCode: string } | null;
 };
 
+export type NotificationFieldsFragment = {
+    id: string;
+    kind: NotificationKind;
+    sourceType: string;
+    sourceId: string | null;
+    title: string;
+    message: string;
+    status: NotificationStatus;
+    readAt: any | null;
+    resolvedAt: any | null;
+    resolution: string | null;
+    createdAt: any;
+};
+
+export type NotificationsQueryVariables = Exact<{
+    options?: InputMaybe<NotificationListOptions>;
+}>;
+
+export type NotificationsQuery = {
+    notifications: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            kind: NotificationKind;
+            sourceType: string;
+            sourceId: string | null;
+            title: string;
+            message: string;
+            status: NotificationStatus;
+            readAt: any | null;
+            resolvedAt: any | null;
+            resolution: string | null;
+            createdAt: any;
+        }>;
+    };
+};
+
+export type NotificationReceivedSubscriptionVariables = Exact<{ [key: string]: never }>;
+
+export type NotificationReceivedSubscription = {
+    notificationReceived: {
+        id: string;
+        kind: NotificationKind;
+        sourceType: string;
+        sourceId: string | null;
+        title: string;
+        message: string;
+        status: NotificationStatus;
+        readAt: any | null;
+        resolvedAt: any | null;
+        resolution: string | null;
+        createdAt: any;
+    };
+};
+
+export type MarkNotificationReadMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type MarkNotificationReadMutation = {
+    markNotificationRead: {
+        id: string;
+        kind: NotificationKind;
+        sourceType: string;
+        sourceId: string | null;
+        title: string;
+        message: string;
+        status: NotificationStatus;
+        readAt: any | null;
+        resolvedAt: any | null;
+        resolution: string | null;
+        createdAt: any;
+    };
+};
+
+export type ResolveNotificationMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    resolution: Scalars['String']['input'];
+}>;
+
+export type ResolveNotificationMutation = {
+    resolveNotification: {
+        id: string;
+        kind: NotificationKind;
+        sourceType: string;
+        sourceId: string | null;
+        title: string;
+        message: string;
+        status: NotificationStatus;
+        readAt: any | null;
+        resolvedAt: any | null;
+        resolution: string | null;
+        createdAt: any;
+    };
+};
+
 export type OrderCreateCounterpartiesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type OrderCreateCounterpartiesQuery = {
@@ -10551,6 +10647,24 @@ export const InvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'InvoiceListItemFields' },
 ) as unknown as TypedDocumentString<InvoiceListItemFieldsFragment, unknown>;
+export const NotificationFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}
+    `,
+    { fragmentName: 'NotificationFields' },
+) as unknown as TypedDocumentString<NotificationFieldsFragment, unknown>;
 export const DraftOrderFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment DraftOrderFields on Order {
@@ -11753,6 +11867,94 @@ export const InvoiceOutstandingBalanceDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     InvoiceOutstandingBalanceQuery,
     InvoiceOutstandingBalanceQueryVariables
+>;
+export const NotificationsDocument = new TypedDocumentString(`
+    query Notifications($options: NotificationListOptions) {
+  notifications(options: $options) {
+    items {
+      ...NotificationFields
+    }
+    totalItems
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<NotificationsQuery, NotificationsQueryVariables>;
+export const NotificationReceivedDocument = new TypedDocumentString(`
+    subscription NotificationReceived {
+  notificationReceived {
+    ...NotificationFields
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<
+    NotificationReceivedSubscription,
+    NotificationReceivedSubscriptionVariables
+>;
+export const MarkNotificationReadDocument = new TypedDocumentString(`
+    mutation MarkNotificationRead($id: ID!) {
+  markNotificationRead(id: $id) {
+    ...NotificationFields
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<
+    MarkNotificationReadMutation,
+    MarkNotificationReadMutationVariables
+>;
+export const ResolveNotificationDocument = new TypedDocumentString(`
+    mutation ResolveNotification($id: ID!, $resolution: String!) {
+  resolveNotification(id: $id, resolution: $resolution) {
+    ...NotificationFields
+  }
+}
+    fragment NotificationFields on Notification {
+  id
+  kind
+  sourceType
+  sourceId
+  title
+  message
+  status
+  readAt
+  resolvedAt
+  resolution
+  createdAt
+}`) as unknown as TypedDocumentString<
+    ResolveNotificationMutation,
+    ResolveNotificationMutationVariables
 >;
 export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
     query OrderCreateCounterparties {
