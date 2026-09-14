@@ -9978,6 +9978,54 @@ export type DeleteTableViewMutationVariables = Exact<{
 
 export type DeleteTableViewMutation = { deleteTableView: boolean };
 
+export type PaymentListItemFieldsFragment = {
+    id: string;
+    number: string;
+    createdAt: any;
+    providerPaymentId: string;
+    channel: string;
+    paymentStatus: string;
+    amount: number;
+    currencyCode: string;
+    invoiceId: string | null;
+    counterpartyId: string | null;
+};
+
+export type PaymentViewCountsQueryVariables = Exact<{
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type PaymentViewCountsQuery = {
+    all: { totalItems: number };
+    captured: { totalItems: number };
+    pending: { totalItems: number };
+    failed: { totalItems: number };
+    refunded: { totalItems: number };
+};
+
+export type PaymentsPageQueryVariables = Exact<{
+    options?: InputMaybe<PaymentListOptions>;
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type PaymentsPageQuery = {
+    visiblePayments: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            number: string;
+            createdAt: any;
+            providerPaymentId: string;
+            channel: string;
+            paymentStatus: string;
+            amount: number;
+            currencyCode: string;
+            invoiceId: string | null;
+            counterpartyId: string | null;
+        }>;
+    };
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -10281,6 +10329,23 @@ export const SavedTableViewFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'SavedTableViewFields' },
 ) as unknown as TypedDocumentString<SavedTableViewFieldsFragment, unknown>;
+export const PaymentListItemFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment PaymentListItemFields on PaymentAttempt {
+  id
+  number
+  createdAt
+  providerPaymentId
+  channel
+  paymentStatus
+  amount
+  currencyCode
+  invoiceId
+  counterpartyId
+}
+    `,
+    { fragmentName: 'PaymentListItemFields' },
+) as unknown as TypedDocumentString<PaymentListItemFieldsFragment, unknown>;
 export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     mutation ChangeOwnPassword($password: String!) {
   updateActiveAdministrator(input: {password: $password}) {
@@ -11883,6 +11948,58 @@ export const DeleteTableViewDocument = new TypedDocumentString(`
   deleteTableView(id: $id)
 }
     `) as unknown as TypedDocumentString<DeleteTableViewMutation, DeleteTableViewMutationVariables>;
+export const PaymentViewCountsDocument = new TypedDocumentString(`
+    query PaymentViewCounts($counterpartyId: ID) {
+  all: visiblePayments(options: {take: 0}, counterpartyId: $counterpartyId) {
+    totalItems
+  }
+  captured: visiblePayments(
+    options: {take: 0, status: "captured"}
+    counterpartyId: $counterpartyId
+  ) {
+    totalItems
+  }
+  pending: visiblePayments(
+    options: {take: 0, status: "pending"}
+    counterpartyId: $counterpartyId
+  ) {
+    totalItems
+  }
+  failed: visiblePayments(
+    options: {take: 0, status: "failed"}
+    counterpartyId: $counterpartyId
+  ) {
+    totalItems
+  }
+  refunded: visiblePayments(
+    options: {take: 0, status: "refunded"}
+    counterpartyId: $counterpartyId
+  ) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<PaymentViewCountsQuery, PaymentViewCountsQueryVariables>;
+export const PaymentsPageDocument = new TypedDocumentString(`
+    query PaymentsPage($options: PaymentListOptions, $counterpartyId: ID) {
+  visiblePayments(options: $options, counterpartyId: $counterpartyId) {
+    totalItems
+    items {
+      ...PaymentListItemFields
+    }
+  }
+}
+    fragment PaymentListItemFields on PaymentAttempt {
+  id
+  number
+  createdAt
+  providerPaymentId
+  channel
+  paymentStatus
+  amount
+  currencyCode
+  invoiceId
+  counterpartyId
+}`) as unknown as TypedDocumentString<PaymentsPageQuery, PaymentsPageQueryVariables>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {

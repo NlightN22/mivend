@@ -1,23 +1,12 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
+import {
+    PaymentsPageDocument,
+    PaymentViewCountsDocument,
+    type PaymentListItemFieldsFragment,
+} from './generated/graphql';
 
-export interface PaymentListItem {
-    id: string;
-    number: string;
-    createdAt: string;
-    // The real external reference (acquirer RRN / kassa receipt / ERP payment-doc id) — kept
-    // distinct from `number` (this project's own internal document id) per the external-integration-rules skill.
-    // Not currently shown as its own column, but available for a future "External ref" field.
-    providerPaymentId: string;
-    channel: string;
-    paymentStatus: string;
-    amount: number;
-    currencyCode: string;
-    invoiceId: string | null;
-    // Only populated by visiblePayments (joined from the payment's Invoice server-side) — see
-    // PaymentVisibilityService.findVisible.
-    counterpartyId: string | null;
-}
+export type PaymentListItem = PaymentListItemFieldsFragment;
 
 export interface PaymentFilters {
     // Index signature lets PaymentFilters satisfy useUrlSyncedState's generic Record<string,
@@ -75,19 +64,6 @@ export const PAYMENT_CHANNEL_OPTIONS = [
     { value: 'bank-transfer-erp', label: 'Bank transfer (ERP)' },
 ] as const;
 
-const PAYMENT_ITEM_FIELDS = `
-    id
-    number
-    createdAt
-    providerPaymentId
-    channel
-    paymentStatus
-    amount
-    currencyCode
-    invoiceId
-    counterpartyId
-`;
-
 export interface PaymentViewCounts {
     all: number;
     captured: number;
@@ -105,22 +81,7 @@ export interface PaymentViewCounts {
 // table's own status column filter. If a future need justifies more chips, add them here (and to
 // CustomerPaymentsTab.vue's VIEWS) rather than switching to the full enum by default.
 export async function fetchPaymentViewCounts(counterpartyId: string): Promise<PaymentViewCounts> {
-    const result = await adminApi<{
-        all: { totalItems: number };
-        captured: { totalItems: number };
-        pending: { totalItems: number };
-        failed: { totalItems: number };
-        refunded: { totalItems: number };
-    }>(
-        `query PaymentViewCounts($counterpartyId: ID) {
-            all: visiblePayments(options: { take: 0 }, counterpartyId: $counterpartyId) { totalItems }
-            captured: visiblePayments(options: { take: 0, status: "captured" }, counterpartyId: $counterpartyId) { totalItems }
-            pending: visiblePayments(options: { take: 0, status: "pending" }, counterpartyId: $counterpartyId) { totalItems }
-            failed: visiblePayments(options: { take: 0, status: "failed" }, counterpartyId: $counterpartyId) { totalItems }
-            refunded: visiblePayments(options: { take: 0, status: "refunded" }, counterpartyId: $counterpartyId) { totalItems }
-        }`,
-        { counterpartyId },
-    );
+    const result = await adminApi(PaymentViewCountsDocument, { counterpartyId });
     return {
         all: result.all.totalItems,
         captured: result.captured.totalItems,
@@ -135,25 +96,15 @@ export async function fetchPaymentsPage(
     page: number,
     pageSize: number,
 ): Promise<{ items: PaymentListItem[]; totalItems: number }> {
-    const result = await adminApi<{
-        visiblePayments: { items: PaymentListItem[]; totalItems: number };
-    }>(
-        `query PaymentsPage($options: PaymentListOptions, $counterpartyId: ID) {
-            visiblePayments(options: $options, counterpartyId: $counterpartyId) {
-                totalItems
-                items { ${PAYMENT_ITEM_FIELDS} }
-            }
-        }`,
-        {
-            options: {
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                status: filters.status || undefined,
-                channel: filters.channel || undefined,
-                search: filters.search || undefined,
-            },
-            counterpartyId: filters.counterpartyId || undefined,
+    const result = await adminApi(PaymentsPageDocument, {
+        options: {
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+            status: filters.status || undefined,
+            channel: filters.channel || undefined,
+            search: filters.search || undefined,
         },
-    );
+        counterpartyId: filters.counterpartyId || undefined,
+    });
     return result.visiblePayments;
 }

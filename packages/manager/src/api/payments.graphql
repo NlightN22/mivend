@@ -1,0 +1,51 @@
+fragment PaymentListItemFields on PaymentAttempt {
+    id
+    number
+    createdAt
+    providerPaymentId
+    channel
+    paymentStatus
+    amount
+    currencyCode
+    invoiceId
+    counterpartyId
+}
+
+query PaymentViewCounts($counterpartyId: ID) {
+    all: visiblePayments(options: { take: 0 }, counterpartyId: $counterpartyId) {
+        totalItems
+    }
+    captured: visiblePayments(
+        options: { take: 0, status: "captured" }
+        counterpartyId: $counterpartyId
+    ) {
+        totalItems
+    }
+    pending: visiblePayments(
+        options: { take: 0, status: "pending" }
+        counterpartyId: $counterpartyId
+    ) {
+        totalItems
+    }
+    failed: visiblePayments(
+        options: { take: 0, status: "failed" }
+        counterpartyId: $counterpartyId
+    ) {
+        totalItems
+    }
+    refunded: visiblePayments(
+        options: { take: 0, status: "refunded" }
+        counterpartyId: $counterpartyId
+    ) {
+        totalItems
+    }
+}
+
+query PaymentsPage($options: PaymentListOptions, $counterpartyId: ID) {
+    visiblePayments(options: $options, counterpartyId: $counterpartyId) {
+        totalItems
+        items {
+            ...PaymentListItemFields
+        }
+    }
+}
