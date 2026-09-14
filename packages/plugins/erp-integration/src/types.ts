@@ -135,24 +135,29 @@ export interface ErpIntegrationPluginOptions {
     reconciliationIntervalMs?: number;
 }
 
-// Every InboundStream, kept in sync by hand with the union type above (same approach as
-// KafkaConsumerConfig.topics/IntegrationInboxProcessorService.handlers, both already keyed by
-// InboundStream with no separate "list of all streams" helper) — used only to derive the bulk
-// lane's stream set below (INBOX_CRITICAL_STREAMS is exhaustively subtracted from it).
-const ALL_INBOUND_STREAMS: readonly InboundStream[] = [
-    'category',
-    'organization',
-    'warehouse',
-    'price-type',
-    'product',
-    'offer',
-    'price',
-    'stock',
-    'storage-location',
-    'stock-organization',
-    'order-registration-result',
-    'department',
-];
+// Every InboundStream, kept in sync by hand with the union type above — used only to derive the
+// bulk lane's stream set below (INBOX_CRITICAL_STREAMS is exhaustively subtracted from it).
+// `satisfies Record<InboundStream, true>` (not a plain array, unlike a first pass at this) makes
+// forgetting a stream here a compile error the moment a new InboundStream is added to the union
+// — without it, a forgotten stream would silently land in neither lane and never get processed
+// again (mivend.audit.90's review of issue #93, MEDIUM finding).
+const ALL_INBOUND_STREAMS_MAP = {
+    category: true,
+    organization: true,
+    warehouse: true,
+    'price-type': true,
+    product: true,
+    offer: true,
+    price: true,
+    stock: true,
+    'storage-location': true,
+    'stock-organization': true,
+    'order-registration-result': true,
+    department: true,
+} satisfies Record<InboundStream, true>;
+const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
+    ALL_INBOUND_STREAMS_MAP,
+) as InboundStream[];
 
 // Issue #93: order-registration-result is reservation-release-blocking (see
 // OrderRegistrationResultHandler) and must never sit behind a bulk catalog/price/stock backlog —
@@ -161,6 +166,17 @@ export const INBOX_CRITICAL_STREAMS: readonly InboundStream[] = ['order-registra
 export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.filter(
     stream => !INBOX_CRITICAL_STREAMS.includes(stream),
 );
+
+// Vendure's DefaultSchedulerStrategy default task timeout is 60_000ms (DEFAULT_TIMEOUT,
+// @vendure/core) and marks a task 'failed' + releases its lock past that — but the task's own
+// execute() promise keeps running in the background regardless (a Promise can't be cancelled),
+// so a bulk-lane run that exceeded a 60s timeout would silently keep going while the next tick
+// starts a second one alongside it. The wall-clock budget below keeps the reclaim loop
+// (integration-inbox.scheduled-task.ts) comfortably inside this explicit timeout regardless of
+// backlog size, so an unbounded backlog just means more scheduled ticks, never an orphaned/
+// duplicated in-flight run (mivend.audit.90's review of issue #93, MEDIUM-HIGH finding).
+export const INBOX_BULK_TASK_TIMEOUT_MS = 120_000;
+export const INBOX_BULK_WALL_CLOCK_BUDGET_MS = 90_000;
 
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
 export const KAFKA_ENABLED_DEFAULT = false;
