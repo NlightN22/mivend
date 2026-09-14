@@ -1,5 +1,18 @@
 import type { SelectOption } from '@mivend/ui-kit';
 import { adminApi } from './client';
+import {
+    CreditTermLimitDocument,
+    PermissionCatalogDocument,
+    RoleAccessScopeConfigDocument,
+    RoleDetailDocument,
+    RolesDocument,
+    SecurityAdministratorsDocument,
+    SetCreditTermLimitDocument,
+    SetRoleAccessScopeConfigDocument,
+    UpdateAdministratorRoleDocument,
+    UpdateRolePermissionsDocument,
+    type Permission,
+} from './generated/graphql';
 
 export interface RoleSummary {
     id: string;
@@ -118,65 +131,33 @@ export const SCOPE_RESOURCE_LABELS: Record<(typeof SCOPE_RESOURCES)[number], str
 };
 
 export async function fetchRoles(): Promise<RoleSummary[]> {
-    const result = await adminApi<{ roles: { items: RoleSummary[] } }>(
-        `query Roles($codes: [String!]!) {
-            roles(options: { filter: { code: { in: $codes } } }) {
-                items { id code description }
-            }
-        }`,
-        { codes: [...KNOWN_ROLE_CODES] },
-    );
+    const result = await adminApi(RolesDocument, { codes: [...KNOWN_ROLE_CODES] });
     return result.roles.items;
 }
 
 export async function fetchRoleDetail(code: string): Promise<RoleDetail | null> {
-    const result = await adminApi<{ roles: { items: RoleDetail[] } }>(
-        `query RoleDetail($code: String!) {
-            roles(options: { filter: { code: { eq: $code } } }) {
-                items { id code description permissions }
-            }
-        }`,
-        { code },
-    );
+    const result = await adminApi(RoleDetailDocument, { code });
     return result.roles.items[0] ?? null;
 }
 
 export async function updateRolePermissions(id: string, permissions: string[]): Promise<void> {
-    await adminApi(
-        `mutation($id: ID!, $permissions: [Permission!]!) {
-            updateRole(input: { id: $id, permissions: $permissions }) { id }
-        }`,
-        { id, permissions },
-    );
+    await adminApi(UpdateRolePermissionsDocument, { id, permissions: permissions as Permission[] });
 }
 
 export async function fetchAccessScopeConfig(code: string): Promise<AccessScopeConfig | null> {
-    const result = await adminApi<{ roleAccessScopeConfig: string | null }>(
-        `query RoleAccessScopeConfig($code: String!) { roleAccessScopeConfig(roleCode: $code) }`,
-        { code },
-    );
+    const result = await adminApi(RoleAccessScopeConfigDocument, { code });
     return result.roleAccessScopeConfig
         ? (JSON.parse(result.roleAccessScopeConfig) as AccessScopeConfig)
         : null;
 }
 
 export async function setAccessScopeConfig(code: string, config: AccessScopeConfig): Promise<void> {
-    await adminApi(
-        `mutation($code: String!, $config: String!) {
-            setRoleAccessScopeConfig(roleCode: $code, accessScopeConfig: $config)
-        }`,
-        { code, config: JSON.stringify(config) },
-    );
+    await adminApi(SetRoleAccessScopeConfigDocument, { code, config: JSON.stringify(config) });
 }
 
 export async function fetchCreditTermLimit(code: string): Promise<CreditTermLimit | null> {
-    const result = await adminApi<{ creditTermLimit: CreditTermLimit | null }>(
-        `query CreditTermLimit($code: String!) {
-            creditTermLimit(roleCode: $code) { roleCode maxExtraDays maxAmount }
-        }`,
-        { code },
-    );
-    return result.creditTermLimit;
+    const result = await adminApi(CreditTermLimitDocument, { code });
+    return result.creditTermLimit ?? null;
 }
 
 export async function setCreditTermLimit(
@@ -184,35 +165,14 @@ export async function setCreditTermLimit(
     maxExtraDays: number,
     maxAmount: number | null,
 ): Promise<void> {
-    await adminApi(
-        `mutation($code: String!, $maxExtraDays: Int!, $maxAmount: Int) {
-            setCreditTermLimit(roleCode: $code, maxExtraDays: $maxExtraDays, maxAmount: $maxAmount) { roleCode }
-        }`,
-        { code, maxExtraDays, maxAmount },
-    );
+    await adminApi(SetCreditTermLimitDocument, { code, maxExtraDays, maxAmount });
 }
 
 // Who holds which of the 6 seeded roles — the other half of Roles & Access ("what a role can
 // do" vs "who has it"). Excludes the bootstrap superadmin account (__super_admin_role__) and
 // any administrator not on one of KNOWN_ROLE_CODES, same curation rationale as fetchRoles().
 export async function fetchTeamMembers(): Promise<TeamMember[]> {
-    const result = await adminApi<{
-        administrators: {
-            items: {
-                id: string;
-                firstName: string;
-                lastName: string;
-                emailAddress: string;
-                user: { roles: { code: string }[] };
-            }[];
-        };
-    }>(
-        `query SecurityAdministrators {
-            administrators(options: { take: 200 }) {
-                items { id firstName lastName emailAddress user { roles { code } } }
-            }
-        }`,
-    );
+    const result = await adminApi(SecurityAdministratorsDocument);
     const known = new Set<string>(KNOWN_ROLE_CODES);
     return result.administrators.items
         .map(a => ({
@@ -229,23 +189,14 @@ export async function updateAdministratorRole(
     administratorId: string,
     roleId: string,
 ): Promise<void> {
-    await adminApi(
-        `mutation($id: ID!, $roleIds: [ID!]!) {
-            updateAdministrator(input: { id: $id, roleIds: $roleIds }) { id }
-        }`,
-        { id: administratorId, roleIds: [roleId] },
-    );
+    await adminApi(UpdateAdministratorRoleDocument, { id: administratorId, roleIds: [roleId] });
 }
 
 // Sourced from Vendure's own permission registry (native + custom, via globalSettings) rather
 // than hardcoded descriptions — filtered to only the names this app curates in
 // PERMISSION_CATEGORIES, since Vendure ships ~40 native CRUD permissions irrelevant to this app.
 export async function fetchPermissionCatalog(): Promise<PermissionInfo[]> {
-    const result = await adminApi<{
-        globalSettings: { serverConfig: { permissions: PermissionInfo[] } };
-    }>(
-        `query PermissionCatalog { globalSettings { serverConfig { permissions { name description } } } }`,
-    );
+    const result = await adminApi(PermissionCatalogDocument);
     const known = new Set(PERMISSION_CATEGORIES.flatMap(c => c.permissionNames));
     return result.globalSettings.serverConfig.permissions.filter(p => known.has(p.name));
 }

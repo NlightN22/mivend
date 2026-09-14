@@ -1,0 +1,81 @@
+query Roles($codes: [String!]!) {
+    roles(options: { filter: { code: { in: $codes } } }) {
+        items {
+            id
+            code
+            description
+        }
+    }
+}
+
+query RoleDetail($code: String!) {
+    roles(options: { filter: { code: { eq: $code } } }) {
+        items {
+            id
+            code
+            description
+            permissions
+        }
+    }
+}
+
+mutation UpdateRolePermissions($id: ID!, $permissions: [Permission!]!) {
+    updateRole(input: { id: $id, permissions: $permissions }) {
+        id
+    }
+}
+
+query RoleAccessScopeConfig($code: String!) {
+    roleAccessScopeConfig(roleCode: $code)
+}
+
+mutation SetRoleAccessScopeConfig($code: String!, $config: String!) {
+    setRoleAccessScopeConfig(roleCode: $code, accessScopeConfig: $config)
+}
+
+query CreditTermLimit($code: String!) {
+    creditTermLimit(roleCode: $code) {
+        roleCode
+        maxExtraDays
+        maxAmount
+    }
+}
+
+mutation SetCreditTermLimit($code: String!, $maxExtraDays: Int!, $maxAmount: Int) {
+    setCreditTermLimit(roleCode: $code, maxExtraDays: $maxExtraDays, maxAmount: $maxAmount) {
+        roleCode
+    }
+}
+
+query SecurityAdministrators {
+    administrators(options: { take: 200 }) {
+        items {
+            id
+            firstName
+            lastName
+            emailAddress
+            user {
+                roles {
+                    code
+                }
+            }
+        }
+    }
+}
+
+mutation UpdateAdministratorRole($id: ID!, $roleIds: [ID!]!) {
+    updateAdministrator(input: { id: $id, roleIds: $roleIds }) {
+        id
+    }
+}
+
+query PermissionCatalog {
+    globalSettings {
+        serverConfig {
+            permissions {
+                name
+                description
+            }
+        }
+    }
+}

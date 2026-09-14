@@ -10155,6 +10155,92 @@ export type EndAllSessionsMutationVariables = Exact<{ [key: string]: never }>;
 
 export type EndAllSessionsMutation = { endAllSessions: boolean };
 
+export type RolesQueryVariables = Exact<{
+    codes: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
+
+export type RolesQuery = {
+    roles: { items: Array<{ id: string; code: string; description: string }> };
+};
+
+export type RoleDetailQueryVariables = Exact<{
+    code: Scalars['String']['input'];
+}>;
+
+export type RoleDetailQuery = {
+    roles: {
+        items: Array<{
+            id: string;
+            code: string;
+            description: string;
+            permissions: Array<Permission>;
+        }>;
+    };
+};
+
+export type UpdateRolePermissionsMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    permissions: Array<Permission> | Permission;
+}>;
+
+export type UpdateRolePermissionsMutation = { updateRole: { id: string } };
+
+export type RoleAccessScopeConfigQueryVariables = Exact<{
+    code: Scalars['String']['input'];
+}>;
+
+export type RoleAccessScopeConfigQuery = { roleAccessScopeConfig: string | null };
+
+export type SetRoleAccessScopeConfigMutationVariables = Exact<{
+    code: Scalars['String']['input'];
+    config: Scalars['String']['input'];
+}>;
+
+export type SetRoleAccessScopeConfigMutation = { setRoleAccessScopeConfig: boolean };
+
+export type CreditTermLimitQueryVariables = Exact<{
+    code: Scalars['String']['input'];
+}>;
+
+export type CreditTermLimitQuery = {
+    creditTermLimit: { roleCode: string; maxExtraDays: number; maxAmount: number | null } | null;
+};
+
+export type SetCreditTermLimitMutationVariables = Exact<{
+    code: Scalars['String']['input'];
+    maxExtraDays: Scalars['Int']['input'];
+    maxAmount?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type SetCreditTermLimitMutation = { setCreditTermLimit: { roleCode: string } };
+
+export type SecurityAdministratorsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SecurityAdministratorsQuery = {
+    administrators: {
+        items: Array<{
+            id: string;
+            firstName: string;
+            lastName: string;
+            emailAddress: string;
+            user: { roles: Array<{ code: string }> };
+        }>;
+    };
+};
+
+export type UpdateAdministratorRoleMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    roleIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+export type UpdateAdministratorRoleMutation = { updateAdministrator: { id: string } };
+
+export type PermissionCatalogQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PermissionCatalogQuery = {
+    globalSettings: { serverConfig: { permissions: Array<{ name: string; description: string }> } };
+};
+
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -12252,3 +12338,117 @@ export const EndAllSessionsDocument = new TypedDocumentString(`
   endAllSessions
 }
     `) as unknown as TypedDocumentString<EndAllSessionsMutation, EndAllSessionsMutationVariables>;
+export const RolesDocument = new TypedDocumentString(`
+    query Roles($codes: [String!]!) {
+  roles(options: {filter: {code: {in: $codes}}}) {
+    items {
+      id
+      code
+      description
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<RolesQuery, RolesQueryVariables>;
+export const RoleDetailDocument = new TypedDocumentString(`
+    query RoleDetail($code: String!) {
+  roles(options: {filter: {code: {eq: $code}}}) {
+    items {
+      id
+      code
+      description
+      permissions
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<RoleDetailQuery, RoleDetailQueryVariables>;
+export const UpdateRolePermissionsDocument = new TypedDocumentString(`
+    mutation UpdateRolePermissions($id: ID!, $permissions: [Permission!]!) {
+  updateRole(input: {id: $id, permissions: $permissions}) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    UpdateRolePermissionsMutation,
+    UpdateRolePermissionsMutationVariables
+>;
+export const RoleAccessScopeConfigDocument = new TypedDocumentString(`
+    query RoleAccessScopeConfig($code: String!) {
+  roleAccessScopeConfig(roleCode: $code)
+}
+    `) as unknown as TypedDocumentString<
+    RoleAccessScopeConfigQuery,
+    RoleAccessScopeConfigQueryVariables
+>;
+export const SetRoleAccessScopeConfigDocument = new TypedDocumentString(`
+    mutation SetRoleAccessScopeConfig($code: String!, $config: String!) {
+  setRoleAccessScopeConfig(roleCode: $code, accessScopeConfig: $config)
+}
+    `) as unknown as TypedDocumentString<
+    SetRoleAccessScopeConfigMutation,
+    SetRoleAccessScopeConfigMutationVariables
+>;
+export const CreditTermLimitDocument = new TypedDocumentString(`
+    query CreditTermLimit($code: String!) {
+  creditTermLimit(roleCode: $code) {
+    roleCode
+    maxExtraDays
+    maxAmount
+  }
+}
+    `) as unknown as TypedDocumentString<CreditTermLimitQuery, CreditTermLimitQueryVariables>;
+export const SetCreditTermLimitDocument = new TypedDocumentString(`
+    mutation SetCreditTermLimit($code: String!, $maxExtraDays: Int!, $maxAmount: Int) {
+  setCreditTermLimit(
+    roleCode: $code
+    maxExtraDays: $maxExtraDays
+    maxAmount: $maxAmount
+  ) {
+    roleCode
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SetCreditTermLimitMutation,
+    SetCreditTermLimitMutationVariables
+>;
+export const SecurityAdministratorsDocument = new TypedDocumentString(`
+    query SecurityAdministrators {
+  administrators(options: {take: 200}) {
+    items {
+      id
+      firstName
+      lastName
+      emailAddress
+      user {
+        roles {
+          code
+        }
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SecurityAdministratorsQuery,
+    SecurityAdministratorsQueryVariables
+>;
+export const UpdateAdministratorRoleDocument = new TypedDocumentString(`
+    mutation UpdateAdministratorRole($id: ID!, $roleIds: [ID!]!) {
+  updateAdministrator(input: {id: $id, roleIds: $roleIds}) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    UpdateAdministratorRoleMutation,
+    UpdateAdministratorRoleMutationVariables
+>;
+export const PermissionCatalogDocument = new TypedDocumentString(`
+    query PermissionCatalog {
+  globalSettings {
+    serverConfig {
+      permissions {
+        name
+        description
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<PermissionCatalogQuery, PermissionCatalogQueryVariables>;
