@@ -1,0 +1,35 @@
+fragment CounterpartyTeamMemberFields on CounterpartyTeamMember {
+    id
+    administratorId
+    role
+    phone
+    createdAt
+}
+
+query CounterpartyTeam($id: ID!) {
+    counterparty(id: $id) {
+        teamMembers {
+            ...CounterpartyTeamMemberFields
+        }
+    }
+}
+
+mutation AddCounterpartyTeamMember(
+    $counterpartyId: ID!
+    $administratorId: ID!
+    $role: String!
+    $phone: String
+) {
+    addCounterpartyTeamMember(
+        counterpartyId: $counterpartyId
+        administratorId: $administratorId
+        role: $role
+        phone: $phone
+    ) {
+        ...CounterpartyTeamMemberFields
+    }
+}
+
+mutation RemoveCounterpartyTeamMember($counterpartyId: ID!, $administratorId: ID!) {
+    removeCounterpartyTeamMember(counterpartyId: $counterpartyId, administratorId: $administratorId)
+}

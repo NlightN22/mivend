@@ -8957,6 +8957,54 @@ export type CatalogPriceEntriesForVariantsQuery = {
     priceEntriesForVariants: Array<{ variantId: string; price: number }>;
 };
 
+export type CounterpartyTeamMemberFieldsFragment = {
+    id: string;
+    administratorId: string;
+    role: string;
+    phone: string | null;
+    createdAt: any;
+};
+
+export type CounterpartyTeamQueryVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type CounterpartyTeamQuery = {
+    counterparty: {
+        teamMembers: Array<{
+            id: string;
+            administratorId: string;
+            role: string;
+            phone: string | null;
+            createdAt: any;
+        }>;
+    } | null;
+};
+
+export type AddCounterpartyTeamMemberMutationVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    administratorId: Scalars['ID']['input'];
+    role: Scalars['String']['input'];
+    phone?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type AddCounterpartyTeamMemberMutation = {
+    addCounterpartyTeamMember: {
+        id: string;
+        administratorId: string;
+        role: string;
+        phone: string | null;
+        createdAt: any;
+    };
+};
+
+export type RemoveCounterpartyTeamMemberMutationVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    administratorId: Scalars['ID']['input'];
+}>;
+
+export type RemoveCounterpartyTeamMemberMutation = { removeCounterpartyTeamMember: boolean };
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -9111,6 +9159,18 @@ export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'BranchSettingsFields' },
 ) as unknown as TypedDocumentString<BranchSettingsFieldsFragment, unknown>;
+export const CounterpartyTeamMemberFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment CounterpartyTeamMemberFields on CounterpartyTeamMember {
+  id
+  administratorId
+  role
+  phone
+  createdAt
+}
+    `,
+    { fragmentName: 'CounterpartyTeamMemberFields' },
+) as unknown as TypedDocumentString<CounterpartyTeamMemberFieldsFragment, unknown>;
 export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     mutation ChangeOwnPassword($password: String!) {
   updateActiveAdministrator(input: {password: $password}) {
@@ -9475,6 +9535,53 @@ export const CatalogPriceEntriesForVariantsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CatalogPriceEntriesForVariantsQuery,
     CatalogPriceEntriesForVariantsQueryVariables
+>;
+export const CounterpartyTeamDocument = new TypedDocumentString(`
+    query CounterpartyTeam($id: ID!) {
+  counterparty(id: $id) {
+    teamMembers {
+      ...CounterpartyTeamMemberFields
+    }
+  }
+}
+    fragment CounterpartyTeamMemberFields on CounterpartyTeamMember {
+  id
+  administratorId
+  role
+  phone
+  createdAt
+}`) as unknown as TypedDocumentString<CounterpartyTeamQuery, CounterpartyTeamQueryVariables>;
+export const AddCounterpartyTeamMemberDocument = new TypedDocumentString(`
+    mutation AddCounterpartyTeamMember($counterpartyId: ID!, $administratorId: ID!, $role: String!, $phone: String) {
+  addCounterpartyTeamMember(
+    counterpartyId: $counterpartyId
+    administratorId: $administratorId
+    role: $role
+    phone: $phone
+  ) {
+    ...CounterpartyTeamMemberFields
+  }
+}
+    fragment CounterpartyTeamMemberFields on CounterpartyTeamMember {
+  id
+  administratorId
+  role
+  phone
+  createdAt
+}`) as unknown as TypedDocumentString<
+    AddCounterpartyTeamMemberMutation,
+    AddCounterpartyTeamMemberMutationVariables
+>;
+export const RemoveCounterpartyTeamMemberDocument = new TypedDocumentString(`
+    mutation RemoveCounterpartyTeamMember($counterpartyId: ID!, $administratorId: ID!) {
+  removeCounterpartyTeamMember(
+    counterpartyId: $counterpartyId
+    administratorId: $administratorId
+  )
+}
+    `) as unknown as TypedDocumentString<
+    RemoveCounterpartyTeamMemberMutation,
+    RemoveCounterpartyTeamMemberMutationVariables
 >;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
