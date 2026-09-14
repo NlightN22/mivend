@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { StockStreamHandler } from '../../handlers/stock.handler';
+import { MissingDependencyError } from '../../types';
 
 function createConnection(
     rows: Array<Record<string, unknown> | undefined>,
@@ -65,7 +66,7 @@ describe('StockStreamHandler', () => {
         expect(warehouseService.findByErpId).not.toHaveBeenCalled();
     });
 
-    it('skips when no Warehouse is found for warehouseId (out-of-order delivery)', async () => {
+    it('throws MissingDependencyError when no Warehouse is found for warehouseId (issue #96: retry, not silent drop)', async () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue(null) };
         const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
         const handler = new StockStreamHandler(
@@ -74,16 +75,17 @@ describe('StockStreamHandler', () => {
             stockLevelService as never,
         );
 
-        await handler.apply(ctx, 'stock-1', {
-            productId: 'prod-1',
-            warehouseId: 'wh-missing',
-            quantity: 5,
-        });
-
+        await expect(
+            handler.apply(ctx, 'stock-1', {
+                productId: 'prod-1',
+                warehouseId: 'wh-missing',
+                quantity: 5,
+            }),
+        ).rejects.toThrow(MissingDependencyError);
         expect(stockLevelService.getStockLevel).not.toHaveBeenCalled();
     });
 
-    it('skips when no StockLocation matches the warehouse yet', async () => {
+    it('throws MissingDependencyError when no StockLocation matches the warehouse yet', async () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
         const handler = new StockStreamHandler(
@@ -92,16 +94,17 @@ describe('StockStreamHandler', () => {
             stockLevelService as never,
         );
 
-        await handler.apply(ctx, 'stock-1', {
-            productId: 'prod-1',
-            warehouseId: 'wh-1',
-            quantity: 5,
-        });
-
+        await expect(
+            handler.apply(ctx, 'stock-1', {
+                productId: 'prod-1',
+                warehouseId: 'wh-1',
+                quantity: 5,
+            }),
+        ).rejects.toThrow(MissingDependencyError);
         expect(stockLevelService.getStockLevel).not.toHaveBeenCalled();
     });
 
-    it('skips when no variant matches the productId', async () => {
+    it('throws MissingDependencyError when no variant matches the productId', async () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
         const handler = new StockStreamHandler(
@@ -110,12 +113,13 @@ describe('StockStreamHandler', () => {
             stockLevelService as never,
         );
 
-        await handler.apply(ctx, 'stock-1', {
-            productId: 'prod-missing',
-            warehouseId: 'wh-1',
-            quantity: 5,
-        });
-
+        await expect(
+            handler.apply(ctx, 'stock-1', {
+                productId: 'prod-missing',
+                warehouseId: 'wh-1',
+                quantity: 5,
+            }),
+        ).rejects.toThrow(MissingDependencyError);
         expect(stockLevelService.getStockLevel).not.toHaveBeenCalled();
     });
 

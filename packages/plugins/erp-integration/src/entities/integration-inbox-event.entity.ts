@@ -84,4 +84,11 @@ export class IntegrationInboxEvent {
 
     @Column({ type: 'timestamptz', name: 'processed_at', nullable: true })
     processedAt!: Date | null;
+
+    // Issue #96: eligibility gate for `claimBatch` when a `MissingDependencyError` retry is
+    // pending — null (the default) means immediately eligible, same as any other pending row.
+    // Set by IntegrationInboxService.markMissingDependency; unrelated to the plain
+    // pending/stale-processing reclaim `claimBatch` already does for every other row.
+    @Column({ type: 'timestamptz', name: 'next_retry_at', nullable: true })
+    nextRetryAt!: Date | null;
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { PriceStreamHandler } from '../../handlers/price.handler';
+import { MissingDependencyError } from '../../types';
 
 function makeConnection(variantId: string | undefined): {
     rawConnection: { createQueryBuilder: ReturnType<typeof vi.fn> };
@@ -83,7 +84,7 @@ describe('PriceStreamHandler', () => {
         expect(priceEntryService.upsert).not.toHaveBeenCalled();
     });
 
-    it('skips when no PriceType is found for priceTypeId (out-of-order delivery)', async () => {
+    it('throws MissingDependencyError when no PriceType is found for priceTypeId (issue #96: retry, not silent drop)', async () => {
         const connection = makeConnection('variant-1');
         const customerPricingService = {
             findPriceTypeByExternalId: vi.fn().mockResolvedValue(null),
@@ -95,16 +96,18 @@ describe('PriceStreamHandler', () => {
             priceEntryService as never,
         );
 
-        await handler.apply(ctx, 'price-1', {
-            productId: 'prod-1',
-            priceTypeId: 'unknown-guid',
-            value: '199.90',
-        });
-
+        await expect(
+            handler.apply(ctx, 'price-1', {
+                productId: 'prod-1',
+                priceTypeId: 'unknown-guid',
+                value: '199.90',
+                isActive: true,
+            }),
+        ).rejects.toThrow(MissingDependencyError);
         expect(priceEntryService.upsert).not.toHaveBeenCalled();
     });
 
-    it('skips when no variant matches the productId', async () => {
+    it('throws MissingDependencyError when no variant matches the productId', async () => {
         const connection = makeConnection(undefined);
         const customerPricingService = {
             findPriceTypeByExternalId: vi.fn().mockResolvedValue(priceType),
@@ -116,12 +119,14 @@ describe('PriceStreamHandler', () => {
             priceEntryService as never,
         );
 
-        await handler.apply(ctx, 'price-1', {
-            productId: 'prod-missing',
-            priceTypeId: 'guid-1',
-            value: '199.90',
-        });
-
+        await expect(
+            handler.apply(ctx, 'price-1', {
+                productId: 'prod-missing',
+                priceTypeId: 'guid-1',
+                value: '199.90',
+                isActive: true,
+            }),
+        ).rejects.toThrow(MissingDependencyError);
         expect(priceEntryService.upsert).not.toHaveBeenCalled();
     });
 

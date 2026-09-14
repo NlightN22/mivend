@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { OrderRegistrationResultHandler } from '../../handlers/order-registration-result.handler';
+import { MissingDependencyError } from '../../types';
 
 function createConnection(rows: Array<Record<string, unknown> | undefined>): {
     rawConnection: { createQueryBuilder: () => unknown };
@@ -80,26 +81,26 @@ describe('OrderRegistrationResultHandler', () => {
         });
     });
 
-    // mivend.audit.72's HIGH finding: this used to silently drop the line with no trace at all —
-    // now the unresolved productId must be surfaced to the sync service, not just discarded.
-    it('reports (does not drop silently) a line whose productId does not resolve to a known variant', async () => {
+    // Issue #96: a productId that doesn't resolve yet is an ordinary eventual-consistency race
+    // (the product stream may simply not have been consumed yet) — this now throws
+    // MissingDependencyError so processOne() retries with backoff instead of the previous
+    // behavior (mivend.audit.72) of reporting it immediately as a permanent reconciliation issue
+    // on the very first attempt. A genuinely stale mapping still surfaces visibly once the 24h
+    // wall-clock retry budget is exhausted (inbox 'failed', not silent).
+    it('throws MissingDependencyError for a line whose productId does not resolve to a known variant', async () => {
         const syncService = { handleOrderRegistrationResult: vi.fn() };
         const handler = new OrderRegistrationResultHandler(
             createConnection([undefined]) as never,
             syncService as never,
         );
 
-        await handler.apply(ctx, 'orr-1', {
-            orderEntityId: 'erp-order-1',
-            reservedLines: [{ productId: 'unknown-prod', reservedQuantity: 1 }],
-        });
-
-        expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
-            orderEntityId: 'erp-order-1',
-            rejected: false,
-            reservedLines: [],
-            unresolvedProductIds: ['unknown-prod'],
-        });
+        await expect(
+            handler.apply(ctx, 'orr-1', {
+                orderEntityId: 'erp-order-1',
+                reservedLines: [{ productId: 'unknown-prod', reservedQuantity: 1 }],
+            }),
+        ).rejects.toThrow(MissingDependencyError);
+        expect(syncService.handleOrderRegistrationResult).not.toHaveBeenCalled();
     });
 
     it('drops (and does not report) a line with a missing productId/reservedQuantity', async () => {

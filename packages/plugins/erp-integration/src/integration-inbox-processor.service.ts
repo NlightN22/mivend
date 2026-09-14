@@ -16,7 +16,7 @@ import { StorageLocationStreamHandler } from './handlers/storage-location.handle
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
-import { INBOX_MAX_ATTEMPTS_DEFAULT, loggerCtx } from './types';
+import { INBOX_MAX_ATTEMPTS_DEFAULT, MissingDependencyError, loggerCtx } from './types';
 import type { InboundStream } from './types';
 import { isVersionNewer } from './version-compare';
 
@@ -131,7 +131,15 @@ export class IntegrationInboxProcessorService {
                 `Failed processing ${row.stream} entityId=${row.entityId} (attempt ${row.attempts + 1}): ${error.message}`,
                 loggerCtx,
             );
-            await this.inbox.markFailed(row.id, error, maxAttempts);
+            // Issue #96: a missing cross-entity dependency is an ordinary eventual-consistency
+            // race (Kafka gives no cross-topic ordering guarantee), not a processing bug — it
+            // gets its own longer backoff-based retry budget instead of markFailed's short/fixed-
+            // attempt dead-letter path.
+            if (error instanceof MissingDependencyError) {
+                await this.inbox.markMissingDependency(row.id, error);
+            } else {
+                await this.inbox.markFailed(row.id, error, maxAttempts);
+            }
             return false;
         }
     }

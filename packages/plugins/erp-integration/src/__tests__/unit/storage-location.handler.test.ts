@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { StorageLocationStreamHandler } from '../../handlers/storage-location.handler';
+import { MissingDependencyError } from '../../types';
 
 // Every apply() call runs 0-2 raw queries in order (findVariantId, then getCurrentAssignment when
 // applicable) — this stub returns queued results in call order, mirroring
@@ -52,7 +53,7 @@ describe('StorageLocationStreamHandler', () => {
         expect(documentsService.findRequisitesIdByErpId).not.toHaveBeenCalled();
     });
 
-    it('skips when the product variant is not found yet', async () => {
+    it('throws MissingDependencyError when the product variant is not found yet (issue #96: retry, not silent drop)', async () => {
         const productVariantService = { update: vi.fn() };
         const documentsService = { findRequisitesIdByErpId: vi.fn() };
         const handler = new StorageLocationStreamHandler(
@@ -61,16 +62,17 @@ describe('StorageLocationStreamHandler', () => {
             documentsService as never,
         );
 
-        await handler.apply(ctx, 'loc-1', {
-            productId: 'prod-missing',
-            organizationId: 'org-1',
-            priority: 1,
-        });
-
+        await expect(
+            handler.apply(ctx, 'loc-1', {
+                productId: 'prod-missing',
+                organizationId: 'org-1',
+                priority: 1,
+            }),
+        ).rejects.toThrow(MissingDependencyError);
         expect(productVariantService.update).not.toHaveBeenCalled();
     });
 
-    it('skips when no OrganizationRequisites is found for the organizationId yet', async () => {
+    it('throws MissingDependencyError when no OrganizationRequisites is found for the organizationId yet', async () => {
         const productVariantService = { update: vi.fn() };
         const documentsService = { findRequisitesIdByErpId: vi.fn().mockResolvedValue(null) };
         const handler = new StorageLocationStreamHandler(
@@ -79,12 +81,13 @@ describe('StorageLocationStreamHandler', () => {
             documentsService as never,
         );
 
-        await handler.apply(ctx, 'loc-1', {
-            productId: 'prod-1',
-            organizationId: 'org-unknown',
-            priority: 1,
-        });
-
+        await expect(
+            handler.apply(ctx, 'loc-1', {
+                productId: 'prod-1',
+                organizationId: 'org-unknown',
+                priority: 1,
+            }),
+        ).rejects.toThrow(MissingDependencyError);
         expect(productVariantService.update).not.toHaveBeenCalled();
     });
 

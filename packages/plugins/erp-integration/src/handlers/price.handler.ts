@@ -4,6 +4,7 @@ import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { PriceEntryService } from '@mivend/plugin-price-entry';
 
 import type { InboundStreamHandler } from './inbound-stream-handler';
+import { MissingDependencyError } from '../types';
 
 const loggerCtx = 'IntegrationPriceHandler';
 
@@ -50,11 +51,11 @@ export class PriceStreamHandler implements InboundStreamHandler {
             priceTypeId,
         );
         if (!priceType) {
-            Logger.warn(
-                `price ${entityId}: no PriceType found for priceTypeId=${priceTypeId}, skipping`,
-                loggerCtx,
+            // Issue #96: ordinary eventual-consistency race (price-type stream not consumed yet),
+            // not a malformed payload — retry via MissingDependencyError instead of dropping.
+            throw new MissingDependencyError(
+                `price ${entityId}: no PriceType found for priceTypeId=${priceTypeId}`,
             );
-            return;
         }
 
         const variant = await this.connection.rawConnection
@@ -66,11 +67,9 @@ export class PriceStreamHandler implements InboundStreamHandler {
             .getRawOne<{ id: string }>();
 
         if (!variant) {
-            Logger.warn(
+            throw new MissingDependencyError(
                 `price ${entityId}: variant not found for productId=${productId}`,
-                loggerCtx,
             );
-            return;
         }
 
         const priceInCents = Math.round(value * 100);

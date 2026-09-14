@@ -4,7 +4,8 @@ import { Brackets, DataSource } from 'typeorm';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import type { IntegrationInboxEventStatus } from './entities/integration-inbox-event.entity';
-import { INBOX_MAX_ATTEMPTS_DEFAULT } from './types';
+import { computeMissingDependencyBackoffMs } from './retry-policy';
+import { INBOX_MAX_ATTEMPTS_DEFAULT, MISSING_DEPENDENCY_WALL_CLOCK_BUDGET_MS } from './types';
 import type { InboundStream } from './types';
 
 const POSTGRES_UNIQUE_VIOLATION = '23505';
@@ -94,14 +95,24 @@ export class IntegrationInboxService {
         const outerRepo = this.dataSource.getRepository(IntegrationInboxEvent);
         return outerRepo.manager.transaction(async manager => {
             const repo = manager.getRepository(outerRepo.target);
-            const qb = repo.createQueryBuilder('event').where(
-                new Brackets(qb => {
-                    qb.where('event.status = :pending', { pending: 'pending' }).orWhere(
-                        `event.status = :processing AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval`,
-                        { processing: 'processing', staleMs: STUCK_PROCESSING_THRESHOLD_MS },
-                    );
-                }),
-            );
+            const qb = repo
+                .createQueryBuilder('event')
+                .where(
+                    new Brackets(qb => {
+                        qb.where('event.status = :pending', { pending: 'pending' }).orWhere(
+                            `event.status = :processing AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval`,
+                            { processing: 'processing', staleMs: STUCK_PROCESSING_THRESHOLD_MS },
+                        );
+                    }),
+                )
+                // Issue #96: a row backed off after a MissingDependencyError is still `pending`
+                // (never `processing`/`failed`) but must not be reclaimed before its scheduled
+                // retry time.
+                .andWhere(
+                    new Brackets(qb => {
+                        qb.where('event.nextRetryAt IS NULL').orWhere('event.nextRetryAt <= now()');
+                    }),
+                );
             if (streams && streams.length > 0) {
                 qb.andWhere('event.stream IN (:...streams)', { streams });
             }
@@ -144,6 +155,43 @@ export class IntegrationInboxService {
                 attempts,
                 lastError: error.message,
                 status: attempts >= maxAttempts ? 'failed' : 'pending',
+            },
+        );
+    }
+
+    // Issue #96: routed here (instead of markFailed) specifically for a caught
+    // MissingDependencyError — a missing foreign lookup into another stream's data is an ordinary
+    // eventual-consistency race, not a processing bug, so it gets its own longer, backoff-based
+    // retry budget instead of the short/fixed-attempt dead-letter path. Stays `pending` (never
+    // `processing`) with `nextRetryAt` set, so `claimBatch` naturally reclaims it once eligible —
+    // unless the row has been unresolved for MISSING_DEPENDENCY_WALL_CLOCK_BUDGET_MS (24h) since
+    // `createdAt`, wall-clock, not attempt count (mirrors issue #93's
+    // INBOX_BULK_WALL_CLOCK_BUDGET_MS pattern), in which case it is dead-lettered the same as
+    // markFailed's terminal case.
+    async markMissingDependency(
+        id: number,
+        error: Error,
+        random: () => number = Math.random,
+    ): Promise<void> {
+        const repo = this.dataSource.getRepository(IntegrationInboxEvent);
+        const row = await repo.findOneOrFail({ where: { id } });
+        const attempts = row.attempts + 1;
+        const wallClockElapsedMs = Date.now() - row.createdAt.getTime();
+        if (wallClockElapsedMs > MISSING_DEPENDENCY_WALL_CLOCK_BUDGET_MS) {
+            await repo.update(
+                { id },
+                { attempts, lastError: error.message, status: 'failed', nextRetryAt: null },
+            );
+            return;
+        }
+        const backoffMs = computeMissingDependencyBackoffMs(attempts, random);
+        await repo.update(
+            { id },
+            {
+                attempts,
+                lastError: error.message,
+                status: 'pending',
+                nextRetryAt: new Date(Date.now() + backoffMs),
             },
         );
     }

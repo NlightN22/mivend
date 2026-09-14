@@ -185,12 +185,39 @@ export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.
 export const INBOX_BULK_TASK_TIMEOUT_MS = 120_000;
 export const INBOX_BULK_WALL_CLOCK_BUDGET_MS = 90_000;
 
+// Issue #96: thrown by a stream handler when a foreign lookup into another Kafka stream's data
+// (Warehouse, PriceType, ProductVariant, OrganizationRequisites, ...) comes back empty. Kafka
+// gives no cross-topic ordering guarantee, so the referenced entity's own stream simply may not
+// have been consumed yet — an ordinary, expected race, not a processing bug. Distinct from a
+// malformed/incomplete payload (still `Logger.warn` + `return`, unretryable — see the
+// external-integration-rules skill's "Cross-entity dependencies" section). Caught specifically by
+// IntegrationInboxProcessorService.processOne(), which routes it to
+// IntegrationInboxService.markMissingDependency() (backoff + `nextRetryAt`) instead of the
+// existing markFailed() short/fixed-attempt dead-letter path used for every other error.
+export class MissingDependencyError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'MissingDependencyError';
+    }
+}
+
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
 export const KAFKA_ENABLED_DEFAULT = false;
 export const MAX_RETRY_DEFAULT = 5;
 export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_CRITICAL_BATCH_SIZE_DEFAULT = 20;
+// Issue #96: MissingDependencyError's own backoff shape, distinct from INBOX_MAX_ATTEMPTS_DEFAULT
+// (which stays short/fail-fast for genuine processing bugs and malformed payloads). Base 30s,
+// doubling per attempt, capped at 30 minutes per individual retry gap, ±20% jitter (spreads out a
+// large batch of simultaneously-eligible rows instead of a thundering-herd reclaim).
+export const MISSING_DEPENDENCY_RETRY_BASE_MS = 30_000;
+export const MISSING_DEPENDENCY_RETRY_MAX_MS = 30 * 60_000;
+export const MISSING_DEPENDENCY_RETRY_JITTER_RATIO = 0.2;
+// Wall-clock give-up budget since row.createdAt, not a fixed attempt count — mirrors issue #93's
+// own INBOX_BULK_WALL_CLOCK_BUDGET_MS pattern. A fixed attempt count stops meaning anything once
+// backoff is capped at a fixed 30-minute gap; 24h is the actual guarantee being made here.
+export const MISSING_DEPENDENCY_WALL_CLOCK_BUDGET_MS = 24 * 60 * 60 * 1000;
 // Bigger than the critical lane's batch for bulk throughput, but not jumped straight to
 // 200-500 — keeps the SELECT ... FOR UPDATE SKIP LOCKED transaction size reasonable (issue #93
 // decision). Tune based on real measurement if still insufficient.

@@ -10,6 +10,7 @@ import {
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import { IntegrationInboxProcessorService } from '../../../integration-inbox-processor.service';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
+import { MissingDependencyError } from '../../../types';
 
 // Component chain: pending row -> claim -> handler.apply -> processed / retry / dead-letter, plus
 // the out-of-order guard. Handlers are stubbed (never real ProductService/etc.) — this suite
@@ -107,6 +108,80 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
             .findOneOrFail({ where: { id: row.id } });
         expect(updated.status).toBe('failed');
         expect(updated.attempts).toBe(2);
+    });
+
+    // Issue #96: a MissingDependencyError must schedule a backoff retry (stays 'pending',
+    // 'nextRetryAt' set) instead of being dead-lettered immediately like every other error.
+    it('schedules a backoff retry on MissingDependencyError instead of dead-lettering it', async () => {
+        const apply = vi
+            .fn()
+            .mockRejectedValue(new MissingDependencyError('warehouse not found yet'));
+        const row = await inboxService.enqueue({
+            stream: 'stock',
+            entityId: 's-missing-dep',
+            version: '1',
+            sourceEventId: 'evt-missing-dep',
+            payload: { sku: 'SKU-MD' },
+        });
+
+        // maxAttempts=1 would dead-letter on the very first failure via markFailed — proves the
+        // MissingDependencyError path is a genuinely different branch, not just a lucky
+        // maxAttempts headroom.
+        await makeProcessor(apply).processPendingBatch(1);
+
+        const updated = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .findOneOrFail({ where: { id: row.id } });
+        expect(updated.status).toBe('pending');
+        expect(updated.attempts).toBe(1);
+        expect(updated.nextRetryAt).not.toBeNull();
+        expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    it('does not reclaim a MissingDependencyError row before its nextRetryAt', async () => {
+        const apply = vi
+            .fn()
+            .mockRejectedValue(new MissingDependencyError('warehouse not found yet'));
+        await inboxService.enqueue({
+            stream: 'stock',
+            entityId: 's-not-yet',
+            version: '1',
+            sourceEventId: 'evt-not-yet',
+            payload: { sku: 'SKU-NY' },
+        });
+        await makeProcessor(apply).processPendingBatch();
+        expect(apply).toHaveBeenCalledTimes(1);
+
+        const { claimed } = await makeProcessor(apply).processPendingBatch();
+        expect(claimed).toBe(0);
+        expect(apply).toHaveBeenCalledTimes(1);
+    });
+
+    it('dead-letters a MissingDependencyError row once the 24h wall-clock budget is exceeded', async () => {
+        const apply = vi
+            .fn()
+            .mockRejectedValue(new MissingDependencyError('warehouse not found yet'));
+        const row = await inboxService.enqueue({
+            stream: 'stock',
+            entityId: 's-old',
+            version: '1',
+            sourceEventId: 'evt-old',
+            payload: { sku: 'SKU-OLD' },
+        });
+        // Backdate createdAt past the 24h wall-clock budget directly in the DB (CreateDateColumn
+        // can't be set via the normal repo API).
+        await dataSource.query(
+            "UPDATE integration_inbox_event SET created_at = now() - interval '25 hours' WHERE id = $1",
+            [row.id],
+        );
+
+        await makeProcessor(apply).processPendingBatch();
+
+        const updated = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .findOneOrFail({ where: { id: row.id } });
+        expect(updated.status).toBe('failed');
+        expect(updated.nextRetryAt).toBeNull();
     });
 
     it('skips applying (but still marks processed) a version superseded by an already-processed newer version', async () => {

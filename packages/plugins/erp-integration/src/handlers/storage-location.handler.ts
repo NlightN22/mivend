@@ -3,6 +3,7 @@ import { ProductVariantService, RequestContext, TransactionalConnection } from '
 import { DocumentsService } from '@mivend/plugin-documents';
 
 import type { InboundStreamHandler } from './inbound-stream-handler';
+import { MissingDependencyError } from '../types';
 
 const loggerCtx = 'IntegrationStorageLocationHandler';
 
@@ -72,11 +73,11 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
 
         const variantId = await this.findVariantId(productId);
         if (!variantId) {
-            Logger.warn(
+            // Issue #96: ordinary eventual-consistency race (product stream not consumed yet) —
+            // retry via MissingDependencyError instead of dropping.
+            throw new MissingDependencyError(
                 `storage-location ${entityId}: variant not found for productId=${productId}`,
-                loggerCtx,
             );
-            return;
         }
 
         const organizationId = await this.documentsService.findRequisitesIdByErpId(
@@ -84,11 +85,9 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
             organizationErpId,
         );
         if (organizationId == null) {
-            Logger.warn(
-                `storage-location ${entityId}: no OrganizationRequisites found for organizationId=${organizationErpId}, skipping`,
-                loggerCtx,
+            throw new MissingDependencyError(
+                `storage-location ${entityId}: no OrganizationRequisites found for organizationId=${organizationErpId}`,
             );
-            return;
         }
 
         const current = await this.getCurrentAssignment(variantId);

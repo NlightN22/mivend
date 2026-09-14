@@ -3,6 +3,7 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 
 import type { InboundStreamHandler } from './inbound-stream-handler';
+import { MissingDependencyError } from '../types';
 
 const loggerCtx = 'IntegrationOrderRegistrationResultHandler';
 
@@ -34,11 +35,6 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
 
         const rawLines = Array.isArray(payload.reservedLines) ? payload.reservedLines : [];
         const reservedLines: Array<{ productVariantId: string; reservedQuantity: number }> = [];
-        // mivend.audit.72's HIGH finding: a productId that never resolves to a ProductVariant
-        // (stale/missing externalId mapping) must be reported, not just dropped — otherwise it's
-        // indistinguishable downstream from "1C hasn't confirmed this line yet" and silently
-        // blocks release forever.
-        const unresolvedProductIds: string[] = [];
         for (const rawLine of rawLines) {
             const line = rawLine as Record<string, unknown>;
             const productId = line.productId != null ? String(line.productId) : '';
@@ -53,12 +49,15 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
 
             const variantId = await this.findVariantId(productId);
             if (!variantId) {
-                Logger.warn(
+                // Issue #96: ordinary eventual-consistency race (product stream not consumed
+                // yet), not necessarily a permanently-stale mapping — retry via
+                // MissingDependencyError. A genuinely stale/missing externalId mapping still
+                // surfaces visibly: this row dead-letters (inbox 'failed') once the 24h
+                // wall-clock budget in IntegrationInboxService.markMissingDependency is exceeded,
+                // same as mivend.audit.72's HIGH finding required (never silently dropped).
+                throw new MissingDependencyError(
                     `order-registration-result ${entityId}: variant not found for productId=${productId}`,
-                    loggerCtx,
                 );
-                unresolvedProductIds.push(productId);
-                continue;
             }
             reservedLines.push({
                 productVariantId: variantId,
@@ -70,7 +69,12 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
             orderEntityId,
             rejected,
             reservedLines,
-            unresolvedProductIds,
+            // Issue #96: an unresolved variant now throws MissingDependencyError above instead of
+            // being collected here — always empty from this caller. The field itself stays on
+            // OrderRegistrationResultInput (reservation-write-off-sync.service.ts) as defensive
+            // input shape for any other future caller, unrelated to this plugin's own retry
+            // mechanism.
+            unresolvedProductIds: [],
         });
     }
 

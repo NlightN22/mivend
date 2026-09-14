@@ -8,6 +8,7 @@ import {
 import { WarehouseService } from '@mivend/plugin-access-control';
 
 import type { InboundStreamHandler } from './inbound-stream-handler';
+import { MissingDependencyError } from '../types';
 
 const loggerCtx = 'IntegrationStockHandler';
 
@@ -54,29 +55,27 @@ export class StockStreamHandler implements InboundStreamHandler {
 
         const warehouse = await this.warehouseService.findByErpId(ctx, warehouseId);
         if (!warehouse) {
-            Logger.warn(
-                `stock ${entityId}: no Warehouse found for warehouseId=${warehouseId}, skipping`,
-                loggerCtx,
+            // Issue #96: an ordinary eventual-consistency race, not a processing bug — the
+            // warehouse stream's own event for this erpId simply hasn't been consumed yet. Throw
+            // so processOne() routes this through the backoff/retry path instead of silently
+            // dropping the event.
+            throw new MissingDependencyError(
+                `stock ${entityId}: no Warehouse found for warehouseId=${warehouseId}`,
             );
-            return;
         }
 
         const stockLocationId = await this.findStockLocationId(warehouseId);
         if (!stockLocationId) {
-            Logger.warn(
-                `stock ${entityId}: no StockLocation found for warehouseId=${warehouseId}, skipping`,
-                loggerCtx,
+            throw new MissingDependencyError(
+                `stock ${entityId}: no StockLocation found for warehouseId=${warehouseId}`,
             );
-            return;
         }
 
         const variantId = await this.findVariantId(productId);
         if (!variantId) {
-            Logger.warn(
+            throw new MissingDependencyError(
                 `stock ${entityId}: variant not found for productId=${productId}`,
-                loggerCtx,
             );
-            return;
         }
 
         // mivend.audit.72 MEDIUM: `current` is a single point-in-time read reused below for both
