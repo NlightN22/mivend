@@ -1,0 +1,26 @@
+query SystemHealthCheckData {
+    zones(options: { take: 1 }) {
+        totalItems
+    }
+    taxCategories(options: { take: 1 }) {
+        totalItems
+    }
+    taxRates(options: { take: 100 }) {
+        items {
+            enabled
+        }
+    }
+    activeChannel {
+        defaultTaxZone {
+            id
+        }
+    }
+    shippingMethods(options: { take: 1 }) {
+        totalItems
+    }
+    paymentMethods(options: { take: 100 }) {
+        items {
+            enabled
+        }
+    }
+}

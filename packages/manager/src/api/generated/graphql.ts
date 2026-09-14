@@ -10241,6 +10241,17 @@ export type PermissionCatalogQuery = {
     globalSettings: { serverConfig: { permissions: Array<{ name: string; description: string }> } };
 };
 
+export type SystemHealthCheckDataQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SystemHealthCheckDataQuery = {
+    zones: { totalItems: number };
+    taxCategories: { totalItems: number };
+    taxRates: { items: Array<{ enabled: boolean }> };
+    activeChannel: { defaultTaxZone: { id: string } | null };
+    shippingMethods: { totalItems: number };
+    paymentMethods: { items: Array<{ enabled: boolean }> };
+};
+
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -12452,3 +12463,34 @@ export const PermissionCatalogDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<PermissionCatalogQuery, PermissionCatalogQueryVariables>;
+export const SystemHealthCheckDataDocument = new TypedDocumentString(`
+    query SystemHealthCheckData {
+  zones(options: {take: 1}) {
+    totalItems
+  }
+  taxCategories(options: {take: 1}) {
+    totalItems
+  }
+  taxRates(options: {take: 100}) {
+    items {
+      enabled
+    }
+  }
+  activeChannel {
+    defaultTaxZone {
+      id
+    }
+  }
+  shippingMethods(options: {take: 1}) {
+    totalItems
+  }
+  paymentMethods(options: {take: 100}) {
+    items {
+      enabled
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SystemHealthCheckDataQuery,
+    SystemHealthCheckDataQueryVariables
+>;

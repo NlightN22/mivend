@@ -1,18 +1,15 @@
 import { adminApi } from './client';
+import {
+    SystemHealthCheckDataDocument,
+    type SystemHealthCheckDataQuery,
+} from './generated/graphql';
 
 // Fixed, hardcoded 6-item checklist for the incident this page exists for (issue #76): Zone,
 // TaxCategory and TaxRate can all exist while Channel.defaultTaxZone is still null, silently
 // breaking tax calculation. Deliberately not a generic check-registry — see AGENTS.md's
 // no-speculative-abstraction rule.
 
-export interface SystemHealthQueryResult {
-    zones: { totalItems: number };
-    taxCategories: { totalItems: number };
-    taxRates: { items: { enabled: boolean }[] };
-    activeChannel: { defaultTaxZone: { id: string } | null };
-    shippingMethods: { totalItems: number };
-    paymentMethods: { items: { enabled: boolean }[] };
-}
+export type SystemHealthQueryResult = SystemHealthCheckDataQuery;
 
 // Vendure 3.7.3's native admin schema, verified against @vendure/core's own schema files (no
 // plugin/backend work needed here) — see packages/manager's SystemHealthPage.vue for the field
@@ -24,16 +21,7 @@ export interface SystemHealthQueryResult {
 // - Channel.defaultTaxZoneId as literally named in the issue doesn't exist; the real field is
 //   `defaultTaxZone: Zone` (nullable object) on `activeChannel`.
 export async function fetchSystemHealthData(): Promise<SystemHealthQueryResult> {
-    return adminApi<SystemHealthQueryResult>(
-        `query SystemHealthCheckData {
-            zones(options: { take: 1 }) { totalItems }
-            taxCategories(options: { take: 1 }) { totalItems }
-            taxRates(options: { take: 100 }) { items { enabled } }
-            activeChannel { defaultTaxZone { id } }
-            shippingMethods(options: { take: 1 }) { totalItems }
-            paymentMethods(options: { take: 100 }) { items { enabled } }
-        }`,
-    );
+    return adminApi(SystemHealthCheckDataDocument);
 }
 
 export interface SystemHealthCheckItem {
