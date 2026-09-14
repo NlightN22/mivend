@@ -8511,6 +8511,12 @@ export type ChangeOwnPasswordMutationVariables = Exact<{
 
 export type ChangeOwnPasswordMutation = { updateActiveAdministrator: { id: string } };
 
+export type PendingApprovalsBadgeCountQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PendingApprovalsBadgeCountQuery = {
+    myApprovalRequestsSummary: { pendingCount: number };
+};
+
 export type ApprovalStepFieldsFragment = {
     id: string;
     stepIndex: number;
@@ -8734,6 +8740,51 @@ export type EscalateApprovalRequestMutationVariables = Exact<{
 }>;
 
 export type EscalateApprovalRequestMutation = { escalateApprovalRequest: { id: string } };
+
+export type ActiveAdministratorFieldsFragment = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    emailAddress: string;
+    customFields: { departmentId: string | null; branchId: string | null } | null;
+    user: {
+        identifier: string;
+        roles: Array<{ code: string; description: string; permissions: Array<Permission> }>;
+    };
+};
+
+export type ActiveAdministratorQueryVariables = Exact<{ [key: string]: never }>;
+
+export type ActiveAdministratorQuery = {
+    activeAdministrator: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        emailAddress: string;
+        customFields: { departmentId: string | null; branchId: string | null } | null;
+        user: {
+            identifier: string;
+            roles: Array<{ code: string; description: string; permissions: Array<Permission> }>;
+        };
+    } | null;
+};
+
+export type LoginMutationVariables = Exact<{
+    username: Scalars['String']['input'];
+    password: Scalars['String']['input'];
+    rememberMe?: InputMaybe<Scalars['Boolean']['input']>;
+}>;
+
+export type LoginMutation = {
+    login:
+        | { __typename: 'CurrentUser'; id: string }
+        | { __typename: 'InvalidCredentialsError'; errorCode: ErrorCode }
+        | { __typename: 'NativeAuthStrategyError' };
+};
+
+export type LogoutMutationVariables = Exact<{ [key: string]: never }>;
+
+export type LogoutMutation = { logout: { success: boolean } };
 
 export type WarehouseFieldsFragment = {
     id: string;
@@ -10521,6 +10572,29 @@ fragment ApprovalRequestSummaryFields on ApprovalRequest {
 }`,
     { fragmentName: 'ApprovalRequestPageFields' },
 ) as unknown as TypedDocumentString<ApprovalRequestPageFieldsFragment, unknown>;
+export const ActiveAdministratorFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment ActiveAdministratorFields on Administrator {
+  id
+  firstName
+  lastName
+  emailAddress
+  customFields {
+    departmentId
+    branchId
+  }
+  user {
+    identifier
+    roles {
+      code
+      description
+      permissions
+    }
+  }
+}
+    `,
+    { fragmentName: 'ActiveAdministratorFields' },
+) as unknown as TypedDocumentString<ActiveAdministratorFieldsFragment, unknown>;
 export const WarehouseFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment WarehouseFields on Warehouse {
@@ -10771,6 +10845,16 @@ export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     ChangeOwnPasswordMutation,
     ChangeOwnPasswordMutationVariables
 >;
+export const PendingApprovalsBadgeCountDocument = new TypedDocumentString(`
+    query PendingApprovalsBadgeCount {
+  myApprovalRequestsSummary(recentLimit: 0) {
+    pendingCount
+  }
+}
+    `) as unknown as TypedDocumentString<
+    PendingApprovalsBadgeCountQuery,
+    PendingApprovalsBadgeCountQueryVariables
+>;
 export const ApprovalsInboxDocument = new TypedDocumentString(`
     query ApprovalsInbox($awaitingOptions: ApprovalListOptions, $allInvolvedOptions: ApprovalListOptions) {
   myApprovalsInbox(
@@ -10948,6 +11032,50 @@ export const EscalateApprovalRequestDocument = new TypedDocumentString(`
     EscalateApprovalRequestMutation,
     EscalateApprovalRequestMutationVariables
 >;
+export const ActiveAdministratorDocument = new TypedDocumentString(`
+    query ActiveAdministrator {
+  activeAdministrator {
+    ...ActiveAdministratorFields
+  }
+}
+    fragment ActiveAdministratorFields on Administrator {
+  id
+  firstName
+  lastName
+  emailAddress
+  customFields {
+    departmentId
+    branchId
+  }
+  user {
+    identifier
+    roles {
+      code
+      description
+      permissions
+    }
+  }
+}`) as unknown as TypedDocumentString<ActiveAdministratorQuery, ActiveAdministratorQueryVariables>;
+export const LoginDocument = new TypedDocumentString(`
+    mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
+  login(username: $username, password: $password, rememberMe: $rememberMe) {
+    __typename
+    ... on CurrentUser {
+      id
+    }
+    ... on InvalidCredentialsError {
+      errorCode
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<LoginMutation, LoginMutationVariables>;
+export const LogoutDocument = new TypedDocumentString(`
+    mutation Logout {
+  logout {
+    success
+  }
+}
+    `) as unknown as TypedDocumentString<LogoutMutation, LogoutMutationVariables>;
 export const WarehousesDocument = new TypedDocumentString(`
     query Warehouses {
   warehouses {

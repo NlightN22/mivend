@@ -17,7 +17,7 @@ import {
     type AppMobileSheetItem,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
-import { adminApi } from '../api/client';
+import { fetchPendingApprovalsBadgeCount } from '../api/approvals';
 import { notificationTransport } from '../api/notifications';
 
 const { notifications, unreadCount, loading: notificationsLoading, markRead, resolve } =
@@ -113,10 +113,7 @@ const moreSheetItems = computed<AppMobileSheetItem[]>(() => {
 
 onMounted(async () => {
     try {
-        const result = await adminApi<{ myApprovalRequestsSummary: { pendingCount: number } }>(
-            `query { myApprovalRequestsSummary(recentLimit: 0) { pendingCount } }`,
-        );
-        approvalsBadgeCount.value = result.myApprovalRequestsSummary.pendingCount;
+        approvalsBadgeCount.value = await fetchPendingApprovalsBadgeCount();
     } catch {
         approvalsBadgeCount.value = 0;
     }

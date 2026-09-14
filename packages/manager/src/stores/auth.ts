@@ -2,40 +2,28 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { clearPersonalUiState } from '../composables/clearPersonalUiState';
 import { adminApi } from '../api/client';
+import {
+    ActiveAdministratorDocument,
+    LoginDocument,
+    LogoutDocument,
+    type ActiveAdministratorFieldsFragment,
+} from '../api/generated/graphql';
 
-interface AdministratorRole {
-    code: string;
-    description: string;
-    permissions: string[];
-}
+// Administrator.customFields is nullable at the wrapper-object level per the GraphQL schema, but
+// Vendure always populates it in practice — normalized once here, same pattern as
+// api/customers.ts's normalizeOrderItem.
+type ActiveAdministrator = Omit<ActiveAdministratorFieldsFragment, 'customFields'> & {
+    customFields: NonNullable<ActiveAdministratorFieldsFragment['customFields']>;
+};
 
-interface ActiveAdministrator {
-    id: string;
-    firstName: string;
-    lastName: string;
-    emailAddress: string;
-    customFields: {
-        departmentId: string | null;
-        branchId: string | null;
+function normalizeActiveAdministrator(
+    admin: ActiveAdministratorFieldsFragment,
+): ActiveAdministrator {
+    return {
+        ...admin,
+        customFields: admin.customFields ?? { departmentId: null, branchId: null },
     };
-    user: {
-        identifier: string;
-        roles: AdministratorRole[];
-    };
 }
-
-const ACTIVE_ADMINISTRATOR_QUERY = `
-    query ActiveAdministrator {
-        activeAdministrator {
-            id
-            firstName
-            lastName
-            emailAddress
-            customFields { departmentId branchId }
-            user { identifier roles { code description permissions } }
-        }
-    }
-`;
 
 // The identifier every contour ships with (SUPERADMIN_USERNAME, same literal value in every
 // apps/server/.env.* — see docs/environments.md) — used only to warn that this session is still
@@ -101,7 +89,10 @@ export const useAuthStore = defineStore('auth', () => {
     );
 
     function hasPermission(name: string): boolean {
-        return permissions.value.includes(name);
+        // Permission is a real GraphQL enum (Vendure's fixed native+custom permission set), but
+        // this app's own permission checks (this function's callers, PERMISSION_CATEGORIES in
+        // api/settings.ts) work with plain strings throughout — narrowing isn't meaningful here.
+        return (permissions.value as string[]).includes(name);
     }
 
     // Real incident (2026-09-12): a fresh contour's only administrator is the built-in
@@ -126,18 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
     const LOGGED_OUT_KEY = 'mv_manager_logged_out';
 
     async function login(username: string, password: string, rememberMe = false): Promise<boolean> {
-        const result = await adminApi<{
-            login: { __typename: string; errorCode?: string; id?: string };
-        }>(
-            `mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
-                login(username: $username, password: $password, rememberMe: $rememberMe) {
-                    __typename
-                    ... on CurrentUser { id }
-                    ... on InvalidCredentialsError { errorCode }
-                }
-            }`,
-            { username, password, rememberMe },
-        );
+        const result = await adminApi(LoginDocument, { username, password, rememberMe });
 
         if (result.login.__typename === 'CurrentUser') {
             sessionStorage.removeItem(LOGGED_OUT_KEY);
@@ -152,7 +132,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function logout(): Promise<void> {
         try {
-            await adminApi<{ logout: { success: boolean } }>(`mutation { logout { success } }`);
+            await adminApi(LogoutDocument);
         } catch (e) {
             console.warn('[auth] logout mutation failed:', e);
         }
@@ -181,10 +161,12 @@ export const useAuthStore = defineStore('auth', () => {
 
     function applyResult(
         myGeneration: number,
-        result: { activeAdministrator: ActiveAdministrator | null },
+        result: { activeAdministrator: ActiveAdministratorFieldsFragment | null },
     ): void {
         if (myGeneration !== generation) return; // superseded by a later call
-        administrator.value = result.activeAdministrator;
+        administrator.value = result.activeAdministrator
+            ? normalizeActiveAdministrator(result.activeAdministrator)
+            : null;
         authStatus.value = result.activeAdministrator ? 'authenticated' : 'unauthenticated';
         isReconnecting.value = false;
     }
@@ -196,9 +178,7 @@ export const useAuthStore = defineStore('auth', () => {
     function scheduleBackgroundRetry(myGeneration: number, delayMs: number): void {
         backgroundRetryTimer = setTimeout(() => {
             if (myGeneration !== generation) return;
-            adminApi<{ activeAdministrator: ActiveAdministrator | null }>(
-                ACTIVE_ADMINISTRATOR_QUERY,
-            )
+            adminApi(ActiveAdministratorDocument)
                 .then(result => {
                     if (myGeneration !== generation) return;
                     applyResult(myGeneration, result);
@@ -229,9 +209,7 @@ export const useAuthStore = defineStore('auth', () => {
             return;
         }
         try {
-            const result = await adminApi<{ activeAdministrator: ActiveAdministrator | null }>(
-                ACTIVE_ADMINISTRATOR_QUERY,
-            );
+            const result = await adminApi(ActiveAdministratorDocument);
             applyResult(myGeneration, result);
         } catch {
             // Vendure's activeAdministrator query never throws for "not logged in" — a genuine

@@ -14,7 +14,6 @@ import {
     type MvDataTableColumn,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import { adminApi } from '../../api/client';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import {
     DEFAULT_FILTERS,
@@ -31,6 +30,7 @@ import {
     type ManagerOption,
     type BranchOption,
 } from '../../api/orders';
+import { fetchDepartments } from '../../api/team';
 import OrdersTableResponsive from '../../components/orders/OrdersTableResponsive.vue';
 import AttentionList from '../../components/orders/AttentionList.vue';
 import OperationalPanel from '../../components/orders/OperationalPanel.vue';
@@ -204,12 +204,10 @@ async function loadAll(): Promise<void> {
     // never affects the rest of the page (same pattern as DashboardPage.vue).
     try {
         const departmentId = authStore.administrator?.customFields.departmentId;
-        const result = await adminApi<{ departments: { erpId: string; name: string }[] }>(
-            `query { departments { erpId name } }`,
-        );
+        const departments = await fetchDepartments();
         // administrator.customFields.departmentId stores the ERP id (see
         // EmployeeService.assign), not Department's DB row id — match on erpId.
-        departmentName.value = result.departments.find(d => d.erpId === departmentId)?.name ?? null;
+        departmentName.value = departments.find(d => d.erpId === departmentId)?.name ?? null;
     } catch (e) {
         console.warn('[orders] could not load department name:', e);
     }

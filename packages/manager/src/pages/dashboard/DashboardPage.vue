@@ -9,7 +9,6 @@ import {
     type FilterChip,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import { adminApi } from '../../api/client';
 import { fetchDashboardData, buildActivityFeed, type DashboardData } from '../../api/dashboard';
 import { getDashboardKpiCards } from '../../api/dashboard-config';
 import { fetchExpiringDiscountGrants } from '../../api/discounts';
@@ -18,6 +17,7 @@ import {
     type FailedIntegrationInboxEvent,
 } from '../../api/integration-health';
 import { fetchNotifications } from '../../api/notifications';
+import { fetchDepartments } from '../../api/team';
 import type { NotificationItem } from '@mivend/ui-kit';
 import RecentOrdersTable from '../../components/dashboard/RecentOrdersTable.vue';
 import ApprovalStatusList from '../../components/dashboard/ApprovalStatusList.vue';
@@ -145,13 +145,10 @@ onMounted(async () => {
         // main dashboard data so a failure here never blanks the whole page.
         try {
             const departmentId = authStore.administrator?.customFields.departmentId;
-            const departmentsResult = await adminApi<{
-                departments: { erpId: string; name: string }[];
-            }>(`query { departments { erpId name } }`);
+            const departments = await fetchDepartments();
             // administrator.customFields.departmentId stores the ERP id (see
             // EmployeeService.assign), not Department's DB row id — match on erpId.
-            departmentName.value =
-                departmentsResult.departments.find(d => d.erpId === departmentId)?.name ?? null;
+            departmentName.value = departments.find(d => d.erpId === departmentId)?.name ?? null;
         } catch (e) {
             console.warn('[dashboard] could not load department name:', e);
         }

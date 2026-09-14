@@ -8,6 +8,7 @@ import {
     DecideDiscountGrantRequestDocument,
     DecidePriceAdjustmentRequestDocument,
     EscalateApprovalRequestDocument,
+    PendingApprovalsBadgeCountDocument,
     type ApprovalRequestPageFieldsFragment,
     type ApprovalRequestSummaryFieldsFragment,
     type ApprovalStepFieldsFragment,
@@ -149,4 +150,11 @@ export async function escalateApprovalRequest(
     escalateToAdministratorId: string,
 ): Promise<void> {
     await adminApi(EscalateApprovalRequestDocument, { requestId, escalateToAdministratorId });
+}
+
+// The sidebar's Approvals badge count — recentLimit: 0 so the response carries only pendingCount,
+// no row data.
+export async function fetchPendingApprovalsBadgeCount(): Promise<number> {
+    const result = await adminApi(PendingApprovalsBadgeCountDocument);
+    return result.myApprovalRequestsSummary.pendingCount;
 }

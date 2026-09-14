@@ -1,0 +1,42 @@
+fragment ActiveAdministratorFields on Administrator {
+    id
+    firstName
+    lastName
+    emailAddress
+    customFields {
+        departmentId
+        branchId
+    }
+    user {
+        identifier
+        roles {
+            code
+            description
+            permissions
+        }
+    }
+}
+
+query ActiveAdministrator {
+    activeAdministrator {
+        ...ActiveAdministratorFields
+    }
+}
+
+mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
+    login(username: $username, password: $password, rememberMe: $rememberMe) {
+        __typename
+        ... on CurrentUser {
+            id
+        }
+        ... on InvalidCredentialsError {
+            errorCode
+        }
+    }
+}
+
+mutation Logout {
+    logout {
+        success
+    }
+}

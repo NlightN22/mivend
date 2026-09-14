@@ -1,3 +1,9 @@
+query PendingApprovalsBadgeCount {
+    myApprovalRequestsSummary(recentLimit: 0) {
+        pendingCount
+    }
+}
+
 fragment ApprovalStepFields on ApprovalStep {
     id
     stepIndex
