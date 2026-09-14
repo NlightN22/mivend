@@ -1,4 +1,11 @@
 import { adminApi } from './client';
+import {
+    DiscountFacetsDocument,
+    DiscountRegistryPageDocument,
+    ExpiringDiscountGrantsDocument,
+    PriceTypeCodesDocument,
+    RequestDiscountGrantDocument,
+} from './generated/graphql';
 
 export type DiscountRegistryFilterStatus =
     | 'active'
@@ -39,31 +46,11 @@ export interface DiscountRegistryEntryRow {
 export async function fetchDiscountRegistryPage(
     options: DiscountRegistryListOptions,
 ): Promise<{ items: DiscountRegistryEntryRow[]; totalItems: number }> {
-    const result = await adminApi<{
-        discountRegistryPage: { items: DiscountRegistryEntryRow[]; totalItems: number };
-    }>(
-        `query DiscountRegistryPage($options: DiscountRegistryListOptions) {
-            discountRegistryPage(options: $options) {
-                items {
-                    id
-                    approvalRequestId
-                    discountRuleId
-                    status
-                    priceTypeCode
-                    facetCode
-                    facetValueCode
-                    percent
-                    validFrom
-                    validTo
-                    justification
-                    counterpartyIds
-                }
-                totalItems
-            }
-        }`,
-        { options },
-    );
-    return result.discountRegistryPage;
+    const result = await adminApi(DiscountRegistryPageDocument, { options });
+    return result.discountRegistryPage as {
+        items: DiscountRegistryEntryRow[];
+        totalItems: number;
+    };
 }
 
 export interface DiscountGrantInput {
@@ -147,9 +134,7 @@ export function buildDiscountRegistryRows(
 }
 
 export async function fetchPriceTypeCodes(): Promise<string[]> {
-    const result = await adminApi<{ priceTypeCodes: string[] }>(
-        `query PriceTypeCodes { priceTypeCodes }`,
-    );
+    const result = await adminApi(PriceTypeCodesDocument);
     return result.priceTypeCodes;
 }
 
@@ -160,19 +145,12 @@ export interface FacetOption {
 }
 
 export async function fetchFacets(): Promise<FacetOption[]> {
-    const result = await adminApi<{ facets: { items: FacetOption[] } }>(
-        `query DiscountFacets { facets(options: { take: 50 }) { items { code name values { code name } } } }`,
-    );
+    const result = await adminApi(DiscountFacetsDocument);
     return result.facets.items;
 }
 
 export async function requestDiscountGrant(input: DiscountGrantInput): Promise<{ id: string }> {
-    const result = await adminApi<{ requestDiscountGrant: { id: string } }>(
-        `mutation($input: DiscountGrantInput!) {
-            requestDiscountGrant(input: $input) { id }
-        }`,
-        { input },
-    );
+    const result = await adminApi(RequestDiscountGrantDocument, { input });
     return result.requestDiscountGrant;
 }
 
@@ -185,15 +163,6 @@ export interface ExpiringDiscountGrant {
 export async function fetchExpiringDiscountGrants(
     withinDays: number,
 ): Promise<ExpiringDiscountGrant[]> {
-    const result = await adminApi<{ expiringDiscountGrants: ExpiringDiscountGrant[] }>(
-        `query ExpiringDiscountGrants($withinDays: Int!) {
-            expiringDiscountGrants(withinDays: $withinDays) {
-                id
-                validTo
-                counterparties { id legalName }
-            }
-        }`,
-        { withinDays },
-    );
+    const result = await adminApi(ExpiringDiscountGrantsDocument, { withinDays });
     return result.expiringDiscountGrants;
 }

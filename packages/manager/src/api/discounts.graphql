@@ -1,0 +1,53 @@
+query DiscountRegistryPage($options: DiscountRegistryListOptions) {
+    discountRegistryPage(options: $options) {
+        items {
+            id
+            approvalRequestId
+            discountRuleId
+            status
+            priceTypeCode
+            facetCode
+            facetValueCode
+            percent
+            validFrom
+            validTo
+            justification
+            counterpartyIds
+        }
+        totalItems
+    }
+}
+
+query PriceTypeCodes {
+    priceTypeCodes
+}
+
+query DiscountFacets {
+    facets(options: { take: 50 }) {
+        items {
+            code
+            name
+            values {
+                code
+                name
+            }
+        }
+    }
+}
+
+mutation RequestDiscountGrant($input: DiscountGrantInput!) {
+    requestDiscountGrant(input: $input) {
+        id
+    }
+}
+
+query ExpiringDiscountGrants($withinDays: Int!) {
+    expiringDiscountGrants(withinDays: $withinDays) {
+        id
+        validTo
+        counterparties {
+            id
+            legalName
+        }
+    }
+}

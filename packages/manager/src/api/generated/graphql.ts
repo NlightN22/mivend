@@ -9367,6 +9367,60 @@ export type ManagerDashboardQuery = {
     myApprovalsInbox: { awaitingMyDecision: { totalItems: number } };
 };
 
+export type DiscountRegistryPageQueryVariables = Exact<{
+    options?: InputMaybe<DiscountRegistryListOptions>;
+}>;
+
+export type DiscountRegistryPageQuery = {
+    discountRegistryPage: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            approvalRequestId: string | null;
+            discountRuleId: string | null;
+            status: string;
+            priceTypeCode: string;
+            facetCode: string | null;
+            facetValueCode: string | null;
+            percent: number;
+            validFrom: any;
+            validTo: any;
+            justification: string | null;
+            counterpartyIds: Array<string> | null;
+        }>;
+    };
+};
+
+export type PriceTypeCodesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PriceTypeCodesQuery = { priceTypeCodes: Array<string> };
+
+export type DiscountFacetsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type DiscountFacetsQuery = {
+    facets: {
+        items: Array<{ code: string; name: string; values: Array<{ code: string; name: string }> }>;
+    };
+};
+
+export type RequestDiscountGrantMutationVariables = Exact<{
+    input: DiscountGrantInput;
+}>;
+
+export type RequestDiscountGrantMutation = { requestDiscountGrant: { id: string } };
+
+export type ExpiringDiscountGrantsQueryVariables = Exact<{
+    withinDays: Scalars['Int']['input'];
+}>;
+
+export type ExpiringDiscountGrantsQuery = {
+    expiringDiscountGrants: Array<{
+        id: string;
+        validTo: any;
+        counterparties: Array<{ id: string; legalName: string }>;
+    }>;
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -10494,6 +10548,74 @@ export const ManagerDashboardDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<ManagerDashboardQuery, ManagerDashboardQueryVariables>;
+export const DiscountRegistryPageDocument = new TypedDocumentString(`
+    query DiscountRegistryPage($options: DiscountRegistryListOptions) {
+  discountRegistryPage(options: $options) {
+    items {
+      id
+      approvalRequestId
+      discountRuleId
+      status
+      priceTypeCode
+      facetCode
+      facetValueCode
+      percent
+      validFrom
+      validTo
+      justification
+      counterpartyIds
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    DiscountRegistryPageQuery,
+    DiscountRegistryPageQueryVariables
+>;
+export const PriceTypeCodesDocument = new TypedDocumentString(`
+    query PriceTypeCodes {
+  priceTypeCodes
+}
+    `) as unknown as TypedDocumentString<PriceTypeCodesQuery, PriceTypeCodesQueryVariables>;
+export const DiscountFacetsDocument = new TypedDocumentString(`
+    query DiscountFacets {
+  facets(options: {take: 50}) {
+    items {
+      code
+      name
+      values {
+        code
+        name
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<DiscountFacetsQuery, DiscountFacetsQueryVariables>;
+export const RequestDiscountGrantDocument = new TypedDocumentString(`
+    mutation RequestDiscountGrant($input: DiscountGrantInput!) {
+  requestDiscountGrant(input: $input) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    RequestDiscountGrantMutation,
+    RequestDiscountGrantMutationVariables
+>;
+export const ExpiringDiscountGrantsDocument = new TypedDocumentString(`
+    query ExpiringDiscountGrants($withinDays: Int!) {
+  expiringDiscountGrants(withinDays: $withinDays) {
+    id
+    validTo
+    counterparties {
+      id
+      legalName
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExpiringDiscountGrantsQuery,
+    ExpiringDiscountGrantsQueryVariables
+>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {
