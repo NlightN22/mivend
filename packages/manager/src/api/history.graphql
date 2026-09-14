@@ -1,0 +1,25 @@
+fragment EntityVersionRowFields on EntityVersion {
+    id
+    entityName
+    entityId
+    action
+    changedFields
+    administratorId
+    comment
+    createdAt
+}
+
+query EntityVersions($entityName: String!, $entityId: ID!) {
+    entityVersions(entityName: $entityName, entityId: $entityId) {
+        ...EntityVersionRowFields
+    }
+}
+
+query EntityVersionsForEntities($refs: [EntityRefInput!]!, $options: EntityVersionListOptions) {
+    entityVersionsForEntities(refs: $refs, options: $options) {
+        items {
+            ...EntityVersionRowFields
+        }
+        totalItems
+    }
+}

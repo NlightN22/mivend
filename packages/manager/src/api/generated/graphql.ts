@@ -9421,6 +9421,56 @@ export type ExpiringDiscountGrantsQuery = {
     }>;
 };
 
+export type EntityVersionRowFieldsFragment = {
+    id: string;
+    entityName: string;
+    entityId: string;
+    action: string;
+    changedFields: string | null;
+    administratorId: string | null;
+    comment: string | null;
+    createdAt: any;
+};
+
+export type EntityVersionsQueryVariables = Exact<{
+    entityName: Scalars['String']['input'];
+    entityId: Scalars['ID']['input'];
+}>;
+
+export type EntityVersionsQuery = {
+    entityVersions: Array<{
+        id: string;
+        entityName: string;
+        entityId: string;
+        action: string;
+        changedFields: string | null;
+        administratorId: string | null;
+        comment: string | null;
+        createdAt: any;
+    }>;
+};
+
+export type EntityVersionsForEntitiesQueryVariables = Exact<{
+    refs: Array<EntityRefInput> | EntityRefInput;
+    options?: InputMaybe<EntityVersionListOptions>;
+}>;
+
+export type EntityVersionsForEntitiesQuery = {
+    entityVersionsForEntities: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            entityName: string;
+            entityId: string;
+            action: string;
+            changedFields: string | null;
+            administratorId: string | null;
+            comment: string | null;
+            createdAt: any;
+        }>;
+    };
+};
+
 export type FailedIntegrationInboxEventsQueryVariables = Exact<{
     options?: InputMaybe<FailedIntegrationInboxEventListOptions>;
 }>;
@@ -10467,6 +10517,21 @@ export const CustomerOrderItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'CustomerOrderItemFields' },
 ) as unknown as TypedDocumentString<CustomerOrderItemFieldsFragment, unknown>;
+export const EntityVersionRowFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment EntityVersionRowFields on EntityVersion {
+  id
+  entityName
+  entityId
+  action
+  changedFields
+  administratorId
+  comment
+  createdAt
+}
+    `,
+    { fragmentName: 'EntityVersionRowFields' },
+) as unknown as TypedDocumentString<EntityVersionRowFieldsFragment, unknown>;
 export const InvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment InvoiceListItemFields on Invoice {
@@ -11556,6 +11621,44 @@ export const ExpiringDiscountGrantsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ExpiringDiscountGrantsQuery,
     ExpiringDiscountGrantsQueryVariables
+>;
+export const EntityVersionsDocument = new TypedDocumentString(`
+    query EntityVersions($entityName: String!, $entityId: ID!) {
+  entityVersions(entityName: $entityName, entityId: $entityId) {
+    ...EntityVersionRowFields
+  }
+}
+    fragment EntityVersionRowFields on EntityVersion {
+  id
+  entityName
+  entityId
+  action
+  changedFields
+  administratorId
+  comment
+  createdAt
+}`) as unknown as TypedDocumentString<EntityVersionsQuery, EntityVersionsQueryVariables>;
+export const EntityVersionsForEntitiesDocument = new TypedDocumentString(`
+    query EntityVersionsForEntities($refs: [EntityRefInput!]!, $options: EntityVersionListOptions) {
+  entityVersionsForEntities(refs: $refs, options: $options) {
+    items {
+      ...EntityVersionRowFields
+    }
+    totalItems
+  }
+}
+    fragment EntityVersionRowFields on EntityVersion {
+  id
+  entityName
+  entityId
+  action
+  changedFields
+  administratorId
+  comment
+  createdAt
+}`) as unknown as TypedDocumentString<
+    EntityVersionsForEntitiesQuery,
+    EntityVersionsForEntitiesQueryVariables
 >;
 export const FailedIntegrationInboxEventsDocument = new TypedDocumentString(`
     query FailedIntegrationInboxEvents($options: FailedIntegrationInboxEventListOptions) {

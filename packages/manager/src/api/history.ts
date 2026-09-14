@@ -1,15 +1,11 @@
 import { adminApi } from './client';
+import {
+    EntityVersionsDocument,
+    EntityVersionsForEntitiesDocument,
+    type EntityVersionRowFieldsFragment,
+} from './generated/graphql';
 
-export interface EntityVersionRow {
-    id: string;
-    entityName: string;
-    entityId: string;
-    action: string;
-    changedFields: string | null;
-    administratorId: string | null;
-    comment: string | null;
-    createdAt: string;
-}
+export type EntityVersionRow = EntityVersionRowFieldsFragment;
 
 // Gated on CustomPermission.ReadEntityHistory (leadership roles only — department-head,
 // general-director, security-officer, portal-admin) — see infrastructure/scripts/
@@ -19,21 +15,7 @@ export async function fetchEntityVersions(
     entityName: string,
     entityId: string,
 ): Promise<EntityVersionRow[]> {
-    const result = await adminApi<{ entityVersions: EntityVersionRow[] }>(
-        `query($entityName: String!, $entityId: ID!) {
-            entityVersions(entityName: $entityName, entityId: $entityId) {
-                id
-                entityName
-                entityId
-                action
-                changedFields
-                administratorId
-                comment
-                createdAt
-            }
-        }`,
-        { entityName, entityId },
-    );
+    const result = await adminApi(EntityVersionsDocument, { entityName, entityId });
     return result.entityVersions;
 }
 
@@ -71,25 +53,6 @@ export async function fetchEntityVersionsForRefs(
     options: EntityVersionListOptions = {},
 ): Promise<EntityVersionPage> {
     if (refs.length === 0) return { items: [], totalItems: 0 };
-    const result = await adminApi<{
-        entityVersionsForEntities: { items: EntityVersionRow[]; totalItems: number };
-    }>(
-        `query($refs: [EntityRefInput!]!, $options: EntityVersionListOptions) {
-            entityVersionsForEntities(refs: $refs, options: $options) {
-                items {
-                    id
-                    entityName
-                    entityId
-                    action
-                    changedFields
-                    administratorId
-                    comment
-                    createdAt
-                }
-                totalItems
-            }
-        }`,
-        { refs, options },
-    );
+    const result = await adminApi(EntityVersionsForEntitiesDocument, { refs, options });
     return result.entityVersionsForEntities;
 }
