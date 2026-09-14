@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
 import {
     MvAppTopbar,
@@ -11,17 +12,17 @@ import {
     MvNotice,
     MvNotificationBell,
     MvNotificationPanel,
-    useNotifications,
     type AppSidebarItem,
     type AppMobileNavItem,
     type AppMobileSheetItem,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
 import { fetchPendingApprovalsBadgeCount } from '../api/approvals';
-import { notificationTransport } from '../api/notifications';
+import { useNotificationsStore } from '../stores/notifications';
 
-const { notifications, unreadCount, loading: notificationsLoading, markRead, resolve } =
-    useNotifications(notificationTransport);
+const notificationsStore = useNotificationsStore();
+const { notifications, unreadCount, loading: notificationsLoading } = storeToRefs(notificationsStore);
+const { markRead, resolve } = notificationsStore;
 const notificationPanelOpen = ref(false);
 
 const authStore = useAuthStore();

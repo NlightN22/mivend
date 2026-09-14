@@ -4803,10 +4803,8 @@ export type NotificationList = {
     totalItems: Scalars['Int']['output'];
 };
 
-// TODO(issue #92): `search` hand-added because the local dev server hung mid-boot when codegen
-// needed to run against it (shared dist/ contention with a concurrent session) — re-run
-// `pnpm codegen` here once the dev server is healthy to confirm this matches real introspection.
 export type NotificationListOptions = {
+    /** Case-insensitive contains match against title (issue #92 — the full notifications page's search box). */
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     status?: InputMaybe<NotificationStatus>;

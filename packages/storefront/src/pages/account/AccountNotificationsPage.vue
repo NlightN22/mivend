@@ -4,6 +4,11 @@ import { MvPagination, MvInput } from '@mivend/ui-kit';
 import type { NotificationItem, NotificationStatus } from '@mivend/ui-kit';
 import AccountSidebar from './AccountSidebar.vue';
 import { fetchNotifications, markNotificationRead } from '../../api/notifications';
+import { useNotificationsStore } from '../../stores/notifications';
+
+// Same store AppHeader's bell/panel read from (issue #92 follow-up) — marking read here must
+// also refresh it, or the topbar badge goes stale until some unrelated bell action refreshes it.
+const notificationsStore = useNotificationsStore();
 
 // issue #92: the full notifications page the bell panel's "Show all notifications" link opens —
 // real server-side search/status filter/pagination, unlike the panel which only ever shows the
@@ -57,6 +62,7 @@ async function onRowClick(item: NotificationItem): Promise<void> {
     const updated = await markNotificationRead(item.id);
     const index = notifications.value.findIndex(n => n.id === updated.id);
     if (index !== -1) notifications.value[index] = updated;
+    await notificationsStore.refresh();
 }
 
 function formatDate(iso: string): string {

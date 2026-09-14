@@ -199,7 +199,7 @@ export type Collection = Node & {
     breadcrumbs: Array<CollectionBreadcrumb>;
     children?: Maybe<Array<Collection>>;
     createdAt: Scalars['DateTime']['output'];
-    customFields?: Maybe<Scalars['JSON']['output']>;
+    customFields?: Maybe<CollectionCustomFields>;
     description: Scalars['String']['output'];
     featuredAsset?: Maybe<Asset>;
     filters: Array<ConfigurableOperation>;
@@ -226,6 +226,10 @@ export type CollectionBreadcrumb = {
     slug: Scalars['String']['output'];
 };
 
+export type CollectionCustomFields = {
+    visibilityOverride?: Maybe<Scalars['String']['output']>;
+};
+
 export type CollectionFilterParameter = {
     _and?: InputMaybe<Array<CollectionFilterParameter>>;
     _or?: InputMaybe<Array<CollectionFilterParameter>>;
@@ -239,6 +243,7 @@ export type CollectionFilterParameter = {
     productVariantCount?: InputMaybe<NumberOperators>;
     slug?: InputMaybe<StringOperators>;
     updatedAt?: InputMaybe<DateOperators>;
+    visibilityOverride?: InputMaybe<StringOperators>;
 };
 
 export type CollectionList = PaginatedList & {
@@ -279,6 +284,7 @@ export type CollectionSortParameter = {
     productVariantCount?: InputMaybe<SortOrder>;
     slug?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
+    visibilityOverride?: InputMaybe<SortOrder>;
 };
 
 export type CollectionTranslation = {
@@ -2243,6 +2249,19 @@ export enum NotificationKind {
     Warning = 'warning',
 }
 
+export type NotificationList = {
+    items: Array<Notification>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type NotificationListOptions = {
+    /** Case-insensitive contains match against title (issue #92 — the full notifications page's search box). */
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    status?: InputMaybe<NotificationStatus>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export enum NotificationStatus {
     Read = 'read',
     Resolved = 'resolved',
@@ -3375,8 +3394,8 @@ export type Query = {
     myTradingPoints: Array<TradingPoint>;
     /** Returns the possible next states that the activeOrder can transition to */
     nextOrderStates: Array<Scalars['String']['output']>;
-    /** The calling customer's own notifications, newest first (issue #87). */
-    notifications: Array<Notification>;
+    /** The calling customer's own notifications, newest first, server-paginated (issue #87). */
+    notifications: NotificationList;
     /**
      * Returns an Order based on the id. Note that in the Shop API, only orders belonging to the
      * currently-authenticated User may be queried.
@@ -3439,7 +3458,7 @@ export type QueryMyPaymentsArgs = {
 };
 
 export type QueryNotificationsArgs = {
-    status?: InputMaybe<NotificationStatus>;
+    options?: InputMaybe<NotificationListOptions>;
 };
 
 export type QueryOrderArgs = {
@@ -4128,19 +4147,6 @@ export type NotificationFieldsFragment = {
     resolvedAt?: any | null;
     resolution?: string | null;
     createdAt: any;
-};
-
-/** Manually added (hand-edited, not re-generated — see notification service Task 2 commit for
- * why): mirrors the notification plugin's NotificationListOptions input added alongside
- * NotificationList's server-side pagination. */
-// TODO(issue #92): `search` hand-added because the local dev server hung mid-boot when codegen
-// needed to run against it (shared dist/ contention with a concurrent session) — re-run
-// `pnpm codegen` here once the dev server is healthy to confirm this matches real introspection.
-export type NotificationListOptions = {
-    search?: InputMaybe<Scalars['String']['input']>;
-    skip?: InputMaybe<Scalars['Int']['input']>;
-    status?: InputMaybe<NotificationStatus>;
-    take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type NotificationsQueryVariables = Exact<{

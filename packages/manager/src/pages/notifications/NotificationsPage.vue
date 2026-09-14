@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { MvNotice, useLatestRequest, MvFilterChips, type FilterChip } from '@mivend/ui-kit';
 import type { NotificationItem } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import { useNotificationsStore } from '../../stores/notifications';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import NotificationsDataTable from '../../components/notifications/NotificationsDataTable.vue';
 import {
@@ -96,6 +97,10 @@ function onDataTableFilters(filters: { status: string; search: string }): void {
 
 const actingId = ref<string | null>(null);
 const actionError = ref('');
+// Same store DefaultLayout's bell/panel read from (issue #92 follow-up) — acting on a
+// notification here must also refresh it, or the topbar badge silently goes stale until the
+// next unrelated bell action happens to refresh it.
+const notificationsStore = useNotificationsStore();
 
 async function onMarkRead(id: string): Promise<void> {
     actingId.value = id;
@@ -104,7 +109,7 @@ async function onMarkRead(id: string): Promise<void> {
         const updated = await markNotificationRead(id);
         const index = notifications.value.findIndex(n => n.id === updated.id);
         if (index !== -1) notifications.value[index] = updated;
-        await loadCounts();
+        await Promise.all([loadCounts(), notificationsStore.refresh()]);
     } catch (e) {
         actionError.value = e instanceof Error ? e.message : 'Could not mark notification as read';
     } finally {
@@ -119,7 +124,7 @@ async function onResolve(id: string, resolution: string): Promise<void> {
         const updated = await resolveNotification(id, resolution);
         const index = notifications.value.findIndex(n => n.id === updated.id);
         if (index !== -1) notifications.value[index] = updated;
-        await loadCounts();
+        await Promise.all([loadCounts(), notificationsStore.refresh()]);
     } catch (e) {
         actionError.value = e instanceof Error ? e.message : 'Could not resolve notification';
     } finally {
