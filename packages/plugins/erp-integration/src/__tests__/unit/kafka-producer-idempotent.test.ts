@@ -8,9 +8,10 @@ import type { ErpIntegrationPluginOptions } from '../../types';
 // maxInFlightRequests<=5 companions) that resend can duplicate the message on the broker. See
 // this project's earlier gap (mivend audit): the consumer side already dedupes on a stable
 // sourceEventId, but the producer/broker side had no equivalent guarantee at all.
-const producerFactory = vi.fn(() => ({
+const sendMock = vi.fn().mockResolvedValue(undefined);
+const producerFactory = vi.fn((_config: unknown) => ({
     connect: vi.fn().mockResolvedValue(undefined),
-    send: vi.fn().mockResolvedValue(undefined),
+    send: sendMock,
     disconnect: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -25,6 +26,7 @@ vi.mock('kafkajs', () => ({
 describe('KafkaProducerService — producer idempotency', () => {
     beforeEach(() => {
         producerFactory.mockClear();
+        sendMock.mockClear();
     });
 
     it('constructs the underlying kafkajs producer with idempotent:true and its required companions', async () => {
@@ -39,9 +41,11 @@ describe('KafkaProducerService — producer idempotency', () => {
         expect(producerFactory).toHaveBeenCalledWith(
             expect.objectContaining({
                 idempotent: true,
-                acks: -1,
                 maxInFlightRequests: 5,
             }),
         );
+        // acks:-1 is a per-send() option in kafkajs's types, not part of ProducerConfig — see
+        // kafka-producer.service.ts's publish().
+        expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({ acks: -1 }));
     });
 });

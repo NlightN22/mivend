@@ -34,6 +34,10 @@ export class KafkaProducerService implements OnModuleDestroy {
 
         await producer.send({
             topic: this.options.kafka.topic,
+            // acks: -1 (all) — kafkajs requires this on every send() when the producer itself
+            // was created with idempotent: true (see getProducer's own comment); it's a per-send
+            // option in kafkajs's types, not part of ProducerConfig.
+            acks: -1,
             messages: [
                 {
                     key: eventId,
@@ -73,7 +77,6 @@ export class KafkaProducerService implements OnModuleDestroy {
         this.producer = kafka.producer({
             idempotent: true,
             maxInFlightRequests: 5,
-            acks: -1,
         });
         await this.producer.connect();
         return this.producer;
