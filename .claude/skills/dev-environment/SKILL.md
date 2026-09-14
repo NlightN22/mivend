@@ -55,12 +55,26 @@ files) — the failure was going around it.
 3. **`make up`** (Docker infra only: postgres, redis, rabbitmq, elasticsearch) is safe
    to call repeatedly — it does not restart already-running containers.
 
-4. **Never call `make down` (or `docker compose down`, or kill Docker containers
-   directly) without first checking whether a `make dev` stack is currently relying on
-   that infra.** Check `pgrep -f "ts-node-dev|tsc -b|tsc --watch|vite"` first. If dev
-   processes are running that you did not start yourself in this exact task, assume
-   they belong to the user (or another task) and treat the Docker infra as **shared and
-   off-limits to tear down** — even transiently. This applies in particular to:
+4. **`make down` is NOT contour-scoped — it is one `docker compose down` against the
+   single shared `infrastructure/docker/docker-compose.dev.yml`, which every contour
+   (local, branch, staging-integration) uses at once.** There is no
+   `make down-staging-integration` or equivalent. Concretely: `postgres-central`,
+   `redis`, `rabbitmq`, and `elasticsearch` are each ONE container shared by every
+   contour — staging-integration doesn't get its own Postgres container, it's just a
+   separate _database_ (`mivend_central_staging_integration`) inside the same
+   `postgres-central` container local dev's `mivend_central` database also lives in.
+   So `make down` unconditionally kills every contour's infra in one shot, including
+   ones you didn't start and aren't currently working on — this is a real, live
+   incident this project has already hit (a session ran `make down` to stop its own
+   local contour and took out an already-running staging-integration stack with it;
+   `make up` + `make dev-staging-integration` recovered it, data survived because
+   `down` doesn't pass `-v`, but the staging-integration server/worker still crashed
+   and had to be manually restarted). Given that, **never call `make down` without
+   first checking whether a `make dev` stack is currently relying on that infra.**
+   Check `pgrep -f "ts-node-dev|tsc -b|tsc --watch|vite"` first. If dev processes are
+   running that you did not start yourself in this exact task, assume they belong to
+   the user (or another task) and treat the Docker infra as **shared and off-limits to
+   tear down** — even transiently. This applies in particular to:
     - Running `make test-int` — it calls `make up` automatically, but do **not** let it
       (or any script) end with `make down` if a pre-existing dev stack is still up.
       If `make test-int`'s own tooling tears infra down as part of its normal flow,
