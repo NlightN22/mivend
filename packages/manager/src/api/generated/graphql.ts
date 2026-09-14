@@ -9421,6 +9421,29 @@ export type ExpiringDiscountGrantsQuery = {
     }>;
 };
 
+export type FailedIntegrationInboxEventsQueryVariables = Exact<{
+    options?: InputMaybe<FailedIntegrationInboxEventListOptions>;
+}>;
+
+export type FailedIntegrationInboxEventsQuery = {
+    failedIntegrationInboxEvents: {
+        items: Array<{
+            id: string;
+            stream: string;
+            entityId: string;
+            lastError: string | null;
+            attempts: number;
+            updatedAt: any;
+        }>;
+    };
+};
+
+export type RunErpReconciliationMutationVariables = Exact<{ [key: string]: never }>;
+
+export type RunErpReconciliationMutation = {
+    runErpReconciliation: { checked: number; issuesFound: number; skipped: Array<string> };
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -10615,6 +10638,35 @@ export const ExpiringDiscountGrantsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ExpiringDiscountGrantsQuery,
     ExpiringDiscountGrantsQueryVariables
+>;
+export const FailedIntegrationInboxEventsDocument = new TypedDocumentString(`
+    query FailedIntegrationInboxEvents($options: FailedIntegrationInboxEventListOptions) {
+  failedIntegrationInboxEvents(options: $options) {
+    items {
+      id
+      stream
+      entityId
+      lastError
+      attempts
+      updatedAt
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    FailedIntegrationInboxEventsQuery,
+    FailedIntegrationInboxEventsQueryVariables
+>;
+export const RunErpReconciliationDocument = new TypedDocumentString(`
+    mutation RunErpReconciliation {
+  runErpReconciliation {
+    checked
+    issuesFound
+    skipped
+  }
+}
+    `) as unknown as TypedDocumentString<
+    RunErpReconciliationMutation,
+    RunErpReconciliationMutationVariables
 >;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {

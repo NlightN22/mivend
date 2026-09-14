@@ -1,0 +1,20 @@
+query FailedIntegrationInboxEvents($options: FailedIntegrationInboxEventListOptions) {
+    failedIntegrationInboxEvents(options: $options) {
+        items {
+            id
+            stream
+            entityId
+            lastError
+            attempts
+            updatedAt
+        }
+    }
+}
+
+mutation RunErpReconciliation {
+    runErpReconciliation {
+        checked
+        issuesFound
+        skipped
+    }
+}

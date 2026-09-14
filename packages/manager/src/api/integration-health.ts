@@ -1,4 +1,8 @@
 import { adminApi } from './client';
+import {
+    FailedIntegrationInboxEventsDocument,
+    RunErpReconciliationDocument,
+} from './generated/graphql';
 
 // Dashboard "system health" panel for the failed-inbox-events widget (issue #76) — kept in one
 // file per the task's own file-size guidance. The reservation/payment/ERP reconciliation issue
@@ -22,23 +26,7 @@ export interface FailedIntegrationInboxEvent {
 export async function fetchFailedIntegrationInboxEvents(
     take: number,
 ): Promise<FailedIntegrationInboxEvent[]> {
-    const result = await adminApi<{
-        failedIntegrationInboxEvents: { items: FailedIntegrationInboxEvent[] };
-    }>(
-        `query FailedIntegrationInboxEvents($options: FailedIntegrationInboxEventListOptions) {
-            failedIntegrationInboxEvents(options: $options) {
-                items {
-                    id
-                    stream
-                    entityId
-                    lastError
-                    attempts
-                    updatedAt
-                }
-            }
-        }`,
-        { options: { take } },
-    );
+    const result = await adminApi(FailedIntegrationInboxEventsDocument, { options: { take } });
     return result.failedIntegrationInboxEvents.items;
 }
 
@@ -49,14 +37,6 @@ export interface ErpReconciliationRunResult {
 }
 
 export async function runErpReconciliation(): Promise<ErpReconciliationRunResult> {
-    const result = await adminApi<{ runErpReconciliation: ErpReconciliationRunResult }>(
-        `mutation RunErpReconciliation {
-            runErpReconciliation {
-                checked
-                issuesFound
-                skipped
-            }
-        }`,
-    );
+    const result = await adminApi(RunErpReconciliationDocument);
     return result.runErpReconciliation;
 }
