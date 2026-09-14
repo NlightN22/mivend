@@ -29,12 +29,14 @@ describe('ReconciliationLocalCountsService', () => {
         const documentsService = {
             findAllRequisites: async () => overrides.organizations ?? [],
         };
+        const stockQueryBuilder = {
+            where: vi.fn().mockReturnThis(),
+            getCount: vi.fn().mockResolvedValue(overrides.stockLevelCount ?? 0),
+        };
         const connection = {
-            getRepository: (_ctx: unknown, entity: { name: string }) => ({
-                count: async () =>
-                    entity.name === 'ProductVariantPriceEntry'
-                        ? (overrides.priceEntryCount ?? 0)
-                        : (overrides.stockLevelCount ?? 0),
+            getRepository: (_ctx: unknown, _entity: { name: string }) => ({
+                count: async () => overrides.priceEntryCount ?? 0,
+                createQueryBuilder: () => stockQueryBuilder,
             }),
         };
         const service = new ReconciliationLocalCountsService(
@@ -45,7 +47,7 @@ describe('ReconciliationLocalCountsService', () => {
             documentsService as never,
             connection as never,
         );
-        return { service, collectionService };
+        return { service, collectionService, stockQueryBuilder };
     }
 
     it('subtracts the root Collection from the category count', async () => {
@@ -101,8 +103,14 @@ describe('ReconciliationLocalCountsService', () => {
         expect(await service.getLocalActiveCount({} as never, 'price')).toBe(456);
     });
 
-    it('counts stock rows as a plain row count (simplified, not per-fact matched)', async () => {
-        const { service } = makeService({ stockLevelCount: 789 });
+    // A plain StockLevel row count is structurally wrong (Vendure auto-creates a zero-quantity
+    // row per variant regardless of whether any real stock event was ever received) — must be
+    // filtered to rows StockStreamHandler actually wrote real data into.
+    it('counts only StockLevel rows with a real received erpAvailableQuantity, not every row', async () => {
+        const { service, stockQueryBuilder } = makeService({ stockLevelCount: 789 });
         expect(await service.getLocalActiveCount({} as never, 'stock')).toBe(789);
+        expect(stockQueryBuilder.where).toHaveBeenCalledWith(
+            'stockLevel."customFieldsErpavailablequantity" IS NOT NULL',
+        );
     });
 });

@@ -85,8 +85,26 @@ export class ReconciliationLocalCountsService {
             case 'price':
                 return this.connection.getRepository(ctx, ProductVariantPriceEntry).count();
             case 'stock':
-                return this.connection.getRepository(ctx, StockLevel).count();
+                return this.countReceivedStockLevels(ctx);
         }
+    }
+
+    // A plain StockLevel row count (the original simplified metric) is structurally wrong, not
+    // just approximate: Vendure auto-creates a zero-quantity StockLevel for every
+    // (ProductVariant, StockLocation) pair at variant-creation time, regardless of whether a real
+    // `stock` Kafka event was ever received for it — so that count mostly measures "how many
+    // variants exist," not "how many stock facts we hold" (confirmed live: local count stayed
+    // ~51834, matching product count almost exactly, while only 1305 stock events had ever been
+    // received). `customFields.erpAvailableQuantity` (StockStreamHandler's own idempotency/data
+    // marker, set only when a real event was applied) is the source-agnostic signal for "we
+    // actually have a received stock fact here" — works regardless of whether the source stays
+    // Kafka or changes later, unlike counting inbox events directly.
+    private async countReceivedStockLevels(ctx: RequestContext): Promise<number> {
+        return this.connection
+            .getRepository(ctx, StockLevel)
+            .createQueryBuilder('stockLevel')
+            .where('stockLevel."customFieldsErpavailablequantity" IS NOT NULL')
+            .getCount();
     }
 
     private async countCategories(ctx: RequestContext): Promise<number> {
