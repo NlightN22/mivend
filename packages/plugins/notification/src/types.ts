@@ -20,6 +20,7 @@ export interface NotificationList {
 
 export interface NotificationListOptions {
     status?: NotificationStatus;
+    search?: string;
     take?: number;
     skip?: number;
 }

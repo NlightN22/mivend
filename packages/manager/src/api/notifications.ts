@@ -1,6 +1,13 @@
 import { createClient } from 'graphql-ws';
 import type { Client } from 'graphql-ws';
-import type { NotificationItem, NotificationStatus, NotificationTransport } from '@mivend/ui-kit';
+import type {
+    NotificationFetchOptions,
+    NotificationItem,
+    NotificationPage,
+    NotificationStatus,
+    NotificationTransport,
+} from '@mivend/ui-kit';
+import type { SelectOption, StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi, getCapturedAuthToken } from './client';
 import {
     MarkNotificationReadDocument,
@@ -37,11 +44,49 @@ function getWsClient(): Client {
     return wsClient;
 }
 
-export async function fetchNotifications(status?: NotificationStatus): Promise<NotificationItem[]> {
-    const result = await adminApi(NotificationsDocument, {
-        options: status ? { status } : undefined,
-    });
-    return result.notifications.items as NotificationItem[];
+// issue #92: the full /notifications page's status filter + view chips — single source of truth
+// reused by both, per the manager-table-standard skill (point 4/4a).
+export const NOTIFICATION_STATUS_OPTIONS: SelectOption[] = [
+    { value: '', label: 'All statuses' },
+    { value: 'unread', label: 'Unread' },
+    { value: 'read', label: 'Read' },
+    { value: 'resolved', label: 'Resolved' },
+];
+export const NOTIFICATION_STATUS_BADGE_VARIANT: Record<NotificationStatus, StatusBadgeVariant> = {
+    unread: 'warning',
+    read: 'neutral',
+    resolved: 'success',
+};
+
+export async function fetchNotifications(
+    opts: NotificationFetchOptions = {},
+): Promise<NotificationPage> {
+    const result = await adminApi(NotificationsDocument, { options: opts });
+    return result.notifications as NotificationPage;
+}
+
+export interface NotificationViewCounts {
+    all: number;
+    unread: number;
+    read: number;
+    resolved: number;
+}
+
+// One lean COUNT per chip (take: 0 — see manager-table-standard point 4a) rather than deriving
+// counts from whatever page happens to be loaded.
+export async function fetchNotificationViewCounts(): Promise<NotificationViewCounts> {
+    const [all, unread, read, resolved] = await Promise.all([
+        fetchNotifications({ take: 0 }),
+        fetchNotifications({ take: 0, status: 'unread' }),
+        fetchNotifications({ take: 0, status: 'read' }),
+        fetchNotifications({ take: 0, status: 'resolved' }),
+    ]);
+    return {
+        all: all.totalItems,
+        unread: unread.totalItems,
+        read: read.totalItems,
+        resolved: resolved.totalItems,
+    };
 }
 
 function subscribeToNotifications(onReceived: (item: NotificationItem) => void): () => void {
@@ -61,12 +106,15 @@ function subscribeToNotifications(onReceived: (item: NotificationItem) => void):
     );
 }
 
-async function markNotificationRead(id: string): Promise<NotificationItem> {
+export async function markNotificationRead(id: string): Promise<NotificationItem> {
     const result = await adminApi(MarkNotificationReadDocument, { id });
     return result.markNotificationRead as NotificationItem;
 }
 
-async function resolveNotification(id: string, resolution: string): Promise<NotificationItem> {
+export async function resolveNotification(
+    id: string,
+    resolution: string,
+): Promise<NotificationItem> {
     const result = await adminApi(ResolveNotificationDocument, { id, resolution });
     return result.resolveNotification as NotificationItem;
 }

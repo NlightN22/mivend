@@ -92,6 +92,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'notifications',
+                    name: 'notifications',
+                    component: () => import('../pages/notifications/NotificationsPage.vue'),
+                    meta: { requiresAuth: true, title: 'Notifications' },
+                },
+                {
                     path: 'settings',
                     redirect: '/settings/roles',
                 },

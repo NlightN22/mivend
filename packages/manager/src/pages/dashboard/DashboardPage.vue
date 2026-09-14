@@ -114,10 +114,12 @@ onMounted(async () => {
             // ErpReconciliationPanel and the sourceType strings each plugin's reconciliation
             // service writes.
             wantsReconciliationPanels
-                ? fetchNotifications('unread').catch(e => {
-                      console.warn('[dashboard] could not load notifications:', e);
-                      return [] as NotificationItem[];
-                  })
+                ? fetchNotifications({ status: 'unread' })
+                      .then(page => page.items)
+                      .catch(e => {
+                          console.warn('[dashboard] could not load notifications:', e);
+                          return [] as NotificationItem[];
+                      })
                 : Promise.resolve([] as NotificationItem[]),
         ]);
         data.value = dashboard;
@@ -228,9 +230,9 @@ onMounted(async () => {
                     <ErpReconciliationPanel
                         :notifications="erpIssues"
                         @refresh="
-                            fetchNotifications('unread').then(
-                                items =>
-                                    (erpIssues = items
+                            fetchNotifications({ status: 'unread' }).then(
+                                page =>
+                                    (erpIssues = page.items
                                         .filter(n => n.sourceType === 'erp-reconciliation')
                                         .slice(0, HEALTH_PANEL_TAKE)),
                             )

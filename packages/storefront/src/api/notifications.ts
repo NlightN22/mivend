@@ -1,4 +1,9 @@
-import type { NotificationItem, NotificationStatus, NotificationTransport } from '@mivend/ui-kit';
+import type {
+    NotificationFetchOptions,
+    NotificationItem,
+    NotificationPage,
+    NotificationTransport,
+} from '@mivend/ui-kit';
 import { shopApi } from './client';
 import { getNotificationsWsClient } from './notificationsWsClient';
 import {
@@ -32,11 +37,19 @@ function toNotificationItem(fragment: NotificationFieldsFragment): NotificationI
     };
 }
 
-export async function fetchNotifications(status?: NotificationStatus): Promise<NotificationItem[]> {
+export async function fetchNotifications(
+    opts: NotificationFetchOptions = {},
+): Promise<NotificationPage> {
     const result = await shopApi(NotificationsDocument, {
-        options: status ? { status: status as GeneratedNotificationStatus } : undefined,
+        options: {
+            ...opts,
+            status: opts.status ? (opts.status as GeneratedNotificationStatus) : undefined,
+        },
     });
-    return result.notifications.items.map(toNotificationItem);
+    return {
+        items: result.notifications.items.map(toNotificationItem),
+        totalItems: result.notifications.totalItems,
+    };
 }
 
 function subscribeToNotifications(onReceived: (item: NotificationItem) => void): () => void {
@@ -56,7 +69,7 @@ function subscribeToNotifications(onReceived: (item: NotificationItem) => void):
     );
 }
 
-async function markNotificationRead(id: string): Promise<NotificationItem> {
+export async function markNotificationRead(id: string): Promise<NotificationItem> {
     const result = await shopApi(MarkNotificationReadDocument, { id });
     return toNotificationItem(result.markNotificationRead);
 }

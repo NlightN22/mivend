@@ -64,8 +64,10 @@ export { default as MvNotificationPanel } from './components/MvNotificationPanel
 export { useNotifications } from './composables/useNotifications';
 export type { UseNotifications } from './composables/useNotifications';
 export type {
+    NotificationFetchOptions,
     NotificationItem,
     NotificationKind,
+    NotificationPage,
     NotificationStatus,
     NotificationTransport,
 } from './composables/notificationTypes';

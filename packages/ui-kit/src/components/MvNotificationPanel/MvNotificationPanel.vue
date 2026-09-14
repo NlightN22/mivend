@@ -14,6 +14,9 @@ const emit = defineEmits<{
     markRead: [id: string];
     resolve: [id: string, resolution: string];
     close: [];
+    // issue #92: navigates to the portal's own full notifications page — this panel only ever
+    // shows the most recent handful (see useNotifications' PANEL_TAKE), never paginates itself.
+    viewAll: [];
 }>();
 
 // NotificationKind maps 1:1 onto MvNotice's NoticeVariant — same four names, no new palette.
@@ -140,6 +143,16 @@ function formatRelativeTime(value: string): string {
                 </div>
             </li>
         </ul>
+
+        <div v-if="!loading && notifications.length > 0" class="mv-notification-panel__footer">
+            <button
+                type="button"
+                class="mv-notification-panel__view-all"
+                @click="$emit('viewAll')"
+            >
+                Show all notifications
+            </button>
+        </div>
     </div>
 </template>
 
@@ -275,5 +288,22 @@ function formatRelativeTime(value: string): string {
 
 .mv-notification-panel__resolve-form :deep(.mv-input) {
     flex: 1;
+}
+
+.mv-notification-panel__footer {
+    border-top: 1px solid var(--el-border-color, #e4e7ec);
+    padding: 10px 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.mv-notification-panel__view-all {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--el-color-primary-dark-2, #008a70);
 }
 </style>

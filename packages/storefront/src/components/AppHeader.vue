@@ -231,6 +231,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 @mark-read="notificationsStore.markRead"
                 @resolve="notificationsStore.resolve"
                 @close="notificationPanelOpen = false"
+                @view-all="notificationPanelOpen = false; router.push('/account/notifications')"
             />
         </div>
 

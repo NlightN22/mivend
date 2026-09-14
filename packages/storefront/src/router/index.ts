@@ -71,6 +71,11 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'account/notifications',
+                    component: () => import('../pages/account/AccountNotificationsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'payment-stub',
                     component: () => import('../pages/checkout/PaymentStubPage.vue'),
                 },

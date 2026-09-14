@@ -149,6 +149,7 @@ async function handleLogout(): Promise<void> {
                 @mark-read="markRead"
                 @resolve="resolve"
                 @close="notificationPanelOpen = false"
+                @view-all="notificationPanelOpen = false; router.push('/notifications')"
             />
         </div>
         <div class="layout__body">

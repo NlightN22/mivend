@@ -21,8 +21,23 @@ export interface NotificationItem {
     createdAt: string;
 }
 
+// issue #92: fetch() now takes real pagination/search options and returns totalItems alongside
+// the page, instead of always returning "the first 50, whatever that is" with no way to know
+// there's more or to get an accurate unread count once a recipient has more than one page.
+export interface NotificationFetchOptions {
+    status?: NotificationStatus;
+    search?: string;
+    take?: number;
+    skip?: number;
+}
+
+export interface NotificationPage {
+    items: NotificationItem[];
+    totalItems: number;
+}
+
 export interface NotificationTransport {
-    fetch(status?: NotificationStatus): Promise<NotificationItem[]>;
+    fetch(opts?: NotificationFetchOptions): Promise<NotificationPage>;
     subscribe(onReceived: (n: NotificationItem) => void): () => void;
     markRead(id: string): Promise<NotificationItem>;
     resolve(id: string, resolution: string): Promise<NotificationItem>;

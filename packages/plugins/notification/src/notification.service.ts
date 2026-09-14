@@ -27,6 +27,8 @@ export interface CreateNotificationInput {
 
 export interface FindForRecipientOptions {
     status?: NotificationStatus;
+    // Case-insensitive contains match against title (issue #92's full notifications page).
+    search?: string;
     take?: number;
     skip?: number;
 }
@@ -182,6 +184,10 @@ export class NotificationService {
 
         if (opts.status) {
             qb.andWhere('notification.status = :status', { status: opts.status });
+        }
+
+        if (opts.search) {
+            qb.andWhere('notification.title ILIKE :search', { search: `%${opts.search}%` });
         }
 
         const [items, totalItems] = await qb

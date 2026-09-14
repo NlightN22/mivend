@@ -514,3 +514,67 @@ describe('NotificationService.findForRecipient — pagination (component, real P
         expect(negativeSkip.items.length).toBeGreaterThanOrEqual(0);
     });
 });
+
+// issue #92: the full notifications page's search box.
+describe('NotificationService.findForRecipient — search (component, real Postgres)', () => {
+    it('matches title case-insensitively, scoped to the caller as usual', async () => {
+        await notificationService.create({} as never, {
+            recipientType: 'administrator',
+            recipientId: 'admin-search',
+            kind: 'info',
+            sourceType: 'reservation.expiring',
+            sourceId: 'search-1',
+            title: 'Reservation RES-100 expiring soon',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator',
+            recipientId: 'admin-search',
+            kind: 'info',
+            sourceType: 'stock.low',
+            sourceId: 'search-2',
+            title: 'Low stock: SKU-42',
+            message: 'x',
+        });
+        await notificationService.create({} as never, {
+            recipientType: 'administrator',
+            recipientId: 'admin-other',
+            kind: 'info',
+            sourceType: 'reservation.expiring',
+            sourceId: 'search-3',
+            title: 'Reservation RES-999 expiring soon',
+            message: 'x',
+        });
+
+        const page = await notificationService.findForRecipient(
+            fakeAdminCtx(),
+            'administrator',
+            'admin-search',
+            { search: 'reservation' },
+        );
+
+        expect(page.items.map(n => n.sourceId)).toEqual(['search-1']);
+    });
+
+    it('returns nothing when the search term matches no title', async () => {
+        await notificationService.create({} as never, {
+            recipientType: 'administrator',
+            recipientId: 'admin-search-2',
+            kind: 'info',
+            sourceType: 'stock.low',
+            sourceId: 'search-4',
+            title: 'Low stock: SKU-77',
+            message: 'x',
+        });
+
+        const page = await notificationService.findForRecipient(
+            fakeAdminCtx(),
+            'administrator',
+            'admin-search-2',
+            { search: 'nonexistent-term' },
+        );
+
+        expect(page.items).toHaveLength(0);
+        expect(page.totalItems).toBe(0);
+    });
+});

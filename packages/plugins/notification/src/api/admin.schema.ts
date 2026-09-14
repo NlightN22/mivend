@@ -13,6 +13,8 @@ export const adminApiExtensions: DocumentNode = gql`
 
     input NotificationListOptions {
         status: NotificationStatus
+        "Case-insensitive contains match against title (issue #92 — the full notifications page's search box)."
+        search: String
         take: Int
         skip: Int
     }
