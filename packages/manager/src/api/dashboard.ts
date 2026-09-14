@@ -1,23 +1,9 @@
 import { adminApi } from './client';
+import { ManagerDashboardDocument, type ManagerDashboardQuery } from './generated/graphql';
 
-export interface RecentOrder {
-    code: string;
-    state: string;
-    totalWithTax: number;
-    currencyCode: string;
-    orderPlacedAt: string | null;
-    createdAt: string;
-    customer: { firstName: string; lastName: string } | null;
-}
-
-export interface SubmittedApproval {
-    id: string;
-    requestType: string;
-    status: string;
-    currentStepRole: string | null;
-    createdAt: string;
-    decidedAt?: string | null;
-}
+export type RecentOrder = ManagerDashboardQuery['recentOrdersList']['items'][number];
+export type SubmittedApproval =
+    ManagerDashboardQuery['myApprovalRequestsSummary']['recent'][number];
 
 export interface ActivityItem {
     id: string;
@@ -87,75 +73,6 @@ export interface DashboardData {
 const IN_PROGRESS_STATES_EXCLUDED = ['AddingItems', 'Draft', 'Cancelled', 'Delivered'];
 const OVERDUE_AFTER_DAYS = 3;
 
-const DASHBOARD_QUERY = `
-    query ManagerDashboard(
-        $excludedStates: [String!]!
-        $since24h: DateTime!
-        $overdueBefore: DateTime!
-    ) {
-        activeOrders: visibleOrders(options: { filter: { state: { notIn: $excludedStates } } }) {
-            totalItems
-        }
-        activeOrdersLast24h: visibleOrders(
-            options: {
-                filter: { state: { notIn: $excludedStates }, orderPlacedAt: { after: $since24h } }
-            }
-        ) {
-            totalItems
-        }
-        awaitingShipment: visibleOrders(options: { filter: { state: { eq: "PaymentSettled" } } }) {
-            totalItems
-        }
-        overdue: visibleOrders(
-            options: {
-                filter: {
-                    state: { eq: "PaymentSettled" }
-                    orderPlacedAt: { before: $overdueBefore }
-                }
-            }
-        ) {
-            totalItems
-        }
-        recentOrdersList: visibleOrders(
-            options: {
-                take: 20
-                sort: { orderPlacedAt: DESC }
-                filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled"] } }
-            }
-        ) {
-            items {
-                code
-                state
-                totalWithTax
-                currencyCode
-                orderPlacedAt
-                createdAt
-                customer { firstName lastName }
-            }
-        }
-        counterpartySummary {
-            totalCount
-        }
-        unassignedCounterpartyCount
-        myApprovalRequestsSummary(recentLimit: 10) {
-            pendingCount
-            recent {
-                id
-                requestType
-                status
-                currentStepRole
-                createdAt
-                decidedAt
-            }
-        }
-        myApprovalsInbox(awaitingOptions: { take: 0 }, allInvolvedOptions: { take: 0 }) {
-            awaitingMyDecision {
-                totalItems
-            }
-        }
-    }
-`;
-
 export async function fetchDashboardData(): Promise<DashboardData> {
     const now = new Date();
     const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
@@ -163,17 +80,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         now.getTime() - OVERDUE_AFTER_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
 
-    const result = await adminApi<{
-        activeOrders: { totalItems: number };
-        activeOrdersLast24h: { totalItems: number };
-        awaitingShipment: { totalItems: number };
-        overdue: { totalItems: number };
-        recentOrdersList: { items: RecentOrder[] };
-        counterpartySummary: { totalCount: number };
-        unassignedCounterpartyCount: number;
-        myApprovalRequestsSummary: { pendingCount: number; recent: SubmittedApproval[] };
-        myApprovalsInbox: { awaitingMyDecision: { totalItems: number } };
-    }>(DASHBOARD_QUERY, {
+    const result = await adminApi(ManagerDashboardDocument, {
         excludedStates: IN_PROGRESS_STATES_EXCLUDED,
         since24h,
         overdueBefore,

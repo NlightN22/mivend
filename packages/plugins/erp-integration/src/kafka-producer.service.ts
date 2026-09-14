@@ -61,7 +61,20 @@ export class KafkaProducerService implements OnModuleDestroy {
             ssl: this.options.kafka.ssl,
             sasl: this.options.kafka.sasl as SASLOptions | undefined,
         });
-        this.producer = kafka.producer();
+        // idempotent: true — without it, kafkajs's own internal retry on a transient
+        // send failure (broker timeout, leader-not-available, etc.) can duplicate a message on
+        // the broker even though outboxService/the outbox row's own eventId already gives every
+        // payload a stable, de-dupeable key. This closes the gap at the producer/broker level
+        // instead of relying solely on the consumer-side dedup key downstream (see
+        // external-integration-rules skill's "Producer idempotency" section). kafkajs requires
+        // maxInFlightRequests <= 5 and acks: -1 (all) whenever idempotent is true — both are
+        // kafkajs's own enforced defaults for an idempotent producer, set explicitly here so this
+        // doesn't silently break if kafkajs's defaults ever change.
+        this.producer = kafka.producer({
+            idempotent: true,
+            maxInFlightRequests: 5,
+            acks: -1,
+        });
         await this.producer.connect();
         return this.producer;
     }

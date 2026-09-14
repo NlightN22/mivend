@@ -9329,6 +9329,44 @@ export type LastOrderDatesQuery = {
     };
 };
 
+export type ManagerDashboardQueryVariables = Exact<{
+    excludedStates: Array<Scalars['String']['input']> | Scalars['String']['input'];
+    since24h: Scalars['DateTime']['input'];
+    overdueBefore: Scalars['DateTime']['input'];
+}>;
+
+export type ManagerDashboardQuery = {
+    unassignedCounterpartyCount: number;
+    activeOrders: { totalItems: number };
+    activeOrdersLast24h: { totalItems: number };
+    awaitingShipment: { totalItems: number };
+    overdue: { totalItems: number };
+    recentOrdersList: {
+        items: Array<{
+            code: string;
+            state: string;
+            totalWithTax: any;
+            currencyCode: CurrencyCode;
+            orderPlacedAt: any | null;
+            createdAt: any;
+            customer: { firstName: string; lastName: string } | null;
+        }>;
+    };
+    counterpartySummary: { totalCount: number };
+    myApprovalRequestsSummary: {
+        pendingCount: number;
+        recent: Array<{
+            id: string;
+            requestType: string;
+            status: string;
+            currentStepRole: string | null;
+            createdAt: any;
+            decidedAt: any | null;
+        }>;
+    };
+    myApprovalsInbox: { awaitingMyDecision: { totalItems: number } };
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -10396,6 +10434,66 @@ export const LastOrderDatesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<LastOrderDatesQuery, LastOrderDatesQueryVariables>;
+export const ManagerDashboardDocument = new TypedDocumentString(`
+    query ManagerDashboard($excludedStates: [String!]!, $since24h: DateTime!, $overdueBefore: DateTime!) {
+  activeOrders: visibleOrders(
+    options: {filter: {state: {notIn: $excludedStates}}}
+  ) {
+    totalItems
+  }
+  activeOrdersLast24h: visibleOrders(
+    options: {filter: {state: {notIn: $excludedStates}, orderPlacedAt: {after: $since24h}}}
+  ) {
+    totalItems
+  }
+  awaitingShipment: visibleOrders(
+    options: {filter: {state: {eq: "PaymentSettled"}}}
+  ) {
+    totalItems
+  }
+  overdue: visibleOrders(
+    options: {filter: {state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
+  ) {
+    totalItems
+  }
+  recentOrdersList: visibleOrders(
+    options: {take: 20, sort: {orderPlacedAt: DESC}, filter: {state: {notIn: ["AddingItems", "Draft", "Cancelled"]}}}
+  ) {
+    items {
+      code
+      state
+      totalWithTax
+      currencyCode
+      orderPlacedAt
+      createdAt
+      customer {
+        firstName
+        lastName
+      }
+    }
+  }
+  counterpartySummary {
+    totalCount
+  }
+  unassignedCounterpartyCount
+  myApprovalRequestsSummary(recentLimit: 10) {
+    pendingCount
+    recent {
+      id
+      requestType
+      status
+      currentStepRole
+      createdAt
+      decidedAt
+    }
+  }
+  myApprovalsInbox(awaitingOptions: {take: 0}, allInvolvedOptions: {take: 0}) {
+    awaitingMyDecision {
+      totalItems
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<ManagerDashboardQuery, ManagerDashboardQueryVariables>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {

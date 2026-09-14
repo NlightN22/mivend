@@ -1,0 +1,69 @@
+query ManagerDashboard(
+    $excludedStates: [String!]!
+    $since24h: DateTime!
+    $overdueBefore: DateTime!
+) {
+    activeOrders: visibleOrders(options: { filter: { state: { notIn: $excludedStates } } }) {
+        totalItems
+    }
+    activeOrdersLast24h: visibleOrders(
+        options: {
+            filter: { state: { notIn: $excludedStates }, orderPlacedAt: { after: $since24h } }
+        }
+    ) {
+        totalItems
+    }
+    awaitingShipment: visibleOrders(options: { filter: { state: { eq: "PaymentSettled" } } }) {
+        totalItems
+    }
+    overdue: visibleOrders(
+        options: {
+            filter: {
+                state: { eq: "PaymentSettled" }
+                orderPlacedAt: { before: $overdueBefore }
+            }
+        }
+    ) {
+        totalItems
+    }
+    recentOrdersList: visibleOrders(
+        options: {
+            take: 20
+            sort: { orderPlacedAt: DESC }
+            filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled"] } }
+        }
+    ) {
+        items {
+            code
+            state
+            totalWithTax
+            currencyCode
+            orderPlacedAt
+            createdAt
+            customer {
+                firstName
+                lastName
+            }
+        }
+    }
+    counterpartySummary {
+        totalCount
+    }
+    unassignedCounterpartyCount
+    myApprovalRequestsSummary(recentLimit: 10) {
+        pendingCount
+        recent {
+            id
+            requestType
+            status
+            currentStepRole
+            createdAt
+            decidedAt
+        }
+    }
+    myApprovalsInbox(awaitingOptions: { take: 0 }, allInvolvedOptions: { take: 0 }) {
+        awaitingMyDecision {
+            totalItems
+        }
+    }
+}
