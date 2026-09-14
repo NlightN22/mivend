@@ -10252,6 +10252,24 @@ export type SystemHealthCheckDataQuery = {
     paymentMethods: { items: Array<{ enabled: boolean }> };
 };
 
+export type DepartmentsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type DepartmentsQuery = { departments: Array<{ id: string; erpId: string; name: string }> };
+
+export type TeamDirectoryQueryVariables = Exact<{ [key: string]: never }>;
+
+export type TeamDirectoryQuery = {
+    teamDirectory: Array<{
+        id: string;
+        firstName: string | null;
+        lastName: string | null;
+        roleCodes: Array<string>;
+        departmentId: string | null;
+        branchId: string | null;
+        position: string | null;
+    }>;
+};
+
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -12494,3 +12512,25 @@ export const SystemHealthCheckDataDocument = new TypedDocumentString(`
     SystemHealthCheckDataQuery,
     SystemHealthCheckDataQueryVariables
 >;
+export const DepartmentsDocument = new TypedDocumentString(`
+    query Departments {
+  departments {
+    id
+    erpId
+    name
+  }
+}
+    `) as unknown as TypedDocumentString<DepartmentsQuery, DepartmentsQueryVariables>;
+export const TeamDirectoryDocument = new TypedDocumentString(`
+    query TeamDirectory {
+  teamDirectory {
+    id
+    firstName
+    lastName
+    roleCodes
+    departmentId
+    branchId
+    position
+  }
+}
+    `) as unknown as TypedDocumentString<TeamDirectoryQuery, TeamDirectoryQueryVariables>;

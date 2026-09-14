@@ -1,5 +1,6 @@
 import { adminApi } from './client';
 import { fetchBranchOptions, type BranchOption } from './orders';
+import { DepartmentsDocument, TeamDirectoryDocument } from './generated/graphql';
 
 export interface DepartmentOption {
     id: string;
@@ -18,9 +19,7 @@ export interface TeamDirectoryMember {
 }
 
 export async function fetchDepartments(): Promise<DepartmentOption[]> {
-    const result = await adminApi<{ departments: DepartmentOption[] }>(
-        `query Departments { departments { id erpId name } }`,
-    );
+    const result = await adminApi(DepartmentsDocument);
     return result.departments;
 }
 
@@ -33,18 +32,6 @@ export type { BranchOption };
 // Deliberately a separate query from teamMembers (used by manager pickers/filters elsewhere,
 // e.g. Orders/Customers), which always returns real names — see that resolver's doc comment.
 export async function fetchTeamDirectory(): Promise<TeamDirectoryMember[]> {
-    const result = await adminApi<{ teamDirectory: TeamDirectoryMember[] }>(
-        `query TeamDirectory {
-            teamDirectory {
-                id
-                firstName
-                lastName
-                roleCodes
-                departmentId
-                branchId
-                position
-            }
-        }`,
-    );
+    const result = await adminApi(TeamDirectoryDocument);
     return result.teamDirectory;
 }

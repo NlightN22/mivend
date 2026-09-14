@@ -1,0 +1,19 @@
+query Departments {
+    departments {
+        id
+        erpId
+        name
+    }
+}
+
+query TeamDirectory {
+    teamDirectory {
+        id
+        firstName
+        lastName
+        roleCodes
+        departmentId
+        branchId
+        position
+    }
+}
