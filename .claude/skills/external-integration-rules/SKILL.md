@@ -147,6 +147,34 @@ discrepancy found using this data becomes a `PaymentReconciliationIssue`. Genera
 specific to payments: any future integration with an external system must persist that system's
 own reference, not only this platform's internal id.
 
+## Hierarchical/catalog-like entities — check for a folder/group discriminator first
+
+Real incident, issue #94: 1C's warehouse tree includes folder/group nodes (e.g. "Branch X,
+Address Y (group)"), not just real leaf warehouses. `warehouse_changed.proto` already carried the
+discriminator (`bool is_folder = 8`, `optional string parent_id = 7`), but the handler read only
+`name`/`branchId`/`isActive`/`isDeleted` and created a real Vendure `StockLocation` for every row
+unconditionally — folders got treated as physical warehouses, with stock quantities that made no
+physical sense, and it went undetected until someone spotted it live in production admin.
+
+**Before writing a new Kafka consumer/stream handler for any hierarchical or catalog-like 1C
+entity** (warehouses, categories, organizational units, price groups, or anything else with a
+natural parent/child or folder structure in 1C):
+
+1. Check the proto contract for a folder/group/hierarchy discriminator field (`is_folder`,
+   `is_group`, `parent_id`, or similarly named).
+2. If the field exists, the handler must explicitly branch on it — read it with the same
+   `=== true` explicit-boolean pattern already used for `isActive`/`isDeleted` (proto3 omits
+   false/zero values on the wire, see `types.ts`) — or explicitly document in a comment why it's
+   safe to ignore. Never assume a flat list once a hierarchy field is visible in the contract.
+3. If no such field is visible in the contract but the entity is plausibly hierarchical in 1C
+   (folders/groups are a common 1C catalog pattern), stop and ask the user/domain owner how
+   folder/group nodes should be represented on this stream — or get explicit confirmation that 1C
+   never sends them here — rather than assuming a flat list and finding out live in production.
+
+As of issue #94, `warehouse_changed.proto` is the only contract under
+`event-contracts/proto/company/` with this kind of field — re-check this per-entity whenever a new
+handler is added or an existing one is touched, since 1C is free to add a similar flag later.
+
 ## Testing — never against the real external system
 
 Automated tests (any level) mock the external transport boundary (Kafka broker, Schema Registry
