@@ -1,31 +1,17 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
+import {
+    BranchesDocument,
+    DeleteTableViewDocument,
+    MyTableViewsDocument,
+    OrdersPageDocument,
+    OrdersSummaryDocument,
+    SaveTableViewDocument,
+    TeamMembersDocument,
+    type OrderListItemFieldsFragment,
+} from './generated/graphql';
 
-export interface OrderListItem {
-    id: string;
-    code: string;
-    state: string;
-    totalWithTax: number;
-    currencyCode: string;
-    orderPlacedAt: string | null;
-    // Informational "when this order was formed" date, shown in the Date placed column — distinct
-    // from orderPlacedAt (which stays the KPI/overdue/sort semantic: only set once an order is
-    // actually placed via checkout, real orders like abandoned carts or cancelled-before-placement
-    // orders never get it). createdAt is a real Vendure base-entity field, always populated.
-    createdAt: string;
-    customFields: { reservationState: string } | null;
-    customer: {
-        firstName: string;
-        lastName: string;
-        counterparty: {
-            shortName: string;
-            inn: string | null;
-            priceType: string;
-            assignedManagerId: string | null;
-            branchId: string | null;
-        } | null;
-    } | null;
-}
+export type OrderListItem = OrderListItemFieldsFragment;
 
 export interface OrdersFilters {
     // Index signature lets OrdersFilters satisfy useUrlSyncedState's generic Record<string,
@@ -123,22 +109,6 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
     return filter;
 }
 
-const ORDER_ITEM_FIELDS = `
-    id
-    code
-    state
-    totalWithTax
-    currencyCode
-    orderPlacedAt
-    createdAt
-    customFields { reservationState }
-    customer {
-        firstName
-        lastName
-        counterparty { shortName inn priceType assignedManagerId branchId }
-    }
-`;
-
 // Real Vendure OrderSortParameter keys only — the PrimeVue DataTable's own column `field` names
 // (see OrdersDataTable.vue) don't all match 1:1 (e.g. its 'total'/'date' columns sort by
 // totalWithTax/orderPlacedAt), so callers map through this before building the `sort` object.
@@ -153,26 +123,16 @@ export async function fetchOrdersPage(
     // "newest first" behavior when omitted.
     sort: Partial<Record<OrderSortField, 'ASC' | 'DESC'>> = { createdAt: 'DESC' },
 ): Promise<{ items: OrderListItem[]; totalItems: number }> {
-    const result = await adminApi<{
-        visibleOrders: { items: OrderListItem[]; totalItems: number };
-    }>(
-        `query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
-            visibleOrders(options: $options, managerId: $managerId, search: $search) {
-                totalItems
-                items { ${ORDER_ITEM_FIELDS} }
-            }
-        }`,
-        {
-            options: {
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                sort,
-                filter: buildFilter(filters),
-            },
-            managerId: filters.managerId || undefined,
-            search: filters.search || undefined,
+    const result = await adminApi(OrdersPageDocument, {
+        options: {
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+            sort,
+            filter: buildFilter(filters),
         },
-    );
+        managerId: filters.managerId || undefined,
+        search: filters.search || undefined,
+    });
     return result.visibleOrders;
 }
 
@@ -207,68 +167,7 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
         now.getTime() - OVERDUE_AFTER_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
 
-    const result = await adminApi<{
-        open: { totalItems: number };
-        overdue: { totalItems: number };
-        today: { totalItems: number; items: { totalWithTax: number }[] };
-        processing: { totalItems: number };
-        drafts: { totalItems: number };
-        allOpen: {
-            items: {
-                id: string;
-                code: string;
-                state: string;
-                orderPlacedAt: string | null;
-                totalWithTax: number;
-                currencyCode: string;
-                customer: { firstName: string; lastName: string } | null;
-            }[];
-        };
-        pendingPriceAdjustmentOrderIds: string[];
-    }>(
-        `query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
-            open: visibleOrders(options: { filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } } }) {
-                totalItems
-            }
-            overdue: visibleOrders(
-                options: { filter: { state: { eq: "PaymentSettled" }, orderPlacedAt: { before: $overdueBefore } } }
-            ) {
-                totalItems
-            }
-            today: visibleOrders(options: { take: 500, filter: { orderPlacedAt: { after: $todayStart } } }) {
-                totalItems
-                items { totalWithTax }
-            }
-            processing: visibleOrders(options: { filter: { state: { eq: "PaymentAuthorized" } } }) {
-                totalItems
-            }
-            drafts: visibleOrders(options: { filter: { state: { eq: "Draft" } } }) {
-                totalItems
-            }
-            # Capped at 500 rows — there is no server-side SUM aggregate on the order list yet,
-            # so "total amount"/attention/waiting-approval below are derived from this page
-            # client-side. Fine for realistic scope sizes today; revisit with real aggregates
-            # if that changes.
-            allOpen: visibleOrders(
-                options: {
-                    take: 500
-                    filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } }
-                }
-            ) {
-                items {
-                    id
-                    code
-                    state
-                    orderPlacedAt
-                    totalWithTax
-                    currencyCode
-                    customer { firstName lastName }
-                }
-            }
-            pendingPriceAdjustmentOrderIds
-        }`,
-        { overdueBefore, todayStart },
-    );
+    const result = await adminApi(OrdersSummaryDocument, { overdueBefore, todayStart });
 
     const pendingIds = new Set(result.pendingPriceAdjustmentOrderIds);
     const overdueBeforeMs = new Date(overdueBefore).getTime();
@@ -386,15 +285,7 @@ export interface ManagerOption {
 }
 
 export async function fetchManagerOptions(): Promise<ManagerOption[]> {
-    const result = await adminApi<{
-        teamMembers: {
-            id: string;
-            firstName: string;
-            lastName: string;
-            emailAddress: string;
-            roleCodes: string[];
-        }[];
-    }>(`query TeamMembers { teamMembers { id firstName lastName emailAddress roleCodes } }`);
+    const result = await adminApi(TeamMembersDocument);
     return result.teamMembers.map(a => ({
         id: a.id,
         name: `${a.firstName} ${a.lastName}`,
@@ -411,9 +302,7 @@ export interface BranchOption {
 }
 
 export async function fetchBranchOptions(): Promise<BranchOption[]> {
-    const result = await adminApi<{ branches: { erpId: string; name: string }[] }>(
-        `query Branches { branches { erpId name } }`,
-    );
+    const result = await adminApi(BranchesDocument);
     return result.branches;
 }
 
@@ -424,15 +313,8 @@ export interface SavedTableView {
     visibleColumns: string[];
 }
 
-const SAVED_TABLE_VIEW_FIELDS = `id name filters visibleColumns`;
-
 export async function fetchMyTableViews(pageKey: string): Promise<SavedTableView[]> {
-    const result = await adminApi<{ myTableViews: SavedTableView[] }>(
-        `query MyTableViews($pageKey: String!) {
-            myTableViews(pageKey: $pageKey) { ${SAVED_TABLE_VIEW_FIELDS} }
-        }`,
-        { pageKey },
-    );
+    const result = await adminApi(MyTableViewsDocument, { pageKey });
     return result.myTableViews;
 }
 
@@ -442,23 +324,16 @@ export async function saveTableView(
     filters: string,
     visibleColumns: string[],
 ): Promise<SavedTableView> {
-    const result = await adminApi<{ saveTableView: SavedTableView }>(
-        `mutation SaveTableView($pageKey: String!, $name: String!, $filters: String!, $visibleColumns: [String!]!) {
-            saveTableView(pageKey: $pageKey, name: $name, filters: $filters, visibleColumns: $visibleColumns) {
-                ${SAVED_TABLE_VIEW_FIELDS}
-            }
-        }`,
-        { pageKey, name, filters, visibleColumns },
-    );
+    const result = await adminApi(SaveTableViewDocument, {
+        pageKey,
+        name,
+        filters,
+        visibleColumns,
+    });
     return result.saveTableView;
 }
 
 export async function deleteTableView(id: string): Promise<boolean> {
-    const result = await adminApi<{ deleteTableView: boolean }>(
-        `mutation DeleteTableView($id: ID!) {
-            deleteTableView(id: $id)
-        }`,
-        { id },
-    );
+    const result = await adminApi(DeleteTableViewDocument, { id });
     return result.deleteTableView;
 }

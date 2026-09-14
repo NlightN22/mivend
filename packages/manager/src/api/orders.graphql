@@ -1,0 +1,138 @@
+fragment OrderListItemFields on Order {
+    id
+    code
+    state
+    totalWithTax
+    currencyCode
+    orderPlacedAt
+    createdAt
+    customFields {
+        reservationState
+    }
+    customer {
+        firstName
+        lastName
+        counterparty {
+            shortName
+            inn
+            priceType
+            assignedManagerId
+            branchId
+        }
+    }
+}
+
+query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
+    visibleOrders(options: $options, managerId: $managerId, search: $search) {
+        totalItems
+        items {
+            ...OrderListItemFields
+        }
+    }
+}
+
+query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
+    open: visibleOrders(
+        options: {
+            filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } }
+        }
+    ) {
+        totalItems
+    }
+    overdue: visibleOrders(
+        options: {
+            filter: {
+                state: { eq: "PaymentSettled" }
+                orderPlacedAt: { before: $overdueBefore }
+            }
+        }
+    ) {
+        totalItems
+    }
+    today: visibleOrders(options: { take: 500, filter: { orderPlacedAt: { after: $todayStart } } }) {
+        totalItems
+        items {
+            totalWithTax
+        }
+    }
+    processing: visibleOrders(options: { filter: { state: { eq: "PaymentAuthorized" } } }) {
+        totalItems
+    }
+    drafts: visibleOrders(options: { filter: { state: { eq: "Draft" } } }) {
+        totalItems
+    }
+    # Capped at 500 rows — there is no server-side SUM aggregate on the order list yet,
+    # so "total amount"/attention/waiting-approval below are derived from this page
+    # client-side. Fine for realistic scope sizes today; revisit with real aggregates
+    # if that changes.
+    allOpen: visibleOrders(
+        options: {
+            take: 500
+            filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } }
+        }
+    ) {
+        items {
+            id
+            code
+            state
+            orderPlacedAt
+            totalWithTax
+            currencyCode
+            customer {
+                firstName
+                lastName
+            }
+        }
+    }
+    pendingPriceAdjustmentOrderIds
+}
+
+query TeamMembers {
+    teamMembers {
+        id
+        firstName
+        lastName
+        emailAddress
+        roleCodes
+    }
+}
+
+query Branches {
+    branches {
+        erpId
+        name
+    }
+}
+
+fragment SavedTableViewFields on SavedTableView {
+    id
+    name
+    filters
+    visibleColumns
+}
+
+query MyTableViews($pageKey: String!) {
+    myTableViews(pageKey: $pageKey) {
+        ...SavedTableViewFields
+    }
+}
+
+mutation SaveTableView(
+    $pageKey: String!
+    $name: String!
+    $filters: String!
+    $visibleColumns: [String!]!
+) {
+    saveTableView(
+        pageKey: $pageKey
+        name: $name
+        filters: $filters
+        visibleColumns: $visibleColumns
+    ) {
+        ...SavedTableViewFields
+    }
+}
+
+mutation DeleteTableView($id: ID!) {
+    deleteTableView(id: $id)
+}

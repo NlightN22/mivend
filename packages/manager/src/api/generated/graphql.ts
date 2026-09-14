@@ -9845,6 +9845,139 @@ export type RelatedDocumentsQuery = {
     };
 };
 
+export type OrderListItemFieldsFragment = {
+    id: string;
+    code: string;
+    state: string;
+    totalWithTax: any;
+    currencyCode: CurrencyCode;
+    orderPlacedAt: any | null;
+    createdAt: any;
+    customFields: { reservationState: string | null } | null;
+    customer: {
+        firstName: string;
+        lastName: string;
+        counterparty: {
+            shortName: string;
+            inn: string | null;
+            priceType: string;
+            assignedManagerId: string | null;
+            branchId: string | null;
+        } | null;
+    } | null;
+};
+
+export type OrdersPageQueryVariables = Exact<{
+    options?: InputMaybe<OrderListOptions>;
+    managerId?: InputMaybe<Scalars['ID']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type OrdersPageQuery = {
+    visibleOrders: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            code: string;
+            state: string;
+            totalWithTax: any;
+            currencyCode: CurrencyCode;
+            orderPlacedAt: any | null;
+            createdAt: any;
+            customFields: { reservationState: string | null } | null;
+            customer: {
+                firstName: string;
+                lastName: string;
+                counterparty: {
+                    shortName: string;
+                    inn: string | null;
+                    priceType: string;
+                    assignedManagerId: string | null;
+                    branchId: string | null;
+                } | null;
+            } | null;
+        }>;
+    };
+};
+
+export type OrdersSummaryQueryVariables = Exact<{
+    overdueBefore: Scalars['DateTime']['input'];
+    todayStart: Scalars['DateTime']['input'];
+}>;
+
+export type OrdersSummaryQuery = {
+    pendingPriceAdjustmentOrderIds: Array<string>;
+    open: { totalItems: number };
+    overdue: { totalItems: number };
+    today: { totalItems: number; items: Array<{ totalWithTax: any }> };
+    processing: { totalItems: number };
+    drafts: { totalItems: number };
+    allOpen: {
+        items: Array<{
+            id: string;
+            code: string;
+            state: string;
+            orderPlacedAt: any | null;
+            totalWithTax: any;
+            currencyCode: CurrencyCode;
+            customer: { firstName: string; lastName: string } | null;
+        }>;
+    };
+};
+
+export type TeamMembersQueryVariables = Exact<{ [key: string]: never }>;
+
+export type TeamMembersQuery = {
+    teamMembers: Array<{
+        id: string;
+        firstName: string;
+        lastName: string;
+        emailAddress: string;
+        roleCodes: Array<string>;
+    }>;
+};
+
+export type BranchesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type BranchesQuery = { branches: Array<{ erpId: string; name: string }> };
+
+export type SavedTableViewFieldsFragment = {
+    id: string;
+    name: string;
+    filters: string;
+    visibleColumns: Array<string>;
+};
+
+export type MyTableViewsQueryVariables = Exact<{
+    pageKey: Scalars['String']['input'];
+}>;
+
+export type MyTableViewsQuery = {
+    myTableViews: Array<{
+        id: string;
+        name: string;
+        filters: string;
+        visibleColumns: Array<string>;
+    }>;
+};
+
+export type SaveTableViewMutationVariables = Exact<{
+    pageKey: Scalars['String']['input'];
+    name: Scalars['String']['input'];
+    filters: Scalars['String']['input'];
+    visibleColumns: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
+
+export type SaveTableViewMutation = {
+    saveTableView: { id: string; name: string; filters: string; visibleColumns: Array<string> };
+};
+
+export type DeleteTableViewMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type DeleteTableViewMutation = { deleteTableView: boolean };
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -10109,6 +10242,45 @@ export const DraftOrderFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'DraftOrderFields' },
 ) as unknown as TypedDocumentString<DraftOrderFieldsFragment, unknown>;
+export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment OrderListItemFields on Order {
+  id
+  code
+  state
+  totalWithTax
+  currencyCode
+  orderPlacedAt
+  createdAt
+  customFields {
+    reservationState
+  }
+  customer {
+    firstName
+    lastName
+    counterparty {
+      shortName
+      inn
+      priceType
+      assignedManagerId
+      branchId
+    }
+  }
+}
+    `,
+    { fragmentName: 'OrderListItemFields' },
+) as unknown as TypedDocumentString<OrderListItemFieldsFragment, unknown>;
+export const SavedTableViewFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment SavedTableViewFields on SavedTableView {
+  id
+  name
+  filters
+  visibleColumns
+}
+    `,
+    { fragmentName: 'SavedTableViewFields' },
+) as unknown as TypedDocumentString<SavedTableViewFieldsFragment, unknown>;
 export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     mutation ChangeOwnPassword($password: String!) {
   updateActiveAdministrator(input: {password: $password}) {
@@ -11581,6 +11753,136 @@ export const RelatedDocumentsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<RelatedDocumentsQuery, RelatedDocumentsQueryVariables>;
+export const OrdersPageDocument = new TypedDocumentString(`
+    query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
+  visibleOrders(options: $options, managerId: $managerId, search: $search) {
+    totalItems
+    items {
+      ...OrderListItemFields
+    }
+  }
+}
+    fragment OrderListItemFields on Order {
+  id
+  code
+  state
+  totalWithTax
+  currencyCode
+  orderPlacedAt
+  createdAt
+  customFields {
+    reservationState
+  }
+  customer {
+    firstName
+    lastName
+    counterparty {
+      shortName
+      inn
+      priceType
+      assignedManagerId
+      branchId
+    }
+  }
+}`) as unknown as TypedDocumentString<OrdersPageQuery, OrdersPageQueryVariables>;
+export const OrdersSummaryDocument = new TypedDocumentString(`
+    query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
+  open: visibleOrders(
+    options: {filter: {state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
+  ) {
+    totalItems
+  }
+  overdue: visibleOrders(
+    options: {filter: {state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
+  ) {
+    totalItems
+  }
+  today: visibleOrders(
+    options: {take: 500, filter: {orderPlacedAt: {after: $todayStart}}}
+  ) {
+    totalItems
+    items {
+      totalWithTax
+    }
+  }
+  processing: visibleOrders(options: {filter: {state: {eq: "PaymentAuthorized"}}}) {
+    totalItems
+  }
+  drafts: visibleOrders(options: {filter: {state: {eq: "Draft"}}}) {
+    totalItems
+  }
+  allOpen: visibleOrders(
+    options: {take: 500, filter: {state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
+  ) {
+    items {
+      id
+      code
+      state
+      orderPlacedAt
+      totalWithTax
+      currencyCode
+      customer {
+        firstName
+        lastName
+      }
+    }
+  }
+  pendingPriceAdjustmentOrderIds
+}
+    `) as unknown as TypedDocumentString<OrdersSummaryQuery, OrdersSummaryQueryVariables>;
+export const TeamMembersDocument = new TypedDocumentString(`
+    query TeamMembers {
+  teamMembers {
+    id
+    firstName
+    lastName
+    emailAddress
+    roleCodes
+  }
+}
+    `) as unknown as TypedDocumentString<TeamMembersQuery, TeamMembersQueryVariables>;
+export const BranchesDocument = new TypedDocumentString(`
+    query Branches {
+  branches {
+    erpId
+    name
+  }
+}
+    `) as unknown as TypedDocumentString<BranchesQuery, BranchesQueryVariables>;
+export const MyTableViewsDocument = new TypedDocumentString(`
+    query MyTableViews($pageKey: String!) {
+  myTableViews(pageKey: $pageKey) {
+    ...SavedTableViewFields
+  }
+}
+    fragment SavedTableViewFields on SavedTableView {
+  id
+  name
+  filters
+  visibleColumns
+}`) as unknown as TypedDocumentString<MyTableViewsQuery, MyTableViewsQueryVariables>;
+export const SaveTableViewDocument = new TypedDocumentString(`
+    mutation SaveTableView($pageKey: String!, $name: String!, $filters: String!, $visibleColumns: [String!]!) {
+  saveTableView(
+    pageKey: $pageKey
+    name: $name
+    filters: $filters
+    visibleColumns: $visibleColumns
+  ) {
+    ...SavedTableViewFields
+  }
+}
+    fragment SavedTableViewFields on SavedTableView {
+  id
+  name
+  filters
+  visibleColumns
+}`) as unknown as TypedDocumentString<SaveTableViewMutation, SaveTableViewMutationVariables>;
+export const DeleteTableViewDocument = new TypedDocumentString(`
+    mutation DeleteTableView($id: ID!) {
+  deleteTableView(id: $id)
+}
+    `) as unknown as TypedDocumentString<DeleteTableViewMutation, DeleteTableViewMutationVariables>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {
