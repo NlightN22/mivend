@@ -28,10 +28,29 @@ files) — the failure was going around it.
    `ts-node-dev`/`vite` command directly, except for isolated single-component
    debugging — and even then, kill that process before finishing (see AGENTS.md).
 
-2. **`make dev` is not idempotent.** Before calling it, check
-   `pgrep -f "ts-node-dev|tsc -b|tsc --watch|vite" | wc -l`. If non-zero, something is
-   already running — do not call `make dev` again on top of it. Investigate first
-   (is it healthy? is it yours or the user's?).
+2. **`make dev` is not idempotent for the same contour.** Running it twice for the
+   _same_ contour (same env file — e.g. local dev twice) creates duplicate `tsc --watch`
+   processes fighting over the same ports/DB. Before calling it, check
+   `pgrep -f "ts-node-dev|tsc -b|tsc --watch|vite" | wc -l` — but a non-zero count by
+   itself does **not** mean "don't start local dev": it can just as well mean a
+   _different_ contour is already running (e.g. `make dev-staging-integration` on its
+   own ports/env, per `docs/environments.md`'s contour model). Identify what's actually
+   running before deciding:
+    - Inspect the matched processes (`pgrep -af ...`) and check each one's env
+      (`tr '\0' '\n' < /proc/<pid>/environ | grep -E '^PORT=|^INSTANCE'`) or the ports
+      they're listening on (`ss -ltnp`) to tell which contour(s) they belong to.
+    - **Two or more running instances of the _same_ contour** (e.g. local dev already
+      up and you're about to run `make dev` again, or `make dev-staging-integration`
+      already up and about to run it again) — do not start another; that's the
+      idempotency violation this rule exists to prevent.
+    - **A different contour already running** (e.g. staging-integration up, you need
+      local dev, or vice versa) is fine to start alongside it — they run on separate
+      ports/env/DBs by design and don't collide. Starting it is a normal, safe action,
+      not one that additionally requires asking the user first (asking is still fine
+      when genuinely unsure which case applies).
+      Direct `pnpm`/`ts-node-dev`/`vite` invocations bypassing the Makefile remain
+      forbidden regardless of how many contours are running — that's rule 1, a separate
+      concern from this idempotency check.
 
 3. **`make up`** (Docker infra only: postgres, redis, rabbitmq, elasticsearch) is safe
    to call repeatedly — it does not restart already-running containers.

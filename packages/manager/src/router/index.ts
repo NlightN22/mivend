@@ -120,6 +120,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'settings/category-visibility',
+                    name: 'settings-category-visibility',
+                    component: () => import('../pages/settings/CategoryVisibilityPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'settings/security',
                     name: 'settings-security',
                     component: () => import('../pages/settings/SecurityPage.vue'),

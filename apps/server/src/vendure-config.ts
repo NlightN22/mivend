@@ -270,6 +270,30 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'ERP available quantity' }],
             },
         ],
+        Collection: [
+            {
+                // Issue #90: manual visibility decision that must survive the next Kafka
+                // isActive/isDeleted recompute (CategoryStreamHandler.ensureCollection reads
+                // this before applying the feed). Null = no override, feed drives isPrivate as
+                // before. A nullable boolean would render as an unreadable three-way checkbox in
+                // Vendure's auto-generated custom-field admin form, so this is a string enum
+                // instead (Auto/Hidden/Visible).
+                name: 'visibilityOverride',
+                type: 'string',
+                nullable: true,
+                options: [
+                    {
+                        value: 'hidden',
+                        label: [{ languageCode: LanguageCode.en, value: 'Hidden' }],
+                    },
+                    {
+                        value: 'visible',
+                        label: [{ languageCode: LanguageCode.en, value: 'Visible' }],
+                    },
+                ],
+                label: [{ languageCode: LanguageCode.en, value: 'Visibility Override' }],
+            },
+        ],
         GlobalSettings: [
             {
                 // Admin-controlled toggle (Settings screen in Admin UI — customFields on

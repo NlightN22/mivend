@@ -196,6 +196,10 @@ const ROLES = [
             // covers all of them) — required for the manager portal's Settings > System health
             // page (issue #76) to read Vendure's own base configuration.
             'ReadSettings',
+            // Native Vendure permission gating updateCollection — required for the manager
+            // portal's Settings > Category visibility page (issue #90) to write
+            // Collection.customFields.visibilityOverride.
+            'UpdateCatalog',
         ],
         accessScopeConfig: { counterparty: 'all', order: 'all', teamVisibility: 'all', invoice: 'all' },
     },

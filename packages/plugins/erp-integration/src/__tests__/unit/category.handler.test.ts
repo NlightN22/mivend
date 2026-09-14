@@ -3,7 +3,11 @@ import type { RequestContext } from '@vendure/core';
 
 import { CategoryStreamHandler } from '../../handlers/category.handler';
 
-function createServices(existingCollection: { id: string } | undefined) {
+function createServices(
+    existingCollection:
+        | { id: string; customFields?: { visibilityOverride?: string | null } }
+        | undefined,
+) {
     const facetService = {
         findByCode: vi.fn().mockResolvedValue({ id: 'facet-1' }),
         create: vi.fn(),
@@ -130,6 +134,80 @@ describe('CategoryStreamHandler', () => {
         expect(collectionService.update).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({ id: 'col-1', isPrivate: true }),
+        );
+    });
+
+    // Issue #90 scope addition: a manual visibilityOverride must survive the next feed recompute.
+    it('keeps a Collection hidden via visibilityOverride even when the feed says active', async () => {
+        const { facetService, facetValueService, collectionService } = createServices({
+            id: 'col-1',
+            customFields: { visibilityOverride: 'hidden' },
+        });
+        const handler = new CategoryStreamHandler(
+            facetService as never,
+            facetValueService as never,
+            collectionService as never,
+        );
+
+        await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: true });
+
+        expect(collectionService.update).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ id: 'col-1', isPrivate: true }),
+        );
+    });
+
+    it('keeps a Collection visible via visibilityOverride even when the feed says deactivated', async () => {
+        const { facetService, facetValueService, collectionService } = createServices({
+            id: 'col-1',
+            customFields: { visibilityOverride: 'visible' },
+        });
+        const handler = new CategoryStreamHandler(
+            facetService as never,
+            facetValueService as never,
+            collectionService as never,
+        );
+
+        await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: false });
+
+        expect(collectionService.update).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ id: 'col-1', isPrivate: false }),
+        );
+    });
+
+    it('honors the feed as usual when visibilityOverride is null', async () => {
+        const { facetService, facetValueService, collectionService } = createServices({
+            id: 'col-1',
+            customFields: { visibilityOverride: null },
+        });
+        const handler = new CategoryStreamHandler(
+            facetService as never,
+            facetValueService as never,
+            collectionService as never,
+        );
+
+        await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: false });
+
+        expect(collectionService.update).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ id: 'col-1', isPrivate: true }),
+        );
+    });
+
+    it('a first-seen category with no existing Collection has no override to read and honors the feed', async () => {
+        const { facetService, facetValueService, collectionService } = createServices(undefined);
+        const handler = new CategoryStreamHandler(
+            facetService as never,
+            facetValueService as never,
+            collectionService as never,
+        );
+
+        await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: false });
+
+        expect(collectionService.create).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ isPrivate: true }),
         );
     });
 });

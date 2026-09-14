@@ -665,7 +665,7 @@ export type Collection = Node & {
     breadcrumbs: Array<CollectionBreadcrumb>;
     children: Maybe<Array<Collection>>;
     createdAt: Scalars['DateTime']['output'];
-    customFields: Maybe<Scalars['JSON']['output']>;
+    customFields: Maybe<CollectionCustomFields>;
     description: Scalars['String']['output'];
     featuredAsset: Maybe<Asset>;
     filters: Array<ConfigurableOperation>;
@@ -694,6 +694,10 @@ export type CollectionBreadcrumb = {
     slug: Scalars['String']['output'];
 };
 
+export type CollectionCustomFields = {
+    visibilityOverride: Maybe<Scalars['String']['output']>;
+};
+
 export type CollectionFilterParameter = {
     _and?: InputMaybe<Array<CollectionFilterParameter>>;
     _or?: InputMaybe<Array<CollectionFilterParameter>>;
@@ -709,6 +713,7 @@ export type CollectionFilterParameter = {
     productVariantCount?: InputMaybe<NumberOperators>;
     slug?: InputMaybe<StringOperators>;
     updatedAt?: InputMaybe<DateOperators>;
+    visibilityOverride?: InputMaybe<StringOperators>;
 };
 
 export type CollectionList = PaginatedList & {
@@ -749,6 +754,7 @@ export type CollectionSortParameter = {
     productVariantCount?: InputMaybe<SortOrder>;
     slug?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
+    visibilityOverride?: InputMaybe<SortOrder>;
 };
 
 export type CollectionTranslation = {
@@ -1072,9 +1078,13 @@ export type CreateChannelInput = {
 
 export type CreateChannelResult = Channel | LanguageNotAvailableError;
 
+export type CreateCollectionCustomFieldsInput = {
+    visibilityOverride?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type CreateCollectionInput = {
     assetIds?: InputMaybe<Array<Scalars['ID']['input']>>;
-    customFields?: InputMaybe<Scalars['JSON']['input']>;
+    customFields?: InputMaybe<CreateCollectionCustomFieldsInput>;
     featuredAssetId?: InputMaybe<Scalars['ID']['input']>;
     filters: Array<ConfigurableOperationInput>;
     inheritFilters?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1735,6 +1745,11 @@ export type CustomFields = {
     TaxRate: Array<CustomFieldConfig>;
     User: Array<CustomFieldConfig>;
     Zone: Array<CustomFieldConfig>;
+};
+
+export type CustomProductMappings = {
+    fullName: Maybe<Scalars['String']['output']>;
+    oemCodes: Maybe<Array<Scalars['String']['output']>>;
 };
 
 export type Customer = Node & {
@@ -5711,6 +5726,16 @@ export type PriceRange = {
     min: Scalars['Money']['output'];
 };
 
+export type PriceRangeBucket = {
+    count: Scalars['Int']['output'];
+    to: Scalars['Int']['output'];
+};
+
+export type PriceRangeInput = {
+    max: Scalars['Int']['input'];
+    min: Scalars['Int']['input'];
+};
+
 export type PriceType = {
     code: Scalars['String']['output'];
     id: Scalars['ID']['output'];
@@ -7237,6 +7262,10 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
+    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
+    inStock?: InputMaybe<Scalars['Boolean']['input']>;
+    priceRange?: InputMaybe<PriceRangeInput>;
+    priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -7251,7 +7280,15 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
+    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchResponsePriceData = {
+    buckets: Array<PriceRangeBucket>;
+    bucketsWithTax: Array<PriceRangeBucket>;
+    range: PriceRange;
+    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -7260,10 +7297,14 @@ export type SearchResult = {
     /** An array of ids of the Collections in which this result appears */
     collectionIds: Array<Scalars['ID']['output']>;
     currencyCode: CurrencyCode;
+    /** @deprecated Use customProductMappings or customProductVariantMappings */
+    customMappings: CustomProductMappings;
+    customProductMappings: CustomProductMappings;
     description: Scalars['String']['output'];
     enabled: Scalars['Boolean']['output'];
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
+    inStock: Maybe<Scalars['Boolean']['output']>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset: Maybe<SearchResultAsset>;
@@ -8099,9 +8140,13 @@ export type UpdateChannelInput = {
 
 export type UpdateChannelResult = Channel | LanguageNotAvailableError;
 
+export type UpdateCollectionCustomFieldsInput = {
+    visibilityOverride?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateCollectionInput = {
     assetIds?: InputMaybe<Array<Scalars['ID']['input']>>;
-    customFields?: InputMaybe<Scalars['JSON']['input']>;
+    customFields?: InputMaybe<UpdateCollectionCustomFieldsInput>;
     featuredAssetId?: InputMaybe<Scalars['ID']['input']>;
     filters?: InputMaybe<Array<ConfigurableOperationInput>>;
     id: Scalars['ID']['input'];
@@ -8951,6 +8996,45 @@ export type CatalogPriceEntriesForVariantsQueryVariables = Exact<{
 
 export type CatalogPriceEntriesForVariantsQuery = {
     priceEntriesForVariants: Array<{ variantId: string; price: number }>;
+};
+
+export type CategoryCollectionFieldsFragment = {
+    id: string;
+    name: string;
+    slug: string;
+    isPrivate: boolean;
+    customFields: { visibilityOverride: string | null } | null;
+};
+
+export type CategoryVisibilityCollectionsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type CategoryVisibilityCollectionsQuery = {
+    collections: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            name: string;
+            slug: string;
+            isPrivate: boolean;
+            customFields: { visibilityOverride: string | null } | null;
+        }>;
+    };
+};
+
+export type SetCategoryVisibilityOverrideMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    visibilityOverride?: InputMaybe<Scalars['String']['input']>;
+    isPrivate?: InputMaybe<Scalars['Boolean']['input']>;
+}>;
+
+export type SetCategoryVisibilityOverrideMutation = {
+    updateCollection: {
+        id: string;
+        name: string;
+        slug: string;
+        isPrivate: boolean;
+        customFields: { visibilityOverride: string | null } | null;
+    };
 };
 
 export type CounterpartyTeamMemberFieldsFragment = {
@@ -10621,6 +10705,20 @@ export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'BranchSettingsFields' },
 ) as unknown as TypedDocumentString<BranchSettingsFieldsFragment, unknown>;
+export const CategoryCollectionFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment CategoryCollectionFields on Collection {
+  id
+  name
+  slug
+  isPrivate
+  customFields {
+    visibilityOverride
+  }
+}
+    `,
+    { fragmentName: 'CategoryCollectionFields' },
+) as unknown as TypedDocumentString<CategoryCollectionFieldsFragment, unknown>;
 export const CounterpartyTeamMemberFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment CounterpartyTeamMemberFields on CounterpartyTeamMember {
@@ -11253,6 +11351,47 @@ export const CatalogPriceEntriesForVariantsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CatalogPriceEntriesForVariantsQuery,
     CatalogPriceEntriesForVariantsQueryVariables
+>;
+export const CategoryVisibilityCollectionsDocument = new TypedDocumentString(`
+    query CategoryVisibilityCollections {
+  collections(options: {filter: {slug: {contains: "cat-"}}, take: 999}) {
+    items {
+      ...CategoryCollectionFields
+    }
+    totalItems
+  }
+}
+    fragment CategoryCollectionFields on Collection {
+  id
+  name
+  slug
+  isPrivate
+  customFields {
+    visibilityOverride
+  }
+}`) as unknown as TypedDocumentString<
+    CategoryVisibilityCollectionsQuery,
+    CategoryVisibilityCollectionsQueryVariables
+>;
+export const SetCategoryVisibilityOverrideDocument = new TypedDocumentString(`
+    mutation SetCategoryVisibilityOverride($id: ID!, $visibilityOverride: String, $isPrivate: Boolean) {
+  updateCollection(
+    input: {id: $id, isPrivate: $isPrivate, customFields: {visibilityOverride: $visibilityOverride}}
+  ) {
+    ...CategoryCollectionFields
+  }
+}
+    fragment CategoryCollectionFields on Collection {
+  id
+  name
+  slug
+  isPrivate
+  customFields {
+    visibilityOverride
+  }
+}`) as unknown as TypedDocumentString<
+    SetCategoryVisibilityOverrideMutation,
+    SetCategoryVisibilityOverrideMutationVariables
 >;
 export const CounterpartyTeamDocument = new TypedDocumentString(`
     query CounterpartyTeam($id: ID!) {

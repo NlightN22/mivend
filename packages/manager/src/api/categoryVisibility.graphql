@@ -1,0 +1,30 @@
+fragment CategoryCollectionFields on Collection {
+    id
+    name
+    slug
+    isPrivate
+    customFields {
+        visibilityOverride
+    }
+}
+
+query CategoryVisibilityCollections {
+    collections(options: { filter: { slug: { contains: "cat-" } }, take: 999 }) {
+        items {
+            ...CategoryCollectionFields
+        }
+        totalItems
+    }
+}
+
+mutation SetCategoryVisibilityOverride($id: ID!, $visibilityOverride: String, $isPrivate: Boolean) {
+    updateCollection(
+        input: {
+            id: $id
+            isPrivate: $isPrivate
+            customFields: { visibilityOverride: $visibilityOverride }
+        }
+    ) {
+        ...CategoryCollectionFields
+    }
+}

@@ -46,6 +46,20 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         await this.ensureCollection(ctx, entityId, name, String(facetValue.id), isPrivate);
     }
 
+    // A non-null visibilityOverride (issue #90) is a manual decision that must survive the next
+    // feed recompute — it wins over isActive/isDeleted on every update, never on the create path
+    // (a category seen for the first time has no override to read yet, so the feed applies
+    // unchanged, matching the acceptance criteria's no-regression requirement).
+    private resolveIsPrivate(
+        feedIsPrivate: boolean,
+        existing: { customFields?: { visibilityOverride?: string | null } } | undefined,
+    ): boolean {
+        const override = existing?.customFields?.visibilityOverride;
+        if (override === 'hidden') return true;
+        if (override === 'visible') return false;
+        return feedIsPrivate;
+    }
+
     private async ensureCategoryFacet(ctx: RequestContext): Promise<Facet> {
         const existing = await this.facetService.findByCode(
             ctx,
@@ -90,6 +104,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
     ): Promise<void> {
         const slug = `cat-${entityId}`;
         const existing = await this.collectionService.findOneBySlug(ctx, slug);
+        const resolvedIsPrivate = this.resolveIsPrivate(isPrivate, existing as never);
         const filters = [
             {
                 code: 'facet-value-filter',
@@ -102,14 +117,14 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         if (existing) {
             await this.collectionService.update(ctx, {
                 id: existing.id,
-                isPrivate,
+                isPrivate: resolvedIsPrivate,
                 translations: [{ languageCode: LanguageCode.en, name, slug, description: '' }],
                 filters,
             });
             return;
         }
         await this.collectionService.create(ctx, {
-            isPrivate,
+            isPrivate: resolvedIsPrivate,
             translations: [{ languageCode: LanguageCode.en, name, slug, description: '' }],
             filters,
         });
