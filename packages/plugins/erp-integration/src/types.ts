@@ -133,6 +133,13 @@ export interface ErpIntegrationPluginOptions {
     reconciliationApiUrl?: string;
     reconciliationApiKey?: string;
     reconciliationIntervalMs?: number;
+    // Issue #91: how often KafkaLagPollerService recomputes per-partition consumer lag for every
+    // inbound topic. Defaults to KAFKA_LAG_POLL_INTERVAL_DEFAULT.
+    kafkaLagPollIntervalMs?: number;
+    // Issue #91: a partition's lag above this value gets a Logger.warn from the poller — the
+    // "at minimum a log line above a threshold" half of the issue's suggested scope. Defaults to
+    // KAFKA_LAG_WARN_THRESHOLD_DEFAULT.
+    kafkaLagWarnThreshold?: number;
 }
 
 // Every InboundStream, kept in sync by hand with the union type above — used only to derive the
@@ -193,4 +200,8 @@ export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
 // Once daily — no sub-day freshness requirement raised for this (issue #84).
 export const RECONCILIATION_INTERVAL_DEFAULT = 24 * 60 * 60 * 1000;
 export const RECONCILIATION_API_URL_DEFAULT = 'https://is.komponent-m.ru';
+// Frequent enough to catch a stalled consumer well before it becomes a support ticket, without
+// hammering the broker's admin API — no sub-minute freshness requirement raised for issue #91.
+export const KAFKA_LAG_POLL_INTERVAL_DEFAULT = 60_000;
+export const KAFKA_LAG_WARN_THRESHOLD_DEFAULT = 1000;
 export const loggerCtx = 'ErpIntegrationPlugin';

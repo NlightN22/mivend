@@ -11,6 +11,7 @@ import { ReservationPlugin } from '@mivend/plugin-reservation';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
+import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
 import { ProductTaxCodeFlag } from './entities/product-tax-code-flag.entity';
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import { ProductTaxCodeFlagService } from './product-tax-code-flag.service';
@@ -50,6 +51,9 @@ import { ReconciliationLocalCountsService } from './reconciliation-local-counts.
 import { ReconciliationService } from './reconciliation.service';
 import { ReconciliationResolver } from './reconciliation.resolver';
 import { createReconciliationTask } from './reconciliation.scheduled-task';
+import { KafkaLagPollerService } from './kafka-lag-poller.service';
+import { createKafkaLagPollTask } from './kafka-lag-poll.scheduled-task';
+import { KafkaLagResolver } from './kafka-lag.resolver';
 
 // Central-hub-only, per the external-integration-rules skill ("Branches never call the ERP [or Integration
 // Service]"). The guard can't live in the providers array itself: @VendurePlugin's decorator body
@@ -83,6 +87,7 @@ import { createReconciliationTask } from './reconciliation.scheduled-task';
         IntegrationOutboxEntry,
         IntegrationInboxEvent,
         KafkaConsumerStatus,
+        KafkaConsumerLagEntry,
         ProductTaxCodeFlag,
         ErpReconciliationIssue,
     ],
@@ -111,6 +116,7 @@ import { createReconciliationTask } from './reconciliation.scheduled-task';
         ReconciliationSummaryClient,
         ReconciliationLocalCountsService,
         ReconciliationService,
+        KafkaLagPollerService,
         {
             provide: ERP_INTEGRATION_PLUGIN_OPTIONS,
             useFactory: (): ErpIntegrationPluginOptions => ErpIntegrationPlugin.options,
@@ -122,6 +128,7 @@ import { createReconciliationTask } from './reconciliation.scheduled-task';
             IntegrationInboxEventResolver,
             ProductTaxCodeFlagResolver,
             ReconciliationResolver,
+            KafkaLagResolver,
         ],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
@@ -132,6 +139,7 @@ import { createReconciliationTask } from './reconciliation.scheduled-task';
             createIntegrationOutboxTask(ErpIntegrationPlugin.options),
             createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
             createReconciliationTask(ErpIntegrationPlugin.options),
+            createKafkaLagPollTask(ErpIntegrationPlugin.options),
         ];
         return config;
     },

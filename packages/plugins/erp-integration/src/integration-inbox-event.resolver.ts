@@ -3,7 +3,11 @@ import { Allow, PaginatedList } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
-import { FailedInboxEventListOptions, IntegrationInboxService } from './integration-inbox.service';
+import {
+    FailedInboxEventListOptions,
+    IntegrationInboxBacklogByStream,
+    IntegrationInboxService,
+} from './integration-inbox.service';
 
 @Resolver()
 export class IntegrationInboxEventResolver {
@@ -15,5 +19,11 @@ export class IntegrationInboxEventResolver {
         @Args() args: { options?: FailedInboxEventListOptions },
     ): Promise<PaginatedList<IntegrationInboxEvent>> {
         return this.integrationInboxService.findFailed(args.options);
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async integrationInboxBacklog(): Promise<IntegrationInboxBacklogByStream[]> {
+        return this.integrationInboxService.getBacklogByStream();
     }
 }

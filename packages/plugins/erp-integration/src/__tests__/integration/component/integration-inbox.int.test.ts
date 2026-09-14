@@ -354,4 +354,75 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             expect(claimed.length).toBe(2);
         });
     });
+
+    // Issue #91's "integration health" page — a different number from Kafka lag (already
+    // consumed/committed rows waiting on mivend's own processor, not broker-side lag). Real
+    // Postgres because the GROUP BY/aggregate shape is exactly what a mocked query builder
+    // wouldn't meaningfully exercise.
+    describe('getBacklogByStream', () => {
+        it('counts pending/processing/failed rows per stream, ignoring processed rows', async () => {
+            await inboxService.enqueue({
+                stream: 'product',
+                entityId: 'p-1',
+                version: '1',
+                sourceEventId: 'evt-backlog-1',
+                payload: {},
+            });
+            await inboxService.enqueue({
+                stream: 'product',
+                entityId: 'p-2',
+                version: '1',
+                sourceEventId: 'evt-backlog-2',
+                payload: {},
+            });
+            const processed = await inboxService.enqueue({
+                stream: 'product',
+                entityId: 'p-3',
+                version: '1',
+                sourceEventId: 'evt-backlog-3',
+                payload: {},
+            });
+            await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .update(processed.id, { status: 'processed' });
+            await inboxService.enqueue({
+                stream: 'stock',
+                entityId: 's-1',
+                version: '1',
+                sourceEventId: 'evt-backlog-4',
+                payload: {},
+            });
+            const failed = await inboxService.enqueue({
+                stream: 'stock',
+                entityId: 's-2',
+                version: '1',
+                sourceEventId: 'evt-backlog-5',
+                payload: {},
+            });
+            await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .update(failed.id, { status: 'failed' });
+
+            const backlog = await inboxService.getBacklogByStream();
+            const byStream = Object.fromEntries(backlog.map(b => [b.stream, b]));
+
+            expect(byStream.product).toEqual({
+                stream: 'product',
+                pending: 2,
+                processing: 0,
+                failed: 0,
+            });
+            expect(byStream.stock).toEqual({
+                stream: 'stock',
+                pending: 1,
+                processing: 0,
+                failed: 1,
+            });
+        });
+
+        it('returns an empty array when there is no backlog at all', async () => {
+            const backlog = await inboxService.getBacklogByStream();
+            expect(backlog).toEqual([]);
+        });
+    });
 });

@@ -69,6 +69,28 @@ export const adminApiExtensions: DocumentNode = gql`
         skipped: [String!]!
     }
 
+    type KafkaTopicLagPartition {
+        partition: Int!
+        committedOffset: String
+        endOffset: String!
+        lag: String
+    }
+
+    type IntegrationInboxBacklogByStream {
+        stream: String!
+        pending: Int!
+        processing: Int!
+        failed: Int!
+    }
+
+    type KafkaTopicLag {
+        topic: String!
+        stream: String!
+        totalLag: String
+        polledAt: DateTime!
+        partitions: [KafkaTopicLagPartition!]!
+    }
+
     extend type Query {
         "Dead-lettered inbound Kafka events, newest first — for the manager-portal dashboard's integration-health panel (issue #76)."
         failedIntegrationInboxEvents(
@@ -80,6 +102,10 @@ export const adminApiExtensions: DocumentNode = gql`
         openErpReconciliationIssues(
             options: OpenErpReconciliationIssueListOptions
         ): ErpReconciliationIssueList!
+        "Per-topic/per-partition Kafka consumer lag for every inbound ERP stream (issue #91), as of the last scheduled poll."
+        kafkaConsumerLag: [KafkaTopicLag!]!
+        "Live count of not-yet-fully-processed IntegrationInboxEvent rows per stream (pending/processing/failed) — a different number from Kafka lag: these rows were already consumed and committed, this is Postgres-side processing backlog."
+        integrationInboxBacklog: [IntegrationInboxBacklogByStream!]!
     }
 
     extend type Mutation {

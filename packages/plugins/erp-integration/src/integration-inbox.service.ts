@@ -3,6 +3,7 @@ import type { PaginatedList } from '@vendure/core';
 import { Brackets, DataSource } from 'typeorm';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
+import type { IntegrationInboxEventStatus } from './entities/integration-inbox-event.entity';
 import { INBOX_MAX_ATTEMPTS_DEFAULT } from './types';
 import type { InboundStream } from './types';
 
@@ -25,6 +26,13 @@ export interface EnqueueInboxEventInput {
 export interface FailedInboxEventListOptions {
     take?: number;
     skip?: number;
+}
+
+export interface IntegrationInboxBacklogByStream {
+    stream: InboundStream;
+    pending: number;
+    processing: number;
+    failed: number;
 }
 
 // The durable inbox for inbound Kafka events from Integration Service (issue #62 Milestone 1).
@@ -159,6 +167,44 @@ export class IntegrationInboxService {
             .getManyAndCount();
 
         return { items, totalItems };
+    }
+
+    // Dashboard read model (issue #91's "integration health" page) — how many rows per stream are
+    // sitting unprocessed right now. Deliberately a different question from Kafka lag: these rows
+    // were already consumed from Kafka and had their offset committed — this is Postgres-side
+    // processing backlog, not broker-side lag, and the two numbers are expected to disagree (a
+    // consumer can be fully caught up with Kafka while a huge inbox backlog waits on a slow/backed
+    // up processor, or vice versa during a burst).
+    async getBacklogByStream(): Promise<IntegrationInboxBacklogByStream[]> {
+        const rows = await this.dataSource
+            .getRepository(IntegrationInboxEvent)
+            .createQueryBuilder('event')
+            .select('event.stream', 'stream')
+            .addSelect('event.status', 'status')
+            .addSelect('COUNT(*)', 'count')
+            .where('event.status IN (:...statuses)', {
+                statuses: ['pending', 'processing', 'failed'],
+            })
+            .groupBy('event.stream')
+            .addGroupBy('event.status')
+            .getRawMany<{
+                stream: InboundStream;
+                status: IntegrationInboxEventStatus;
+                count: string;
+            }>();
+
+        const byStream = new Map<InboundStream, IntegrationInboxBacklogByStream>();
+        for (const row of rows) {
+            const entry = byStream.get(row.stream) ?? {
+                stream: row.stream,
+                pending: 0,
+                processing: 0,
+                failed: 0,
+            };
+            entry[row.status as 'pending' | 'processing' | 'failed'] = Number(row.count);
+            byStream.set(row.stream, entry);
+        }
+        return [...byStream.values()];
     }
 
     private isUniqueViolation(err: unknown): boolean {

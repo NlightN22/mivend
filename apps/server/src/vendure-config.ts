@@ -30,6 +30,7 @@ import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
 import { SystemHealthDashboardPlugin } from './system-health-dashboard.plugin';
 import { DefaultSuperadminAlertDashboardPlugin } from './default-superadmin-alert-dashboard.plugin';
 import { BranchConsolidationAlertDashboardPlugin } from './branch-consolidation-alert-dashboard.plugin';
+import { IntegrationHealthDashboardPlugin } from './integration-health-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
@@ -390,6 +391,10 @@ export const config: VendureConfig = {
         // Same shape/reasoning as SystemHealthDashboardPlugin above — see
         // src/dashboard/branch-consolidation/index.ts.
         BranchConsolidationAlertDashboardPlugin,
+        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #91) — Kafka lag and
+        // inbox backlog together, as two sections of one page — see
+        // src/dashboard/integration-health/index.ts.
+        IntegrationHealthDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({}),
