@@ -132,6 +132,57 @@ describe('WarehouseStreamHandler', () => {
         });
     });
 
+    // Issue #94: 1C's warehouse hierarchy includes folder/group nodes, not just real leaf
+    // warehouses — a folder must never become a Warehouse or StockLocation row.
+    it('skips folder rows entirely (isFolder === true), even when a matching StockLocation already exists', async () => {
+        const warehouseService = { upsert: vi.fn() };
+        const stockLocationService = { create: vi.fn(), update: vi.fn() };
+        const handler = new WarehouseStreamHandler(
+            warehouseService as never,
+            stockLocationService as never,
+            createConnection({ id: 'loc-1' }) as never,
+        );
+
+        await handler.apply(ctx, 'wh-folder-1', {
+            name: 'Group folder',
+            branchId: 'branch-guid',
+            isActive: true,
+            isFolder: true,
+        });
+
+        expect(warehouseService.upsert).not.toHaveBeenCalled();
+        expect(stockLocationService.create).not.toHaveBeenCalled();
+        expect(stockLocationService.update).not.toHaveBeenCalled();
+    });
+
+    it('still creates the StockLocation for a non-folder row (isFolder explicitly false)', async () => {
+        const warehouseService = { upsert: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLocationService = { create: vi.fn(), update: vi.fn() };
+        const handler = new WarehouseStreamHandler(
+            warehouseService as never,
+            stockLocationService as never,
+            createConnection(undefined) as never,
+        );
+
+        await handler.apply(ctx, 'wh-1', {
+            name: 'Main warehouse',
+            branchId: 'branch-guid',
+            isActive: true,
+            isFolder: false,
+        });
+
+        expect(warehouseService.upsert).toHaveBeenCalledWith(ctx, {
+            erpId: 'wh-1',
+            name: 'Main warehouse',
+            branchErpId: 'branch-guid',
+            isActive: true,
+        });
+        expect(stockLocationService.create).toHaveBeenCalledWith(ctx, {
+            name: 'Main warehouse',
+            customFields: { warehouseErpId: 'wh-1' },
+        });
+    });
+
     it('still creates the StockLocation when branchId is entirely absent from the payload', async () => {
         const warehouseService = {
             upsert: vi.fn().mockResolvedValue({ id: 'w1', branchId: null }),

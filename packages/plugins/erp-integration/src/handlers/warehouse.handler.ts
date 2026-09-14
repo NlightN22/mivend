@@ -6,12 +6,17 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationWarehouseHandler';
 
-// Applies Integration Service's `warehouse` stream (WarehouseChanged: name/branchId/isActive —
-// entityId is the warehouse's own 1C GUID, branchId is the owning division's 1C GUID = Branch
-// .erpId). Confirmed architecture (issue #63 plan): warehouse-level stock uses Vendure's native
-// StockLocation, one per Warehouse — not Channel, since a branch is a soft staff-grouping tag
-// here, not a hard catalog/pricing partition. StockLocation has no native external-id field, so
-// StockLocation.customFields.warehouseErpId is this handler's own idempotency key.
+// Applies Integration Service's `warehouse` stream (WarehouseChanged: name/branchId/isActive/
+// isFolder — entityId is the warehouse's own 1C GUID, branchId is the owning division's 1C GUID
+// = Branch.erpId). Confirmed architecture (issue #63 plan): warehouse-level stock uses Vendure's
+// native StockLocation, one per Warehouse — not Channel, since a branch is a soft staff-grouping
+// tag here, not a hard catalog/pricing partition. StockLocation has no native external-id field,
+// so StockLocation.customFields.warehouseErpId is this handler's own idempotency key.
+//
+// 1C's warehouse hierarchy has folder/group nodes as well as real leaf warehouses (issue #94).
+// isFolder === true skips the row entirely — no Warehouse, no StockLocation. Vendure has no
+// native hierarchy concept for StockLocation, and Branch already covers the organizational
+// grouping need, so no synthetic folder representation is introduced.
 @Injectable()
 export class WarehouseStreamHandler implements InboundStreamHandler {
     constructor(
@@ -38,6 +43,14 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         // zero-value omission).
         const isActive = payload.isActive === true;
         const isDeleted = payload.isDeleted === true;
+        // 1C's warehouse hierarchy includes folder/group nodes, not just real leaf warehouses
+        // (issue #94) — Vendure has no StockLocation/Warehouse hierarchy concept, and Branch
+        // already covers the organizational grouping need, so folders are skipped entirely.
+        const isFolder = payload.isFolder === true;
+        if (isFolder) {
+            Logger.verbose(`Skipping folder warehouse node erpId=${entityId}`, loggerCtx);
+            return;
+        }
 
         await this.warehouseService.upsert(ctx, {
             erpId: entityId,
