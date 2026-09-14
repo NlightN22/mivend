@@ -110,7 +110,7 @@ describe('ReconciliationLocalCountsService', () => {
         const { service, stockQueryBuilder } = makeService({ stockLevelCount: 789 });
         expect(await service.getLocalActiveCount({} as never, 'stock')).toBe(789);
         expect(stockQueryBuilder.where).toHaveBeenCalledWith(
-            'stockLevel."customFieldsErpavailablequantity" IS NOT NULL',
+            '"stockLevel"."customFieldsErpavailablequantity" IS NOT NULL',
         );
     });
 });

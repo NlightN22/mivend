@@ -103,7 +103,7 @@ export class ReconciliationLocalCountsService {
         return this.connection
             .getRepository(ctx, StockLevel)
             .createQueryBuilder('stockLevel')
-            .where('stockLevel."customFieldsErpavailablequantity" IS NOT NULL')
+            .where('"stockLevel"."customFieldsErpavailablequantity" IS NOT NULL')
             .getCount();
     }
 
