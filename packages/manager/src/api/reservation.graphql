@@ -1,0 +1,43 @@
+fragment OrderReservationFields on Reservation {
+    id
+    orderLineId
+    productVariantId
+    quantity
+    status
+    reservedAt
+    expiresAt
+    releasedAt
+}
+
+query OrderReservations($orderId: ID!) {
+    orderReservations(orderId: $orderId) {
+        ...OrderReservationFields
+    }
+}
+
+mutation ConfirmOrder($orderId: ID!, $reservationDays: Int!) {
+    confirmOrder(orderId: $orderId, reservationDays: $reservationDays) {
+        ...OrderReservationFields
+    }
+}
+
+mutation ReleaseOrderReservation($orderId: ID!) {
+    releaseOrderReservation(orderId: $orderId)
+}
+
+mutation ExtendOrderReservation($orderId: ID!, $additionalDays: Int!) {
+    extendOrderReservation(orderId: $orderId, additionalDays: $additionalDays) {
+        ...OrderReservationFields
+    }
+}
+
+query ReservationExtensionLimit($roleCode: String!) {
+    reservationExtensionLimit(roleCode: $roleCode) {
+        roleCode
+        maxExtraDays
+    }
+}
+
+query AvailableStock($productVariantId: ID!) {
+    availableStock(productVariantId: $productVariantId)
+}

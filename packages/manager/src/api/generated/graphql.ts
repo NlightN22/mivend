@@ -10048,6 +10048,90 @@ export type ProductCrossReferencesQuery = {
     productCrossReferences: Array<{ oemCode: string; oemBrand: string }>;
 };
 
+export type OrderReservationFieldsFragment = {
+    id: string;
+    orderLineId: string;
+    productVariantId: string;
+    quantity: number;
+    status: string;
+    reservedAt: any;
+    expiresAt: any;
+    releasedAt: any | null;
+};
+
+export type OrderReservationsQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type OrderReservationsQuery = {
+    orderReservations: Array<{
+        id: string;
+        orderLineId: string;
+        productVariantId: string;
+        quantity: number;
+        status: string;
+        reservedAt: any;
+        expiresAt: any;
+        releasedAt: any | null;
+    }>;
+};
+
+export type ConfirmOrderMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    reservationDays: Scalars['Int']['input'];
+}>;
+
+export type ConfirmOrderMutation = {
+    confirmOrder: Array<{
+        id: string;
+        orderLineId: string;
+        productVariantId: string;
+        quantity: number;
+        status: string;
+        reservedAt: any;
+        expiresAt: any;
+        releasedAt: any | null;
+    }>;
+};
+
+export type ReleaseOrderReservationMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type ReleaseOrderReservationMutation = { releaseOrderReservation: number };
+
+export type ExtendOrderReservationMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    additionalDays: Scalars['Int']['input'];
+}>;
+
+export type ExtendOrderReservationMutation = {
+    extendOrderReservation: Array<{
+        id: string;
+        orderLineId: string;
+        productVariantId: string;
+        quantity: number;
+        status: string;
+        reservedAt: any;
+        expiresAt: any;
+        releasedAt: any | null;
+    }>;
+};
+
+export type ReservationExtensionLimitQueryVariables = Exact<{
+    roleCode: Scalars['String']['input'];
+}>;
+
+export type ReservationExtensionLimitQuery = {
+    reservationExtensionLimit: { roleCode: string; maxExtraDays: number } | null;
+};
+
+export type AvailableStockQueryVariables = Exact<{
+    productVariantId: Scalars['ID']['input'];
+}>;
+
+export type AvailableStockQuery = { availableStock: number };
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -10368,6 +10452,21 @@ export const PaymentListItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'PaymentListItemFields' },
 ) as unknown as TypedDocumentString<PaymentListItemFieldsFragment, unknown>;
+export const OrderReservationFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment OrderReservationFields on Reservation {
+  id
+  orderLineId
+  productVariantId
+  quantity
+  status
+  reservedAt
+  expiresAt
+  releasedAt
+}
+    `,
+    { fragmentName: 'OrderReservationFields' },
+) as unknown as TypedDocumentString<OrderReservationFieldsFragment, unknown>;
 export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     mutation ChangeOwnPassword($password: String!) {
   updateActiveAdministrator(input: {password: $password}) {
@@ -12056,6 +12155,81 @@ export const ProductCrossReferencesDocument = new TypedDocumentString(`
     ProductCrossReferencesQuery,
     ProductCrossReferencesQueryVariables
 >;
+export const OrderReservationsDocument = new TypedDocumentString(`
+    query OrderReservations($orderId: ID!) {
+  orderReservations(orderId: $orderId) {
+    ...OrderReservationFields
+  }
+}
+    fragment OrderReservationFields on Reservation {
+  id
+  orderLineId
+  productVariantId
+  quantity
+  status
+  reservedAt
+  expiresAt
+  releasedAt
+}`) as unknown as TypedDocumentString<OrderReservationsQuery, OrderReservationsQueryVariables>;
+export const ConfirmOrderDocument = new TypedDocumentString(`
+    mutation ConfirmOrder($orderId: ID!, $reservationDays: Int!) {
+  confirmOrder(orderId: $orderId, reservationDays: $reservationDays) {
+    ...OrderReservationFields
+  }
+}
+    fragment OrderReservationFields on Reservation {
+  id
+  orderLineId
+  productVariantId
+  quantity
+  status
+  reservedAt
+  expiresAt
+  releasedAt
+}`) as unknown as TypedDocumentString<ConfirmOrderMutation, ConfirmOrderMutationVariables>;
+export const ReleaseOrderReservationDocument = new TypedDocumentString(`
+    mutation ReleaseOrderReservation($orderId: ID!) {
+  releaseOrderReservation(orderId: $orderId)
+}
+    `) as unknown as TypedDocumentString<
+    ReleaseOrderReservationMutation,
+    ReleaseOrderReservationMutationVariables
+>;
+export const ExtendOrderReservationDocument = new TypedDocumentString(`
+    mutation ExtendOrderReservation($orderId: ID!, $additionalDays: Int!) {
+  extendOrderReservation(orderId: $orderId, additionalDays: $additionalDays) {
+    ...OrderReservationFields
+  }
+}
+    fragment OrderReservationFields on Reservation {
+  id
+  orderLineId
+  productVariantId
+  quantity
+  status
+  reservedAt
+  expiresAt
+  releasedAt
+}`) as unknown as TypedDocumentString<
+    ExtendOrderReservationMutation,
+    ExtendOrderReservationMutationVariables
+>;
+export const ReservationExtensionLimitDocument = new TypedDocumentString(`
+    query ReservationExtensionLimit($roleCode: String!) {
+  reservationExtensionLimit(roleCode: $roleCode) {
+    roleCode
+    maxExtraDays
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ReservationExtensionLimitQuery,
+    ReservationExtensionLimitQueryVariables
+>;
+export const AvailableStockDocument = new TypedDocumentString(`
+    query AvailableStock($productVariantId: ID!) {
+  availableStock(productVariantId: $productVariantId)
+}
+    `) as unknown as TypedDocumentString<AvailableStockQuery, AvailableStockQueryVariables>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {

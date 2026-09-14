@@ -1,55 +1,35 @@
 import { adminApi } from './client';
+import {
+    AvailableStockDocument,
+    ConfirmOrderDocument,
+    ExtendOrderReservationDocument,
+    OrderReservationsDocument,
+    ReleaseOrderReservationDocument,
+    ReservationExtensionLimitDocument,
+    type OrderReservationFieldsFragment,
+} from './generated/graphql';
 
 export type ReservationStatus = 'active' | 'released' | 'expired';
 
-export interface OrderReservation {
-    id: string;
-    orderLineId: string;
-    productVariantId: string;
-    quantity: number;
+export type OrderReservation = Omit<OrderReservationFieldsFragment, 'status'> & {
     status: ReservationStatus;
-    reservedAt: string;
-    expiresAt: string;
-    releasedAt: string | null;
-}
-
-const RESERVATION_FIELDS = `
-    id
-    orderLineId
-    productVariantId
-    quantity
-    status
-    reservedAt
-    expiresAt
-    releasedAt
-`;
+};
 
 export async function fetchOrderReservations(orderId: string): Promise<OrderReservation[]> {
-    const result = await adminApi<{ orderReservations: OrderReservation[] }>(
-        `query OrderReservations($orderId: ID!) { orderReservations(orderId: $orderId) { ${RESERVATION_FIELDS} } }`,
-        { orderId },
-    );
-    return result.orderReservations;
+    const result = await adminApi(OrderReservationsDocument, { orderId });
+    return result.orderReservations as OrderReservation[];
 }
 
 export async function confirmOrder(
     orderId: string,
     reservationDays: number,
 ): Promise<OrderReservation[]> {
-    const result = await adminApi<{ confirmOrder: OrderReservation[] }>(
-        `mutation($orderId: ID!, $reservationDays: Int!) {
-            confirmOrder(orderId: $orderId, reservationDays: $reservationDays) { ${RESERVATION_FIELDS} }
-        }`,
-        { orderId, reservationDays },
-    );
-    return result.confirmOrder;
+    const result = await adminApi(ConfirmOrderDocument, { orderId, reservationDays });
+    return result.confirmOrder as OrderReservation[];
 }
 
 export async function releaseOrderReservation(orderId: string): Promise<number> {
-    const result = await adminApi<{ releaseOrderReservation: number }>(
-        `mutation($orderId: ID!) { releaseOrderReservation(orderId: $orderId) }`,
-        { orderId },
-    );
+    const result = await adminApi(ReleaseOrderReservationDocument, { orderId });
     return result.releaseOrderReservation;
 }
 
@@ -57,13 +37,8 @@ export async function extendOrderReservation(
     orderId: string,
     additionalDays: number,
 ): Promise<OrderReservation[]> {
-    const result = await adminApi<{ extendOrderReservation: OrderReservation[] }>(
-        `mutation($orderId: ID!, $additionalDays: Int!) {
-            extendOrderReservation(orderId: $orderId, additionalDays: $additionalDays) { ${RESERVATION_FIELDS} }
-        }`,
-        { orderId, additionalDays },
-    );
-    return result.extendOrderReservation;
+    const result = await adminApi(ExtendOrderReservationDocument, { orderId, additionalDays });
+    return result.extendOrderReservation as OrderReservation[];
 }
 
 export interface ReservationExtensionLimit {
@@ -77,17 +52,11 @@ export interface ReservationExtensionLimit {
 export async function fetchReservationExtensionLimit(
     roleCode: string,
 ): Promise<ReservationExtensionLimit | null> {
-    const result = await adminApi<{ reservationExtensionLimit: ReservationExtensionLimit | null }>(
-        `query($roleCode: String!) { reservationExtensionLimit(roleCode: $roleCode) { roleCode maxExtraDays } }`,
-        { roleCode },
-    );
-    return result.reservationExtensionLimit;
+    const result = await adminApi(ReservationExtensionLimitDocument, { roleCode });
+    return result.reservationExtensionLimit ?? null;
 }
 
 export async function fetchAvailableStock(productVariantId: string): Promise<number> {
-    const result = await adminApi<{ availableStock: number }>(
-        `query($productVariantId: ID!) { availableStock(productVariantId: $productVariantId) }`,
-        { productVariantId },
-    );
+    const result = await adminApi(AvailableStockDocument, { productVariantId });
     return result.availableStock;
 }
