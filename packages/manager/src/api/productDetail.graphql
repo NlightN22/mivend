@@ -1,0 +1,28 @@
+query ProductBySlug($slug: String) {
+    product(slug: $slug) {
+        id
+        name
+        slug
+        facetValues {
+            id
+            name
+            facet {
+                code
+            }
+        }
+        variants {
+            id
+            sku
+            stockLevels {
+                stockOnHand
+            }
+        }
+    }
+}
+
+query ProductCrossReferences($productId: ID!) {
+    productCrossReferences(productId: $productId) {
+        oemCode
+        oemBrand
+    }
+}

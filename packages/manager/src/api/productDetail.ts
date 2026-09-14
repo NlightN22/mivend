@@ -2,6 +2,7 @@ import { adminApi } from './client';
 import { fetchPriceEntriesForVariants } from './catalog';
 import { fetchPriceTypeCodes } from './discounts';
 import { FLOOR_PRICE_TYPE_CODE } from '../constants/pricing';
+import { ProductBySlugDocument, ProductCrossReferencesDocument } from './generated/graphql';
 
 export interface ProductDetail {
     id: string;
@@ -12,26 +13,7 @@ export interface ProductDetail {
 }
 
 export async function fetchProductBySlug(slug: string): Promise<ProductDetail | null> {
-    const result = await adminApi<{
-        product: {
-            id: string;
-            name: string;
-            slug: string;
-            facetValues: { id: string; name: string; facet: { code: string } }[];
-            variants: { id: string; sku: string; stockLevels: { stockOnHand: number }[] }[];
-        } | null;
-    }>(
-        `query ProductBySlug($slug: String) {
-            product(slug: $slug) {
-                id
-                name
-                slug
-                facetValues { id name facet { code } }
-                variants { id sku stockLevels { stockOnHand } }
-            }
-        }`,
-        { slug },
-    );
+    const result = await adminApi(ProductBySlugDocument, { slug });
     if (!result.product) return null;
     return {
         id: result.product.id,
@@ -56,14 +38,7 @@ export interface CrossReferenceRow {
 }
 
 export async function fetchCrossReferences(productId: string): Promise<CrossReferenceRow[]> {
-    const result = await adminApi<{
-        productCrossReferences: CrossReferenceRow[];
-    }>(
-        `query ProductCrossReferences($productId: ID!) {
-            productCrossReferences(productId: $productId) { oemCode oemBrand }
-        }`,
-        { productId },
-    );
+    const result = await adminApi(ProductCrossReferencesDocument, { productId });
     return result.productCrossReferences;
 }
 

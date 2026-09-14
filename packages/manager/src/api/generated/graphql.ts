@@ -10026,6 +10026,28 @@ export type PaymentsPageQuery = {
     };
 };
 
+export type ProductBySlugQueryVariables = Exact<{
+    slug?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type ProductBySlugQuery = {
+    product: {
+        id: string;
+        name: string;
+        slug: string;
+        facetValues: Array<{ id: string; name: string; facet: { code: string } }>;
+        variants: Array<{ id: string; sku: string; stockLevels: Array<{ stockOnHand: number }> }>;
+    } | null;
+};
+
+export type ProductCrossReferencesQueryVariables = Exact<{
+    productId: Scalars['ID']['input'];
+}>;
+
+export type ProductCrossReferencesQuery = {
+    productCrossReferences: Array<{ oemCode: string; oemBrand: string }>;
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -12000,6 +12022,40 @@ export const PaymentsPageDocument = new TypedDocumentString(`
   invoiceId
   counterpartyId
 }`) as unknown as TypedDocumentString<PaymentsPageQuery, PaymentsPageQueryVariables>;
+export const ProductBySlugDocument = new TypedDocumentString(`
+    query ProductBySlug($slug: String) {
+  product(slug: $slug) {
+    id
+    name
+    slug
+    facetValues {
+      id
+      name
+      facet {
+        code
+      }
+    }
+    variants {
+      id
+      sku
+      stockLevels {
+        stockOnHand
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<ProductBySlugQuery, ProductBySlugQueryVariables>;
+export const ProductCrossReferencesDocument = new TypedDocumentString(`
+    query ProductCrossReferences($productId: ID!) {
+  productCrossReferences(productId: $productId) {
+    oemCode
+    oemBrand
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ProductCrossReferencesQuery,
+    ProductCrossReferencesQueryVariables
+>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {
