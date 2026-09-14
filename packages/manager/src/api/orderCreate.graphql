@@ -1,0 +1,183 @@
+query OrderCreateCounterparties {
+    counterparties(options: { take: 500 }) {
+        items {
+            id
+            shortName
+            legalName
+            inn
+            priceType
+            tradingPoints {
+                id
+                name
+                address
+            }
+        }
+    }
+}
+
+query OrderCreateCustomers($counterpartyIds: [String!]!, $take: Int!) {
+    customers(options: { take: $take, filter: { counterpartyId: { in: $counterpartyIds } } }) {
+        items {
+            id
+            counterparty {
+                id
+            }
+        }
+    }
+}
+
+query OrderCreateProductSearch($term: String!) {
+    search(input: { term: $term, take: 20, groupByProduct: false }) {
+        items {
+            productVariantId
+            productName
+            sku
+        }
+    }
+}
+
+fragment DraftOrderFields on Order {
+    id
+    code
+    state
+    currencyCode
+    subTotalWithTax
+    shippingWithTax
+    totalWithTax
+    lines {
+        id
+        quantity
+        unitPriceWithTax
+        linePriceWithTax
+        productVariant {
+            id
+            name
+            sku
+        }
+    }
+}
+
+query OrderCreateOrder($id: ID!) {
+    order(id: $id) {
+        ...DraftOrderFields
+    }
+}
+
+mutation CreateDraftOrder {
+    createDraftOrder {
+        ...DraftOrderFields
+    }
+}
+
+mutation SetCustomerForDraftOrder($orderId: ID!, $customerId: ID!) {
+    setCustomerForDraftOrder(orderId: $orderId, customerId: $customerId) {
+        __typename
+        ... on Order {
+            ...DraftOrderFields
+        }
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation AddItemToDraftOrder($orderId: ID!, $input: AddItemToDraftOrderInput!) {
+    addItemToDraftOrder(orderId: $orderId, input: $input) {
+        __typename
+        ... on Order {
+            ...DraftOrderFields
+        }
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation AdjustDraftOrderLineQuantity($orderId: ID!, $input: AdjustDraftOrderLineInput!) {
+    adjustDraftOrderLine(orderId: $orderId, input: $input) {
+        __typename
+        ... on Order {
+            ...DraftOrderFields
+        }
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation RemoveDraftOrderLine($orderId: ID!, $orderLineId: ID!) {
+    removeDraftOrderLine(orderId: $orderId, orderLineId: $orderLineId) {
+        __typename
+        ... on Order {
+            ...DraftOrderFields
+        }
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation RequestPriceAdjustment(
+    $orderId: ID!
+    $orderLineId: ID!
+    $requestedPrice: Int!
+    $justification: String
+) {
+    requestPriceAdjustment(
+        orderId: $orderId
+        orderLineId: $orderLineId
+        requestedPrice: $requestedPrice
+        justification: $justification
+    ) {
+        decision
+        approvalRequestId
+    }
+}
+
+mutation SetDraftOrderShippingAddress($orderId: ID!, $input: CreateAddressInput!) {
+    setDraftOrderShippingAddress(orderId: $orderId, input: $input) {
+        id
+    }
+}
+
+query EligibleShippingMethodsForDraftOrder($orderId: ID!) {
+    eligibleShippingMethodsForDraftOrder(orderId: $orderId) {
+        id
+    }
+}
+
+mutation SetDraftOrderShippingMethod($orderId: ID!, $id: ID!) {
+    setDraftOrderShippingMethod(orderId: $orderId, shippingMethodId: $id) {
+        __typename
+    }
+}
+
+mutation TransitionOrderToState($id: ID!) {
+    transitionOrderToState(id: $id, state: "ArrangingPayment") {
+        __typename
+        ... on Order {
+            code
+        }
+        ... on OrderStateTransitionError {
+            errorCode
+            message
+        }
+    }
+}
+
+mutation AddManualPaymentToOrder($input: ManualPaymentInput!) {
+    addManualPaymentToOrder(input: $input) {
+        __typename
+        ... on Order {
+            code
+        }
+        ... on ManualPaymentStateError {
+            errorCode
+            message
+        }
+    }
+}

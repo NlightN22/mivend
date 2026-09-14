@@ -1,4 +1,22 @@
 import { adminApi } from './client';
+import {
+    AddItemToDraftOrderDocument,
+    AddManualPaymentToOrderDocument,
+    AdjustDraftOrderLineQuantityDocument,
+    CreateDraftOrderDocument,
+    EligibleShippingMethodsForDraftOrderDocument,
+    OrderCreateCounterpartiesDocument,
+    OrderCreateCustomersDocument,
+    OrderCreateOrderDocument,
+    OrderCreateProductSearchDocument,
+    RemoveDraftOrderLineDocument,
+    RequestPriceAdjustmentDocument,
+    SetCustomerForDraftOrderDocument,
+    SetDraftOrderShippingAddressDocument,
+    SetDraftOrderShippingMethodDocument,
+    TransitionOrderToStateDocument,
+    type DraftOrderFieldsFragment,
+} from './generated/graphql';
 
 export interface CustomerOption {
     counterpartyId: string;
@@ -19,31 +37,7 @@ export interface CustomerCredit {
 // fix would be a search-as-you-type picker querying `counterparties(options:{search})` instead
 // of fetching everything, same stopgap as `fetchAllCustomersCapped` in api/customers.ts).
 export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
-    const result = await adminApi<{
-        counterparties: {
-            items: {
-                id: string;
-                shortName: string;
-                legalName: string;
-                inn: string | null;
-                priceType: string;
-                tradingPoints: { id: string; name: string; address: string }[];
-            }[];
-        };
-    }>(
-        `query OrderCreateCounterparties {
-            counterparties(options: { take: 500 }) {
-                items {
-                    id
-                    shortName
-                    legalName
-                    inn
-                    priceType
-                    tradingPoints { id name address }
-                }
-            }
-        }`,
-    );
+    const result = await adminApi(OrderCreateCounterpartiesDocument);
     // Counterparty -> Customer is the reverse of Customer.counterparty (see
     // CounterpartyService.getForCustomer) — there's no direct reverse field on Counterparty, so
     // it's resolved via one batched lookup filtered to exactly the counterparty ids just fetched
@@ -51,19 +45,13 @@ export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
     // picker once the customer book passed 200 rows, a real incident, see the
     // backend-plugin-rules skill's Pagination section).
     const counterpartyIds = result.counterparties.items.map(c => c.id);
-    const customersResult = await adminApi<{
-        customers: { items: { id: string; counterparty: { id: string } | null }[] };
-    }>(
-        // counterpartyId is a customField, filterable as a flat StringOperators field (not
-        // IDOperators, even though it holds an id) — see fetchCustomerIdForCounterparty's
-        // comment in api/customers.ts for the same gotcha.
-        `query OrderCreateCustomers($counterpartyIds: [String!]!, $take: Int!) {
-            customers(options: { take: $take, filter: { counterpartyId: { in: $counterpartyIds } } }) {
-                items { id counterparty { id } }
-            }
-        }`,
-        { counterpartyIds, take: counterpartyIds.length },
-    );
+    // counterpartyId is a customField, filterable as a flat StringOperators field (not
+    // IDOperators, even though it holds an id) — see fetchCustomerIdForCounterparty's comment in
+    // api/customers.ts for the same gotcha.
+    const customersResult = await adminApi(OrderCreateCustomersDocument, {
+        counterpartyIds,
+        take: counterpartyIds.length,
+    });
     const customerIdByCounterpartyId = new Map(
         customersResult.customers.items
             .filter(c => c.counterparty)
@@ -99,82 +87,31 @@ export interface ProductSearchResult {
 
 export async function searchProducts(term: string): Promise<ProductSearchResult[]> {
     if (!term.trim()) return [];
-    const result = await adminApi<{
-        search: { items: ProductSearchResult[] };
-    }>(
-        `query($term: String!) {
-            search(input: { term: $term, take: 20, groupByProduct: false }) {
-                items { productVariantId productName sku }
-            }
-        }`,
-        { term },
-    );
+    const result = await adminApi(OrderCreateProductSearchDocument, { term });
     return result.search.items;
 }
 
-export interface DraftOrderLine {
-    id: string;
-    quantity: number;
-    unitPriceWithTax: number;
-    linePriceWithTax: number;
-    productVariant: { id: string; name: string; sku: string };
-}
+export type DraftOrderState = DraftOrderFieldsFragment;
+export type DraftOrderLine = DraftOrderFieldsFragment['lines'][number];
 
-export interface DraftOrderState {
-    id: string;
-    code: string;
-    state: string;
-    currencyCode: string;
-    subTotalWithTax: number;
-    shippingWithTax: number;
-    totalWithTax: number;
-    lines: DraftOrderLine[];
-}
-
-const DRAFT_ORDER_FIELDS = `
-    id
-    code
-    state
-    currencyCode
-    subTotalWithTax
-    shippingWithTax
-    totalWithTax
-    lines {
-        id
-        quantity
-        unitPriceWithTax
-        linePriceWithTax
-        productVariant { id name sku }
+function assertOrderResult<T extends { __typename: string }>(
+    result: T,
+): Extract<T, { __typename: 'Order' }> {
+    if (result.__typename !== 'Order') {
+        const message = 'message' in result ? (result as { message?: string }).message : undefined;
+        throw new Error(message ?? 'Order mutation failed');
     }
-`;
-
-interface MutationErrorResult {
-    __typename: string;
-    errorCode?: string;
-    message?: string;
-}
-
-function assertOrderResult(
-    result: (DraftOrderState & { __typename?: string }) | MutationErrorResult,
-): DraftOrderState {
-    if (result.__typename && result.__typename !== 'Order') {
-        throw new Error((result as MutationErrorResult).message ?? 'Order mutation failed');
-    }
-    return result as DraftOrderState;
+    return result as Extract<T, { __typename: 'Order' }>;
 }
 
 export async function fetchOrder(orderId: string): Promise<DraftOrderState> {
-    const result = await adminApi<{ order: DraftOrderState }>(
-        `query($id: ID!) { order(id: $id) { ${DRAFT_ORDER_FIELDS} } }`,
-        { id: orderId },
-    );
+    const result = await adminApi(OrderCreateOrderDocument, { id: orderId });
+    if (!result.order) throw new Error('Order not found');
     return result.order;
 }
 
 export async function createDraftOrder(): Promise<DraftOrderState> {
-    const result = await adminApi<{ createDraftOrder: DraftOrderState }>(
-        `mutation { createDraftOrder { ${DRAFT_ORDER_FIELDS} } }`,
-    );
+    const result = await adminApi(CreateDraftOrderDocument);
     return result.createDraftOrder;
 }
 
@@ -182,18 +119,7 @@ export async function setCustomerForDraftOrder(
     orderId: string,
     customerId: string,
 ): Promise<DraftOrderState> {
-    const result = await adminApi<{
-        setCustomerForDraftOrder: DraftOrderState & { __typename: string };
-    }>(
-        `mutation($orderId: ID!, $customerId: ID!) {
-            setCustomerForDraftOrder(orderId: $orderId, customerId: $customerId) {
-                __typename
-                ... on Order { ${DRAFT_ORDER_FIELDS} }
-                ... on ErrorResult { errorCode message }
-            }
-        }`,
-        { orderId, customerId },
-    );
+    const result = await adminApi(SetCustomerForDraftOrderDocument, { orderId, customerId });
     return assertOrderResult(result.setCustomerForDraftOrder);
 }
 
@@ -202,18 +128,10 @@ export async function addItemToDraftOrder(
     productVariantId: string,
     quantity: number,
 ): Promise<DraftOrderState> {
-    const result = await adminApi<{
-        addItemToDraftOrder: DraftOrderState & { __typename: string };
-    }>(
-        `mutation($orderId: ID!, $input: AddItemToDraftOrderInput!) {
-            addItemToDraftOrder(orderId: $orderId, input: $input) {
-                __typename
-                ... on Order { ${DRAFT_ORDER_FIELDS} }
-                ... on ErrorResult { errorCode message }
-            }
-        }`,
-        { orderId, input: { productVariantId, quantity } },
-    );
+    const result = await adminApi(AddItemToDraftOrderDocument, {
+        orderId,
+        input: { productVariantId, quantity },
+    });
     return assertOrderResult(result.addItemToDraftOrder);
 }
 
@@ -222,18 +140,10 @@ export async function adjustDraftOrderLineQuantity(
     orderLineId: string,
     quantity: number,
 ): Promise<DraftOrderState> {
-    const result = await adminApi<{
-        adjustDraftOrderLine: DraftOrderState & { __typename: string };
-    }>(
-        `mutation($orderId: ID!, $input: AdjustDraftOrderLineInput!) {
-            adjustDraftOrderLine(orderId: $orderId, input: $input) {
-                __typename
-                ... on Order { ${DRAFT_ORDER_FIELDS} }
-                ... on ErrorResult { errorCode message }
-            }
-        }`,
-        { orderId, input: { orderLineId, quantity } },
-    );
+    const result = await adminApi(AdjustDraftOrderLineQuantityDocument, {
+        orderId,
+        input: { orderLineId, quantity },
+    });
     return assertOrderResult(result.adjustDraftOrderLine);
 }
 
@@ -241,18 +151,7 @@ export async function removeDraftOrderLine(
     orderId: string,
     orderLineId: string,
 ): Promise<DraftOrderState> {
-    const result = await adminApi<{
-        removeDraftOrderLine: DraftOrderState & { __typename: string };
-    }>(
-        `mutation($orderId: ID!, $orderLineId: ID!) {
-            removeDraftOrderLine(orderId: $orderId, orderLineId: $orderLineId) {
-                __typename
-                ... on Order { ${DRAFT_ORDER_FIELDS} }
-                ... on ErrorResult { errorCode message }
-            }
-        }`,
-        { orderId, orderLineId },
-    );
+    const result = await adminApi(RemoveDraftOrderLineDocument, { orderId, orderLineId });
     return assertOrderResult(result.removeDraftOrderLine);
 }
 
@@ -267,21 +166,13 @@ export async function requestPriceAdjustment(
     requestedPrice: number,
     justification?: string,
 ): Promise<PriceAdjustmentResult> {
-    const result = await adminApi<{ requestPriceAdjustment: PriceAdjustmentResult }>(
-        `mutation($orderId: ID!, $orderLineId: ID!, $requestedPrice: Int!, $justification: String) {
-            requestPriceAdjustment(
-                orderId: $orderId
-                orderLineId: $orderLineId
-                requestedPrice: $requestedPrice
-                justification: $justification
-            ) {
-                decision
-                approvalRequestId
-            }
-        }`,
-        { orderId, orderLineId, requestedPrice, justification },
-    );
-    return result.requestPriceAdjustment;
+    const result = await adminApi(RequestPriceAdjustmentDocument, {
+        orderId,
+        orderLineId,
+        requestedPrice,
+        justification,
+    });
+    return result.requestPriceAdjustment as PriceAdjustmentResult;
 }
 
 // Only two payment handlers actually exist (see apps/server/src/payment-method-handlers.ts) —
@@ -296,65 +187,34 @@ export async function finalizeOrder(
     tradingPointAddress: string,
     paymentMethod: string,
 ): Promise<{ code: string }> {
-    await adminApi(
-        `mutation($orderId: ID!, $input: CreateAddressInput!) {
-            setDraftOrderShippingAddress(orderId: $orderId, input: $input) { id }
-        }`,
-        {
-            orderId,
-            input: { streetLine1: tradingPointAddress || 'N/A', countryCode: 'RU' },
-        },
-    );
-
-    const eligible = await adminApi<{
-        eligibleShippingMethodsForDraftOrder: { id: string }[];
-    }>(`query($orderId: ID!) { eligibleShippingMethodsForDraftOrder(orderId: $orderId) { id } }`, {
+    await adminApi(SetDraftOrderShippingAddressDocument, {
         orderId,
+        input: { streetLine1: tradingPointAddress || 'N/A', countryCode: 'RU' },
     });
+
+    const eligible = await adminApi(EligibleShippingMethodsForDraftOrderDocument, { orderId });
     const shippingMethodId = eligible.eligibleShippingMethodsForDraftOrder[0]?.id;
     if (shippingMethodId) {
-        await adminApi(
-            `mutation($orderId: ID!, $id: ID!) {
-                setDraftOrderShippingMethod(orderId: $orderId, shippingMethodId: $id) {
-                    __typename
-                }
-            }`,
-            { orderId, id: shippingMethodId },
-        );
+        await adminApi(SetDraftOrderShippingMethodDocument, { orderId, id: shippingMethodId });
     }
 
-    const transition = await adminApi<{
-        transitionOrderToState: { __typename: string; message?: string; code?: string };
-    }>(
-        `mutation($id: ID!) {
-            transitionOrderToState(id: $id, state: "ArrangingPayment") {
-                __typename
-                ... on Order { code }
-                ... on OrderStateTransitionError { errorCode message }
-            }
-        }`,
-        { id: orderId },
-    );
-    if (transition.transitionOrderToState.__typename !== 'Order') {
+    const transition = await adminApi(TransitionOrderToStateDocument, { id: orderId });
+    if (
+        !transition.transitionOrderToState ||
+        transition.transitionOrderToState.__typename !== 'Order'
+    ) {
         throw new Error(
-            transition.transitionOrderToState.message ?? 'Could not proceed to payment',
+            transition.transitionOrderToState && 'message' in transition.transitionOrderToState
+                ? (transition.transitionOrderToState.message ?? 'Could not proceed to payment')
+                : 'Could not proceed to payment',
         );
     }
 
-    const payment = await adminApi<{
-        addManualPaymentToOrder: { __typename: string; code?: string; message?: string };
-    }>(
-        `mutation($input: ManualPaymentInput!) {
-            addManualPaymentToOrder(input: $input) {
-                __typename
-                ... on Order { code }
-                ... on ManualPaymentStateError { errorCode message }
-            }
-        }`,
-        { input: { orderId, method: paymentMethod, metadata: {} } },
-    );
+    const payment = await adminApi(AddManualPaymentToOrderDocument, {
+        input: { orderId, method: paymentMethod, metadata: {} },
+    });
     if (payment.addManualPaymentToOrder.__typename !== 'Order') {
         throw new Error(payment.addManualPaymentToOrder.message ?? 'Could not place order');
     }
-    return { code: payment.addManualPaymentToOrder.code as string };
+    return { code: payment.addManualPaymentToOrder.code };
 }
