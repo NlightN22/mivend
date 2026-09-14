@@ -35,9 +35,15 @@ export class CategoryStreamHandler implements InboundStreamHandler {
             Logger.warn(`category ${entityId}: missing name, skipping`, loggerCtx);
             return;
         }
+        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
+        // bool zero-value omission).
+        const isActive = payload.isActive === true;
+        const isDeleted = payload.isDeleted === true;
+        const isPrivate = !isActive || isDeleted;
+
         const facet = await this.ensureCategoryFacet(ctx);
         const facetValue = await this.ensureFacetValue(ctx, facet, entityId, name);
-        await this.ensureCollection(ctx, entityId, name, String(facetValue.id));
+        await this.ensureCollection(ctx, entityId, name, String(facetValue.id), isPrivate);
     }
 
     private async ensureCategoryFacet(ctx: RequestContext): Promise<Facet> {
@@ -80,6 +86,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         entityId: string,
         name: string,
         facetValueId: string,
+        isPrivate: boolean,
     ): Promise<void> {
         const slug = `cat-${entityId}`;
         const existing = await this.collectionService.findOneBySlug(ctx, slug);
@@ -95,13 +102,14 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         if (existing) {
             await this.collectionService.update(ctx, {
                 id: existing.id,
+                isPrivate,
                 translations: [{ languageCode: LanguageCode.en, name, slug, description: '' }],
                 filters,
             });
             return;
         }
         await this.collectionService.create(ctx, {
-            isPrivate: false,
+            isPrivate,
             translations: [{ languageCode: LanguageCode.en, name, slug, description: '' }],
             filters,
         });
