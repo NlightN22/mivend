@@ -90,11 +90,7 @@ export type Adjustment = {
     type: AdjustmentType;
 };
 
-export enum AdjustmentType {
-    DistributedOrderPromotion = 'DISTRIBUTED_ORDER_PROMOTION',
-    Other = 'OTHER',
-    Promotion = 'PROMOTION',
-}
+export type AdjustmentType = 'DISTRIBUTED_ORDER_PROMOTION' | 'OTHER' | 'PROMOTION';
 
 export type Administrator = Node & {
     createdAt: Scalars['DateTime']['output'];
@@ -421,11 +417,7 @@ export type AssetTranslationInput = {
     name?: InputMaybe<Scalars['String']['input']>;
 };
 
-export enum AssetType {
-    Binary = 'BINARY',
-    Image = 'IMAGE',
-    Video = 'VIDEO',
-}
+export type AssetType = 'BINARY' | 'IMAGE' | 'VIDEO';
 
 export type AssignAssetsToChannelInput = {
     assetIds: Array<Scalars['ID']['input']>;
@@ -1346,322 +1338,321 @@ export type CreditTermRequestInput = {
  *
  * @docsCategory common
  */
-export enum CurrencyCode {
+export type CurrencyCode =
     /** United Arab Emirates dirham */
-    Aed = 'AED',
+    | 'AED'
     /** Afghan afghani */
-    Afn = 'AFN',
+    | 'AFN'
     /** Albanian lek */
-    All = 'ALL',
+    | 'ALL'
     /** Armenian dram */
-    Amd = 'AMD',
+    | 'AMD'
     /** Netherlands Antillean guilder */
-    Ang = 'ANG',
+    | 'ANG'
     /** Angolan kwanza */
-    Aoa = 'AOA',
+    | 'AOA'
     /** Argentine peso */
-    Ars = 'ARS',
+    | 'ARS'
     /** Australian dollar */
-    Aud = 'AUD',
+    | 'AUD'
     /** Aruban florin */
-    Awg = 'AWG',
+    | 'AWG'
     /** Azerbaijani manat */
-    Azn = 'AZN',
+    | 'AZN'
     /** Bosnia and Herzegovina convertible mark */
-    Bam = 'BAM',
+    | 'BAM'
     /** Barbados dollar */
-    Bbd = 'BBD',
+    | 'BBD'
     /** Bangladeshi taka */
-    Bdt = 'BDT',
+    | 'BDT'
     /** Bulgarian lev */
-    Bgn = 'BGN',
+    | 'BGN'
     /** Bahraini dinar */
-    Bhd = 'BHD',
+    | 'BHD'
     /** Burundian franc */
-    Bif = 'BIF',
+    | 'BIF'
     /** Bermudian dollar */
-    Bmd = 'BMD',
+    | 'BMD'
     /** Brunei dollar */
-    Bnd = 'BND',
+    | 'BND'
     /** Boliviano */
-    Bob = 'BOB',
+    | 'BOB'
     /** Brazilian real */
-    Brl = 'BRL',
+    | 'BRL'
     /** Bahamian dollar */
-    Bsd = 'BSD',
+    | 'BSD'
     /** Bhutanese ngultrum */
-    Btn = 'BTN',
+    | 'BTN'
     /** Botswana pula */
-    Bwp = 'BWP',
+    | 'BWP'
     /** Belarusian ruble */
-    Byn = 'BYN',
+    | 'BYN'
     /** Belize dollar */
-    Bzd = 'BZD',
+    | 'BZD'
     /** Canadian dollar */
-    Cad = 'CAD',
+    | 'CAD'
     /** Congolese franc */
-    Cdf = 'CDF',
+    | 'CDF'
     /** Swiss franc */
-    Chf = 'CHF',
+    | 'CHF'
     /** Chilean peso */
-    Clp = 'CLP',
+    | 'CLP'
     /** Renminbi (Chinese) yuan */
-    Cny = 'CNY',
+    | 'CNY'
     /** Colombian peso */
-    Cop = 'COP',
+    | 'COP'
     /** Costa Rican colon */
-    Crc = 'CRC',
+    | 'CRC'
     /** Cuban convertible peso */
-    Cuc = 'CUC',
+    | 'CUC'
     /** Cuban peso */
-    Cup = 'CUP',
+    | 'CUP'
     /** Cape Verde escudo */
-    Cve = 'CVE',
+    | 'CVE'
     /** Czech koruna */
-    Czk = 'CZK',
+    | 'CZK'
     /** Djiboutian franc */
-    Djf = 'DJF',
+    | 'DJF'
     /** Danish krone */
-    Dkk = 'DKK',
+    | 'DKK'
     /** Dominican peso */
-    Dop = 'DOP',
+    | 'DOP'
     /** Algerian dinar */
-    Dzd = 'DZD',
+    | 'DZD'
     /** Egyptian pound */
-    Egp = 'EGP',
+    | 'EGP'
     /** Eritrean nakfa */
-    Ern = 'ERN',
+    | 'ERN'
     /** Ethiopian birr */
-    Etb = 'ETB',
+    | 'ETB'
     /** Euro */
-    Eur = 'EUR',
+    | 'EUR'
     /** Fiji dollar */
-    Fjd = 'FJD',
+    | 'FJD'
     /** Falkland Islands pound */
-    Fkp = 'FKP',
+    | 'FKP'
     /** Pound sterling */
-    Gbp = 'GBP',
+    | 'GBP'
     /** Georgian lari */
-    Gel = 'GEL',
+    | 'GEL'
     /** Ghanaian cedi */
-    Ghs = 'GHS',
+    | 'GHS'
     /** Gibraltar pound */
-    Gip = 'GIP',
+    | 'GIP'
     /** Gambian dalasi */
-    Gmd = 'GMD',
+    | 'GMD'
     /** Guinean franc */
-    Gnf = 'GNF',
+    | 'GNF'
     /** Guatemalan quetzal */
-    Gtq = 'GTQ',
+    | 'GTQ'
     /** Guyanese dollar */
-    Gyd = 'GYD',
+    | 'GYD'
     /** Hong Kong dollar */
-    Hkd = 'HKD',
+    | 'HKD'
     /** Honduran lempira */
-    Hnl = 'HNL',
+    | 'HNL'
     /** Croatian kuna */
-    Hrk = 'HRK',
+    | 'HRK'
     /** Haitian gourde */
-    Htg = 'HTG',
+    | 'HTG'
     /** Hungarian forint */
-    Huf = 'HUF',
+    | 'HUF'
     /** Indonesian rupiah */
-    Idr = 'IDR',
+    | 'IDR'
     /** Israeli new shekel */
-    Ils = 'ILS',
+    | 'ILS'
     /** Indian rupee */
-    Inr = 'INR',
+    | 'INR'
     /** Iraqi dinar */
-    Iqd = 'IQD',
+    | 'IQD'
     /** Iranian rial */
-    Irr = 'IRR',
+    | 'IRR'
     /** Icelandic króna */
-    Isk = 'ISK',
+    | 'ISK'
     /** Jamaican dollar */
-    Jmd = 'JMD',
+    | 'JMD'
     /** Jordanian dinar */
-    Jod = 'JOD',
+    | 'JOD'
     /** Japanese yen */
-    Jpy = 'JPY',
+    | 'JPY'
     /** Kenyan shilling */
-    Kes = 'KES',
+    | 'KES'
     /** Kyrgyzstani som */
-    Kgs = 'KGS',
+    | 'KGS'
     /** Cambodian riel */
-    Khr = 'KHR',
+    | 'KHR'
     /** Comoro franc */
-    Kmf = 'KMF',
+    | 'KMF'
     /** North Korean won */
-    Kpw = 'KPW',
+    | 'KPW'
     /** South Korean won */
-    Krw = 'KRW',
+    | 'KRW'
     /** Kuwaiti dinar */
-    Kwd = 'KWD',
+    | 'KWD'
     /** Cayman Islands dollar */
-    Kyd = 'KYD',
+    | 'KYD'
     /** Kazakhstani tenge */
-    Kzt = 'KZT',
+    | 'KZT'
     /** Lao kip */
-    Lak = 'LAK',
+    | 'LAK'
     /** Lebanese pound */
-    Lbp = 'LBP',
+    | 'LBP'
     /** Sri Lankan rupee */
-    Lkr = 'LKR',
+    | 'LKR'
     /** Liberian dollar */
-    Lrd = 'LRD',
+    | 'LRD'
     /** Lesotho loti */
-    Lsl = 'LSL',
+    | 'LSL'
     /** Libyan dinar */
-    Lyd = 'LYD',
+    | 'LYD'
     /** Moroccan dirham */
-    Mad = 'MAD',
+    | 'MAD'
     /** Moldovan leu */
-    Mdl = 'MDL',
+    | 'MDL'
     /** Malagasy ariary */
-    Mga = 'MGA',
+    | 'MGA'
     /** Macedonian denar */
-    Mkd = 'MKD',
+    | 'MKD'
     /** Myanmar kyat */
-    Mmk = 'MMK',
+    | 'MMK'
     /** Mongolian tögrög */
-    Mnt = 'MNT',
+    | 'MNT'
     /** Macanese pataca */
-    Mop = 'MOP',
+    | 'MOP'
     /** Mauritanian ouguiya */
-    Mru = 'MRU',
+    | 'MRU'
     /** Mauritian rupee */
-    Mur = 'MUR',
+    | 'MUR'
     /** Maldivian rufiyaa */
-    Mvr = 'MVR',
+    | 'MVR'
     /** Malawian kwacha */
-    Mwk = 'MWK',
+    | 'MWK'
     /** Mexican peso */
-    Mxn = 'MXN',
+    | 'MXN'
     /** Malaysian ringgit */
-    Myr = 'MYR',
+    | 'MYR'
     /** Mozambican metical */
-    Mzn = 'MZN',
+    | 'MZN'
     /** Namibian dollar */
-    Nad = 'NAD',
+    | 'NAD'
     /** Nigerian naira */
-    Ngn = 'NGN',
+    | 'NGN'
     /** Nicaraguan córdoba */
-    Nio = 'NIO',
+    | 'NIO'
     /** Norwegian krone */
-    Nok = 'NOK',
+    | 'NOK'
     /** Nepalese rupee */
-    Npr = 'NPR',
+    | 'NPR'
     /** New Zealand dollar */
-    Nzd = 'NZD',
+    | 'NZD'
     /** Omani rial */
-    Omr = 'OMR',
+    | 'OMR'
     /** Panamanian balboa */
-    Pab = 'PAB',
+    | 'PAB'
     /** Peruvian sol */
-    Pen = 'PEN',
+    | 'PEN'
     /** Papua New Guinean kina */
-    Pgk = 'PGK',
+    | 'PGK'
     /** Philippine peso */
-    Php = 'PHP',
+    | 'PHP'
     /** Pakistani rupee */
-    Pkr = 'PKR',
+    | 'PKR'
     /** Polish złoty */
-    Pln = 'PLN',
+    | 'PLN'
     /** Paraguayan guaraní */
-    Pyg = 'PYG',
+    | 'PYG'
     /** Qatari riyal */
-    Qar = 'QAR',
+    | 'QAR'
     /** Romanian leu */
-    Ron = 'RON',
+    | 'RON'
     /** Serbian dinar */
-    Rsd = 'RSD',
+    | 'RSD'
     /** Russian ruble */
-    Rub = 'RUB',
+    | 'RUB'
     /** Rwandan franc */
-    Rwf = 'RWF',
+    | 'RWF'
     /** Saudi riyal */
-    Sar = 'SAR',
+    | 'SAR'
     /** Solomon Islands dollar */
-    Sbd = 'SBD',
+    | 'SBD'
     /** Seychelles rupee */
-    Scr = 'SCR',
+    | 'SCR'
     /** Sudanese pound */
-    Sdg = 'SDG',
+    | 'SDG'
     /** Swedish krona/kronor */
-    Sek = 'SEK',
+    | 'SEK'
     /** Singapore dollar */
-    Sgd = 'SGD',
+    | 'SGD'
     /** Saint Helena pound */
-    Shp = 'SHP',
+    | 'SHP'
     /** Sierra Leonean leone */
-    Sll = 'SLL',
+    | 'SLL'
     /** Somali shilling */
-    Sos = 'SOS',
+    | 'SOS'
     /** Surinamese dollar */
-    Srd = 'SRD',
+    | 'SRD'
     /** South Sudanese pound */
-    Ssp = 'SSP',
+    | 'SSP'
     /** São Tomé and Príncipe dobra */
-    Stn = 'STN',
+    | 'STN'
     /** Salvadoran colón */
-    Svc = 'SVC',
+    | 'SVC'
     /** Syrian pound */
-    Syp = 'SYP',
+    | 'SYP'
     /** Swazi lilangeni */
-    Szl = 'SZL',
+    | 'SZL'
     /** Thai baht */
-    Thb = 'THB',
+    | 'THB'
     /** Tajikistani somoni */
-    Tjs = 'TJS',
+    | 'TJS'
     /** Turkmenistan manat */
-    Tmt = 'TMT',
+    | 'TMT'
     /** Tunisian dinar */
-    Tnd = 'TND',
+    | 'TND'
     /** Tongan paʻanga */
-    Top = 'TOP',
+    | 'TOP'
     /** Turkish lira */
-    Try = 'TRY',
+    | 'TRY'
     /** Trinidad and Tobago dollar */
-    Ttd = 'TTD',
+    | 'TTD'
     /** New Taiwan dollar */
-    Twd = 'TWD',
+    | 'TWD'
     /** Tanzanian shilling */
-    Tzs = 'TZS',
+    | 'TZS'
     /** Ukrainian hryvnia */
-    Uah = 'UAH',
+    | 'UAH'
     /** Ugandan shilling */
-    Ugx = 'UGX',
+    | 'UGX'
     /** United States dollar */
-    Usd = 'USD',
+    | 'USD'
     /** Uruguayan peso */
-    Uyu = 'UYU',
+    | 'UYU'
     /** Uzbekistan som */
-    Uzs = 'UZS',
+    | 'UZS'
     /** Venezuelan bolívar soberano */
-    Ves = 'VES',
+    | 'VES'
     /** Vietnamese đồng */
-    Vnd = 'VND',
+    | 'VND'
     /** Vanuatu vatu */
-    Vuv = 'VUV',
+    | 'VUV'
     /** Samoan tala */
-    Wst = 'WST',
+    | 'WST'
     /** CFA franc BEAC */
-    Xaf = 'XAF',
+    | 'XAF'
     /** East Caribbean dollar */
-    Xcd = 'XCD',
+    | 'XCD'
     /** CFA franc BCEAO */
-    Xof = 'XOF',
+    | 'XOF'
     /** CFP franc (franc Pacifique) */
-    Xpf = 'XPF',
+    | 'XPF'
     /** Yemeni rial */
-    Yer = 'YER',
+    | 'YER'
     /** South African rand */
-    Zar = 'ZAR',
+    | 'ZAR'
     /** Zambian kwacha */
-    Zmw = 'ZMW',
+    | 'ZMW'
     /** Zimbabwean dollar */
-    Zwl = 'ZWL',
-}
+    | 'ZWL';
 
 export type CurrentUser = {
     channels: Array<CurrentUserChannel>;
@@ -1894,11 +1885,7 @@ export type DashboardMetricSummaryInput = {
     types: Array<DashboardMetricType>;
 };
 
-export enum DashboardMetricType {
-    AverageOrderValue = 'AverageOrderValue',
-    OrderCount = 'OrderCount',
-    OrderTotal = 'OrderTotal',
-}
+export type DashboardMetricType = 'AverageOrderValue' | 'OrderCount' | 'OrderTotal';
 
 /** Operators for filtering on a list of Date fields */
 export type DateListOperators = {
@@ -1979,12 +1966,11 @@ export type DeletionResponse = {
     result: DeletionResult;
 };
 
-export enum DeletionResult {
+export type DeletionResult =
     /** The entity was successfully deleted */
-    Deleted = 'DELETED',
+    | 'DELETED'
     /** Deletion did not take place, reason given in message */
-    NotDeleted = 'NOT_DELETED',
-}
+    | 'NOT_DELETED';
 
 export type Department = {
     erpId: Scalars['String']['output'];
@@ -2245,55 +2231,54 @@ export type ErpReconciliationRunResult = {
     skipped: Array<Scalars['String']['output']>;
 };
 
-export enum ErrorCode {
-    AlreadyRefundedError = 'ALREADY_REFUNDED_ERROR',
-    CancelActiveOrderError = 'CANCEL_ACTIVE_ORDER_ERROR',
-    CancelPaymentError = 'CANCEL_PAYMENT_ERROR',
-    ChannelDefaultLanguageError = 'CHANNEL_DEFAULT_LANGUAGE_ERROR',
-    CouponCodeExpiredError = 'COUPON_CODE_EXPIRED_ERROR',
-    CouponCodeInvalidError = 'COUPON_CODE_INVALID_ERROR',
-    CouponCodeLimitError = 'COUPON_CODE_LIMIT_ERROR',
-    CreateFulfillmentError = 'CREATE_FULFILLMENT_ERROR',
-    DuplicateEntityError = 'DUPLICATE_ENTITY_ERROR',
-    EmailAddressConflictError = 'EMAIL_ADDRESS_CONFLICT_ERROR',
-    EmptyOrderLineSelectionError = 'EMPTY_ORDER_LINE_SELECTION_ERROR',
-    FacetInUseError = 'FACET_IN_USE_ERROR',
-    FulfillmentStateTransitionError = 'FULFILLMENT_STATE_TRANSITION_ERROR',
-    GuestCheckoutError = 'GUEST_CHECKOUT_ERROR',
-    IneligibleShippingMethodError = 'INELIGIBLE_SHIPPING_METHOD_ERROR',
-    InsufficientStockError = 'INSUFFICIENT_STOCK_ERROR',
-    InsufficientStockOnHandError = 'INSUFFICIENT_STOCK_ON_HAND_ERROR',
-    InvalidCredentialsError = 'INVALID_CREDENTIALS_ERROR',
-    InvalidFulfillmentHandlerError = 'INVALID_FULFILLMENT_HANDLER_ERROR',
-    ItemsAlreadyFulfilledError = 'ITEMS_ALREADY_FULFILLED_ERROR',
-    LanguageNotAvailableError = 'LANGUAGE_NOT_AVAILABLE_ERROR',
-    ManualPaymentStateError = 'MANUAL_PAYMENT_STATE_ERROR',
-    MimeTypeError = 'MIME_TYPE_ERROR',
-    MissingConditionsError = 'MISSING_CONDITIONS_ERROR',
-    MultipleOrderError = 'MULTIPLE_ORDER_ERROR',
-    NativeAuthStrategyError = 'NATIVE_AUTH_STRATEGY_ERROR',
-    NegativeQuantityError = 'NEGATIVE_QUANTITY_ERROR',
-    NothingToRefundError = 'NOTHING_TO_REFUND_ERROR',
-    NoActiveOrderError = 'NO_ACTIVE_ORDER_ERROR',
-    NoChangesSpecifiedError = 'NO_CHANGES_SPECIFIED_ERROR',
-    OrderInterceptorError = 'ORDER_INTERCEPTOR_ERROR',
-    OrderLimitError = 'ORDER_LIMIT_ERROR',
-    OrderModificationError = 'ORDER_MODIFICATION_ERROR',
-    OrderModificationStateError = 'ORDER_MODIFICATION_STATE_ERROR',
-    OrderStateTransitionError = 'ORDER_STATE_TRANSITION_ERROR',
-    PaymentMethodMissingError = 'PAYMENT_METHOD_MISSING_ERROR',
-    PaymentOrderMismatchError = 'PAYMENT_ORDER_MISMATCH_ERROR',
-    PaymentStateTransitionError = 'PAYMENT_STATE_TRANSITION_ERROR',
-    ProductOptionGroupInUseError = 'PRODUCT_OPTION_GROUP_IN_USE_ERROR',
-    ProductOptionInUseError = 'PRODUCT_OPTION_IN_USE_ERROR',
-    QuantityTooGreatError = 'QUANTITY_TOO_GREAT_ERROR',
-    RefundAmountError = 'REFUND_AMOUNT_ERROR',
-    RefundOrderStateError = 'REFUND_ORDER_STATE_ERROR',
-    RefundPaymentIdMissingError = 'REFUND_PAYMENT_ID_MISSING_ERROR',
-    RefundStateTransitionError = 'REFUND_STATE_TRANSITION_ERROR',
-    SettlePaymentError = 'SETTLE_PAYMENT_ERROR',
-    UnknownError = 'UNKNOWN_ERROR',
-}
+export type ErrorCode =
+    | 'ALREADY_REFUNDED_ERROR'
+    | 'CANCEL_ACTIVE_ORDER_ERROR'
+    | 'CANCEL_PAYMENT_ERROR'
+    | 'CHANNEL_DEFAULT_LANGUAGE_ERROR'
+    | 'COUPON_CODE_EXPIRED_ERROR'
+    | 'COUPON_CODE_INVALID_ERROR'
+    | 'COUPON_CODE_LIMIT_ERROR'
+    | 'CREATE_FULFILLMENT_ERROR'
+    | 'DUPLICATE_ENTITY_ERROR'
+    | 'EMAIL_ADDRESS_CONFLICT_ERROR'
+    | 'EMPTY_ORDER_LINE_SELECTION_ERROR'
+    | 'FACET_IN_USE_ERROR'
+    | 'FULFILLMENT_STATE_TRANSITION_ERROR'
+    | 'GUEST_CHECKOUT_ERROR'
+    | 'INELIGIBLE_SHIPPING_METHOD_ERROR'
+    | 'INSUFFICIENT_STOCK_ERROR'
+    | 'INSUFFICIENT_STOCK_ON_HAND_ERROR'
+    | 'INVALID_CREDENTIALS_ERROR'
+    | 'INVALID_FULFILLMENT_HANDLER_ERROR'
+    | 'ITEMS_ALREADY_FULFILLED_ERROR'
+    | 'LANGUAGE_NOT_AVAILABLE_ERROR'
+    | 'MANUAL_PAYMENT_STATE_ERROR'
+    | 'MIME_TYPE_ERROR'
+    | 'MISSING_CONDITIONS_ERROR'
+    | 'MULTIPLE_ORDER_ERROR'
+    | 'NATIVE_AUTH_STRATEGY_ERROR'
+    | 'NEGATIVE_QUANTITY_ERROR'
+    | 'NOTHING_TO_REFUND_ERROR'
+    | 'NO_ACTIVE_ORDER_ERROR'
+    | 'NO_CHANGES_SPECIFIED_ERROR'
+    | 'ORDER_INTERCEPTOR_ERROR'
+    | 'ORDER_LIMIT_ERROR'
+    | 'ORDER_MODIFICATION_ERROR'
+    | 'ORDER_MODIFICATION_STATE_ERROR'
+    | 'ORDER_STATE_TRANSITION_ERROR'
+    | 'PAYMENT_METHOD_MISSING_ERROR'
+    | 'PAYMENT_ORDER_MISMATCH_ERROR'
+    | 'PAYMENT_STATE_TRANSITION_ERROR'
+    | 'PRODUCT_OPTION_GROUP_IN_USE_ERROR'
+    | 'PRODUCT_OPTION_IN_USE_ERROR'
+    | 'QUANTITY_TOO_GREAT_ERROR'
+    | 'REFUND_AMOUNT_ERROR'
+    | 'REFUND_ORDER_STATE_ERROR'
+    | 'REFUND_PAYMENT_ID_MISSING_ERROR'
+    | 'REFUND_STATE_TRANSITION_ERROR'
+    | 'SETTLE_PAYMENT_ERROR'
+    | 'UNKNOWN_ERROR';
 
 export type ErrorResult = {
     errorCode: ErrorCode;
@@ -2554,11 +2539,7 @@ export type FulfillmentStateTransitionError = ErrorResult & {
     transitionError: Scalars['String']['output'];
 };
 
-export enum GlobalFlag {
-    False = 'FALSE',
-    Inherit = 'INHERIT',
-    True = 'TRUE',
-}
+export type GlobalFlag = 'FALSE' | 'INHERIT' | 'TRUE';
 
 export type GlobalSettings = {
     availableLanguages: Array<LanguageCode>;
@@ -2628,34 +2609,33 @@ export type HistoryEntrySortParameter = {
     updatedAt?: InputMaybe<SortOrder>;
 };
 
-export enum HistoryEntryType {
-    CustomerAddedToGroup = 'CUSTOMER_ADDED_TO_GROUP',
-    CustomerAddressCreated = 'CUSTOMER_ADDRESS_CREATED',
-    CustomerAddressDeleted = 'CUSTOMER_ADDRESS_DELETED',
-    CustomerAddressUpdated = 'CUSTOMER_ADDRESS_UPDATED',
-    CustomerDetailUpdated = 'CUSTOMER_DETAIL_UPDATED',
-    CustomerEmailUpdateRequested = 'CUSTOMER_EMAIL_UPDATE_REQUESTED',
-    CustomerEmailUpdateVerified = 'CUSTOMER_EMAIL_UPDATE_VERIFIED',
-    CustomerNote = 'CUSTOMER_NOTE',
-    CustomerPasswordResetRequested = 'CUSTOMER_PASSWORD_RESET_REQUESTED',
-    CustomerPasswordResetVerified = 'CUSTOMER_PASSWORD_RESET_VERIFIED',
-    CustomerPasswordUpdated = 'CUSTOMER_PASSWORD_UPDATED',
-    CustomerRegistered = 'CUSTOMER_REGISTERED',
-    CustomerRemovedFromGroup = 'CUSTOMER_REMOVED_FROM_GROUP',
-    CustomerVerified = 'CUSTOMER_VERIFIED',
-    OrderCancellation = 'ORDER_CANCELLATION',
-    OrderCouponApplied = 'ORDER_COUPON_APPLIED',
-    OrderCouponRemoved = 'ORDER_COUPON_REMOVED',
-    OrderCurrencyUpdated = 'ORDER_CURRENCY_UPDATED',
-    OrderCustomerUpdated = 'ORDER_CUSTOMER_UPDATED',
-    OrderFulfillment = 'ORDER_FULFILLMENT',
-    OrderFulfillmentTransition = 'ORDER_FULFILLMENT_TRANSITION',
-    OrderModified = 'ORDER_MODIFIED',
-    OrderNote = 'ORDER_NOTE',
-    OrderPaymentTransition = 'ORDER_PAYMENT_TRANSITION',
-    OrderRefundTransition = 'ORDER_REFUND_TRANSITION',
-    OrderStateTransition = 'ORDER_STATE_TRANSITION',
-}
+export type HistoryEntryType =
+    | 'CUSTOMER_ADDED_TO_GROUP'
+    | 'CUSTOMER_ADDRESS_CREATED'
+    | 'CUSTOMER_ADDRESS_DELETED'
+    | 'CUSTOMER_ADDRESS_UPDATED'
+    | 'CUSTOMER_DETAIL_UPDATED'
+    | 'CUSTOMER_EMAIL_UPDATE_REQUESTED'
+    | 'CUSTOMER_EMAIL_UPDATE_VERIFIED'
+    | 'CUSTOMER_NOTE'
+    | 'CUSTOMER_PASSWORD_RESET_REQUESTED'
+    | 'CUSTOMER_PASSWORD_RESET_VERIFIED'
+    | 'CUSTOMER_PASSWORD_UPDATED'
+    | 'CUSTOMER_REGISTERED'
+    | 'CUSTOMER_REMOVED_FROM_GROUP'
+    | 'CUSTOMER_VERIFIED'
+    | 'ORDER_CANCELLATION'
+    | 'ORDER_COUPON_APPLIED'
+    | 'ORDER_COUPON_REMOVED'
+    | 'ORDER_CURRENCY_UPDATED'
+    | 'ORDER_CUSTOMER_UPDATED'
+    | 'ORDER_FULFILLMENT'
+    | 'ORDER_FULFILLMENT_TRANSITION'
+    | 'ORDER_MODIFIED'
+    | 'ORDER_NOTE'
+    | 'ORDER_PAYMENT_TRANSITION'
+    | 'ORDER_REFUND_TRANSITION'
+    | 'ORDER_STATE_TRANSITION';
 
 /** Operators for filtering on a list of ID fields */
 export type IdListOperators = {
@@ -2868,14 +2848,7 @@ export type JobSortParameter = {
  *
  * @docsCategory common
  */
-export enum JobState {
-    Cancelled = 'CANCELLED',
-    Completed = 'COMPLETED',
-    Failed = 'FAILED',
-    Pending = 'PENDING',
-    Retrying = 'RETRYING',
-    Running = 'RUNNING',
-}
+export type JobState = 'CANCELLED' | 'COMPLETED' | 'FAILED' | 'PENDING' | 'RETRYING' | 'RUNNING';
 
 /**
  * @description
@@ -2886,322 +2859,321 @@ export enum JobState {
  *
  * @docsCategory common
  */
-export enum LanguageCode {
+export type LanguageCode =
     /** Afrikaans */
-    Af = 'af',
+    | 'af'
     /** Akan */
-    Ak = 'ak',
+    | 'ak'
     /** Amharic */
-    Am = 'am',
+    | 'am'
     /** Arabic */
-    Ar = 'ar',
+    | 'ar'
     /** Assamese */
-    As = 'as',
+    | 'as'
     /** Azerbaijani */
-    Az = 'az',
+    | 'az'
     /** Belarusian */
-    Be = 'be',
+    | 'be'
     /** Bulgarian */
-    Bg = 'bg',
+    | 'bg'
     /** Bambara */
-    Bm = 'bm',
+    | 'bm'
     /** Bangla */
-    Bn = 'bn',
+    | 'bn'
     /** Tibetan */
-    Bo = 'bo',
+    | 'bo'
     /** Breton */
-    Br = 'br',
+    | 'br'
     /** Bosnian */
-    Bs = 'bs',
+    | 'bs'
     /** Catalan */
-    Ca = 'ca',
+    | 'ca'
     /** Chechen */
-    Ce = 'ce',
+    | 'ce'
     /** Corsican */
-    Co = 'co',
+    | 'co'
     /** Czech */
-    Cs = 'cs',
+    | 'cs'
     /** Church Slavic */
-    Cu = 'cu',
+    | 'cu'
     /** Welsh */
-    Cy = 'cy',
+    | 'cy'
     /** Danish */
-    Da = 'da',
+    | 'da'
     /** German */
-    De = 'de',
+    | 'de'
     /** Austrian German */
-    DeAt = 'de_AT',
+    | 'de_AT'
     /** Swiss High German */
-    DeCh = 'de_CH',
+    | 'de_CH'
     /** Dzongkha */
-    Dz = 'dz',
+    | 'dz'
     /** Ewe */
-    Ee = 'ee',
+    | 'ee'
     /** Greek */
-    El = 'el',
+    | 'el'
     /** English */
-    En = 'en',
+    | 'en'
     /** Australian English */
-    EnAu = 'en_AU',
+    | 'en_AU'
     /** Canadian English */
-    EnCa = 'en_CA',
+    | 'en_CA'
     /** British English */
-    EnGb = 'en_GB',
+    | 'en_GB'
     /** American English */
-    EnUs = 'en_US',
+    | 'en_US'
     /** Esperanto */
-    Eo = 'eo',
+    | 'eo'
     /** Spanish */
-    Es = 'es',
+    | 'es'
     /** European Spanish */
-    EsEs = 'es_ES',
+    | 'es_ES'
     /** Mexican Spanish */
-    EsMx = 'es_MX',
+    | 'es_MX'
     /** Estonian */
-    Et = 'et',
+    | 'et'
     /** Basque */
-    Eu = 'eu',
+    | 'eu'
     /** Persian */
-    Fa = 'fa',
+    | 'fa'
     /** Dari */
-    FaAf = 'fa_AF',
+    | 'fa_AF'
     /** Fulah */
-    Ff = 'ff',
+    | 'ff'
     /** Finnish */
-    Fi = 'fi',
+    | 'fi'
     /** Faroese */
-    Fo = 'fo',
+    | 'fo'
     /** French */
-    Fr = 'fr',
+    | 'fr'
     /** Canadian French */
-    FrCa = 'fr_CA',
+    | 'fr_CA'
     /** Swiss French */
-    FrCh = 'fr_CH',
+    | 'fr_CH'
     /** Western Frisian */
-    Fy = 'fy',
+    | 'fy'
     /** Irish */
-    Ga = 'ga',
+    | 'ga'
     /** Scottish Gaelic */
-    Gd = 'gd',
+    | 'gd'
     /** Galician */
-    Gl = 'gl',
+    | 'gl'
     /** Gujarati */
-    Gu = 'gu',
+    | 'gu'
     /** Manx */
-    Gv = 'gv',
+    | 'gv'
     /** Hausa */
-    Ha = 'ha',
+    | 'ha'
     /** Hebrew */
-    He = 'he',
+    | 'he'
     /** Hindi */
-    Hi = 'hi',
+    | 'hi'
     /** Croatian */
-    Hr = 'hr',
+    | 'hr'
     /** Haitian Creole */
-    Ht = 'ht',
+    | 'ht'
     /** Hungarian */
-    Hu = 'hu',
+    | 'hu'
     /** Armenian */
-    Hy = 'hy',
+    | 'hy'
     /** Interlingua */
-    Ia = 'ia',
+    | 'ia'
     /** Indonesian */
-    Id = 'id',
+    | 'id'
     /** Igbo */
-    Ig = 'ig',
+    | 'ig'
     /** Sichuan Yi */
-    Ii = 'ii',
+    | 'ii'
     /** Icelandic */
-    Is = 'is',
+    | 'is'
     /** Italian */
-    It = 'it',
+    | 'it'
     /** Japanese */
-    Ja = 'ja',
+    | 'ja'
     /** Javanese */
-    Jv = 'jv',
+    | 'jv'
     /** Georgian */
-    Ka = 'ka',
+    | 'ka'
     /** Kikuyu */
-    Ki = 'ki',
+    | 'ki'
     /** Kazakh */
-    Kk = 'kk',
+    | 'kk'
     /** Kalaallisut */
-    Kl = 'kl',
+    | 'kl'
     /** Khmer */
-    Km = 'km',
+    | 'km'
     /** Kannada */
-    Kn = 'kn',
+    | 'kn'
     /** Korean */
-    Ko = 'ko',
+    | 'ko'
     /** Kashmiri */
-    Ks = 'ks',
+    | 'ks'
     /** Kurdish */
-    Ku = 'ku',
+    | 'ku'
     /** Cornish */
-    Kw = 'kw',
+    | 'kw'
     /** Kyrgyz */
-    Ky = 'ky',
+    | 'ky'
     /** Latin */
-    La = 'la',
+    | 'la'
     /** Luxembourgish */
-    Lb = 'lb',
+    | 'lb'
     /** Ganda */
-    Lg = 'lg',
+    | 'lg'
     /** Lingala */
-    Ln = 'ln',
+    | 'ln'
     /** Lao */
-    Lo = 'lo',
+    | 'lo'
     /** Lithuanian */
-    Lt = 'lt',
+    | 'lt'
     /** Luba-Katanga */
-    Lu = 'lu',
+    | 'lu'
     /** Latvian */
-    Lv = 'lv',
+    | 'lv'
     /** Malagasy */
-    Mg = 'mg',
+    | 'mg'
     /** Maori */
-    Mi = 'mi',
+    | 'mi'
     /** Macedonian */
-    Mk = 'mk',
+    | 'mk'
     /** Malayalam */
-    Ml = 'ml',
+    | 'ml'
     /** Mongolian */
-    Mn = 'mn',
+    | 'mn'
     /** Marathi */
-    Mr = 'mr',
+    | 'mr'
     /** Malay */
-    Ms = 'ms',
+    | 'ms'
     /** Maltese */
-    Mt = 'mt',
+    | 'mt'
     /** Burmese */
-    My = 'my',
+    | 'my'
     /** Norwegian Bokmål */
-    Nb = 'nb',
+    | 'nb'
     /** North Ndebele */
-    Nd = 'nd',
+    | 'nd'
     /** Nepali */
-    Ne = 'ne',
+    | 'ne'
     /** Dutch */
-    Nl = 'nl',
+    | 'nl'
     /** Flemish */
-    NlBe = 'nl_BE',
+    | 'nl_BE'
     /** Norwegian Nynorsk */
-    Nn = 'nn',
+    | 'nn'
     /** Nyanja */
-    Ny = 'ny',
+    | 'ny'
     /** Oromo */
-    Om = 'om',
+    | 'om'
     /** Odia */
-    Or = 'or',
+    | 'or'
     /** Ossetic */
-    Os = 'os',
+    | 'os'
     /** Punjabi */
-    Pa = 'pa',
+    | 'pa'
     /** Polish */
-    Pl = 'pl',
+    | 'pl'
     /** Pashto */
-    Ps = 'ps',
+    | 'ps'
     /** Portuguese */
-    Pt = 'pt',
+    | 'pt'
     /** Brazilian Portuguese */
-    PtBr = 'pt_BR',
+    | 'pt_BR'
     /** European Portuguese */
-    PtPt = 'pt_PT',
+    | 'pt_PT'
     /** Quechua */
-    Qu = 'qu',
+    | 'qu'
     /** Romansh */
-    Rm = 'rm',
+    | 'rm'
     /** Rundi */
-    Rn = 'rn',
+    | 'rn'
     /** Romanian */
-    Ro = 'ro',
+    | 'ro'
     /** Moldavian */
-    RoMd = 'ro_MD',
+    | 'ro_MD'
     /** Russian */
-    Ru = 'ru',
+    | 'ru'
     /** Kinyarwanda */
-    Rw = 'rw',
+    | 'rw'
     /** Sanskrit */
-    Sa = 'sa',
+    | 'sa'
     /** Sindhi */
-    Sd = 'sd',
+    | 'sd'
     /** Northern Sami */
-    Se = 'se',
+    | 'se'
     /** Sango */
-    Sg = 'sg',
+    | 'sg'
     /** Sinhala */
-    Si = 'si',
+    | 'si'
     /** Slovak */
-    Sk = 'sk',
+    | 'sk'
     /** Slovenian */
-    Sl = 'sl',
+    | 'sl'
     /** Samoan */
-    Sm = 'sm',
+    | 'sm'
     /** Shona */
-    Sn = 'sn',
+    | 'sn'
     /** Somali */
-    So = 'so',
+    | 'so'
     /** Albanian */
-    Sq = 'sq',
+    | 'sq'
     /** Serbian */
-    Sr = 'sr',
+    | 'sr'
     /** Southern Sotho */
-    St = 'st',
+    | 'st'
     /** Sundanese */
-    Su = 'su',
+    | 'su'
     /** Swedish */
-    Sv = 'sv',
+    | 'sv'
     /** Swahili */
-    Sw = 'sw',
+    | 'sw'
     /** Congo Swahili */
-    SwCd = 'sw_CD',
+    | 'sw_CD'
     /** Tamil */
-    Ta = 'ta',
+    | 'ta'
     /** Telugu */
-    Te = 'te',
+    | 'te'
     /** Tajik */
-    Tg = 'tg',
+    | 'tg'
     /** Thai */
-    Th = 'th',
+    | 'th'
     /** Tigrinya */
-    Ti = 'ti',
+    | 'ti'
     /** Turkmen */
-    Tk = 'tk',
+    | 'tk'
     /** Tongan */
-    To = 'to',
+    | 'to'
     /** Turkish */
-    Tr = 'tr',
+    | 'tr'
     /** Tatar */
-    Tt = 'tt',
+    | 'tt'
     /** Uyghur */
-    Ug = 'ug',
+    | 'ug'
     /** Ukrainian */
-    Uk = 'uk',
+    | 'uk'
     /** Urdu */
-    Ur = 'ur',
+    | 'ur'
     /** Uzbek */
-    Uz = 'uz',
+    | 'uz'
     /** Vietnamese */
-    Vi = 'vi',
+    | 'vi'
     /** Volapük */
-    Vo = 'vo',
+    | 'vo'
     /** Wolof */
-    Wo = 'wo',
+    | 'wo'
     /** Xhosa */
-    Xh = 'xh',
+    | 'xh'
     /** Yiddish */
-    Yi = 'yi',
+    | 'yi'
     /** Yoruba */
-    Yo = 'yo',
+    | 'yo'
     /** Chinese */
-    Zh = 'zh',
+    | 'zh'
     /** Simplified Chinese */
-    ZhHans = 'zh_Hans',
+    | 'zh_Hans'
     /** Traditional Chinese */
-    ZhHant = 'zh_Hant',
+    | 'zh_Hant'
     /** Zulu */
-    Zu = 'zu',
-}
+    | 'zu';
 
 /** Returned if attempting to set a Channel's defaultLanguageCode to a language which is not enabled in GlobalSettings */
 export type LanguageNotAvailableError = ErrorResult & {
@@ -3247,10 +3219,7 @@ export type LocalizedString = {
     value: Scalars['String']['output'];
 };
 
-export enum LogicalOperator {
-    And = 'AND',
-    Or = 'OR',
-}
+export type LogicalOperator = 'AND' | 'OR';
 
 export type ManualPaymentInput = {
     metadata?: InputMaybe<Scalars['JSON']['input']>;
@@ -4812,12 +4781,7 @@ export type Notification = {
     title: Scalars['String']['output'];
 };
 
-export enum NotificationKind {
-    Error = 'error',
-    Info = 'info',
-    Success = 'success',
-    Warning = 'warning',
-}
+export type NotificationKind = 'error' | 'info' | 'success' | 'warning';
 
 export type NotificationList = {
     items: Array<Notification>;
@@ -4830,11 +4794,7 @@ export type NotificationListOptions = {
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
-export enum NotificationStatus {
-    Read = 'read',
-    Resolved = 'resolved',
-    Unread = 'unread',
-}
+export type NotificationStatus = 'read' | 'resolved' | 'unread';
 
 /** Operators for filtering on a list of Number fields */
 export type NumberListOperators = {
@@ -5240,11 +5200,7 @@ export type OrderTaxSummary = {
     taxTotal: Scalars['Money']['output'];
 };
 
-export enum OrderType {
-    Aggregate = 'Aggregate',
-    Regular = 'Regular',
-    Seller = 'Seller',
-}
+export type OrderType = 'Aggregate' | 'Regular' | 'Seller';
 
 export type OrganizationRequisites = {
     erpId: Scalars['String']['output'];
@@ -5483,242 +5439,241 @@ export type PaymentStateTransitionError = ErrorResult & {
  *
  * @docsCategory common
  */
-export enum Permission {
+export type Permission =
     /** Adjust an order line price directly, as long as it stays at/above the floor price (layer 5 gate) */
-    AdjustPriceWithinLimit = 'AdjustPriceWithinLimit',
+    | 'AdjustPriceWithinLimit'
     /** Decide a step of a priceAdjustmentApproval or discountGrantApproval chain (layer 5) */
-    ApproveDiscountRequest = 'ApproveDiscountRequest',
+    | 'ApproveDiscountRequest'
     /** Decide a step of a securityLimitApproval chain (layer 5) */
-    ApproveSecurityLimit = 'ApproveSecurityLimit',
+    | 'ApproveSecurityLimit'
     /** Authenticated means simply that the user is logged in */
-    Authenticated = 'Authenticated',
+    | 'Authenticated'
     /** Confirm or release a manual order reservation (order-confirmation flow, see docs/order-flow.md) */
-    ConfirmOrder = 'ConfirmOrder',
+    | 'ConfirmOrder'
     /** Grants permission to create Administrator */
-    CreateAdministrator = 'CreateAdministrator',
+    | 'CreateAdministrator'
     /** Grants permission to create ApiKey */
-    CreateApiKey = 'CreateApiKey',
+    | 'CreateApiKey'
     /** Grants permission to create Asset */
-    CreateAsset = 'CreateAsset',
+    | 'CreateAsset'
     /** Grants permission to create Products, Facets, Assets, Collections */
-    CreateCatalog = 'CreateCatalog',
+    | 'CreateCatalog'
     /** Grants permission to create Channel */
-    CreateChannel = 'CreateChannel',
+    | 'CreateChannel'
     /** Grants permission to create Collection */
-    CreateCollection = 'CreateCollection',
+    | 'CreateCollection'
     /** Grants permission to create Country */
-    CreateCountry = 'CreateCountry',
+    | 'CreateCountry'
     /** Grants permission to create Customer */
-    CreateCustomer = 'CreateCustomer',
+    | 'CreateCustomer'
     /** Grants permission to create CustomerGroup */
-    CreateCustomerGroup = 'CreateCustomerGroup',
+    | 'CreateCustomerGroup'
     /** Grants permission to create Facet */
-    CreateFacet = 'CreateFacet',
+    | 'CreateFacet'
     /** Grants permission to create Order */
-    CreateOrder = 'CreateOrder',
+    | 'CreateOrder'
     /** Grants permission to create PaymentMethod */
-    CreatePaymentMethod = 'CreatePaymentMethod',
+    | 'CreatePaymentMethod'
     /** Grants permission to create Product */
-    CreateProduct = 'CreateProduct',
+    | 'CreateProduct'
     /** Grants permission to create Promotion */
-    CreatePromotion = 'CreatePromotion',
+    | 'CreatePromotion'
     /** Grants permission to create Seller */
-    CreateSeller = 'CreateSeller',
+    | 'CreateSeller'
     /** Grants permission to create PaymentMethods, ShippingMethods, TaxCategories, TaxRates, Zones, Countries, System & GlobalSettings */
-    CreateSettings = 'CreateSettings',
+    | 'CreateSettings'
     /** Grants permission to create ShippingMethod */
-    CreateShippingMethod = 'CreateShippingMethod',
+    | 'CreateShippingMethod'
     /** Grants permission to create StockLocation */
-    CreateStockLocation = 'CreateStockLocation',
+    | 'CreateStockLocation'
     /** Grants permission to create System */
-    CreateSystem = 'CreateSystem',
+    | 'CreateSystem'
     /** Grants permission to create Tag */
-    CreateTag = 'CreateTag',
+    | 'CreateTag'
     /** Grants permission to create TaxCategory */
-    CreateTaxCategory = 'CreateTaxCategory',
+    | 'CreateTaxCategory'
     /** Grants permission to create TaxRate */
-    CreateTaxRate = 'CreateTaxRate',
+    | 'CreateTaxRate'
     /** Grants permission to create Zone */
-    CreateZone = 'CreateZone',
+    | 'CreateZone'
     /** Grants permission to delete Administrator */
-    DeleteAdministrator = 'DeleteAdministrator',
+    | 'DeleteAdministrator'
     /** Grants permission to delete ApiKey */
-    DeleteApiKey = 'DeleteApiKey',
+    | 'DeleteApiKey'
     /** Grants permission to delete Asset */
-    DeleteAsset = 'DeleteAsset',
+    | 'DeleteAsset'
     /** Grants permission to delete Products, Facets, Assets, Collections */
-    DeleteCatalog = 'DeleteCatalog',
+    | 'DeleteCatalog'
     /** Grants permission to delete Channel */
-    DeleteChannel = 'DeleteChannel',
+    | 'DeleteChannel'
     /** Grants permission to delete Collection */
-    DeleteCollection = 'DeleteCollection',
+    | 'DeleteCollection'
     /** Grants permission to delete Country */
-    DeleteCountry = 'DeleteCountry',
+    | 'DeleteCountry'
     /** Grants permission to delete Customer */
-    DeleteCustomer = 'DeleteCustomer',
+    | 'DeleteCustomer'
     /** Grants permission to delete CustomerGroup */
-    DeleteCustomerGroup = 'DeleteCustomerGroup',
+    | 'DeleteCustomerGroup'
     /** Grants permission to delete Facet */
-    DeleteFacet = 'DeleteFacet',
+    | 'DeleteFacet'
     /** Grants permission to delete Order */
-    DeleteOrder = 'DeleteOrder',
+    | 'DeleteOrder'
     /** Grants permission to delete PaymentMethod */
-    DeletePaymentMethod = 'DeletePaymentMethod',
+    | 'DeletePaymentMethod'
     /** Grants permission to delete Product */
-    DeleteProduct = 'DeleteProduct',
+    | 'DeleteProduct'
     /** Grants permission to delete Promotion */
-    DeletePromotion = 'DeletePromotion',
+    | 'DeletePromotion'
     /** Grants permission to delete Seller */
-    DeleteSeller = 'DeleteSeller',
+    | 'DeleteSeller'
     /** Grants permission to delete PaymentMethods, ShippingMethods, TaxCategories, TaxRates, Zones, Countries, System & GlobalSettings */
-    DeleteSettings = 'DeleteSettings',
+    | 'DeleteSettings'
     /** Grants permission to delete ShippingMethod */
-    DeleteShippingMethod = 'DeleteShippingMethod',
+    | 'DeleteShippingMethod'
     /** Grants permission to delete StockLocation */
-    DeleteStockLocation = 'DeleteStockLocation',
+    | 'DeleteStockLocation'
     /** Grants permission to delete System */
-    DeleteSystem = 'DeleteSystem',
+    | 'DeleteSystem'
     /** Grants permission to delete Tag */
-    DeleteTag = 'DeleteTag',
+    | 'DeleteTag'
     /** Grants permission to delete TaxCategory */
-    DeleteTaxCategory = 'DeleteTaxCategory',
+    | 'DeleteTaxCategory'
     /** Grants permission to delete TaxRate */
-    DeleteTaxRate = 'DeleteTaxRate',
+    | 'DeleteTaxRate'
     /** Grants permission to delete Zone */
-    DeleteZone = 'DeleteZone',
+    | 'DeleteZone'
     /** Manage role scope configuration (departmentId/branchId, max scope per resource) */
-    ManageAccessControl = 'ManageAccessControl',
+    | 'ManageAccessControl'
     /** Create/edit WorkflowDefinition chains (layer 5, /settings) */
-    ManageApprovalWorkflows = 'ManageApprovalWorkflows',
+    | 'ManageApprovalWorkflows'
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
-    ManageCounterpartyTeam = 'ManageCounterpartyTeam',
+    | 'ManageCounterpartyTeam'
     /** Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84) */
-    ManageErpIntegration = 'ManageErpIntegration',
+    | 'ManageErpIntegration'
     /** Owner means the user owns this entity, e.g. a Customer's own Order */
-    Owner = 'Owner',
+    | 'Owner'
     /** Public means any unauthenticated user may perform the operation */
-    Public = 'Public',
+    | 'Public'
     /** Grants permission to read Administrator */
-    ReadAdministrator = 'ReadAdministrator',
+    | 'ReadAdministrator'
     /** Grants permission to read ApiKey */
-    ReadApiKey = 'ReadApiKey',
+    | 'ReadApiKey'
     /** Grants permission to read Asset */
-    ReadAsset = 'ReadAsset',
+    | 'ReadAsset'
     /** Grants permission to read Products, Facets, Assets, Collections */
-    ReadCatalog = 'ReadCatalog',
+    | 'ReadCatalog'
     /** Grants permission to read Channel */
-    ReadChannel = 'ReadChannel',
+    | 'ReadChannel'
     /** Grants permission to read Collection */
-    ReadCollection = 'ReadCollection',
+    | 'ReadCollection'
     /** Read counterparty records (scope resolved separately by AccessScopeService) */
-    ReadCounterparty = 'ReadCounterparty',
+    | 'ReadCounterparty'
     /** Read a counterparty's creditLimit/creditBalance (financial data, layer 4 redaction) */
-    ReadCounterpartyCredit = 'ReadCounterpartyCredit',
+    | 'ReadCounterpartyCredit'
     /** Grants permission to read Country */
-    ReadCountry = 'ReadCountry',
+    | 'ReadCountry'
     /** Grants permission to read Customer */
-    ReadCustomer = 'ReadCustomer',
+    | 'ReadCustomer'
     /** Grants permission to read CustomerGroup */
-    ReadCustomerGroup = 'ReadCustomerGroup',
+    | 'ReadCustomerGroup'
     /** Grants permission to read DashboardGlobalViews */
-    ReadDashboardGlobalViews = 'ReadDashboardGlobalViews',
+    | 'ReadDashboardGlobalViews'
     /** Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves */
-    ReadEntityHistory = 'ReadEntityHistory',
+    | 'ReadEntityHistory'
     /** Grants permission to read Facet */
-    ReadFacet = 'ReadFacet',
+    | 'ReadFacet'
     /** Read the raw floor-price threshold for a variant (financial data, layer 4 redaction) */
-    ReadFloorPrice = 'ReadFloorPrice',
+    | 'ReadFloorPrice'
     /** Read invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveInvoiceScope) */
-    ReadInvoice = 'ReadInvoice',
+    | 'ReadInvoice'
     /** Grants permission to read Order */
-    ReadOrder = 'ReadOrder',
+    | 'ReadOrder'
     /** Read payment records for the manager portal — a resource derived from Invoice, scoped the same way (AccessScopeService.resolveInvoiceScope) */
-    ReadPayment = 'ReadPayment',
+    | 'ReadPayment'
     /** Grants permission to read PaymentMethod */
-    ReadPaymentMethod = 'ReadPaymentMethod',
+    | 'ReadPaymentMethod'
     /** Grants permission to read Product */
-    ReadProduct = 'ReadProduct',
+    | 'ReadProduct'
     /** Grants permission to read Promotion */
-    ReadPromotion = 'ReadPromotion',
+    | 'ReadPromotion'
     /** Grants permission to read Seller */
-    ReadSeller = 'ReadSeller',
+    | 'ReadSeller'
     /** Grants permission to read PaymentMethods, ShippingMethods, TaxCategories, TaxRates, Zones, Countries, System & GlobalSettings */
-    ReadSettings = 'ReadSettings',
+    | 'ReadSettings'
     /** Grants permission to read ShippingMethod */
-    ReadShippingMethod = 'ReadShippingMethod',
+    | 'ReadShippingMethod'
     /** Grants permission to read StockLocation */
-    ReadStockLocation = 'ReadStockLocation',
+    | 'ReadStockLocation'
     /** Grants permission to read System */
-    ReadSystem = 'ReadSystem',
+    | 'ReadSystem'
     /** Grants permission to read Tag */
-    ReadTag = 'ReadTag',
+    | 'ReadTag'
     /** Grants permission to read TaxCategory */
-    ReadTaxCategory = 'ReadTaxCategory',
+    | 'ReadTaxCategory'
     /** Grants permission to read TaxRate */
-    ReadTaxRate = 'ReadTaxRate',
+    | 'ReadTaxRate'
     /** Grants permission to read Zone */
-    ReadZone = 'ReadZone',
+    | 'ReadZone'
     /** Change a counterparty's assignedManagerId — department-head only within their own department, portal-admin unrestricted (see manager-portal-concept.md §3.3) */
-    ReassignCounterpartyManager = 'ReassignCounterpartyManager',
+    | 'ReassignCounterpartyManager'
     /** Create a credit-term approval request (layer 5) */
-    RequestCreditTermApproval = 'RequestCreditTermApproval',
+    | 'RequestCreditTermApproval'
     /** Create/renew a standing discount grant approval request (layer 5) */
-    RequestDiscountGrantApproval = 'RequestDiscountGrantApproval',
+    | 'RequestDiscountGrantApproval'
     /** Create a one-off price adjustment approval request (layer 5) */
-    RequestPriceAdjustmentApproval = 'RequestPriceAdjustmentApproval',
+    | 'RequestPriceAdjustmentApproval'
     /** SuperAdmin has unrestricted access to all operations */
-    SuperAdmin = 'SuperAdmin',
+    | 'SuperAdmin'
     /** Grants permission to update Administrator */
-    UpdateAdministrator = 'UpdateAdministrator',
+    | 'UpdateAdministrator'
     /** Grants permission to update ApiKey */
-    UpdateApiKey = 'UpdateApiKey',
+    | 'UpdateApiKey'
     /** Grants permission to update Asset */
-    UpdateAsset = 'UpdateAsset',
+    | 'UpdateAsset'
     /** Grants permission to update Products, Facets, Assets, Collections */
-    UpdateCatalog = 'UpdateCatalog',
+    | 'UpdateCatalog'
     /** Grants permission to update Channel */
-    UpdateChannel = 'UpdateChannel',
+    | 'UpdateChannel'
     /** Grants permission to update Collection */
-    UpdateCollection = 'UpdateCollection',
+    | 'UpdateCollection'
     /** Grants permission to update Country */
-    UpdateCountry = 'UpdateCountry',
+    | 'UpdateCountry'
     /** Grants permission to update Customer */
-    UpdateCustomer = 'UpdateCustomer',
+    | 'UpdateCustomer'
     /** Grants permission to update CustomerGroup */
-    UpdateCustomerGroup = 'UpdateCustomerGroup',
+    | 'UpdateCustomerGroup'
     /** Grants permission to update Facet */
-    UpdateFacet = 'UpdateFacet',
+    | 'UpdateFacet'
     /** Grants permission to update GlobalSettings */
-    UpdateGlobalSettings = 'UpdateGlobalSettings',
+    | 'UpdateGlobalSettings'
     /** Grants permission to update Order */
-    UpdateOrder = 'UpdateOrder',
+    | 'UpdateOrder'
     /** Grants permission to update PaymentMethod */
-    UpdatePaymentMethod = 'UpdatePaymentMethod',
+    | 'UpdatePaymentMethod'
     /** Grants permission to update Product */
-    UpdateProduct = 'UpdateProduct',
+    | 'UpdateProduct'
     /** Grants permission to update Promotion */
-    UpdatePromotion = 'UpdatePromotion',
+    | 'UpdatePromotion'
     /** Grants permission to update Seller */
-    UpdateSeller = 'UpdateSeller',
+    | 'UpdateSeller'
     /** Grants permission to update PaymentMethods, ShippingMethods, TaxCategories, TaxRates, Zones, Countries, System & GlobalSettings */
-    UpdateSettings = 'UpdateSettings',
+    | 'UpdateSettings'
     /** Grants permission to update ShippingMethod */
-    UpdateShippingMethod = 'UpdateShippingMethod',
+    | 'UpdateShippingMethod'
     /** Grants permission to update StockLocation */
-    UpdateStockLocation = 'UpdateStockLocation',
+    | 'UpdateStockLocation'
     /** Grants permission to update System */
-    UpdateSystem = 'UpdateSystem',
+    | 'UpdateSystem'
     /** Grants permission to update Tag */
-    UpdateTag = 'UpdateTag',
+    | 'UpdateTag'
     /** Grants permission to update TaxCategory */
-    UpdateTaxCategory = 'UpdateTaxCategory',
+    | 'UpdateTaxCategory'
     /** Grants permission to update TaxRate */
-    UpdateTaxRate = 'UpdateTaxRate',
+    | 'UpdateTaxRate'
     /** Grants permission to update Zone */
-    UpdateZone = 'UpdateZone',
+    | 'UpdateZone'
     /** Grants permission to write DashboardGlobalViews */
-    WriteDashboardGlobalViews = 'WriteDashboardGlobalViews',
-}
+    | 'WriteDashboardGlobalViews';
 
 export type PermissionDefinition = {
     assignable: Scalars['Boolean']['output'];
@@ -7433,13 +7388,7 @@ export type SettingsStoreInput = {
     value: Scalars['JSON']['input'];
 };
 
-export enum SettingsStoreScopeType {
-    Channel = 'CHANNEL',
-    Custom = 'CUSTOM',
-    Global = 'GLOBAL',
-    User = 'USER',
-    UserAndChannel = 'USER_AND_CHANNEL',
-}
+export type SettingsStoreScopeType = 'CHANNEL' | 'CUSTOM' | 'GLOBAL' | 'USER' | 'USER_AND_CHANNEL';
 
 /** Returned if the Payment settlement fails */
 export type SettlePaymentError = ErrorResult & {
@@ -7569,10 +7518,7 @@ export type SlugForEntityInput = {
     inputValue: Scalars['String']['input'];
 };
 
-export enum SortOrder {
-    Asc = 'ASC',
-    Desc = 'DESC',
-}
+export type SortOrder = 'ASC' | 'DESC';
 
 export type StockAdjustment = Node &
     StockMovement & {
@@ -7684,14 +7630,13 @@ export type StockMovementListOptions = {
     type?: InputMaybe<StockMovementType>;
 };
 
-export enum StockMovementType {
-    Adjustment = 'ADJUSTMENT',
-    Allocation = 'ALLOCATION',
-    Cancellation = 'CANCELLATION',
-    Release = 'RELEASE',
-    Return = 'RETURN',
-    Sale = 'SALE',
-}
+export type StockMovementType =
+    | 'ADJUSTMENT'
+    | 'ALLOCATION'
+    | 'CANCELLATION'
+    | 'RELEASE'
+    | 'RETURN'
+    | 'SALE';
 
 export type StringCustomFieldConfig = CustomField & {
     deprecated: Maybe<Scalars['Boolean']['output']>;
@@ -9005,6 +8950,385 @@ export type RemoveCounterpartyTeamMemberMutationVariables = Exact<{
 
 export type RemoveCounterpartyTeamMemberMutation = { removeCounterpartyTeamMember: boolean };
 
+export type CustomerListItemFieldsFragment = {
+    id: string;
+    shortName: string;
+    legalName: string;
+    inn: string | null;
+    isActive: boolean;
+    priceType: string;
+    assignedManagerId: string | null;
+    branchId: string | null;
+    erpGroupLabel: string | null;
+    tradingPoints: Array<{
+        id: string;
+        name: string;
+        address: string;
+        workingHours: string | null;
+        deliveryComment: string | null;
+        isActive: boolean;
+        contacts: Array<{
+            name: string;
+            phone: string | null;
+            email: string | null;
+            isPrimary: boolean;
+        }>;
+    }>;
+};
+
+export type CustomersPageQueryVariables = Exact<{
+    options?: InputMaybe<CounterpartyListOptions>;
+}>;
+
+export type CustomersPageQuery = {
+    counterparties: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            shortName: string;
+            legalName: string;
+            inn: string | null;
+            isActive: boolean;
+            priceType: string;
+            assignedManagerId: string | null;
+            branchId: string | null;
+            erpGroupLabel: string | null;
+            tradingPoints: Array<{
+                id: string;
+                name: string;
+                address: string;
+                workingHours: string | null;
+                deliveryComment: string | null;
+                isActive: boolean;
+                contacts: Array<{
+                    name: string;
+                    phone: string | null;
+                    email: string | null;
+                    isPrimary: boolean;
+                }>;
+            }>;
+        }>;
+    };
+};
+
+export type UnassignedCounterpartyCountQueryVariables = Exact<{ [key: string]: never }>;
+
+export type UnassignedCounterpartyCountQuery = { unassignedCounterpartyCount: number };
+
+export type CustomersSummaryQueryVariables = Exact<{ [key: string]: never }>;
+
+export type CustomersSummaryQuery = {
+    counterpartySummary: {
+        totalCount: number;
+        activeCount: number;
+        totalCreditBalance: number | null;
+        highUsageCount: number | null;
+    };
+};
+
+export type HighUsageCustomersQueryVariables = Exact<{
+    limit: Scalars['Int']['input'];
+}>;
+
+export type HighUsageCustomersQuery = {
+    highUsageCounterparties: Array<{
+        creditLimit: number | null;
+        creditBalance: number | null;
+        id: string;
+        shortName: string;
+        legalName: string;
+        inn: string | null;
+        isActive: boolean;
+        priceType: string;
+        assignedManagerId: string | null;
+        branchId: string | null;
+        erpGroupLabel: string | null;
+        tradingPoints: Array<{
+            id: string;
+            name: string;
+            address: string;
+            workingHours: string | null;
+            deliveryComment: string | null;
+            isActive: boolean;
+            contacts: Array<{
+                name: string;
+                phone: string | null;
+                email: string | null;
+                isPrimary: boolean;
+            }>;
+        }>;
+    }>;
+};
+
+export type CustomerByIdQueryVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type CustomerByIdQuery = {
+    counterparty: {
+        id: string;
+        shortName: string;
+        legalName: string;
+        inn: string | null;
+        isActive: boolean;
+        priceType: string;
+        assignedManagerId: string | null;
+        branchId: string | null;
+        erpGroupLabel: string | null;
+        tradingPoints: Array<{
+            id: string;
+            name: string;
+            address: string;
+            workingHours: string | null;
+            deliveryComment: string | null;
+            isActive: boolean;
+            contacts: Array<{
+                name: string;
+                phone: string | null;
+                email: string | null;
+                isPrimary: boolean;
+            }>;
+        }>;
+    } | null;
+};
+
+export type CounterpartyShortNameQueryVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type CounterpartyShortNameQuery = { counterparty: { shortName: string } | null };
+
+export type ReassignCounterpartyManagerMutationVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    administratorId: Scalars['ID']['input'];
+}>;
+
+export type ReassignCounterpartyManagerMutation = { reassignCounterpartyManager: { id: string } };
+
+export type UpdateTradingPointDetailsMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    input: TradingPointDetailsInput;
+}>;
+
+export type UpdateTradingPointDetailsMutation = { updateTradingPointDetails: { id: string } };
+
+export type SetTradingPointActiveMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    isActive: Scalars['Boolean']['input'];
+}>;
+
+export type SetTradingPointActiveMutation = { setTradingPointActive: { id: string } };
+
+export type CustomerIdForCounterpartyQueryVariables = Exact<{
+    counterpartyId: Scalars['String']['input'];
+}>;
+
+export type CustomerIdForCounterpartyQuery = { customers: { items: Array<{ id: string }> } };
+
+export type CustomerOrderItemFieldsFragment = {
+    id: string;
+    code: string;
+    state: string;
+    totalWithTax: any;
+    currencyCode: CurrencyCode;
+    orderPlacedAt: any | null;
+    createdAt: any;
+    totalQuantity: number;
+    customer: { firstName: string; lastName: string } | null;
+    customFields: {
+        latestFulfillmentState: string | null;
+        placedByAdministratorId: string | null;
+        reservationState: string | null;
+    } | null;
+};
+
+export type CustomerOrdersQueryVariables = Exact<{
+    customerId: Scalars['ID']['input'];
+    take: Scalars['Int']['input'];
+}>;
+
+export type CustomerOrdersQuery = {
+    visibleOrders: {
+        items: Array<{
+            id: string;
+            code: string;
+            state: string;
+            totalWithTax: any;
+            currencyCode: CurrencyCode;
+            orderPlacedAt: any | null;
+            createdAt: any;
+            totalQuantity: number;
+            customer: { firstName: string; lastName: string } | null;
+            customFields: {
+                latestFulfillmentState: string | null;
+                placedByAdministratorId: string | null;
+                reservationState: string | null;
+            } | null;
+        }>;
+    };
+};
+
+export type CustomerOrdersByPaymentViewQueryVariables = Exact<{
+    customerId: Scalars['ID']['input'];
+    paymentView: Scalars['String']['input'];
+    options?: InputMaybe<OrderListOptions>;
+}>;
+
+export type CustomerOrdersByPaymentViewQuery = {
+    customerOrdersByPaymentView: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            code: string;
+            state: string;
+            totalWithTax: any;
+            currencyCode: CurrencyCode;
+            orderPlacedAt: any | null;
+            createdAt: any;
+            totalQuantity: number;
+            customer: { firstName: string; lastName: string } | null;
+            customFields: {
+                latestFulfillmentState: string | null;
+                placedByAdministratorId: string | null;
+                reservationState: string | null;
+            } | null;
+        }>;
+    };
+};
+
+export type CustomerOrdersPageQueryVariables = Exact<{
+    customerId: Scalars['ID']['input'];
+    options?: InputMaybe<OrderListOptions>;
+}>;
+
+export type CustomerOrdersPageQuery = {
+    visibleOrders: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            code: string;
+            state: string;
+            totalWithTax: any;
+            currencyCode: CurrencyCode;
+            orderPlacedAt: any | null;
+            createdAt: any;
+            totalQuantity: number;
+            customer: { firstName: string; lastName: string } | null;
+            customFields: {
+                latestFulfillmentState: string | null;
+                placedByAdministratorId: string | null;
+                reservationState: string | null;
+            } | null;
+        }>;
+    };
+};
+
+export type CustomerOrderViewCountsQueryVariables = Exact<{
+    customerId: Scalars['ID']['input'];
+}>;
+
+export type CustomerOrderViewCountsQuery = {
+    all: { totalItems: number };
+    cancelled: { totalItems: number };
+    unpaid: { totalItems: number };
+    partial: { totalItems: number };
+};
+
+export type OrderPaymentSummariesQueryVariables = Exact<{
+    orderIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+export type OrderPaymentSummariesQuery = {
+    orderPaymentSummaries: Array<{ orderId: string; capturedAmount: number }>;
+};
+
+export type CustomerDocumentsPageQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    options?: InputMaybe<DocumentListOptions>;
+}>;
+
+export type CustomerDocumentsPageQuery = {
+    documents: {
+        totalItems: number;
+        items: Array<{ id: string; type: string; number: string; status: string; issueDate: any }>;
+    };
+};
+
+export type CustomerDocumentTypesQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+}>;
+
+export type CustomerDocumentTypesQuery = { documentTypes: Array<string> };
+
+export type CreditByCounterpartyIdQueryVariables = Exact<{
+    options?: InputMaybe<CounterpartyListOptions>;
+}>;
+
+export type CreditByCounterpartyIdQuery = {
+    counterparties: {
+        items: Array<{ id: string; creditLimit: number | null; creditBalance: number | null }>;
+    };
+};
+
+export type CreditForCounterpartyQueryVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type CreditForCounterpartyQuery = {
+    counterparty: { creditLimit: number | null; creditBalance: number | null } | null;
+};
+
+export type ActiveDiscountCountForCounterpartyQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    options?: InputMaybe<DiscountGrantForCustomerListOptions>;
+}>;
+
+export type ActiveDiscountCountForCounterpartyQuery = {
+    discountGrantsForCounterparty: { totalItems: number };
+};
+
+export type DiscountGrantViewCountsQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+}>;
+
+export type DiscountGrantViewCountsQuery = {
+    all: { totalItems: number };
+    active: { totalItems: number };
+    expiringSoon: { totalItems: number };
+    expired: { totalItems: number };
+};
+
+export type CustomerDiscountGrantsPageQueryVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    options?: InputMaybe<DiscountGrantForCustomerListOptions>;
+}>;
+
+export type CustomerDiscountGrantsPageQuery = {
+    discountGrantsForCounterparty: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            number: string;
+            createdAt: any;
+            percent: number;
+            facetValueCode: string | null;
+            validTo: any;
+            status: string;
+        }>;
+    };
+};
+
+export type LastOrderDatesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type LastOrderDatesQuery = {
+    visibleOrders: {
+        items: Array<{
+            orderPlacedAt: any | null;
+            customer: { counterparty: { id: string } | null } | null;
+        }>;
+    };
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -9171,6 +9495,60 @@ export const CounterpartyTeamMemberFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'CounterpartyTeamMemberFields' },
 ) as unknown as TypedDocumentString<CounterpartyTeamMemberFieldsFragment, unknown>;
+export const CustomerListItemFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment CustomerListItemFields on Counterparty {
+  id
+  shortName
+  legalName
+  inn
+  isActive
+  priceType
+  assignedManagerId
+  branchId
+  erpGroupLabel
+  tradingPoints {
+    id
+    name
+    address
+    workingHours
+    deliveryComment
+    isActive
+    contacts {
+      name
+      phone
+      email
+      isPrimary
+    }
+  }
+}
+    `,
+    { fragmentName: 'CustomerListItemFields' },
+) as unknown as TypedDocumentString<CustomerListItemFieldsFragment, unknown>;
+export const CustomerOrderItemFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment CustomerOrderItemFields on Order {
+  id
+  code
+  state
+  totalWithTax
+  currencyCode
+  orderPlacedAt
+  createdAt
+  totalQuantity
+  customer {
+    firstName
+    lastName
+  }
+  customFields {
+    latestFulfillmentState
+    placedByAdministratorId
+    reservationState
+  }
+}
+    `,
+    { fragmentName: 'CustomerOrderItemFields' },
+) as unknown as TypedDocumentString<CustomerOrderItemFieldsFragment, unknown>;
 export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     mutation ChangeOwnPassword($password: String!) {
   updateActiveAdministrator(input: {password: $password}) {
@@ -9583,6 +9961,441 @@ export const RemoveCounterpartyTeamMemberDocument = new TypedDocumentString(`
     RemoveCounterpartyTeamMemberMutation,
     RemoveCounterpartyTeamMemberMutationVariables
 >;
+export const CustomersPageDocument = new TypedDocumentString(`
+    query CustomersPage($options: CounterpartyListOptions) {
+  counterparties(options: $options) {
+    items {
+      ...CustomerListItemFields
+    }
+    totalItems
+  }
+}
+    fragment CustomerListItemFields on Counterparty {
+  id
+  shortName
+  legalName
+  inn
+  isActive
+  priceType
+  assignedManagerId
+  branchId
+  erpGroupLabel
+  tradingPoints {
+    id
+    name
+    address
+    workingHours
+    deliveryComment
+    isActive
+    contacts {
+      name
+      phone
+      email
+      isPrimary
+    }
+  }
+}`) as unknown as TypedDocumentString<CustomersPageQuery, CustomersPageQueryVariables>;
+export const UnassignedCounterpartyCountDocument = new TypedDocumentString(`
+    query UnassignedCounterpartyCount {
+  unassignedCounterpartyCount
+}
+    `) as unknown as TypedDocumentString<
+    UnassignedCounterpartyCountQuery,
+    UnassignedCounterpartyCountQueryVariables
+>;
+export const CustomersSummaryDocument = new TypedDocumentString(`
+    query CustomersSummary {
+  counterpartySummary {
+    totalCount
+    activeCount
+    totalCreditBalance
+    highUsageCount
+  }
+}
+    `) as unknown as TypedDocumentString<CustomersSummaryQuery, CustomersSummaryQueryVariables>;
+export const HighUsageCustomersDocument = new TypedDocumentString(`
+    query HighUsageCustomers($limit: Int!) {
+  highUsageCounterparties(limit: $limit) {
+    ...CustomerListItemFields
+    creditLimit
+    creditBalance
+  }
+}
+    fragment CustomerListItemFields on Counterparty {
+  id
+  shortName
+  legalName
+  inn
+  isActive
+  priceType
+  assignedManagerId
+  branchId
+  erpGroupLabel
+  tradingPoints {
+    id
+    name
+    address
+    workingHours
+    deliveryComment
+    isActive
+    contacts {
+      name
+      phone
+      email
+      isPrimary
+    }
+  }
+}`) as unknown as TypedDocumentString<HighUsageCustomersQuery, HighUsageCustomersQueryVariables>;
+export const CustomerByIdDocument = new TypedDocumentString(`
+    query CustomerById($id: ID!) {
+  counterparty(id: $id) {
+    ...CustomerListItemFields
+  }
+}
+    fragment CustomerListItemFields on Counterparty {
+  id
+  shortName
+  legalName
+  inn
+  isActive
+  priceType
+  assignedManagerId
+  branchId
+  erpGroupLabel
+  tradingPoints {
+    id
+    name
+    address
+    workingHours
+    deliveryComment
+    isActive
+    contacts {
+      name
+      phone
+      email
+      isPrimary
+    }
+  }
+}`) as unknown as TypedDocumentString<CustomerByIdQuery, CustomerByIdQueryVariables>;
+export const CounterpartyShortNameDocument = new TypedDocumentString(`
+    query CounterpartyShortName($id: ID!) {
+  counterparty(id: $id) {
+    shortName
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CounterpartyShortNameQuery,
+    CounterpartyShortNameQueryVariables
+>;
+export const ReassignCounterpartyManagerDocument = new TypedDocumentString(`
+    mutation ReassignCounterpartyManager($counterpartyId: ID!, $administratorId: ID!) {
+  reassignCounterpartyManager(
+    counterpartyId: $counterpartyId
+    administratorId: $administratorId
+  ) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ReassignCounterpartyManagerMutation,
+    ReassignCounterpartyManagerMutationVariables
+>;
+export const UpdateTradingPointDetailsDocument = new TypedDocumentString(`
+    mutation UpdateTradingPointDetails($id: ID!, $input: TradingPointDetailsInput!) {
+  updateTradingPointDetails(id: $id, input: $input) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    UpdateTradingPointDetailsMutation,
+    UpdateTradingPointDetailsMutationVariables
+>;
+export const SetTradingPointActiveDocument = new TypedDocumentString(`
+    mutation SetTradingPointActive($id: ID!, $isActive: Boolean!) {
+  setTradingPointActive(id: $id, isActive: $isActive) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SetTradingPointActiveMutation,
+    SetTradingPointActiveMutationVariables
+>;
+export const CustomerIdForCounterpartyDocument = new TypedDocumentString(`
+    query CustomerIdForCounterparty($counterpartyId: String!) {
+  customers(options: {take: 1, filter: {counterpartyId: {eq: $counterpartyId}}}) {
+    items {
+      id
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CustomerIdForCounterpartyQuery,
+    CustomerIdForCounterpartyQueryVariables
+>;
+export const CustomerOrdersDocument = new TypedDocumentString(`
+    query CustomerOrders($customerId: ID!, $take: Int!) {
+  visibleOrders(
+    options: {take: $take, sort: {orderPlacedAt: DESC}}
+    customerId: $customerId
+  ) {
+    items {
+      ...CustomerOrderItemFields
+    }
+  }
+}
+    fragment CustomerOrderItemFields on Order {
+  id
+  code
+  state
+  totalWithTax
+  currencyCode
+  orderPlacedAt
+  createdAt
+  totalQuantity
+  customer {
+    firstName
+    lastName
+  }
+  customFields {
+    latestFulfillmentState
+    placedByAdministratorId
+    reservationState
+  }
+}`) as unknown as TypedDocumentString<CustomerOrdersQuery, CustomerOrdersQueryVariables>;
+export const CustomerOrdersByPaymentViewDocument = new TypedDocumentString(`
+    query CustomerOrdersByPaymentView($customerId: ID!, $paymentView: String!, $options: OrderListOptions) {
+  customerOrdersByPaymentView(
+    customerId: $customerId
+    paymentView: $paymentView
+    options: $options
+  ) {
+    totalItems
+    items {
+      ...CustomerOrderItemFields
+    }
+  }
+}
+    fragment CustomerOrderItemFields on Order {
+  id
+  code
+  state
+  totalWithTax
+  currencyCode
+  orderPlacedAt
+  createdAt
+  totalQuantity
+  customer {
+    firstName
+    lastName
+  }
+  customFields {
+    latestFulfillmentState
+    placedByAdministratorId
+    reservationState
+  }
+}`) as unknown as TypedDocumentString<
+    CustomerOrdersByPaymentViewQuery,
+    CustomerOrdersByPaymentViewQueryVariables
+>;
+export const CustomerOrdersPageDocument = new TypedDocumentString(`
+    query CustomerOrdersPage($customerId: ID!, $options: OrderListOptions) {
+  visibleOrders(options: $options, customerId: $customerId) {
+    totalItems
+    items {
+      ...CustomerOrderItemFields
+    }
+  }
+}
+    fragment CustomerOrderItemFields on Order {
+  id
+  code
+  state
+  totalWithTax
+  currencyCode
+  orderPlacedAt
+  createdAt
+  totalQuantity
+  customer {
+    firstName
+    lastName
+  }
+  customFields {
+    latestFulfillmentState
+    placedByAdministratorId
+    reservationState
+  }
+}`) as unknown as TypedDocumentString<CustomerOrdersPageQuery, CustomerOrdersPageQueryVariables>;
+export const CustomerOrderViewCountsDocument = new TypedDocumentString(`
+    query CustomerOrderViewCounts($customerId: ID!) {
+  all: visibleOrders(customerId: $customerId, options: {take: 0}) {
+    totalItems
+  }
+  cancelled: visibleOrders(
+    customerId: $customerId
+    options: {take: 0, filter: {state: {eq: "Cancelled"}}}
+  ) {
+    totalItems
+  }
+  unpaid: customerOrdersByPaymentView(
+    customerId: $customerId
+    paymentView: "unpaid"
+    options: {take: 0}
+  ) {
+    totalItems
+  }
+  partial: customerOrdersByPaymentView(
+    customerId: $customerId
+    paymentView: "partial"
+    options: {take: 0}
+  ) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CustomerOrderViewCountsQuery,
+    CustomerOrderViewCountsQueryVariables
+>;
+export const OrderPaymentSummariesDocument = new TypedDocumentString(`
+    query OrderPaymentSummaries($orderIds: [ID!]!) {
+  orderPaymentSummaries(orderIds: $orderIds) {
+    orderId
+    capturedAmount
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderPaymentSummariesQuery,
+    OrderPaymentSummariesQueryVariables
+>;
+export const CustomerDocumentsPageDocument = new TypedDocumentString(`
+    query CustomerDocumentsPage($counterpartyId: ID!, $options: DocumentListOptions) {
+  documents(options: $options, counterpartyId: $counterpartyId) {
+    totalItems
+    items {
+      id
+      type
+      number
+      status
+      issueDate
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CustomerDocumentsPageQuery,
+    CustomerDocumentsPageQueryVariables
+>;
+export const CustomerDocumentTypesDocument = new TypedDocumentString(`
+    query CustomerDocumentTypes($counterpartyId: ID!) {
+  documentTypes(counterpartyId: $counterpartyId)
+}
+    `) as unknown as TypedDocumentString<
+    CustomerDocumentTypesQuery,
+    CustomerDocumentTypesQueryVariables
+>;
+export const CreditByCounterpartyIdDocument = new TypedDocumentString(`
+    query CreditByCounterpartyId($options: CounterpartyListOptions) {
+  counterparties(options: $options) {
+    items {
+      id
+      creditLimit
+      creditBalance
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CreditByCounterpartyIdQuery,
+    CreditByCounterpartyIdQueryVariables
+>;
+export const CreditForCounterpartyDocument = new TypedDocumentString(`
+    query CreditForCounterparty($id: ID!) {
+  counterparty(id: $id) {
+    creditLimit
+    creditBalance
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CreditForCounterpartyQuery,
+    CreditForCounterpartyQueryVariables
+>;
+export const ActiveDiscountCountForCounterpartyDocument = new TypedDocumentString(`
+    query ActiveDiscountCountForCounterparty($counterpartyId: ID!, $options: DiscountGrantForCustomerListOptions) {
+  discountGrantsForCounterparty(
+    counterpartyId: $counterpartyId
+    options: $options
+  ) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ActiveDiscountCountForCounterpartyQuery,
+    ActiveDiscountCountForCounterpartyQueryVariables
+>;
+export const DiscountGrantViewCountsDocument = new TypedDocumentString(`
+    query DiscountGrantViewCounts($counterpartyId: ID!) {
+  all: discountGrantsForCounterparty(
+    counterpartyId: $counterpartyId
+    options: {take: 0}
+  ) {
+    totalItems
+  }
+  active: discountGrantsForCounterparty(
+    counterpartyId: $counterpartyId
+    options: {take: 0, status: "active"}
+  ) {
+    totalItems
+  }
+  expiringSoon: discountGrantsForCounterparty(
+    counterpartyId: $counterpartyId
+    options: {take: 0, status: "expiring-soon"}
+  ) {
+    totalItems
+  }
+  expired: discountGrantsForCounterparty(
+    counterpartyId: $counterpartyId
+    options: {take: 0, status: "expired"}
+  ) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    DiscountGrantViewCountsQuery,
+    DiscountGrantViewCountsQueryVariables
+>;
+export const CustomerDiscountGrantsPageDocument = new TypedDocumentString(`
+    query CustomerDiscountGrantsPage($counterpartyId: ID!, $options: DiscountGrantForCustomerListOptions) {
+  discountGrantsForCounterparty(
+    counterpartyId: $counterpartyId
+    options: $options
+  ) {
+    totalItems
+    items {
+      id
+      number
+      createdAt
+      percent
+      facetValueCode
+      validTo
+      status
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CustomerDiscountGrantsPageQuery,
+    CustomerDiscountGrantsPageQueryVariables
+>;
+export const LastOrderDatesDocument = new TypedDocumentString(`
+    query LastOrderDates {
+  visibleOrders(options: {take: 500, sort: {orderPlacedAt: DESC}}) {
+    items {
+      orderPlacedAt
+      customer {
+        counterparty {
+          id
+        }
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<LastOrderDatesQuery, LastOrderDatesQueryVariables>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {

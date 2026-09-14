@@ -20,6 +20,11 @@ const config: CodegenConfig = {
                 documentMode: 'string',
                 skipTypename: true,
                 avoidOptionals: { field: true },
+                // Every existing manager call site treats sort directions/currency codes/etc. as
+                // plain string literals ('ASC', 'RUB', ...), never as an imported TS enum member
+                // — without this, every such literal fails to type-check against the plugin's
+                // default real-`enum` output (e.g. "ASC" not assignable to SortOrder).
+                enumsAsTypes: true,
             },
         },
     },

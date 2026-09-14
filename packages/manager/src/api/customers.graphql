@@ -1,0 +1,281 @@
+fragment CustomerListItemFields on Counterparty {
+    id
+    shortName
+    legalName
+    inn
+    isActive
+    priceType
+    assignedManagerId
+    branchId
+    erpGroupLabel
+    tradingPoints {
+        id
+        name
+        address
+        workingHours
+        deliveryComment
+        isActive
+        contacts {
+            name
+            phone
+            email
+            isPrimary
+        }
+    }
+}
+
+query CustomersPage($options: CounterpartyListOptions) {
+    counterparties(options: $options) {
+        items {
+            ...CustomerListItemFields
+        }
+        totalItems
+    }
+}
+
+query UnassignedCounterpartyCount {
+    unassignedCounterpartyCount
+}
+
+query CustomersSummary {
+    counterpartySummary {
+        totalCount
+        activeCount
+        totalCreditBalance
+        highUsageCount
+    }
+}
+
+query HighUsageCustomers($limit: Int!) {
+    highUsageCounterparties(limit: $limit) {
+        ...CustomerListItemFields
+        creditLimit
+        creditBalance
+    }
+}
+
+query CustomerById($id: ID!) {
+    counterparty(id: $id) {
+        ...CustomerListItemFields
+    }
+}
+
+query CounterpartyShortName($id: ID!) {
+    counterparty(id: $id) {
+        shortName
+    }
+}
+
+mutation ReassignCounterpartyManager($counterpartyId: ID!, $administratorId: ID!) {
+    reassignCounterpartyManager(
+        counterpartyId: $counterpartyId
+        administratorId: $administratorId
+    ) {
+        id
+    }
+}
+
+mutation UpdateTradingPointDetails($id: ID!, $input: TradingPointDetailsInput!) {
+    updateTradingPointDetails(id: $id, input: $input) {
+        id
+    }
+}
+
+mutation SetTradingPointActive($id: ID!, $isActive: Boolean!) {
+    setTradingPointActive(id: $id, isActive: $isActive) {
+        id
+    }
+}
+
+query CustomerIdForCounterparty($counterpartyId: String!) {
+    customers(options: { take: 1, filter: { counterpartyId: { eq: $counterpartyId } } }) {
+        items {
+            id
+        }
+    }
+}
+
+fragment CustomerOrderItemFields on Order {
+    id
+    code
+    state
+    totalWithTax
+    currencyCode
+    orderPlacedAt
+    createdAt
+    totalQuantity
+    customer {
+        firstName
+        lastName
+    }
+    customFields {
+        latestFulfillmentState
+        placedByAdministratorId
+        reservationState
+    }
+}
+
+query CustomerOrders($customerId: ID!, $take: Int!) {
+    visibleOrders(options: { take: $take, sort: { orderPlacedAt: DESC } }, customerId: $customerId) {
+        items {
+            ...CustomerOrderItemFields
+        }
+    }
+}
+
+query CustomerOrdersByPaymentView(
+    $customerId: ID!
+    $paymentView: String!
+    $options: OrderListOptions
+) {
+    customerOrdersByPaymentView(
+        customerId: $customerId
+        paymentView: $paymentView
+        options: $options
+    ) {
+        totalItems
+        items {
+            ...CustomerOrderItemFields
+        }
+    }
+}
+
+query CustomerOrdersPage($customerId: ID!, $options: OrderListOptions) {
+    visibleOrders(options: $options, customerId: $customerId) {
+        totalItems
+        items {
+            ...CustomerOrderItemFields
+        }
+    }
+}
+
+query CustomerOrderViewCounts($customerId: ID!) {
+    all: visibleOrders(customerId: $customerId, options: { take: 0 }) {
+        totalItems
+    }
+    cancelled: visibleOrders(
+        customerId: $customerId
+        options: { take: 0, filter: { state: { eq: "Cancelled" } } }
+    ) {
+        totalItems
+    }
+    unpaid: customerOrdersByPaymentView(
+        customerId: $customerId
+        paymentView: "unpaid"
+        options: { take: 0 }
+    ) {
+        totalItems
+    }
+    partial: customerOrdersByPaymentView(
+        customerId: $customerId
+        paymentView: "partial"
+        options: { take: 0 }
+    ) {
+        totalItems
+    }
+}
+
+query OrderPaymentSummaries($orderIds: [ID!]!) {
+    orderPaymentSummaries(orderIds: $orderIds) {
+        orderId
+        capturedAmount
+    }
+}
+
+query CustomerDocumentsPage($counterpartyId: ID!, $options: DocumentListOptions) {
+    documents(options: $options, counterpartyId: $counterpartyId) {
+        totalItems
+        items {
+            id
+            type
+            number
+            status
+            issueDate
+        }
+    }
+}
+
+query CustomerDocumentTypes($counterpartyId: ID!) {
+    documentTypes(counterpartyId: $counterpartyId)
+}
+
+query CreditByCounterpartyId($options: CounterpartyListOptions) {
+    counterparties(options: $options) {
+        items {
+            id
+            creditLimit
+            creditBalance
+        }
+    }
+}
+
+query CreditForCounterparty($id: ID!) {
+    counterparty(id: $id) {
+        creditLimit
+        creditBalance
+    }
+}
+
+query ActiveDiscountCountForCounterparty(
+    $counterpartyId: ID!
+    $options: DiscountGrantForCustomerListOptions
+) {
+    discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: $options) {
+        totalItems
+    }
+}
+
+query DiscountGrantViewCounts($counterpartyId: ID!) {
+    all: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0 }) {
+        totalItems
+    }
+    active: discountGrantsForCounterparty(
+        counterpartyId: $counterpartyId
+        options: { take: 0, status: "active" }
+    ) {
+        totalItems
+    }
+    expiringSoon: discountGrantsForCounterparty(
+        counterpartyId: $counterpartyId
+        options: { take: 0, status: "expiring-soon" }
+    ) {
+        totalItems
+    }
+    expired: discountGrantsForCounterparty(
+        counterpartyId: $counterpartyId
+        options: { take: 0, status: "expired" }
+    ) {
+        totalItems
+    }
+}
+
+query CustomerDiscountGrantsPage(
+    $counterpartyId: ID!
+    $options: DiscountGrantForCustomerListOptions
+) {
+    discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: $options) {
+        totalItems
+        items {
+            id
+            number
+            createdAt
+            percent
+            facetValueCode
+            validTo
+            status
+        }
+    }
+}
+
+query LastOrderDates {
+    visibleOrders(options: { take: 500, sort: { orderPlacedAt: DESC } }) {
+        items {
+            orderPlacedAt
+            customer {
+                counterparty {
+                    id
+                }
+            }
+        }
+    }
+}

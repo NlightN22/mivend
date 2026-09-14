@@ -1,35 +1,40 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
+import {
+    ActiveDiscountCountForCounterpartyDocument,
+    CounterpartyShortNameDocument,
+    CreditByCounterpartyIdDocument,
+    CreditForCounterpartyDocument,
+    CustomerByIdDocument,
+    CustomerDiscountGrantsPageDocument,
+    CustomerDocumentsPageDocument,
+    CustomerDocumentTypesDocument,
+    CustomerIdForCounterpartyDocument,
+    CustomerOrdersByPaymentViewDocument,
+    CustomerOrderViewCountsDocument,
+    CustomerOrdersDocument,
+    CustomerOrdersPageDocument,
+    CustomersPageDocument,
+    CustomersSummaryDocument,
+    DiscountGrantViewCountsDocument,
+    HighUsageCustomersDocument,
+    LastOrderDatesDocument,
+    OrderPaymentSummariesDocument,
+    ReassignCounterpartyManagerDocument,
+    SetTradingPointActiveDocument,
+    UnassignedCounterpartyCountDocument,
+    UpdateTradingPointDetailsDocument,
+    type CustomerListItemFieldsFragment,
+    type CustomerOrderItemFieldsFragment,
+} from './generated/graphql';
 
-export interface ContactPersonInfo {
-    name: string;
-    phone: string | null;
-    email: string | null;
-    isPrimary: boolean;
-}
+export type ContactPersonInfo =
+    CustomerListItemFieldsFragment['tradingPoints'][number]['contacts'][number];
+export type TradingPointInfo = CustomerListItemFieldsFragment['tradingPoints'][number];
+export type CustomerListItem = CustomerListItemFieldsFragment & { contacts: ContactPersonInfo[] };
 
-export interface TradingPointInfo {
-    id: string;
-    name: string;
-    address: string;
-    workingHours: string | null;
-    deliveryComment: string | null;
-    isActive: boolean;
-    contacts: ContactPersonInfo[];
-}
-
-export interface CustomerListItem {
-    id: string;
-    shortName: string;
-    legalName: string;
-    inn: string | null;
-    isActive: boolean;
-    priceType: string;
-    assignedManagerId: string | null;
-    branchId: string | null;
-    erpGroupLabel: string | null;
-    contacts: ContactPersonInfo[];
-    tradingPoints: TradingPointInfo[];
+function toCustomerListItem(c: CustomerListItemFieldsFragment): CustomerListItem {
+    return { ...c, contacts: c.tradingPoints.flatMap(tp => tp.contacts) };
 }
 
 export interface CustomersListOptions {
@@ -46,73 +51,12 @@ export interface CustomersListOptions {
     unassignedOnly?: boolean;
 }
 
-const CUSTOMER_LIST_FIELDS = `
-    id
-    shortName
-    legalName
-    inn
-    isActive
-    priceType
-    assignedManagerId
-    branchId
-    erpGroupLabel
-    tradingPoints {
-        id
-        name
-        address
-        workingHours
-        deliveryComment
-        isActive
-        contacts { name phone email isPrimary }
-    }
-`;
-
-function toCustomerListItem(c: {
-    id: string;
-    shortName: string;
-    legalName: string;
-    inn: string | null;
-    isActive: boolean;
-    priceType: string;
-    assignedManagerId: string | null;
-    branchId: string | null;
-    erpGroupLabel: string | null;
-    tradingPoints: TradingPointInfo[];
-}): CustomerListItem {
-    return {
-        id: c.id,
-        shortName: c.shortName,
-        legalName: c.legalName,
-        inn: c.inn,
-        isActive: c.isActive,
-        priceType: c.priceType,
-        assignedManagerId: c.assignedManagerId,
-        branchId: c.branchId,
-        erpGroupLabel: c.erpGroupLabel,
-        contacts: c.tradingPoints.flatMap(tp => tp.contacts),
-        tradingPoints: c.tradingPoints,
-    };
-}
-
 // Server-side paginated (see issue #39) — search/status/manager/branch/group/unassigned are all
 // pushed down to CounterpartyListOptions, never filtered client-side over a partial page.
 export async function fetchCustomersPage(
     options: CustomersListOptions,
 ): Promise<{ items: CustomerListItem[]; totalItems: number }> {
-    const result = await adminApi<{
-        counterparties: {
-            items: Parameters<typeof toCustomerListItem>[0][];
-            totalItems: number;
-        };
-    }>(
-        `query CustomersPage($options: CounterpartyListOptions) {
-            counterparties(options: $options) {
-                items { ${CUSTOMER_LIST_FIELDS} }
-                totalItems
-            }
-        }`,
-        { options },
-    );
+    const result = await adminApi(CustomersPageDocument, { options });
     return {
         items: result.counterparties.items.map(toCustomerListItem),
         totalItems: result.counterparties.totalItems,
@@ -120,9 +64,7 @@ export async function fetchCustomersPage(
 }
 
 export async function fetchUnassignedCounterpartyCount(): Promise<number> {
-    const result = await adminApi<{ unassignedCounterpartyCount: number }>(
-        `query UnassignedCounterpartyCount { unassignedCounterpartyCount }`,
-    );
+    const result = await adminApi(UnassignedCounterpartyCountDocument);
     return result.unassignedCounterpartyCount;
 }
 
@@ -135,11 +77,7 @@ export interface CustomersSummary {
 }
 
 export async function fetchCustomersSummary(): Promise<CustomersSummary> {
-    const result = await adminApi<{ counterpartySummary: CustomersSummary }>(
-        `query CustomersSummary {
-            counterpartySummary { totalCount activeCount totalCreditBalance highUsageCount }
-        }`,
-    );
+    const result = await adminApi(CustomersSummaryDocument);
     return result.counterpartySummary;
 }
 
@@ -154,21 +92,11 @@ export interface HighUsageCustomer extends CustomerListItem {
 // fetchCreditByCounterpartyId's comment). Wrapped in try/catch for callers without the permission.
 export async function fetchHighUsageCustomers(limit: number): Promise<HighUsageCustomer[]> {
     try {
-        const result = await adminApi<{
-            highUsageCounterparties: (Parameters<typeof toCustomerListItem>[0] & {
-                creditLimit: number;
-                creditBalance: number;
-            })[];
-        }>(
-            `query($limit: Int!) {
-                highUsageCounterparties(limit: $limit) { ${CUSTOMER_LIST_FIELDS} creditLimit creditBalance }
-            }`,
-            { limit },
-        );
+        const result = await adminApi(HighUsageCustomersDocument, { limit });
         return result.highUsageCounterparties.map(c => ({
             ...toCustomerListItem(c),
-            creditLimit: c.creditLimit,
-            creditBalance: c.creditBalance,
+            creditLimit: c.creditLimit ?? 0,
+            creditBalance: c.creditBalance ?? 0,
         }));
     } catch {
         return [];
@@ -190,14 +118,7 @@ export async function fetchAllCustomersCapped(): Promise<CustomerListItem[]> {
 // Dedicated single-entity lookup (see counterparty.resolver.ts's `counterparty(id)`) — no longer
 // depends on fetching the (now paginated) full list and filtering client-side by id.
 export async function fetchCustomerById(counterpartyId: string): Promise<CustomerListItem | null> {
-    const result = await adminApi<{
-        counterparty: Parameters<typeof toCustomerListItem>[0] | null;
-    }>(
-        `query CustomerById($id: ID!) {
-            counterparty(id: $id) { ${CUSTOMER_LIST_FIELDS} }
-        }`,
-        { id: counterpartyId },
-    );
+    const result = await adminApi(CustomerByIdDocument, { id: counterpartyId });
     return result.counterparty ? toCustomerListItem(result.counterparty) : null;
 }
 
@@ -209,12 +130,7 @@ export async function fetchCustomerById(counterpartyId: string): Promise<Custome
 export async function fetchCounterpartyNames(ids: string[]): Promise<Map<string, string>> {
     const uniqueIds = [...new Set(ids)];
     const results = await Promise.all(
-        uniqueIds.map(id =>
-            adminApi<{ counterparty: { shortName: string } | null }>(
-                `query($id: ID!) { counterparty(id: $id) { shortName } }`,
-                { id },
-            ),
-        ),
+        uniqueIds.map(id => adminApi(CounterpartyShortNameDocument, { id })),
     );
     return new Map(
         uniqueIds
@@ -230,12 +146,7 @@ export async function reassignCounterpartyManager(
     counterpartyId: string,
     administratorId: string,
 ): Promise<void> {
-    await adminApi(
-        `mutation($counterpartyId: ID!, $administratorId: ID!) {
-            reassignCounterpartyManager(counterpartyId: $counterpartyId, administratorId: $administratorId) { id }
-        }`,
-        { counterpartyId, administratorId },
-    );
+    await adminApi(ReassignCounterpartyManagerDocument, { counterpartyId, administratorId });
 }
 
 export interface TradingPointDetailsPatch {
@@ -258,23 +169,13 @@ export async function updateTradingPointDetails(
     id: string,
     input: TradingPointDetailsPatch,
 ): Promise<void> {
-    await adminApi(
-        `mutation($id: ID!, $input: TradingPointDetailsInput!) {
-            updateTradingPointDetails(id: $id, input: $input) { id }
-        }`,
-        { id, input },
-    );
+    await adminApi(UpdateTradingPointDetailsDocument, { id, input });
 }
 
 // One-click reactivate/deactivate — sets both isActive and customerStatus together (see
 // TradingPointService.setActive).
 export async function setTradingPointActive(id: string, isActive: boolean): Promise<void> {
-    await adminApi(
-        `mutation($id: ID!, $isActive: Boolean!) {
-            setTradingPointActive(id: $id, isActive: $isActive) { id }
-        }`,
-        { id, isActive },
-    );
+    await adminApi(SetTradingPointActiveDocument, { id, isActive });
 }
 
 // Vendure's Customer.id (needed to filter orders/create draft orders) is a different id than
@@ -283,80 +184,39 @@ export async function setTradingPointActive(id: string, isActive: boolean): Prom
 export async function fetchCustomerIdForCounterparty(
     counterpartyId: string,
 ): Promise<string | null> {
-    const result = await adminApi<{
-        customers: { items: { id: string }[] };
-    }>(
-        // counterpartyId is a customField, filterable as a flat StringOperators field (not
-        // IDOperators, even though it holds an id) — the same gotcha the backend-plugin-rules skill documents for Shop
-        // API custom field filters being flat; here it's also typed as plain String, not ID.
-        `query CustomerIdForCounterparty($counterpartyId: String!) {
-            customers(options: { take: 1, filter: { counterpartyId: { eq: $counterpartyId } } }) {
-                items { id }
-            }
-        }`,
-        { counterpartyId },
-    );
+    // counterpartyId is a customField, filterable as a flat StringOperators field (not
+    // IDOperators, even though it holds an id) — the same gotcha the backend-plugin-rules skill
+    // documents for Shop API custom field filters being flat; here it's also typed as plain
+    // String, not ID.
+    const result = await adminApi(CustomerIdForCounterpartyDocument, { counterpartyId });
     return result.customers.items[0]?.id ?? null;
 }
 
-export interface CustomerOrderItem {
-    id: string;
-    code: string;
-    state: string;
-    totalWithTax: number;
-    currencyCode: string;
-    orderPlacedAt: string | null;
-    createdAt: string;
-    totalQuantity: number;
-    customer: { firstName: string; lastName: string } | null;
-    customFields: {
-        // Denormalized server-side by ErpOrderService.onFulfillmentStateChanged — see
-        // vendure-config.ts's doc comment. Null means no fulfillment yet ("Not started").
-        latestFulfillmentState: string | null;
-        // Denormalized server-side at placement time by ErpOrderService.onOrderPlaced — null
-        // means a storefront customer placed it themselves (no Administrator involved). Resolve
-        // to a display name via the `managers` list, same as OrdersTable.vue's managerName().
-        placedByAdministratorId: string | null;
-        // plugin-reservation's own state field — real column now (see CustomerOrdersDataTable.vue),
-        // not an orphaned filter with no corresponding data on screen.
-        reservationState: string | null;
+export type CustomerOrderItem = Omit<CustomerOrderItemFieldsFragment, 'customFields'> & {
+    customFields: NonNullable<CustomerOrderItemFieldsFragment['customFields']>;
+};
+
+// Order.customFields is nullable at the wrapper-object level per the GraphQL schema, but Vendure
+// always populates it in practice (custom fields default to null values, never a missing
+// object) — normalized here once so every caller downstream can keep assuming it's present, as
+// this file's own consumers always have.
+function normalizeOrderItem(item: CustomerOrderItemFieldsFragment): CustomerOrderItem {
+    return {
+        ...item,
+        customFields: item.customFields ?? {
+            latestFulfillmentState: null,
+            placedByAdministratorId: null,
+            reservationState: null,
+        },
     };
 }
-
-// totalQuantity is a real field already on Vendure's Order type —
-// latestFulfillmentState/placedByAdministratorId are this project's own denormalized customFields
-// (see vendure-config.ts), replacing what used to be computed client-side from `history`/the raw
-// `fulfillments` relation on every request (neither is fetched at all anymore — the fulfillment
-// progress bar now reads a stage position from latestFulfillmentState, not a fulfilled-quantity
-// ratio computed from `fulfillments` — see CustomerOrdersTab.vue's fulfillmentProgress()).
-const CUSTOMER_ORDER_ITEM_FIELDS = `
-    id
-    code
-    state
-    totalWithTax
-    currencyCode
-    orderPlacedAt
-    createdAt
-    totalQuantity
-    customer { firstName lastName }
-    customFields { latestFulfillmentState placedByAdministratorId reservationState }
-`;
 
 export async function fetchOrdersForCustomer(
     customerId: string,
     take = 20,
 ): Promise<CustomerOrderItem[]> {
-    const result = await adminApi<{
-        visibleOrders: { items: CustomerOrderItem[] };
-    }>(
-        `query CustomerOrders($customerId: ID!, $take: Int!) {
-            visibleOrders(options: { take: $take, sort: { orderPlacedAt: DESC } }, customerId: $customerId) {
-                items { ${CUSTOMER_ORDER_ITEM_FIELDS} }
-            }
-        }`,
-        { customerId, take },
-    );
-    return result.visibleOrders.items;
+    const result = await adminApi(CustomerOrdersDocument, { customerId, take });
+    return result.visibleOrders.items.map(normalizeOrderItem);
 }
 
 // CustomerOrdersTab's "view chips" (All/Unpaid/Partially paid/Cancelled) — real, DB-level
@@ -501,32 +361,22 @@ export async function fetchOrdersPageForCustomer(
     };
 
     if (view === 'unpaid' || view === 'partial') {
-        const result = await adminApi<{
-            customerOrdersByPaymentView: { items: CustomerOrderItem[]; totalItems: number };
-        }>(
-            `query CustomerOrdersByPaymentView($customerId: ID!, $paymentView: String!, $options: OrderListOptions) {
-                customerOrdersByPaymentView(customerId: $customerId, paymentView: $paymentView, options: $options) {
-                    totalItems
-                    items { ${CUSTOMER_ORDER_ITEM_FIELDS} }
-                }
-            }`,
-            { customerId, paymentView: view, options },
-        );
-        return result.customerOrdersByPaymentView;
+        const result = await adminApi(CustomerOrdersByPaymentViewDocument, {
+            customerId,
+            paymentView: view,
+            options,
+        });
+        return {
+            items: result.customerOrdersByPaymentView.items.map(normalizeOrderItem),
+            totalItems: result.customerOrdersByPaymentView.totalItems,
+        };
     }
 
-    const result = await adminApi<{
-        visibleOrders: { items: CustomerOrderItem[]; totalItems: number };
-    }>(
-        `query CustomerOrdersPage($customerId: ID!, $options: OrderListOptions) {
-            visibleOrders(options: $options, customerId: $customerId) {
-                totalItems
-                items { ${CUSTOMER_ORDER_ITEM_FIELDS} }
-            }
-        }`,
-        { customerId, options },
-    );
-    return result.visibleOrders;
+    const result = await adminApi(CustomerOrdersPageDocument, { customerId, options });
+    return {
+        items: result.visibleOrders.items.map(normalizeOrderItem),
+        totalItems: result.visibleOrders.totalItems,
+    };
 }
 
 export interface CustomerOrderViewCounts {
@@ -542,31 +392,7 @@ export interface CustomerOrderViewCounts {
 export async function fetchCustomerOrderViewCounts(
     customerId: string,
 ): Promise<CustomerOrderViewCounts> {
-    const result = await adminApi<{
-        all: { totalItems: number };
-        cancelled: { totalItems: number };
-        unpaid: { totalItems: number };
-        partial: { totalItems: number };
-    }>(
-        `query CustomerOrderViewCounts($customerId: ID!) {
-            all: visibleOrders(customerId: $customerId, options: { take: 0 }) { totalItems }
-            cancelled: visibleOrders(
-                customerId: $customerId
-                options: { take: 0, filter: { state: { eq: "Cancelled" } } }
-            ) { totalItems }
-            unpaid: customerOrdersByPaymentView(
-                customerId: $customerId
-                paymentView: "unpaid"
-                options: { take: 0 }
-            ) { totalItems }
-            partial: customerOrdersByPaymentView(
-                customerId: $customerId
-                paymentView: "partial"
-                options: { take: 0 }
-            ) { totalItems }
-        }`,
-        { customerId },
-    );
+    const result = await adminApi(CustomerOrderViewCountsDocument, { customerId });
     return {
         all: result.all.totalItems,
         cancelled: result.cancelled.totalItems,
@@ -583,14 +409,7 @@ export async function fetchCustomerOrderViewCounts(
 export async function fetchOrderPaymentSummaries(orderIds: string[]): Promise<Map<string, number>> {
     const map = new Map<string, number>();
     if (!orderIds.length) return map;
-    const result = await adminApi<{
-        orderPaymentSummaries: { orderId: string; capturedAmount: number }[];
-    }>(
-        `query OrderPaymentSummaries($orderIds: [ID!]!) {
-            orderPaymentSummaries(orderIds: $orderIds) { orderId capturedAmount }
-        }`,
-        { orderIds },
-    );
+    const result = await adminApi(OrderPaymentSummariesDocument, { orderIds });
     for (const summary of result.orderPaymentSummaries) {
         map.set(summary.orderId, summary.capturedAmount);
     }
@@ -661,26 +480,16 @@ export async function fetchDocumentsPageForCounterparty(
     pageSize: number,
     filters: CustomerDocumentFilters = DEFAULT_CUSTOMER_DOCUMENT_FILTERS,
 ): Promise<{ items: CustomerDocument[]; totalItems: number }> {
-    const result = await adminApi<{
-        documents: { items: CustomerDocument[]; totalItems: number };
-    }>(
-        `query CustomerDocumentsPage($counterpartyId: ID!, $options: DocumentListOptions) {
-            documents(options: $options, counterpartyId: $counterpartyId) {
-                totalItems
-                items { id type number status issueDate }
-            }
-        }`,
-        {
-            counterpartyId,
-            options: {
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                types: filters.types.length ? filters.types : undefined,
-                status: filters.status || undefined,
-                search: filters.search || undefined,
-            },
+    const result = await adminApi(CustomerDocumentsPageDocument, {
+        counterpartyId,
+        options: {
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+            types: filters.types.length ? filters.types : undefined,
+            status: filters.status || undefined,
+            search: filters.search || undefined,
         },
-    );
+    });
     return result.documents;
 }
 
@@ -688,12 +497,7 @@ export async function fetchDocumentsPageForCounterparty(
 // Type column's checklist filter (see DOCUMENT_STATUS_OPTIONS' own doc comment). A small, bounded
 // aggregate (plugin-documents' DocumentsService.findVisibleTypes), not a hardcoded list.
 export async function fetchDocumentTypes(counterpartyId: string): Promise<string[]> {
-    const result = await adminApi<{ documentTypes: string[] }>(
-        `query CustomerDocumentTypes($counterpartyId: ID!) {
-            documentTypes(counterpartyId: $counterpartyId)
-        }`,
-        { counterpartyId },
-    );
+    const result = await adminApi(CustomerDocumentTypesDocument, { counterpartyId });
     return result.documentTypes;
 }
 
@@ -712,18 +516,11 @@ export async function fetchCreditByCounterpartyId(
     options: CustomersListOptions,
 ): Promise<Map<string, CustomerCredit>> {
     try {
-        const result = await adminApi<{
-            counterparties: { items: { id: string; creditLimit: number; creditBalance: number }[] };
-        }>(
-            `query($options: CounterpartyListOptions) {
-                counterparties(options: $options) { items { id creditLimit creditBalance } }
-            }`,
-            { options },
-        );
+        const result = await adminApi(CreditByCounterpartyIdDocument, { options });
         return new Map(
             result.counterparties.items.map(c => [
                 c.id,
-                { creditLimit: c.creditLimit, creditBalance: c.creditBalance },
+                { creditLimit: c.creditLimit ?? 0, creditBalance: c.creditBalance ?? 0 },
             ]),
         );
     } catch {
@@ -737,18 +534,11 @@ export async function fetchCreditForCounterparty(
     counterpartyId: string,
 ): Promise<CustomerCredit | null> {
     try {
-        const result = await adminApi<{
-            counterparty: { creditLimit: number; creditBalance: number } | null;
-        }>(
-            `query($id: ID!) {
-                counterparty(id: $id) { creditLimit creditBalance }
-            }`,
-            { id: counterpartyId },
-        );
+        const result = await adminApi(CreditForCounterpartyDocument, { id: counterpartyId });
         return result.counterparty
             ? {
-                  creditLimit: result.counterparty.creditLimit,
-                  creditBalance: result.counterparty.creditBalance,
+                  creditLimit: result.counterparty.creditLimit ?? 0,
+                  creditBalance: result.counterparty.creditBalance ?? 0,
               }
             : null;
     } catch {
@@ -772,14 +562,10 @@ export async function fetchActiveDiscountCountsByCustomer(
             // countByStatus helper (findAllPaginated(ctx, { take: 0, status })). status: 'active'
             // is computed server-side (DiscountGrantService.computeGrantStatus), the single
             // source of truth this used to duplicate client-side via a raw validTo comparison.
-            const result = await adminApi<{
-                discountGrantsForCounterparty: { totalItems: number };
-            }>(
-                `query ActiveDiscountCountForCounterparty($counterpartyId: ID!, $options: DiscountGrantForCustomerListOptions) {
-                    discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: $options) { totalItems }
-                }`,
-                { counterpartyId, options: { take: 0, status: 'active' } },
-            );
+            const result = await adminApi(ActiveDiscountCountForCounterpartyDocument, {
+                counterpartyId,
+                options: { take: 0, status: 'active' },
+            });
             return [counterpartyId, result.discountGrantsForCounterparty.totalItems] as const;
         }),
     );
@@ -836,20 +622,7 @@ export interface DiscountGrantViewCounts {
 export async function fetchDiscountGrantViewCounts(
     counterpartyId: string,
 ): Promise<DiscountGrantViewCounts> {
-    const result = await adminApi<{
-        all: { totalItems: number };
-        active: { totalItems: number };
-        expiringSoon: { totalItems: number };
-        expired: { totalItems: number };
-    }>(
-        `query DiscountGrantViewCounts($counterpartyId: ID!) {
-            all: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0 }) { totalItems }
-            active: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0, status: "active" }) { totalItems }
-            expiringSoon: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0, status: "expiring-soon" }) { totalItems }
-            expired: discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: { take: 0, status: "expired" }) { totalItems }
-        }`,
-        { counterpartyId },
-    );
+    const result = await adminApi(DiscountGrantViewCountsDocument, { counterpartyId });
     return {
         all: result.all.totalItems,
         active: result.active.totalItems,
@@ -870,54 +643,26 @@ export async function fetchDiscountGrantsPage(
     page: number,
     pageSize: number,
 ): Promise<{ items: DiscountRuleItem[]; totalItems: number }> {
-    const result = await adminApi<{
-        discountGrantsForCounterparty: { items: DiscountRuleItem[]; totalItems: number };
-    }>(
-        `query CustomerDiscountGrantsPage($counterpartyId: ID!, $options: DiscountGrantForCustomerListOptions) {
-            discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: $options) {
-                totalItems
-                items {
-                    id
-                    number
-                    createdAt
-                    percent
-                    facetValueCode
-                    validTo
-                    status
-                }
-            }
-        }`,
-        {
-            counterpartyId,
-            options: {
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                search: filters.search || undefined,
-                status: filters.status || undefined,
-            },
+    const result = await adminApi(CustomerDiscountGrantsPageDocument, {
+        counterpartyId,
+        options: {
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+            search: filters.search || undefined,
+            status: filters.status || undefined,
         },
-    );
-    return result.discountGrantsForCounterparty;
+    });
+    return result.discountGrantsForCounterparty as {
+        items: DiscountRuleItem[];
+        totalItems: number;
+    };
 }
 
 // Keyed by counterparty id (the "customer" this whole page means) — capped at 500 rows, same
 // tradeoff as OrdersSummary's "total amount": there is no per-customer MAX(orderPlacedAt)
 // aggregate query yet.
 export async function fetchLastOrderDatesByCounterpartyId(): Promise<Map<string, string>> {
-    const result = await adminApi<{
-        visibleOrders: {
-            items: {
-                orderPlacedAt: string | null;
-                customer: { counterparty: { id: string } | null } | null;
-            }[];
-        };
-    }>(
-        `query LastOrderDates {
-            visibleOrders(options: { take: 500, sort: { orderPlacedAt: DESC } }) {
-                items { orderPlacedAt customer { counterparty { id } } }
-            }
-        }`,
-    );
+    const result = await adminApi(LastOrderDatesDocument);
     const map = new Map<string, string>();
     for (const item of result.visibleOrders.items) {
         const counterpartyId = item.customer?.counterparty?.id;
