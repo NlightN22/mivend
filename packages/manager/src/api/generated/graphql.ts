@@ -8886,6 +8886,77 @@ export type SetBranchSettingsMutation = {
     };
 };
 
+export type CatalogFacetsQueryVariables = Exact<{
+    term?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type CatalogFacetsQuery = {
+    search: {
+        facetValues: Array<{
+            count: number;
+            facetValue: {
+                id: string;
+                code: string;
+                name: string;
+                facet: { code: string; name: string };
+            };
+        }>;
+    };
+};
+
+export type CategoryTreeQueryVariables = Exact<{ [key: string]: never }>;
+
+export type CategoryTreeQuery = {
+    collections: {
+        items: Array<{
+            id: string;
+            name: string;
+            slug: string;
+            breadcrumbs: Array<{ id: string; name: string; slug: string }>;
+            children: Array<{ id: string; name: string; slug: string }> | null;
+        }>;
+    };
+};
+
+export type CatalogPageQueryVariables = Exact<{
+    term?: InputMaybe<Scalars['String']['input']>;
+    facetValueFilters?: InputMaybe<Array<FacetValueFilterInput> | FacetValueFilterInput>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type CatalogPageQuery = {
+    search: {
+        totalItems: number;
+        items: Array<{
+            productId: string;
+            productVariantId: string;
+            productName: string;
+            sku: string;
+            slug: string;
+            facetValueIds: Array<string>;
+            productAsset: { preview: string } | null;
+        }>;
+    };
+};
+
+export type CatalogVariantStockQueryVariables = Exact<{
+    ids: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
+
+export type CatalogVariantStockQuery = {
+    productVariants: { items: Array<{ id: string; stockLevels: Array<{ stockOnHand: number }> }> };
+};
+
+export type CatalogPriceEntriesForVariantsQueryVariables = Exact<{
+    ids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+    priceTypeCode: Scalars['String']['input'];
+}>;
+
+export type CatalogPriceEntriesForVariantsQuery = {
+    priceEntriesForVariants: Array<{ variantId: string; price: number }>;
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -9319,6 +9390,91 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
 }`) as unknown as TypedDocumentString<
     SetBranchSettingsMutation,
     SetBranchSettingsMutationVariables
+>;
+export const CatalogFacetsDocument = new TypedDocumentString(`
+    query CatalogFacets($term: String) {
+  search(input: {term: $term, take: 0, skip: 0, groupByProduct: true}) {
+    facetValues {
+      facetValue {
+        id
+        code
+        name
+        facet {
+          code
+          name
+        }
+      }
+      count
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<CatalogFacetsQuery, CatalogFacetsQueryVariables>;
+export const CategoryTreeDocument = new TypedDocumentString(`
+    query CategoryTree {
+  collections(options: {take: 100}) {
+    items {
+      id
+      name
+      slug
+      breadcrumbs {
+        id
+        name
+        slug
+      }
+      children {
+        id
+        name
+        slug
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<CategoryTreeQuery, CategoryTreeQueryVariables>;
+export const CatalogPageDocument = new TypedDocumentString(`
+    query CatalogPage($term: String, $facetValueFilters: [FacetValueFilterInput!], $skip: Int, $take: Int) {
+  search(
+    input: {term: $term, facetValueFilters: $facetValueFilters, groupByProduct: true, skip: $skip, take: $take}
+  ) {
+    totalItems
+    items {
+      productId
+      productVariantId
+      productName
+      sku
+      slug
+      facetValueIds
+      productAsset {
+        preview
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<CatalogPageQuery, CatalogPageQueryVariables>;
+export const CatalogVariantStockDocument = new TypedDocumentString(`
+    query CatalogVariantStock($ids: [String!]!) {
+  productVariants(options: {filter: {id: {in: $ids}}}) {
+    items {
+      id
+      stockLevels {
+        stockOnHand
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CatalogVariantStockQuery,
+    CatalogVariantStockQueryVariables
+>;
+export const CatalogPriceEntriesForVariantsDocument = new TypedDocumentString(`
+    query CatalogPriceEntriesForVariants($ids: [ID!]!, $priceTypeCode: String!) {
+  priceEntriesForVariants(variantIds: $ids, priceTypeCode: $priceTypeCode) {
+    variantId
+    price
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CatalogPriceEntriesForVariantsQuery,
+    CatalogPriceEntriesForVariantsQueryVariables
 >;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {

@@ -5,17 +5,29 @@ import {
     buildFacetValueFilters,
     buildFacetGroups,
     type FacetGroup,
-    type EsFacetValueResult,
 } from '../../../shared/src/catalogFacets';
+import { buildCategoryTree, type CollectionNode } from '../../../shared/src/collectionTree';
 import {
-    buildCategoryTree,
-    type CollectionNode,
-    type RawCollection,
-} from '../../../shared/src/collectionTree';
+    CatalogFacetsDocument,
+    CatalogPageDocument,
+    CatalogPriceEntriesForVariantsDocument,
+    CatalogVariantStockDocument,
+    CategoryTreeDocument,
+} from './generated/graphql';
 
 export interface CatalogFilters {
     search: string;
     facetValueIds: string[];
+    // mivend#86: kept on the filter shape for UI/state-shape compatibility, but NOT actually
+    // sent to the search query below — Admin API's own SearchInput type has no `inStock`/
+    // `priceRangeWithTax` field at all (confirmed live: the pre-migration raw query string sent
+    // both unconditionally and every single fetchCatalogPage() call was failing GraphQL
+    // validation — "Field 'inStock' is not defined by type 'SearchInput'" /
+    // "Unknown type 'PriceRangeInput'" — the whole Catalog page was broken before this fix, not
+    // just these two filters). Restoring real stock/price-range filtering needs its own design
+    // (Admin API's search genuinely has no such field; Shop API's does) — left in the filter
+    // shape so the UI controls keep compiling, but they are currently inert. Follow-up issue
+    // needed before re-wiring them.
     inStock: boolean;
     priceMin: number | null;
     priceMax: number | null;
@@ -32,19 +44,7 @@ export const DEFAULT_CATALOG_FILTERS: CatalogFilters = {
 // Facets query — no facetValueFilters, so the panel always shows every available value
 // regardless of the current selection (mirrors storefront's FACETS_QUERY).
 export async function fetchCatalogFacets(term: string): Promise<FacetGroup[]> {
-    const result = await adminApi<{
-        search: { facetValues: EsFacetValueResult[] };
-    }>(
-        `query CatalogFacets($term: String) {
-            search(input: { term: $term, take: 0, skip: 0, groupByProduct: true }) {
-                facetValues {
-                    facetValue { id code name facet { code name } }
-                    count
-                }
-            }
-        }`,
-        { term: term || undefined },
-    );
+    const result = await adminApi(CatalogFacetsDocument, { term: term || undefined });
     return buildFacetGroups(result.search.facetValues);
 }
 
@@ -52,18 +52,10 @@ export async function fetchCatalogFacets(term: string): Promise<FacetGroup[]> {
 // browsing by structure, as an alternative to the flat facet checkboxes) — same Collection tree
 // storefront's mega-menu uses, via the shared buildCategoryTree shaping logic.
 export async function fetchCategoryTree(): Promise<CollectionNode[]> {
-    const result = await adminApi<{ collections: { items: RawCollection[] } }>(
-        `query CategoryTree {
-            collections(options: { take: 100 }) {
-                items {
-                    id name slug
-                    breadcrumbs { id name slug }
-                    children { id name slug }
-                }
-            }
-        }`,
+    const result = await adminApi(CategoryTreeDocument);
+    return buildCategoryTree(
+        result.collections.items.map(item => ({ ...item, children: item.children ?? [] })),
     );
-    return buildCategoryTree(result.collections.items);
 }
 
 export interface CatalogListItem {
@@ -81,59 +73,18 @@ export interface CatalogPageResult {
     totalItems: number;
 }
 
-function buildPriceRange(filters: CatalogFilters): { min: number; max: number } | undefined {
-    if (filters.priceMin == null && filters.priceMax == null) return undefined;
-    return {
-        min: filters.priceMin != null ? Math.round(filters.priceMin * 100) : 0,
-        max: filters.priceMax != null ? Math.round(filters.priceMax * 100) : 999_999_999,
-    };
-}
-
 export async function fetchCatalogPage(
     filters: CatalogFilters,
     facetGroups: FacetGroup[],
     page: number,
     pageSize: number,
 ): Promise<CatalogPageResult> {
-    const result = await adminApi<{
-        search: {
-            totalItems: number;
-            items: (Omit<CatalogListItem, 'imagePreview'> & {
-                productAsset: { preview: string } | null;
-            })[];
-        };
-    }>(
-        `query CatalogPage($term: String, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput, $skip: Int, $take: Int) {
-            search(input: {
-                term: $term
-                facetValueFilters: $facetValueFilters
-                inStock: $inStock
-                priceRangeWithTax: $priceRangeWithTax
-                groupByProduct: true
-                skip: $skip
-                take: $take
-            }) {
-                totalItems
-                items {
-                    productId
-                    productVariantId
-                    productName
-                    sku
-                    slug
-                    facetValueIds
-                    productAsset { preview }
-                }
-            }
-        }`,
-        {
-            term: filters.search || undefined,
-            facetValueFilters: buildFacetValueFilters(filters.facetValueIds, facetGroups),
-            inStock: filters.inStock ? true : undefined,
-            priceRangeWithTax: buildPriceRange(filters),
-            skip: (page - 1) * pageSize,
-            take: pageSize,
-        },
-    );
+    const result = await adminApi(CatalogPageDocument, {
+        term: filters.search || undefined,
+        facetValueFilters: buildFacetValueFilters(filters.facetValueIds, facetGroups),
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+    });
     return {
         items: result.search.items.map(item => ({
             ...item,
@@ -150,16 +101,7 @@ export interface VariantStock {
 
 export async function fetchStockForVariants(variantIds: string[]): Promise<Map<string, number>> {
     if (variantIds.length === 0) return new Map();
-    const result = await adminApi<{
-        productVariants: { items: { id: string; stockLevels: { stockOnHand: number }[] }[] };
-    }>(
-        `query CatalogVariantStock($ids: [String!]!) {
-            productVariants(options: { filter: { id: { in: $ids } } }) {
-                items { id stockLevels { stockOnHand } }
-            }
-        }`,
-        { ids: variantIds },
-    );
+    const result = await adminApi(CatalogVariantStockDocument, { ids: variantIds });
     return new Map(
         result.productVariants.items.map(v => [
             v.id,
@@ -177,17 +119,10 @@ export async function fetchPriceEntriesForVariants(
 ): Promise<Map<string, number> | null> {
     if (variantIds.length === 0) return new Map();
     try {
-        const result = await adminApi<{
-            priceEntriesForVariants: { variantId: string; price: number }[];
-        }>(
-            `query($ids: [ID!]!, $priceTypeCode: String!) {
-                priceEntriesForVariants(variantIds: $ids, priceTypeCode: $priceTypeCode) {
-                    variantId
-                    price
-                }
-            }`,
-            { ids: variantIds, priceTypeCode },
-        );
+        const result = await adminApi(CatalogPriceEntriesForVariantsDocument, {
+            ids: variantIds,
+            priceTypeCode,
+        });
         return new Map(result.priceEntriesForVariants.map(e => [e.variantId, e.price]));
     } catch {
         return null;

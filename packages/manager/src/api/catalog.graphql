@@ -1,0 +1,84 @@
+query CatalogFacets($term: String) {
+    search(input: { term: $term, take: 0, skip: 0, groupByProduct: true }) {
+        facetValues {
+            facetValue {
+                id
+                code
+                name
+                facet {
+                    code
+                    name
+                }
+            }
+            count
+        }
+    }
+}
+
+query CategoryTree {
+    collections(options: { take: 100 }) {
+        items {
+            id
+            name
+            slug
+            breadcrumbs {
+                id
+                name
+                slug
+            }
+            children {
+                id
+                name
+                slug
+            }
+        }
+    }
+}
+
+query CatalogPage(
+    $term: String
+    $facetValueFilters: [FacetValueFilterInput!]
+    $skip: Int
+    $take: Int
+) {
+    search(
+        input: {
+            term: $term
+            facetValueFilters: $facetValueFilters
+            groupByProduct: true
+            skip: $skip
+            take: $take
+        }
+    ) {
+        totalItems
+        items {
+            productId
+            productVariantId
+            productName
+            sku
+            slug
+            facetValueIds
+            productAsset {
+                preview
+            }
+        }
+    }
+}
+
+query CatalogVariantStock($ids: [String!]!) {
+    productVariants(options: { filter: { id: { in: $ids } } }) {
+        items {
+            id
+            stockLevels {
+                stockOnHand
+            }
+        }
+    }
+}
+
+query CatalogPriceEntriesForVariants($ids: [ID!]!, $priceTypeCode: String!) {
+    priceEntriesForVariants(variantIds: $ids, priceTypeCode: $priceTypeCode) {
+        variantId
+        price
+    }
+}
