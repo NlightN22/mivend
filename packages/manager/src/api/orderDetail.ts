@@ -1,37 +1,35 @@
 import { adminApi } from './client';
+import {
+    OrderDetailDocument,
+    PriceAdjustmentRequestsForOrderDocument,
+    RelatedDocumentsDocument,
+    type OrderDetailQuery,
+} from './generated/graphql';
 
-export interface OrderDetailLine {
-    id: string;
-    quantity: number;
-    unitPriceWithTax: number;
-    linePriceWithTax: number;
-    productVariant: { id: string; name: string; sku: string };
-    customFields: { manualUnitPrice: number | null; manualPriceReason: string | null };
-}
+type RawOrderDetail = OrderDetailQuery['visibleOrders']['items'][number];
+type RawOrderDetailLine = RawOrderDetail['lines'][number];
 
-export interface OrderDetail {
-    id: string;
-    code: string;
-    state: string;
-    orderPlacedAt: string | null;
-    createdAt: string;
-    currencyCode: string;
-    subTotalWithTax: number;
-    shippingWithTax: number;
-    totalWithTax: number;
-    customFields: { reservationDays: number | null };
+export type OrderDetailLine = Omit<RawOrderDetailLine, 'customFields'> & {
+    customFields: NonNullable<RawOrderDetailLine['customFields']>;
+};
+export type OrderDetail = Omit<RawOrderDetail, 'customFields' | 'lines'> & {
+    customFields: NonNullable<RawOrderDetail['customFields']>;
     lines: OrderDetailLine[];
-    customer: {
-        firstName: string;
-        lastName: string;
-        counterparty: {
-            id: string;
-            shortName: string;
-            inn: string | null;
-            assignedManagerId: string | null;
-            priceType: string;
-        } | null;
-    } | null;
+};
+
+// Order.customFields/OrderLine.customFields are nullable at the wrapper-object level per the
+// GraphQL schema, but Vendure always populates them in practice (custom fields default to null
+// values, never a missing object) — normalized here once, same pattern as
+// api/customers.ts's normalizeOrderItem.
+function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
+    return {
+        ...order,
+        customFields: order.customFields ?? { reservationDays: null },
+        lines: order.lines.map(line => ({
+            ...line,
+            customFields: line.customFields ?? { manualUnitPrice: null, manualPriceReason: null },
+        })),
+    };
 }
 
 // States past which a line-level price can no longer be adjusted from this page (see
@@ -46,45 +44,9 @@ export const NON_EDITABLE_ORDER_STATES = [
 ];
 
 export async function fetchOrderDetail(code: string): Promise<OrderDetail | null> {
-    const result = await adminApi<{ visibleOrders: { items: OrderDetail[] } }>(
-        `query OrderDetail($code: String!) {
-            visibleOrders(options: { take: 1, filter: { code: { eq: $code } } }) {
-                items {
-                    id
-                    code
-                    state
-                    orderPlacedAt
-                    createdAt
-                    currencyCode
-                    subTotalWithTax
-                    shippingWithTax
-                    totalWithTax
-                    customFields { reservationDays }
-                    lines {
-                        id
-                        quantity
-                        unitPriceWithTax
-                        linePriceWithTax
-                        productVariant { id name sku }
-                        customFields { manualUnitPrice manualPriceReason }
-                    }
-                    customer {
-                        firstName
-                        lastName
-                        counterparty {
-                            id
-                            shortName
-                            inn
-                            assignedManagerId
-                            priceType
-                        }
-                    }
-                }
-            }
-        }`,
-        { code },
-    );
-    return result.visibleOrders.items[0] ?? null;
+    const result = await adminApi(OrderDetailDocument, { code });
+    const order = result.visibleOrders.items[0];
+    return order ? normalizeOrderDetail(order) : null;
 }
 
 export interface PriceAdjustmentRequestSummary {
@@ -99,21 +61,7 @@ export interface PriceAdjustmentRequestSummary {
 export async function fetchPriceAdjustmentRequestsForOrder(
     orderId: string,
 ): Promise<PriceAdjustmentRequestSummary[]> {
-    const result = await adminApi<{
-        priceAdjustmentRequestsForOrder: PriceAdjustmentRequestSummary[];
-    }>(
-        `query PriceAdjustmentRequestsForOrder($orderId: ID!) {
-            priceAdjustmentRequestsForOrder(orderId: $orderId) {
-                id
-                payload
-                status
-                currentStepRole
-                createdAt
-                decidedAt
-            }
-        }`,
-        { orderId },
-    );
+    const result = await adminApi(PriceAdjustmentRequestsForOrderDocument, { orderId });
     return result.priceAdjustmentRequestsForOrder;
 }
 
@@ -127,13 +75,6 @@ export interface RelatedDocument {
 }
 
 export async function fetchRelatedDocuments(orderId: string): Promise<RelatedDocument[]> {
-    const result = await adminApi<{ documents: { items: RelatedDocument[] } }>(
-        `query RelatedDocuments($orderId: ID!) {
-            documents(options: { take: 100 }, orderId: $orderId) {
-                items { id type number status issueDate orderId }
-            }
-        }`,
-        { orderId },
-    );
+    const result = await adminApi(RelatedDocumentsDocument, { orderId });
     return result.documents.items;
 }

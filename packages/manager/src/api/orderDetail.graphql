@@ -1,0 +1,68 @@
+query OrderDetail($code: String!) {
+    visibleOrders(options: { take: 1, filter: { code: { eq: $code } } }) {
+        items {
+            id
+            code
+            state
+            orderPlacedAt
+            createdAt
+            currencyCode
+            subTotalWithTax
+            shippingWithTax
+            totalWithTax
+            customFields {
+                reservationDays
+            }
+            lines {
+                id
+                quantity
+                unitPriceWithTax
+                linePriceWithTax
+                productVariant {
+                    id
+                    name
+                    sku
+                }
+                customFields {
+                    manualUnitPrice
+                    manualPriceReason
+                }
+            }
+            customer {
+                firstName
+                lastName
+                counterparty {
+                    id
+                    shortName
+                    inn
+                    assignedManagerId
+                    priceType
+                }
+            }
+        }
+    }
+}
+
+query PriceAdjustmentRequestsForOrder($orderId: ID!) {
+    priceAdjustmentRequestsForOrder(orderId: $orderId) {
+        id
+        payload
+        status
+        currentStepRole
+        createdAt
+        decidedAt
+    }
+}
+
+query RelatedDocuments($orderId: ID!) {
+    documents(options: { take: 100 }, orderId: $orderId) {
+        items {
+            id
+            type
+            number
+            status
+            issueDate
+            orderId
+        }
+    }
+}

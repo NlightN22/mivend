@@ -9770,6 +9770,81 @@ export type AddManualPaymentToOrderMutation = {
         | { __typename: 'Order'; code: string };
 };
 
+export type OrderDetailQueryVariables = Exact<{
+    code: Scalars['String']['input'];
+}>;
+
+export type OrderDetailQuery = {
+    visibleOrders: {
+        items: Array<{
+            id: string;
+            code: string;
+            state: string;
+            orderPlacedAt: any | null;
+            createdAt: any;
+            currencyCode: CurrencyCode;
+            subTotalWithTax: any;
+            shippingWithTax: any;
+            totalWithTax: any;
+            customFields: { reservationDays: number | null } | null;
+            lines: Array<{
+                id: string;
+                quantity: number;
+                unitPriceWithTax: any;
+                linePriceWithTax: any;
+                productVariant: { id: string; name: string; sku: string };
+                customFields: {
+                    manualUnitPrice: number | null;
+                    manualPriceReason: string | null;
+                } | null;
+            }>;
+            customer: {
+                firstName: string;
+                lastName: string;
+                counterparty: {
+                    id: string;
+                    shortName: string;
+                    inn: string | null;
+                    assignedManagerId: string | null;
+                    priceType: string;
+                } | null;
+            } | null;
+        }>;
+    };
+};
+
+export type PriceAdjustmentRequestsForOrderQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type PriceAdjustmentRequestsForOrderQuery = {
+    priceAdjustmentRequestsForOrder: Array<{
+        id: string;
+        payload: string;
+        status: string;
+        currentStepRole: string | null;
+        createdAt: any;
+        decidedAt: any | null;
+    }>;
+};
+
+export type RelatedDocumentsQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type RelatedDocumentsQuery = {
+    documents: {
+        items: Array<{
+            id: string;
+            type: string;
+            number: string;
+            status: string;
+            issueDate: any;
+            orderId: string | null;
+        }>;
+    };
+};
+
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MySessionsQuery = {
@@ -11431,6 +11506,81 @@ export const AddManualPaymentToOrderDocument = new TypedDocumentString(`
     AddManualPaymentToOrderMutation,
     AddManualPaymentToOrderMutationVariables
 >;
+export const OrderDetailDocument = new TypedDocumentString(`
+    query OrderDetail($code: String!) {
+  visibleOrders(options: {take: 1, filter: {code: {eq: $code}}}) {
+    items {
+      id
+      code
+      state
+      orderPlacedAt
+      createdAt
+      currencyCode
+      subTotalWithTax
+      shippingWithTax
+      totalWithTax
+      customFields {
+        reservationDays
+      }
+      lines {
+        id
+        quantity
+        unitPriceWithTax
+        linePriceWithTax
+        productVariant {
+          id
+          name
+          sku
+        }
+        customFields {
+          manualUnitPrice
+          manualPriceReason
+        }
+      }
+      customer {
+        firstName
+        lastName
+        counterparty {
+          id
+          shortName
+          inn
+          assignedManagerId
+          priceType
+        }
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<OrderDetailQuery, OrderDetailQueryVariables>;
+export const PriceAdjustmentRequestsForOrderDocument = new TypedDocumentString(`
+    query PriceAdjustmentRequestsForOrder($orderId: ID!) {
+  priceAdjustmentRequestsForOrder(orderId: $orderId) {
+    id
+    payload
+    status
+    currentStepRole
+    createdAt
+    decidedAt
+  }
+}
+    `) as unknown as TypedDocumentString<
+    PriceAdjustmentRequestsForOrderQuery,
+    PriceAdjustmentRequestsForOrderQueryVariables
+>;
+export const RelatedDocumentsDocument = new TypedDocumentString(`
+    query RelatedDocuments($orderId: ID!) {
+  documents(options: {take: 100}, orderId: $orderId) {
+    items {
+      id
+      type
+      number
+      status
+      issueDate
+      orderId
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<RelatedDocumentsQuery, RelatedDocumentsQueryVariables>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {
