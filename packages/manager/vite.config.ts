@@ -14,6 +14,25 @@ export default defineConfig(() => {
                 '@': fileURLToPath(new URL('./src', import.meta.url)),
             },
         },
+        build: {
+            // Vite's default build output dir is `assets/`, which collides with the `/assets`
+            // proxy rule below (Vendure's own product-image assetUrlPrefix) — see
+            // packages/storefront/vite.config.ts for the full explanation (issue #115).
+            assetsDir: '_app',
+            // Splits the single 1.4 MB/430 KB-gzip monolithic chunk Vite otherwise produces
+            // (flagged by its own chunkSizeWarningLimit warning, issue #115) into independently
+            // cacheable vendor bundles — these rarely change between our own deploys, so
+            // splitting them out means a real app-code deploy doesn't force re-downloading them.
+            rollupOptions: {
+                output: {
+                    manualChunks: {
+                        vue: ['vue', 'vue-router', 'pinia'],
+                        'element-plus': ['element-plus', '@element-plus/icons-vue'],
+                        primevue: ['primevue', '@primevue/themes'],
+                    },
+                },
+            },
+        },
         server: {
             port: parseInt(process.env.VITE_PORT ?? '5174'),
             host: '0.0.0.0',
