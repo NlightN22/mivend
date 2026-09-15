@@ -4,6 +4,7 @@ import tsParser from '@typescript-eslint/parser';
 import prettierConfig from 'eslint-config-prettier';
 import noRawGraphql from './eslint-rules/no-raw-graphql.js';
 import noSyncPaymentProcessing from './eslint-rules/no-sync-payment-processing.js';
+import noNullCheckOnPlainProtoScalar from './eslint-rules/no-null-check-on-plain-proto-scalar.js';
 
 export default [
     js.configs.recommended,
@@ -194,6 +195,22 @@ export default [
         plugins: { local: { rules: { 'no-sync-payment-processing': noSyncPaymentProcessing } } },
         rules: {
             'local/no-sync-payment-processing': 'error',
+        },
+    },
+    // mivend.issue.84.88 (2026-09-15): stock.handler.ts read `payload.availableQuantity != null`
+    // and treated an absent key as "no data" instead of "explicit 0" — Integration Service's
+    // contract declares available_quantity as a plain (non-optional) proto3 double, whose
+    // zero-value is OMITTED from the decoded JSON entirely, same shape as issue #89's
+    // isActive/isDeleted bug. Scoped to handlers/** (the only files that read a raw decoded
+    // Kafka payload directly) — see eslint-rules/no-null-check-on-plain-proto-scalar.js and the
+    // external-integration-rules skill for the full explanation and the field denylist.
+    {
+        files: ['packages/plugins/erp-integration/src/handlers/**/*.ts'],
+        ignores: ['**/*.test.ts', '**/__tests__/**'],
+        languageOptions: { parser: tsParser },
+        plugins: { local: { rules: { 'no-null-check-on-plain-proto-scalar': noNullCheckOnPlainProtoScalar } } },
+        rules: {
+            'local/no-null-check-on-plain-proto-scalar': 'error',
         },
     },
     prettierConfig, // must be last — disables rules that conflict with prettier

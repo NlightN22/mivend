@@ -177,6 +177,73 @@ made, so bound on that directly). This is a distinct, longer budget from the def
 `INBOX_MAX_ATTEMPTS_DEFAULT`-based retry used for genuine processing bugs / malformed data, which
 should stay short (fail fast, a human needs to look at it, more waiting won't help).
 
+## Non-optional proto3 scalar fields — an absent key means the zero value, never "no data"
+
+**Rule: for any plain (non-`optional`) scalar field in an Integration Service contract — bool,
+`double`/numeric, or string — reading the decoded JSON payload must treat an absent key as that
+field's zero value (`false` for bool, `0` for numeric, `""` for string), never as "field not
+sent, skip it" or "field not sent, treat as null/unknown".** This is not specific to booleans.
+
+**Why**: proto3's JSON mapping (used by `@bufbuild/protobuf`'s `toJson`, which every consumer in
+`kafka-consumer.service.ts` goes through) omits a non-optional scalar field from the encoded JSON
+entirely when its value equals the type's zero value. A field declared `optional` in the `.proto`
+gets real presence tracking (its own bit, `?? undefined` is a legitimate "genuinely not sent" read)
+— a plain scalar does not, and its absence is indistinguishable at the JSON level from an explicit
+zero. `expectedQuantity` (`optional double`) and `isActive`/`is_folder` (`optional bool`) in these
+contracts DO carry real presence; `available_quantity`/`quantity`/`isDeleted` etc. (plain, no
+`optional` keyword) do NOT — check the generated `.d.ts` (`node_modules/@nlightn22/event-contracts/
+dist/generated/.../*_pb.d.ts`) for the field's own doc comment (`@generated from field: optional
+double expected_quantity = 12;` vs `@generated from field: double available_quantity = 11;`) to
+tell which is which; do not guess from the field's own semantics.
+
+**Two real incidents from getting this wrong, same root cause, different field/type:**
+
+- issue #89: `isActive`/`isDeleted` bool fields — an absent key was read as "defaults to active",
+  making real deactivations from 1C silently invisible. Fixed via the `=== true` explicit-boolean
+  read pattern (see `types.ts`'s `InboundStream` comment) — now applied consistently across every
+  handler reading these two fields.
+- mivend.issue.84.88 (2026-09-15): `stock.handler.ts`'s `availableQuantity` (a `double`, not a
+  bool) had the identical bug in a different type — `payload.availableQuantity != null ? Number(
+...) : null` treated an absent key as "no data, don't write anything", when it actually meant
+  "1C reports zero available stock" — exactly the case the downstream ATP cap
+  (`ReservationAvailabilityService`, issue #72) most needs to catch. This silently skipped writing
+  the ATP cap for every affected row (a real oversell-risk gap, not just cosmetic) and, separately,
+  broke an unrelated reconciliation feature that used the same field's nullness as a proxy for "did
+  we receive this fact" (see the item below on not overloading a business field for that). Found
+  only because a downstream count mismatch was chased back to it — the underlying data bug (missing
+  ATP cap) had no user-visible symptom of its own and could have gone unnoticed indefinitely.
+
+**Before writing or reviewing any handler that reads a field from a decoded Kafka payload:**
+
+1. Look up the field in the generated `.d.ts` — is it declared `optional` or plain?
+2. If plain: read an absent key as the zero value (`?? 0` / `=== true` / `?? ''`), never as
+   `null`/`undefined`/"skip". A guard like `if (payload.x != null)` on a plain scalar is close to
+   always wrong for this reason — it can never distinguish "explicit zero" from "not sent",
+   because the wire format itself cannot represent that distinction for a plain field.
+3. If `optional`: an absent key genuinely means "not sent" and a `null`/`undefined` branch is
+   correct — don't apply this rule there, don't invent a zero-value default the source system
+   never asserted.
+4. This is a repo-wide pattern, not per-handler — when reviewing a new or changed handler, grep
+   the same field name across every OTHER handler/stream that reads it, since a fix applied to one
+   handler (e.g. `isActive` in `category.handler.ts`) does not automatically propagate to a
+   different handler making the same read for a different field (`availableQuantity` in
+   `stock.handler.ts`) — that gap between the two is exactly how issue #84/#88's incident happened
+   years after #89 had already established the pattern for booleans.
+
+**Do not use a business-purpose field's nullness as an infrastructure-purpose proxy.** The
+`availableQuantity`/`erpAvailableQuantity` incident above was made worse by
+`ReconciliationLocalCountsService` separately using `erpAvailableQuantity IS NOT NULL` as its
+answer to "did we receive a stock fact at all" — an infrastructure/observability question — when
+that field's actual purpose is a business ATP cap. The two questions have different correct
+answers (a stock fact can be fully, correctly received and applied while genuinely leaving that
+particular business field at its default), and reusing one field for both meant fixing the
+business-logic read bug was necessary AND sufficient to also fix a completely different,
+previously-mysterious reconciliation gap — which is a sign the reconciliation counter was reading
+the wrong signal in the first place, not evidence the two concerns were ever actually the same
+thing. If a handler needs an explicit "did we apply a real event" marker, use a dedicated field for
+it (a timestamp column set unconditionally, or similar) rather than inferring it from whether some
+unrelated business field happens to be non-null.
+
 ## External reference id — always persist the source system's own identifier
 
 Any record representing a fact from an external system must capture that system's own unique
