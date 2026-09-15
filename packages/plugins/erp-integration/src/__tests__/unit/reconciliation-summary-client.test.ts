@@ -55,9 +55,24 @@ describe('ReconciliationSummaryClient.fetchSummaries', () => {
         ]);
         const [url, init] = fetchMock.mock.calls[0];
         expect(String(url)).toContain('aggregateType=product');
+        expect(String(url)).not.toContain('excludeDeletedWarehouse');
         expect((init as { headers: Record<string, string> }).headers['X-Api-Key']).toBe(
             'secret-key',
         );
+    });
+
+    // Issue #90's follow-up (search-platform#111): "stock"'s activeCount otherwise counts stock
+    // tied to a since-deleted warehouse, which mivend structurally can't track locally.
+    it('adds excludeDeletedWarehouse=true only for aggregateType=stock', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const client = new ReconciliationSummaryClient(OPTIONS);
+        await client.fetchSummaries('stock');
+
+        const [url] = fetchMock.mock.calls[0];
+        expect(String(url)).toContain('aggregateType=stock');
+        expect(String(url)).toContain('excludeDeletedWarehouse=true');
     });
 
     it('retries a transient failure and succeeds on a later attempt', async () => {

@@ -37,6 +37,12 @@ export class ReconciliationSummaryClient {
             this.options.reconciliationApiUrl ?? RECONCILIATION_API_URL_DEFAULT,
         );
         if (aggregateType) url.searchParams.set('aggregateType', aggregateType);
+        // Issue #90's follow-up: Integration Service's own `stock` activeCount counted stock tied
+        // to a since-deleted warehouse, while mivend structurally can't track stock for a
+        // warehouse it doesn't keep a local row for — search-platform#111 added this filter so
+        // both sides compare the same definition of "active" stock, rather than mivend carrying a
+        // permanent, never-resolvable open reconciliation issue for a definition mismatch.
+        if (aggregateType === 'stock') url.searchParams.set('excludeDeletedWarehouse', 'true');
 
         let lastError: Error | undefined;
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
