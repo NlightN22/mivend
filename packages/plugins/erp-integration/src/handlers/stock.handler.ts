@@ -50,14 +50,19 @@ export class StockStreamHandler implements InboundStreamHandler {
     ): Promise<void> {
         const productId = String(payload.productId ?? '');
         const warehouseId = String(payload.warehouseId ?? '');
-        const quantity = Number(payload.quantity ?? NaN);
+        // `quantity` is a plain (non-optional) proto3 double, same zero-value-omission shape as
+        // `availableQuantity` above — an absent key means "reported as 0", never "malformed
+        // payload". A prior revision defaulted this to NaN and treated NaN as malformed, which
+        // silently dropped the whole event (not just the ATP cap) for every genuine "stock hit
+        // zero" fact — confirmed live: 4 processed stock events with no `quantity` key at all
+        // (mivend.issue.84.88, 2026-09-15). productId/warehouseId remain real malformed-payload
+        // checks (string fields have no zero-value-omission ambiguity — an empty/absent one is
+        // unambiguously invalid here).
+        const quantity = Number(payload.quantity ?? 0);
         const availableQuantity = Number(payload.availableQuantity ?? 0);
         const isDeleted = payload.isDeleted === true;
-        if (!productId || !warehouseId || Number.isNaN(quantity)) {
-            Logger.warn(
-                `stock ${entityId}: missing productId/warehouseId/quantity, skipping`,
-                loggerCtx,
-            );
+        if (!productId || !warehouseId) {
+            Logger.warn(`stock ${entityId}: missing productId/warehouseId, skipping`, loggerCtx);
             return;
         }
         if (isDeleted) {

@@ -33,7 +33,7 @@ function createConnection(
 describe('StockStreamHandler', () => {
     const ctx = {} as RequestContext;
 
-    it('skips when productId/warehouseId/quantity is missing', async () => {
+    it('skips when productId/warehouseId is missing', async () => {
         const warehouseService = { findByErpId: vi.fn() };
         const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
         const handler = new StockStreamHandler(
@@ -45,6 +45,34 @@ describe('StockStreamHandler', () => {
         await handler.apply(ctx, 'stock-1', { productId: '', quantity: 5 });
 
         expect(warehouseService.findByErpId).not.toHaveBeenCalled();
+    });
+
+    // mivend.issue.84.88: `quantity` is a plain (non-optional) proto3 double, same zero-value
+    // omission shape as `availableQuantity` — an absent key means the reported quantity is 0, not
+    // a malformed payload. Confirmed live: 4 processed stock events with no `quantity` key were
+    // being silently dropped in full (not even stockOnHand applied) by a prior revision that
+    // defaulted the missing key to NaN and treated NaN as "missing, skip".
+    it('applies a stock event with an absent quantity as an explicit 0, not a malformed-payload skip', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLevelService = {
+            getStockLevel: vi.fn().mockResolvedValue({ id: 'level-1', stockOnHand: 5 }),
+            updateStockOnHandForLocation: vi.fn(),
+        };
+        const handler = new StockStreamHandler(
+            createConnection([{ id: 'loc-1' }, { id: 'variant-1' }]) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
+
+        await handler.apply(ctx, 'stock-1', { productId: 'prod-1', warehouseId: 'wh-1' });
+
+        expect(warehouseService.findByErpId).toHaveBeenCalled();
+        expect(stockLevelService.updateStockOnHandForLocation).toHaveBeenCalledWith(
+            ctx,
+            'variant-1',
+            'loc-1',
+            -5,
+        );
     });
 
     it('skips a deleted stock event without writing', async () => {
