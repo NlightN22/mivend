@@ -38,10 +38,16 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         for (const rawLine of rawLines) {
             const line = rawLine as Record<string, unknown>;
             const productId = line.productId != null ? String(line.productId) : '';
-            const reservedQuantity = Number(line.reservedQuantity ?? NaN);
-            if (!productId || Number.isNaN(reservedQuantity)) {
+            // `reservedQuantity` is a plain (non-optional) proto3 double — same zero-value-
+            // omission shape as stock.handler.ts's quantity/availableQuantity (mivend.issue.84.88,
+            // external-integration-rules skill's "Non-optional proto3 scalar fields"). An absent
+            // key means reservedQuantity=0 (e.g. a fully-cancelled/zeroed line), not a malformed
+            // line — only productId (a string field, genuinely invalid when empty) is a real
+            // malformed-payload check here.
+            const reservedQuantity = Number(line.reservedQuantity ?? 0);
+            if (!productId) {
                 Logger.warn(
-                    `order-registration-result ${entityId}: skipping line with missing productId/reservedQuantity`,
+                    `order-registration-result ${entityId}: skipping line with missing productId`,
                     loggerCtx,
                 );
                 continue;

@@ -45,7 +45,13 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         const productId = String(payload.productId ?? '');
         const organizationErpId =
             payload.organizationId != null ? String(payload.organizationId) : '';
-        const priority = Number(payload.priority ?? NaN);
+        // `priority` is a plain (non-optional) proto3 int32 — same zero-value-omission shape as
+        // stock.handler.ts's quantity/availableQuantity (mivend.issue.84.88, external-integration-
+        // rules skill's "Non-optional proto3 scalar fields"). An absent key means priority=0,
+        // which per this handler's own "lowest priority wins" rule is very plausibly the WINNING
+        // row, not a malformed one — the prior `?? NaN` + isNaN-skip silently dropped exactly the
+        // case most likely to matter.
+        const priority = Number(payload.priority ?? 0);
         const isDeleted = payload.isDeleted === true;
 
         if (!productId) {
@@ -66,11 +72,6 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
             );
             return;
         }
-        if (Number.isNaN(priority)) {
-            Logger.warn(`storage-location ${entityId}: missing priority, skipping`, loggerCtx);
-            return;
-        }
-
         const variantId = await this.findVariantId(productId);
         if (!variantId) {
             // Issue #96: ordinary eventual-consistency race (product stream not consumed yet) —

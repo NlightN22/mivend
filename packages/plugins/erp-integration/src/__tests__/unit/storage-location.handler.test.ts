@@ -118,6 +118,33 @@ describe('StorageLocationStreamHandler', () => {
         ]);
     });
 
+    // mivend.issue.84.88: `priority` is a plain (non-optional) proto3 int32 — an absent key means
+    // priority=0, which per "lowest priority wins" is very plausibly the WINNING row, not a
+    // malformed payload. A prior revision defaulted the missing key to NaN and skipped the whole
+    // row.
+    it('applies a row with an absent priority as an explicit 0, not a malformed-payload skip', async () => {
+        const productVariantService = { update: vi.fn() };
+        const documentsService = { findRequisitesIdByErpId: vi.fn().mockResolvedValue(42) };
+        const handler = new StorageLocationStreamHandler(
+            createConnection([{ id: 'variant-1' }, undefined]) as never,
+            productVariantService as never,
+            documentsService as never,
+        );
+
+        await handler.apply(ctx, 'loc-1', { productId: 'prod-1', organizationId: 'org-1' });
+
+        expect(productVariantService.update).toHaveBeenCalledWith(ctx, [
+            {
+                id: 'variant-1',
+                customFields: {
+                    organizationId: 42,
+                    organizationPriority: 0,
+                    organizationSourceEntityId: 'loc-1',
+                },
+            },
+        ]);
+    });
+
     it('a lower-priority row overrides the current winner (lower priority wins)', async () => {
         const productVariantService = { update: vi.fn() };
         const documentsService = { findRequisitesIdByErpId: vi.fn().mockResolvedValue(99) };

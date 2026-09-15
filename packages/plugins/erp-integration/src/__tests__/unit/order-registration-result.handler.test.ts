@@ -103,7 +103,30 @@ describe('OrderRegistrationResultHandler', () => {
         expect(syncService.handleOrderRegistrationResult).not.toHaveBeenCalled();
     });
 
-    it('drops (and does not report) a line with a missing productId/reservedQuantity', async () => {
+    // mivend.issue.84.88: `reservedQuantity` is a plain (non-optional) proto3 double — an absent
+    // key means reservedQuantity=0 (a fully-cancelled/zeroed line), not a malformed line. A prior
+    // revision defaulted the missing key to NaN and dropped the whole line.
+    it('applies a line with an absent reservedQuantity as an explicit 0, not a dropped line', async () => {
+        const syncService = { handleOrderRegistrationResult: vi.fn() };
+        const handler = new OrderRegistrationResultHandler(
+            createConnection([{ id: 'variant-1' }]) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'orr-1', {
+            orderEntityId: 'erp-order-1',
+            reservedLines: [{ productId: 'prod-1' }],
+        });
+
+        expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: false,
+            reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 0 }],
+            unresolvedProductIds: [],
+        });
+    });
+
+    it('drops (and does not report) a line with a missing productId', async () => {
         const syncService = { handleOrderRegistrationResult: vi.fn() };
         const handler = new OrderRegistrationResultHandler(
             createConnection([]) as never,
