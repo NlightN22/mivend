@@ -32,8 +32,14 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
             return;
         }
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
-        // zero-value omission).
-        const isActive = payload.isActive === true;
+        // zero-value omission). isDeleted folds in the same way every sibling handler does
+        // (warehouse/price/stock/category) — Integration Service can send isActive:true and
+        // isDeleted:true on the same event, and this handler previously ignored isDeleted
+        // entirely despite its own doc comment claiming to read it, leaving a deleted
+        // organization permanently isActive:true locally and overcounted by
+        // ReconciliationLocalCountsService.countActiveOrganizations (same class of bug #90 fixed
+        // for categories via isPrivate).
+        const isActive = payload.isActive === true && payload.isDeleted !== true;
 
         await this.documentsService.upsertActiveState(ctx, entityId, name, isActive);
         Logger.verbose(`Upserted organization erpId=${entityId}`, loggerCtx);

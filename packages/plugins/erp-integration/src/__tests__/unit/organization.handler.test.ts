@@ -47,6 +47,44 @@ describe('OrganizationStreamHandler', () => {
         );
     });
 
+    // isDeleted must fold into isActive the same way every sibling handler does (warehouse/
+    // price/stock/category) — Integration Service can send isActive:true and isDeleted:true on
+    // the same event. This handler previously ignored isDeleted entirely, leaving a deleted
+    // organization permanently isActive:true locally and overcounted by
+    // ReconciliationLocalCountsService.countActiveOrganizations (same class of bug #90 fixed for
+    // categories via isPrivate).
+    it('treats isDeleted:true as inactive even when isActive is true', async () => {
+        const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
+        const handler = new OrganizationStreamHandler(documentsService as never);
+
+        await handler.apply(ctx, 'org-1', {
+            name: 'Acme LLC',
+            isActive: true,
+            isDeleted: true,
+        });
+
+        expect(documentsService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'org-1',
+            'Acme LLC',
+            false,
+        );
+    });
+
+    it('stays active when isDeleted is absent (proto3 omits the false zero-value)', async () => {
+        const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
+        const handler = new OrganizationStreamHandler(documentsService as never);
+
+        await handler.apply(ctx, 'org-1', { name: 'Acme LLC', isActive: true });
+
+        expect(documentsService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'org-1',
+            'Acme LLC',
+            true,
+        );
+    });
+
     it('creates a row (issue #88) when no matching OrganizationRequisites exists yet', async () => {
         const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
         const handler = new OrganizationStreamHandler(documentsService as never);
