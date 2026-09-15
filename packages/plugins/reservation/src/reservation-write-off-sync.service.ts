@@ -18,6 +18,12 @@ export interface OrderRegistrationResultInput {
     // all — reported as a distinct ReservationReconciliationIssue (mivend.audit.72's HIGH
     // finding), never silently folded into "not confirmed in this result yet."
     unresolvedProductIds: string[];
+    // Staff-facing informational fields, persisted onto Order.customFields — never used in any
+    // release/quantity-match decision below. documentNumber is a real proto `optional string`
+    // (null means genuinely absent); status is a plain proto3 string ('' means absent, per the
+    // zero-value-omission rule — see external-integration-rules skill).
+    documentNumber: string | null;
+    status: string;
 }
 
 // Bridges company.orders.events.v1.order-registration-result into the local reservation domain
@@ -51,7 +57,10 @@ export class ReservationWriteOffSyncService {
         }
 
         const orderId = await this.findOrderIdByErpId(input.orderEntityId);
-        if (!orderId) {
+        const order = orderId
+            ? await this.connection.getRepository(ctx, Order).findOne({ where: { id: orderId } })
+            : null;
+        if (!orderId || !order) {
             // mivend.audit.72's LOW finding: never a silent, permanent skip — this order-
             // registration-result event is a one-shot fact (unlike the catalog streams, it never
             // arrives again at a higher version for the same entityId), so if Order.customFields
@@ -64,6 +73,13 @@ export class ReservationWriteOffSyncService {
                 `order-registration-result: no Order found for orderEntityId=${input.orderEntityId}`,
             );
         }
+
+        // Always persist the latest known document number/status, regardless of rejected/
+        // released/no-op below — purely informational for staff, never read by the
+        // release/quantity-match logic that follows.
+        order.customFields.erpRegistrationDocumentNumber = input.documentNumber;
+        order.customFields.erpRegistrationStatus = input.status;
+        await this.connection.getRepository(ctx, Order).save(order);
 
         if (input.unresolvedProductIds.length > 0) {
             for (const externalProductId of input.unresolvedProductIds) {
@@ -163,12 +179,7 @@ export class ReservationWriteOffSyncService {
 
         const stillActive = await reservationRepo.count({ where: { orderId, status: 'active' } });
         if (stillActive === 0) {
-            const order = await this.connection
-                .getRepository(ctx, Order)
-                .findOne({ where: { id: orderId } });
-            if (order) {
-                await this.reservationService.setOrderReservationState(ctx, order, 'RELEASED');
-            }
+            await this.reservationService.setOrderReservationState(ctx, order, 'RELEASED');
         }
     }
 

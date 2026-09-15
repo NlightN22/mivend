@@ -185,6 +185,27 @@ export const config: VendureConfig = {
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Placed By (Administrator)' }],
             },
+            {
+                // 1C's own document number for this order's registration (Document.Номер) — set
+                // from company.orders.events.v1.OrderRegistrationResult.document_number, a real
+                // proto `optional string` (genuinely absent, not a zero-value-omission case).
+                // Staff need this to cross-reference the order against 1C directly. See #74's
+                // order-registration-result follow-up.
+                name: 'erpRegistrationDocumentNumber',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP Registration Document #' }],
+            },
+            {
+                // Raw `status` string from the same event — 1C's own label, passed through
+                // verbatim, never mapped to a mivend enum (no fixed value set is documented by
+                // Integration Service yet). Empty string means the field was absent (plain,
+                // non-optional proto3 string — zero-value-omission rule applies, not `optional`).
+                name: 'erpRegistrationStatus',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP Registration Status' }],
+            },
         ],
         Product: [
             {

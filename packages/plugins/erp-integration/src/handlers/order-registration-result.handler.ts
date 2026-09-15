@@ -32,6 +32,13 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
 
         const orderEntityId = payload.orderEntityId != null ? String(payload.orderEntityId) : null;
         const rejected = payload.businessRejectionReason != null;
+        // document_number is a real proto `optional string` — absent genuinely means "not
+        // assigned yet" (e.g. a rejected result), not a zero-value-omission case.
+        const documentNumber =
+            payload.documentNumber != null ? String(payload.documentNumber) : null;
+        // status is a plain (non-optional) proto3 string — absent means '' (the zero value),
+        // same rule as every other plain scalar field (external-integration-rules skill).
+        const status = payload.status != null ? String(payload.status) : '';
 
         const rawLines = Array.isArray(payload.reservedLines) ? payload.reservedLines : [];
         const reservedLines: Array<{ productVariantId: string; reservedQuantity: number }> = [];
@@ -95,6 +102,8 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
             // input shape for any other future caller, unrelated to this plugin's own retry
             // mechanism.
             unresolvedProductIds: [],
+            documentNumber,
+            status,
         });
     }
 

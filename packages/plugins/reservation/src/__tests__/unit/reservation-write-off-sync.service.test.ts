@@ -26,7 +26,10 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     const ctx = {} as unknown as RequestContext;
 
     beforeEach(() => {
-        orderRepo = { findOne: vi.fn(async () => ({ id: 'order-1' })) };
+        orderRepo = {
+            findOne: vi.fn(async () => ({ id: 'order-1', customFields: {} })),
+            save: vi.fn(async (x: unknown) => x),
+        };
         reservationRepo = {
             find: vi.fn(async () => []),
             save: vi.fn(async (rows: unknown[]) => rows),
@@ -57,6 +60,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: true,
             reservedLines: [],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
         expect(rawQuery).not.toHaveBeenCalled();
         expect(reservationRepo.find).not.toHaveBeenCalled();
@@ -73,6 +78,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
                 rejected: false,
                 reservedLines: [],
                 unresolvedProductIds: [],
+                documentNumber: null,
+                status: '',
             }),
         ).rejects.toThrow(/no Order found/);
         expect(reservationRepo.find).not.toHaveBeenCalled();
@@ -84,6 +91,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: true,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
         expect(reservationRepo.find).not.toHaveBeenCalled();
         expect(reservationRepo.save).not.toHaveBeenCalled();
@@ -98,6 +107,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: false,
             reservedLines: [],
             unresolvedProductIds: ['unknown-prod-1'],
+            documentNumber: null,
+            status: '',
         });
 
         expect(reconciliationIssueService.reportUnresolvedProductMapping).toHaveBeenCalledWith(
@@ -117,6 +128,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: true,
             reservedLines: [],
             unresolvedProductIds: ['unknown-prod-1'],
+            documentNumber: null,
+            status: '',
         });
 
         expect(reconciliationIssueService.reportUnresolvedProductMapping).toHaveBeenCalledTimes(1);
@@ -139,6 +152,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -150,7 +165,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
         expect(reservationService.setOrderReservationState).toHaveBeenCalledWith(
             ctx,
-            { id: 'order-1' },
+            expect.objectContaining({ id: 'order-1' }),
             'RELEASED',
         );
     });
@@ -171,6 +186,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 3 }],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
@@ -203,6 +220,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: false,
             reservedLines: [],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
@@ -233,6 +252,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -256,10 +277,57 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
         expect(reservationService.setOrderReservationState).not.toHaveBeenCalled();
+    });
+
+    // Staff need 1C's own document number and raw status to cross-reference the order in 1C —
+    // purely informational, must never affect release/quantity-match logic below.
+    it('persists documentNumber/status onto Order.customFields, even on a rejected result', async () => {
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: true,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: 'ЗК-00001',
+            status: 'Отклонён',
+        });
+
+        expect(orderRepo.save).toHaveBeenCalledWith(
+            expect.objectContaining({
+                id: 'order-1',
+                customFields: expect.objectContaining({
+                    erpRegistrationDocumentNumber: 'ЗК-00001',
+                    erpRegistrationStatus: 'Отклонён',
+                }),
+            }),
+        );
+    });
+
+    it('persists documentNumber/status even when there is nothing to release', async () => {
+        reservationRepo.find.mockResolvedValue([]);
+
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: 'ЗК-00002',
+            status: 'Проведён',
+        });
+
+        expect(orderRepo.save).toHaveBeenCalledWith(
+            expect.objectContaining({
+                customFields: expect.objectContaining({
+                    erpRegistrationDocumentNumber: 'ЗК-00002',
+                    erpRegistrationStatus: 'Проведён',
+                }),
+            }),
+        );
     });
 
     it('is idempotent: a repeat with no remaining active reservations is a no-op', async () => {
@@ -270,6 +338,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();

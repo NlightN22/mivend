@@ -58,6 +58,8 @@ describe('OrderRegistrationResultHandler', () => {
             rejected: true,
             reservedLines: [],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
     });
 
@@ -78,6 +80,8 @@ describe('OrderRegistrationResultHandler', () => {
             rejected: false,
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 3 }],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
     });
 
@@ -123,6 +127,8 @@ describe('OrderRegistrationResultHandler', () => {
             rejected: false,
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 0 }],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
     });
 
@@ -143,6 +149,8 @@ describe('OrderRegistrationResultHandler', () => {
             rejected: false,
             reservedLines: [],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
         });
     });
 
@@ -162,6 +170,56 @@ describe('OrderRegistrationResultHandler', () => {
             rejected: true,
             reservedLines: [],
             unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
+        });
+    });
+
+    // documentNumber is a real proto `optional string` (null when genuinely absent); status is a
+    // plain proto3 string (zero-value-omission rule applies — absent means '').
+    it('extracts documentNumber and status, and treats status absent as the empty string', async () => {
+        const syncService = { handleOrderRegistrationResult: vi.fn() };
+        const handler = new OrderRegistrationResultHandler(
+            createConnection([]) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'orr-1', {
+            orderEntityId: 'erp-order-1',
+            documentNumber: 'ЗК-00001',
+            reservedLines: [],
+        });
+
+        expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: 'ЗК-00001',
+            status: '',
+        });
+    });
+
+    it('passes status through verbatim when present', async () => {
+        const syncService = { handleOrderRegistrationResult: vi.fn() };
+        const handler = new OrderRegistrationResultHandler(
+            createConnection([]) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'orr-1', {
+            orderEntityId: 'erp-order-1',
+            status: 'Проведён',
+            reservedLines: [],
+        });
+
+        expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: 'Проведён',
         });
     });
 });

@@ -12,6 +12,12 @@ declare module '@vendure/core' {
         latestFulfillmentState?: string | null;
         // Denormalized at placement time — see ErpOrderService.onOrderPlaced.
         placedByAdministratorId?: string | null;
+        // Set by plugin-reservation's ReservationWriteOffSyncService from Integration Service's
+        // company.orders.events.v1.OrderRegistrationResult — staff-facing informational fields,
+        // never read by any reservation/order-state decision. See vendure-config.ts's own doc
+        // comment on these two customFields for the proto3 optional-vs-plain distinction.
+        erpRegistrationDocumentNumber?: string | null;
+        erpRegistrationStatus?: string | null;
     }
 }
 
