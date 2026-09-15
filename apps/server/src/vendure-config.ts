@@ -32,6 +32,7 @@ import { DefaultSuperadminAlertDashboardPlugin } from './default-superadmin-aler
 import { BranchConsolidationAlertDashboardPlugin } from './branch-consolidation-alert-dashboard.plugin';
 import { IntegrationHealthDashboardPlugin } from './integration-health-dashboard.plugin';
 import { ErpReconciliationDashboardPlugin } from './erp-reconciliation-dashboard.plugin';
+import { OrganizationsDashboardPlugin } from './organizations-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
@@ -400,6 +401,10 @@ export const config: VendureConfig = {
         // rather than a third section on integration-health, since that page is already dense —
         // see src/dashboard/erp-reconciliation/index.ts.
         ErpReconciliationDashboardPlugin,
+        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #88) — native
+        // Dashboard companion to packages/manager's Settings → Organizations page, same
+        // read-only organizationRequisites query — see src/dashboard/organizations/index.ts.
+        OrganizationsDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({}),
