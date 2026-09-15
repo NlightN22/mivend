@@ -53,9 +53,11 @@ beforeAll(async () => {
         rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
-    service = new ReservationReconciliationIssueService(connectionShim, {
-        create: async () => ({}),
-    } as never);
+    service = new ReservationReconciliationIssueService(
+        connectionShim,
+        { create: async () => ({}) } as never,
+        { resolveOrderScope: async () => ({ kind: 'all' }) } as never,
+    );
 });
 
 afterAll(async () => {

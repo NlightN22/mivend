@@ -31,6 +31,7 @@ describe('PaymentReconciliationIssueService.report — Notification wiring', () 
         service = new PaymentReconciliationIssueService(
             connection as unknown as TransactionalConnection,
             notificationService as never,
+            { resolveScope: vi.fn(async () => ({ kind: 'all' })) } as never,
         );
     });
 
@@ -48,5 +49,67 @@ describe('PaymentReconciliationIssueService.report — Notification wiring', () 
                 sourceType: 'payment-reconciliation',
             }),
         );
+    });
+});
+
+// mivend.audit.common's HIGH finding on issue #76: findOpen had no branch/counterparty scoping
+// at all, so a branch-scoped manager saw payment reconciliation issues company-wide. Mirrors
+// InvoiceVisibilityService's own consuming pattern (PaymentVisibilityService) — this reuses
+// InvoiceVisibilityService.applyScope against an invoice/counterparty join.
+describe('PaymentReconciliationIssueService.findOpen — scope filtering', () => {
+    function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
+        const qb: Record<string, ReturnType<typeof vi.fn>> = {};
+        qb.where = vi.fn(() => qb);
+        qb.innerJoin = vi.fn(() => qb);
+        qb.leftJoin = vi.fn(() => qb);
+        qb.andWhere = vi.fn(() => qb);
+        qb.orderBy = vi.fn(() => qb);
+        qb.addOrderBy = vi.fn(() => qb);
+        qb.take = vi.fn(() => qb);
+        qb.skip = vi.fn(() => qb);
+        qb.getManyAndCount = vi.fn(async () => [[], 0]);
+        return qb;
+    }
+
+    let qb: ReturnType<typeof mockQueryBuilder>;
+    let service: PaymentReconciliationIssueService;
+    let invoiceVisibilityService: {
+        resolveScope: ReturnType<typeof vi.fn>;
+        applyScope: ReturnType<typeof vi.fn>;
+    };
+    const ctx = {} as unknown as RequestContext;
+
+    beforeEach(() => {
+        qb = mockQueryBuilder();
+        const repo = { createQueryBuilder: vi.fn(() => qb) };
+        const connection = { getRepository: vi.fn(() => repo) };
+        invoiceVisibilityService = {
+            resolveScope: vi.fn(),
+            applyScope: vi.fn(),
+        };
+        service = new PaymentReconciliationIssueService(
+            connection as unknown as TransactionalConnection,
+            { create: vi.fn(async () => ({})) } as never,
+            invoiceVisibilityService as never,
+        );
+    });
+
+    it('applies no invoice join for "all" scope', async () => {
+        invoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+
+        await service.findOpen(ctx);
+
+        expect(qb.innerJoin).not.toHaveBeenCalled();
+        expect(invoiceVisibilityService.applyScope).not.toHaveBeenCalled();
+    });
+
+    it('inner-joins Invoice and delegates to InvoiceVisibilityService.applyScope for "own"/"department" scope', async () => {
+        const scope = { kind: 'department', departmentId: 'dept-1', branchId: 'branch-1' };
+        invoiceVisibilityService.resolveScope.mockResolvedValue(scope);
+
+        await service.findOpen(ctx);
+
+        expect(qb.innerJoin).toHaveBeenCalled();
+        expect(invoiceVisibilityService.applyScope).toHaveBeenCalledWith(qb, scope);
     });
 });

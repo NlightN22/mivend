@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
+import { AccessScopeService } from '@mivend/plugin-access-control';
+import { Counterparty } from '@mivend/plugin-counterparty';
 import { IsNull } from 'typeorm';
 
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
@@ -20,6 +22,7 @@ export class ReservationReconciliationIssueService {
     constructor(
         private connection: TransactionalConnection,
         private notificationService: NotificationService,
+        private accessScopeService: AccessScopeService,
     ) {}
 
     async reportQuantityMismatch(
@@ -66,7 +69,13 @@ export class ReservationReconciliationIssueService {
     }
 
     // Dashboard/ops read model (issue #76) — open issues need a human to resolve; never
-    // auto-resolved from this query.
+    // auto-resolved from this query. mivend.audit.common's HIGH finding on the first version of
+    // this method: it had no branch/counterparty scoping at all, so a branch-scoped manager saw
+    // reconciliation issues for every branch's orders. Scoped the same way
+    // OrderVisibilityService.buildVisibleOrdersQuery scopes Order itself (own = key-account
+    // read exception via applyOwnCounterpartyFilter, department = order's own denormalized
+    // branch, OR NULL for a legitimately branch-less order) — joined via `order`/`customer` raw
+    // tables since ReservationReconciliationIssue only carries orderId, not a real relation.
     async findOpen(
         ctx: RequestContext,
         options?: OpenReservationReconciliationIssueListOptions,
@@ -74,10 +83,35 @@ export class ReservationReconciliationIssueService {
         const take = Math.min(options?.take ?? 20, OPEN_ISSUES_MAX_TAKE);
         const skip = options?.skip ?? 0;
 
-        const [items, totalItems] = await this.connection
+        const scope = await this.accessScopeService.resolveOrderScope(ctx);
+        const qb = this.connection
             .getRepository(ctx, ReservationReconciliationIssue)
             .createQueryBuilder('issue')
-            .where('issue.status = :status', { status: 'open' })
+            .where('issue.status = :status', { status: 'open' });
+
+        if (scope.kind !== 'all') {
+            qb.leftJoin('order', 'o', 'o.id::text = issue."orderId"')
+                .leftJoin('customer', 'customer', 'customer.id = o."customerId"')
+                .leftJoin(
+                    Counterparty,
+                    'counterparty',
+                    'customer."customFieldsCounterpartyid"::text = counterparty.id::text',
+                );
+            if (scope.kind === 'own') {
+                this.accessScopeService.applyOwnCounterpartyFilter(
+                    qb,
+                    'counterparty',
+                    scope.administratorId,
+                );
+            } else {
+                qb.andWhere(
+                    `counterparty.departmentId = :departmentId AND ("o"."customFieldsBranchid" = :branchId OR "o"."customFieldsBranchid" IS NULL)`,
+                    { departmentId: scope.departmentId ?? null, branchId: scope.branchId ?? null },
+                );
+            }
+        }
+
+        const [items, totalItems] = await qb
             .orderBy('issue.detectedAt', 'DESC')
             .addOrderBy('issue.id', 'DESC')
             .take(take)

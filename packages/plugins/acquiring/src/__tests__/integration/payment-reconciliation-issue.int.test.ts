@@ -55,9 +55,11 @@ beforeAll(async () => {
         rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
-    service = new PaymentReconciliationIssueService(connectionShim, {
-        create: async () => ({}),
-    } as never);
+    service = new PaymentReconciliationIssueService(
+        connectionShim,
+        { create: async () => ({}) } as never,
+        { resolveScope: async () => ({ kind: 'all' }) } as never,
+    );
 });
 
 afterAll(async () => {

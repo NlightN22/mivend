@@ -25,6 +25,7 @@ describe('ReservationReconciliationIssueService', () => {
         service = new ReservationReconciliationIssueService(
             connection as unknown as TransactionalConnection,
             notificationService as never,
+            { resolveOrderScope: vi.fn(async () => ({ kind: 'all' })) } as never,
         );
     });
 
@@ -123,5 +124,89 @@ describe('ReservationReconciliationIssueService', () => {
             }),
         );
         expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    // mivend.audit.common's HIGH finding on issue #76: findOpen had no branch/counterparty
+    // scoping at all, so a branch-scoped manager saw reconciliation issues company-wide. Mirrors
+    // OrderVisibilityService's own mock-query-builder unit test style (see
+    // order-visibility.service.test.ts) since this joins the same order/customer/counterparty
+    // shape the real query does.
+    describe('findOpen scope filtering', () => {
+        function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
+            const qb: Record<string, ReturnType<typeof vi.fn>> = {};
+            qb.where = vi.fn(() => qb);
+            qb.leftJoin = vi.fn(() => qb);
+            qb.andWhere = vi.fn(() => qb);
+            qb.orderBy = vi.fn(() => qb);
+            qb.addOrderBy = vi.fn(() => qb);
+            qb.take = vi.fn(() => qb);
+            qb.skip = vi.fn(() => qb);
+            qb.getManyAndCount = vi.fn(async () => [[], 0]);
+            return qb;
+        }
+
+        let qb: ReturnType<typeof mockQueryBuilder>;
+        let accessScopeService: {
+            resolveOrderScope: ReturnType<typeof vi.fn>;
+            applyOwnCounterpartyFilter: ReturnType<typeof vi.fn>;
+        };
+
+        beforeEach(() => {
+            qb = mockQueryBuilder();
+            repo.createQueryBuilder = vi.fn(() => qb) as never;
+            accessScopeService = {
+                resolveOrderScope: vi.fn(),
+                applyOwnCounterpartyFilter: vi.fn(),
+            };
+            service = new ReservationReconciliationIssueService(
+                connection as unknown as TransactionalConnection,
+                notificationService as never,
+                accessScopeService as never,
+            );
+        });
+
+        it('applies no scope join/filter for "all" scope', async () => {
+            accessScopeService.resolveOrderScope.mockResolvedValue({ kind: 'all' });
+
+            await service.findOpen(ctx);
+
+            expect(qb.leftJoin).not.toHaveBeenCalled();
+        });
+
+        it('joins order/customer/counterparty and applies applyOwnCounterpartyFilter for "own" scope', async () => {
+            accessScopeService.resolveOrderScope.mockResolvedValue({
+                kind: 'own',
+                administratorId: 'admin-1',
+            });
+
+            await service.findOpen(ctx);
+
+            expect(qb.leftJoin).toHaveBeenCalled();
+            expect(accessScopeService.applyOwnCounterpartyFilter).toHaveBeenCalledWith(
+                qb,
+                'counterparty',
+                'admin-1',
+            );
+        });
+
+        it('filters by department + order\'s own branch (with a branch-less OR NULL) for "department" scope', async () => {
+            accessScopeService.resolveOrderScope.mockResolvedValue({
+                kind: 'department',
+                departmentId: 'dept-1',
+                branchId: 'branch-1',
+            });
+
+            await service.findOpen(ctx);
+
+            expect(qb.andWhere).toHaveBeenCalledWith(
+                expect.stringContaining('counterparty.departmentId = :departmentId'),
+                { departmentId: 'dept-1', branchId: 'branch-1' },
+            );
+            const [sql] = qb.andWhere.mock.calls.find(
+                (call: unknown[]) =>
+                    typeof call[0] === 'string' && call[0].includes('departmentId'),
+            ) as [string, unknown];
+            expect(sql).toContain('IS NULL');
+        });
     });
 });
