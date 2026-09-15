@@ -226,3 +226,57 @@ describe('NotificationService.resolve', () => {
         expect(save).toHaveBeenCalledTimes(1);
     });
 });
+
+// issue #99: a producer's own source record resolving must close out the notification(s) it
+// raised, otherwise the alert sits "unread" forever with stale numbers.
+describe('NotificationService.resolveBySource', () => {
+    it('resolves every not-yet-resolved notification for the source', async () => {
+        const open = [
+            new Notification({
+                id: 'notif-1',
+                ...baseInput,
+                status: 'unread',
+                resolvedAt: null,
+                resolution: null,
+            }),
+            new Notification({
+                id: 'notif-2',
+                ...baseInput,
+                status: 'read',
+                resolvedAt: null,
+                resolution: null,
+            }),
+        ];
+        const save = vi.fn().mockImplementation(async (rows: Notification[]) => rows);
+        const find = vi.fn().mockResolvedValue(open);
+        const connection = { getRepository: () => ({ find, save }) };
+        const service = new NotificationService(connection as never, { publish: vi.fn() } as never);
+
+        const result = await service.resolveBySource(
+            {} as never,
+            { sourceType: baseInput.sourceType, sourceId: baseInput.sourceId },
+            'auto-resolved on reconciliation',
+        );
+
+        expect(result).toHaveLength(2);
+        expect(result.every(n => n.status === 'resolved')).toBe(true);
+        expect(result.every(n => n.resolution === 'auto-resolved on reconciliation')).toBe(true);
+        expect(result.every(n => n.resolvedAt instanceof Date)).toBe(true);
+    });
+
+    it('is a no-op when nothing open exists for the source', async () => {
+        const save = vi.fn();
+        const find = vi.fn().mockResolvedValue([]);
+        const connection = { getRepository: () => ({ find, save }) };
+        const service = new NotificationService(connection as never, { publish: vi.fn() } as never);
+
+        const result = await service.resolveBySource(
+            {} as never,
+            { sourceType: baseInput.sourceType, sourceId: baseInput.sourceId },
+            'auto-resolved on reconciliation',
+        );
+
+        expect(result).toEqual([]);
+        expect(save).not.toHaveBeenCalled();
+    });
+});

@@ -143,7 +143,10 @@ describe('ReconciliationService.runComparison', () => {
             fetchSummaries: async (aggregateType?: string) => [makeSummary(aggregateType ?? '', 5)],
         };
         const localCounts = { getLocalActiveCount: async () => 5 };
-        const notificationService = { create: vi.fn() };
+        const notificationService = {
+            create: vi.fn(),
+            resolveBySource: vi.fn().mockResolvedValue([]),
+        };
         const service = new ReconciliationService(
             connection as never,
             requestContextService as never,
@@ -155,6 +158,11 @@ describe('ReconciliationService.runComparison', () => {
         await service.runComparison({ triggeredBy: 'scheduled' });
 
         expect(save).toHaveBeenCalledTimes(COMPARED_AGGREGATE_TYPES.length);
+        expect(notificationService.resolveBySource).toHaveBeenCalledWith(
+            expect.anything(),
+            { sourceType: 'erp-reconciliation', sourceId: COMPARED_AGGREGATE_TYPES[0] },
+            expect.stringMatching(/auto-resolved/i),
+        );
         expect(save.mock.calls[0][0]).toMatchObject({
             id: '9',
             status: 'resolved',
@@ -231,18 +239,27 @@ describe('ReconciliationService.runComparison', () => {
 
 describe('ReconciliationService.resolve', () => {
     it('marks the issue resolved with the given resolution note, never auto-picked', async () => {
-        const issue = { id: '3', status: 'open', resolution: null };
+        const issue = {
+            id: '3',
+            status: 'open',
+            resolution: null,
+            aggregateType: COMPARED_AGGREGATE_TYPES[0],
+        };
         const save = vi.fn().mockImplementation(async (x: typeof issue) => x);
         const findOneOrFail = vi.fn().mockResolvedValue(issue);
         const connection = {
             getRepository: () => ({ save, findOneOrFail }),
+        };
+        const notificationService = {
+            create: vi.fn(),
+            resolveBySource: vi.fn().mockResolvedValue([]),
         };
         const service = new ReconciliationService(
             connection as never,
             { create: vi.fn() } as never,
             {} as never,
             {} as never,
-            { create: vi.fn() } as never,
+            notificationService as never,
         );
 
         const result = await service.resolve({} as never, {
@@ -251,5 +268,40 @@ describe('ReconciliationService.resolve', () => {
         });
 
         expect(result).toMatchObject({ status: 'resolved', resolution: 'stale seed row' });
+    });
+
+    // Without this, a manual resolve leaves the notification that reported the drift sitting
+    // "unread" forever with stale numbers even after the underlying issue is closed (issue #99).
+    it('resolves the notification raised for this aggregateType, not just the issue row', async () => {
+        const issue = {
+            id: '3',
+            status: 'open',
+            resolution: null,
+            aggregateType: COMPARED_AGGREGATE_TYPES[0],
+        };
+        const save = vi.fn().mockImplementation(async (x: typeof issue) => x);
+        const findOneOrFail = vi.fn().mockResolvedValue(issue);
+        const connection = {
+            getRepository: () => ({ save, findOneOrFail }),
+        };
+        const notificationService = {
+            create: vi.fn(),
+            resolveBySource: vi.fn().mockResolvedValue([]),
+        };
+        const service = new ReconciliationService(
+            connection as never,
+            { create: vi.fn() } as never,
+            {} as never,
+            {} as never,
+            notificationService as never,
+        );
+
+        await service.resolve({} as never, { id: '3', resolution: 'stale seed row' });
+
+        expect(notificationService.resolveBySource).toHaveBeenCalledWith(
+            expect.anything(),
+            { sourceType: 'erp-reconciliation', sourceId: COMPARED_AGGREGATE_TYPES[0] },
+            'stale seed row',
+        );
     });
 });

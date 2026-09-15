@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
-import { Brackets, IsNull } from 'typeorm';
+import { Brackets, IsNull, Not } from 'typeorm';
 import { PubSub } from 'graphql-subscriptions';
 
 import {
@@ -224,5 +224,37 @@ export class NotificationService {
         notification.resolvedAt = new Date();
         notification.resolution = resolution;
         return repo.save(notification);
+    }
+
+    // For a producer (e.g. ReconciliationService) whose own source record just transitioned to
+    // resolved to close out the notification(s) it raised — otherwise the alert sits "unread"
+    // forever with stale numbers even after the underlying drift is gone (issue #99). Matches by
+    // (sourceType, sourceId) only, not recipientId: a source-level resolution applies to every
+    // recipient it notified, and the producer's own "who to notify" bookkeeping (e.g.
+    // ErpReconciliationIssue.triggeredByAdministratorId) can drift out of sync with which
+    // recipientId the original notification actually carries, so re-deriving that recipient here
+    // would be fragile where matching on the source identity alone is not.
+    async resolveBySource(
+        ctx: RequestContext,
+        source: { sourceType: string; sourceId: string },
+        resolution: string,
+    ): Promise<Notification[]> {
+        const repo = this.connection.getRepository(ctx, Notification);
+        const open = await repo.find({
+            where: {
+                sourceType: source.sourceType,
+                sourceId: source.sourceId,
+                status: Not('resolved'),
+            },
+        });
+        if (open.length === 0) return [];
+
+        const resolvedAt = new Date();
+        for (const notification of open) {
+            notification.status = 'resolved';
+            notification.resolvedAt = resolvedAt;
+            notification.resolution = resolution;
+        }
+        return repo.save(open);
     }
 }

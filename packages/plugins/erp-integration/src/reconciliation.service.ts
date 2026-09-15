@@ -129,7 +129,13 @@ export class ReconciliationService {
         const issue = await repo.findOneOrFail({ where: { id: input.id } });
         issue.status = 'resolved';
         issue.resolution = input.resolution;
-        return repo.save(issue);
+        const saved = await repo.save(issue);
+        await this.notificationService.resolveBySource(
+            ctx,
+            { sourceType: 'erp-reconciliation', sourceId: saved.aggregateType },
+            input.resolution,
+        );
+        return saved;
     }
 
     // Without this, a stale open issue lingers forever showing outdated counts once the
@@ -141,9 +147,15 @@ export class ReconciliationService {
         const repo = this.connection.getRepository(ctx, ErpReconciliationIssue);
         const existing = await repo.findOne({ where: { aggregateType, status: 'open' } });
         if (!existing) return;
+        const resolution = 'Auto-resolved: counts matched on a later reconciliation run.';
         existing.status = 'resolved';
-        existing.resolution = 'Auto-resolved: counts matched on a later reconciliation run.';
+        existing.resolution = resolution;
         await repo.save(existing);
+        await this.notificationService.resolveBySource(
+            ctx,
+            { sourceType: 'erp-reconciliation', sourceId: aggregateType },
+            resolution,
+        );
     }
 
     // Without this dedupe, a persistent drift (the exact scenario this issue was written for —
