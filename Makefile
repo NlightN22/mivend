@@ -250,14 +250,28 @@ mutation-pilot:
 
 docker-build:
 	docker build -f apps/server/Dockerfile -t mivend-server:local .
+	docker build -f packages/storefront/Dockerfile -t mivend-storefront:local .
+	docker build -f packages/manager/Dockerfile -t mivend-manager:local .
 
 docker-push:
 	docker build -f apps/server/Dockerfile \
 		-t ghcr.io/nlightn22/mivend-server:v$(VERSION) \
 		-t ghcr.io/nlightn22/mivend-server:latest \
 		.
+	docker build -f packages/storefront/Dockerfile \
+		-t ghcr.io/nlightn22/mivend-storefront:v$(VERSION) \
+		-t ghcr.io/nlightn22/mivend-storefront:latest \
+		.
+	docker build -f packages/manager/Dockerfile \
+		-t ghcr.io/nlightn22/mivend-manager:v$(VERSION) \
+		-t ghcr.io/nlightn22/mivend-manager:latest \
+		.
 	docker push ghcr.io/nlightn22/mivend-server:v$(VERSION)
 	docker push ghcr.io/nlightn22/mivend-server:latest
+	docker push ghcr.io/nlightn22/mivend-storefront:v$(VERSION)
+	docker push ghcr.io/nlightn22/mivend-storefront:latest
+	docker push ghcr.io/nlightn22/mivend-manager:v$(VERSION)
+	docker push ghcr.io/nlightn22/mivend-manager:latest
 
 # ── Production ─────────────────────────────────────────────────────────────────
 

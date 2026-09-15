@@ -1,0 +1,41 @@
+server {
+    listen 80;
+    server_tokens off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA fallback — every non-file route resolves client-side via vue-router.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /shop-api {
+        proxy_pass ${API_TARGET};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # WS subscriptions transport — see apps/server/src/subscriptions.ts's
+    # mountNotificationSubscriptions('/shop-api-subscriptions').
+    location /shop-api-subscriptions {
+        proxy_pass ${API_TARGET};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+    }
+
+    # Vendure's own assetUrlPrefix — product images, never this app's own built JS/CSS (that
+    # lives under /_app, see vite.config.ts's build.assetsDir, issue #115).
+    location /assets {
+        proxy_pass ${API_TARGET};
+        proxy_set_header Host $host;
+    }
+
+    # REST API docs (issue #28).
+    location /api-docs {
+        proxy_pass ${API_TARGET};
+        proxy_set_header Host $host;
+    }
+}

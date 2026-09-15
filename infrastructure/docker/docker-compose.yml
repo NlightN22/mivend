@@ -89,6 +89,30 @@ services:
             retries: 10
         restart: unless-stopped
 
+    # Issue #115: production build (bundled/minified, not the raw Vite dev server every contour
+    # uses today) served via nginx. Host port intentionally left as a plain default here — which
+    # external port these are actually published on (if at all) is a deliberate decision for the
+    # publish-service skill/workflow, not something this compose file decides on its own.
+    storefront:
+        image: ghcr.io/nlightn22/mivend-storefront:${IMAGE_TAG:-latest}
+        environment:
+            API_TARGET: http://server:3000
+        ports:
+            - '${STOREFRONT_PORT:-8004}:80'
+        depends_on:
+            - server
+        restart: unless-stopped
+
+    manager:
+        image: ghcr.io/nlightn22/mivend-manager:${IMAGE_TAG:-latest}
+        environment:
+            API_TARGET: http://server:3000
+        ports:
+            - '${MANAGER_PORT:-8005}:80'
+        depends_on:
+            - server
+        restart: unless-stopped
+
 volumes:
     postgres-data:
     redis-data:
