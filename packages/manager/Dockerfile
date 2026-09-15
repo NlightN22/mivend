@@ -27,5 +27,9 @@ COPY --from=builder /app/packages/manager/dist /usr/share/nginx/html
 COPY packages/manager/nginx.conf.template /etc/nginx/templates/default.conf.template
 # Overridden at `docker run`/compose time — the nginx official image's own docker-entrypoint
 # envsubst's ${API_TARGET} in the template above into /etc/nginx/conf.d/default.conf on startup.
+# NOTE if overriding manually (e.g. ad hoc local testing): nginx resolves 'localhost'
+# via IPv6 first inside a container and will hang if the target only listens on IPv4 —
+# use 127.0.0.1 (or --network host) instead of 'localhost' (found during issue #115's
+# own benchmark run, see docs/frontend-load-benchmarks.md).
 ENV API_TARGET=http://server:3000
 EXPOSE 80

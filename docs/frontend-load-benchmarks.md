@@ -48,17 +48,35 @@ box load, first-hit dependency pre-bundling in dev mode).
 Record every real measurement run here — frontend, mode (dev server vs. production
 container), commit SHA, date, and the numbers. Never overwrite a prior entry; append.
 
-| Date                     | Commit | Frontend | Page | Mode | Requests | Transferred | Notes |
-| ------------------------ | ------ | -------- | ---- | ---- | -------- | ----------- | ----- |
-| _(none yet — see below)_ |        |          |      |      |          |             |       |
+| Date       | Commit    | Frontend   | Page                        | Mode                                                                | Requests | Transferred | Notes                   |
+| ---------- | --------- | ---------- | --------------------------- | ------------------------------------------------------------------- | -------- | ----------- | ----------------------- |
+| 2026-09-15 | `373794d` | manager    | `/` (unauthenticated shell) | prod container (nginx, `--network host` vs local dev backend :3000) | 14       | 2385.6 KB   | `networkidle` in 1064ms |
+| 2026-09-15 | `373794d` | manager    | `/` (unauthenticated shell) | dev server (`vite`, port 5174, local contour)                       | 210      | 11091.2 KB  | `networkidle` in 3515ms |
+| 2026-09-15 | `373794d` | storefront | `/` (unauthenticated shell) | prod container (nginx, `--network host` vs local dev backend :3000) | 24       | 1799.3 KB   | `networkidle` in 1709ms |
+| 2026-09-15 | `373794d` | storefront | `/` (unauthenticated shell) | dev server (`vite`, port 5173, local contour)                       | 234      | 11567.1 KB  | `networkidle` in 3875ms |
 
-**Not yet measured against a real deploy.** Issue #115 built the production Docker images and
-confirmed they build/serve statically correctly, but did not spin up the full
-`docker-compose.yml` production stack (would compete with this box's already-running `make dev`/
-`make dev-staging-integration` stacks for shared ports — see the `dev-environment` skill) or run
-a real Playwright measurement against it. **First real baseline entries are the next concrete
-step**, once there's a production deploy (or a dedicated local `prod-up` run with no
-conflicting dev stack) to point Playwright at.
+**Method used for the entries above**: a one-off Playwright script (CDP `Network.enable`, counting
+`Network.responseReceived` and summing `loadingFinished.encodedDataLength`), single run each — not
+yet the "3 runs, take the median" rule above, this was a quick sanity check to unblock the "is this
+actually faster" question, not the final rigorous methodology run. Ran the images built from this
+session's own commits via `docker run --network host` — this box's real nginx already owns ports
+80/443, and a bridge-network container could not reach the host's backend at all (`localhost`
+resolved to `::1` inside the container and the connection just hung; `127.0.0.1` explicitly, or
+`--network host`, both fixed it). The real `docker-compose.yml` deploy hits neither problem —
+containers reach `server` by its compose service name on the shared compose network. Only the
+unauthenticated shell was measured (same page both modes) — login-gated pages with real seeded
+data (Orders list, Customer detail, Catalog, Product detail) were not measured this round.
+
+**Result: the production build is a large, real improvement, confirmed on this box alone** —
+roughly 15x fewer requests and 4-6x less data transferred, `networkidle` in about a third the
+time. All of this is on localhost (near-zero latency per request) — the gap should be
+considerably larger over a real network connection, given dev mode's 200+ individual round trips
+vs. prod's ~15-25.
+
+**Still not done**: a proper 3-run-median measurement against real seeded/authenticated control
+pages, and a measurement against an actual deployed `docker-compose.yml` stack (not just an ad hoc
+`docker run --network host`) — this round proved the concept and the direction, not the final
+numbers.
 
 ## When to re-run
 
