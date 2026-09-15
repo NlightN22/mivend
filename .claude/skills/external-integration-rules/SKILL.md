@@ -244,6 +244,51 @@ thing. If a handler needs an explicit "did we apply a real event" marker, use a 
 it (a timestamp column set unconditionally, or similar) rather than inferring it from whether some
 unrelated business field happens to be non-null.
 
+## A handler bug fix does not retroactively fix already-processed data — reprocessing is mandatory
+
+**Fixing a handler's read/derivation logic only changes how FUTURE Kafka events get applied.**
+Every `IntegrationInboxEvent` row already marked `processed` ran through the OLD, buggy logic and
+keeps whatever wrong local state that produced — the code fix alone does nothing for it. Treat a
+bug fix to any inbound handler's business-data derivation (an `isActive`/`isDeleted` read, a
+missing-field default, a wrong filter, anything that changes what gets written to a local entity)
+as **incomplete** until you've also identified and reprocessed the already-affected rows. This is
+not optional cleanup — it's the same class of requirement as writing a test for the fix itself.
+
+**Real incidents this happened for, repeatedly, same pattern each time** (`mivend.issue.84.88`,
+2026-09-15): after fixing `isActive`/`isDeleted` handling (#89) and the category `isPrivate`
+filter (#90), the _already-consumed_ Kafka events for `warehouse` (58 events), `category` (1141
+events), and `organization` (51 events) were still sitting `processed` with the old bad output —
+reconciliation kept showing the same gap even though the code was correct, because nothing had
+re-run the new logic against that already-arrived data. Confirmed again by the user directly for
+this same `organization`/`isDeleted` fix, immediately after it shipped: "у нас все из-эктив
+получаются... ты должен тогда вызывать загрузку этих данных" — exactly this gap.
+
+**Rule of thumb for how to reprocess, in order of preference:**
+
+1. **Known, small, bounded set of affected rows, payload already stored locally** (e.g. an inbox
+   row's own `payload` JSON already contains everything the fixed logic needs to re-derive) →
+   **self-replay**: reset those `integration_inbox_event.status` rows from `processed` back to
+   `pending` (a direct SQL `UPDATE ... WHERE stream = '<x>' AND status = 'processed'`, scoped as
+   tightly as you can identify the affected set) and let the existing consumer/worker loop pick
+   them up and reapply the now-fixed handler. No external call needed — the fix and the data are
+   both already local.
+2. **Known entity-id list, but the payload needs to come from the source again** (not fully
+   reconstructable from what's stored) → a **targeted replay** via Integration Service's
+   `POST /api/resync/v1/replay` (issue #108 on the `search-platform` side; max 200 entityIds per
+   request) — ask by explicit ID list, never guess/enumerate on mivend's side.
+3. **Unknown or large-scale gap** (you can't enumerate which specific rows are wrong, or the
+   count is large enough that enumeration itself is the risk) → ask Search Platform for a full
+   `aggregateType` resync through the same endpoint, rather than trying to figure out the
+   affected set yourself.
+
+**Never skip this silently.** If you fix a handler bug and decide reprocessing is out of scope for
+the current change (e.g. no local/staging-integration contour is reachable, or it's genuinely a
+separate follow-up), say so explicitly to the user/in the report — don't let a green `make test`
+read as "the data is now correct," because it only proves the code path is correct for new input.
+Before reprocessing anything beyond the local dev contour, confirm with the user first — resetting
+inbox rows or requesting a resync are real, hard-to-fully-reverse actions against shared state
+(this project's own "Executing actions with care" rules apply here, not just to git).
+
 ## External reference id — always persist the source system's own identifier
 
 Any record representing a fact from an external system must capture that system's own unique
