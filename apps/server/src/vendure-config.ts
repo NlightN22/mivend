@@ -31,6 +31,7 @@ import { SystemHealthDashboardPlugin } from './system-health-dashboard.plugin';
 import { DefaultSuperadminAlertDashboardPlugin } from './default-superadmin-alert-dashboard.plugin';
 import { BranchConsolidationAlertDashboardPlugin } from './branch-consolidation-alert-dashboard.plugin';
 import { IntegrationHealthDashboardPlugin } from './integration-health-dashboard.plugin';
+import { ErpReconciliationDashboardPlugin } from './erp-reconciliation-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
@@ -395,6 +396,10 @@ export const config: VendureConfig = {
         // inbox backlog together, as two sections of one page — see
         // src/dashboard/integration-health/index.ts.
         IntegrationHealthDashboardPlugin,
+        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #97) — its own page
+        // rather than a third section on integration-health, since that page is already dense —
+        // see src/dashboard/erp-reconciliation/index.ts.
+        ErpReconciliationDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({}),
