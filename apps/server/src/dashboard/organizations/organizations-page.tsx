@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { api, graphql } from '@vendure/dashboard';
+import {
+    api,
+    graphql,
+    Badge,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@vendure/dashboard';
 
 // Read-only companion to packages/manager's Settings → Organizations page (issue #88 part 2,
 // commit 3894048) — same underlying `organizationRequisites` query, no create/edit here either.
@@ -39,70 +49,49 @@ export function OrganizationsPage() {
     }
 
     return (
-        <div style={{ padding: 24, maxWidth: 720 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Organizations</h1>
-            <p style={{ color: '#666', marginBottom: 20 }}>
+        <div className="p-6">
+            <h1 className="text-xl font-semibold mb-1">Organizations</h1>
+            <p className="text-muted-foreground mb-4 max-w-2xl">
                 Read-only view of counterparty organization requisites synced from the ERP. Same
                 data as the manager portal's Settings → Organizations page.
             </p>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                <colgroup>
-                    <col style={{ width: '34%' }} />
-                    <col style={{ width: '30%' }} />
-                    <col style={{ width: '16%' }} />
-                    <col style={{ width: '20%' }} />
-                </colgroup>
-                <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-                        <th style={{ padding: '6px 16px 6px 0' }}>Legal name</th>
-                        <th style={{ padding: '6px 16px 6px 0' }}>ERP id</th>
-                        <th style={{ padding: '6px 16px 6px 0' }}>Active</th>
-                        <th style={{ padding: '6px 0' }}>Requisites complete</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {organizations.map(org => (
-                        <tr key={org.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                            <td
-                                style={{
-                                    padding: '6px 16px 6px 0',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                }}
-                                title={org.legalName}
-                            >
-                                {org.legalName}
-                            </td>
-                            <td
-                                style={{
-                                    padding: '6px 16px 6px 0',
-                                    color: '#6b7280',
-                                    fontFamily: 'monospace',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                }}
-                                title={org.erpId}
-                            >
-                                {org.erpId}
-                            </td>
-                            <td style={{ padding: '6px 16px 6px 0' }}>{org.isActive ? 'Yes' : 'No'}</td>
-                            <td style={{ padding: '6px 0' }}>
-                                {org.hasCompleteRequisites ? 'Yes' : 'No'}
-                            </td>
-                        </tr>
-                    ))}
-                    {loaded && organizations.length === 0 && (
-                        <tr>
-                            <td colSpan={4} style={{ padding: '12px 0', color: '#6b7280' }}>
-                                No organizations yet.
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
-            </table>
+            {loaded && organizations.length === 0 && (
+                <p className="text-muted-foreground">No organizations yet.</p>
+            )}
+
+            {organizations.length > 0 && (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Legal name</TableHead>
+                            <TableHead>ERP id</TableHead>
+                            <TableHead>Active</TableHead>
+                            <TableHead>Requisites complete</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {organizations.map(org => (
+                            <TableRow key={org.id}>
+                                <TableCell>{org.legalName}</TableCell>
+                                <TableCell className="font-mono text-muted-foreground">
+                                    {org.erpId}
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant={org.isActive ? 'secondary' : 'outline'}>
+                                        {org.isActive ? 'Yes' : 'No'}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant={org.hasCompleteRequisites ? 'secondary' : 'outline'}>
+                                        {org.hasCompleteRequisites ? 'Yes' : 'No'}
+                                    </Badge>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            )}
         </div>
     );
 }
