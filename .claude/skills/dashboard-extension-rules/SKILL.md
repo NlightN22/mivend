@@ -1,0 +1,124 @@
+---
+name: dashboard-extension-rules
+description: Mandatory workflow for adding or changing anything under @vendure/dashboard (native Vendure Dashboard, packages/dashboard) — a new page, alert, or nav item registered via a plugin's `dashboard:` entry point. Covers the required file layout, the plugin-discovery dev-restart gotcha, what to test vs. what to verify live, and the mandatory visual audit before calling it done. Read before touching anything under apps/server/src/dashboard/ or any `*-dashboard.plugin.ts`.
+---
+
+# Vendure Dashboard extension rules
+
+`@vendure/dashboard` is a separate standalone React app (`packages/dashboard`, its own Vite dev
+server per contour — local `:5175`, staging-integration `:5185`) mounted at `/admin`'s successor,
+not the manager portal. A plugin bolts a page/alert/nav-item onto it via a `dashboard: '<path>'`
+entry in its `@VendurePlugin({...})` decorator, pointing at a file that calls
+`defineDashboardExtension({...})`.
+
+## Required layout
+
+Mirror the existing extensions (`system-health`, `branch-consolidation`,
+`default-superadmin-account`, `integration-health`) exactly:
+
+```
+apps/server/src/dashboard/<name>/
+├── index.ts              # defineDashboardExtension({ alerts, routes })
+├── <name>-page.tsx        # React page component, if the extension has a page (not alert-only)
+└── <pure-logic>.ts        # plain TS, no React/Vendure imports — the actual derivation logic
+apps/server/src/<name>-dashboard.plugin.ts   # tiny, logic-free @VendurePlugin pointing at index.ts
+```
+
+**Why this sits under `apps/server/src`, not `packages/plugins/*`**: `@vendure/dashboard`'s
+static plugin-discovery step (an AST scan for a compiled `dashboard: '...'` decorator property)
+cannot see a pnpm-workspace-symlinked package's dashboard extension — it classifies any symlinked
+local package as "local" and never actually feeds it through the compile step needed to discover
+the extension. A real relative import from `apps/server/src/vendure-config.ts` is what makes
+discovery work. Confirmed via a manual AST-walk during issue #76 — don't re-litigate this by
+trying `packages/plugins/*` again for a new extension; put it here.
+
+**The `*-dashboard.plugin.ts` file has zero logic** — its only job is
+`dashboard: './dashboard/<name>/index.ts'` in the decorator, so `@vendure/dashboard`'s scanner
+has something to find. Register it in `apps/server/src/vendure-config.ts`'s `plugins` array
+alongside the others.
+
+## Separate pure logic from React glue — and test only the pure logic
+
+`index.ts`/`<name>-page.tsx` are thin: data fetching (`api.query(...)`), rendering, and wiring
+into `defineDashboardExtension`. Any actual decision logic — what counts as "missing", a
+threshold check, grouping/aggregating rows, an alert's `shouldShow`/`severity` derivation — goes
+in its own plain `.ts` file with no React/`@vendure/dashboard` imports, exactly like
+`system-health-check.ts`'s `buildSystemHealthChecklist`/`getMissingChecks` or
+`kafka-lag.resolver.ts`'s `groupLagRowsByTopic`. **Unit-test that file.** Do not attempt to unit-
+test the React component or the `defineDashboardExtension` call itself — there is no existing
+test harness for that in this repo, and building one is out of scope for a single extension.
+
+An alert's `check()` must fail closed (return the "nothing to report" value, e.g. `[]`/`-1`/
+`false`) inside a `try/catch` — a viewer lacking the underlying query's permission, or a
+transient network error, must never crash the whole `<Alerts>` shell for every other extension.
+
+## Mandatory dev gotcha: plugin-discovery is scan-once, not watched
+
+`@vendure/dashboard`'s Vite dev server scans every plugin's `dashboard:` path **once, at that
+process's own startup** — it is not part of the file-watch/HMR loop. Concretely:
+
+- **Creating a brand-new extension file, or renaming/moving an existing one**, is invisible to an
+  already-running dashboard Vite process. It keeps requesting the _old_ path, gets a 404, and the
+  whole app renders blank (no error banner — just an empty page, sometimes stuck on the loading
+  spinner). A browser hard-reload does **not** fix this — the stale state is server-side, in the
+  Vite process, not the browser.
+- **Editing the _contents_ of an already-discovered file** (no rename) is fine — normal Vite
+  HMR/module reload picks it up live, no restart needed.
+- **Restarting `apps/server`'s `main.ts`/`worker.ts` does not fix this either** — the dashboard
+  Vite server is a completely separate process/port per contour. You must restart _that specific
+  contour's_ `packages/dashboard` dev server:
+    ```
+    # find it: ss -ltnp | grep <port>   (5175 local, 5185 staging-integration)
+    # kill that PID, then restart with the exact same env it was launched with, e.g.:
+    pnpm --filter @mivend/dashboard dev                                    # local
+    VITE_API_TARGET=http://localhost:3010 VITE_PORT=5185 \
+      pnpm --filter @mivend/dashboard exec vite --mode staging-integration # staging-integration
+    ```
+    Confirm the restart actually picked up the new extension by checking its own startup log line:
+    `Analyzed plugins and found N dashboard extensions` / `Found N plugins (N active in runtime
+config): <YourNewPlugin> (local), ...` — if your plugin isn't named there, the restart didn't
+    take (wrong process killed, or a build/compile error upstream) and the page will keep 404ing.
+- Per the `dev-environment` skill's rules: this is the one narrow, legitimate case for
+  restarting a single component's dev process directly instead of a full `make dev` cycle — do
+  it, verify, and don't touch anything else (Docker infra, the other contour, `apps/server`).
+
+## Mandatory: live visual audit before calling the extension done
+
+A green `make lint`/`make test`/`tsc --noEmit` proves the code compiles and the extracted pure
+logic is correct — it proves nothing about whether the page actually renders in the real
+Dashboard app, and the scan-once gotcha above means it is entirely possible to ship code that
+type-checks perfectly and still 404s live. Before reporting a dashboard extension as finished:
+
+1. Confirm the target contour's `packages/dashboard` Vite process actually discovered the new/
+   renamed extension (the startup log line above).
+2. Load the page for real, authenticated, through the actual contour you're verifying (local or
+   staging-integration) — either the `check-page` skill's script for a quick unauthenticated
+   smoke check (won't get past the login screen, but catches a hard crash/404 on the shell
+   itself), or a throwaway authenticated Playwright script (log in via the real
+   `login` GraphQL mutation to get a session cookie, `context.addCookies(...)`, navigate, assert
+   on rendered text/screenshot) for anything gated by login — which every real dashboard page is.
+   **Delete the throwaway script afterward** — it's a debugging aid, not a repo artifact (no
+   ad hoc `.mjs` files left under `packages/e2e/` or elsewhere).
+3. Actually look at the screenshot/rendered text — an empty `bodyTextPreview` with no console
+   errors can mean "healthy pre-login spinner" (normal) or "crashed silently" (not normal);
+   distinguish the two by checking for `consoleErrors`/`networkErrors`/`requestFailures` in the
+   check output, not just whether navigation itself succeeded.
+4. If the extension is gated by a `CustomPermission` (via the underlying GraphQL query's
+   `@Allow(...)`), verify with a real account that actually holds that permission — a page that
+   "renders" but silently shows nothing because every query 403'd looks identical to one with no
+   data yet, unless you check the response status.
+5. Do this **per contour that matters for the task** — a fix verified only on local and never
+   checked on staging-integration (or vice versa) is not verified; this project runs both
+   simultaneously on the same box and the scan-once gotcha above is per-process, so "it works
+   locally" says nothing about the other contour.
+
+Skipping this step is exactly how the `/kafka-lag` → `/integration-health` rename shipped broken
+on a live contour despite every automated check passing (issue #91) — the automated checks were
+never wrong, they just don't cover this failure mode at all.
+
+## Reference implementations
+
+`apps/server/src/dashboard/system-health/` (alert only, pure-logic file tested), `.../branch-
+consolidation/` (alert + page + mutation), `.../integration-health/` (alert + page combining two
+independent data sources on one page rather than one page per metric — see its own doc comments
+for why).
