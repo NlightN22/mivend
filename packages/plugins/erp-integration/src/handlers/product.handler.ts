@@ -14,6 +14,10 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationProductHandler';
 
+// TaxCategory list changes rarely (admin-configured), so a short TTL avoids a DB round-trip on
+// every single ProductChanged event without risking a long-stale erpVatCode mapping.
+const TAX_CATEGORY_CACHE_TTL_MS = 60_000;
+
 // Applies Integration Service's `product` stream (ProductChanged). Deliberately reuses the same
 // lookup shape as erp-import's ProductHandler (match by `customFieldsExternalid`) rather than a
 // second, competing external-id scheme — both are "the ERP's product id", just arriving over two
@@ -33,6 +37,11 @@ export class ProductStreamHandler implements InboundStreamHandler {
         private readonly productTaxCodeFlagService: ProductTaxCodeFlagService,
     ) {}
 
+    private taxCategoriesCache?: {
+        items: Awaited<ReturnType<TaxCategoryService['findAll']>>['items'];
+        expiresAt: number;
+    };
+
     async apply(
         ctx: RequestContext,
         entityId: string,
@@ -49,11 +58,11 @@ export class ProductStreamHandler implements InboundStreamHandler {
         // bool zero-value omission).
         const isActive = payload.isActive === true;
         // `vatCode` isn't in @nlightn22/event-contracts' ProductChangedSchema yet (verified
-        // against 0.13.0's product_changed_pb.d.ts — no VAT field at all). Reading it here
-        // anyway, defensively: until that contract is extended this always resolves via the
-        // 'unset' branch below, which is exactly the intended non-blocking fallback (issue #79),
-        // not a bug — the moment the contract gains the field, real codes flow through with no
-        // further changes needed here.
+        // against 0.13.0's product_changed_pb.d.ts — no VAT field at all; tracked as issue #113).
+        // Reading it here anyway, defensively: until that contract is extended this always
+        // resolves via the 'unset' branch below, which is exactly the intended non-blocking
+        // fallback (issue #79), not a bug — the moment the contract gains the field, real codes
+        // flow through with no further changes needed here.
         const rawVatCode = String(payload.vatCode ?? '');
         const taxCategoryId = await this.resolveTaxCategoryId(ctx, entityId, rawVatCode);
 
@@ -98,6 +107,20 @@ export class ProductStreamHandler implements InboundStreamHandler {
         Logger.verbose(`Created product externalId=${entityId}`, loggerCtx);
     }
 
+    private async getTaxCategories(
+        ctx: RequestContext,
+    ): Promise<Awaited<ReturnType<TaxCategoryService['findAll']>>['items']> {
+        if (this.taxCategoriesCache && this.taxCategoriesCache.expiresAt > Date.now()) {
+            return this.taxCategoriesCache.items;
+        }
+        const taxCategories = await this.taxCategoryService.findAll(ctx);
+        this.taxCategoriesCache = {
+            items: taxCategories.items,
+            expiresAt: Date.now() + TAX_CATEGORY_CACHE_TTL_MS,
+        };
+        return taxCategories.items;
+    }
+
     // Resolves the raw VAT code to a TaxCategory id via the pure resolveVatCode function,
     // persisting a non-blocking review flag when the resolution isn't a clean match (issue #79).
     // Returns undefined only when there is no default TaxCategory configured at all yet (a
@@ -108,8 +131,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         entityId: string,
         rawVatCode: string,
     ): Promise<string | undefined> {
-        const taxCategories = await this.taxCategoryService.findAll(ctx);
-        const defaultTaxCategory = taxCategories.items.find(tc => tc.isDefault);
+        const taxCategoryItems = await this.getTaxCategories(ctx);
+        const defaultTaxCategory = taxCategoryItems.find(tc => tc.isDefault);
         if (!defaultTaxCategory) {
             Logger.warn(
                 `product ${entityId}: no default TaxCategory configured, leaving taxCategoryId unset`,
@@ -119,7 +142,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         }
 
         const taxCategoryIdByErpVatCode = new Map(
-            taxCategories.items
+            taxCategoryItems
                 .filter(tc => !!tc.customFields.erpVatCode)
                 .map(tc => [tc.customFields.erpVatCode as string, String(tc.id)]),
         );
@@ -135,7 +158,21 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 `product ${entityId}: VAT code '${rawVatCode}' — ${resolution.flag.detail}`,
                 loggerCtx,
             );
-            await this.productTaxCodeFlagService.report(ctx, entityId, rawVatCode, resolution.flag);
+            try {
+                await this.productTaxCodeFlagService.report(
+                    ctx,
+                    entityId,
+                    rawVatCode,
+                    resolution.flag,
+                );
+            } catch (err) {
+                // Flagging is a review aid, not part of the import contract (issue #79) —
+                // losing a flag row must never block product create/update.
+                Logger.error(
+                    `product ${entityId}: failed to persist VAT code flag: ${err instanceof Error ? err.message : String(err)}`,
+                    loggerCtx,
+                );
+            }
         }
 
         return resolution.taxCategoryId;
