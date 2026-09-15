@@ -87,9 +87,10 @@ your own Tailwind utility soup as a substitute for a component that already exis
   same reasoning as above.
 - This applies to every new page/alert action, not just tables — buttons, inputs, form layout,
   status indicators. `erp-reconciliation-page.tsx` is the fullest current reference for the
-  pattern (`Button`, `Input`, `Table`, `Badge` together); `branches-page.tsx` predates this rule
-  and still uses raw HTML — don't copy its styling, only its data-flow shape (see "Required
-  layout" above), and feel free to fix it to match this rule if you're touching it anyway.
+  pattern (`Button`, `Input`, `Table`, `Badge` together); `branches-page.tsx` and
+  `integration-health-page.tsx` both predate this rule and still use raw HTML — don't copy their
+  styling, only their data-flow shape (see "Required layout" above), and feel free to fix either
+  to match this rule if you're touching it anyway.
 
 ## Mandatory dev gotcha: plugin-discovery is scan-once, not watched
 
