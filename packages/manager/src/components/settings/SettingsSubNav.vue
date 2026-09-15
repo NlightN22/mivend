@@ -3,7 +3,14 @@
 // CustomerDetailPage.vue's in-page tabs, but these are real routes (RouterLink), not
 // activeTab toggles, since each section is its own page with its own data loading.
 defineProps<{
-    active: 'roles' | 'team' | 'security' | 'branches' | 'category-visibility' | 'system-health';
+    active:
+        | 'roles'
+        | 'team'
+        | 'security'
+        | 'branches'
+        | 'organizations'
+        | 'category-visibility'
+        | 'system-health';
 }>();
 </script>
 
@@ -12,6 +19,9 @@ defineProps<{
         <RouterLink to="/settings/roles" :class="{ active: active === 'roles' }">Roles & access</RouterLink>
         <RouterLink to="/settings/team" :class="{ active: active === 'team' }">Team</RouterLink>
         <RouterLink to="/settings/branches" :class="{ active: active === 'branches' }">Branches</RouterLink>
+        <RouterLink to="/settings/organizations" :class="{ active: active === 'organizations' }">
+            Organizations
+        </RouterLink>
         <RouterLink
             to="/settings/category-visibility"
             :class="{ active: active === 'category-visibility' }"

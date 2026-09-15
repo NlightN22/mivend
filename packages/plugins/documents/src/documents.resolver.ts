@@ -123,3 +123,14 @@ export class DocumentFieldResolver {
         return this.assetService.findOne(ctx, doc.assetId);
     }
 }
+
+@Resolver('OrganizationRequisites')
+export class OrganizationFieldResolver {
+    // Derived, never stored — inn/legalAddress themselves are deliberately not exposed on
+    // this GraphQL type (issue #88 v1 scope: manager UI only needs the completeness flag,
+    // not the partial legal fields).
+    @ResolveField()
+    hasCompleteRequisites(@Parent() requisites: OrganizationRequisites): boolean {
+        return requisites.inn != null && requisites.legalAddress != null;
+    }
+}

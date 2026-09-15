@@ -36,6 +36,9 @@ export const adminApiExtensions = gql`
         erpId: String!
         legalName: String!
         isActive: Boolean!
+        createdAt: DateTime!
+        "True when both inn and legalAddress are non-null (see OrganizationFieldResolver)."
+        hasCompleteRequisites: Boolean!
     }
 
     extend type Query {

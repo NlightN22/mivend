@@ -2728,6 +2728,13 @@ export type IntStructFieldConfig = StructField & {
     ui: Maybe<Scalars['JSON']['output']>;
 };
 
+export type IntegrationInboxBacklogByStream = {
+    failed: Scalars['Int']['output'];
+    pending: Scalars['Int']['output'];
+    processing: Scalars['Int']['output'];
+    stream: Scalars['String']['output'];
+};
+
 /** Returned if the user authentication credentials are not valid */
 export type InvalidCredentialsError = ErrorResult & {
     authenticationError: Scalars['String']['output'];
@@ -2864,6 +2871,21 @@ export type JobSortParameter = {
  * @docsCategory common
  */
 export type JobState = 'CANCELLED' | 'COMPLETED' | 'FAILED' | 'PENDING' | 'RETRYING' | 'RUNNING';
+
+export type KafkaTopicLag = {
+    partitions: Array<KafkaTopicLagPartition>;
+    polledAt: Scalars['DateTime']['output'];
+    stream: Scalars['String']['output'];
+    topic: Scalars['String']['output'];
+    totalLag: Maybe<Scalars['String']['output']>;
+};
+
+export type KafkaTopicLagPartition = {
+    committedOffset: Maybe<Scalars['String']['output']>;
+    endOffset: Scalars['String']['output'];
+    lag: Maybe<Scalars['String']['output']>;
+    partition: Scalars['Int']['output'];
+};
 
 /**
  * @description
@@ -5220,7 +5242,10 @@ export type OrderTaxSummary = {
 export type OrderType = 'Aggregate' | 'Regular' | 'Seller';
 
 export type OrganizationRequisites = {
+    createdAt: Scalars['DateTime']['output'];
     erpId: Scalars['String']['output'];
+    /** True when both inn and legalAddress are non-null (see OrganizationFieldResolver). */
+    hasCompleteRequisites: Scalars['Boolean']['output'];
     id: Scalars['ID']['output'];
     isActive: Scalars['Boolean']['output'];
     legalName: Scalars['String']['output'];
@@ -6377,6 +6402,8 @@ export type Query = {
     getSettingsStoreValues: Maybe<Scalars['JSON']['output']>;
     globalSettings: GlobalSettings;
     highUsageCounterparties: Array<Counterparty>;
+    /** Live count of not-yet-fully-processed IntegrationInboxEvent rows per stream (pending/processing/failed) — a different number from Kafka lag: these rows were already consumed and committed, this is Postgres-side processing backlog. */
+    integrationInboxBacklog: Array<IntegrationInboxBacklogByStream>;
     /** Sum of a counterparty's unpaid (pending/issued) invoices, scoped the same way visibleInvoices is. Null if the counterparty has no unpaid invoices, not zero-with-a-currency. */
     invoiceOutstandingBalance: Maybe<MoneyAmount>;
     invoicesForOrder: Array<Invoice>;
@@ -6385,6 +6412,8 @@ export type Query = {
     jobQueues: Array<JobQueue>;
     jobs: JobList;
     jobsById: Array<Job>;
+    /** Per-topic/per-partition Kafka consumer lag for every inbound ERP stream (issue #91), as of the last scheduled poll. */
+    kafkaConsumerLag: Array<KafkaTopicLag>;
     me: Maybe<CurrentUser>;
     myApprovalRequestsSummary: ApprovalRequestsSummary;
     myApprovalsInbox: ApprovalsInbox;
@@ -10261,6 +10290,28 @@ export type DeleteTableViewMutationVariables = Exact<{
 
 export type DeleteTableViewMutation = { deleteTableView: boolean };
 
+export type OrganizationRequisitesFieldsFragment = {
+    id: string;
+    erpId: string;
+    legalName: string;
+    isActive: boolean;
+    createdAt: any;
+    hasCompleteRequisites: boolean;
+};
+
+export type OrganizationsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OrganizationsQuery = {
+    organizationRequisites: Array<{
+        id: string;
+        erpId: string;
+        legalName: string;
+        isActive: boolean;
+        createdAt: any;
+        hasCompleteRequisites: boolean;
+    }>;
+};
+
 export type PaymentListItemFieldsFragment = {
     id: string;
     number: string;
@@ -10903,6 +10954,19 @@ export const SavedTableViewFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'SavedTableViewFields' },
 ) as unknown as TypedDocumentString<SavedTableViewFieldsFragment, unknown>;
+export const OrganizationRequisitesFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment OrganizationRequisitesFields on OrganizationRequisites {
+  id
+  erpId
+  legalName
+  isActive
+  createdAt
+  hasCompleteRequisites
+}
+    `,
+    { fragmentName: 'OrganizationRequisitesFields' },
+) as unknown as TypedDocumentString<OrganizationRequisitesFieldsFragment, unknown>;
 export const PaymentListItemFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment PaymentListItemFields on PaymentAttempt {
@@ -12758,6 +12822,20 @@ export const DeleteTableViewDocument = new TypedDocumentString(`
   deleteTableView(id: $id)
 }
     `) as unknown as TypedDocumentString<DeleteTableViewMutation, DeleteTableViewMutationVariables>;
+export const OrganizationsDocument = new TypedDocumentString(`
+    query Organizations {
+  organizationRequisites {
+    ...OrganizationRequisitesFields
+  }
+}
+    fragment OrganizationRequisitesFields on OrganizationRequisites {
+  id
+  erpId
+  legalName
+  isActive
+  createdAt
+  hasCompleteRequisites
+}`) as unknown as TypedDocumentString<OrganizationsQuery, OrganizationsQueryVariables>;
 export const PaymentViewCountsDocument = new TypedDocumentString(`
     query PaymentViewCounts($counterpartyId: ID) {
   all: visiblePayments(options: {take: 0}, counterpartyId: $counterpartyId) {

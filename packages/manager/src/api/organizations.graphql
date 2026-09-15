@@ -1,0 +1,14 @@
+fragment OrganizationRequisitesFields on OrganizationRequisites {
+    id
+    erpId
+    legalName
+    isActive
+    createdAt
+    hasCompleteRequisites
+}
+
+query Organizations {
+    organizationRequisites {
+        ...OrganizationRequisitesFields
+    }
+}

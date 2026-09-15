@@ -20,6 +20,7 @@ import {
     DocumentsResolver,
     DocumentFieldResolver,
     DocumentsAdminResolver,
+    OrganizationFieldResolver,
 } from './documents.resolver';
 import { shopApiExtensions } from './api/shop.schema';
 import { adminApiExtensions } from './api/admin.schema';
@@ -45,7 +46,7 @@ const INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
     },
     adminApiExtensions: {
         schema: adminApiExtensions,
-        resolvers: [DocumentsAdminResolver, DocumentFieldResolver],
+        resolvers: [DocumentsAdminResolver, DocumentFieldResolver, OrganizationFieldResolver],
     },
     providers: [DocumentsService, PdfBrowserService, PdfGeneratorService],
     exports: [DocumentsService, PdfGeneratorService],

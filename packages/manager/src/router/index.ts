@@ -126,6 +126,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'settings/organizations',
+                    name: 'settings-organizations',
+                    component: () => import('../pages/settings/OrganizationsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'settings/category-visibility',
                     name: 'settings-category-visibility',
                     component: () => import('../pages/settings/CategoryVisibilityPage.vue'),
