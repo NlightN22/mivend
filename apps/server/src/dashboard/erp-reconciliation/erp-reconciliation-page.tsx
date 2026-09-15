@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { api, graphql } from '@vendure/dashboard';
+import {
+    api,
+    graphql,
+    Badge,
+    Button,
+    Input,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@vendure/dashboard';
 
 import { formatIssueTypeLabel, formatRunSummary } from './erp-reconciliation-format.js';
 
@@ -14,6 +26,13 @@ import { formatIssueTypeLabel, formatRunSummary } from './erp-reconciliation-for
 // One explicit behavior difference from the manager-portal panel: the comparison auto-runs on
 // page load (not just on the manual button), so a viewer sees a fresh result without an extra
 // click — see loadAndRun below.
+//
+// Uses @vendure/dashboard's own themed components (Button/Input/Table/Badge, from
+// @vendure-io/ui) rather than raw HTML with inline hex colors — those don't track the admin
+// theme's dark/light CSS variables, so a hardcoded `background: '#fff'` button/table look broken
+// in dark mode even though it renders. Tailwind utility classes are safe here too: the Dashboard
+// ships a dedicated extension-tailwind.css build that generates classes for extension source
+// files against the same admin-theme design tokens as the rest of the app.
 const openIssuesDocument = graphql(`
     query OpenErpReconciliationIssuesForDashboard($options: OpenErpReconciliationIssueListOptions) {
         openErpReconciliationIssues(options: $options) {
@@ -117,65 +136,54 @@ export function ErpReconciliationPage() {
     }
 
     return (
-        <div style={{ padding: 24, maxWidth: 960 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>ERP reconciliation</h1>
-            <p style={{ color: '#666', marginBottom: 16 }}>
+        <div className="p-6">
+            <h1 className="text-xl font-semibold mb-1">ERP reconciliation</h1>
+            <p className="text-muted-foreground mb-4 max-w-2xl">
                 Entity-completeness discrepancies between mivend's own counts and Integration
                 Service's reconciliation summary (central hub only). The comparison runs
                 automatically when this page loads.
             </p>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <button
-                    type="button"
-                    onClick={() => void loadAndRun()}
-                    disabled={running}
-                    style={{
-                        padding: '6px 14px',
-                        borderRadius: 6,
-                        border: '1px solid #d1d5db',
-                        background: running ? '#f3f4f6' : '#fff',
-                        cursor: running ? 'default' : 'pointer',
-                    }}
-                >
+            <div className="flex items-center gap-3 mb-5">
+                <Button variant="outline" onClick={() => void loadAndRun()} disabled={running}>
                     {running ? 'Running…' : 'Run reconciliation now'}
-                </button>
-                {runSummary && <span style={{ color: '#6b7280', fontSize: 13 }}>{runSummary}</span>}
+                </Button>
+                {runSummary && <span className="text-muted-foreground text-sm">{runSummary}</span>}
             </div>
 
-            {error && <div style={{ color: '#b91c1c', marginBottom: 12 }}>{error}</div>}
+            {error && <div className="text-destructive mb-3">{error}</div>}
 
             {loaded && issues.length === 0 && !error && (
-                <p style={{ color: '#6b7280' }}>No open ERP discrepancies.</p>
+                <p className="text-muted-foreground">No open ERP discrepancies.</p>
             )}
 
             {issues.length > 0 && (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-                            <th style={{ padding: '4px 8px' }}>Aggregate</th>
-                            <th style={{ padding: '4px 8px' }}>Discrepancy</th>
-                            <th style={{ padding: '4px 8px' }}>mivend count</th>
-                            <th style={{ padding: '4px 8px' }}>Integration Service count</th>
-                            <th style={{ padding: '4px 8px' }}>Detected</th>
-                            <th style={{ padding: '4px 8px' }}>Resolve</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Aggregate</TableHead>
+                            <TableHead>Discrepancy</TableHead>
+                            <TableHead>mivend count</TableHead>
+                            <TableHead>Integration Service count</TableHead>
+                            <TableHead>Detected</TableHead>
+                            <TableHead>Resolve</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
                         {issues.map(issue => (
-                            <tr key={issue.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                <td style={{ padding: '4px 8px', textTransform: 'capitalize' }}>
-                                    {issue.aggregateType}
-                                </td>
-                                <td style={{ padding: '4px 8px' }}>{formatIssueTypeLabel(issue.issueType)}</td>
-                                <td style={{ padding: '4px 8px' }}>{issue.ourCount}</td>
-                                <td style={{ padding: '4px 8px' }}>{issue.theirActiveCount}</td>
-                                <td style={{ padding: '4px 8px', color: '#6b7280' }}>
+                            <TableRow key={issue.id}>
+                                <TableCell className="capitalize">
+                                    <Badge variant="secondary">{issue.aggregateType}</Badge>
+                                </TableCell>
+                                <TableCell>{formatIssueTypeLabel(issue.issueType)}</TableCell>
+                                <TableCell>{issue.ourCount}</TableCell>
+                                <TableCell>{issue.theirActiveCount}</TableCell>
+                                <TableCell className="text-muted-foreground">
                                     {new Date(issue.detectedAt).toLocaleString()}
-                                </td>
-                                <td style={{ padding: '4px 8px' }}>
-                                    <div style={{ display: 'flex', gap: 6 }}>
-                                        <input
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex gap-2">
+                                        <Input
                                             type="text"
                                             placeholder="Resolution note"
                                             value={resolutionDrafts[issue.id] ?? ''}
@@ -185,36 +193,25 @@ export function ErpReconciliationPage() {
                                                     [issue.id]: e.target.value,
                                                 }))
                                             }
-                                            style={{
-                                                padding: '2px 6px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: 4,
-                                                fontSize: 12,
-                                            }}
+                                            className="h-8 text-xs"
                                         />
-                                        <button
-                                            type="button"
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
                                             onClick={() => void handleResolve(issue.id)}
                                             disabled={
                                                 resolvingId === issue.id ||
                                                 !(resolutionDrafts[issue.id] ?? '').trim()
                                             }
-                                            style={{
-                                                padding: '2px 10px',
-                                                borderRadius: 4,
-                                                border: '1px solid #d1d5db',
-                                                fontSize: 12,
-                                                cursor: resolvingId === issue.id ? 'default' : 'pointer',
-                                            }}
                                         >
                                             {resolvingId === issue.id ? '…' : 'Resolve'}
-                                        </button>
+                                        </Button>
                                     </div>
-                                </td>
-                            </tr>
+                                </TableCell>
+                            </TableRow>
                         ))}
-                    </tbody>
-                </table>
+                    </TableBody>
+                </Table>
             )}
         </div>
     );
