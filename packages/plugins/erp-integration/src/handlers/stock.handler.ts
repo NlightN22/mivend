@@ -22,6 +22,19 @@ const loggerCtx = 'IntegrationStockHandler';
 // ATP, since 1C receives reservations from other channels mivend never sees as events.
 // `reservedQuantity` still has no destination — issue #72's revised ATP formula only needs 1C's
 // *available* number as a ceiling, not its own reserved breakdown.
+//
+// `available_quantity` is a plain (non-optional) proto3 `double` in Integration Service's
+// contract — same zero-value-omission shape as `isActive`/`isDeleted` documented in types.ts's
+// InboundStream comment, just for a numeric field instead of a bool: when the value is exactly
+// 0, @bufbuild/protobuf's JSON encoder OMITS the key entirely rather than sending `0`. Reading
+// `payload.availableQuantity != null` therefore silently drops every message where 1C reports
+// zero available stock — the exact case the ATP cap most needs to catch (mivend.issue.84.88,
+// confirmed live: 68 production stock rows had a real applied event with no erpAvailableQuantity
+// ever written, because the field was 0 and absent from JSON, not missing). The correct read
+// treats an absent key as an explicit 0, never as "no data" — same fix shape as `payload.isActive
+// === true` elsewhere in this plugin. `expectedQuantity` (unused here) IS declared `optional` in
+// the same schema and does carry real presence — this zero-omission issue is specific to fields
+// declared as plain scalars, not a blanket "treat every absent numeric field as 0" rule.
 @Injectable()
 export class StockStreamHandler implements InboundStreamHandler {
     constructor(
@@ -38,8 +51,7 @@ export class StockStreamHandler implements InboundStreamHandler {
         const productId = String(payload.productId ?? '');
         const warehouseId = String(payload.warehouseId ?? '');
         const quantity = Number(payload.quantity ?? NaN);
-        const availableQuantity =
-            payload.availableQuantity != null ? Number(payload.availableQuantity) : null;
+        const availableQuantity = Number(payload.availableQuantity ?? 0);
         const isDeleted = payload.isDeleted === true;
         if (!productId || !warehouseId || Number.isNaN(quantity)) {
             Logger.warn(
@@ -98,10 +110,7 @@ export class StockStreamHandler implements InboundStreamHandler {
                 change,
             );
         }
-        if (
-            availableQuantity != null &&
-            current.customFields?.erpAvailableQuantity !== Math.round(availableQuantity)
-        ) {
+        if (current.customFields?.erpAvailableQuantity !== Math.round(availableQuantity)) {
             current.customFields = {
                 ...current.customFields,
                 erpAvailableQuantity: Math.round(availableQuantity),
@@ -110,7 +119,7 @@ export class StockStreamHandler implements InboundStreamHandler {
         }
         Logger.verbose(
             `Updated stock productId=${productId} warehouseId=${warehouseId} qty=${stockOnHand} ` +
-                `erpAvailable=${availableQuantity ?? 'n/a'}`,
+                `erpAvailable=${availableQuantity}`,
             loggerCtx,
         );
     }

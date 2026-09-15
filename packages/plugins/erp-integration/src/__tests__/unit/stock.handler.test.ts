@@ -208,10 +208,48 @@ describe('StockStreamHandler', () => {
         expect(stockLevelSave).not.toHaveBeenCalled();
     });
 
-    it('does not touch StockLevel when availableQuantity is absent from the payload', async () => {
+    // mivend.issue.84.88: Integration Service's contract declares available_quantity as a plain
+    // (non-optional) proto3 double — its zero-value (0) is OMITTED from the decoded JSON payload,
+    // same shape as isActive/isDeleted's own documented zero-value omission (types.ts). An absent
+    // key here means "1C reports zero available," not "no data" — confirmed live as a real
+    // production gap (68 stock rows silently never got an ATP cap written at all).
+    it('treats an absent availableQuantity as an explicit 0, not "no data" (proto3 zero-value omission)', async () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLevelService = {
-            getStockLevel: vi.fn().mockResolvedValue({ id: 'level-1', stockOnHand: 12 }),
+            getStockLevel: vi
+                .fn()
+                .mockResolvedValue({ id: 'level-1', stockOnHand: 12, customFields: {} }),
+            updateStockOnHandForLocation: vi.fn(),
+        };
+        const stockLevelSave = vi.fn();
+        const handler = new StockStreamHandler(
+            createConnection([{ id: 'loc-1' }, { id: 'variant-1' }], stockLevelSave) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
+
+        await handler.apply(ctx, 'stock-1', {
+            productId: 'prod-1',
+            warehouseId: 'wh-1',
+            quantity: 12,
+        });
+
+        expect(stockLevelSave).toHaveBeenCalledWith(
+            expect.objectContaining({
+                id: 'level-1',
+                customFields: expect.objectContaining({ erpAvailableQuantity: 0 }),
+            }),
+        );
+    });
+
+    it('does not touch StockLevel when erpAvailableQuantity is already 0 and availableQuantity is absent', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
+        const stockLevelService = {
+            getStockLevel: vi.fn().mockResolvedValue({
+                id: 'level-1',
+                stockOnHand: 12,
+                customFields: { erpAvailableQuantity: 0 },
+            }),
             updateStockOnHandForLocation: vi.fn(),
         };
         const stockLevelSave = vi.fn();
