@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { PaginatedList } from '@vendure/core';
+import { Logger } from '@vendure/core';
 import { Brackets, DataSource } from 'typeorm';
+
+const loggerCtx = 'IntegrationInboxService';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import type { IntegrationInboxEventStatus } from './entities/integration-inbox-event.entity';
@@ -59,7 +62,13 @@ export class IntegrationInboxService {
         const existing = await repo.findOne({
             where: { stream: input.stream, sourceEventId: input.sourceEventId },
         });
-        if (existing) return existing;
+        if (existing) {
+            Logger.warn(
+                `Duplicate inbox event ignored: stream=${input.stream} sourceEventId=${input.sourceEventId}`,
+                loggerCtx,
+            );
+            return existing;
+        }
 
         try {
             return await repo.save(
@@ -75,9 +84,14 @@ export class IntegrationInboxService {
             );
         } catch (err) {
             if (this.isUniqueViolation(err)) {
-                return (await repo.findOne({
+                const race = await repo.findOne({
                     where: { stream: input.stream, sourceEventId: input.sourceEventId },
-                }))!;
+                });
+                Logger.warn(
+                    `Duplicate inbox event ignored (race on insert): stream=${input.stream} sourceEventId=${input.sourceEventId}`,
+                    loggerCtx,
+                );
+                return race!;
             }
             throw err;
         }
