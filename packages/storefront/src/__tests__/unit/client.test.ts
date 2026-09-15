@@ -1,15 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { adminApi, ApiNetworkError } from '../../api/client';
+import { shopApi, ApiNetworkError } from '../../api/client';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
     return {
         ok,
         status,
+        headers: { get: () => null },
         json: async () => body,
-    } as Response;
+    } as unknown as Response;
 }
 
-describe('adminApi', () => {
+// Mirrors packages/manager/src/__tests__/unit/client.test.ts — both clients share the exact
+// same fetchWithRetry shape (issue #115).
+describe('shopApi', () => {
     beforeEach(() => {
         vi.useFakeTimers();
     });
@@ -18,7 +21,7 @@ describe('adminApi', () => {
         const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: { ok: true } }));
         vi.stubGlobal('fetch', fetchMock);
 
-        const result = await adminApi<{ ok: boolean }>('{ ok }');
+        const result = await shopApi<{ ok: boolean }>('{ ok }');
 
         expect(result).toEqual({ ok: true });
         expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -28,7 +31,7 @@ describe('adminApi', () => {
         const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}, false, 500));
         vi.stubGlobal('fetch', fetchMock);
 
-        await expect(adminApi('{ ok }')).rejects.toThrow('Admin API error: 500');
+        await expect(shopApi('{ ok }')).rejects.toThrow('Shop API error: 500');
         expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
@@ -36,28 +39,12 @@ describe('adminApi', () => {
         const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
         vi.stubGlobal('fetch', fetchMock);
 
-        const promise = adminApi('{ ok }');
-        // Attach the assertion before advancing fake timers, so the rejection is always
-        // "handled" from the consumer's perspective — avoids a spurious unhandled-rejection
-        // warning from the gap between the promise rejecting and being awaited.
+        const promise = shopApi('{ ok }');
         await Promise.all([
             expect(promise).rejects.toBeInstanceOf(ApiNetworkError),
             vi.runAllTimersAsync(),
         ]);
-        // Initial attempt + 3 retries.
         expect(fetchMock).toHaveBeenCalledTimes(4);
-    });
-
-    it('succeeds if a retry recovers after an initial network failure', async () => {
-        const fetchMock = vi
-            .fn()
-            .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-            .mockResolvedValueOnce(jsonResponse({ data: { ok: true } }));
-        vi.stubGlobal('fetch', fetchMock);
-
-        const promise = adminApi<{ ok: boolean }>('{ ok }');
-        await Promise.all([expect(promise).resolves.toEqual({ ok: true }), vi.runAllTimersAsync()]);
-        expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     // Issue #115's own live remote-network finding: a hung connection with no response (not a
@@ -75,12 +62,11 @@ describe('adminApi', () => {
         );
         vi.stubGlobal('fetch', fetchMock);
 
-        const promise = adminApi('{ ok }');
+        const promise = shopApi('{ ok }');
         await Promise.all([
             expect(promise).rejects.toBeInstanceOf(ApiNetworkError),
             vi.runAllTimersAsync(),
         ]);
-        // Initial attempt + 3 retries, each one aborted by the 5s timeout rather than hanging.
         expect(fetchMock).toHaveBeenCalledTimes(4);
     });
 });

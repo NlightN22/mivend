@@ -22,22 +22,34 @@ export class ApiNetworkError extends Error {}
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 600;
 
+// Without this, a hung connection (no reset, just no response — the real-world case on a lossy
+// VPN, confirmed live during issue #115's remote benchmark) relies on the browser's own default
+// TCP timeout to ever throw and trigger a retry, which can run into the tens of seconds — the
+// user just sees a stuck page with no feedback. Aborting explicitly caps that wait and lets the
+// retry loop below actually do its job promptly instead of waiting on the OS.
+const REQUEST_TIMEOUT_MS = 5000;
+
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Retries only on a genuine network failure (fetch() itself throwing) — never on a real HTTP
-// response, even an error one, since that means the server was reachable and responded.
+// Retries only on a genuine network failure (fetch() itself throwing, including our own
+// timeout-triggered abort below) — never on a real HTTP response, even an error one, since that
+// means the server was reachable and responded.
 async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
     let lastError: unknown;
     for (let attempt = 0; attempt <= RETRY_ATTEMPTS; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
         try {
-            return await fetch(url, init);
+            return await fetch(url, { ...init, signal: controller.signal });
         } catch (err) {
             lastError = err;
             if (attempt < RETRY_ATTEMPTS) {
                 await sleep(RETRY_BASE_DELAY_MS * 2 ** attempt);
             }
+        } finally {
+            clearTimeout(timeoutId);
         }
     }
     throw new ApiNetworkError(lastError instanceof Error ? lastError.message : 'Network error');
