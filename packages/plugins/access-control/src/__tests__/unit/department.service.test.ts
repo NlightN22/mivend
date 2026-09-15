@@ -27,7 +27,12 @@ describe('DepartmentService', () => {
         repo.findOne.mockResolvedValue(null);
         await service.upsert(ctx, { erpId: 'dept-sales', name: 'Sales' });
         expect(repo.create).toHaveBeenCalledWith(
-            expect.objectContaining({ erpId: 'dept-sales', name: 'Sales', parentErpId: null }),
+            expect.objectContaining({
+                erpId: 'dept-sales',
+                name: 'Sales',
+                parentErpId: null,
+                isActive: true,
+            }),
         );
         expect(repo.save).toHaveBeenCalled();
     });
@@ -39,11 +44,37 @@ describe('DepartmentService', () => {
             erpId: 'dept-sales',
             name: 'New name',
             parentErpId: 'dept-hq',
+            isActive: false,
         });
         expect(repo.create).not.toHaveBeenCalled();
         expect(repo.save).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'New name', parentErpId: 'dept-hq' }),
+            expect.objectContaining({ name: 'New name', parentErpId: 'dept-hq', isActive: false }),
         );
+    });
+
+    // mivend.issue.88 follow-up: erp-import's own DepartmentRecordDto never carried isActive —
+    // omitting it must default to active, never leave the column undefined.
+    it('defaults isActive to true when omitted from the input (erp-import path)', async () => {
+        repo.findOne.mockResolvedValue(null);
+        await service.upsert(ctx, { erpId: 'dept-sales', name: 'Sales' });
+        expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ isActive: true }));
+    });
+
+    describe('setActiveStateIfExists', () => {
+        it('updates isActive on an existing department and returns true', async () => {
+            const existing = { erpId: 'dept-sales', name: 'Sales', isActive: true };
+            repo.findOne.mockResolvedValue(existing);
+            const result = await service.setActiveStateIfExists(ctx, 'dept-sales', false);
+            expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ isActive: false }));
+            expect(result).toBe(true);
+        });
+
+        it('does nothing and returns false when no department matches erpId', async () => {
+            repo.findOne.mockResolvedValue(null);
+            const result = await service.setActiveStateIfExists(ctx, 'dept-unknown', false);
+            expect(repo.save).not.toHaveBeenCalled();
+            expect(result).toBe(false);
+        });
     });
 
     it('findAll returns rows ordered by name', async () => {

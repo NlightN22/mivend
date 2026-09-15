@@ -22,14 +22,34 @@ export class DepartmentStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
-        const name = String(payload.name ?? '');
+        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
+        // bool zero-value omission). isDeleted folds in the same way every sibling handler does
+        // (mivend.issue.88 follow-up, 2026-09-15) — this handler previously never read either
+        // field at all, despite DepartmentChanged carrying both; a deactivated/deleted 1C
+        // department had no way to reflect that locally (Department had no isActive column).
+        const isActive = payload.isActive === true && payload.isDeleted !== true;
+
+        const name = payload.name ? String(payload.name) : null;
         if (!name) {
-            Logger.warn(`department ${entityId}: missing name, skipping`, loggerCtx);
+            // A deletion tombstone never carries a name (confirmed for organization/warehouse/
+            // category — same shape here). Still update isActive on an already-known
+            // department; never fabricate a brand-new one with a blank name.
+            const updated = await this.departmentService.setActiveStateIfExists(
+                ctx,
+                entityId,
+                isActive,
+            );
+            if (!updated) {
+                Logger.warn(
+                    `department ${entityId}: missing name and no existing row, skipping`,
+                    loggerCtx,
+                );
+            }
             return;
         }
         const parentErpId = payload.parentId ? String(payload.parentId) : null;
 
-        await this.departmentService.upsert(ctx, { erpId: entityId, name, parentErpId });
+        await this.departmentService.upsert(ctx, { erpId: entityId, name, parentErpId, isActive });
         Logger.verbose(`Upserted department erpId=${entityId}`, loggerCtx);
     }
 }
