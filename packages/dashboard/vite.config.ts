@@ -18,6 +18,12 @@ export default defineConfig(() => {
     const apiTarget = process.env.VITE_API_TARGET ?? 'http://localhost:3000';
 
     return {
+        build: {
+            // Vite's default build output dir is `assets/`, which collides with the `/assets`
+            // proxy rule below (Vendure's own product-image assetUrlPrefix) — see
+            // packages/storefront/vite.config.ts for the full explanation (issue #115).
+            assetsDir: '_app',
+        },
         server: {
             port: parseInt(process.env.VITE_PORT ?? '5175'),
             host: '0.0.0.0',
