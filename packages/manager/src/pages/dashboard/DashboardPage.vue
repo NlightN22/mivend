@@ -29,7 +29,6 @@ import ActivityFeed from '../../components/dashboard/ActivityFeed.vue';
 import IntegrationInboxErrorsPanel from '../../components/dashboard/IntegrationInboxErrorsPanel.vue';
 import ReservationReconciliationPanel from '../../components/dashboard/ReservationReconciliationPanel.vue';
 import PaymentReconciliationPanel from '../../components/dashboard/PaymentReconciliationPanel.vue';
-import ErpReconciliationPanel from '../../components/dashboard/ErpReconciliationPanel.vue';
 
 const authStore = useAuthStore();
 const data = ref<DashboardData | null>(null);
@@ -38,7 +37,6 @@ const expiringDiscounts = ref<ExpiringDiscount[]>([]);
 const failedInboxEvents = ref<FailedIntegrationInboxEvent[]>([]);
 const reservationIssues = ref<NotificationItem[]>([]);
 const paymentIssues = ref<NotificationItem[]>([]);
-const erpIssues = ref<NotificationItem[]>([]);
 const loading = ref(true);
 
 // Small, fixed row cap for dashboard attention panels — these are "is anything on fire" widgets,
@@ -95,9 +93,7 @@ onMounted(async () => {
         // individually so one plugin's outage (or, right now, one query not deployed yet) never
         // blanks the whole dashboard, same reasoning as the department-name fetch below.
         const wantsReconciliationPanels =
-            authStore.hasPermission('ReadOrder') ||
-            authStore.hasPermission('ReadPayment') ||
-            authStore.hasPermission('ManageErpIntegration');
+            authStore.hasPermission('ReadOrder') || authStore.hasPermission('ReadPayment');
 
         const [dashboard, grants, failedEvents, unreadNotifications] = await Promise.all([
             fetchDashboardData(),
@@ -108,11 +104,11 @@ onMounted(async () => {
                       return [];
                   })
                 : Promise.resolve([]),
-            // The three reconciliation panels below all read from this single generic
+            // The two reconciliation panels below both read from this single generic
             // notifications(status: 'unread') query (issue #87), filtered client-side by
-            // sourceType — see ReservationReconciliationPanel/PaymentReconciliationPanel/
-            // ErpReconciliationPanel and the sourceType strings each plugin's reconciliation
-            // service writes.
+            // sourceType — see ReservationReconciliationPanel/PaymentReconciliationPanel
+            // and the sourceType strings each plugin's reconciliation service writes.
+            // (ErpReconciliationPanel moved to Settings > System Health — issue #98.)
             wantsReconciliationPanels
                 ? fetchNotifications({ status: 'unread' })
                       .then(page => page.items)
@@ -129,9 +125,6 @@ onMounted(async () => {
             .slice(0, HEALTH_PANEL_TAKE);
         paymentIssues.value = unreadNotifications
             .filter(n => n.sourceType === 'payment-reconciliation')
-            .slice(0, HEALTH_PANEL_TAKE);
-        erpIssues.value = unreadNotifications
-            .filter(n => n.sourceType === 'erp-reconciliation')
             .slice(0, HEALTH_PANEL_TAKE);
         // One grant can list several customers (see DiscountGrant.counterparties) — the banner
         // shows one line per customer, same shape as the design mock.
@@ -224,20 +217,6 @@ onMounted(async () => {
 
                 <MvPanel v-if="authStore.hasPermission('ReadPayment')" title="Payment reconciliation">
                     <PaymentReconciliationPanel :notifications="paymentIssues" />
-                </MvPanel>
-
-                <MvPanel v-if="authStore.hasPermission('ManageErpIntegration')" title="ERP reconciliation">
-                    <ErpReconciliationPanel
-                        :notifications="erpIssues"
-                        @refresh="
-                            fetchNotifications({ status: 'unread' }).then(
-                                page =>
-                                    (erpIssues = page.items
-                                        .filter(n => n.sourceType === 'erp-reconciliation')
-                                        .slice(0, HEALTH_PANEL_TAKE)),
-                            )
-                        "
-                    />
                 </MvPanel>
             </div>
 

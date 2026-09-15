@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
+import type { NotificationItem } from '@mivend/ui-kit';
 import { IconCircleCheck, IconAlertTriangle } from '@tabler/icons-vue';
 import { useAuthStore } from '../../stores/auth';
 import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
@@ -9,11 +10,18 @@ import {
     fetchSystemHealthData,
     type SystemHealthCheckItem,
 } from '../../api/system-health';
+import { fetchNotifications } from '../../api/notifications';
+import ErpReconciliationPanel from '../../components/dashboard/ErpReconciliationPanel.vue';
+
+// ERP reconciliation panel take cap — same fixed-row-cap reasoning as the Dashboard's own
+// health panels before this moved here (issue #98).
+const HEALTH_PANEL_TAKE = 10;
 
 const authStore = useAuthStore();
 const checklist = ref<SystemHealthCheckItem[]>([]);
 const loading = ref(true);
 const error = ref('');
+const erpIssues = ref<NotificationItem[]>([]);
 
 async function load(): Promise<void> {
     loading.value = true;
@@ -28,8 +36,21 @@ async function load(): Promise<void> {
     }
 }
 
+async function loadErpIssues(): Promise<void> {
+    try {
+        const page = await fetchNotifications({ status: 'unread' });
+        erpIssues.value = page.items
+            .filter(n => n.sourceType === 'erp-reconciliation')
+            .slice(0, HEALTH_PANEL_TAKE);
+    } catch (e) {
+        console.warn('[system-health] could not load ERP reconciliation notifications:', e);
+        erpIssues.value = [];
+    }
+}
+
 onMounted(() => {
     if (authStore.hasPermission('ManageAccessControl')) void load();
+    if (authStore.hasPermission('ManageErpIntegration')) void loadErpIssues();
 });
 </script>
 
@@ -65,6 +86,10 @@ onMounted(() => {
                     <p v-if="item.detail" class="system-health-page__detail">{{ item.detail }}</p>
                 </li>
             </ul>
+        </MvPanel>
+
+        <MvPanel v-if="authStore.hasPermission('ManageErpIntegration')" title="ERP reconciliation">
+            <ErpReconciliationPanel :notifications="erpIssues" @refresh="loadErpIssues" />
         </MvPanel>
     </div>
 </template>
