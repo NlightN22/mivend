@@ -8,6 +8,9 @@ describe('ReservationReconciliationIssueService', () => {
         findOne: ReturnType<typeof vi.fn>;
         create: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
+        // Only assigned by the nested 'findOpen scope filtering' describe block below — optional
+        // here so that assignment doesn't need a `tsc -b`-unfriendly cast (issue #115).
+        createQueryBuilder?: ReturnType<typeof vi.fn>;
     };
     let connection: { getRepository: ReturnType<typeof vi.fn> };
     let notificationService: { create: ReturnType<typeof vi.fn> };
@@ -134,14 +137,18 @@ describe('ReservationReconciliationIssueService', () => {
     describe('findOpen scope filtering', () => {
         function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
             const qb: Record<string, ReturnType<typeof vi.fn>> = {};
-            qb.where = vi.fn(() => qb);
-            qb.leftJoin = vi.fn(() => qb);
-            qb.andWhere = vi.fn(() => qb);
-            qb.orderBy = vi.fn(() => qb);
-            qb.addOrderBy = vi.fn(() => qb);
-            qb.take = vi.fn(() => qb);
-            qb.skip = vi.fn(() => qb);
-            qb.getManyAndCount = vi.fn(async () => [[], 0]);
+            // .mockReturnThis() (not `vi.fn(() => qb)`) avoids a self-referential generic that
+            // `tsc -b`'s stricter project-build typecheck rejects (not caught by `make test`'s
+            // plain vitest run — surfaced only when packages/dashboard's Docker build ran
+            // `pnpm build:plugins`, issue #115).
+            qb.where = vi.fn().mockReturnThis();
+            qb.leftJoin = vi.fn().mockReturnThis();
+            qb.andWhere = vi.fn().mockReturnThis();
+            qb.orderBy = vi.fn().mockReturnThis();
+            qb.addOrderBy = vi.fn().mockReturnThis();
+            qb.take = vi.fn().mockReturnThis();
+            qb.skip = vi.fn().mockReturnThis();
+            qb.getManyAndCount = vi.fn(async () => [[], 0]) as ReturnType<typeof vi.fn>;
             return qb;
         }
 
@@ -153,7 +160,7 @@ describe('ReservationReconciliationIssueService', () => {
 
         beforeEach(() => {
             qb = mockQueryBuilder();
-            repo.createQueryBuilder = vi.fn(() => qb) as never;
+            repo.createQueryBuilder = vi.fn(() => qb);
             accessScopeService = {
                 resolveOrderScope: vi.fn(),
                 applyOwnCounterpartyFilter: vi.fn(),

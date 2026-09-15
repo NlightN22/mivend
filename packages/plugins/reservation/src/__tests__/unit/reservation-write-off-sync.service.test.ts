@@ -6,7 +6,7 @@ import { ReservationReconciliationIssueService } from '../../reservation-reconci
 import { ReservationService } from '../../reservation.service';
 
 describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
-    let orderRepo: { findOne: ReturnType<typeof vi.fn> };
+    let orderRepo: { findOne: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
     let reservationRepo: {
         find: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
