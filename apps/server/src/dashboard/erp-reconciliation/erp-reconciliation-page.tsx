@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     api,
     graphql,
@@ -116,9 +116,14 @@ export function ErpReconciliationPage() {
         }
     }
 
-    if (!loaded && !running) {
+    // A real mutation with backend cost (a full comparison run against Integration Service),
+    // not an idempotent read like the `if (!loaded) void load()` render-time pattern used
+    // elsewhere in this codebase (e.g. branches-page.tsx) — that pattern is only safe for a
+    // query. Effect + empty deps guarantees loadAndRun fires exactly once per mount, even under
+    // React 18 dev StrictMode's double-invocation.
+    useEffect(() => {
         void loadAndRun();
-    }
+    }, []);
 
     async function handleResolve(issueId: string): Promise<void> {
         const resolution = (resolutionDrafts[issueId] ?? '').trim();
@@ -128,6 +133,10 @@ export function ErpReconciliationPage() {
         try {
             await api.mutate(resolveIssueDocument, { id: issueId, resolution });
             await loadIssues();
+            setResolutionDrafts(prev => {
+                const { [issueId]: _removed, ...rest } = prev;
+                return rest;
+            });
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Could not resolve issue');
         } finally {
