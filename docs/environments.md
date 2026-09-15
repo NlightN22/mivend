@@ -193,7 +193,13 @@ loops back via `lo` and proves nothing).
 `@nlightn22/event-contracts` version staging/prod actually use, not just whatever happens to be
 locally pinned — not yet implemented, tracked under issue #68's checklist.
 
-`packages/dashboard` (issue #77) has no production build/serve story yet — every contour
-(including staging-integration) currently serves it via the raw Vite dev server, same as
-`packages/storefront`/`packages/manager` today. `vite build`/`vite preview` scripts exist but
-nothing runs them; deliberately deferred, not scheduled.
+`packages/storefront`/`packages/manager` now have a real production build/serve pipeline
+(`Dockerfile` + nginx, issue #115) — but every contour, including staging-integration, still
+serves them via the raw Vite dev server today; nothing has actually deployed the new images yet.
+See `docs/frontend-load-benchmarks.md` for the measurement methodology (no real baseline numbers
+recorded yet either, for the same reason).
+
+`packages/dashboard` (issue #77) still has no production build/serve story — same raw-Vite-dev-
+server gap, not yet addressed by #115 (deliberately scoped to storefront/manager first; dashboard
+uses Vendure's own dashboard plugin, a different constraint — see #115's own text on why it was
+left for a follow-up decision).
