@@ -46,23 +46,49 @@ export function OrganizationsPage() {
                 data as the manager portal's Settings → Organizations page.
             </p>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <colgroup>
+                    <col style={{ width: '34%' }} />
+                    <col style={{ width: '30%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '20%' }} />
+                </colgroup>
                 <thead>
                     <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-                        <th style={{ padding: '6px 0' }}>Legal name</th>
-                        <th style={{ padding: '6px 0' }}>ERP id</th>
-                        <th style={{ padding: '6px 0' }}>Active</th>
+                        <th style={{ padding: '6px 16px 6px 0' }}>Legal name</th>
+                        <th style={{ padding: '6px 16px 6px 0' }}>ERP id</th>
+                        <th style={{ padding: '6px 16px 6px 0' }}>Active</th>
                         <th style={{ padding: '6px 0' }}>Requisites complete</th>
                     </tr>
                 </thead>
                 <tbody>
                     {organizations.map(org => (
                         <tr key={org.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                            <td style={{ padding: '6px 0' }}>{org.legalName}</td>
-                            <td style={{ padding: '6px 0', color: '#6b7280', fontFamily: 'monospace' }}>
+                            <td
+                                style={{
+                                    padding: '6px 16px 6px 0',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}
+                                title={org.legalName}
+                            >
+                                {org.legalName}
+                            </td>
+                            <td
+                                style={{
+                                    padding: '6px 16px 6px 0',
+                                    color: '#6b7280',
+                                    fontFamily: 'monospace',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}
+                                title={org.erpId}
+                            >
                                 {org.erpId}
                             </td>
-                            <td style={{ padding: '6px 0' }}>{org.isActive ? 'Yes' : 'No'}</td>
+                            <td style={{ padding: '6px 16px 6px 0' }}>{org.isActive ? 'Yes' : 'No'}</td>
                             <td style={{ padding: '6px 0' }}>
                                 {org.hasCompleteRequisites ? 'Yes' : 'No'}
                             </td>
