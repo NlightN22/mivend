@@ -52,6 +52,45 @@ An alert's `check()` must fail closed (return the "nothing to report" value, e.g
 `false`) inside a `try/catch` — a viewer lacking the underlying query's permission, or a
 transient network error, must never crash the whole `<Alerts>` shell for every other extension.
 
+## UI: use `@vendure/dashboard`'s own components first, never raw HTML/inline styles
+
+`@vendure/dashboard` re-exports a full set of themed UI primitives built on its own design
+tokens — `Table`/`TableHeader`/`TableRow`/`TableHead`/`TableBody`/`TableCell`, `Button`, `Input`,
+`Badge`, and more (grep `node_modules/@vendure/dashboard/src/lib/components` for the full list
+before assuming one doesn't exist). **Always reach for these first, exactly like a page in this
+repo already using them (e.g. `erp-reconciliation-page.tsx`) — never hand-roll a bare `<table>`/
+`<div>`/`<button>` with inline `style={{ ... }}` objects or made-up hex colors, and never invent
+your own Tailwind utility soup as a substitute for a component that already exists.**
+
+- A raw `<table>` with `style={{ padding: '6px 0' }}` on every cell has no real column model —
+  no shared row height, no consistent horizontal gap between columns, no responsive behavior.
+  Real incident: `organizations-page.tsx`'s first version did exactly this — cells had _only_
+  vertical padding, so a monospace ERP-id GUID column visually ran into the adjacent Legal-name
+  column with no gap at all. The fix was not "add more inline styles" (a second bad attempt
+  tried hardcoded percentage column widths via `<colgroup>`, which is inflexible and still not
+  what any other page in this codebase does) — it was replacing the whole hand-rolled table with
+  `@vendure/dashboard`'s own `Table`/`TableRow`/`TableCell` components, matching
+  `erp-reconciliation-page.tsx`'s existing pattern exactly. Those components already carry
+  correct, consistent per-cell padding and a stretchable (not fixed-percentage) column layout
+  out of the box — there was nothing left to hand-tune.
+- Inline hex colors (`color: '#666'`, `background: '#111827'`) also silently break dark mode —
+  they don't track the admin theme's CSS variables, so a page that "renders" in a quick check can
+  look visibly wrong (wrong contrast, mismatched background) the moment a viewer's theme differs
+  from whatever the author's browser happened to be in. Use the component's own variant props
+  (`<Badge variant="secondary">`, `<Button variant="outline">`) or the theme's own Tailwind
+  utility classes (`text-muted-foreground`, `text-destructive`) instead — both are already wired
+  to the same design tokens as the rest of the app, including `packages/dashboard`'s dedicated
+  `extension-tailwind.css` build that makes these classes available to extension source files.
+- Only fall back to a bare HTML element with your own styling if you've actually checked
+  `@vendure/dashboard`'s component exports and confirmed nothing fits (rare) — and if so, prefer
+  Tailwind utility classes tied to the theme's tokens over inline `style={{ ... }}` hex values,
+  same reasoning as above.
+- This applies to every new page/alert action, not just tables — buttons, inputs, form layout,
+  status indicators. `erp-reconciliation-page.tsx` is the fullest current reference for the
+  pattern (`Button`, `Input`, `Table`, `Badge` together); `branches-page.tsx` predates this rule
+  and still uses raw HTML — don't copy its styling, only its data-flow shape (see "Required
+  layout" above), and feel free to fix it to match this rule if you're touching it anyway.
+
 ## Mandatory dev gotcha: plugin-discovery is scan-once, not watched
 
 `@vendure/dashboard`'s Vite dev server scans every plugin's `dashboard:` path **once, at that
@@ -67,17 +106,16 @@ process's own startup** — it is not part of the file-watch/HMR loop. Concretel
 - **Restarting `apps/server`'s `main.ts`/`worker.ts` does not fix this either** — the dashboard
   Vite server is a completely separate process/port per contour. You must restart _that specific
   contour's_ `packages/dashboard` dev server:
-    ```
-    # find it: ss -ltnp | grep <port>   (5175 local, 5185 staging-integration)
+  `     # find it: ss -ltnp | grep <port>   (5175 local, 5185 staging-integration)
     # kill that PID, then restart with the exact same env it was launched with, e.g.:
     pnpm --filter @mivend/dashboard dev                                    # local
     VITE_API_TARGET=http://localhost:3010 VITE_PORT=5185 \
       pnpm --filter @mivend/dashboard exec vite --mode staging-integration # staging-integration
-    ```
-    Confirm the restart actually picked up the new extension by checking its own startup log line:
-    `Analyzed plugins and found N dashboard extensions` / `Found N plugins (N active in runtime
+    `
+  Confirm the restart actually picked up the new extension by checking its own startup log line:
+  `Analyzed plugins and found N dashboard extensions` / `Found N plugins (N active in runtime
 config): <YourNewPlugin> (local), ...` — if your plugin isn't named there, the restart didn't
-    take (wrong process killed, or a build/compile error upstream) and the page will keep 404ing.
+  take (wrong process killed, or a build/compile error upstream) and the page will keep 404ing.
 - Per the `dev-environment` skill's rules: this is the one narrow, legitimate case for
   restarting a single component's dev process directly instead of a full `make dev` cycle — do
   it, verify, and don't touch anything else (Docker infra, the other contour, `apps/server`).
