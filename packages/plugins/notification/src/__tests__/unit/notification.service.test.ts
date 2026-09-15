@@ -264,6 +264,48 @@ describe('NotificationService.resolveBySource', () => {
         expect(result.every(n => n.resolvedAt instanceof Date)).toBe(true);
     });
 
+    // The whole reason this matches by (sourceType, sourceId) alone and never filters by
+    // recipientId: NotificationService.create's own dedupe-by-source lookup is keyed on
+    // recipientId too, so a manual reconciliation run (recipientId=some admin) followed later by
+    // a scheduled run for the same still-open issue (recipientId=null) misses that dedupe lookup
+    // and inserts a SECOND notification row for the same source instead of updating the first.
+    // Both rows must still be closed out when the source issue resolves, or the first one is
+    // orphaned "unread" forever.
+    it('resolves every row for the source even when they carry different (or null) recipientIds', async () => {
+        const open = [
+            new Notification({
+                id: 'notif-1',
+                ...baseInput,
+                recipientId: 'admin-1',
+                status: 'unread',
+                resolvedAt: null,
+                resolution: null,
+            }),
+            new Notification({
+                id: 'notif-2',
+                ...baseInput,
+                recipientId: null,
+                status: 'unread',
+                resolvedAt: null,
+                resolution: null,
+            }),
+        ];
+        const save = vi.fn().mockImplementation(async (rows: Notification[]) => rows);
+        const find = vi.fn().mockResolvedValue(open);
+        const connection = { getRepository: () => ({ find, save }) };
+        const service = new NotificationService(connection as never, { publish: vi.fn() } as never);
+
+        const result = await service.resolveBySource(
+            {} as never,
+            { sourceType: baseInput.sourceType, sourceId: baseInput.sourceId },
+            'auto-resolved on reconciliation',
+        );
+
+        expect(result).toHaveLength(2);
+        expect(result.map(n => n.recipientId).sort()).toEqual([null, 'admin-1'].sort());
+        expect(result.every(n => n.status === 'resolved')).toBe(true);
+    });
+
     it('is a no-op when nothing open exists for the source', async () => {
         const save = vi.fn();
         const find = vi.fn().mockResolvedValue([]);

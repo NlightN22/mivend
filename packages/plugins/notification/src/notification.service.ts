@@ -229,11 +229,13 @@ export class NotificationService {
     // For a producer (e.g. ReconciliationService) whose own source record just transitioned to
     // resolved to close out the notification(s) it raised — otherwise the alert sits "unread"
     // forever with stale numbers even after the underlying drift is gone (issue #99). Matches by
-    // (sourceType, sourceId) only, not recipientId: a source-level resolution applies to every
-    // recipient it notified, and the producer's own "who to notify" bookkeeping (e.g.
-    // ErpReconciliationIssue.triggeredByAdministratorId) can drift out of sync with which
-    // recipientId the original notification actually carries, so re-deriving that recipient here
-    // would be fragile where matching on the source identity alone is not.
+    // (sourceType, sourceId) only, never recipientId: create()'s own dedupe-by-source lookup is
+    // itself keyed on recipientId, so a manual run (recipientId=some admin) followed later by a
+    // scheduled run for the same still-open issue (recipientId=null) misses that dedupe and
+    // inserts a SECOND row for the same source rather than updating the first — multiple rows
+    // with different (or null) recipientIds for one source is a real, not hypothetical, state.
+    // Filtering this query by recipientId would leave whichever row doesn't match orphaned
+    // "unread" forever; matching on source identity alone resolves all of them.
     async resolveBySource(
         ctx: RequestContext,
         source: { sourceType: string; sourceId: string },
