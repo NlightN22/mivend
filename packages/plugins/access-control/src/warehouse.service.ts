@@ -75,6 +75,24 @@ export class WarehouseService {
         return this.connection.getRepository(ctx, Warehouse).findOne({ where: { erpId } });
     }
 
+    // mivend.issue.84.88 follow-up: Integration Service's `warehouse` deletion tombstones never
+    // carry a name (confirmed against real staging-integration payloads) — this lets a caller
+    // update isActive on an already-known warehouse without fabricating a name. A deliberate
+    // no-op (returns false) when no Warehouse matches erpId yet — a deletion tombstone must
+    // never create a brand-new row.
+    async setActiveStateIfExists(
+        ctx: RequestContext,
+        erpId: string,
+        isActive: boolean,
+    ): Promise<boolean> {
+        const repo = this.connection.getRepository(ctx, Warehouse);
+        const warehouse = await repo.findOne({ where: { erpId } });
+        if (!warehouse) return false;
+        warehouse.isActive = isActive;
+        await repo.save(warehouse);
+        return true;
+    }
+
     // Shared branch->StockLocation join, extracted so every caller that needs "which
     // StockLocations belong to this order's branch" (erp-integration's
     // BranchStockLocationStrategy, plugin-reservation's ReservationService) resolves it the same

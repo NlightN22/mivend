@@ -26,11 +26,13 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
-        const name = String(payload.name ?? '');
-        if (!name) {
-            Logger.warn(`organization ${entityId}: missing name, skipping`, loggerCtx);
-            return;
-        }
+        // A deletion tombstone (isDeleted:true) never carries a name — confirmed against real
+        // staging-integration payloads (mivend.issue.84.88 follow-up). Previously a missing name
+        // skipped the event entirely, which meant an org already known locally could never be
+        // deactivated by its own deletion event. `name: null` here still lets upsertActiveState
+        // update isActive on an existing row; it only refuses to fabricate a brand-new row with
+        // a blank name (see that method's own comment).
+        const name = payload.name ? String(payload.name) : null;
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
         // zero-value omission). isDeleted folds in the same way every sibling handler does
         // (warehouse/price/stock/category) — Integration Service can send isActive:true and
@@ -42,6 +44,14 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 
         await this.documentsService.upsertActiveState(ctx, entityId, name, isActive);
+        if (!name) {
+            Logger.verbose(
+                `organization ${entityId}: no name (deletion tombstone) — updated active ` +
+                    `state only if a row already existed, never created one`,
+                loggerCtx,
+            );
+            return;
+        }
         Logger.verbose(`Upserted organization erpId=${entityId}`, loggerCtx);
     }
 }

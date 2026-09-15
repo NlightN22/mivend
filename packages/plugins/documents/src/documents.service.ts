@@ -192,21 +192,29 @@ export class DocumentsService {
     // erp-import's own record arrives (if it ever does in this contour) — never fabricated here.
     // PdfGeneratorService refuses to render an invoice/contract against a row still missing them
     // (see assertRequisitesComplete).
+    //
+    // `name: null` (mivend.issue.84.88 follow-up): Integration Service's `organization` deletion
+    // tombstones never carry a name, only entityId/isDeleted — confirmed against real
+    // staging-integration payloads. A null name updates isActive on an already-known
+    // organization without touching legalName, and is a deliberate no-op (never creates a row)
+    // when no existing row matches erpId — a deletion tombstone must never fabricate a brand-new
+    // organization with a blank name.
     async upsertActiveState(
         ctx: RequestContext,
         erpId: string,
-        name: string,
+        name: string | null,
         isActive: boolean,
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, OrganizationRequisites);
-        let entity = await repo.findOne({ where: { erpId } });
+        const entity = await repo.findOne({ where: { erpId } });
         if (entity) {
-            entity.legalName = name;
+            if (name) entity.legalName = name;
             entity.isActive = isActive;
-        } else {
-            entity = repo.create({ erpId, legalName: name, isActive });
+            await repo.save(entity);
+            return;
         }
-        await repo.save(entity);
+        if (!name) return;
+        await repo.save(repo.create({ erpId, legalName: name, isActive }));
     }
 
     // PdfGeneratorService's guard before rendering any document against a given

@@ -112,6 +112,27 @@ describe('WarehouseService', () => {
         );
     });
 
+    // mivend.issue.84.88 follow-up: a deletion tombstone from Integration Service never carries
+    // a name — this method lets a caller update isActive without fabricating one.
+    describe('setActiveStateIfExists', () => {
+        it('updates isActive on an existing warehouse and returns true', async () => {
+            const existing = { erpId: 'wh-1', name: 'Old', branchId: 'branch-1', isActive: true };
+            warehouseRepo.findOne.mockResolvedValue(existing);
+            const result = await service.setActiveStateIfExists(ctx, 'wh-1', false);
+            expect(warehouseRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({ isActive: false }),
+            );
+            expect(result).toBe(true);
+        });
+
+        it('does nothing and returns false when no warehouse matches erpId', async () => {
+            warehouseRepo.findOne.mockResolvedValue(null);
+            const result = await service.setActiveStateIfExists(ctx, 'wh-unknown', false);
+            expect(warehouseRepo.save).not.toHaveBeenCalled();
+            expect(result).toBe(false);
+        });
+    });
+
     it('findByErpId queries by erpId', async () => {
         await service.findByErpId(ctx, 'wh-1');
         expect(warehouseRepo.findOne).toHaveBeenCalledWith({ where: { erpId: 'wh-1' } });

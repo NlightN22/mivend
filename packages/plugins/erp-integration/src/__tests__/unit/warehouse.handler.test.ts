@@ -24,8 +24,11 @@ function createConnection(existingLocation: { id: string } | undefined): {
 describe('WarehouseStreamHandler', () => {
     const ctx = {} as RequestContext;
 
-    it('skips when name is missing', async () => {
-        const warehouseService = { upsert: vi.fn() };
+    it('skips (no upsert, no update) when name is missing and no existing warehouse matches', async () => {
+        const warehouseService = {
+            upsert: vi.fn(),
+            setActiveStateIfExists: vi.fn().mockResolvedValue(false),
+        };
         const stockLocationService = { create: vi.fn(), update: vi.fn() };
         const handler = new WarehouseStreamHandler(
             warehouseService as never,
@@ -36,6 +39,30 @@ describe('WarehouseStreamHandler', () => {
         await handler.apply(ctx, 'wh-1', { branchId: 'branch-guid' });
 
         expect(warehouseService.upsert).not.toHaveBeenCalled();
+        expect(warehouseService.setActiveStateIfExists).toHaveBeenCalledWith(ctx, 'wh-1', false);
+    });
+
+    // A deletion tombstone never carries a name (confirmed against real staging-integration
+    // payloads, mivend.issue.84.88 follow-up) — must still deactivate an already-known warehouse
+    // instead of silently skipping the event entirely (the previous behavior).
+    it('updates isActive only, via setActiveStateIfExists, when name is missing but the warehouse already exists', async () => {
+        const warehouseService = {
+            upsert: vi.fn(),
+            setActiveStateIfExists: vi.fn().mockResolvedValue(true),
+        };
+        const stockLocationService = { create: vi.fn(), update: vi.fn() };
+        const handler = new WarehouseStreamHandler(
+            warehouseService as never,
+            stockLocationService as never,
+            createConnection(undefined) as never,
+        );
+
+        await handler.apply(ctx, 'wh-1', { isDeleted: true });
+
+        expect(warehouseService.setActiveStateIfExists).toHaveBeenCalledWith(ctx, 'wh-1', false);
+        expect(warehouseService.upsert).not.toHaveBeenCalled();
+        expect(stockLocationService.create).not.toHaveBeenCalled();
+        expect(stockLocationService.update).not.toHaveBeenCalled();
     });
 
     // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON

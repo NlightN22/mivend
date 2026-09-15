@@ -30,11 +30,12 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
-        const name = String(payload.name ?? '');
-        if (!name) {
-            Logger.warn(`category ${entityId}: missing name, skipping`, loggerCtx);
-            return;
-        }
+        // A deletion tombstone (isDeleted:true) never carries a name — confirmed against real
+        // staging-integration payloads (mivend.issue.84.88 follow-up). `name: null` still lets
+        // an already-known category be hidden (isPrivate) below; only creating a brand-new
+        // facet value/Collection still requires a real name (see ensureFacetValue/
+        // ensureCollection — neither fabricates one).
+        const name = payload.name ? String(payload.name) : null;
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
         // bool zero-value omission).
         const isActive = payload.isActive === true;
@@ -42,7 +43,21 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         const isPrivate = !isActive || isDeleted;
 
         const facet = await this.ensureCategoryFacet(ctx);
-        const facetValue = await this.ensureFacetValue(ctx, facet, entityId, name);
+        const existingFacetValue = await this.findFacetValue(ctx, facet, entityId);
+        if (!existingFacetValue && !name) {
+            Logger.warn(
+                `category ${entityId}: missing name and no existing facet value, skipping`,
+                loggerCtx,
+            );
+            return;
+        }
+        const facetValue = await this.ensureFacetValue(
+            ctx,
+            facet,
+            entityId,
+            name,
+            existingFacetValue,
+        );
         await this.ensureCollection(ctx, entityId, name, String(facetValue.id), isPrivate);
     }
 
@@ -74,15 +89,28 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         });
     }
 
-    private async ensureFacetValue(
+    private async findFacetValue(
         ctx: RequestContext,
         facet: { id: string | number },
         entityId: string,
-        name: string,
-    ): Promise<FacetValue> {
+    ): Promise<FacetValue | undefined> {
         const all = await this.facetValueService.findByFacetId(ctx, facet.id);
-        const existing = all.find(v => v.code === entityId);
+        return all.find(v => v.code === entityId);
+    }
+
+    // `name: null` only updates an already-found facet value's isActive-adjacent state via the
+    // caller's later isPrivate write on the Collection — the facet value's own name translation
+    // is left untouched rather than blanked. Creating a brand-new facet value still requires a
+    // real name; the caller (apply) already guarantees that when `existing` is undefined.
+    private async ensureFacetValue(
+        ctx: RequestContext,
+        facet: Facet,
+        entityId: string,
+        name: string | null,
+        existing: FacetValue | undefined,
+    ): Promise<FacetValue> {
         if (existing) {
+            if (!name) return existing;
             return this.facetValueService.update(ctx, {
                 id: existing.id,
                 translations: [{ languageCode: LanguageCode.en, name }],
@@ -91,20 +119,30 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         return this.facetValueService.create(ctx, facet as never, {
             facetId: String(facet.id),
             code: entityId,
-            translations: [{ languageCode: LanguageCode.en, name }],
+            // Guaranteed non-null here — apply() only reaches this branch (no existing facet
+            // value) when name is present.
+            translations: [{ languageCode: LanguageCode.en, name: name as string }],
         });
     }
 
     private async ensureCollection(
         ctx: RequestContext,
         entityId: string,
-        name: string,
+        name: string | null,
         facetValueId: string,
         isPrivate: boolean,
     ): Promise<void> {
         const slug = `cat-${entityId}`;
         const existing = await this.collectionService.findOneBySlug(ctx, slug);
+        if (!existing && !name) {
+            Logger.warn(
+                `category ${entityId}: missing name and no existing collection, skipping`,
+                loggerCtx,
+            );
+            return;
+        }
         const resolvedIsPrivate = this.resolveIsPrivate(isPrivate, existing as never);
+        const resolvedName = name ?? existing!.name;
         const filters = [
             {
                 code: 'facet-value-filter',
@@ -118,14 +156,18 @@ export class CategoryStreamHandler implements InboundStreamHandler {
             await this.collectionService.update(ctx, {
                 id: existing.id,
                 isPrivate: resolvedIsPrivate,
-                translations: [{ languageCode: LanguageCode.en, name, slug, description: '' }],
+                translations: [
+                    { languageCode: LanguageCode.en, name: resolvedName, slug, description: '' },
+                ],
                 filters,
             });
             return;
         }
         await this.collectionService.create(ctx, {
             isPrivate: resolvedIsPrivate,
-            translations: [{ languageCode: LanguageCode.en, name, slug, description: '' }],
+            translations: [
+                { languageCode: LanguageCode.en, name: resolvedName, slug, description: '' },
+            ],
             filters,
         });
     }

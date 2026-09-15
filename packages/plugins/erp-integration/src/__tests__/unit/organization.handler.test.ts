@@ -6,13 +6,17 @@ import { OrganizationStreamHandler } from '../../handlers/organization.handler';
 describe('OrganizationStreamHandler', () => {
     const ctx = {} as RequestContext;
 
-    it('skips when name is missing', async () => {
-        const documentsService = { upsertActiveState: vi.fn() };
+    // A deletion tombstone never carries a name (confirmed against real staging-integration
+    // payloads, mivend.issue.84.88 follow-up) — the handler must still forward the update so an
+    // already-known organization can be deactivated; DocumentsService.upsertActiveState is what
+    // refuses to fabricate a brand-new row from a null name, not this handler.
+    it('passes name:null through when the payload has no name (deletion tombstone)', async () => {
+        const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
         const handler = new OrganizationStreamHandler(documentsService as never);
 
-        await handler.apply(ctx, 'org-1', {});
+        await handler.apply(ctx, 'org-1', { isDeleted: true });
 
-        expect(documentsService.upsertActiveState).not.toHaveBeenCalled();
+        expect(documentsService.upsertActiveState).toHaveBeenCalledWith(ctx, 'org-1', null, false);
     });
 
     it('upserts name + isActive, never fabricating legal fields', async () => {

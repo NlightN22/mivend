@@ -30,15 +30,6 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
-        const name = String(payload.name ?? '');
-        if (!name) {
-            Logger.warn(`warehouse ${entityId}: missing name, skipping`, loggerCtx);
-            return;
-        }
-        // An empty/missing branchId (malformed payload) is handled the same as an unresolvable
-        // one — WarehouseService.upsert leaves branchId null either way, never a reason to skip
-        // creating the Warehouse itself.
-        const branchId = String(payload.branchId ?? '');
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
         // zero-value omission).
         const isActive = payload.isActive === true;
@@ -51,6 +42,31 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
             Logger.verbose(`Skipping folder warehouse node erpId=${entityId}`, loggerCtx);
             return;
         }
+
+        const name = payload.name ? String(payload.name) : null;
+        if (!name) {
+            // A deletion tombstone (isDeleted:true) never carries a name — confirmed against
+            // real staging-integration payloads (mivend.issue.84.88 follow-up). Still update
+            // isActive on an already-known warehouse; never fabricate a brand-new one with a
+            // blank name.
+            const updated = await this.warehouseService.setActiveStateIfExists(
+                ctx,
+                entityId,
+                isActive && !isDeleted,
+            );
+            if (!updated) {
+                Logger.warn(
+                    `warehouse ${entityId}: missing name and no existing row, skipping`,
+                    loggerCtx,
+                );
+            }
+            return;
+        }
+
+        // An empty/missing branchId (malformed payload) is handled the same as an unresolvable
+        // one — WarehouseService.upsert leaves branchId null either way, never a reason to skip
+        // creating the Warehouse itself.
+        const branchId = String(payload.branchId ?? '');
 
         await this.warehouseService.upsert(ctx, {
             erpId: entityId,

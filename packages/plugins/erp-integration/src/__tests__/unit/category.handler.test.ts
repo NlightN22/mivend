@@ -5,15 +5,16 @@ import { CategoryStreamHandler } from '../../handlers/category.handler';
 
 function createServices(
     existingCollection:
-        | { id: string; customFields?: { visibilityOverride?: string | null } }
+        | { id: string; name?: string; customFields?: { visibilityOverride?: string | null } }
         | undefined,
+    existingFacetValues: Array<{ id: string; code: string }> = [],
 ) {
     const facetService = {
         findByCode: vi.fn().mockResolvedValue({ id: 'facet-1' }),
         create: vi.fn(),
     };
     const facetValueService = {
-        findByFacetId: vi.fn().mockResolvedValue([]),
+        findByFacetId: vi.fn().mockResolvedValue(existingFacetValues),
         create: vi.fn().mockResolvedValue({ id: 'fv-1' }),
         update: vi.fn().mockResolvedValue({ id: 'fv-1' }),
     };
@@ -193,6 +194,50 @@ describe('CategoryStreamHandler', () => {
             ctx,
             expect.objectContaining({ id: 'col-1', isPrivate: true }),
         );
+    });
+
+    // A deletion tombstone (isDeleted:true) never carries a name — confirmed against real
+    // staging-integration payloads (mivend.issue.84.88 follow-up). Must still hide an
+    // already-known category rather than silently skip the event (the previous behavior), and
+    // must never blank its existing name translation while doing so.
+    it('hides an existing Collection on a nameless deletion tombstone, never touching its name', async () => {
+        const { facetService, facetValueService, collectionService } = createServices(
+            { id: 'col-1', name: 'Beverages' },
+            [{ id: 'fv-1', code: 'cat-1' }],
+        );
+        const handler = new CategoryStreamHandler(
+            facetService as never,
+            facetValueService as never,
+            collectionService as never,
+        );
+
+        await handler.apply(ctx, 'cat-1', { isDeleted: true });
+
+        expect(collectionService.update).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                id: 'col-1',
+                isPrivate: true,
+                translations: [expect.objectContaining({ name: 'Beverages' })],
+            }),
+        );
+        expect(facetValueService.update).not.toHaveBeenCalled();
+    });
+
+    it('skips (no create/update anywhere) when name is missing and neither facet value nor Collection exist yet', async () => {
+        const { facetService, facetValueService, collectionService } = createServices(undefined);
+        const handler = new CategoryStreamHandler(
+            facetService as never,
+            facetValueService as never,
+            collectionService as never,
+        );
+
+        await handler.apply(ctx, 'cat-1', { isDeleted: true });
+
+        expect(collectionService.create).not.toHaveBeenCalled();
+        expect(collectionService.update).not.toHaveBeenCalled();
+        expect(facetValueService.create).not.toHaveBeenCalled();
+        expect(facetValueService.update).not.toHaveBeenCalled();
     });
 
     it('a first-seen category with no existing Collection has no override to read and honors the feed', async () => {

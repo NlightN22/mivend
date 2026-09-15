@@ -256,6 +256,34 @@ describe('DocumentsService', () => {
                 }),
             );
         });
+
+        // mivend.issue.84.88 follow-up: a deletion tombstone never carries a name — must still
+        // update isActive on an already-known organization, never touching legalName.
+        it('updates isActive only when name is null but the row already exists', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'org-1',
+                legalName: 'Existing Name',
+                isActive: true,
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'org-1', null, false);
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    legalName: 'Existing Name',
+                    isActive: false,
+                }),
+            );
+        });
+
+        // Never fabricate a brand-new organization with a blank name — a deletion tombstone for
+        // an entity mivend never created locally must stay a true no-op.
+        it('does not create a row when name is null and none exists yet', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            await service.upsertActiveState(mockCtx, 'org-unknown', null, false);
+            expect(mockRepo.create).not.toHaveBeenCalled();
+            expect(mockRepo.save).not.toHaveBeenCalled();
+        });
     });
 
     describe('assertRequisitesComplete', () => {
