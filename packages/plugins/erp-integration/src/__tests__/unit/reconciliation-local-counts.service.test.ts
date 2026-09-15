@@ -50,9 +50,12 @@ describe('ReconciliationLocalCountsService', () => {
         return { service, collectionService, stockQueryBuilder };
     }
 
-    it('subtracts the root Collection from the category count', async () => {
+    // mivend.issue.84.88: root's own isPrivate defaults to true, so the isPrivate:false filter
+    // below already excludes it from totalItems on its own — no separate "-1" needed (an earlier
+    // version subtracted 1 unconditionally and silently undercounted every real category by one).
+    it('uses the isPrivate:false totalItems directly, with no root adjustment', async () => {
         const { service } = makeService({ collectionTotalItems: 6 });
-        expect(await service.getLocalActiveCount({} as never, 'category')).toBe(5);
+        expect(await service.getLocalActiveCount({} as never, 'category')).toBe(6);
     });
 
     // mivend.audit.85 HIGH finding: issue #90 hides a deactivated category's Collection via
@@ -65,11 +68,6 @@ describe('ReconciliationLocalCountsService', () => {
             {},
             expect.objectContaining({ filter: { isPrivate: { eq: false } } }),
         );
-    });
-
-    it('never returns a negative category count if the root is somehow absent', async () => {
-        const { service } = makeService({ collectionTotalItems: 0 });
-        expect(await service.getLocalActiveCount({} as never, 'category')).toBe(0);
     });
 
     it('counts only active organizations', async () => {

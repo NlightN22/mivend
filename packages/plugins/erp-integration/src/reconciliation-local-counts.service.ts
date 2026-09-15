@@ -108,17 +108,22 @@ export class ReconciliationLocalCountsService {
     }
 
     private async countCategories(ctx: RequestContext): Promise<number> {
-        // CategoryStreamHandler creates one Collection per category; CollectionService.findAll's
-        // own result always includes the root Collection Vendure creates at bootstrap, which is
-        // not itself a category — subtract it. isPrivate:false filters out categories
-        // CategoryStreamHandler has hidden on deactivation (issue #90) — without this filter a
-        // deactivated category still counted as present, defeating #90's own reconciliation fix
-        // (mivend.audit.85 HIGH finding).
+        // CategoryStreamHandler creates one Collection per category. isPrivate:false filters out
+        // categories CategoryStreamHandler has hidden on deactivation (issue #90) — without this
+        // filter a deactivated category still counted as present, defeating #90's own
+        // reconciliation fix (mivend.audit.85 HIGH finding).
+        //
+        // No "-1 for the root Collection" here: root's own isPrivate defaults to true in this
+        // instance, so the isPrivate:false filter above already excludes it on its own — an
+        // earlier version of this method subtracted 1 unconditionally regardless of the filter,
+        // silently discarding one real category every run (confirmed live: isPrivate:false
+        // returned exactly Integration Service's own active count, 452, with no root present
+        // among the results at all — mivend.issue.84.88, 2026-09-15).
         const { totalItems } = await this.collectionService.findAll(ctx, {
             take: 1,
             filter: { isPrivate: { eq: false } },
         });
-        return Math.max(0, totalItems - 1);
+        return totalItems;
     }
 
     private async countActiveOrganizations(ctx: RequestContext): Promise<number> {
