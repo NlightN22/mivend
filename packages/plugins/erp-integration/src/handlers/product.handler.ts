@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+    FacetService,
+    FacetValueService,
     LanguageCode,
     ProductService,
     ProductVariantService,
@@ -9,7 +11,10 @@ import {
 } from '@vendure/core';
 
 import { ProductTaxCodeFlagService } from '../product-tax-code-flag.service';
+import { ProductCategoryFlagService } from '../product-category-flag.service';
 import { resolveVatCode } from '../vat-code-resolver';
+import { resolveCategoryFacetValueId } from '../category-resolver';
+import { mapProductTier2Fields } from '../product-tier2-fields';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationProductHandler';
@@ -17,6 +22,10 @@ const loggerCtx = 'IntegrationProductHandler';
 // TaxCategory list changes rarely (admin-configured), so a short TTL avoids a DB round-trip on
 // every single ProductChanged event without risking a long-stale erpVatCode mapping.
 const TAX_CATEGORY_CACHE_TTL_MS = 60_000;
+
+// Same facet code CategoryStreamHandler owns/creates (category.handler.ts) — this handler only
+// reads it, never creates a category facet or facet value itself.
+const CATEGORY_FACET_CODE = 'category';
 
 // Applies Integration Service's `product` stream (ProductChanged). Deliberately reuses the same
 // lookup shape as erp-import's ProductHandler (match by `customFieldsExternalid`) rather than a
@@ -35,6 +44,9 @@ export class ProductStreamHandler implements InboundStreamHandler {
         private readonly productVariantService: ProductVariantService,
         private readonly taxCategoryService: TaxCategoryService,
         private readonly productTaxCodeFlagService: ProductTaxCodeFlagService,
+        private readonly facetService: FacetService,
+        private readonly facetValueService: FacetValueService,
+        private readonly productCategoryFlagService: ProductCategoryFlagService,
     ) {}
 
     private taxCategoriesCache?: {
@@ -66,6 +78,20 @@ export class ProductStreamHandler implements InboundStreamHandler {
         const rawVatCode = String(payload.vatCode ?? '');
         const taxCategoryId = await this.resolveTaxCategoryId(ctx, entityId, rawVatCode);
 
+        // issue #116: category_id -> the 'category' facet's FacetValue, assigned to the VARIANT
+        // (see resolveCategoryFacetValueIdForProduct's own doc comment for why not the Product).
+        const rawCategoryId =
+            typeof payload.categoryId === 'string' && payload.categoryId !== ''
+                ? payload.categoryId
+                : undefined;
+        const categoryFacetValueId = await this.resolveCategoryFacetValueIdForProduct(
+            ctx,
+            entityId,
+            rawCategoryId,
+        );
+
+        const tier2CustomFields = mapProductTier2Fields(payload);
+
         const existing = await this.connection.rawConnection
             .createQueryBuilder()
             .select('p.id', 'id')
@@ -78,21 +104,36 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 id: existing.id,
                 enabled: isActive,
                 translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
+                customFields: tier2CustomFields,
             });
             const variants = await this.productVariantService.getVariantsByProductId(
                 ctx,
                 existing.id,
             );
             if (variants.items.length > 0) {
+                const variantId = String(variants.items[0].id);
+                const facetValueIds = await this.mergeCategoryFacetValueId(
+                    ctx,
+                    variantId,
+                    categoryFacetValueId,
+                );
                 await this.productVariantService.update(ctx, [
                     {
-                        id: variants.items[0].id,
+                        id: variantId,
                         enabled: isActive,
                         ...(taxCategoryId ? { taxCategoryId } : {}),
+                        ...(facetValueIds ? { facetValueIds } : {}),
                     },
                 ]);
             } else {
-                await this.createDefaultVariant(ctx, existing.id, sku, name, taxCategoryId);
+                await this.createDefaultVariant(
+                    ctx,
+                    existing.id,
+                    sku,
+                    name,
+                    taxCategoryId,
+                    categoryFacetValueId,
+                );
             }
             Logger.verbose(`Updated product externalId=${entityId}`, loggerCtx);
             return;
@@ -101,9 +142,16 @@ export class ProductStreamHandler implements InboundStreamHandler {
         const created = await this.productService.create(ctx, {
             enabled: isActive,
             translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
-            customFields: { externalId: entityId },
+            customFields: { externalId: entityId, ...tier2CustomFields },
         });
-        await this.createDefaultVariant(ctx, String(created.id), sku, name, taxCategoryId);
+        await this.createDefaultVariant(
+            ctx,
+            String(created.id),
+            sku,
+            name,
+            taxCategoryId,
+            categoryFacetValueId,
+        );
         Logger.verbose(`Created product externalId=${entityId}`, loggerCtx);
     }
 
@@ -178,6 +226,89 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return resolution.taxCategoryId;
     }
 
+    // Resolves category_id to the 'category' facet's FacetValue id via the pure
+    // resolveCategoryFacetValueId function, persisting a non-blocking review flag when
+    // unresolved (absent, or not synced yet — issue #116). Returns undefined in both flagged
+    // cases; the caller omits the category facet value entirely rather than blocking product
+    // create/update — same non-blocking philosophy as resolveTaxCategoryId/issue #79.
+    //
+    // No caching here (unlike getTaxCategories): categories arrive continuously via Kafka, not
+    // admin-configured-rarely like TaxCategory — a cache would risk exactly the out-of-order
+    // "category just synced, product arrives right after" race this method exists to tolerate,
+    // for no proven throughput benefit (see AGENTS.md — no speculative optimization).
+    private async resolveCategoryFacetValueIdForProduct(
+        ctx: RequestContext,
+        entityId: string,
+        rawCategoryId: string | undefined,
+    ): Promise<string | undefined> {
+        const facet = await this.facetService.findByCode(ctx, CATEGORY_FACET_CODE, LanguageCode.en);
+        const facetValueIdByCategoryCode = new Map<string, string>();
+        if (facet) {
+            const values = await this.facetValueService.findByFacetId(ctx, facet.id);
+            for (const value of values) {
+                facetValueIdByCategoryCode.set(value.code, String(value.id));
+            }
+        }
+
+        const resolution = resolveCategoryFacetValueId(rawCategoryId, facetValueIdByCategoryCode);
+
+        if (resolution.flag) {
+            Logger.warn(`product ${entityId}: category — ${resolution.flag.detail}`, loggerCtx);
+            try {
+                await this.productCategoryFlagService.report(
+                    ctx,
+                    entityId,
+                    rawCategoryId ?? null,
+                    resolution.flag,
+                );
+            } catch (err) {
+                Logger.error(
+                    `product ${entityId}: failed to persist category flag: ${err instanceof Error ? err.message : String(err)}`,
+                    loggerCtx,
+                );
+            }
+        }
+
+        return resolution.facetValueId;
+    }
+
+    // On update, replaces only the variant's own category-facet slot — every other facet value
+    // already on the variant (any future non-category use) survives untouched. Returns undefined
+    // when there's nothing to change (no new category resolved AND the variant already has none),
+    // so the caller can omit facetValueIds from the update input entirely rather than sending a
+    // no-op empty array.
+    private async mergeCategoryFacetValueId(
+        ctx: RequestContext,
+        variantId: string,
+        categoryFacetValueId: string | undefined,
+    ): Promise<string[] | undefined> {
+        const variant = await this.productVariantService.findOne(ctx, variantId, ['facetValues']);
+        const currentFacetValues = variant?.facetValues ?? [];
+        const categoryFacet = await this.facetService.findByCode(
+            ctx,
+            CATEGORY_FACET_CODE,
+            LanguageCode.en,
+        );
+        const nonCategoryFacetValueIds = categoryFacet
+            ? currentFacetValues
+                  .filter(fv => String(fv.facetId) !== String(categoryFacet.id))
+                  .map(fv => String(fv.id))
+            : currentFacetValues.map(fv => String(fv.id));
+
+        if (
+            !categoryFacetValueId &&
+            nonCategoryFacetValueIds.length === currentFacetValues.length
+        ) {
+            // Nothing to change: no new category resolved, and the variant had no category facet
+            // value to remove either.
+            return undefined;
+        }
+
+        return categoryFacetValueId
+            ? [...nonCategoryFacetValueIds, categoryFacetValueId]
+            : nonCategoryFacetValueIds;
+    }
+
     // A Product with zero variants can't be priced/stocked/ordered — one default variant per
     // product is this plugin's simplification until real multi-variant mapping is designed
     // (out of scope for issue #63). PriceStreamHandler/StockStreamHandler resolve the target
@@ -189,6 +320,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         sku: string,
         name: string,
         taxCategoryId: string | undefined,
+        categoryFacetValueId: string | undefined,
     ): Promise<void> {
         await this.productVariantService.create(ctx, [
             {
@@ -197,6 +329,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 translations: [{ languageCode: LanguageCode.en, name }],
                 trackInventory: 'TRUE' as never,
                 ...(taxCategoryId ? { taxCategoryId } : {}),
+                ...(categoryFacetValueId ? { facetValueIds: [categoryFacetValueId] } : {}),
             },
         ]);
     }

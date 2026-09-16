@@ -221,6 +221,18 @@ export const config: VendureConfig = {
                 defaultValue: false,
                 label: [{ languageCode: LanguageCode.en, value: 'On Sale' }],
             },
+            // Issue #116 — ProductChanged's `manufacturer` (plain optional string, a normal typed
+            // field, not one of the rejected-raw-JSON shapes). The rest of ProductChanged's
+            // fields (barcodes, attributes, specifications, technicalRequirements,
+            // manufacturerCodes) are deliberately NOT stored yet — issue #116 rejected an opaque
+            // raw-JSON dump and requires a real per-field entity/relation design informed by
+            // Search Platform's own answer on actual shape/cardinality, not decided here yet.
+            {
+                name: 'manufacturer',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Manufacturer' }],
+            },
         ],
         ProductVariant: [
             {

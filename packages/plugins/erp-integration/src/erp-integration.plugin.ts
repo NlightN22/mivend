@@ -13,8 +13,10 @@ import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
 import { ProductTaxCodeFlag } from './entities/product-tax-code-flag.entity';
+import { ProductCategoryFlag } from './entities/product-category-flag.entity';
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import { ProductTaxCodeFlagService } from './product-tax-code-flag.service';
+import { ProductCategoryFlagService } from './product-category-flag.service';
 import { ProductTaxCodeFlagResolver } from './product-tax-code-flag.resolver';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
@@ -89,6 +91,7 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
         KafkaConsumerStatus,
         KafkaConsumerLagEntry,
         ProductTaxCodeFlag,
+        ProductCategoryFlag,
         ErpReconciliationIssue,
     ],
     controllers: [KafkaStatusController],
@@ -113,6 +116,7 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
         SchemaRegistryClient,
         OrderSubmittedListener,
         ProductTaxCodeFlagService,
+        ProductCategoryFlagService,
         ReconciliationSummaryClient,
         ReconciliationLocalCountsService,
         ReconciliationService,
