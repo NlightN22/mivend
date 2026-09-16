@@ -42,6 +42,39 @@ credit limits flow ERP → Hub → Branch and are never modified locally on bran
 means "ERP via Integration Service." This ownership rule is unchanged by which transport carries
 it.
 
+## Wire format — protobuf only, never a JSON-bridge stream
+
+**mivend only builds a consumer against an Integration Service Kafka stream once it's encoded as
+real, generated protobuf (`@nlightn22/event-contracts`, `toBinary`/`fromBinary` against a
+`.proto`-generated type) — never against a stream still on their interim JSON bridge
+(`jsonMapperOnTopic` in their `outbox-event-mapper.ts`).** A hand-parsed JSON payload, however
+carefully validated on mivend's own side (a strict class + runtime validator, same rigor as any
+REST DTO), only gives compile-time type safety in mivend's own code — it gives zero wire-format
+evolution guarantee from the producer's side. Integration Service can rename/retype/remove a
+field in a JSON-bridge stream with no schema check catching it before it ships; a real protobuf
+schema can't silently break a field backward-incompatibly the same way (field numbers are
+load-bearing, removal/retyping is a visible, reviewable schema change, not a silent JSON reshape).
+
+**mivend's own `KafkaConsumerService`'s decode step is protobuf-only by design**
+(`fromBinary(SCHEMA_BY_STREAM[stream], ...)`, see the resilience patterns below) — there is no
+"JSON decode branch" to add for an exception case. A stream still on their JSON bridge is not
+ready to consume, full stop, regardless of how complete or stable its field set looks today.
+
+**When a stream mivend needs is still JSON-bridge**: file it upstream against Integration
+Service, asking them to run their own contract-formalization process for that stream (as of this
+writing, their `1c-exchange-plan-workflow` skill's stage 6.5 — "Event-contracts protobuf schema
+audit" — already exists for exactly this; check whether an equivalent skill/process still exists
+on their side before assuming the same reference applies verbatim, their tooling can change).
+Don't design or implement a mivend-side handler against the JSON shape as an interim measure —
+wait for the real schema, even if that means a stream stays in the "waiting on Integration
+Service" bucket for a while.
+
+**When mivend needs a new field added to an already-protobuf stream**: file the request the same
+way (see the counterparty/contract/user research threads in issues #104/#105/#109/#117 for the
+established "check first, ship if quick, track as a blocker otherwise" process) — Integration
+Service should coordinate the exact field name/type with mivend before shipping a schema change
+mivend depends on, not ship first and let mivend adapt after the fact.
+
 ## Kafka consumer resilience patterns
 
 Live incident, 2026-09-05: `plugin-erp-integration`'s Kafka consumer (`KafkaConsumerService`)
