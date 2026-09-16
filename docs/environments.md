@@ -175,6 +175,12 @@ Use `127.0.0.1` explicitly (`make preview-up`'s default) or `--network host`, ne
 Load-time baseline measurements for this preview are recorded in
 `docs/frontend-load-benchmarks.md`.
 
+`packages/dashboard` has its own `Dockerfile`/`nginx.conf.template` and is wired into
+`make preview-build`/`preview-up`/`preview-down` alongside storefront/manager, but is
+deliberately **not** added as a service to `infrastructure/docker/docker-compose.yml` — that file
+covers the real deploy, and dashboard's real-deploy story wasn't part of #115's scope (see
+`@vendure/dashboard` caveats above). Not an oversight.
+
 **Dashboard has its own port, unlike the old Admin UI.** The Angular `@vendure/admin-ui-plugin`
 used to be mounted inline on the API process (`AdminUiPlugin.init({ port: ADMIN_UI_PORT, ... })`)
 and, despite its `port` option, never actually listened on that port — `/admin` was served on the
@@ -230,13 +236,9 @@ loops back via `lo` and proves nothing).
 `@nlightn22/event-contracts` version staging/prod actually use, not just whatever happens to be
 locally pinned — not yet implemented, tracked under issue #68's checklist.
 
-`packages/storefront`/`packages/manager` now have a real production build/serve pipeline
-(`Dockerfile` + nginx, issue #115) — but every contour, including staging-integration, still
-serves them via the raw Vite dev server today; nothing has actually deployed the new images yet.
-See `docs/frontend-load-benchmarks.md` for the measurement methodology (no real baseline numbers
-recorded yet either, for the same reason).
-
-`packages/dashboard` (issue #77) still has no production build/serve story — same raw-Vite-dev-
-server gap, not yet addressed by #115 (deliberately scoped to storefront/manager first; dashboard
-uses Vendure's own dashboard plugin, a different constraint — see #115's own text on why it was
-left for a follow-up decision).
+`packages/storefront`/`packages/manager`/`packages/dashboard` all now have a real production
+build/serve pipeline (`Dockerfile` + nginx, issue #115; see "Production preview" above) — but
+every contour, including staging-integration, still serves them via the raw Vite dev server
+today; nothing has actually deployed the new images to a real contour yet, only run manually via
+`make preview-*` on this box. See `docs/frontend-load-benchmarks.md` for real baseline numbers
+comparing the prod container against the dev server.
