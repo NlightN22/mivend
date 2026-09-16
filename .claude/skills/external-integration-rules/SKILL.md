@@ -22,6 +22,14 @@ Full design: `docs/sync.md`, `docs/payments.md`, `docs/ai/1c-integration-service
 `make dev`/automated tests reach a real external broker**, see that doc's "Testing must stay
 within the local contour").
 
+**Before researching or implementing consumption of any specific Integration Service Kafka
+stream, check `docs/ai/erp-streams-map.md` first** — a living status table (consumed / blocked /
+design-in-progress / needed-later / not-needed) for every stream, with the mivend + search-platform
+issue numbers already tracking it and non-trivial design decisions already made (e.g. the
+per-contract credit-limit model, the discount-rule one-entity-two-channels model). Update that
+table whenever a stream's status changes — don't let it go stale, and don't re-derive a decision
+already recorded there from scratch.
+
 ## Ownership — one plugin per external boundary
 
 **`plugin-erp-integration` (central-hub-only) is the single owner of all traffic to/from
