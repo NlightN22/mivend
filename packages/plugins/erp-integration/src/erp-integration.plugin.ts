@@ -14,9 +14,15 @@ import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
 import { ProductTaxCodeFlag } from './entities/product-tax-code-flag.entity';
 import { ProductCategoryFlag } from './entities/product-category-flag.entity';
+import { Manufacturer } from './entities/manufacturer.entity';
+import { ProductVariantBarcode } from './entities/product-variant-barcode.entity';
+import { ProductCharacteristic } from './entities/product-characteristic.entity';
+import { ProductManufacturerCode } from './entities/product-manufacturer-code.entity';
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import { ProductTaxCodeFlagService } from './product-tax-code-flag.service';
 import { ProductCategoryFlagService } from './product-category-flag.service';
+import { ManufacturerService } from './manufacturer.service';
+import { ProductAncillaryDataService } from './product-ancillary-data.service';
 import { ProductTaxCodeFlagResolver } from './product-tax-code-flag.resolver';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
@@ -92,6 +98,10 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
         KafkaConsumerLagEntry,
         ProductTaxCodeFlag,
         ProductCategoryFlag,
+        Manufacturer,
+        ProductVariantBarcode,
+        ProductCharacteristic,
+        ProductManufacturerCode,
         ErpReconciliationIssue,
     ],
     controllers: [KafkaStatusController],
@@ -117,6 +127,8 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
         OrderSubmittedListener,
         ProductTaxCodeFlagService,
         ProductCategoryFlagService,
+        ManufacturerService,
+        ProductAncillaryDataService,
         ReconciliationSummaryClient,
         ReconciliationLocalCountsService,
         ReconciliationService,

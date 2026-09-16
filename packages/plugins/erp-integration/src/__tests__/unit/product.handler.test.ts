@@ -56,6 +56,22 @@ function makeFacetServices(categoryFacetValues: Array<{ id: string; code: string
     return { facetService, facetValueService };
 }
 
+function makeManufacturerService(): { upsert: ReturnType<typeof vi.fn> } {
+    return { upsert: vi.fn().mockResolvedValue({ id: 'manufacturer-1' }) };
+}
+
+function makeProductAncillaryDataService(): {
+    replaceBarcodes: ReturnType<typeof vi.fn>;
+    replaceCharacteristics: ReturnType<typeof vi.fn>;
+    replaceManufacturerCodes: ReturnType<typeof vi.fn>;
+} {
+    return {
+        replaceBarcodes: vi.fn().mockResolvedValue(undefined),
+        replaceCharacteristics: vi.fn().mockResolvedValue(undefined),
+        replaceManufacturerCodes: vi.fn().mockResolvedValue(undefined),
+    };
+}
+
 const DEFAULT_TAX_CATEGORY = { id: 'tax-default', isDefault: true, customFields: {} };
 
 function makeHandler(overrides?: {
@@ -72,6 +88,8 @@ function makeHandler(overrides?: {
     facetService?: { findByCode: ReturnType<typeof vi.fn> };
     facetValueService?: { findByFacetId: ReturnType<typeof vi.fn> };
     productCategoryFlagService?: { report: ReturnType<typeof vi.fn> };
+    manufacturerService?: { upsert: ReturnType<typeof vi.fn> };
+    productAncillaryDataService?: ReturnType<typeof makeProductAncillaryDataService>;
 }): {
     handler: ProductStreamHandler;
     productService: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
@@ -83,6 +101,8 @@ function makeHandler(overrides?: {
     };
     productTaxCodeFlagService: { report: ReturnType<typeof vi.fn> };
     productCategoryFlagService: { report: ReturnType<typeof vi.fn> };
+    manufacturerService: { upsert: ReturnType<typeof vi.fn> };
+    productAncillaryDataService: ReturnType<typeof makeProductAncillaryDataService>;
 } {
     const connection = overrides?.connection ?? makeConnection(undefined);
     const productService = overrides?.productService ?? {
@@ -104,6 +124,9 @@ function makeHandler(overrides?: {
         : makeFacetServices(undefined);
     const productCategoryFlagService =
         overrides?.productCategoryFlagService ?? makeProductCategoryFlagService();
+    const manufacturerService = overrides?.manufacturerService ?? makeManufacturerService();
+    const productAncillaryDataService =
+        overrides?.productAncillaryDataService ?? makeProductAncillaryDataService();
 
     const handler = new ProductStreamHandler(
         connection as never,
@@ -114,6 +137,8 @@ function makeHandler(overrides?: {
         facetService as never,
         facetValueService as never,
         productCategoryFlagService as never,
+        manufacturerService as never,
+        productAncillaryDataService as never,
     );
     return {
         handler,
@@ -121,6 +146,8 @@ function makeHandler(overrides?: {
         productVariantService,
         productTaxCodeFlagService,
         productCategoryFlagService,
+        manufacturerService,
+        productAncillaryDataService,
     };
 }
 
@@ -340,34 +367,42 @@ describe('ProductStreamHandler', () => {
         });
     });
 
-    // issue #116 — `manufacturer` (the one Tier 2 field shipped this round; the rest await a real
-    // per-field entity design, see product-tier2-fields.ts's own comment)
-    describe('manufacturer field', () => {
-        it('maps manufacturer onto the created Product customFields', async () => {
-            const { handler, productService } = makeHandler();
+    // issue #116 Tier 2 — Manufacturer entity/relation
+    describe('manufacturer', () => {
+        it('finds-or-creates the Manufacturer by GUID and assigns manufacturerId on create', async () => {
+            const manufacturerService = makeManufacturerService();
+            const { handler, productService } = makeHandler({ manufacturerService });
 
-            await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget', manufacturer: 'Acme' });
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget',
+                manufacturer: 'guid-acme',
+                attributes: { Производитель: { raw: 'Acme Corp', normalized: ['acme corp'] } },
+            });
 
+            expect(manufacturerService.upsert).toHaveBeenCalledWith(ctx, 'guid-acme', 'Acme Corp');
             expect(productService.create).toHaveBeenCalledWith(
                 ctx,
                 expect.objectContaining({
-                    customFields: expect.objectContaining({ manufacturer: 'Acme' }),
+                    customFields: expect.objectContaining({ manufacturerId: 'manufacturer-1' }),
                 }),
             );
         });
 
-        it('omits manufacturer entirely when the payload carries none (proto3 optional-unset omission)', async () => {
-            const { handler, productService } = makeHandler();
+        it('never resolves/assigns a manufacturer when the field is absent', async () => {
+            const manufacturerService = makeManufacturerService();
+            const { handler, productService } = makeHandler({ manufacturerService });
 
             await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' });
 
+            expect(manufacturerService.upsert).not.toHaveBeenCalled();
             expect(productService.create).toHaveBeenCalledWith(
                 ctx,
                 expect.objectContaining({ customFields: { externalId: 'p-1' } }),
             );
         });
 
-        it('also maps manufacturer on the update path', async () => {
+        it('on update, omits manufacturerId entirely (never clears the relation) when absent from this event', async () => {
             const connection = makeConnection('existing-product-id');
             const productVariantService = {
                 getVariantsByProductId: vi.fn().mockResolvedValue({ items: [{ id: 'variant-1' }] }),
@@ -378,11 +413,60 @@ describe('ProductStreamHandler', () => {
             const productService = { create: vi.fn(), update: vi.fn().mockResolvedValue({}) };
             const { handler } = makeHandler({ connection, productService, productVariantService });
 
-            await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget', manufacturer: 'Acme' });
+            await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' });
 
             expect(productService.update).toHaveBeenCalledWith(
                 ctx,
-                expect.objectContaining({ customFields: { manufacturer: 'Acme' } }),
+                expect.not.objectContaining({ customFields: expect.anything() }),
+            );
+        });
+    });
+
+    // issue #116 Tier 2 — ancillary child data (barcodes, characteristics, manufacturer codes)
+    describe('ancillary data replace-all', () => {
+        it('replaces barcodes on the resolved variant, characteristics/manufacturerCodes on the product', async () => {
+            const productAncillaryDataService = makeProductAncillaryDataService();
+            const { handler } = makeHandler({ productAncillaryDataService });
+
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget',
+                barcodes: ['4600000000000'],
+                attributes: { Диаметр: { raw: '15', normalized: ['15'] } },
+                manufacturerCodes: [{ lineNumber: 2, code: 'OEM-1', manufacturer: 'guid-other' }],
+            });
+
+            expect(productAncillaryDataService.replaceBarcodes).toHaveBeenCalledWith(ctx, '20', [
+                '4600000000000',
+            ]);
+            expect(productAncillaryDataService.replaceCharacteristics).toHaveBeenCalledWith(
+                ctx,
+                '10',
+                [expect.objectContaining({ group: 'attribute', key: 'Диаметр', rawValue: '15' })],
+            );
+            expect(productAncillaryDataService.replaceManufacturerCodes).toHaveBeenCalledWith(
+                ctx,
+                '10',
+                [{ lineNumber: 2, code: 'OEM-1', manufacturer: 'guid-other' }],
+            );
+        });
+
+        it('replaces with empty arrays (clearing stale rows) when the payload carries none', async () => {
+            const productAncillaryDataService = makeProductAncillaryDataService();
+            const { handler } = makeHandler({ productAncillaryDataService });
+
+            await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' });
+
+            expect(productAncillaryDataService.replaceBarcodes).toHaveBeenCalledWith(ctx, '20', []);
+            expect(productAncillaryDataService.replaceCharacteristics).toHaveBeenCalledWith(
+                ctx,
+                '10',
+                [],
+            );
+            expect(productAncillaryDataService.replaceManufacturerCodes).toHaveBeenCalledWith(
+                ctx,
+                '10',
+                [],
             );
         });
     });

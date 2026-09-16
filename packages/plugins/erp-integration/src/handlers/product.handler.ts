@@ -12,9 +12,19 @@ import {
 
 import { ProductTaxCodeFlagService } from '../product-tax-code-flag.service';
 import { ProductCategoryFlagService } from '../product-category-flag.service';
+import { ManufacturerService } from '../manufacturer.service';
+import { ProductAncillaryDataService } from '../product-ancillary-data.service';
 import { resolveVatCode } from '../vat-code-resolver';
 import { resolveCategoryFacetValueId } from '../category-resolver';
-import { mapProductTier2Fields } from '../product-tier2-fields';
+import {
+    extractBarcodes,
+    extractManufacturerCodes,
+    extractManufacturerId,
+} from '../product-ancillary-fields';
+import {
+    findManufacturerNameFromAttributes,
+    mapProductCharacteristics,
+} from '../product-characteristics-mapper';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationProductHandler';
@@ -47,6 +57,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         private readonly facetService: FacetService,
         private readonly facetValueService: FacetValueService,
         private readonly productCategoryFlagService: ProductCategoryFlagService,
+        private readonly manufacturerService: ManufacturerService,
+        private readonly productAncillaryDataService: ProductAncillaryDataService,
     ) {}
 
     private taxCategoriesCache?: {
@@ -90,7 +102,26 @@ export class ProductStreamHandler implements InboundStreamHandler {
             rawCategoryId,
         );
 
-        const tier2CustomFields = mapProductTier2Fields(payload);
+        // issue #116 Tier 2 — Manufacturer is a real entity (find-or-create by the 1C GUID,
+        // name backfilled from the 'attributes' map's own 'Производитель' key), never a plain
+        // string custom field (that field is a GUID, not a display name).
+        const manufacturerExternalId = extractManufacturerId(payload);
+        const manufacturerName = findManufacturerNameFromAttributes(payload);
+        const manufacturerId = manufacturerExternalId
+            ? String(
+                  (
+                      await this.manufacturerService.upsert(
+                          ctx,
+                          manufacturerExternalId,
+                          manufacturerName,
+                      )
+                  ).id,
+              )
+            : undefined;
+
+        const characteristicRows = mapProductCharacteristics(payload);
+        const manufacturerCodeRows = extractManufacturerCodes(payload);
+        const barcodes = extractBarcodes(payload);
 
         const existing = await this.connection.rawConnection
             .createQueryBuilder()
@@ -99,19 +130,27 @@ export class ProductStreamHandler implements InboundStreamHandler {
             .where('p."customFieldsExternalid" = :extId', { extId: entityId })
             .getRawOne<{ id: string }>();
 
+        let productId: string;
+        let variantId: string;
+
         if (existing) {
+            productId = existing.id;
             await this.productService.update(ctx, {
-                id: existing.id,
+                id: productId,
                 enabled: isActive,
                 translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
-                customFields: tier2CustomFields,
+                // Omit manufacturerId entirely when this event carries none — an update must
+                // never clear an already-resolved manufacturer relation just because a later
+                // event happens not to mention it (same non-destructive-absence philosophy as
+                // ManufacturerService.upsert's own name backfill).
+                ...(manufacturerId ? { customFields: { manufacturerId } } : {}),
             });
             const variants = await this.productVariantService.getVariantsByProductId(
                 ctx,
-                existing.id,
+                productId,
             );
             if (variants.items.length > 0) {
-                const variantId = String(variants.items[0].id);
+                variantId = String(variants.items[0].id);
                 const facetValueIds = await this.mergeCategoryFacetValueId(
                     ctx,
                     variantId,
@@ -126,9 +165,9 @@ export class ProductStreamHandler implements InboundStreamHandler {
                     },
                 ]);
             } else {
-                await this.createDefaultVariant(
+                variantId = await this.createDefaultVariant(
                     ctx,
-                    existing.id,
+                    productId,
                     sku,
                     name,
                     taxCategoryId,
@@ -136,23 +175,35 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 );
             }
             Logger.verbose(`Updated product externalId=${entityId}`, loggerCtx);
-            return;
+        } else {
+            const created = await this.productService.create(ctx, {
+                enabled: isActive,
+                translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
+                customFields: { externalId: entityId, manufacturerId },
+            });
+            productId = String(created.id);
+            variantId = await this.createDefaultVariant(
+                ctx,
+                productId,
+                sku,
+                name,
+                taxCategoryId,
+                categoryFacetValueId,
+            );
+            Logger.verbose(`Created product externalId=${entityId}`, loggerCtx);
         }
 
-        const created = await this.productService.create(ctx, {
-            enabled: isActive,
-            translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
-            customFields: { externalId: entityId, ...tier2CustomFields },
-        });
-        await this.createDefaultVariant(
+        await this.productAncillaryDataService.replaceBarcodes(ctx, variantId, barcodes);
+        await this.productAncillaryDataService.replaceCharacteristics(
             ctx,
-            String(created.id),
-            sku,
-            name,
-            taxCategoryId,
-            categoryFacetValueId,
+            productId,
+            characteristicRows,
         );
-        Logger.verbose(`Created product externalId=${entityId}`, loggerCtx);
+        await this.productAncillaryDataService.replaceManufacturerCodes(
+            ctx,
+            productId,
+            manufacturerCodeRows,
+        );
     }
 
     private async getTaxCategories(
@@ -314,6 +365,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
     // (out of scope for issue #63). PriceStreamHandler/StockStreamHandler resolve the target
     // variant by productId -> this variant, since there is no ProductVariant.externalId
     // customField yet (single-variant-per-product assumption, matching erp-import's own).
+    // Returns the created variant's id (needed by the caller to attach barcodes, issue #116).
     private async createDefaultVariant(
         ctx: RequestContext,
         productId: string,
@@ -321,8 +373,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         name: string,
         taxCategoryId: string | undefined,
         categoryFacetValueId: string | undefined,
-    ): Promise<void> {
-        await this.productVariantService.create(ctx, [
+    ): Promise<string> {
+        const [variant] = await this.productVariantService.create(ctx, [
             {
                 productId,
                 sku,
@@ -332,5 +384,6 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 ...(categoryFacetValueId ? { facetValueIds: [categoryFacetValueId] } : {}),
             },
         ]);
+        return String(variant.id);
     }
 }

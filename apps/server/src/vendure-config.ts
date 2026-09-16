@@ -15,7 +15,11 @@ import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { searchPlugins } from '@mivend/plugin-search';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { SyncPlugin, StubErpAdapter } from '@mivend/plugin-sync';
-import { ErpIntegrationPlugin, BranchStockLocationStrategy } from '@mivend/plugin-erp-integration';
+import {
+    ErpIntegrationPlugin,
+    BranchStockLocationStrategy,
+    Manufacturer,
+} from '@mivend/plugin-erp-integration';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { PopularProductsPlugin } from '@mivend/plugin-popular-products';
 import { AccessControlPlugin, CustomPermission } from '@mivend/plugin-access-control';
@@ -221,15 +225,16 @@ export const config: VendureConfig = {
                 defaultValue: false,
                 label: [{ languageCode: LanguageCode.en, value: 'On Sale' }],
             },
-            // Issue #116 — ProductChanged's `manufacturer` (plain optional string, a normal typed
-            // field, not one of the rejected-raw-JSON shapes). The rest of ProductChanged's
-            // fields (barcodes, attributes, specifications, technicalRequirements,
-            // manufacturerCodes) are deliberately NOT stored yet — issue #116 rejected an opaque
-            // raw-JSON dump and requires a real per-field entity/relation design informed by
-            // Search Platform's own answer on actual shape/cardinality, not decided here yet.
+            // Issue #116 — ProductChanged's `manufacturer` field is a 1C directory GUID, not a
+            // display name (confirmed live with Search Platform — the field's own OpenAPI
+            // description is misleading). A relation to the real Manufacturer entity, not a
+            // plain string field; ProductStreamHandler resolves/creates the Manufacturer and
+            // backfills its name from the 'attributes' map's own 'Производитель' key.
             {
                 name: 'manufacturer',
-                type: 'string',
+                type: 'relation',
+                entity: Manufacturer,
+                graphQLType: 'Manufacturer',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Manufacturer' }],
             },

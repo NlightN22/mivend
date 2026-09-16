@@ -1,10 +1,10 @@
 declare module '@vendure/core' {
     interface CustomProductFields {
-        // Owned by apps/server/src/vendure-config.ts's customFields config. ProductChanged's
-        // plain `manufacturer` field (issue #116) — its other fields (barcodes, attributes,
-        // specifications, technicalRequirements, manufacturerCodes) are deliberately not stored
-        // yet, pending a real per-field entity design (see product-tier2-fields.ts's own comment).
-        manufacturer?: string | null;
+        // Owned by apps/server/src/vendure-config.ts's customFields config. A relation to the
+        // Manufacturer entity (issue #116) — ProductChanged's `manufacturer` is a 1C directory
+        // GUID, not a display name, so this is a real relation, not a plain string field. See
+        // manufacturer.entity.ts / manufacturer.service.ts.
+        manufacturer?: import('./entities/manufacturer.entity').Manufacturer | null;
     }
 
     interface CustomProductVariantFields {
