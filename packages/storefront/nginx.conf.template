@@ -1,5 +1,9 @@
 server {
-    listen 80;
+    # Defaults to 80 (the real compose deployment's container-internal port, mapped externally
+    # via docker-compose.yml's ports:). Overridden to a fixed port (e.g. 18024) only by the
+    # `make preview-up` --network host mode, which needs the container to listen on a real host
+    # port directly (see docs/environments.md's "prod-preview" contour).
+    listen ${LISTEN_PORT};
     server_tokens off;
 
     root /usr/share/nginx/html;

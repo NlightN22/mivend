@@ -73,10 +73,43 @@ time. All of this is on localhost (near-zero latency per request) — the gap sh
 considerably larger over a real network connection, given dev mode's 200+ individual round trips
 vs. prod's ~15-25.
 
-**Still not done**: a proper 3-run-median measurement against real seeded/authenticated control
-pages, and a measurement against an actual deployed `docker-compose.yml` stack (not just an ad hoc
-`docker run --network host`) — this round proved the concept and the direction, not the final
-numbers.
+**Still not done**: a proper 3-run-median measurement (single run each below), and a measurement
+against an actual deployed `docker-compose.yml` stack (not just an ad hoc `docker run
+--network host`) — these rounds proved the concept and the direction, not the final numbers.
+
+## Second round — all three apps, main pages (2026-09-16, commit 10dd8a6)
+
+Against the now-permanent `make preview-up` deployment (`docs/environments.md`'s "Production
+preview"), real staging-integration data, real admin login (not the unauthenticated shell this
+time). `waitUntil: 'load'` + a fixed 1.5s settle (not `networkidle` — both storefront and manager
+keep a live subscription/polling connection open, so `networkidle` never fires and just times
+out).
+
+| Date       | Commit    | App        | Page            | Requests | Transferred | Time   |
+| ---------- | --------- | ---------- | --------------- | -------- | ----------- | ------ |
+| 2026-09-16 | `10dd8a6` | storefront | `/` (home)      | 25       | 1797.5 KB   | 1814ms |
+| 2026-09-16 | `10dd8a6` | storefront | `/catalog`      | 23       | 39.0 KB     | 1567ms |
+| 2026-09-16 | `10dd8a6` | manager    | `/` (dashboard) | 36       | 36.1 KB     | 1672ms |
+| 2026-09-16 | `10dd8a6` | manager    | `/orders`       | 43       | 80.2 KB     | 1619ms |
+| 2026-09-16 | `10dd8a6` | manager    | `/customers`    | 40       | 28.0 KB     | 1599ms |
+| 2026-09-16 | `10dd8a6` | dashboard  | `/` (insights)  | 24       | 38.2 KB     | 1587ms |
+| 2026-09-16 | `10dd8a6` | dashboard  | `/orders`       | 21       | 36.8 KB     | 1571ms |
+| 2026-09-16 | `10dd8a6` | dashboard  | `/customers`    | 20       | 36.4 KB     | 1558ms |
+
+Notes:
+
+- storefront's `/` (home) transfers far more than every other row (1.8MB) because it's the first
+  navigation in a fresh browser context — the main JS/CSS bundle and vendor chunks (element-plus,
+  vue) aren't cached yet. `/catalog` right after, same context, shows the real steady-state cost
+  once those are cached (39 KB — just that page's own small lazy chunk + its API calls).
+- All three apps land in the same ~1.5-1.8s ballpark for a full page navigation once logged in,
+  on this box talking to itself over a real (if VPN-routed) network path — consistent with the
+  first round's finding that the production build is the right fix, not a fluke.
+- Login credentials differ per app on staging-integration (its database is never seeded, per
+  docs/environments.md): manager and dashboard both authenticate against the same
+  Administrator record (`admin` / see `apps/server/.env.central.staging-integration`'s
+  `SUPERADMIN_PASSWORD`) — the local contour's seeded test accounts
+  (`anna.portaladmin@mivend.dev` etc.) don't exist there.
 
 ## When to re-run
 

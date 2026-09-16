@@ -38,4 +38,5 @@ COPY packages/storefront/nginx.conf.template /etc/nginx/templates/default.conf.t
 # use 127.0.0.1 (or --network host) instead of 'localhost' (found during issue #115's
 # own benchmark run, see docs/frontend-load-benchmarks.md).
 ENV API_TARGET=http://server:3000
+ENV LISTEN_PORT=80
 EXPOSE 80

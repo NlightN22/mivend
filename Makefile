@@ -14,6 +14,7 @@ export
         test test-int test-e2e mutation-pilot \
         e2e e2e-smoke e2e-ui e2e-report \
         docker-build docker-push \
+        preview-build preview-up preview-down \
         prod-up prod-down \
         dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-access-roles seed-approvals seed-payment-refunds \
         seed-customer-detail seed-all \
@@ -280,6 +281,36 @@ prod-up:
 
 prod-down:
 	$(COMPOSE_PROD) down
+
+# ── Production preview (issue #115) ─────────────────────────────────────────────
+#
+# Occasional real-build sanity check: production Docker images for the three frontends, run
+# directly on this host (--network host, not the compose network) against the staging-integration
+# backend's real data (:3010) — for "we made a pile of changes, let's see how this actually
+# behaves in a production build" checks, not a permanent dev workflow. Reachable externally at
+# https://devof.komponent-m.ru:8024 (storefront) / :8025 (manager) / :8026 (dashboard) — see
+# docs/environments.md's "Production preview" section. `preview-build` requires a GitHub Packages
+# read token in ~/.npmrc for the dashboard image (see packages/dashboard/Dockerfile's own comment).
+
+PREVIEW_API_TARGET ?= http://127.0.0.1:3010
+
+preview-build:
+	docker build -f packages/storefront/Dockerfile -t mivend-storefront:preview .
+	docker build -f packages/manager/Dockerfile -t mivend-manager:preview .
+	DOCKER_BUILDKIT=1 docker build -f packages/dashboard/Dockerfile \
+		--secret id=npmrc,src=$(HOME)/.npmrc -t mivend-dashboard:preview .
+
+preview-up:
+	docker run -d --name mivend-storefront-preview --network host \
+		-e API_TARGET=$(PREVIEW_API_TARGET) -e LISTEN_PORT=18024 mivend-storefront:preview
+	docker run -d --name mivend-manager-preview --network host \
+		-e API_TARGET=$(PREVIEW_API_TARGET) -e LISTEN_PORT=18025 mivend-manager:preview
+	docker run -d --name mivend-dashboard-preview --network host \
+		-e API_TARGET=$(PREVIEW_API_TARGET) -e LISTEN_PORT=18026 mivend-dashboard:preview
+	@echo "Preview containers up: https://devof.komponent-m.ru:8024 (storefront) / :8025 (manager) / :8026 (dashboard)"
+
+preview-down:
+	-docker rm -f mivend-storefront-preview mivend-manager-preview mivend-dashboard-preview
 
 # ── E2E tests ──────────────────────────────────────────────────────────────────
 

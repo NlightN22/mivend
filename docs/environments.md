@@ -139,6 +139,41 @@ directly from outside (no `ufw allow` for them).
 | Storefront       | staging-integration | `5183`                 | `8014`                                           |
 | Manager          | staging-integration | `5184`                 | `8015`                                           |
 | Dashboard        | staging-integration | `5185`                 | `8016`                                           |
+| Storefront       | **prod preview**    | `18024`                | `8024`                                           |
+| Manager          | **prod preview**    | `18025`                | `8025`                                           |
+| Dashboard        | **prod preview**    | `18026`                | `8026`                                           |
+
+### Production preview (issue #115)
+
+Not a real fourth contour — a standing way to check "what does this actually feel like as a real
+production build" without deploying anywhere external. `make preview-build`/`preview-up`/
+`preview-down` build the same Docker images `docker-compose.yml`'s real production deploy would
+use (nginx + the bundled/minified Vite output, `Cache-Control: immutable` on hashed assets, proxy
+keepalive — see the three `packages/*/Dockerfile`s) and run them directly on this host via
+`docker run --network host` (not the compose network), pointed at **staging-integration's real
+data** (`:3010`) rather than a fresh empty database. Kept intentionally rare/manual — for after a
+pile of changes have landed, not a routine dev-loop step; `make dev`'s raw Vite dev servers stay
+the everyday workflow.
+
+The container's own nginx listens on a fixed host port directly (`LISTEN_PORT` env var,
+`packages/*/nginx.conf.template`'s `listen ${LISTEN_PORT};`) rather than the compose deployment's
+internal `80` — `--network host` means "container port" and "host port" are the same thing, so
+this has to be a port nothing else already owns. `18024`/`18025`/`18026` were picked simply as
+free ports at the time; they carry no other meaning and aren't part of the local/staging-
+integration internal-port sequence.
+
+Published externally the same way as the other contours (`/etc/nginx/sites-enabled/mivend.conf`
+proxies `8024`/`8025`/`8026` → `127.0.0.1:18024`/`18025`/`18026`, `ufw allow`ed) — unlike those,
+these three ports are **not tied to a `make dev`/`make dev-staging-integration` process**, so they
+stay up independently and only go down via `make preview-down` (or a manual `docker rm -f`).
+
+**Real gotcha hit setting this up**: `API_TARGET=http://localhost:3010` hangs inside the
+container — nginx resolves `localhost` via IPv6 first and the backend doesn't answer on `::1`.
+Use `127.0.0.1` explicitly (`make preview-up`'s default) or `--network host`, never bare
+`localhost`, when pointing a container's `API_TARGET` at anything on this same box.
+
+Load-time baseline measurements for this preview are recorded in
+`docs/frontend-load-benchmarks.md`.
 
 **Dashboard has its own port, unlike the old Admin UI.** The Angular `@vendure/admin-ui-plugin`
 used to be mounted inline on the API process (`AdminUiPlugin.init({ port: ADMIN_UI_PORT, ... })`)
@@ -167,11 +202,13 @@ own `metricSummary` query: without it, the Dashboard's Insights page has no serv
 `dashboardMetricSummary` GraphQL field to query and its order-metrics chart silently renders
 empty (no error surfaced beyond a 400 in the browser console).
 
-Step of 10 between contours is deliberate — the next contour after staging-integration (or a
+Step of 10 between contours is deliberate — the next real contour after staging-integration (or a
 branch instance that ever needs its own external access, which it doesn't today per
-`docs/architecture.md`'s "Storefront hosting: Central-only, not per-branch") takes the next free
-decade (`8023`-`8025`, ...), so the mapping stays predictable without consulting this table for
-every new one.
+`docs/architecture.md`'s "Storefront hosting: Central-only, not per-branch") would normally take
+the next free decade (`8023`-`8026`), but `8024`/`8025`/`8026` are already spoken for by the
+production-preview ports above (not a real contour, see "Production preview" below) — the next
+real contour should use `8033`-`8036` instead, or reclaim `8023`/`8027`-`8029` if the preview
+setup is ever retired.
 
 `packages/storefront/vite.config.ts`/`packages/manager/vite.config.ts` read `VITE_API_TARGET`
 (and `VITE_PORT`) as plain env vars rather than hardcoding `localhost:3000` — the root
