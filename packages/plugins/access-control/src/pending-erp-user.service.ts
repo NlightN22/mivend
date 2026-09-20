@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    ListQueryBuilder,
+    ListQueryOptions,
+    PaginatedList,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
 
 import { PendingErpUser } from './entities/pending-erp-user.entity';
 
@@ -13,7 +19,10 @@ export interface PendingErpUserInput {
 // Issue #119: the "unlinked 1C user" candidate list — see PendingErpUser's own comment.
 @Injectable()
 export class PendingErpUserService {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private listQueryBuilder: ListQueryBuilder,
+    ) {}
 
     // Called on every UserChanged event that fails to match an existing Administrator by email
     // — idempotent, keeps the row's fields/lastSeenAt current for whoever reviews the list.
@@ -45,10 +54,17 @@ export class PendingErpUserService {
         await this.connection.getRepository(ctx, PendingErpUser).delete({ erpId });
     }
 
-    async findAll(ctx: RequestContext): Promise<PendingErpUser[]> {
-        return this.connection
-            .getRepository(ctx, PendingErpUser)
-            .find({ order: { firstSeenAt: 'ASC' } });
+    // Real server-side pagination (AGENTS.md's pagination rule) — this list accumulates over
+    // every 1C "user" ever seen that hasn't yet been linked to an Administrator, it is not
+    // genuinely bounded. Backs the Dashboard "ERP users" > Pending screen's ListPage.
+    async findAllPaginated(
+        ctx: RequestContext,
+        options?: ListQueryOptions<PendingErpUser>,
+    ): Promise<PaginatedList<PendingErpUser>> {
+        const [items, totalItems] = await this.listQueryBuilder
+            .build(PendingErpUser, options, { ctx, orderBy: { firstSeenAt: 'ASC' } })
+            .getManyAndCount();
+        return { items, totalItems };
     }
 
     async findByErpId(ctx: RequestContext, erpId: string): Promise<PendingErpUser | null> {

@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { AdministratorListOptions } from '@vendure/common/lib/generated-types';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     Administrator,
     AdministratorService,
+    ListQueryBuilder,
     Logger,
+    PaginatedList,
     RequestContext,
     TransactionalConnection,
     User,
@@ -21,7 +24,28 @@ export class AdministratorActivationService {
     constructor(
         private connection: TransactionalConnection,
         private administratorService: AdministratorService,
+        private listQueryBuilder: ListQueryBuilder,
     ) {}
+
+    // Backs the Dashboard "ERP users" > Deactivated screen's ListPage. Structurally distinct
+    // from the native `administrators` query, not a filter on top of it: AdministratorService.
+    // findAll/findOne hard-filter `deletedAt IS NULL` in @vendure/core itself, so a soft-deleted
+    // Administrator is invisible there no matter what options are passed — see Decision 1/Phase 1
+    // of issue #119. TypeORM's QueryBuilder (unlike its Repository.find methods) does not
+    // auto-exclude soft-deleted rows, so `.withDeleted()` here is a no-op safety net; the real
+    // work is the explicit `deletedAt IS NOT NULL` filter, which is what actually restricts this
+    // to deactivated accounts.
+    async findDeactivated(
+        ctx: RequestContext,
+        options?: AdministratorListOptions,
+    ): Promise<PaginatedList<Administrator>> {
+        const qb = this.listQueryBuilder.build(Administrator, options, { ctx });
+        qb.withDeleted()
+            .andWhere(`${qb.alias}.deletedAt IS NOT NULL`)
+            .andWhere(`${qb.alias}.customFieldsErpid IS NOT NULL`);
+        const [items, totalItems] = await qb.getManyAndCount();
+        return { items, totalItems };
+    }
 
     // Driven by UserChanged's own isActive/isDeleted — a no-op when no Administrator has ever
     // been linked to this erpId (nothing to deactivate).

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import type { ListQueryBuilder, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { PendingErpUserService } from '../../pending-erp-user.service';
 
@@ -15,13 +15,18 @@ function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
 
 describe('PendingErpUserService', () => {
     let repo: ReturnType<typeof createMockRepo>;
+    let listQueryBuilder: { build: ReturnType<typeof vi.fn> };
     let service: PendingErpUserService;
     const ctx = {} as unknown as RequestContext;
 
     beforeEach(() => {
         repo = createMockRepo();
         const connection = { getRepository: () => repo };
-        service = new PendingErpUserService(connection as unknown as TransactionalConnection);
+        listQueryBuilder = { build: vi.fn() };
+        service = new PendingErpUserService(
+            connection as unknown as TransactionalConnection,
+            listQueryBuilder as unknown as ListQueryBuilder,
+        );
     });
 
     describe('upsert', () => {
@@ -91,12 +96,19 @@ describe('PendingErpUserService', () => {
         });
     });
 
-    describe('findAll / findByErpId', () => {
-        it('returns all rows ordered by firstSeenAt', async () => {
-            repo.find.mockResolvedValue([{ erpId: 'user-1' }]);
-            const result = await service.findAll(ctx);
-            expect(repo.find).toHaveBeenCalledWith({ order: { firstSeenAt: 'ASC' } });
-            expect(result).toEqual([{ erpId: 'user-1' }]);
+    describe('findAllPaginated / findByErpId', () => {
+        it('returns a paginated list built via ListQueryBuilder, sorted by firstSeenAt by default', async () => {
+            const qb = { getManyAndCount: vi.fn(async () => [[{ erpId: 'user-1' }], 1]) };
+            listQueryBuilder.build.mockReturnValue(qb);
+
+            const result = await service.findAllPaginated(ctx);
+
+            expect(listQueryBuilder.build).toHaveBeenCalledWith(
+                expect.anything(),
+                undefined,
+                expect.objectContaining({ ctx, orderBy: { firstSeenAt: 'ASC' } }),
+            );
+            expect(result).toEqual({ items: [{ erpId: 'user-1' }], totalItems: 1 });
         });
 
         it('returns null when no pending row matches erpId', async () => {

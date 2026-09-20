@@ -120,6 +120,7 @@ const ROLES = [
             // the caller's own (privilege-escalation guard), so seeing/editing the other 5
             // roles via Settings > Roles & Access requires holding everything any of them can do.
             'ManageAccessControl',
+            'ManageAdministratorLifecycle',
             'ReadAdministrator',
             'UpdateAdministrator',
             'CreateOrder',
@@ -166,6 +167,7 @@ const ROLES = [
             'ReadCounterpartyCredit',
             'ReadFloorPrice',
             'ManageAccessControl',
+            'ManageAdministratorLifecycle',
             'ManageApprovalWorkflows',
             'ReassignCounterpartyManager',
             'ManageCounterpartyTeam',

@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
+import type {
+    AdministratorService,
+    ListQueryBuilder,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
 
 import { AdministratorActivationService } from '../../administrator-activation.service';
 
@@ -14,6 +19,7 @@ function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
 describe('AdministratorActivationService', () => {
     let repo: ReturnType<typeof createMockRepo>;
     let administratorService: { softDelete: ReturnType<typeof vi.fn> };
+    let listQueryBuilder: { build: ReturnType<typeof vi.fn> };
     let service: AdministratorActivationService;
     const ctx = {} as unknown as RequestContext;
 
@@ -21,9 +27,11 @@ describe('AdministratorActivationService', () => {
         repo = createMockRepo();
         const connection = { getRepository: () => repo };
         administratorService = { softDelete: vi.fn() };
+        listQueryBuilder = { build: vi.fn() };
         service = new AdministratorActivationService(
             connection as unknown as TransactionalConnection,
             administratorService as unknown as AdministratorService,
+            listQueryBuilder as unknown as ListQueryBuilder,
         );
     });
 
@@ -107,6 +115,27 @@ describe('AdministratorActivationService', () => {
             expect(repo.save).toHaveBeenCalledWith(
                 expect.objectContaining({ id: 'admin-1', deletedAt: null }),
             );
+        });
+    });
+
+    describe('findDeactivated', () => {
+        it('queries with soft-deleted rows included, filtered to deletedAt set and erpId set', async () => {
+            const qb = {
+                alias: 'administrator',
+                withDeleted: vi.fn(),
+                andWhere: vi.fn(),
+                getManyAndCount: vi.fn(async () => [[{ id: 'admin-1' }], 1]),
+            };
+            qb.withDeleted.mockReturnValue(qb);
+            qb.andWhere.mockReturnValue(qb);
+            listQueryBuilder.build.mockReturnValue(qb);
+
+            const result = await service.findDeactivated(ctx);
+
+            expect(qb.withDeleted).toHaveBeenCalled();
+            expect(qb.andWhere).toHaveBeenCalledWith('administrator.deletedAt IS NOT NULL');
+            expect(qb.andWhere).toHaveBeenCalledWith('administrator.customFieldsErpid IS NOT NULL');
+            expect(result).toEqual({ items: [{ id: 'admin-1' }], totalItems: 1 });
         });
     });
 });

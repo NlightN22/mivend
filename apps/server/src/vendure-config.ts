@@ -44,6 +44,7 @@ import { BranchConsolidationAlertDashboardPlugin } from './branch-consolidation-
 import { IntegrationHealthDashboardPlugin } from './integration-health-dashboard.plugin';
 import { ErpReconciliationDashboardPlugin } from './erp-reconciliation-dashboard.plugin';
 import { OrganizationsDashboardPlugin } from './organizations-dashboard.plugin';
+import { ErpUsersDashboardPlugin } from './erp-users-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const redisDb = parseInt(process.env.REDIS_DB ?? '0');
@@ -517,6 +518,11 @@ export const config: VendureConfig = {
         // Dashboard companion to packages/manager's Settings → Organizations page, same
         // read-only organizationRequisites query — see src/dashboard/organizations/index.ts.
         OrganizationsDashboardPlugin,
+        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #119 Phase 1) —
+        // "ERP users" Pending/Deactivated screens, the sysadmin entry point onto
+        // AccessControlPlugin's Administrator-lifecycle backend — see
+        // src/dashboard/erp-users/index.ts.
+        ErpUsersDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({}),

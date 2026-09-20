@@ -95,6 +95,33 @@ const adminApiSchema = gql`
         lastSeenAt: DateTime!
     }
 
+    type PendingErpUserList {
+        items: [PendingErpUser!]!
+        totalItems: Int!
+    }
+
+    input PendingErpUserFilterParameter {
+        erpId: StringOperators
+        fullName: StringOperators
+        email: StringOperators
+    }
+
+    input PendingErpUserSortParameter {
+        erpId: SortOrder
+        fullName: SortOrder
+        email: SortOrder
+        firstSeenAt: SortOrder
+        lastSeenAt: SortOrder
+    }
+
+    input PendingErpUserListOptions {
+        skip: Int
+        take: Int
+        sort: PendingErpUserSortParameter
+        filter: PendingErpUserFilterParameter
+        filterOperator: LogicalOperator
+    }
+
     extend type Query {
         departments: [Department!]!
         branches: [Branch!]!
@@ -104,7 +131,10 @@ const adminApiSchema = gql`
         teamDirectory: [TeamDirectoryMember!]!
         creditTermLimit(roleCode: String!): CreditTermLimit
         roleAccessScopeConfig(roleCode: String!): String
-        pendingErpUsers: [PendingErpUser!]!
+        # Issue #119 Phase 1: both real server-side pagination, backing the Dashboard "ERP
+        # users" screens' ListPage components — see access-control.resolver.ts's own comments.
+        pendingErpUsers(options: PendingErpUserListOptions): PendingErpUserList!
+        deactivatedAdministrators(options: AdministratorListOptions): AdministratorList!
     }
 
     extend type Mutation {

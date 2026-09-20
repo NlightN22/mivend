@@ -1,10 +1,12 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { Permission } from '@vendure/common/lib/generated-types';
+import { AdministratorListOptions, Permission } from '@vendure/common/lib/generated-types';
 import {
     Administrator,
     Allow,
     AdministratorService,
     Ctx,
+    ListQueryOptions,
+    PaginatedList,
     RequestContext,
     Transaction,
 } from '@vendure/core';
@@ -260,8 +262,23 @@ export class AccessControlResolver {
     // Issue #119: unlinked 1C users awaiting a human decision — see PendingErpUser's own comment.
     @Query()
     @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
-    async pendingErpUsers(@Ctx() ctx: RequestContext): Promise<PendingErpUser[]> {
-        return this.pendingErpUserService.findAll(ctx);
+    async pendingErpUsers(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: ListQueryOptions<PendingErpUser> },
+    ): Promise<PaginatedList<PendingErpUser>> {
+        return this.pendingErpUserService.findAllPaginated(ctx, args.options);
+    }
+
+    // Issue #119 Phase 1: soft-deleted (deactivated) Administrators — invisible to the native
+    // `administrators` query/page, see AdministratorActivationService.findDeactivated's own
+    // comment for why this can't just be a filter on that query.
+    @Query()
+    @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
+    async deactivatedAdministrators(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: AdministratorListOptions },
+    ): Promise<PaginatedList<Administrator>> {
+        return this.administratorActivationService.findDeactivated(ctx, args.options);
     }
 
     // Issue #119, Decision 3: the only Administrator creation path anchored on erpId — zero
