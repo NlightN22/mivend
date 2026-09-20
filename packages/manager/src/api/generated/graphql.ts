@@ -2260,6 +2260,57 @@ export type ErpReconciliationRunResult = {
     skipped: Array<Scalars['String']['output']>;
 };
 
+export type ErpUser = Node & {
+    administratorId: Maybe<Scalars['ID']['output']>;
+    departmentId: Maybe<Scalars['String']['output']>;
+    email: Maybe<Scalars['String']['output']>;
+    erpId: Scalars['String']['output'];
+    firstSeenAt: Scalars['DateTime']['output'];
+    fullName: Maybe<Scalars['String']['output']>;
+    id: Scalars['ID']['output'];
+    lastSeenAt: Scalars['DateTime']['output'];
+    status: Scalars['String']['output'];
+};
+
+export type ErpUserFilterParameter = {
+    _and?: InputMaybe<Array<ErpUserFilterParameter>>;
+    _or?: InputMaybe<Array<ErpUserFilterParameter>>;
+    administratorId?: InputMaybe<IdOperators>;
+    departmentId?: InputMaybe<StringOperators>;
+    email?: InputMaybe<StringOperators>;
+    erpId?: InputMaybe<StringOperators>;
+    firstSeenAt?: InputMaybe<DateOperators>;
+    fullName?: InputMaybe<StringOperators>;
+    id?: InputMaybe<IdOperators>;
+    lastSeenAt?: InputMaybe<DateOperators>;
+    status?: InputMaybe<StringOperators>;
+};
+
+export type ErpUserList = PaginatedList & {
+    items: Array<ErpUser>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type ErpUserListOptions = {
+    filter?: InputMaybe<ErpUserFilterParameter>;
+    filterOperator?: InputMaybe<LogicalOperator>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<ErpUserSortParameter>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type ErpUserSortParameter = {
+    administratorId?: InputMaybe<SortOrder>;
+    departmentId?: InputMaybe<SortOrder>;
+    email?: InputMaybe<SortOrder>;
+    erpId?: InputMaybe<SortOrder>;
+    firstSeenAt?: InputMaybe<SortOrder>;
+    fullName?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    lastSeenAt?: InputMaybe<SortOrder>;
+    status?: InputMaybe<SortOrder>;
+};
+
 export type ErrorCode =
     | 'ALREADY_REFUNDED_ERROR'
     | 'CANCEL_ACTIVE_ORDER_ERROR'
@@ -5498,51 +5549,6 @@ export type PaymentStateTransitionError = ErrorResult & {
     transitionError: Scalars['String']['output'];
 };
 
-export type PendingErpUser = Node & {
-    departmentId: Maybe<Scalars['String']['output']>;
-    email: Maybe<Scalars['String']['output']>;
-    erpId: Scalars['String']['output'];
-    firstSeenAt: Scalars['DateTime']['output'];
-    fullName: Maybe<Scalars['String']['output']>;
-    id: Scalars['ID']['output'];
-    lastSeenAt: Scalars['DateTime']['output'];
-};
-
-export type PendingErpUserFilterParameter = {
-    _and?: InputMaybe<Array<PendingErpUserFilterParameter>>;
-    _or?: InputMaybe<Array<PendingErpUserFilterParameter>>;
-    departmentId?: InputMaybe<StringOperators>;
-    email?: InputMaybe<StringOperators>;
-    erpId?: InputMaybe<StringOperators>;
-    firstSeenAt?: InputMaybe<DateOperators>;
-    fullName?: InputMaybe<StringOperators>;
-    id?: InputMaybe<IdOperators>;
-    lastSeenAt?: InputMaybe<DateOperators>;
-};
-
-export type PendingErpUserList = PaginatedList & {
-    items: Array<PendingErpUser>;
-    totalItems: Scalars['Int']['output'];
-};
-
-export type PendingErpUserListOptions = {
-    filter?: InputMaybe<PendingErpUserFilterParameter>;
-    filterOperator?: InputMaybe<LogicalOperator>;
-    skip?: InputMaybe<Scalars['Int']['input']>;
-    sort?: InputMaybe<PendingErpUserSortParameter>;
-    take?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type PendingErpUserSortParameter = {
-    departmentId?: InputMaybe<SortOrder>;
-    email?: InputMaybe<SortOrder>;
-    erpId?: InputMaybe<SortOrder>;
-    firstSeenAt?: InputMaybe<SortOrder>;
-    fullName?: InputMaybe<SortOrder>;
-    id?: InputMaybe<SortOrder>;
-    lastSeenAt?: InputMaybe<SortOrder>;
-};
-
 /**
  * @description
  * Permissions for administrators and customers. Used to control access to
@@ -5680,7 +5686,7 @@ export type Permission =
     | 'DeleteZone'
     /** Manage role scope configuration (departmentId/branchId, max scope per resource) */
     | 'ManageAccessControl'
-    /** Decide who has an Administrator login at all — review PendingErpUser candidates, create an Administrator anchored on erpId, and manually activate/deactivate one (issue #119); distinct from ManageAccessControl, which is RBAC role/scope configuration once a login already exists */
+    /** Decide who has an Administrator login at all — review ErpUser candidates, create an Administrator anchored on erpId, and manually activate/deactivate one (issue #119); distinct from ManageAccessControl, which is RBAC role/scope configuration once a login already exists */
     | 'ManageAdministratorLifecycle'
     /** Create/edit WorkflowDefinition chains (layer 5, /settings) */
     | 'ManageApprovalWorkflows'
@@ -6542,7 +6548,7 @@ export type Query = {
     paymentMethods: PaymentMethodList;
     /** Seed-script idempotency helper only — see seed-payment-refunds.mjs. */
     paymentRefundExists: Scalars['Boolean']['output'];
-    pendingErpUsers: PendingErpUserList;
+    pendingErpUsers: ErpUserList;
     pendingPriceAdjustmentOrderIds: Array<Scalars['String']['output']>;
     pendingSearchIndexUpdates: Scalars['Int']['output'];
     portalUsers: AdministratorList;
@@ -6889,7 +6895,7 @@ export type QueryPaymentRefundExistsArgs = {
 };
 
 export type QueryPendingErpUsersArgs = {
-    options?: InputMaybe<PendingErpUserListOptions>;
+    options?: InputMaybe<ErpUserListOptions>;
 };
 
 export type QueryPortalUsersArgs = {
@@ -10759,7 +10765,7 @@ export type SetAdministratorActiveMutationVariables = Exact<{
 export type SetAdministratorActiveMutation = { setAdministratorActive: boolean };
 
 export type PendingErpUsersPageQueryVariables = Exact<{
-    options?: InputMaybe<PendingErpUserListOptions>;
+    options?: InputMaybe<ErpUserListOptions>;
 }>;
 
 export type PendingErpUsersPageQuery = {
@@ -13412,7 +13418,7 @@ export const SetAdministratorActiveDocument = new TypedDocumentString(`
     SetAdministratorActiveMutationVariables
 >;
 export const PendingErpUsersPageDocument = new TypedDocumentString(`
-    query PendingErpUsersPage($options: PendingErpUserListOptions) {
+    query PendingErpUsersPage($options: ErpUserListOptions) {
   pendingErpUsers(options: $options) {
     items {
       id
