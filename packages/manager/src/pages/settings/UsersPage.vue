@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { useLatestRequest, MvFilterChips, type FilterChip } from '@mivend/ui-kit';
+import { useLatestRequest, MvFilterChips, MvNotice, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import UsersDataTable from '../../components/settings/UsersDataTable.vue';
@@ -42,6 +42,11 @@ function departmentName(departmentId: string | null): string {
 
 const roles = ref<RoleSummary[]>([]);
 const savingRoleId = ref<string | null>(null);
+// Real incident this fixes: Create administrator/Activate-Deactivate/role-change all threw
+// silently on failure (e.g. a stale/incompatible admin-api schema) — the button's own loading
+// state cleared in `finally`, so the UI looked like nothing had happened at all instead of
+// surfacing an error.
+const actionError = ref('');
 
 // Users dataset state
 const pageSize = ref(20);
@@ -125,19 +130,39 @@ async function loadCounts(): Promise<void> {
 watch([statusFilter, searchFilter, pageSize], () => {
     page.value = 1;
 });
+// useLatestRequest has no built-in error channel (see its own source) — every other table in
+// the manager portal shares this same gap (CustomerInvoicesTab.vue etc. all call `void load()`
+// too), pre-existing and out of scope to fix broadly here; this page wraps its own calls so a
+// failed fetch is at least visible instead of leaving the table stuck on stale/empty data with
+// no explanation.
+async function safeLoadUsers(): Promise<void> {
+    try {
+        await loadUsers();
+    } catch (e) {
+        actionError.value = e instanceof Error ? e.message : 'Could not load users';
+    }
+}
+async function safeLoadPending(): Promise<void> {
+    try {
+        await loadPending();
+    } catch (e) {
+        actionError.value = e instanceof Error ? e.message : 'Could not load pending users';
+    }
+}
+
 watch([page, statusFilter, searchFilter, pageSize], () => {
-    if (view.value === 'users') void loadUsers();
+    if (view.value === 'users') void safeLoadUsers();
     toQuery(buildUrlFilters(), page);
 });
 watch(view, v => {
     toQuery(buildUrlFilters(), page);
-    if (v === 'users' && users.value.length === 0) void loadUsers();
-    if (v === 'pending' && pendingUsers.value.length === 0) void loadPending();
+    if (v === 'users' && users.value.length === 0) void safeLoadUsers();
+    if (v === 'pending' && pendingUsers.value.length === 0) void safeLoadPending();
 });
 watch(pendingSearchFilter, () => {
     pendingPage.value = 1;
 });
-watch([pendingPage, pendingSearchFilter, pendingPageSize], () => void loadPending());
+watch([pendingPage, pendingSearchFilter, pendingPageSize], () => void safeLoadPending());
 
 function onUsersFilters(filters: { status: string; search: string }): void {
     statusFilter.value = filters.status;
@@ -145,25 +170,36 @@ function onUsersFilters(filters: { status: string; search: string }): void {
 }
 
 async function onToggleActive(user: PortalUser, isActive: boolean): Promise<void> {
-    await setAdministratorActive(user.id, isActive);
-    await Promise.all([loadUsers(), loadCounts()]);
+    actionError.value = '';
+    try {
+        await setAdministratorActive(user.id, isActive);
+        await Promise.all([loadUsers(), loadCounts()]);
+    } catch (e) {
+        actionError.value = e instanceof Error ? e.message : 'Could not update the account status';
+    }
 }
 
 async function onChangeRole(user: PortalUser, roleId: string): Promise<void> {
+    actionError.value = '';
     savingRoleId.value = user.id;
     try {
         await updateAdministratorRole(user.id, roleId);
         await loadUsers();
+    } catch (e) {
+        actionError.value = e instanceof Error ? e.message : 'Could not update the role';
     } finally {
         savingRoleId.value = null;
     }
 }
 
 async function onCreateAdministrator(erpId: string): Promise<void> {
+    actionError.value = '';
     creatingErpId.value = erpId;
     try {
         await createAdministratorFromErpUser(erpId);
         await Promise.all([loadPending(), loadCounts()]);
+    } catch (e) {
+        actionError.value = e instanceof Error ? e.message : 'Could not create the administrator';
     } finally {
         creatingErpId.value = null;
     }
@@ -176,9 +212,9 @@ onMounted(async () => {
         loadCounts(),
     ]);
     if (view.value === 'pending') {
-        void loadPending();
+        void safeLoadPending();
     } else {
-        void loadUsers();
+        void safeLoadUsers();
     }
 });
 </script>
@@ -193,6 +229,8 @@ onMounted(async () => {
         <div class="users-page__breadcrumb">Workspace / Settings</div>
         <h1 class="users-page__title">Users</h1>
         <SettingsSubNav active="users" />
+
+        <MvNotice v-if="actionError" variant="error">{{ actionError }}</MvNotice>
 
         <UsersDataTable
             v-if="view === 'users'"
