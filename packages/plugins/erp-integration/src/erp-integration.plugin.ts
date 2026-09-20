@@ -49,6 +49,7 @@ import { DepartmentStreamHandler } from './handlers/department.handler';
 import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
+import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
@@ -124,6 +125,7 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
         CounterpartyStreamHandler,
         StorageLocationStreamHandler,
         OrderRegistrationResultHandler,
+        OrderChangedStreamHandler,
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,

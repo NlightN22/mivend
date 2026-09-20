@@ -93,6 +93,12 @@ export type InboundStream =
     | 'storage-location'
     | 'stock-organization'
     | 'order-registration-result'
+    // 1C's order-changed stream (issue #110/#72) — the order's ongoing, current-state view
+    // (status/reservedQuantity/contractId), fired repeatedly over the order's lifetime, distinct
+    // from order-registration-result's one-shot registration outcome. Bulk lane, not critical:
+    // unlike order-registration-result this is not the sole reservation-release trigger, so a
+    // backlog behind catalog/price/stock does not block the release-latency-sensitive path.
+    | 'order-changed'
     // 1C's "Подразделение" (org-structure division) — feeds the existing, previously-unfed
     // Department entity in @mivend/plugin-access-control. Different domain than the 10 streams
     // above (company.customers, not company.catalog/orders) — see DepartmentStreamHandler.
@@ -175,6 +181,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'storage-location': true,
     'stock-organization': true,
     'order-registration-result': true,
+    'order-changed': true,
     department: true,
     counterparty: true,
 } satisfies Record<InboundStream, true>;

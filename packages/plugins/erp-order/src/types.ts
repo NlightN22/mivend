@@ -18,6 +18,15 @@ declare module '@vendure/core' {
         // comment on these two customFields for the proto3 optional-vs-plain distinction.
         erpRegistrationDocumentNumber?: string | null;
         erpRegistrationStatus?: string | null;
+        // Set by plugin-reservation's ReservationWriteOffSyncService.handleOrderChanged from
+        // Integration Service's company.orders.events.v1.OrderChanged (issue #110) — the order's
+        // ongoing current-state view, kept separate from erpRegistrationStatus (the one-shot
+        // order-registration-result outcome) since the two streams report at different times with
+        // no guaranteed relationship between their values.
+        erpOrderStatus?: string | null;
+        // OrderChanged.contract_id (issue #110) — a flat GUID ref to a 1C contract, real optional
+        // presence. Purely informational until a Contract entity exists (#50/#105).
+        erpContractId?: string | null;
     }
 }
 

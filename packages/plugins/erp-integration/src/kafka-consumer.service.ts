@@ -7,6 +7,7 @@ import {
     CounterpartyChangedSchema,
     DepartmentChangedSchema,
     OfferChangedSchema,
+    OrderChangedSchema,
     OrderRegistrationResultSchema,
     OrganizationChangedSchema,
     PriceChangedSchema,
@@ -78,6 +79,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     'storage-location': StorageLocationChangedSchema,
     'stock-organization': StockOrganizationChangedSchema,
     'order-registration-result': OrderRegistrationResultSchema,
+    'order-changed': OrderChangedSchema,
     department: DepartmentChangedSchema,
     counterparty: CounterpartyChangedSchema,
 };
