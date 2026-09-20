@@ -30,6 +30,7 @@ function makeOptions(
                 'order-changed': 'oc',
                 department: 'dept',
                 counterparty: 'cp',
+                'counterparty-credit-balance': 'cpcb',
             },
         },
         schemaRegistry: { url: 'http://x' },

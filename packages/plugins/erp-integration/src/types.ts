@@ -105,11 +105,17 @@ export type InboundStream =
     | 'department'
     // 1C's "Контрагент" (counterparty) — feeds @mivend/plugin-counterparty's Counterparty entity.
     // Same company.customers domain as department above. Issue #104: partial-create of name/
-    // isActive only — creditLimit/creditBalance/paymentDelayDays/priceType/inn/departmentId/
-    // branchId/erpGroupLabel stay erp-import/REST-only fields, never fabricated here (see
+    // isActive/inn/erpGroupLabel/departmentId (verified live against
+    // @nlightn22/event-contracts@0.38.0, search-platform#92/#118) — creditLimit/paymentDelayDays/
+    // priceType/branchId stay erp-import/REST-only fields, never fabricated here (see
     // CounterpartyStreamHandler). manager_id/manager_ids deliberately not consumed yet — blocked
-    // on #109 (no erpId↔Administrator mapping exists).
-    | 'counterparty';
+    // on #109 (no erpId↔Administrator mapping exists). creditBalance lives on its own separate
+    // stream, see 'counterparty-credit-balance' below.
+    | 'counterparty'
+    // search-platform#129: register-driven creditBalance for Counterparty
+    // (AccumulationRegister_ВзаиморасчетыСКонтрагентами), independent of CounterpartyChanged's own
+    // catalog-change trigger. See CounterpartyCreditBalanceStreamHandler.
+    | 'counterparty-credit-balance';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -184,6 +190,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'order-changed': true,
     department: true,
     counterparty: true,
+    'counterparty-credit-balance': true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

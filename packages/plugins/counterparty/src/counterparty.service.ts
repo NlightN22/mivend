@@ -42,41 +42,92 @@ export class CounterpartyService {
         return saved;
     }
 
-    // Issue #104: Integration Service's `counterparty` Kafka stream only carries name/isActive/
-    // isDeleted/managerId(s) — never creditLimit/creditBalance/paymentDelayDays/priceType/inn/
-    // departmentId/branchId/erpGroupLabel, which stay erp-import/REST-only fields (same shape as
-    // #88's OrganizationChanged vs. OrganizationRequisitesRecord gap). Distinct from upsert()
-    // above, which expects the full REST payload shape and must not be reused here. Always
-    // creates/updates a row so a counterparty mivend only knows about via Kafka (e.g. the
-    // staging-integration contour, which never runs erp-import — issue #68) is not permanently
-    // absent; every other column stays at its existing value or entity default until erp-import's
-    // own record arrives, if it ever does in this contour — never fabricated here.
+    // Issue #104: Integration Service's `counterparty` Kafka stream (verified live against
+    // @nlightn22/event-contracts@0.38.0, search-platform#118/#92) carries name/isActive/
+    // isDeleted/managerId(s)/inn/erpGroupLabel/departmentId — never creditLimit/paymentDelayDays/
+    // priceType/branchId, which stay erp-import/REST-only fields (same shape as #88's
+    // OrganizationChanged vs. OrganizationRequisitesRecord gap). creditBalance moved to its own
+    // register-driven stream (search-platform#129 — see updateCreditBalance below), not part of
+    // this event. managerId/managerIds are deliberately not accepted here — Counterparty.
+    // assignedManagerId is a Vendure Administrator.id, and there is no erpId↔Administrator mapping
+    // in mivend yet (blocked on #109). Distinct from upsert() above, which expects the full REST
+    // payload shape and must not be reused here. Always creates/updates a row so a counterparty
+    // mivend only knows about via Kafka (e.g. the staging-integration contour, which never runs
+    // erp-import — issue #68) is not permanently absent; creditLimit/paymentDelayDays/priceType/
+    // branchId stay at their existing value or entity default until erp-import's own record
+    // arrives, if it ever does in this contour — never fabricated here.
     //
-    // `name: null` (deletion tombstone): the stream's deletion events never carry a name, only
-    // entityId/isDeleted — same convention confirmed for organization/department. Updates
+    // `fields.name: null` (deletion tombstone): the stream's deletion events never carry a name,
+    // only entityId/isDeleted — same convention confirmed for organization/department. Updates
     // isActive on an already-known counterparty without touching legalName/shortName, and is a
     // deliberate no-op (never creates a row) when no existing row matches erpId — a deletion
     // tombstone must never fabricate a brand-new counterparty with a blank name.
+    //
+    // `fields.inn`/`erpGroupLabel`/`departmentId` are `undefined` when the event omits them
+    // (real optional-scalar presence, not the proto3 zero-value-omission ambiguity — see #135)
+    // and `null` when 1C explicitly cleared them — only `undefined` is treated as "leave
+    // unchanged"; `null` is applied like any other real value.
     async upsertActiveState(
         ctx: RequestContext,
         erpId: string,
-        name: string | null,
-        isActive: boolean,
+        fields: {
+            name: string | null;
+            isActive: boolean;
+            inn?: string | null;
+            erpGroupLabel?: string | null;
+            departmentId?: string | null;
+        },
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, Counterparty);
         const entity = await repo.findOne({ where: { erpId } });
         if (entity) {
-            if (name) {
-                entity.legalName = name;
-                entity.shortName = name;
+            if (fields.name) {
+                entity.legalName = fields.name;
+                entity.shortName = fields.name;
             }
-            entity.isActive = isActive;
+            entity.isActive = fields.isActive;
+            if (fields.inn !== undefined) entity.inn = fields.inn;
+            if (fields.erpGroupLabel !== undefined) entity.erpGroupLabel = fields.erpGroupLabel;
+            if (fields.departmentId !== undefined) entity.departmentId = fields.departmentId;
             await repo.save(entity);
             return;
         }
-        if (!name) return;
-        await repo.save(repo.create({ erpId, legalName: name, shortName: name, isActive }));
+        if (!fields.name) return;
+        await repo.save(
+            repo.create({
+                erpId,
+                legalName: fields.name,
+                shortName: fields.name,
+                isActive: fields.isActive,
+                inn: fields.inn ?? null,
+                erpGroupLabel: fields.erpGroupLabel ?? null,
+                departmentId: fields.departmentId ?? null,
+            }),
+        );
         Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);
+    }
+
+    // search-platform#129: CounterpartyCreditBalanceChanged is a separate, register-driven stream
+    // (AccumulationRegister_ВзаиморасчетыСКонтрагентами), independent of CounterpartyChanged's own
+    // catalog-change trigger — creditBalance can change without any other Counterparty field
+    // changing, and vice versa. Deliberate no-op when no row exists yet for this erpId — same
+    // never-fabricate-a-new-row rule as upsertActiveState (a balance update is meaningless without
+    // the counterparty itself already existing, and this stream carries no name to create one).
+    async updateCreditBalance(
+        ctx: RequestContext,
+        erpId: string,
+        creditBalance: number,
+    ): Promise<void> {
+        const repo = this.connection.getRepository(ctx, Counterparty);
+        const result = await repo.update({ erpId }, { creditBalance });
+        if (!result.affected) {
+            Logger.verbose(
+                `counterparty creditBalance for erpId=${erpId}: no existing row, skipping`,
+                loggerCtx,
+            );
+            return;
+        }
+        Logger.verbose(`Updated creditBalance for erpId=${erpId}`, loggerCtx);
     }
 
     async deactivate(ctx: RequestContext, erpId: string): Promise<void> {

@@ -47,6 +47,7 @@ import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { OrganizationStreamHandler } from './handlers/organization.handler';
 import { DepartmentStreamHandler } from './handlers/department.handler';
 import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
+import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-credit-balance.handler';
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
@@ -123,6 +124,7 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
         OrganizationStreamHandler,
         DepartmentStreamHandler,
         CounterpartyStreamHandler,
+        CounterpartyCreditBalanceStreamHandler,
         StorageLocationStreamHandler,
         OrderRegistrationResultHandler,
         OrderChangedStreamHandler,

@@ -615,6 +615,11 @@ export const config: VendureConfig = {
                     counterparty:
                         process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY ??
                         'company.customers.events.v1.counterparty-changed',
+                    // search-platform#129: register-driven creditBalance, independent of
+                    // counterparty above — see CounterpartyCreditBalanceStreamHandler.
+                    'counterparty-credit-balance':
+                        process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY_CREDIT_BALANCE ??
+                        'company.customers.events.v1.counterparty-credit-balance-changed',
                 },
             },
             schemaRegistry: {

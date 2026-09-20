@@ -151,17 +151,23 @@ describe('CounterpartyService', () => {
 
     describe('upsertActiveState', () => {
         // Issue #104: partial-create from the `counterparty` Kafka stream — creditLimit/
-        // creditBalance/paymentDelayDays/priceType/inn/departmentId/branchId/erpGroupLabel must
-        // never be fabricated here, same as #88's organization precedent.
+        // paymentDelayDays/priceType/branchId must never be fabricated here, same as #88's
+        // organization precedent. creditBalance lives on its own stream — see updateCreditBalance.
         it('creates a partial row when no counterparty exists for that erpId, never fabricating REST-only fields', async () => {
             mockRepo.findOne.mockResolvedValue(null);
             mockRepo.create.mockImplementation((input: unknown) => input);
-            await service.upsertActiveState(mockCtx, 'cp-unknown', 'Acme Corp', true);
+            await service.upsertActiveState(mockCtx, 'cp-unknown', {
+                name: 'Acme Corp',
+                isActive: true,
+            });
             expect(mockRepo.create).toHaveBeenCalledWith({
                 erpId: 'cp-unknown',
                 legalName: 'Acme Corp',
                 shortName: 'Acme Corp',
                 isActive: true,
+                inn: null,
+                erpGroupLabel: null,
+                departmentId: null,
             });
             expect(mockRepo.save).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -171,6 +177,31 @@ describe('CounterpartyService', () => {
                     isActive: true,
                 }),
             );
+        });
+
+        // Issue #104 follow-up, verified live against @nlightn22/event-contracts@0.38.0
+        // (search-platform#92/#118): inn/erpGroupLabel/departmentId are real fields on this
+        // stream today — a stale earlier read of the issue's own comments had wrongly treated
+        // them as unavailable.
+        it('creates a partial row with inn/erpGroupLabel/departmentId when the payload carries them', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            mockRepo.create.mockImplementation((input: unknown) => input);
+            await service.upsertActiveState(mockCtx, 'cp-unknown', {
+                name: 'Acme Corp',
+                isActive: true,
+                inn: '7701234567',
+                erpGroupLabel: 'Wholesale',
+                departmentId: 'dept-1',
+            });
+            expect(mockRepo.create).toHaveBeenCalledWith({
+                erpId: 'cp-unknown',
+                legalName: 'Acme Corp',
+                shortName: 'Acme Corp',
+                isActive: true,
+                inn: '7701234567',
+                erpGroupLabel: 'Wholesale',
+                departmentId: 'dept-1',
+            });
         });
 
         it('updates legalName/shortName/isActive on an existing row, never touching REST-only fields', async () => {
@@ -185,7 +216,7 @@ describe('CounterpartyService', () => {
                 priceType: 'wholesale',
             };
             mockRepo.findOne.mockResolvedValue(entity);
-            await service.upsertActiveState(mockCtx, 'cp-1', 'New Name', false);
+            await service.upsertActiveState(mockCtx, 'cp-1', { name: 'New Name', isActive: false });
             expect(mockRepo.save).toHaveBeenCalledWith(
                 expect.objectContaining({
                     legalName: 'New Name',
@@ -195,6 +226,55 @@ describe('CounterpartyService', () => {
                     creditLimit: 1000,
                     priceType: 'wholesale',
                 }),
+            );
+        });
+
+        // `undefined` (field absent from the payload) means "leave unchanged" — must not
+        // overwrite inn/erpGroupLabel/departmentId with null just because the event omitted them.
+        it('leaves inn/erpGroupLabel/departmentId untouched when omitted from fields', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'cp-1',
+                legalName: 'Old Name',
+                shortName: 'Old Name',
+                isActive: true,
+                inn: '123456',
+                erpGroupLabel: 'Wholesale',
+                departmentId: 'dept-1',
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'cp-1', { name: 'New Name', isActive: false });
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    inn: '123456',
+                    erpGroupLabel: 'Wholesale',
+                    departmentId: 'dept-1',
+                }),
+            );
+        });
+
+        // An explicit null (1C cleared the field) must be applied, distinct from `undefined`.
+        it('applies an explicit null for inn/erpGroupLabel/departmentId', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'cp-1',
+                legalName: 'Old Name',
+                shortName: 'Old Name',
+                isActive: true,
+                inn: '123456',
+                erpGroupLabel: 'Wholesale',
+                departmentId: 'dept-1',
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'cp-1', {
+                name: 'New Name',
+                isActive: false,
+                inn: null,
+                erpGroupLabel: null,
+                departmentId: null,
+            });
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({ inn: null, erpGroupLabel: null, departmentId: null }),
             );
         });
 
@@ -209,7 +289,7 @@ describe('CounterpartyService', () => {
                 isActive: true,
             };
             mockRepo.findOne.mockResolvedValue(entity);
-            await service.upsertActiveState(mockCtx, 'cp-1', null, false);
+            await service.upsertActiveState(mockCtx, 'cp-1', { name: null, isActive: false });
             expect(mockRepo.save).toHaveBeenCalledWith(
                 expect.objectContaining({
                     legalName: 'Existing Name',
@@ -223,9 +303,29 @@ describe('CounterpartyService', () => {
         // an entity mivend never created locally must stay a true no-op.
         it('does not create a row when name is null and none exists yet', async () => {
             mockRepo.findOne.mockResolvedValue(null);
-            await service.upsertActiveState(mockCtx, 'cp-unknown', null, false);
+            await service.upsertActiveState(mockCtx, 'cp-unknown', { name: null, isActive: false });
             expect(mockRepo.create).not.toHaveBeenCalled();
             expect(mockRepo.save).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('updateCreditBalance', () => {
+        // search-platform#129: a separate, register-driven stream from upsertActiveState above.
+        it('updates creditBalance on an existing row', async () => {
+            mockRepo.update.mockResolvedValue({ affected: 1 });
+            await service.updateCreditBalance(mockCtx, 'cp-1', 500);
+            expect(mockRepo.update).toHaveBeenCalledWith({ erpId: 'cp-1' }, { creditBalance: 500 });
+        });
+
+        // Never fabricate a Counterparty row from a balance update alone — this stream carries
+        // no name, so there is nothing to create from.
+        it('is a no-op when no counterparty exists for that erpId', async () => {
+            mockRepo.update.mockResolvedValue({ affected: 0 });
+            await service.updateCreditBalance(mockCtx, 'cp-unknown', 500);
+            expect(mockRepo.update).toHaveBeenCalledWith(
+                { erpId: 'cp-unknown' },
+                { creditBalance: 500 },
+            );
         });
     });
 

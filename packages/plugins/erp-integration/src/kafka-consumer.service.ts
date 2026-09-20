@@ -5,6 +5,7 @@ import { DataSource } from 'typeorm';
 import {
     CategoryChangedSchema,
     CounterpartyChangedSchema,
+    CounterpartyCreditBalanceChangedSchema,
     DepartmentChangedSchema,
     OfferChangedSchema,
     OrderChangedSchema,
@@ -82,6 +83,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     'order-changed': OrderChangedSchema,
     department: DepartmentChangedSchema,
     counterparty: CounterpartyChangedSchema,
+    'counterparty-credit-balance': CounterpartyCreditBalanceChangedSchema,
 };
 
 @Injectable()

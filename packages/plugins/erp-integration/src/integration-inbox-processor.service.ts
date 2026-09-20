@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
+import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-credit-balance.handler';
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
 import { DepartmentStreamHandler } from './handlers/department.handler';
 import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
@@ -42,6 +43,7 @@ export class IntegrationInboxProcessorService {
         organizationHandler: OrganizationStreamHandler,
         departmentHandler: DepartmentStreamHandler,
         counterpartyHandler: CounterpartyStreamHandler,
+        counterpartyCreditBalanceHandler: CounterpartyCreditBalanceStreamHandler,
         storageLocationHandler: StorageLocationStreamHandler,
         orderRegistrationResultHandler: OrderRegistrationResultHandler,
         orderChangedHandler: OrderChangedStreamHandler,
@@ -55,6 +57,7 @@ export class IntegrationInboxProcessorService {
             warehouse: warehouseHandler,
             department: departmentHandler,
             counterparty: counterpartyHandler,
+            'counterparty-credit-balance': counterpartyCreditBalanceHandler,
             'price-type': priceTypeHandler,
             offer: new DeferredStreamHandler('offer'),
             'storage-location': storageLocationHandler,
