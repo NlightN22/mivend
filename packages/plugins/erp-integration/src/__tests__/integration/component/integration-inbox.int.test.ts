@@ -353,6 +353,39 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             const claimed = await inboxService.claimBatch(20);
             expect(claimed.length).toBe(2);
         });
+
+        // Issue #127 regression: mirrors the real incident shape — an older, larger backlog on
+        // one bulk-lane stream ('counterparty') must never delay a newer row on a stream that now
+        // claims from its own dedicated lane ('user'). Before the fix, both streams shared the
+        // bulk lane's single global `ORDER BY event.createdAt ASC` claim query, so the older
+        // counterparty rows always won every claim slot. 'user' now has its own disjoint stream
+        // filter, so its row is claimed immediately regardless of counterparty's backlog age/size.
+        it('claims a newer user row promptly even with a much older counterparty backlog present', async () => {
+            for (let i = 0; i < 5; i++) {
+                await inboxService.enqueue({
+                    stream: 'counterparty',
+                    entityId: `cp-${i}`,
+                    version: '1',
+                    sourceEventId: `evt-cp-${i}`,
+                    payload: {},
+                });
+            }
+            const userRow = await inboxService.enqueue({
+                stream: 'user',
+                entityId: 'user-1',
+                version: '1',
+                sourceEventId: 'evt-user-1',
+                payload: {},
+            });
+
+            const claimed = await inboxService.claimBatch(20, ['user']);
+            expect(claimed.map(r => r.id)).toEqual([userRow.id]);
+
+            const counterpartyRows = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .find({ where: { stream: 'counterparty' } });
+            expect(counterpartyRows.every(row => row.status === 'pending')).toBe(true);
+        });
     });
 
     // Issue #91's "integration health" page — a different number from Kafka lag (already

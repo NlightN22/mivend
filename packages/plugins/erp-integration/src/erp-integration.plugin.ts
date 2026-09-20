@@ -32,6 +32,7 @@ import { IntegrationInboxProcessorService } from './integration-inbox-processor.
 import {
     createIntegrationInboxBulkTask,
     createIntegrationInboxCriticalTask,
+    createIntegrationInboxUserTask,
 } from './integration-inbox.scheduled-task';
 import { createCollectionFiltersRecomputeTask } from './collection-filters-recompute.scheduled-task';
 import { IntegrationInboxEventResolver } from './integration-inbox-event.resolver';
@@ -161,6 +162,7 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             createIntegrationInboxCriticalTask(ErpIntegrationPlugin.options),
+            createIntegrationInboxUserTask(ErpIntegrationPlugin.options),
             createIntegrationInboxBulkTask(ErpIntegrationPlugin.options),
             createIntegrationOutboxTask(ErpIntegrationPlugin.options),
             createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),

@@ -8,8 +8,10 @@ import {
     INBOX_BULK_TASK_TIMEOUT_MS,
     INBOX_BULK_WALL_CLOCK_BUDGET_MS,
     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
-    INBOX_CRITICAL_STREAMS,
+    INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
     INBOX_POLL_INTERVAL_DEFAULT,
+    INBOX_USER_BATCH_SIZE_DEFAULT,
+    INBOX_USER_STREAMS,
     loggerCtx,
 } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
@@ -20,11 +22,19 @@ import type { ErpIntegrationPluginOptions } from './types';
 // enable/disable + run-now via the admin API, replacing the previous raw BullMQ Queue+Worker
 // (integration-inbox.worker.ts).
 //
-// Issue #93: split into two independent lanes so a large bulk backlog (a full price/stock resync,
+// Issue #93: split into independent lanes so a large bulk backlog (a full price/stock resync,
 // hundreds of thousands of rows) can never starve order-registration-result, which reservation
-// release depends on (OrderRegistrationResultHandler). Both lanes claim from the same
-// IntegrationInboxEvent table but with disjoint `stream` filters (INBOX_CRITICAL_STREAMS/
-// INBOX_BULK_STREAMS), so a row is claimed by exactly one lane.
+// release depends on (OrderRegistrationResultHandler). Every lane claims from the same
+// IntegrationInboxEvent table but with disjoint `stream` filters, so a row is claimed by exactly
+// one lane.
+//
+// Issue #127: this used to be a single "critical" lane shared with 'user' (added to fix a
+// separate head-of-line-blocking incident — see INBOX_USER_STREAMS' own comment in types.ts).
+// Sharing one lane/one claimBatch query between the two would have just relocated the original
+// #93 problem: a large 'user' backlog could then starve order-registration-result the exact same
+// way 'counterparty' once starved 'user'. Kept as two fully independent, single-stream lanes
+// instead (see createIntegrationInboxUserTask below) — order-registration-result's own claim
+// query never has to share a batch, or an ORDER BY, with any other stream, critical or bulk.
 export function createIntegrationInboxCriticalTask(
     options: ErpIntegrationPluginOptions,
 ): ScheduledTask {
@@ -32,7 +42,7 @@ export function createIntegrationInboxCriticalTask(
     return new ScheduledTask({
         id: 'erp-integration-inbox-critical',
         description:
-            'Processes pending order-registration-result inbox records promptly, independent of the bulk catalog/price/stock lane (central hub only).',
+            'Processes pending order-registration-result inbox records promptly, independent of every other lane (central hub only).',
         schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
@@ -41,12 +51,47 @@ export function createIntegrationInboxCriticalTask(
                 .get(IntegrationInboxProcessorService)
                 .processPendingBatch(
                     undefined,
-                    [...INBOX_CRITICAL_STREAMS],
+                    [...INBOX_ORDER_REGISTRATION_RESULT_STREAMS],
                     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
                 );
             if (processed > 0 || failed > 0) {
                 Logger.verbose(
                     `Integration inbox critical-lane sweep: ${processed} processed, ${failed} failed/retrying`,
+                    loggerCtx,
+                );
+            }
+            return { processed, failed };
+        },
+    });
+}
+
+// Issue #127: 'user' gets its own lane, deliberately not merged into the order-registration-result
+// lane above (see that function's own comment for why) and not left in the bulk lane (the original
+// starvation incident this fixes). No reclaim-while-full loop here, same as the
+// order-registration-result lane — 'user' is expected to stay low-volume; if it ever needs one,
+// add it the same way the bulk lane has it, budget-bounded.
+export function createIntegrationInboxUserTask(
+    options: ErpIntegrationPluginOptions,
+): ScheduledTask {
+    const everyMs = options.inboxPollIntervalMs ?? INBOX_POLL_INTERVAL_DEFAULT;
+    return new ScheduledTask({
+        id: 'erp-integration-inbox-user',
+        description:
+            'Processes pending user inbox records promptly, independent of every other lane (central hub only).',
+        schedule: cronEveryMs(everyMs),
+        execute: async ({ injector }) => {
+            if (options.instanceType !== 'central') return { skipped: true };
+
+            const { processed, failed } = await injector
+                .get(IntegrationInboxProcessorService)
+                .processPendingBatch(
+                    undefined,
+                    [...INBOX_USER_STREAMS],
+                    INBOX_USER_BATCH_SIZE_DEFAULT,
+                );
+            if (processed > 0 || failed > 0) {
+                Logger.verbose(
+                    `Integration inbox user-lane sweep: ${processed} processed, ${failed} failed/retrying`,
                     loggerCtx,
                 );
             }

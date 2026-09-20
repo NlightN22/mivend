@@ -3,13 +3,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
     createIntegrationInboxBulkTask,
     createIntegrationInboxCriticalTask,
+    createIntegrationInboxUserTask,
 } from '../../integration-inbox.scheduled-task';
 import {
     INBOX_BULK_BATCH_SIZE_DEFAULT,
     INBOX_BULK_STREAMS,
     INBOX_BULK_WALL_CLOCK_BUDGET_MS,
     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
-    INBOX_CRITICAL_STREAMS,
+    INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
+    INBOX_USER_BATCH_SIZE_DEFAULT,
+    INBOX_USER_STREAMS,
 } from '../../types';
 import type { ErpIntegrationPluginOptions } from '../../types';
 
@@ -76,8 +79,45 @@ describe('createIntegrationInboxCriticalTask', () => {
         expect(processPendingBatch).toHaveBeenCalledTimes(1);
         expect(processPendingBatch).toHaveBeenCalledWith(
             undefined,
-            [...INBOX_CRITICAL_STREAMS],
+            [...INBOX_ORDER_REGISTRATION_RESULT_STREAMS],
             INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
+        );
+        expect(result).toEqual({ processed: 1, failed: 0 });
+    });
+});
+
+// Issue #127: 'user' moved out of the bulk lane into its own dedicated lane (not merged into
+// createIntegrationInboxCriticalTask above) so a large 'user' backlog can never starve
+// order-registration-result the way 'counterparty' once starved 'user' in the bulk lane — see
+// integration-inbox.scheduled-task.ts's own comment for the reasoning.
+describe('createIntegrationInboxUserTask', () => {
+    it('skips on a branch instance', async () => {
+        const processPendingBatch = vi.fn();
+        const task = createIntegrationInboxUserTask(makeOptions('branch'));
+        const result = await task.options.execute({
+            injector: { get: () => ({ processPendingBatch }) } as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+        expect(result).toEqual({ skipped: true });
+        expect(processPendingBatch).not.toHaveBeenCalled();
+    });
+
+    it('claims only the user stream, at the user batch size, independent of the critical lane', async () => {
+        const processPendingBatch = vi
+            .fn()
+            .mockResolvedValue({ processed: 1, failed: 0, claimed: 1 });
+        const task = createIntegrationInboxUserTask(makeOptions('central'));
+        const result = await task.options.execute({
+            injector: { get: () => ({ processPendingBatch }) } as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+        expect(processPendingBatch).toHaveBeenCalledTimes(1);
+        expect(processPendingBatch).toHaveBeenCalledWith(
+            undefined,
+            [...INBOX_USER_STREAMS],
+            INBOX_USER_BATCH_SIZE_DEFAULT,
         );
         expect(result).toEqual({ processed: 1, failed: 0 });
     });

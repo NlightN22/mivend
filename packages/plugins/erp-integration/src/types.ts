@@ -212,8 +212,28 @@ const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
 
 // Issue #93: order-registration-result is reservation-release-blocking (see
 // OrderRegistrationResultHandler) and must never sit behind a bulk catalog/price/stock backlog —
-// it gets its own claim/process lane. Every other InboundStream is the bulk lane.
-export const INBOX_CRITICAL_STREAMS: readonly InboundStream[] = ['order-registration-result'];
+// it gets its own claim/process lane, exclusively its own (see
+// INBOX_ORDER_REGISTRATION_RESULT_STREAMS below): no other stream, including 'user', ever shares
+// its claim query, so a backlog on any other stream can never delay it.
+export const INBOX_ORDER_REGISTRATION_RESULT_STREAMS: readonly InboundStream[] = [
+    'order-registration-result',
+];
+// Issue #127: 'user' gets its own dedicated lane for a completely different reason than
+// order-registration-result above — not reservation urgency, but a real head-of-line-blocking
+// incident. claimBatch's single global `ORDER BY createdAt ASC` inside the bulk lane let an
+// older, much larger `counterparty` backlog starve `user` of any claim slots for hours, even
+// though UserStreamHandler itself was healthy and had nothing wrong with it. A third, disjoint
+// lane guarantees `user` a claim slot regardless of any other bulk-lane stream's backlog
+// size/age — and, symmetrically, guarantees a future `user` backlog can never delay
+// order-registration-result either, since they no longer share a claim query.
+export const INBOX_USER_STREAMS: readonly InboundStream[] = ['user'];
+// The union of both non-bulk lanes — used only to derive INBOX_BULK_STREAMS below (every other
+// InboundStream). Each lane still claims independently via its own stream set above; this union
+// is not itself passed to claimBatch anywhere.
+export const INBOX_CRITICAL_STREAMS: readonly InboundStream[] = [
+    ...INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
+    ...INBOX_USER_STREAMS,
+];
 export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.filter(
     stream => !INBOX_CRITICAL_STREAMS.includes(stream),
 );
@@ -251,6 +271,12 @@ export const MAX_RETRY_DEFAULT = 5;
 export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_CRITICAL_BATCH_SIZE_DEFAULT = 20;
+// Issue #127: the 'user' lane's own batch size, deliberately the same default as the
+// order-registration-result lane's above — both are now small, low-volume, latency-sensitive
+// lanes with no reclaim-while-full loop (see integration-inbox.scheduled-task.ts). Kept as its
+// own named constant, not a reused reference, so the two lanes can be tuned independently later
+// without one change silently affecting the other.
+export const INBOX_USER_BATCH_SIZE_DEFAULT = 20;
 // Issue #96: MissingDependencyError's own backoff shape, distinct from INBOX_MAX_ATTEMPTS_DEFAULT
 // (which stays short/fail-fast for genuine processing bugs and malformed payloads). Base 30s,
 // doubling per attempt, capped at 30 minutes per individual retry gap, ±20% jitter (spreads out a
