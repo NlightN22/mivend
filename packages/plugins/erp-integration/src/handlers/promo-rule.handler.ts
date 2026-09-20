@@ -67,8 +67,10 @@ const GIFT_TYPE_PERCENT = 99;
 //                          count" threshold; deferred until that mechanic is actually needed.
 //   effective_from        — consumed -> DiscountRule.validFrom.
 //   effective_to          — consumed -> DiscountRule.validTo.
-//   is_active             — consumed (absent means false — proto3 zero-value omission, see
-//                          types.ts's InboundStream comment).
+//   is_active             — consumed; the field is genuinely `optional bool` (real presence, not
+//                          a proto3 zero-value omission) — absence is treated as not-active as a
+//                          deliberate conservative default, not because absence and false are
+//                          indistinguishable on the wire.
 //   is_deleted            — consumed (always false per the field's own proto comment; read anyway
 //                          for envelope consistency with every other handler).
 @Injectable()
