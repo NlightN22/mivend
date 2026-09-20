@@ -86,7 +86,10 @@ export class DiscountRegistryResolver {
                 discountRuleId: rule.id,
                 status: 'materialized' as const,
                 input: {
-                    priceTypeCode: rule.priceTypeCode,
+                    // Promo-type rules (issue's promo-rule feature) have a null priceTypeCode —
+                    // same '' sentinel fallback as the pending/rejected branch below, since the
+                    // registry entry's own DB column is non-null.
+                    priceTypeCode: rule.priceTypeCode ?? '',
                     facetCode: rule.facetCode,
                     facetValueCode: rule.facetValueCode,
                     percent: rule.percent,

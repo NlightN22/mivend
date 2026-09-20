@@ -27,6 +27,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             counterparty: 'cp',
             'counterparty-credit-balance': 'cpcb',
             user: 'usr',
+            'promo-rule': 'pr2',
         },
     },
     schemaRegistry: { url: 'http://registry.test' },

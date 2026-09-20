@@ -2,6 +2,18 @@ import { gql } from 'graphql-tag';
 import type { DocumentNode } from 'graphql';
 
 export const adminApiExtensions: DocumentNode = gql`
+    # Backs the Product.manufacturer relation customField (vendure-config.ts) — issue #116
+    # registered the entity but never declared this type, which @vendure/core's own
+    # addGraphQLCustomFields validates exists at schema-build time. Missed by every automated
+    # check here (a green make test/make lint doesn't build the real GraphQL schema), only
+    # surfaced when @vendure/dashboard's own standalone schema-generator tried to build it for
+    # this issue's unrelated Dashboard work (issue #119 Phase 1).
+    type Manufacturer {
+        id: ID!
+        externalId: String!
+        name: String
+    }
+
     type FailedIntegrationInboxEvent {
         id: ID!
         stream: String!

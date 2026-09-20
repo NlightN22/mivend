@@ -35,7 +35,9 @@ export interface DiscountRegistryEntryInput {
 
 export interface DiscountRuleForRegistry {
     id: ID;
-    priceTypeCode: string;
+    // Promo-type rules have no priceTypeCode (see DiscountRule.priceTypeCode's own comment) —
+    // upsertFromRule coerces to the registry entry's own non-null column.
+    priceTypeCode: string | null;
     facetCode: string | null;
     facetValueCode: string | null;
     percent: number;
@@ -105,7 +107,7 @@ export class DiscountRegistryService {
             entry = repo.create({ discountRuleId: String(rule.id), approvalRequestId: null });
         }
         entry.status = 'materialized';
-        entry.priceTypeCode = rule.priceTypeCode;
+        entry.priceTypeCode = rule.priceTypeCode ?? '';
         entry.facetCode = rule.facetCode;
         entry.facetValueCode = rule.facetValueCode;
         entry.percent = rule.percent;
