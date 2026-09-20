@@ -12,10 +12,36 @@ describe('CounterpartyCreditBalanceStreamHandler', () => {
 
         await handler.apply(ctx, 'register-entry-1', {
             counterpartyId: 'cp-1',
-            balance: 12345.67,
+            balance: 12345,
         });
 
-        expect(counterpartyService.updateCreditBalance).toHaveBeenCalledWith(ctx, 'cp-1', 12345.67);
+        expect(counterpartyService.updateCreditBalance).toHaveBeenCalledWith(ctx, 'cp-1', 12345);
+    });
+
+    // mivend.audit.common (2026-09-20): Counterparty.creditBalance is a `bigint` column storing
+    // whole rubles (same convention as creditLimit) — this register-driven stream is the only
+    // balance source that ever sends a fractional value, which previously reached the bigint
+    // column as-is and failed with "invalid input syntax for type bigint" (766 dead-lettered
+    // rows in staging). Rounded, not truncated — 100.6 must become 101, not silently 100.
+    it('rounds a fractional balance to the nearest whole ruble before writing it', async () => {
+        const counterpartyService = { updateCreditBalance: vi.fn().mockResolvedValue(undefined) };
+        const handler = new CounterpartyCreditBalanceStreamHandler(counterpartyService as never);
+
+        await handler.apply(ctx, 'register-entry-1', {
+            counterpartyId: 'cp-1',
+            balance: -20906.8,
+        });
+
+        expect(counterpartyService.updateCreditBalance).toHaveBeenCalledWith(ctx, 'cp-1', -20907);
+    });
+
+    it('rounds .5 up for a positive fractional balance', async () => {
+        const counterpartyService = { updateCreditBalance: vi.fn().mockResolvedValue(undefined) };
+        const handler = new CounterpartyCreditBalanceStreamHandler(counterpartyService as never);
+
+        await handler.apply(ctx, 'register-entry-1', { counterpartyId: 'cp-1', balance: 100.5 });
+
+        expect(counterpartyService.updateCreditBalance).toHaveBeenCalledWith(ctx, 'cp-1', 101);
     });
 
     it('skips when counterpartyId is missing (malformed payload, not retryable)', async () => {

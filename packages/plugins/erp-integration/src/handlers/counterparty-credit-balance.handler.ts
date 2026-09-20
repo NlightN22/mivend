@@ -39,15 +39,25 @@ export class CounterpartyCreditBalanceStreamHandler implements InboundStreamHand
             );
             return;
         }
-        const balance =
+        const rawBalance =
             typeof payload.balance === 'number' ? payload.balance : Number(payload.balance);
-        if (!Number.isFinite(balance)) {
+        if (!Number.isFinite(rawBalance)) {
             Logger.warn(
                 `counterparty-credit-balance ${entityId}: missing/invalid balance, skipping`,
                 loggerCtx,
             );
             return;
         }
+        // Counterparty.creditBalance/creditLimit are both `bigint` columns storing whole rubles,
+        // not fractional minor units (see Counterparty.creditLimit's own GraphQL `Int` type and
+        // erp-import's counterparty-record.dto.ts, which already sends creditLimit as a plain
+        // integer) — this register-driven stream is the only balance source that ever sends a
+        // fractional value (e.g. -20906.8), which previously reached `bigint` as-is and failed
+        // with "invalid input syntax for type bigint" (766 dead-lettered rows in staging,
+        // mivend.audit.common, 2026-09-20). Rounded to match the existing whole-ruble convention
+        // — not truncated, so a balance like 100.6 doesn't silently become a materially
+        // different 100.
+        const balance = Math.round(rawBalance);
         await this.counterpartyService.updateCreditBalance(ctx, counterpartyId, balance);
     }
 }
