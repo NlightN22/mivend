@@ -6,7 +6,10 @@ import type { PendingErpUserService } from '../../pending-erp-user.service';
 
 describe('AdministratorProvisioningService', () => {
     let administratorService: { create: ReturnType<typeof vi.fn> };
-    let userService: { setPasswordResetToken: ReturnType<typeof vi.fn> };
+    let userService: {
+        setPasswordResetToken: ReturnType<typeof vi.fn>;
+        resetPasswordByToken: ReturnType<typeof vi.fn>;
+    };
     let eventBus: { publish: ReturnType<typeof vi.fn> };
     let pendingErpUserService: {
         findByErpId: ReturnType<typeof vi.fn>;
@@ -17,7 +20,7 @@ describe('AdministratorProvisioningService', () => {
 
     beforeEach(() => {
         administratorService = { create: vi.fn() };
-        userService = { setPasswordResetToken: vi.fn() };
+        userService = { setPasswordResetToken: vi.fn(), resetPasswordByToken: vi.fn() };
         eventBus = { publish: vi.fn() };
         pendingErpUserService = { findByErpId: vi.fn(), deleteByErpId: vi.fn() };
         service = new AdministratorProvisioningService(
@@ -108,5 +111,49 @@ describe('AdministratorProvisioningService', () => {
         await service.createFromPending(ctx, 'user-1');
 
         expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+
+    describe('completePasswordReset', () => {
+        it('reports success when resetPasswordByToken returns a User', async () => {
+            userService.resetPasswordByToken.mockResolvedValue({
+                id: 'user-1',
+                identifier: 'ivan@example.com',
+            });
+
+            const result = await service.completePasswordReset(ctx, 'tok-1', 'new-pass');
+
+            expect(result).toEqual({ success: true });
+        });
+
+        it('reports an expired-token reason for PasswordResetTokenExpiredError', async () => {
+            userService.resetPasswordByToken.mockResolvedValue({
+                __typename: 'PasswordResetTokenExpiredError',
+            });
+
+            const result = await service.completePasswordReset(ctx, 'tok-1', 'new-pass');
+
+            expect(result).toEqual({ success: false, reason: 'expired' });
+        });
+
+        it('reports an invalid-token reason for PasswordResetTokenInvalidError', async () => {
+            userService.resetPasswordByToken.mockResolvedValue({
+                __typename: 'PasswordResetTokenInvalidError',
+            });
+
+            const result = await service.completePasswordReset(ctx, 'tok-1', 'new-pass');
+
+            expect(result).toEqual({ success: false, reason: 'invalid' });
+        });
+
+        it('reports a validation reason for PasswordValidationError', async () => {
+            userService.resetPasswordByToken.mockResolvedValue({
+                __typename: 'PasswordValidationError',
+                validationErrorMessage: 'Too short',
+            });
+
+            const result = await service.completePasswordReset(ctx, 'tok-1', 'new-pass');
+
+            expect(result).toEqual({ success: false, reason: 'validation' });
+        });
     });
 });

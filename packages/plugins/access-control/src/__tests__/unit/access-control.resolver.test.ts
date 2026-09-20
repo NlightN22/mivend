@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AdministratorService, RequestContext } from '@vendure/core';
 
-import { AccessControlResolver } from '../../access-control.resolver';
+import { AccessControlResolver, AdministratorStatusResolver } from '../../access-control.resolver';
 import { AccessScopeService } from '../../access-scope.service';
 import { AdministratorActivationService } from '../../administrator-activation.service';
 import { AdministratorProvisioningService } from '../../administrator-provisioning.service';
@@ -167,5 +167,104 @@ describe('AccessControlResolver.teamDirectory', () => {
         const [member] = await resolver.teamDirectory(ctx);
         expect(member.branchId).toBe('branch-central');
         expect(member.position).toBe('Sales operator');
+    });
+});
+
+describe('AccessControlResolver.portalUsers', () => {
+    it('delegates to AdministratorActivationService.findAllWithStatus with the given options/status', async () => {
+        const administratorActivationService = { findAllWithStatus: vi.fn() };
+        const resolver = new AccessControlResolver(
+            {} as RoleScopeConfigService,
+            {} as DepartmentService,
+            {} as BranchService,
+            {} as WarehouseService,
+            {} as BranchSettingsService,
+            {} as CreditTermLimitService,
+            {} as AdministratorService,
+            {} as AccessScopeService,
+            {} as PendingErpUserService,
+            {} as AdministratorProvisioningService,
+            administratorActivationService as unknown as AdministratorActivationService,
+        );
+        const ctx = {} as RequestContext;
+        administratorActivationService.findAllWithStatus.mockResolvedValue({
+            items: [],
+            totalItems: 0,
+        });
+
+        await resolver.portalUsers(ctx, { options: { take: 20 }, status: 'active' });
+
+        expect(administratorActivationService.findAllWithStatus).toHaveBeenCalledWith(
+            ctx,
+            { take: 20 },
+            'active',
+        );
+    });
+});
+
+describe('AccessControlResolver.resetAdministratorPassword', () => {
+    it('returns success:true on a successful reset', async () => {
+        const administratorProvisioningService = { completePasswordReset: vi.fn() };
+        const resolver = new AccessControlResolver(
+            {} as RoleScopeConfigService,
+            {} as DepartmentService,
+            {} as BranchService,
+            {} as WarehouseService,
+            {} as BranchSettingsService,
+            {} as CreditTermLimitService,
+            {} as AdministratorService,
+            {} as AccessScopeService,
+            {} as PendingErpUserService,
+            administratorProvisioningService as unknown as AdministratorProvisioningService,
+            {} as AdministratorActivationService,
+        );
+        administratorProvisioningService.completePasswordReset.mockResolvedValue({ success: true });
+
+        const result = await resolver.resetAdministratorPassword({} as RequestContext, {
+            token: 'tok-1',
+            password: 'new-pass',
+        });
+
+        expect(result).toEqual({ success: true, reason: null });
+    });
+
+    it('surfaces the failure reason without throwing', async () => {
+        const administratorProvisioningService = { completePasswordReset: vi.fn() };
+        const resolver = new AccessControlResolver(
+            {} as RoleScopeConfigService,
+            {} as DepartmentService,
+            {} as BranchService,
+            {} as WarehouseService,
+            {} as BranchSettingsService,
+            {} as CreditTermLimitService,
+            {} as AdministratorService,
+            {} as AccessScopeService,
+            {} as PendingErpUserService,
+            administratorProvisioningService as unknown as AdministratorProvisioningService,
+            {} as AdministratorActivationService,
+        );
+        administratorProvisioningService.completePasswordReset.mockResolvedValue({
+            success: false,
+            reason: 'expired',
+        });
+
+        const result = await resolver.resetAdministratorPassword({} as RequestContext, {
+            token: 'tok-1',
+            password: 'new-pass',
+        });
+
+        expect(result).toEqual({ success: false, reason: 'expired' });
+    });
+});
+
+describe('AdministratorStatusResolver.isActive', () => {
+    const resolver = new AdministratorStatusResolver();
+
+    it('is true when deletedAt is null', () => {
+        expect(resolver.isActive({ deletedAt: null } as never)).toBe(true);
+    });
+
+    it('is false when deletedAt is set', () => {
+        expect(resolver.isActive({ deletedAt: new Date() } as never)).toBe(false);
     });
 });

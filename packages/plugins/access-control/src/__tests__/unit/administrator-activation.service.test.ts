@@ -138,4 +138,47 @@ describe('AdministratorActivationService', () => {
             expect(result).toEqual({ items: [{ id: 'admin-1' }], totalItems: 1 });
         });
     });
+
+    describe('findAllWithStatus', () => {
+        function mockQb() {
+            const qb = {
+                alias: 'administrator',
+                withDeleted: vi.fn(),
+                andWhere: vi.fn(),
+                getManyAndCount: vi.fn(async () => [[{ id: 'admin-1' }], 1]),
+            };
+            qb.withDeleted.mockReturnValue(qb);
+            qb.andWhere.mockReturnValue(qb);
+            return qb;
+        }
+
+        it('includes soft-deleted rows and applies no status predicate for "all" (undefined)', async () => {
+            const qb = mockQb();
+            listQueryBuilder.build.mockReturnValue(qb);
+
+            const result = await service.findAllWithStatus(ctx, undefined, undefined);
+
+            expect(qb.withDeleted).toHaveBeenCalled();
+            expect(qb.andWhere).not.toHaveBeenCalled();
+            expect(result).toEqual({ items: [{ id: 'admin-1' }], totalItems: 1 });
+        });
+
+        it('filters to deletedAt IS NULL for status=active', async () => {
+            const qb = mockQb();
+            listQueryBuilder.build.mockReturnValue(qb);
+
+            await service.findAllWithStatus(ctx, undefined, 'active');
+
+            expect(qb.andWhere).toHaveBeenCalledWith('administrator.deletedAt IS NULL');
+        });
+
+        it('filters to deletedAt IS NOT NULL for status=inactive', async () => {
+            const qb = mockQb();
+            listQueryBuilder.build.mockReturnValue(qb);
+
+            await service.findAllWithStatus(ctx, undefined, 'inactive');
+
+            expect(qb.andWhere).toHaveBeenCalledWith('administrator.deletedAt IS NOT NULL');
+        });
+    });
 });

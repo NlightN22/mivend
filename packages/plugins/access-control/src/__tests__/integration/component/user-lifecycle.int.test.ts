@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi, type Mock } from 'vitest';
 import {
     Column,
     DataSource,
@@ -259,7 +259,7 @@ describe('UserEnrichmentService.linkAndEnrich (real DB)', () => {
 
 describe('AdministratorActivationService.setActive (real DB)', () => {
     let service: AdministratorActivationService;
-    let softDelete: ReturnType<typeof vi.fn>;
+    let softDelete: Mock<[ctx: unknown, id: number], Promise<void>>;
 
     beforeAll(() => {
         const connection = makeConnectionShim();

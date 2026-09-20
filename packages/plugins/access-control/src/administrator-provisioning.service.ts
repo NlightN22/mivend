@@ -67,4 +67,34 @@ export class AdministratorProvisioningService {
 
         return admin;
     }
+
+    // Issue #119 Phase 2: completes the reset-link flow started by createFromPending above (also
+    // reused for any later "reset this Administrator's password" staff action, per the issue's
+    // Decision 3 step 3). `resetPasswordByToken` is a generic User-level method (verified in
+    // @vendure/core source, not Customer-specific) — the only auth this endpoint has is
+    // possession of a valid, unexpired, single-use token, not RBAC, since the caller has no
+    // session yet (see the resolver's `@Allow(Permission.Public)`). Its error variants
+    // (PasswordResetTokenExpiredError/PasswordResetTokenInvalidError/PasswordValidationError)
+    // aren't part of @vendure/core's public export surface, so they're distinguished here by
+    // `__typename` rather than an `instanceof` check.
+    async completePasswordReset(
+        ctx: RequestContext,
+        token: string,
+        password: string,
+    ): Promise<
+        { success: true } | { success: false; reason: 'expired' | 'invalid' | 'validation' }
+    > {
+        const result = await this.userService.resetPasswordByToken(ctx, token, password);
+        if ('identifier' in result) {
+            return { success: true };
+        }
+        switch (result.__typename) {
+            case 'PasswordResetTokenExpiredError':
+                return { success: false, reason: 'expired' };
+            case 'PasswordValidationError':
+                return { success: false, reason: 'validation' };
+            default:
+                return { success: false, reason: 'invalid' };
+        }
+    }
 }

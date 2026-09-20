@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AdministratorListOptions } from '@vendure/common/lib/generated-types';
+import type { AdministratorListOptions } from '@vendure/common/lib/generated-types';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     Administrator,
@@ -43,6 +43,31 @@ export class AdministratorActivationService {
         qb.withDeleted()
             .andWhere(`${qb.alias}.deletedAt IS NOT NULL`)
             .andWhere(`${qb.alias}.customFieldsErpid IS NOT NULL`);
+        const [items, totalItems] = await qb.getManyAndCount();
+        return { items, totalItems };
+    }
+
+    // Backs the manager-portal "Settings > Users" screen (issue #119 Phase 2) — every
+    // Administrator (not just erpId-linked ones, unlike findDeactivated above, which is scoped
+    // to the Dashboard's own "ERP users > Deactivated" tab), filterable by status. Same
+    // `.withDeleted()` + explicit `deletedAt` predicate approach as findDeactivated, for the
+    // same reason: AdministratorService.findAll hard-filters deletedAt IS NULL, so a status
+    // filter can't be built on top of it.
+    async findAllWithStatus(
+        ctx: RequestContext,
+        options: AdministratorListOptions | undefined,
+        status: 'active' | 'inactive' | undefined,
+    ): Promise<PaginatedList<Administrator>> {
+        const qb = this.listQueryBuilder.build(Administrator, options, {
+            ctx,
+            relations: ['user', 'user.roles'],
+        });
+        qb.withDeleted();
+        if (status === 'active') {
+            qb.andWhere(`${qb.alias}.deletedAt IS NULL`);
+        } else if (status === 'inactive') {
+            qb.andWhere(`${qb.alias}.deletedAt IS NOT NULL`);
+        }
         const [items, totalItems] = await qb.getManyAndCount();
         return { items, totalItems };
     }

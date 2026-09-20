@@ -6,7 +6,7 @@ import {
 } from '@vendure/core';
 import gql from 'graphql-tag';
 
-import { AccessControlResolver } from './access-control.resolver';
+import { AccessControlResolver, AdministratorStatusResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
 import { AdministratorActivationService } from './administrator-activation.service';
 import { AdministratorProvisioningService } from './administrator-provisioning.service';
@@ -131,6 +131,24 @@ const adminApiSchema = gql`
         filterOperator: LogicalOperator
     }
 
+    enum PortalUserStatus {
+        active
+        inactive
+    }
+
+    # Issue #119 Phase 2: not a native Administrator field — Vendure core tracks deletedAt
+    # internally but never exposes it on the GraphQL type. Resolved by AdministratorStatusResolver
+    # in access-control.resolver.ts from the same entity instance already loaded by whichever
+    # query returned this Administrator.
+    extend type Administrator {
+        isActive: Boolean!
+    }
+
+    type ResetAdministratorPasswordResult {
+        success: Boolean!
+        reason: String
+    }
+
     extend type Query {
         departments: [Department!]!
         branches: [Branch!]!
@@ -144,11 +162,21 @@ const adminApiSchema = gql`
         # users" screens' ListPage components — see access-control.resolver.ts's own comments.
         pendingErpUsers(options: PendingErpUserListOptions): PendingErpUserList!
         deactivatedAdministrators(options: AdministratorListOptions): AdministratorList!
+        # Issue #119 Phase 2: backs the manager-portal Settings > Users screen — every
+        # Administrator, filterable by status (omit status for "All").
+        portalUsers(options: AdministratorListOptions, status: PortalUserStatus): AdministratorList!
     }
 
     extend type Mutation {
         setRoleAccessScopeConfig(roleCode: String!, accessScopeConfig: String!): Boolean!
         setCreditTermLimit(roleCode: String!, maxExtraDays: Int!, maxAmount: Int): CreditTermLimit!
+        # Issue #119 Phase 2: completes the emailed password-reset link — deliberately no
+        # @Allow(Public) alternative on the *schema* side, that's a resolver-level concern, but
+        # this mutation is reachable with no session (see the resolver's own comment).
+        resetAdministratorPassword(
+            token: String!
+            password: String!
+        ): ResetAdministratorPasswordResult!
         updateWarehouseBranchAssignment(
             warehouseId: ID!
             branchId: String!
@@ -208,7 +236,7 @@ const adminApiSchema = gql`
     ],
     adminApiExtensions: {
         schema: adminApiSchema,
-        resolvers: [AccessControlResolver],
+        resolvers: [AccessControlResolver, AdministratorStatusResolver],
     },
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.Administrator = [

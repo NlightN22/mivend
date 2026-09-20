@@ -1,4 +1,4 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { AdministratorListOptions, Permission } from '@vendure/common/lib/generated-types';
 import {
     Administrator,
@@ -308,5 +308,52 @@ export class AccessControlResolver {
             args.isActive,
         );
         return true;
+    }
+
+    // Issue #119 Phase 2: backs the manager-portal Settings > Users screen — every Administrator
+    // (not scoped to erpId, unlike Phase 1's deactivatedAdministrators), filterable by status.
+    @Query()
+    @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
+    async portalUsers(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: AdministratorListOptions; status?: 'active' | 'inactive' },
+    ): Promise<PaginatedList<Administrator>> {
+        return this.administratorActivationService.findAllWithStatus(
+            ctx,
+            args.options,
+            args.status,
+        );
+    }
+
+    // Issue #119 Phase 2: completes the emailed password-reset link from
+    // AdministratorProvisioningService.createFromPending. Deliberately Public — the person
+    // opening this link has no session yet; possession of a valid, unexpired, single-use token
+    // is the only security boundary here, same as the shop-api's own public resetPassword.
+    @Transaction()
+    @Mutation()
+    @Allow(Permission.Public)
+    async resetAdministratorPassword(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { token: string; password: string },
+    ): Promise<{ success: boolean; reason: string | null }> {
+        const result = await this.administratorProvisioningService.completePasswordReset(
+            ctx,
+            args.token,
+            args.password,
+        );
+        return result.success
+            ? { success: true, reason: null }
+            : { success: false, reason: result.reason };
+    }
+}
+
+// Issue #119 Phase 2: `isActive` isn't a native Administrator field (Vendure core exposes only
+// `deletedAt` internally, not on the GraphQL type) — resolved here from the same entity instance
+// `portalUsers`/`deactivatedAdministrators` already load, not a second query.
+@Resolver('Administrator')
+export class AdministratorStatusResolver {
+    @ResolveField()
+    isActive(@Parent() administrator: Administrator): boolean {
+        return administrator.deletedAt == null;
     }
 }
