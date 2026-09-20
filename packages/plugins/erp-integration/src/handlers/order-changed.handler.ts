@@ -21,6 +21,17 @@ const loggerCtx = 'IntegrationOrderChangedHandler';
 // discount design is still in progress), and the issue's own scope explicitly warns against
 // fabricating a use before one exists. comment is out of scope per the issue too. Revisit once
 // #101 lands a real consumer for these fields.
+//
+// Header-level customerId/organizationId/warehouseId, and per-line plain `quantity` (distinct
+// from reservedQuantity), are ALSO deliberately not consumed — explicit decision, not an
+// oversight (mivend.audit.common's #110 review flagged these as needing a written call, same as
+// the discount fields above): the order's customer/organization/warehouse are already known
+// locally from the Order itself (this handler only correlates by entityId into an existing
+// Order — it never creates one), so re-deriving them from this stream would be a redundant,
+// unused write. `quantity` (the ordered amount, as opposed to reservedQuantity, the ERP-confirmed
+// reserved amount) has no current consumer — only reservedQuantity feeds #72's reservation
+// tracking. Revisit if a future feature needs to detect an ERP-side order-line quantity edit
+// independent of reservation state.
 @Injectable()
 export class OrderChangedStreamHandler implements InboundStreamHandler {
     constructor(
