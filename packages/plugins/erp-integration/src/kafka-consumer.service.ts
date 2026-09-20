@@ -17,6 +17,7 @@ import {
     StockChangedSchema,
     StockOrganizationChangedSchema,
     StorageLocationChangedSchema,
+    UserChangedSchema,
     WarehouseChangedSchema,
 } from '@nlightn22/event-contracts';
 import { Consumer, Kafka } from 'kafkajs';
@@ -84,6 +85,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     department: DepartmentChangedSchema,
     counterparty: CounterpartyChangedSchema,
     'counterparty-credit-balance': CounterpartyCreditBalanceChangedSchema,
+    user: UserChangedSchema,
 };
 
 @Injectable()

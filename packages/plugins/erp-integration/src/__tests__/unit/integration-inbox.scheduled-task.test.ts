@@ -37,6 +37,7 @@ function makeOptions(instanceType: 'central' | 'branch'): ErpIntegrationPluginOp
                 department: 'dept',
                 counterparty: 'cp',
                 'counterparty-credit-balance': 'cpcb',
+                user: 'usr',
             },
         },
         schemaRegistry: { url: 'http://x' },

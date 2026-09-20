@@ -40,6 +40,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             department: 't-department',
             counterparty: 'cp',
             'counterparty-credit-balance': 'cpcb',
+            user: 'usr',
         },
     },
     schemaRegistry: { url: 'http://localhost:8081' },

@@ -48,14 +48,15 @@ export class CounterpartyService {
     // priceType/branchId, which stay erp-import/REST-only fields (same shape as #88's
     // OrganizationChanged vs. OrganizationRequisitesRecord gap). creditBalance moved to its own
     // register-driven stream (search-platform#129 — see updateCreditBalance below), not part of
-    // this event. managerId/managerIds are deliberately not accepted here — Counterparty.
-    // assignedManagerId is a Vendure Administrator.id, and there is no erpId↔Administrator mapping
-    // in mivend yet (blocked on #109). Distinct from upsert() above, which expects the full REST
-    // payload shape and must not be reused here. Always creates/updates a row so a counterparty
-    // mivend only knows about via Kafka (e.g. the staging-integration contour, which never runs
-    // erp-import — issue #68) is not permanently absent; creditLimit/paymentDelayDays/priceType/
-    // branchId stay at their existing value or entity default until erp-import's own record
-    // arrives, if it ever does in this contour — never fabricated here.
+    // this event. `assignedManagerId` here is an already-resolved Vendure Administrator.id (see
+    // CounterpartyStreamHandler/UserEnrichmentService, issue #109) — this method itself never
+    // does 1C-erpId↔Administrator resolution, only writes whatever id the caller already
+    // resolved. Distinct from upsert() above, which expects the full REST payload shape and must
+    // not be reused here. Always creates/updates a row so a counterparty mivend only knows about
+    // via Kafka (e.g. the staging-integration contour, which never runs erp-import — issue #68)
+    // is not permanently absent; creditLimit/paymentDelayDays/priceType/branchId stay at their
+    // existing value or entity default until erp-import's own record arrives, if it ever does in
+    // this contour — never fabricated here.
     //
     // `fields.name: null` (deletion tombstone): the stream's deletion events never carry a name,
     // only entityId/isDeleted — same convention confirmed for organization/department. Updates
@@ -63,10 +64,11 @@ export class CounterpartyService {
     // deliberate no-op (never creates a row) when no existing row matches erpId — a deletion
     // tombstone must never fabricate a brand-new counterparty with a blank name.
     //
-    // `fields.inn`/`erpGroupLabel`/`departmentId` are `undefined` when the event omits them
-    // (real optional-scalar presence, not the proto3 zero-value-omission ambiguity — see #135)
-    // and `null` when 1C explicitly cleared them — only `undefined` is treated as "leave
-    // unchanged"; `null` is applied like any other real value.
+    // `fields.inn`/`erpGroupLabel`/`departmentId`/`assignedManagerId` are `undefined` when the
+    // event omits them (real optional-scalar presence, not the proto3 zero-value-omission
+    // ambiguity — see #135) and `null` when 1C explicitly cleared them (or, for
+    // `assignedManagerId`, when the caller found no manager assigned at all) — only `undefined`
+    // is treated as "leave unchanged"; `null` is applied like any other real value.
     async upsertActiveState(
         ctx: RequestContext,
         erpId: string,
@@ -76,6 +78,7 @@ export class CounterpartyService {
             inn?: string | null;
             erpGroupLabel?: string | null;
             departmentId?: string | null;
+            assignedManagerId?: string | null;
         },
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, Counterparty);
@@ -89,6 +92,9 @@ export class CounterpartyService {
             if (fields.inn !== undefined) entity.inn = fields.inn;
             if (fields.erpGroupLabel !== undefined) entity.erpGroupLabel = fields.erpGroupLabel;
             if (fields.departmentId !== undefined) entity.departmentId = fields.departmentId;
+            if (fields.assignedManagerId !== undefined) {
+                entity.assignedManagerId = fields.assignedManagerId;
+            }
             await repo.save(entity);
             return;
         }
@@ -102,6 +108,7 @@ export class CounterpartyService {
                 inn: fields.inn ?? null,
                 erpGroupLabel: fields.erpGroupLabel ?? null,
                 departmentId: fields.departmentId ?? null,
+                assignedManagerId: fields.assignedManagerId ?? null,
             }),
         );
         Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);

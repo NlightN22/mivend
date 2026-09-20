@@ -16,6 +16,7 @@ import { PriceTypeStreamHandler } from './handlers/price-type.handler';
 import { ProductStreamHandler } from './handlers/product.handler';
 import { StockStreamHandler } from './handlers/stock.handler';
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
+import { UserStreamHandler } from './handlers/user.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
@@ -47,6 +48,7 @@ export class IntegrationInboxProcessorService {
         storageLocationHandler: StorageLocationStreamHandler,
         orderRegistrationResultHandler: OrderRegistrationResultHandler,
         orderChangedHandler: OrderChangedStreamHandler,
+        userHandler: UserStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -63,6 +65,7 @@ export class IntegrationInboxProcessorService {
             'storage-location': storageLocationHandler,
             'order-registration-result': orderRegistrationResultHandler,
             'order-changed': orderChangedHandler,
+            user: userHandler,
             // Quantity dimension deliberately deferred to issue #72 (ATP/reservation-drift
             // source-of-truth); organization_id here is not authoritative — StorageLocationChanged
             // above is the sole source for ProductVariant.customFields.organizationId, so this

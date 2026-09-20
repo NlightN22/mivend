@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { UserEnrichmentService } from '@mivend/plugin-access-control';
 
+import { MissingDependencyError } from '../types';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationCounterpartyHandler';
@@ -14,12 +16,24 @@ const loggerCtx = 'IntegrationCounterpartyHandler';
 // paymentDelayDays/priceType/branchId, which stay erp-import's own richer REST record (see
 // CounterpartyService.upsertActiveState's own comment). creditBalance moved to its own
 // register-driven stream (search-platform#129) — see CounterpartyCreditBalanceStreamHandler.
-// manager_id/manager_ids deliberately not read here: Counterparty.assignedManagerId is a Vendure
-// Administrator.id, and there is no erpId↔Administrator mapping anywhere in mivend yet — blocked
-// on #109, tracked there, not a trivial "read the field" case.
+//
+// manager_id/manager_ids: issue #109 shipped the erpId↔Administrator correlation
+// (UserEnrichmentService, fed by the `user` stream) this was blocked on — resolved here to
+// Counterparty.assignedManagerId (a Vendure Administrator.id, never a raw 1C erpId).
+//
+// access-control-review note (docs/access-control.md, layer 3): this writes assignedManagerId
+// directly, bypassing CounterpartyService.reassignManager's own department-scope authorization
+// check — deliberate, not an oversight. Same precedent as departmentId/branchId already being
+// ERP-authoritative (EmployeeService's REST path writes Administrator.customFields.departmentId
+// the same way) — "ERP is master for business data" (AGENTS.md/external-integration-rules). 1C
+// can silently change who holds `own`-scope access to a counterparty; the portal's own
+// reassignManager mutation stays a manual override tool on top of that, not the sole path.
 @Injectable()
 export class CounterpartyStreamHandler implements InboundStreamHandler {
-    constructor(private readonly counterpartyService: CounterpartyService) {}
+    constructor(
+        private readonly counterpartyService: CounterpartyService,
+        private readonly userEnrichmentService: UserEnrichmentService,
+    ) {}
 
     async apply(
         ctx: RequestContext,
@@ -37,6 +51,8 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         // handler does.
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 
+        const assignedManagerId = await this.resolveAssignedManagerId(entityId, ctx, payload);
+
         await this.counterpartyService.upsertActiveState(ctx, entityId, {
             name,
             isActive,
@@ -53,6 +69,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                 'departmentId' in payload
                     ? ((payload.departmentId as string | null) ?? null)
                     : undefined,
+            assignedManagerId,
         });
         if (!name) {
             Logger.verbose(
@@ -63,5 +80,43 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
             return;
         }
         Logger.verbose(`Upserted counterparty erpId=${entityId}`, loggerCtx);
+    }
+
+    // Primary manager_id wins; else the first entry of manager_ids; else `undefined` (leave
+    // assignedManagerId untouched) — mirrors search-platform#92's own established fallback
+    // decision, never invented on Integration Service's side. Both keys are omitted by 1C itself
+    // (real optional-scalar/empty-repeated-field presence, not proto3 zero-value ambiguity) when
+    // no manager is assigned at all — that case must never clear an existing REST/portal-assigned
+    // manager just because this event omitted the field.
+    private async resolveAssignedManagerId(
+        entityId: string,
+        ctx: RequestContext,
+        payload: Record<string, unknown>,
+    ): Promise<string | null | undefined> {
+        const managerIds = Array.isArray(payload.managerIds)
+            ? (payload.managerIds as unknown[])
+            : [];
+        const managerErpId = payload.managerId
+            ? String(payload.managerId)
+            : managerIds.length > 0
+              ? String(managerIds[0])
+              : undefined;
+        if (managerErpId === undefined) return undefined;
+
+        const administratorId = await this.userEnrichmentService.findAdministratorIdByErpId(
+            ctx,
+            managerErpId,
+        );
+        if (administratorId === null) {
+            // Ordinary eventual-consistency race (the manager's own `user` event may simply not
+            // have arrived yet, Kafka gives no cross-topic ordering guarantee) — retryable, per
+            // external-integration-rules's "Cross-entity dependencies" section. Never silently
+            // skip: that would permanently drop the manager assignment the moment this event
+            // happens to arrive before the manager's own `user` event.
+            throw new MissingDependencyError(
+                `counterparty ${entityId}: manager erpId=${managerErpId} has no linked Administrator yet`,
+            );
+        }
+        return String(administratorId);
     }
 }

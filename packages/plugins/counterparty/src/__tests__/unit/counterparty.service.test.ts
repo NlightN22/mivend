@@ -168,6 +168,7 @@ describe('CounterpartyService', () => {
                 inn: null,
                 erpGroupLabel: null,
                 departmentId: null,
+                assignedManagerId: null,
             });
             expect(mockRepo.save).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -201,6 +202,7 @@ describe('CounterpartyService', () => {
                 inn: '7701234567',
                 erpGroupLabel: 'Wholesale',
                 departmentId: 'dept-1',
+                assignedManagerId: null,
             });
         });
 
@@ -306,6 +308,61 @@ describe('CounterpartyService', () => {
             await service.upsertActiveState(mockCtx, 'cp-unknown', { name: null, isActive: false });
             expect(mockRepo.create).not.toHaveBeenCalled();
             expect(mockRepo.save).not.toHaveBeenCalled();
+        });
+
+        // Issue #109 unblocked this — assignedManagerId is now an already-resolved Administrator
+        // id passed in by the caller (CounterpartyStreamHandler), not something this method
+        // resolves itself.
+        it('applies an already-resolved assignedManagerId on an existing row', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'cp-1',
+                legalName: 'Acme Corp',
+                shortName: 'Acme Corp',
+                isActive: true,
+                assignedManagerId: null,
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'cp-1', {
+                name: 'Acme Corp',
+                isActive: true,
+                assignedManagerId: 'admin-1',
+            });
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({ assignedManagerId: 'admin-1' }),
+            );
+        });
+
+        // `undefined` (the caller found no manager assigned at all — see
+        // CounterpartyStreamHandler's own fallback logic) must leave an existing REST/portal-
+        // assigned manager untouched, never clear it to null.
+        it('leaves assignedManagerId untouched when omitted from fields', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'cp-1',
+                legalName: 'Acme Corp',
+                shortName: 'Acme Corp',
+                isActive: true,
+                assignedManagerId: 'admin-existing',
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'cp-1', { name: 'Acme Corp', isActive: true });
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({ assignedManagerId: 'admin-existing' }),
+            );
+        });
+
+        it('creates a row with assignedManagerId when provided', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            mockRepo.create.mockImplementation((input: unknown) => input);
+            await service.upsertActiveState(mockCtx, 'cp-unknown', {
+                name: 'Acme Corp',
+                isActive: true,
+                assignedManagerId: 'admin-1',
+            });
+            expect(mockRepo.create).toHaveBeenCalledWith(
+                expect.objectContaining({ assignedManagerId: 'admin-1' }),
+            );
         });
     });
 

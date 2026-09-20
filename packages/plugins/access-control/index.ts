@@ -15,6 +15,8 @@ export { WarehouseService } from './src/warehouse.service';
 export type { WarehouseRecordInput } from './src/warehouse.service';
 export { EmployeeService } from './src/employee.service';
 export type { EmployeeRecordInput } from './src/employee.service';
+export { UserEnrichmentService } from './src/user-enrichment.service';
+export type { UserEnrichmentInput } from './src/user-enrichment.service';
 export { CreditTermLimit } from './src/entities/credit-term-limit.entity';
 export { CreditTermLimitService } from './src/credit-term-limit.service';
 export { BranchSettings } from './src/entities/branch-settings.entity';

@@ -108,10 +108,16 @@ export type InboundStream =
     // isActive/inn/erpGroupLabel/departmentId (verified live against
     // @nlightn22/event-contracts@0.38.0, search-platform#92/#118) — creditLimit/paymentDelayDays/
     // priceType/branchId stay erp-import/REST-only fields, never fabricated here (see
-    // CounterpartyStreamHandler). manager_id/manager_ids deliberately not consumed yet — blocked
-    // on #109 (no erpId↔Administrator mapping exists). creditBalance lives on its own separate
-    // stream, see 'counterparty-credit-balance' below.
+    // CounterpartyStreamHandler). manager_id/manager_ids now consumed too, resolved to an
+    // Administrator via the 'user' stream below (issue #109 unblocked). creditBalance lives on
+    // its own separate stream, see 'counterparty-credit-balance' below.
     | 'counterparty'
+    // 1C's "Пользователи" (user) — enrichment-only correlation of an Administrator with 1C's own
+    // user GUID, matched by email once (see UserEnrichmentService). Issue #109. Feeds
+    // Administrator.customFields.erpId/departmentId — never creates an Administrator. Also the
+    // resolution target for CounterpartyChanged's manager_id/manager_ids above. role/positionId
+    // deliberately not consumed yet — mivend#117's Position-entity design isn't finalized.
+    | 'user'
     // search-platform#129: register-driven creditBalance for Counterparty
     // (AccumulationRegister_ВзаиморасчетыСКонтрагентами), independent of CounterpartyChanged's own
     // catalog-change trigger. See CounterpartyCreditBalanceStreamHandler.
@@ -191,6 +197,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     department: true,
     counterparty: true,
     'counterparty-credit-balance': true,
+    user: true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

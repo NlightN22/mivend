@@ -31,6 +31,7 @@ function makeOptions(
                 department: 'dept',
                 counterparty: 'cp',
                 'counterparty-credit-balance': 'cpcb',
+                user: 'usr',
             },
         },
         schemaRegistry: { url: 'http://x' },

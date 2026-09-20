@@ -620,6 +620,11 @@ export const config: VendureConfig = {
                     'counterparty-credit-balance':
                         process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY_CREDIT_BALANCE ??
                         'company.customers.events.v1.counterparty-credit-balance-changed',
+                    // Issue #109: Administrator enrichment (erpId/departmentId), also the
+                    // resolution target for CounterpartyChanged's manager_id/manager_ids.
+                    user:
+                        process.env.INTEGRATION_KAFKA_TOPIC_USER ??
+                        'company.customers.events.v1.user-changed',
                 },
             },
             schemaRegistry: {

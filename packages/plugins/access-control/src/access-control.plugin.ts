@@ -13,6 +13,7 @@ import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
 import { EmployeeService } from './employee.service';
+import { UserEnrichmentService } from './user-enrichment.service';
 import { Branch } from './entities/branch.entity';
 import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
@@ -122,6 +123,7 @@ const adminApiSchema = gql`
         BranchSettingsService,
         EmployeeService,
         CreditTermLimitService,
+        UserEnrichmentService,
     ],
     exports: [
         AccessScopeService,
@@ -132,6 +134,7 @@ const adminApiSchema = gql`
         BranchSettingsService,
         EmployeeService,
         CreditTermLimitService,
+        UserEnrichmentService,
     ],
     adminApiExtensions: {
         schema: adminApiSchema,
@@ -169,6 +172,18 @@ const adminApiSchema = gql`
                 type: 'string' as const,
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Source Administrator ID' }],
+            },
+            {
+                // Issue #109: correlates this Administrator with 1C's own "Пользователи" GUID
+                // (UserChanged.entity_id) — see UserEnrichmentService.linkAndEnrich. Matched once
+                // by email, then persisted here for every later event so re-matching by email
+                // (which can itself change in 1C) is never needed again. Application-level
+                // uniqueness only (looked up before assigning) — Vendure customFields don't
+                // support a DB-level unique constraint here, same as branchId/departmentId above.
+                name: 'erpId',
+                type: 'string' as const,
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP User ID' }],
             },
         ];
         config.customFields.GlobalSettings = [
