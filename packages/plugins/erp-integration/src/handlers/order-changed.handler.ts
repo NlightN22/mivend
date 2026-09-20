@@ -34,9 +34,13 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         payload: Record<string, unknown>,
     ): Promise<void> {
         // This stream reports current state, not a diff — a deleted order is a legitimate "no
-        // work to do" case here, not a missing-dependency retry case. isDeleted is a plain
-        // (non-optional) proto3 bool in 0.15.0 — real presence is `=== true`, per types.ts's
-        // doc comment (an absent key means the zero value, false, not "unknown").
+        // work to do" case here, not a missing-dependency retry case. isDeleted was a plain
+        // (non-optional) proto3 bool through 0.15.0; @nlightn22/event-contracts@0.38.0 changed it
+        // to `optional bool` (real presence, absent now genuinely means "not sent" rather than a
+        // zero-value omission). The `=== true` read is correct under either shape — an absent/
+        // undefined key and an explicit `false` both correctly fall through as "not deleted" — so
+        // no behavior change was needed, only this comment (verified against the 0.38.0 .d.ts;
+        // see the external-integration-rules skill's "always check the current contract" rule).
         if (payload.isDeleted === true) {
             Logger.verbose(`order-changed ${entityId}: deleted, skipping`, loggerCtx);
             return;
