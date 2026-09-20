@@ -52,7 +52,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "==> Starting infra (postgres, redis, rabbitmq, elasticsearch)..."
+echo "==> Starting infra (postgres, rabbitmq, elasticsearch)..."
 # GitHub Actions runners set GITHUB_REPOSITORY_OWNER themselves (to the real, case-preserved
 # repo owner login, e.g. "NlightN22") — so the docker-compose file's own
 # `${GITHUB_REPOSITORY_OWNER:-nlightn22}` fallback never actually triggers in CI, and Docker

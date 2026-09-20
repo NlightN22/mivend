@@ -9,7 +9,7 @@ cd "$REPO_ROOT"
 echo "==> Tearing down volumes..."
 $COMPOSE down -v
 
-echo "==> Starting infra (postgres, redis, rabbitmq, elasticsearch)..."
+echo "==> Starting infra (postgres, rabbitmq, elasticsearch)..."
 GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER:-nlightn22}" $COMPOSE up -d
 
 echo "==> Waiting for postgres to be healthy..."

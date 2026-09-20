@@ -15,7 +15,7 @@ Tests are split into three categories with different infrastructure requirements
 ### Integration tests
 
 - **What:** full plugin cycles — outbox writes, publish to RabbitMQ, consumer applies changes to DB, idempotency
-- **Infrastructure:** real PostgreSQL + Redis + RabbitMQ (no mocks)
+- **Infrastructure:** real PostgreSQL + RabbitMQ (no mocks)
 - **Location:** `src/__tests__/integration/` inside each package
 - **Command:** `pnpm --filter "packages/**" test:integration`
 
@@ -46,10 +46,9 @@ Services spun up by GitHub Actions:
 | Service    | Image                                      | Port |
 | ---------- | ------------------------------------------ | ---- |
 | PostgreSQL | `postgres:16`                              | 5432 |
-| Redis      | `redis:7`                                  | 6379 |
 | RabbitMQ   | `ghcr.io/nlightn22/mivend-rabbitmq:latest` | 5672 |
 
-Services: PostgreSQL + Redis + `ghcr.io/nlightn22/mivend-rabbitmq` (с преднастроенной топологией).
+Services: PostgreSQL + `ghcr.io/nlightn22/mivend-rabbitmq` (с преднастроенной топологией).
 
 Steps: install → build plugins → run integration tests.
 
@@ -73,8 +72,8 @@ pnpm format:write
 # Run unit tests locally at any time:
 pnpm test
 
-# Run integration tests locally (requires running postgres + redis):
-docker compose -f infrastructure/docker/docker-compose.dev.yml up -d postgres-central redis
+# Run integration tests locally (requires running postgres):
+docker compose -f infrastructure/docker/docker-compose.dev.yml up -d postgres-central
 pnpm --filter "packages/**" test:integration
 ```
 

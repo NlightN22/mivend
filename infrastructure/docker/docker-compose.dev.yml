@@ -35,16 +35,6 @@ services:
             timeout: 5s
             retries: 5
 
-    redis:
-        image: redis:7-alpine
-        ports:
-            - '127.0.0.1:6380:6379'
-        healthcheck:
-            test: ['CMD', 'redis-cli', 'ping']
-            interval: 10s
-            timeout: 5s
-            retries: 5
-
     rabbitmq:
         image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-nlightn22}/mivend-rabbitmq:latest
         environment:
@@ -95,16 +85,12 @@ services:
             DB_USERNAME: postgres
             DB_PASSWORD: postgres
             DB_NAME: mivend_central
-            REDIS_HOST: redis
-            REDIS_PORT: '6379'
             RABBITMQ_URL: amqp://mivend:mivend@rabbitmq:5672
             SUPERADMIN_USERNAME: superadmin
             SUPERADMIN_PASSWORD: superadmin
             ELASTICSEARCH_HOST: http://elasticsearch:9200
         depends_on:
             postgres-central:
-                condition: service_healthy
-            redis:
                 condition: service_healthy
             rabbitmq:
                 condition: service_healthy

@@ -8,8 +8,6 @@ services:
             DB_USERNAME: ${POSTGRES_USER:-postgres}
             DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
             DB_NAME: ${POSTGRES_DB:-mivend}
-            REDIS_HOST: redis
-            REDIS_PORT: 6379
             INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
             PORT: 3000
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
@@ -18,8 +16,6 @@ services:
             - '3000:3000'
         depends_on:
             postgres:
-                condition: service_healthy
-            redis:
                 condition: service_healthy
             rabbitmq:
                 condition: service_healthy
@@ -35,15 +31,11 @@ services:
             DB_USERNAME: ${POSTGRES_USER:-postgres}
             DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
             DB_NAME: ${POSTGRES_DB:-mivend}
-            REDIS_HOST: redis
-            REDIS_PORT: 6379
             INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
             SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-superadmin}
         depends_on:
             postgres:
-                condition: service_healthy
-            redis:
                 condition: service_healthy
             rabbitmq:
                 condition: service_healthy
@@ -59,15 +51,11 @@ services:
             DB_USERNAME: ${POSTGRES_USER:-postgres}
             DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
             DB_NAME: ${POSTGRES_DB:-mivend}
-            REDIS_HOST: redis
-            REDIS_PORT: 6379
             INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
             SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-superadmin}
         depends_on:
             postgres:
-                condition: service_healthy
-            redis:
                 condition: service_healthy
             rabbitmq:
                 condition: service_healthy
@@ -83,17 +71,6 @@ services:
             - postgres-data:/var/lib/postgresql/data
         healthcheck:
             test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        restart: unless-stopped
-
-    redis:
-        image: redis:7-alpine
-        volumes:
-            - redis-data:/data
-        healthcheck:
-            test: ['CMD', 'redis-cli', 'ping']
             interval: 10s
             timeout: 5s
             retries: 5
@@ -139,5 +116,4 @@ services:
 
 volumes:
     postgres-data:
-    redis-data:
     rabbitmq-data:

@@ -340,7 +340,8 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
 ## What is never synced
 
 - Admin sessions, API tokens — never leave the instance that issued them.
-- BullMQ job state — local to each instance's Redis.
+- Job queue state — local to each instance's own Postgres `job_record` table (since issue #128;
+  no shared Redis for jobs anymore).
 - Elasticsearch indexes — rebuilt independently per instance from local DB.
 
 ---

@@ -251,15 +251,16 @@ Branch app is stateless — multiple instances behind a load balancer share all 
 [Load Balancer]
       ↓
 [Branch App × N]   ← stateless
-      ↓        ↓
-[PostgreSQL HA] [Redis]
-                  ↓
-            [BullMQ workers]
+      ↓
+[PostgreSQL HA]
+      ↓
+[DB-backed job queue workers]
 ```
 
-- **PostgreSQL** — branch data (HA via Patroni or managed PostgreSQL)
-- **Redis** — BullMQ job queues (Vendure uses BullMQ by default for job processing)
-- **BullMQ workers** — process sync jobs, reservation TTL expiry, and other background tasks
+- **PostgreSQL** — branch data (HA via Patroni or managed PostgreSQL); also backs the job
+  queue itself (`job_record` table) since issue #128 moved off BullMQ/Redis to Vendure's own
+  `DefaultJobQueuePlugin` (`SqlJobQueueStrategy`) — no separate Redis dependency for jobs
+- **Job queue workers** — process sync jobs, reservation TTL expiry, and other background tasks
 - Infrastructure: Docker on local servers (Proxmox)
 
 ## Domain decisions
@@ -293,7 +294,7 @@ Branch app is stateless — multiple instances behind a load balancer share all 
 - `apps/branch` — minimal working Vendure instance
 - `apps/central` — minimal working Vendure instance
 - `packages/shared` — base types
-- Docker Compose: PostgreSQL × 2 + Elasticsearch + Redis + RabbitMQ
+- Docker Compose: PostgreSQL × 2 + Elasticsearch + RabbitMQ
 
 ### Phase 2 — Core domain
 

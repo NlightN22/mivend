@@ -81,8 +81,8 @@ both live in `docker-postgres-central-1`, distinguished by `DB_NAME`; the branch
 BullMQ/Redis to Vendure's DB-backed `DefaultJobQueuePlugin`), job records live in each contour's
 own Postgres database and are isolated by `DB_NAME` the same way everything else is — the
 `REDIS_DB` index scheme this section used to describe for per-contour BullMQ queue isolation no
-longer applies to jobs. The `redis` container/env vars (`REDIS_HOST`/`REDIS_PORT`/`REDIS_DB`)
-remain in the compose files and `.env.*` examples as unused legacy config, not yet removed.
+longer applies. Redis itself (the `redis` container/env vars) has been removed from this project
+entirely as a follow-up to #128 — nothing in the codebase depends on it anymore.
 
 ## Testing must stay within the local contour
 
@@ -119,7 +119,7 @@ already watching plugins.
 ## Reaching a contour from outside this box
 
 Every contour's server/worker/storefront/manager bind to `0.0.0.0` (or `localhost`, for the
-Postgres/Redis/RabbitMQ it shares — see "Database isolation" above), but the only thing actually
+Postgres/RabbitMQ it shares — see "Database isolation" above), but the only thing actually
 reachable from outside this box is **nginx** (`/etc/nginx/sites-enabled/mivend.conf`, TLS on
 `devof.komponent-m.ru`) plus `ufw` allowing exactly the ports nginx listens on — see this box's
 `publish-service` skill (`/opt/search-platform/.claude/skills/publish-service/SKILL.md`) for the

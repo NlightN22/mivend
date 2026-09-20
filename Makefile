@@ -93,13 +93,13 @@ endif
 # Minimal branch-instance test stack: server + worker only (no separate storefront/manager dev
 # servers — see docs/architecture.md's branch-identity/scope design). Safe to run alongside an
 # already-running `make dev` central stack: only kills branch-tagged processes (see
-# dev-kill-branch.sh), reuses the shared postgres-branch/redis/rabbitmq/elasticsearch containers.
+# dev-kill-branch.sh), reuses the shared postgres-branch/rabbitmq/elasticsearch containers.
 # Since issue #128 (job queue moved off BullMQ/Redis to Vendure's DB-backed
 # DefaultJobQueuePlugin), job isolation from central comes from the separate postgres-branch
-# database itself, not REDIS_DB.
+# database itself — there is no Redis in this stack anymore at all.
 dev-branch:
 	@bash infrastructure/scripts/dev-kill-branch.sh
-	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait postgres-branch redis rabbitmq elasticsearch
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait postgres-branch rabbitmq elasticsearch
 	@docker exec docker-postgres-branch-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mivend_branch'" | grep -q 1 \
 		|| docker exec docker-postgres-branch-1 psql -U postgres -c "CREATE DATABASE mivend_branch"
 	pnpm build:plugins

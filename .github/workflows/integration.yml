@@ -30,16 +30,6 @@ jobs:
                     --health-timeout 5s
                     --health-retries 5
 
-            redis:
-                image: redis:7
-                ports:
-                    - 6379:6379
-                options: >-
-                    --health-cmd "redis-cli ping"
-                    --health-interval 10s
-                    --health-timeout 5s
-                    --health-retries 5
-
             rabbitmq:
                 image: ghcr.io/nlightn22/mivend-rabbitmq:latest
                 env:
@@ -60,8 +50,6 @@ jobs:
             TEST_DB_USER: postgres
             TEST_DB_PASSWORD: postgres
             TEST_DB_NAME: mivend_test
-            REDIS_HOST: localhost
-            REDIS_PORT: 6379
             RABBITMQ_URL: amqp://mivend:mivend@localhost:5672
 
         steps:
@@ -93,7 +81,7 @@ jobs:
             # Component tests (docs/testing-strategy.md's "Component" level — a full
             # enqueue->claim->process->persist chain) already ran as part of the step above (same
             # `test:integration` script, same DB/infra, no reason to spin up a second Postgres/
-            # Redis/RabbitMQ matrix for two files) — this re-runs just that subset for a
+            # RabbitMQ matrix for two files) — this re-runs just that subset for a
             # distinctly labeled pass/fail in the Actions log, per the target CI pipeline. Not
             # worth a dedicated job for the two component suites that exist today
             # (plugin-erp-import, plugin-reservation); revisit if that count grows.
@@ -105,7 +93,7 @@ jobs:
     # Small critical-route subset (login, order creation — see docs/testing-strategy.md's "E2E
     # strategy"), not the full Playwright suite. Manual-trigger only for now
     # (workflow_dispatch with run_e2e_smoke=true) until its real runtime/flakiness in a fresh
-    # GitHub-hosted runner (boots postgres/redis/rabbitmq/elasticsearch + server + worker +
+    # GitHub-hosted runner (boots postgres/rabbitmq/elasticsearch + server + worker +
     # storefront + manager natively) has been observed at least once — see AGENTS.md "Do not
     # include heavy E2E on every push without a time estimate."
     e2e-smoke:

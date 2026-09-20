@@ -187,8 +187,9 @@ Stock check + reservation write must be atomic — never read-then-check-then-wr
 separate steps (two concurrent orders can both read the same free-stock number). Use a DB
 transaction with row locking (`SELECT ... FOR UPDATE`) or an atomic conditional `UPDATE`,
 with retry on conflict. Postgres-level transactional correctness is sufficient for this
-project's scale — do not introduce Redis solely for this; it's already used for
-BullMQ/sessions but is not a requirement for atomic stock reservation here.
+project's scale — do not introduce Redis solely for this; there is no Redis in this project at
+all since issue #128 moved the job queue off BullMQ to Postgres, and it is not a requirement
+for atomic stock reservation here.
 
 ### Reservation state (separate from `Order.state`)
 

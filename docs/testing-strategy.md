@@ -19,7 +19,7 @@ Pure business logic: invariants, calculations, FSM transitions, strategy selecti
 transformation, overlap classification, allocation rules, scope predicates, retry decisions,
 command/event construction.
 
-- No real DB, no RabbitMQ, no Redis, no external services, no full Vendure app bootstrap.
+- No real DB, no RabbitMQ, no external services, no full Vendure app bootstrap.
 - Mock only real external dependencies — never the logic under test.
 - Does not prove ORM/SQL/transaction/locking behavior.
 
@@ -29,8 +29,8 @@ Location: `src/__tests__/unit/`. Runner: Vitest, root `vitest.config.ts` (`make 
 
 A single infrastructural seam: repository against real Postgres, SQL queries, unique
 constraints, foreign keys, transactions, locking (`SKIP LOCKED`, optimistic/pessimistic),
-inbox claim, business-write+outbox atomicity, (de)serialization, resolver→service→DB, Redis or
-RabbitMQ when the boundary itself is under test, migrations/schema.
+inbox claim, business-write+outbox atomicity, (de)serialization, resolver→service→DB, RabbitMQ
+when the boundary itself is under test, migrations/schema.
 
 Does not automatically become a full user scenario.
 
@@ -218,14 +218,14 @@ need no DB/infra, so they're already part of the unit vitest run) with a second,
 labeled step that re-runs just the contract subset for a distinctly named pass/fail in the
 Actions log. `.github/workflows/integration.yml`'s `integration` job runs the full
 `test:integration` across every plugin (integration + component together — both need the same
-Postgres/Redis/RabbitMQ, so there's no isolation reason to split them), with a second, explicitly
+Postgres/RabbitMQ, so there's no isolation reason to split them), with a second, explicitly
 labeled step that re-runs just the two existing component suites (`plugin-erp-import`,
 `plugin-reservation`) the same way. `e2e-smoke` stays a separate `workflow_dispatch`-only job (see
 "E2E strategy" above).
 
 **Why not 4-6 fully separate jobs, one per level, matching the target pipeline literally**: as of
 this writing there is exactly 1 contract suite and 2 component suites in the whole repo (`git
-grep` them if that's changed since). A dedicated job means a dedicated Postgres/Redis/RabbitMQ
+grep` them if that's changed since). A dedicated job means a dedicated Postgres/RabbitMQ
 service matrix and its own startup cost, paid on every push, for 1-3 files — the same "don't add
 abstractions before real repetition" rule this project applies everywhere else in `AGENTS.md`
 applies to CI structure too. The chosen shape (extra labeled _steps_ within the existing 2 jobs,
@@ -378,8 +378,8 @@ WITH LOGIN` against `/docker-entrypoint-initdb.d/01-create-test-db.sql`'s own `A
   container stdout. Fixed by waiting on `pg_isready -h 127.0.0.1` (forces TCP) before this
   entrypoint's own commands run, which structurally can't observe the temp phase at all.
 
-        Deliberately **not** flipped to run on every PR despite being green now — see "E2E strategy"
-        above for the reasoning (cost vs. benefit for 2 tests) and the re-run command.
+            Deliberately **not** flipped to run on every PR despite being green now — see "E2E strategy"
+            above for the reasoning (cost vs. benefit for 2 tests) and the re-run command.
 
 - **CI has 2 jobs with labeled subset-steps, not 4-6 fully separate jobs** — deliberate, see the
   CI section above for the full reasoning and the revisit condition.

@@ -97,9 +97,10 @@ await page.request.post(`${base}/shop-api`, {
 
 ### 3. Stale auth cookies after server restart
 
-Vendure stores sessions in Redis. When the dev stack is reset (`make dev-reset` or `make dev-fresh`),
-Redis is wiped. The stored cookies in `.auth/storefront-user.json` become invalid immediately.
-Tests that rely on auth will fail silently — the page loads but the user is not logged in.
+Vendure stores sessions in Postgres (the `session` table; no Redis in this project since issue
+#128). When the dev stack is reset (`make dev-reset` or `make dev-fresh`), the database is wiped.
+The stored cookies in `.auth/storefront-user.json` become invalid immediately. Tests that rely on
+auth will fail silently — the page loads but the user is not logged in.
 
 **Fix:** delete `.auth/storefront-user.json` before the next test run. Playwright's `global-setup`
 will re-login and write a fresh file.

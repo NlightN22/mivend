@@ -16,7 +16,7 @@ pnpm install
 # 2. Log in to GitHub Container Registry (pulls mivend-rabbitmq image)
 echo $GITHUB_TOKEN | docker login ghcr.io -u <your-github-username> --password-stdin
 
-# 3. Start dev infrastructure (PostgreSQL × 2, Redis, RabbitMQ, Elasticsearch)
+# 3. Start dev infrastructure (PostgreSQL × 2, RabbitMQ, Elasticsearch)
 make up
 
 # 4. Copy env files and adjust if needed
@@ -42,15 +42,15 @@ pnpm dev:branch  # run server as branch
 
 Beyond the `central`/`branch` instance identity above, the central instance also has three
 **contours** — local (isolated, synthetic data), staging-integration (real Integration Service
-Kafka), and production — each with its own database, Redis DB index, and ports, so they can run
+Kafka), and production — each with its own database and ports, so they can run
 side by side without colliding. Full design, rationale, and setup steps:
 **[docs/environments.md](./environments.md)**. Quick reference:
 
-| Contour             | `make` target                  | Env file                                       | DB                                       | Redis DB | API port | Storefront | Manager |
-| ------------------- | ------------------------------ | ---------------------------------------------- | ---------------------------------------- | -------- | -------- | ---------- | ------- |
-| local               | `make dev`                     | `apps/server/.env.central`                     | `mivend_central`                         | `0`      | `3000`   | `5173`     | `5174`  |
-| branch              | `make dev-branch`              | `apps/server/.env.branch`                      | `mivend_branch` (own Postgres container) | `1`      | `3001`   | —          | —       |
-| staging-integration | `make dev-staging-integration` | `apps/server/.env.central.staging-integration` | `mivend_central_staging_integration`     | `2`      | `3010`   | `5183`     | `5184`  |
+| Contour             | `make` target                  | Env file                                       | DB                                       | API port | Storefront | Manager |
+| ------------------- | ------------------------------ | ---------------------------------------------- | ---------------------------------------- | -------- | ---------- | ------- |
+| local               | `make dev`                     | `apps/server/.env.central`                     | `mivend_central`                         | `3000`   | `5173`     | `5174`  |
+| branch              | `make dev-branch`              | `apps/server/.env.branch`                      | `mivend_branch` (own Postgres container) | `3001`   | —          | —       |
+| staging-integration | `make dev-staging-integration` | `apps/server/.env.central.staging-integration` | `mivend_central_staging_integration`     | `3010`   | `5183`     | `5184`  |
 
 (Branch has no storefront/manager by design — both are central-only, see
 `docs/architecture.md`'s "Storefront hosting: Central-only, not per-branch".) External access
@@ -73,7 +73,7 @@ make test        # unit tests — no Docker needed
 make test-int    # integration tests — starts infrastructure automatically
 ```
 
-Integration tests use real PostgreSQL, Redis, and RabbitMQ. The first run
+Integration tests use real PostgreSQL and RabbitMQ. The first run
 may take an extra ~30 s while Docker pulls images.
 
 See [ci-cd.md](./ci-cd.md) for the full CI/CD pipeline description.

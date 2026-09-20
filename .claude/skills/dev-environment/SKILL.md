@@ -52,14 +52,15 @@ files) — the failure was going around it.
       forbidden regardless of how many contours are running — that's rule 1, a separate
       concern from this idempotency check.
 
-3. **`make up`** (Docker infra only: postgres, redis, rabbitmq, elasticsearch) is safe
-   to call repeatedly — it does not restart already-running containers.
+3. **`make up`** (Docker infra only: postgres, rabbitmq, elasticsearch — no Redis since
+   issue #128 moved the job queue off BullMQ) is safe to call repeatedly — it does not
+   restart already-running containers.
 
 4. **`make down` is NOT contour-scoped — it is one `docker compose down` against the
    single shared `infrastructure/docker/docker-compose.dev.yml`, which every contour
    (local, branch, staging-integration) uses at once.** There is no
    `make down-staging-integration` or equivalent. Concretely: `postgres-central`,
-   `redis`, `rabbitmq`, and `elasticsearch` are each ONE container shared by every
+   `rabbitmq`, and `elasticsearch` are each ONE container shared by every
    contour — staging-integration doesn't get its own Postgres container, it's just a
    separate _database_ (`mivend_central_staging_integration`) inside the same
    `postgres-central` container local dev's `mivend_central` database also lives in.
