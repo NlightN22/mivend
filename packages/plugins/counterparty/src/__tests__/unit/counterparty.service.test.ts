@@ -168,6 +168,7 @@ describe('CounterpartyService', () => {
                 erpGroupLabel: null,
                 departmentId: null,
                 assignedManagerId: null,
+                managerErpId: null,
             });
             expect(mockRepo.save).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -202,6 +203,7 @@ describe('CounterpartyService', () => {
                 erpGroupLabel: 'Wholesale',
                 departmentId: 'dept-1',
                 assignedManagerId: null,
+                managerErpId: null,
             });
         });
 
@@ -382,6 +384,63 @@ describe('CounterpartyService', () => {
                 { erpId: 'cp-unknown' },
                 { creditBalance: 500 },
             );
+        });
+    });
+
+    describe('backfillAssignedManager', () => {
+        function mockUpdateQueryBuilder(
+            affected: number,
+        ): Record<string, ReturnType<typeof vi.fn>> {
+            const qb: Record<string, ReturnType<typeof vi.fn>> = {
+                update: vi.fn(),
+                set: vi.fn(),
+                where: vi.fn(),
+                andWhere: vi.fn(),
+                execute: vi.fn(async () => ({ affected })),
+            };
+            qb.update.mockReturnValue(qb);
+            qb.set.mockReturnValue(qb);
+            qb.where.mockReturnValue(qb);
+            qb.andWhere.mockReturnValue(qb);
+            return qb;
+        }
+
+        // mivend.audit.common (2026-09-20): called from AdministratorLinkedListener once an
+        // erpId links — resolves every Counterparty left with assignedManagerId:null because its
+        // `counterparty` event was processed while that erpId was still unlinked.
+        it('updates only rows matching managerErpId with assignedManagerId still null', async () => {
+            const qb = mockUpdateQueryBuilder(2);
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            const affected = await service.backfillAssignedManager(
+                mockCtx,
+                'user-erp-1',
+                'admin-1',
+            );
+
+            expect(qb.set).toHaveBeenCalledWith({ assignedManagerId: 'admin-1' });
+            expect(qb.where).toHaveBeenCalledWith('managerErpId = :managerErpId', {
+                managerErpId: 'user-erp-1',
+            });
+            expect(qb.andWhere).toHaveBeenCalledWith('assignedManagerId IS NULL');
+            expect(affected).toBe(2);
+        });
+
+        it('returns 0 without error when no counterparty is waiting on this erpId', async () => {
+            const qb = mockUpdateQueryBuilder(0);
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            const affected = await service.backfillAssignedManager(
+                mockCtx,
+                'user-erp-none',
+                'admin-1',
+            );
+
+            expect(affected).toBe(0);
         });
     });
 

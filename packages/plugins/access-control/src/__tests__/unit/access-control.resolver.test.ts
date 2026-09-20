@@ -9,7 +9,7 @@ import { BranchService } from '../../branch.service';
 import { BranchSettingsService } from '../../branch-settings.service';
 import { CreditTermLimitService } from '../../credit-term-limit.service';
 import { DepartmentService } from '../../department.service';
-import { PendingErpUserService } from '../../pending-erp-user.service';
+import { ErpUserService } from '../../erp-user.service';
 import { RoleScopeConfigService } from '../../role-scope-config.service';
 import { WarehouseService } from '../../warehouse.service';
 
@@ -47,7 +47,7 @@ describe('AccessControlResolver.teamMembers', () => {
             {} as CreditTermLimitService,
             administratorService as unknown as AdministratorService,
             {} as AccessScopeService,
-            {} as PendingErpUserService,
+            {} as ErpUserService,
             {} as AdministratorProvisioningService,
             {} as AdministratorActivationService,
         );
@@ -93,7 +93,7 @@ describe('AccessControlResolver.teamDirectory', () => {
             {} as CreditTermLimitService,
             administratorService as unknown as AdministratorService,
             accessScopeService as unknown as AccessScopeService,
-            {} as PendingErpUserService,
+            {} as ErpUserService,
             {} as AdministratorProvisioningService,
             {} as AdministratorActivationService,
         );
@@ -182,7 +182,7 @@ describe('AccessControlResolver.portalUsers', () => {
             {} as CreditTermLimitService,
             {} as AdministratorService,
             {} as AccessScopeService,
-            {} as PendingErpUserService,
+            {} as ErpUserService,
             {} as AdministratorProvisioningService,
             administratorActivationService as unknown as AdministratorActivationService,
         );
@@ -214,7 +214,7 @@ describe('AccessControlResolver.resetAdministratorPassword', () => {
             {} as CreditTermLimitService,
             {} as AdministratorService,
             {} as AccessScopeService,
-            {} as PendingErpUserService,
+            {} as ErpUserService,
             administratorProvisioningService as unknown as AdministratorProvisioningService,
             {} as AdministratorActivationService,
         );
@@ -239,7 +239,7 @@ describe('AccessControlResolver.resetAdministratorPassword', () => {
             {} as CreditTermLimitService,
             {} as AdministratorService,
             {} as AccessScopeService,
-            {} as PendingErpUserService,
+            {} as ErpUserService,
             administratorProvisioningService as unknown as AdministratorProvisioningService,
             {} as AdministratorActivationService,
         );

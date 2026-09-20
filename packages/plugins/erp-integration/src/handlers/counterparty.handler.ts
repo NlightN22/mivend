@@ -6,6 +6,11 @@ import { UserEnrichmentService } from '@mivend/plugin-access-control';
 import { MissingDependencyError } from '../types';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
+interface ManagerResolution {
+    assignedManagerId: string | null | undefined;
+    managerErpId: string | null | undefined;
+}
+
 const loggerCtx = 'IntegrationCounterpartyHandler';
 
 // Applies Integration Service's `counterparty` stream (CounterpartyChanged, 1C's "Контрагент",
@@ -51,7 +56,11 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         // handler does.
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 
-        const assignedManagerId = await this.resolveAssignedManagerId(entityId, ctx, payload);
+        const { assignedManagerId, managerErpId } = await this.resolveAssignedManagerId(
+            entityId,
+            ctx,
+            payload,
+        );
 
         await this.counterpartyService.upsertActiveState(ctx, entityId, {
             name,
@@ -70,6 +79,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                     ? ((payload.departmentId as string | null) ?? null)
                     : undefined,
             assignedManagerId,
+            managerErpId,
         });
         if (!name) {
             Logger.verbose(
@@ -88,11 +98,23 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
     // (real optional-scalar/empty-repeated-field presence, not proto3 zero-value ambiguity) when
     // no manager is assigned at all — that case must never clear an existing REST/portal-assigned
     // manager just because this event omitted the field.
+    //
+    // mivend.audit.common (2026-09-20): three distinct outcomes of
+    // UserEnrichmentService.findManagerLink, previously collapsed into just two (found/not
+    // found) via the old findAdministratorIdByErpId, which is exactly what grew an unbounded
+    // MissingDependencyError retry backlog (65k+ pending rows in staging-integration) — a
+    // manager erpId that a human simply hasn't decided on yet (can take days) was retried
+    // identically to a genuine cross-stream ordering race (which resolves in seconds/minutes):
+    //   - `{ found: false }` — never seen this erpId at all: a real race, still retryable.
+    //   - `{ found: true, administratorId: null }` — known, still unlinked: NOT a race. Do not
+    //     retry; save with no manager (assignedManagerId: null) — AdministratorLinkedListener
+    //     backfills it later if/when this erpId actually links.
+    //   - `{ found: true, administratorId }` — linked: use it.
     private async resolveAssignedManagerId(
         entityId: string,
         ctx: RequestContext,
         payload: Record<string, unknown>,
-    ): Promise<string | null | undefined> {
+    ): Promise<ManagerResolution> {
         const managerIds = Array.isArray(payload.managerIds)
             ? (payload.managerIds as unknown[])
             : [];
@@ -101,13 +123,12 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
             : managerIds.length > 0
               ? String(managerIds[0])
               : undefined;
-        if (managerErpId === undefined) return undefined;
+        if (managerErpId === undefined) {
+            return { assignedManagerId: undefined, managerErpId: undefined };
+        }
 
-        const administratorId = await this.userEnrichmentService.findAdministratorIdByErpId(
-            ctx,
-            managerErpId,
-        );
-        if (administratorId === null) {
+        const resolution = await this.userEnrichmentService.findManagerLink(ctx, managerErpId);
+        if (!resolution.found) {
             // Ordinary eventual-consistency race (the manager's own `user` event may simply not
             // have arrived yet, Kafka gives no cross-topic ordering guarantee) — retryable, per
             // external-integration-rules's "Cross-entity dependencies" section. Never silently
@@ -117,6 +138,13 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                 `counterparty ${entityId}: manager erpId=${managerErpId} has no linked Administrator yet`,
             );
         }
-        return String(administratorId);
+        if (resolution.administratorId === null) {
+            Logger.verbose(
+                `counterparty ${entityId}: manager erpId=${managerErpId} is known but not yet linked to an Administrator — saving with no manager, not retrying`,
+                loggerCtx,
+            );
+            return { assignedManagerId: null, managerErpId };
+        }
+        return { assignedManagerId: String(resolution.administratorId), managerErpId };
     }
 }

@@ -1,19 +1,20 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
+import type { ManagerLinkResolution } from '@mivend/plugin-access-control';
 
 import { CounterpartyStreamHandler } from '../../handlers/counterparty.handler';
 import { MissingDependencyError } from '../../types';
 
 function makeHandler(
     upsertActiveState = vi.fn().mockResolvedValue(undefined),
-    findAdministratorIdByErpId = vi.fn().mockResolvedValue(null),
+    findManagerLink = vi.fn().mockResolvedValue({ found: false } satisfies ManagerLinkResolution),
 ): {
     handler: CounterpartyStreamHandler;
     counterpartyService: { upsertActiveState: ReturnType<typeof vi.fn> };
-    userEnrichmentService: { findAdministratorIdByErpId: ReturnType<typeof vi.fn> };
+    userEnrichmentService: { findManagerLink: ReturnType<typeof vi.fn> };
 } {
     const counterpartyService = { upsertActiveState };
-    const userEnrichmentService = { findAdministratorIdByErpId };
+    const userEnrichmentService = { findManagerLink };
     const handler = new CounterpartyStreamHandler(
         counterpartyService as never,
         userEnrichmentService as never,
@@ -40,6 +41,7 @@ describe('CounterpartyStreamHandler', () => {
             erpGroupLabel: undefined,
             departmentId: undefined,
             assignedManagerId: undefined,
+            managerErpId: undefined,
         });
     });
 
@@ -55,6 +57,7 @@ describe('CounterpartyStreamHandler', () => {
             erpGroupLabel: undefined,
             departmentId: undefined,
             assignedManagerId: undefined,
+            managerErpId: undefined,
         });
     });
 
@@ -134,6 +137,7 @@ describe('CounterpartyStreamHandler', () => {
             erpGroupLabel: 'Wholesale',
             departmentId: 'dept-1',
             assignedManagerId: undefined,
+            managerErpId: undefined,
         });
     });
 
@@ -169,17 +173,23 @@ describe('CounterpartyStreamHandler', () => {
             erpGroupLabel: null,
             departmentId: null,
             assignedManagerId: undefined,
+            managerErpId: undefined,
         });
     });
 
     // Issue #109 unblocked this — managerId is now resolved to a Vendure Administrator.id via
-    // UserEnrichmentService, not ignored.
-    describe('manager_id/manager_ids resolution (issue #109 unblocked)', () => {
-        it('resolves managerId to an Administrator.id via UserEnrichmentService', async () => {
-            const findAdministratorIdByErpId = vi.fn().mockResolvedValue('admin-1');
+    // UserEnrichmentService.findManagerLink. mivend.audit.common (2026-09-20) replaced the old
+    // two-outcome findAdministratorIdByErpId (found/not-found) with a three-outcome resolution —
+    // see that method's own doc comment for why "known, unlinked" must not be retried the same
+    // way as "never seen" (the actual fix for issue #104's inbox backlog).
+    describe('manager_id/manager_ids resolution (issue #109 unblocked, mivend.audit.common fix)', () => {
+        it('resolves managerId to an Administrator.id when linked', async () => {
+            const findManagerLink = vi
+                .fn()
+                .mockResolvedValue({ found: true, administratorId: 'admin-1' });
             const { handler, counterpartyService, userEnrichmentService } = makeHandler(
                 undefined,
-                findAdministratorIdByErpId,
+                findManagerLink,
             );
 
             await handler.apply(ctx, 'cp-1', {
@@ -188,24 +198,26 @@ describe('CounterpartyStreamHandler', () => {
                 managerId: 'user-erp-1',
             });
 
-            expect(userEnrichmentService.findAdministratorIdByErpId).toHaveBeenCalledWith(
-                ctx,
-                'user-erp-1',
-            );
+            expect(userEnrichmentService.findManagerLink).toHaveBeenCalledWith(ctx, 'user-erp-1');
             expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
                 ctx,
                 'cp-1',
-                expect.objectContaining({ assignedManagerId: 'admin-1' }),
+                expect.objectContaining({
+                    assignedManagerId: 'admin-1',
+                    managerErpId: 'user-erp-1',
+                }),
             );
         });
 
         // search-platform#92's own established fallback: primary manager_id wins; else the
         // first entry of manager_ids.
         it('falls back to the first of managerIds when managerId is absent', async () => {
-            const findAdministratorIdByErpId = vi.fn().mockResolvedValue('admin-2');
+            const findManagerLink = vi
+                .fn()
+                .mockResolvedValue({ found: true, administratorId: 'admin-2' });
             const { handler, userEnrichmentService, counterpartyService } = makeHandler(
                 undefined,
-                findAdministratorIdByErpId,
+                findManagerLink,
             );
 
             await handler.apply(ctx, 'cp-1', {
@@ -214,38 +226,56 @@ describe('CounterpartyStreamHandler', () => {
                 managerIds: ['user-erp-2', 'user-erp-3'],
             });
 
-            expect(userEnrichmentService.findAdministratorIdByErpId).toHaveBeenCalledWith(
-                ctx,
-                'user-erp-2',
-            );
+            expect(userEnrichmentService.findManagerLink).toHaveBeenCalledWith(ctx, 'user-erp-2');
             expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
                 ctx,
                 'cp-1',
-                expect.objectContaining({ assignedManagerId: 'admin-2' }),
+                expect.objectContaining({
+                    assignedManagerId: 'admin-2',
+                    managerErpId: 'user-erp-2',
+                }),
             );
         });
 
         // Neither field present (1C has no manager assigned at all) must leave an existing
         // REST/portal-assigned manager untouched — never clear it to null.
-        it('leaves assignedManagerId untouched when neither managerId nor managerIds is present', async () => {
+        it('leaves assignedManagerId/managerErpId untouched when neither managerId nor managerIds is present', async () => {
             const { handler, counterpartyService, userEnrichmentService } = makeHandler();
 
             await handler.apply(ctx, 'cp-1', { name: 'Acme Corp', isActive: true });
 
-            expect(userEnrichmentService.findAdministratorIdByErpId).not.toHaveBeenCalled();
+            expect(userEnrichmentService.findManagerLink).not.toHaveBeenCalled();
             const call = counterpartyService.upsertActiveState.mock.calls[0][2];
             expect(call.assignedManagerId).toBeUndefined();
+            expect(call.managerErpId).toBeUndefined();
         });
 
-        // Ordinary eventual-consistency race (the manager's own `user` event hasn't arrived yet)
-        // — must be retryable via MissingDependencyError, never a silent skip that would
-        // permanently drop the manager assignment.
-        it('throws MissingDependencyError when the manager erpId has no linked Administrator yet', async () => {
-            const findAdministratorIdByErpId = vi.fn().mockResolvedValue(null);
-            const { handler, counterpartyService } = makeHandler(
-                undefined,
-                findAdministratorIdByErpId,
-            );
+        // Ordinary eventual-consistency race (the manager's own `user` event hasn't arrived yet,
+        // no ErpUser row at all for this erpId) — must be retryable via MissingDependencyError,
+        // never a silent skip that would permanently drop the manager assignment.
+        it('throws MissingDependencyError when the manager erpId has never been seen at all', async () => {
+            const findManagerLink = vi.fn().mockResolvedValue({ found: false });
+            const { handler, counterpartyService } = makeHandler(undefined, findManagerLink);
+
+            await expect(
+                handler.apply(ctx, 'cp-1', {
+                    name: 'Acme Corp',
+                    isActive: true,
+                    managerId: 'user-erp-unknown',
+                }),
+            ).rejects.toThrow(MissingDependencyError);
+            expect(counterpartyService.upsertActiveState).not.toHaveBeenCalled();
+        });
+
+        // The actual bug this fix addresses: a manager erpId that's known but still unlinked
+        // (a human hasn't decided yet, can take days) must NOT be retried like a race — it must
+        // save with no manager and move on. AdministratorLinkedListener (plugin-counterparty)
+        // backfills this later if/when the erpId actually links.
+        it('does not throw, and saves with assignedManagerId:null, when the manager erpId is known but still unlinked', async () => {
+            const findManagerLink = vi
+                .fn()
+                .mockResolvedValue({ found: true, administratorId: null });
+            const { handler, counterpartyService } = makeHandler(undefined, findManagerLink);
 
             await expect(
                 handler.apply(ctx, 'cp-1', {
@@ -253,8 +283,15 @@ describe('CounterpartyStreamHandler', () => {
                     isActive: true,
                     managerId: 'user-erp-unlinked',
                 }),
-            ).rejects.toThrow(MissingDependencyError);
-            expect(counterpartyService.upsertActiveState).not.toHaveBeenCalled();
+            ).resolves.toBeUndefined();
+            expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+                ctx,
+                'cp-1',
+                expect.objectContaining({
+                    assignedManagerId: null,
+                    managerErpId: 'user-erp-unlinked',
+                }),
+            );
         });
     });
 });

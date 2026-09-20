@@ -8,7 +8,12 @@ import {
     OneToOne,
     PrimaryGeneratedColumn,
 } from 'typeorm';
-import type { ListQueryBuilder, RequestContext, TransactionalConnection } from '@vendure/core';
+import type {
+    EventBus,
+    ListQueryBuilder,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
 import { Administrator, User } from '@vendure/core';
 import {
     createTestSchema,
@@ -18,16 +23,18 @@ import {
 } from 'shared';
 
 import { AdministratorActivationService } from '../../../administrator-activation.service';
-import { PendingErpUserService } from '../../../pending-erp-user.service';
+import { ErpUserService } from '../../../erp-user.service';
 import { UserEnrichmentService } from '../../../user-enrichment.service';
 
 // Real end-to-end chain for issue #119's own scenario request: a 1C user arrives (active or
-// inactive), gets queued as a PendingErpUser candidate (or not), and — once linked — gets
+// inactive), gets queued as an ErpUser candidate (or not), and — once linked — gets
 // deactivated/reactivated for real. `user-enrichment.service.test.ts`/`administrator-activation.
 // service.test.ts` already prove the *decision logic* against a fully mocked repo; this file
-// proves what mocks can't: the real Postgres writes (PendingErpUser's unique-erpId-backed
-// upsert, Administrator.customFields.erpId's embedded-column write, deletedAt actually landing on
-// both Administrator and User rows).
+// proves what mocks can't: the real Postgres writes (ErpUser's unique-erpId-backed upsert,
+// Administrator.customFields.erpId's embedded-column write, deletedAt actually landing on both
+// Administrator and User rows). mivend.audit.common (2026-09-20) extends this with real
+// evidence that a linked ErpUser row survives (is never deleted), which is the whole fix for
+// issue #104's `counterparty` stream inbox backlog.
 //
 // Administrator/User are real @vendure/core VendureEntity classes — they rely on an
 // EntityIdStrategy registered during a full Vendure bootstrap() to generate their primary column,
@@ -95,8 +102,8 @@ class TestUser {
     deletedAt!: Date | null;
 }
 
-@Entity('pending_erp_user')
-class TestPendingErpUser {
+@Entity('erp_user')
+class TestErpUser {
     @PrimaryGeneratedColumn()
     id!: number;
 
@@ -106,6 +113,9 @@ class TestPendingErpUser {
     @Column({ type: 'varchar', nullable: true }) departmentId!: string | null;
     @Column({ type: 'timestamp' }) firstSeenAt!: Date;
     @Column({ type: 'timestamp' }) lastSeenAt!: Date;
+    @Column({ type: 'varchar', default: 'unlinked' }) status!: string;
+    @Column({ type: 'varchar', nullable: true }) administratorId!: string | null;
+    @Column({ type: 'boolean', nullable: true }) active!: boolean | null;
 }
 
 const mockCtx = {} as unknown as RequestContext;
@@ -118,7 +128,7 @@ function makeConnectionShim(): TransactionalConnection {
         getRepository: (_ctx: unknown, entity: unknown) => {
             if (entity === Administrator) return dataSource.getRepository(TestAdministrator);
             if (entity === User) return dataSource.getRepository(TestUser);
-            return dataSource.getRepository(TestPendingErpUser);
+            return dataSource.getRepository(TestErpUser);
         },
     } as unknown as TransactionalConnection;
 }
@@ -130,7 +140,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestAdministrator, TestUser, TestPendingErpUser],
+        entities: [TestAdministrator, TestUser, TestErpUser],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -145,27 +155,32 @@ afterEach(async () => {
     // Plain DELETE, not `.clear()` (TRUNCATE) — Postgres refuses to TRUNCATE a table referenced
     // by a FK unless every referencing table is truncated in the same statement. FK order:
     // administrator references user, so it's deleted first.
-    await dataSource.getRepository(TestPendingErpUser).createQueryBuilder().delete().execute();
+    await dataSource.getRepository(TestErpUser).createQueryBuilder().delete().execute();
     await dataSource.getRepository(TestAdministrator).createQueryBuilder().delete().execute();
     await dataSource.getRepository(TestUser).createQueryBuilder().delete().execute();
 });
 
 describe('UserEnrichmentService.linkAndEnrich (real DB)', () => {
-    let pendingErpUserService: PendingErpUserService;
+    let erpUserService: ErpUserService;
     let service: UserEnrichmentService;
+    let eventBus: { publish: ReturnType<typeof vi.fn> };
 
     beforeAll(() => {
         const connection = makeConnectionShim();
-        pendingErpUserService = new PendingErpUserService(
+        erpUserService = new ErpUserService(
             connection,
             {} as unknown as ListQueryBuilder, // only findAllPaginated needs this; unused here
         );
-        service = new UserEnrichmentService(connection, pendingErpUserService, {
-            syncFromErp: vi.fn(),
-        } as unknown as AdministratorActivationService);
+        eventBus = { publish: vi.fn() };
+        service = new UserEnrichmentService(
+            connection,
+            erpUserService,
+            { syncFromErp: vi.fn() } as unknown as AdministratorActivationService,
+            eventBus as unknown as EventBus,
+        );
     });
 
-    it('creates a real PendingErpUser row for an active, unlinked user with no email', async () => {
+    it('creates a real, unlinked ErpUser row for an active, unlinked user with no email', async () => {
         await service.linkAndEnrich(mockCtx, {
             erpId: 'user-active-1',
             fullName: 'Active Person',
@@ -173,12 +188,20 @@ describe('UserEnrichmentService.linkAndEnrich (real DB)', () => {
         });
 
         const row = await dataSource
-            .getRepository(TestPendingErpUser)
+            .getRepository(TestErpUser)
             .findOne({ where: { erpId: 'user-active-1' } });
-        expect(row).toMatchObject({ erpId: 'user-active-1', fullName: 'Active Person' });
+        expect(row).toMatchObject({
+            erpId: 'user-active-1',
+            fullName: 'Active Person',
+            status: 'unlinked',
+        });
     });
 
-    it('never creates a PendingErpUser row for an inactive/deleted, unlinked user', async () => {
+    // mivend.audit.common (2026-09-20): the row is still created/kept (never deleted — that's
+    // the whole point of this fix), just flagged active:false so it's excluded from the
+    // Pending list (ErpUserService.findAllPaginated) and never offered a "Create Administrator"
+    // action.
+    it('creates the ErpUser row flagged active:false for an inactive/deleted, unlinked user — never surfaced as a create-candidate', async () => {
         const result = await service.linkAndEnrich(mockCtx, {
             erpId: 'user-inactive-1',
             fullName: 'Deleted Person',
@@ -187,26 +210,25 @@ describe('UserEnrichmentService.linkAndEnrich (real DB)', () => {
 
         expect(result).toBeNull();
         const row = await dataSource
-            .getRepository(TestPendingErpUser)
+            .getRepository(TestErpUser)
             .findOne({ where: { erpId: 'user-inactive-1' } });
-        expect(row).toBeNull();
+        expect(row).toMatchObject({ erpId: 'user-inactive-1', status: 'unlinked', active: false });
     });
 
-    it('deletes an already-queued PendingErpUser row once 1C reports the same user inactive', async () => {
+    it('keeps (never deletes) the ErpUser row once 1C reports the same user inactive, just flips active:false', async () => {
         await service.linkAndEnrich(mockCtx, { erpId: 'user-flip-1', isActive: true });
-        expect(
-            await dataSource
-                .getRepository(TestPendingErpUser)
-                .findOne({ where: { erpId: 'user-flip-1' } }),
-        ).not.toBeNull();
+        const beforeRow = await dataSource
+            .getRepository(TestErpUser)
+            .findOne({ where: { erpId: 'user-flip-1' } });
+        expect(beforeRow).toMatchObject({ active: true });
 
         await service.linkAndEnrich(mockCtx, { erpId: 'user-flip-1', isActive: false });
 
-        expect(
-            await dataSource
-                .getRepository(TestPendingErpUser)
-                .findOne({ where: { erpId: 'user-flip-1' } }),
-        ).toBeNull();
+        const afterRow = await dataSource
+            .getRepository(TestErpUser)
+            .findOne({ where: { erpId: 'user-flip-1' } });
+        expect(afterRow).not.toBeNull();
+        expect(afterRow).toMatchObject({ erpId: 'user-flip-1', active: false });
     });
 
     it('upserts, not duplicates, the same erpId processed twice (real unique constraint)', async () => {
@@ -222,21 +244,22 @@ describe('UserEnrichmentService.linkAndEnrich (real DB)', () => {
         });
 
         const rows = await dataSource
-            .getRepository(TestPendingErpUser)
+            .getRepository(TestErpUser)
             .find({ where: { erpId: 'user-repeat-1' } });
         expect(rows).toHaveLength(1);
         expect(rows[0].fullName).toBe('Second');
     });
 
-    it('links by email match, writes customFields.erpId for real, and removes the pending row', async () => {
+    it('links by email match, writes customFields.erpId for real, and flips (never deletes) the ErpUser row to linked', async () => {
         const admin = await dataSource
             .getRepository(TestAdministrator)
             .save({ firstName: 'A', lastName: 'B', emailAddress: 'match@example.com' });
-        await dataSource.getRepository(TestPendingErpUser).save({
+        await dataSource.getRepository(TestErpUser).save({
             erpId: 'user-match-1',
             email: 'match@example.com',
             firstSeenAt: new Date(),
             lastSeenAt: new Date(),
+            status: 'unlinked',
         });
 
         const result = await service.linkAndEnrich(mockCtx, {
@@ -249,11 +272,31 @@ describe('UserEnrichmentService.linkAndEnrich (real DB)', () => {
             .getRepository(TestAdministrator)
             .findOne({ where: { id: admin.id } });
         expect(reloaded?.customFields?.erpId).toBe('user-match-1');
-        expect(
-            await dataSource
-                .getRepository(TestPendingErpUser)
-                .findOne({ where: { erpId: 'user-match-1' } }),
-        ).toBeNull();
+        const erpUserRow = await dataSource
+            .getRepository(TestErpUser)
+            .findOne({ where: { erpId: 'user-match-1' } });
+        expect(erpUserRow).not.toBeNull();
+        expect(erpUserRow).toMatchObject({
+            status: 'linked',
+            administratorId: String(admin.id),
+        });
+        expect(eventBus.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('flips to linked even when no ErpUser row existed yet (immediate email-match on first sight)', async () => {
+        const admin = await dataSource
+            .getRepository(TestAdministrator)
+            .save({ firstName: 'A', lastName: 'B', emailAddress: 'first-sight@example.com' });
+
+        await service.linkAndEnrich(mockCtx, {
+            erpId: 'user-first-sight-1',
+            email: 'first-sight@example.com',
+        });
+
+        const erpUserRow = await dataSource
+            .getRepository(TestErpUser)
+            .findOne({ where: { erpId: 'user-first-sight-1' } });
+        expect(erpUserRow).toMatchObject({ status: 'linked', administratorId: String(admin.id) });
     });
 });
 

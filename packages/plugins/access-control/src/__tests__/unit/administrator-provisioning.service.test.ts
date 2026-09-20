@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AdministratorService, EventBus, RequestContext, UserService } from '@vendure/core';
 
 import { AdministratorProvisioningService } from '../../administrator-provisioning.service';
-import type { PendingErpUserService } from '../../pending-erp-user.service';
+import { AdministratorLinkedEvent } from '../../administrator-linked.event';
+import type { ErpUserService } from '../../erp-user.service';
 
 describe('AdministratorProvisioningService', () => {
     let administratorService: { create: ReturnType<typeof vi.fn> };
@@ -11,9 +12,9 @@ describe('AdministratorProvisioningService', () => {
         resetPasswordByToken: ReturnType<typeof vi.fn>;
     };
     let eventBus: { publish: ReturnType<typeof vi.fn> };
-    let pendingErpUserService: {
+    let erpUserService: {
         findByErpId: ReturnType<typeof vi.fn>;
-        deleteByErpId: ReturnType<typeof vi.fn>;
+        markLinked: ReturnType<typeof vi.fn>;
     };
     let service: AdministratorProvisioningService;
     const ctx = {} as unknown as RequestContext;
@@ -22,24 +23,24 @@ describe('AdministratorProvisioningService', () => {
         administratorService = { create: vi.fn() };
         userService = { setPasswordResetToken: vi.fn(), resetPasswordByToken: vi.fn() };
         eventBus = { publish: vi.fn() };
-        pendingErpUserService = { findByErpId: vi.fn(), deleteByErpId: vi.fn() };
+        erpUserService = { findByErpId: vi.fn(), markLinked: vi.fn() };
         service = new AdministratorProvisioningService(
             administratorService as unknown as AdministratorService,
             userService as unknown as UserService,
             eventBus as unknown as EventBus,
-            pendingErpUserService as unknown as PendingErpUserService,
+            erpUserService as unknown as ErpUserService,
         );
     });
 
-    it('throws when no PendingErpUser exists for the given erpId', async () => {
-        pendingErpUserService.findByErpId.mockResolvedValue(null);
+    it('throws when no ErpUser row exists for the given erpId', async () => {
+        erpUserService.findByErpId.mockResolvedValue(null);
 
         await expect(service.createFromPending(ctx, 'user-1')).rejects.toThrow();
         expect(administratorService.create).not.toHaveBeenCalled();
     });
 
     it('throws when the pending candidate has no email', async () => {
-        pendingErpUserService.findByErpId.mockResolvedValue({
+        erpUserService.findByErpId.mockResolvedValue({
             erpId: 'user-1',
             email: null,
             fullName: 'Ivan Petrov',
@@ -51,7 +52,7 @@ describe('AdministratorProvisioningService', () => {
     });
 
     it('creates an Administrator with zero roles, erpId customField, and never returns/exposes the generated password', async () => {
-        pendingErpUserService.findByErpId.mockResolvedValue({
+        erpUserService.findByErpId.mockResolvedValue({
             erpId: 'user-1',
             email: 'ivan@example.com',
             fullName: 'Ivan Petrov',
@@ -81,8 +82,8 @@ describe('AdministratorProvisioningService', () => {
         expect(result).toEqual({ id: 'admin-1' });
     });
 
-    it('deletes the PendingErpUser row and publishes a PasswordResetEvent after creation', async () => {
-        pendingErpUserService.findByErpId.mockResolvedValue({
+    it('flips the ErpUser row to linked (never deletes it), publishes AdministratorLinkedEvent, and publishes a PasswordResetEvent after creation', async () => {
+        erpUserService.findByErpId.mockResolvedValue({
             erpId: 'user-1',
             email: 'ivan@example.com',
             fullName: 'Ivan Petrov',
@@ -93,13 +94,14 @@ describe('AdministratorProvisioningService', () => {
 
         await service.createFromPending(ctx, 'user-1');
 
-        expect(pendingErpUserService.deleteByErpId).toHaveBeenCalledWith(ctx, 'user-1');
+        expect(erpUserService.markLinked).toHaveBeenCalledWith(ctx, 'user-1', 'admin-1');
         expect(userService.setPasswordResetToken).toHaveBeenCalledWith(ctx, 'ivan@example.com');
-        expect(eventBus.publish).toHaveBeenCalledTimes(1);
+        expect(eventBus.publish).toHaveBeenCalledTimes(2);
+        expect(eventBus.publish).toHaveBeenCalledWith(expect.any(AdministratorLinkedEvent));
     });
 
-    it('does not publish an event when setPasswordResetToken finds no native auth method', async () => {
-        pendingErpUserService.findByErpId.mockResolvedValue({
+    it('still publishes AdministratorLinkedEvent, but not a PasswordResetEvent, when setPasswordResetToken finds no native auth method', async () => {
+        erpUserService.findByErpId.mockResolvedValue({
             erpId: 'user-1',
             email: 'ivan@example.com',
             fullName: 'Ivan Petrov',
@@ -110,7 +112,8 @@ describe('AdministratorProvisioningService', () => {
 
         await service.createFromPending(ctx, 'user-1');
 
-        expect(eventBus.publish).not.toHaveBeenCalled();
+        expect(eventBus.publish).toHaveBeenCalledTimes(1);
+        expect(eventBus.publish).toHaveBeenCalledWith(expect.any(AdministratorLinkedEvent));
     });
 
     describe('completePasswordReset', () => {

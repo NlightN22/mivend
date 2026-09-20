@@ -39,6 +39,18 @@ export class Counterparty extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     assignedManagerId!: string | null;
 
+    // Raw 1C manager erpId this Counterparty's assignedManagerId was (or would be) resolved
+    // from — same "keep the raw ERP id alongside the resolved one" convention as
+    // DiscountRule.triggerProductErpId. Needed because `assignedManagerId` resolution can be
+    // deferred (the manager's own Administrator may not be linked yet — see
+    // UserEnrichmentService.findManagerLink): without this, once a `counterparty` event has been
+    // applied there's no way to later find "which erpId was this counterparty waiting on" to
+    // backfill assignedManagerId once that erpId finally links (see
+    // AdministratorLinkedListener). Indexed for that backfill lookup.
+    @Index()
+    @Column({ type: 'varchar', nullable: true })
+    managerErpId!: string | null;
+
     @Column({ type: 'varchar', nullable: true })
     departmentId!: string | null;
 

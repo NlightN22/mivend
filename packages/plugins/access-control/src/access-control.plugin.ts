@@ -15,13 +15,13 @@ import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
 import { EmployeeService } from './employee.service';
-import { PendingErpUserService } from './pending-erp-user.service';
+import { ErpUserService } from './erp-user.service';
 import { UserEnrichmentService } from './user-enrichment.service';
 import { Branch } from './entities/branch.entity';
 import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
-import { PendingErpUser } from './entities/pending-erp-user.entity';
+import { ErpUser } from './entities/erp-user.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
 import { RoleScopeConfigService } from './role-scope-config.service';
 import { Warehouse } from './entities/warehouse.entity';
@@ -94,7 +94,12 @@ const adminApiSchema = gql`
     # Phase 1's own "Pending ERP users" page rendered only its one additionalColumn until this
     # was added), unlike deactivatedAdministrators, which reuses the native, already-compliant
     # Administrator/AdministratorList.
-    type PendingErpUser implements Node {
+    # Renamed from PendingErpUser (mivend.audit.common, 2026-09-20) — "pending" stopped
+    # describing the row once linked ones stick around too (ErpUser.status/administratorId are
+    # never deleted on link, see ErpUser entity's own doc comment). The pendingErpUsers query
+    # name is kept as-is — it still means exactly what it says (only unlinked rows), see
+    # ErpUserService.findAllPaginated's own filter.
+    type ErpUser implements Node {
         id: ID!
         erpId: String!
         fullName: String
@@ -102,20 +107,22 @@ const adminApiSchema = gql`
         departmentId: String
         firstSeenAt: DateTime!
         lastSeenAt: DateTime!
+        status: String!
+        administratorId: ID
     }
 
-    type PendingErpUserList implements PaginatedList {
-        items: [PendingErpUser!]!
+    type ErpUserList implements PaginatedList {
+        items: [ErpUser!]!
         totalItems: Int!
     }
 
-    input PendingErpUserFilterParameter {
+    input ErpUserFilterParameter {
         erpId: StringOperators
         fullName: StringOperators
         email: StringOperators
     }
 
-    input PendingErpUserSortParameter {
+    input ErpUserSortParameter {
         erpId: SortOrder
         fullName: SortOrder
         email: SortOrder
@@ -123,11 +130,11 @@ const adminApiSchema = gql`
         lastSeenAt: SortOrder
     }
 
-    input PendingErpUserListOptions {
+    input ErpUserListOptions {
         skip: Int
         take: Int
-        sort: PendingErpUserSortParameter
-        filter: PendingErpUserFilterParameter
+        sort: ErpUserSortParameter
+        filter: ErpUserFilterParameter
         filterOperator: LogicalOperator
     }
 
@@ -160,7 +167,7 @@ const adminApiSchema = gql`
         roleAccessScopeConfig(roleCode: String!): String
         # Issue #119 Phase 1: both real server-side pagination, backing the Dashboard "ERP
         # users" screens' ListPage components — see access-control.resolver.ts's own comments.
-        pendingErpUsers(options: PendingErpUserListOptions): PendingErpUserList!
+        pendingErpUsers(options: ErpUserListOptions): ErpUserList!
         deactivatedAdministrators(options: AdministratorListOptions): AdministratorList!
         # Issue #119 Phase 2: backs the manager-portal Settings > Users screen — every
         # Administrator, filterable by status (omit status for "All").
@@ -204,7 +211,7 @@ const adminApiSchema = gql`
         Warehouse,
         BranchSettings,
         CreditTermLimit,
-        PendingErpUser,
+        ErpUser,
     ],
     providers: [
         AccessScopeService,
@@ -216,7 +223,7 @@ const adminApiSchema = gql`
         EmployeeService,
         CreditTermLimitService,
         UserEnrichmentService,
-        PendingErpUserService,
+        ErpUserService,
         AdministratorActivationService,
         AdministratorProvisioningService,
     ],
@@ -230,7 +237,7 @@ const adminApiSchema = gql`
         EmployeeService,
         CreditTermLimitService,
         UserEnrichmentService,
-        PendingErpUserService,
+        ErpUserService,
         AdministratorActivationService,
         AdministratorProvisioningService,
     ],

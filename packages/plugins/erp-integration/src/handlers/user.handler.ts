@@ -10,10 +10,10 @@ const loggerCtx = 'IntegrationUserHandler';
 // company.customers.events.v1.user-changed). Issue #109: enrichment-only, never creates an
 // Administrator — matches an existing one by email on first sight of an erpId, then persists
 // erpId for idempotent re-processing (see UserEnrichmentService.linkAndEnrich's own comment).
-// Issue #119 extends this with fullName/isActive/isDeleted: fullName seeds the PendingErpUser
+// Issue #119 extends this with fullName/isActive/isDeleted: fullName seeds the ErpUser
 // candidate row's display name; isActive/isDeleted drive automatic deactivate/reactivate of an
 // already-linked Administrator (UserEnrichmentService delegates to
-// AdministratorActivationService.syncFromErp) — never used to create/keep a PendingErpUser row.
+// AdministratorActivationService.syncFromErp) — never used to create/keep an ErpUser row.
 // role/positionId are deliberately still deferred (mivend #117's Position-entity design isn't
 // finalized yet, even though search-platform's own PositionChanged stream/position_id field are
 // already live).

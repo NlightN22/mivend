@@ -23,9 +23,9 @@ import { Branch } from './entities/branch.entity';
 import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
-import { PendingErpUser } from './entities/pending-erp-user.entity';
+import { ErpUser } from './entities/erp-user.entity';
 import { Warehouse } from './entities/warehouse.entity';
-import { PendingErpUserService } from './pending-erp-user.service';
+import { ErpUserService } from './erp-user.service';
 import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.service';
 import { WarehouseService } from './warehouse.service';
 
@@ -58,7 +58,7 @@ export class AccessControlResolver {
         private creditTermLimitService: CreditTermLimitService,
         private administratorService: AdministratorService,
         private accessScopeService: AccessScopeService,
-        private pendingErpUserService: PendingErpUserService,
+        private erpUserService: ErpUserService,
         private administratorProvisioningService: AdministratorProvisioningService,
         private administratorActivationService: AdministratorActivationService,
     ) {}
@@ -259,14 +259,14 @@ export class AccessControlResolver {
         );
     }
 
-    // Issue #119: unlinked 1C users awaiting a human decision — see PendingErpUser's own comment.
+    // Issue #119: unlinked 1C users awaiting a human decision — see ErpUser's own comment.
     @Query()
     @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
     async pendingErpUsers(
         @Ctx() ctx: RequestContext,
-        @Args() args: { options?: ListQueryOptions<PendingErpUser> },
-    ): Promise<PaginatedList<PendingErpUser>> {
-        return this.pendingErpUserService.findAllPaginated(ctx, args.options);
+        @Args() args: { options?: ListQueryOptions<ErpUser> },
+    ): Promise<PaginatedList<ErpUser>> {
+        return this.erpUserService.findAllPaginated(ctx, args.options);
     }
 
     // Issue #119 Phase 1: soft-deleted (deactivated) Administrators — invisible to the native

@@ -39,6 +39,7 @@ import { CounterpartyService } from './counterparty.service';
 import { TradingPointService } from './trading-point.service';
 import { CreditTermGateService } from './credit-term-gate.service';
 import { CreditTermService } from './credit-term.service';
+import { AdministratorLinkedListener } from './administrator-linked.listener';
 
 const tradingPointFields = gql`
     type ContactPerson {
@@ -327,6 +328,7 @@ const adminResolvers = [
         CreditTermGateService,
         CreditTermService,
         CounterpartyTeamService,
+        AdministratorLinkedListener,
     ],
     exports: [CounterpartyService, TradingPointService],
     configuration: (config: RuntimeVendureConfig) => {

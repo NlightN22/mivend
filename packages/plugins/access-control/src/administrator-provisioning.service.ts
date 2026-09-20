@@ -10,7 +10,8 @@ import {
     UserService,
 } from '@vendure/core';
 
-import { PendingErpUserService } from './pending-erp-user.service';
+import { AdministratorLinkedEvent } from './administrator-linked.event';
+import { ErpUserService } from './erp-user.service';
 
 // Issue #119, Decision 3: human-triggered creation, anchored on erpId from the moment of
 // creation — never re-derived by email matching afterwards. The only creation path; the Kafka
@@ -22,7 +23,7 @@ export class AdministratorProvisioningService {
         private administratorService: AdministratorService,
         private userService: UserService,
         private eventBus: EventBus,
-        private pendingErpUserService: PendingErpUserService,
+        private erpUserService: ErpUserService,
     ) {}
 
     // Decision 4: zero roles at creation — the Administrator exists but can perform no action
@@ -35,7 +36,7 @@ export class AdministratorProvisioningService {
     // uses, so the already-registered `passwordResetHandler` (@vendure/email-plugin) delivers the
     // link — no plaintext password ever reaches a human, staff included.
     async createFromPending(ctx: RequestContext, erpId: string): Promise<Administrator> {
-        const pending = await this.pendingErpUserService.findByErpId(ctx, erpId);
+        const pending = await this.erpUserService.findByErpId(ctx, erpId);
         if (!pending) {
             throw new Error(
                 `No pending ERP user found for erpId=${erpId} — already linked, or never seen`,
@@ -58,7 +59,12 @@ export class AdministratorProvisioningService {
             customFields: { erpId, departmentId: pending.departmentId },
         });
 
-        await this.pendingErpUserService.deleteByErpId(ctx, erpId);
+        // mivend.audit.common (2026-09-20): flips the row to linked in place — never deletes it
+        // (see ErpUserService.markLinked's own comment). Publishing AdministratorLinkedEvent
+        // lets plugin-counterparty backfill any Counterparty left with no manager while this
+        // erpId was still unlinked.
+        await this.erpUserService.markLinked(ctx, erpId, admin.id);
+        await this.eventBus.publish(new AdministratorLinkedEvent(ctx, erpId, admin.id));
 
         const user = await this.userService.setPasswordResetToken(ctx, pending.email);
         if (user) {

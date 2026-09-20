@@ -4,13 +4,14 @@ import { api, Button, graphql, ListPage } from '@vendure/dashboard';
 import { toast } from 'sonner';
 
 // Issue #119 Phase 1 — "Pending" section of the "ERP users" Dashboard surface: 1C users
-// (UserChanged) not yet linked to any Administrator (PendingErpUserService's own candidate
-// list), awaiting a human decision to create a real login for them. Built on ListPage per
+// (UserChanged) not yet linked to any Administrator (ErpUserService's own candidate list,
+// filtered to status: 'unlinked' — see its own doc comment), awaiting a human decision to
+// create a real login for them. Built on ListPage per
 // dashboard-extension-rules — a hand-rolled table/fetch loop here (like the pre-existing
 // branches-page.tsx/erp-reconciliation-page.tsx) is exactly what that rule now forbids for a
 // new page.
 const pendingErpUsersListDocument = graphql(`
-    query PendingErpUsersForDashboard($options: PendingErpUserListOptions) {
+    query PendingErpUsersForDashboard($options: ErpUserListOptions) {
         pendingErpUsers(options: $options) {
             items {
                 id

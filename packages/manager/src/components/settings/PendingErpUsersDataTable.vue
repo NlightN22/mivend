@@ -11,7 +11,7 @@ import type { PendingErpUserRow } from '../../api/users';
 
 // Settings > Users > Pending (issue #119 Phase 2) — ERP candidates with no manager-portal
 // account yet. Server-side paginated (manager-table-standard skill). No status filter/column: the
-// whole dataset is "Pending" by definition (see access-control.plugin.ts's PendingErpUser
+// whole dataset is "Pending" by definition (see access-control.plugin.ts's ErpUser
 // entity), so a status filter would have exactly one value.
 const props = defineProps<{
     users: PendingErpUserRow[];

@@ -23,7 +23,7 @@ mutation SetAdministratorActive($id: ID!, $isActive: Boolean!) {
     setAdministratorActive(administratorId: $id, isActive: $isActive)
 }
 
-query PendingErpUsersPage($options: PendingErpUserListOptions) {
+query PendingErpUsersPage($options: ErpUserListOptions) {
     pendingErpUsers(options: $options) {
         items {
             id

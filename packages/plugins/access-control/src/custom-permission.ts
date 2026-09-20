@@ -91,6 +91,6 @@ export const CustomPermission = {
     ManageAdministratorLifecycle: new PermissionDefinition({
         name: 'ManageAdministratorLifecycle',
         description:
-            'Decide who has an Administrator login at all — review PendingErpUser candidates, create an Administrator anchored on erpId, and manually activate/deactivate one (issue #119); distinct from ManageAccessControl, which is RBAC role/scope configuration once a login already exists',
+            'Decide who has an Administrator login at all — review ErpUser candidates, create an Administrator anchored on erpId, and manually activate/deactivate one (issue #119); distinct from ManageAccessControl, which is RBAC role/scope configuration once a login already exists',
     }),
 } as const;

@@ -79,6 +79,11 @@ export class CounterpartyService {
             erpGroupLabel?: string | null;
             departmentId?: string | null;
             assignedManagerId?: string | null;
+            // The raw erpId assignedManagerId was (or would be) resolved from — always passed
+            // together with assignedManagerId by CounterpartyStreamHandler, even when
+            // assignedManagerId itself is undefined/null. See Counterparty.managerErpId's own
+            // doc comment.
+            managerErpId?: string | null;
         },
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, Counterparty);
@@ -95,6 +100,7 @@ export class CounterpartyService {
             if (fields.assignedManagerId !== undefined) {
                 entity.assignedManagerId = fields.assignedManagerId;
             }
+            if (fields.managerErpId !== undefined) entity.managerErpId = fields.managerErpId;
             await repo.save(entity);
             return;
         }
@@ -109,9 +115,40 @@ export class CounterpartyService {
                 erpGroupLabel: fields.erpGroupLabel ?? null,
                 departmentId: fields.departmentId ?? null,
                 assignedManagerId: fields.assignedManagerId ?? null,
+                managerErpId: fields.managerErpId ?? null,
             }),
         );
         Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);
+    }
+
+    // mivend.audit.common (2026-09-20): called from AdministratorLinkedListener once an erpId
+    // links to an Administrator — resolves every Counterparty that was left with no manager
+    // because its `counterparty` event was processed while that erpId was still `unlinked` (see
+    // CounterpartyStreamHandler.resolveAssignedManagerId's "known, not a race" branch). Bounded,
+    // indexed lookup (Counterparty.managerErpId has its own index) — never touches a row whose
+    // assignedManagerId is already set, so a later manual reassignment (portal
+    // reassignManager) is never clobbered by a backfill running late.
+    async backfillAssignedManager(
+        ctx: RequestContext,
+        managerErpId: string,
+        administratorId: ID,
+    ): Promise<number> {
+        const repo = this.connection.getRepository(ctx, Counterparty);
+        const result = await repo
+            .createQueryBuilder()
+            .update(Counterparty)
+            .set({ assignedManagerId: String(administratorId) })
+            .where('managerErpId = :managerErpId', { managerErpId })
+            .andWhere('assignedManagerId IS NULL')
+            .execute();
+        const affected = result.affected ?? 0;
+        if (affected > 0) {
+            Logger.verbose(
+                `Backfilled assignedManagerId=${String(administratorId)} for ${affected} counterparty row(s) waiting on managerErpId=${managerErpId}`,
+                loggerCtx,
+            );
+        }
+        return affected;
     }
 
     // search-platform#129: CounterpartyCreditBalanceChanged is a separate, register-driven stream
