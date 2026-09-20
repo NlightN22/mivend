@@ -30,7 +30,7 @@ interface GenerateDocumentJobData {
 // Puppeteer -> save as a Vendure Asset. Runs inside the existing worker process
 // via JobQueueService — see apps/server/src/worker.ts, which already calls
 // startJobQueue() generically, so this queue rides on the already-configured
-// BullMQJobQueuePlugin with no further wiring.
+// DefaultJobQueuePlugin (issue #128) with no further wiring.
 @Injectable()
 export class PdfGeneratorService implements OnModuleInit {
     private queue!: JobQueue<GenerateDocumentJobData>;

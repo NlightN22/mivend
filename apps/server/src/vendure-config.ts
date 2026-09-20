@@ -1,6 +1,11 @@
 import path from 'path';
 import { readFileSync } from 'fs';
-import { DefaultSchedulerPlugin, LanguageCode, VendureConfig } from '@vendure/core';
+import {
+    DefaultJobQueuePlugin,
+    DefaultSchedulerPlugin,
+    LanguageCode,
+    VendureConfig,
+} from '@vendure/core';
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { offlineTermsPaymentHandler, onlineStubPaymentHandler } from './payment-method-handlers';
@@ -13,7 +18,6 @@ import {
     emailAddressChangeHandler,
 } from '@vendure/email-plugin';
 import { DashboardPlugin } from '@vendure/dashboard/plugin';
-import { BullMQJobQueuePlugin } from '@vendure/job-queue-plugin/package/bullmq';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
@@ -47,7 +51,6 @@ import { OrganizationsDashboardPlugin } from './organizations-dashboard.plugin';
 import { ErpUsersDashboardPlugin } from './erp-users-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
-const redisDb = parseInt(process.env.REDIS_DB ?? '0');
 const integrationKafkaEnabled = process.env.INTEGRATION_KAFKA_ENABLED === 'true';
 // Issue #68 contour model: the legacy direct-REST ERP intake and the real Kafka/Integration
 // Service path are mutually exclusive per contour — set explicitly per env file (true for
@@ -473,14 +476,13 @@ export const config: VendureConfig = {
             assetUrlPrefix: process.env.ASSET_URL_PREFIX ?? '/assets/',
         }),
         emailPlugin,
-        BullMQJobQueuePlugin.init({
-            connection: {
-                host: process.env.REDIS_HOST ?? 'localhost',
-                port: parseInt(process.env.REDIS_PORT ?? '6379'),
-                db: redisDb,
-                maxRetriesPerRequest: null,
-            },
-        }),
+        // Issue #128: migrated off BullMQJobQueuePlugin (Redis-backed) to Vendure's own
+        // DB-backed SqlJobQueueStrategy — no separate per-queue-type Redis dependency, and
+        // (unlike BullMQ, where every process's Worker pulls indiscriminately off one shared
+        // underlying queue) `activeQueues` is a real `WHERE queueName = ...` filter at the
+        // query level, so worker.ts/worker-email.ts's existing activeQueues split now gives
+        // genuine per-process isolation. See the vendure-workers skill.
+        DefaultJobQueuePlugin.init({}),
         // Issue #80: the standard for all recurring/periodic plugin work (sweeps, cleanups,
         // polling) — see the backend-plugin-rules skill's "Recurring/periodic work" section.
         // Runs worker-process-only and DB-locked out of the box (DefaultSchedulerStrategy), and

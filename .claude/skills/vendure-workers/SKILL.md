@@ -1,6 +1,6 @@
 ---
 name: vendure-workers
-description: Mandatory before adding, splitting, or reconfiguring any Vendure worker process (worker.ts, worker-email.ts, or any future dedicated worker), touching jobQueueOptions/activeQueues, or adding a new JobQueueService.createQueue() call. Covers how Vendure's BullMQ job queue actually behaves across multiple worker processes, why activeQueues alone does NOT give real isolation, and the real incident this project already hit getting it wrong twice in one day.
+description: Mandatory before adding, splitting, or reconfiguring any Vendure worker process (worker.ts, worker-email.ts, or any future dedicated worker), touching jobQueueOptions/activeQueues, or adding a new JobQueueService.createQueue() call. Covers how this project's job queue (Vendure's DB-backed DefaultJobQueuePlugin, since issue #128) behaves across multiple worker processes, how activeQueues gives real isolation there, and the BullMQ-era incident that drove this design (kept as historical context).
 ---
 
 # Vendure workers: job queues, activeQueues, and process splitting
@@ -10,29 +10,38 @@ This project runs more than one `bootstrapWorker()` process per contour (`worker
 touching either file, adding a third worker, or adding any new `JobQueueService.createQueue()`
 call in a plugin.
 
-**Planned, not yet done: issue #128 — migrate off `BullMQJobQueuePlugin` to Vendure's default
-polling (DB-backed) `JobQueueStrategy`.** No specific load requirement drove the original BullMQ
-choice; it was picked as "more forward-looking" at the time. The polling strategy implements
-`activeQueues` as a real SQL `WHERE queueName = ...` filter (verified in
-`polling-job-queue-strategy.js`), which would make the `worker.ts`/`worker-email.ts` split already
-written in this skill actually work as originally intended, with no further code changes to
-either file. Everything below describing BullMQ's specific limitations is accurate for the
-strategy in use as of this writing — re-verify it against #128 once that migration lands, and
-trim the now-historical BullMQ-specific warnings if they no longer apply.
+**Done: issue #128 — migrated off `BullMQJobQueuePlugin` to Vendure's own DB-backed
+`DefaultJobQueuePlugin` (`SqlJobQueueStrategy`)**, configured in `apps/server/src/vendure-config.ts`.
+No specific load requirement drove the original BullMQ choice; it was picked as "more
+forward-looking" at the time. `SqlJobQueueStrategy` (via the shared `PollingJobQueueStrategy` base
+it and `InMemoryJobQueueStrategy` both extend) implements `activeQueues` as a real SQL
+`WHERE queueName = ...` filter (verified in `polling-job-queue-strategy.js`), so the
+`worker.ts`/`worker-email.ts` split already written in this skill now works as originally
+intended, with no code changes needed to either file beyond updating their comments. There is no
+longer a separate Redis dependency for jobs — job records live in each contour's own Postgres
+database (`job_record` table, `synchronize: true` creates it automatically outside production;
+staging-integration/production run with `synchronize: false` and need a real migration before
+first deploy of this change, not yet done as of this writing).
 
-## The one fact that matters most
+**Historical context below describes BullMQ's specific limitations, which no longer apply now
+that the strategy has changed** — kept because the same failure class (a shared underlying queue
+that any worker can blindly dequeue from) is exactly what `activeQueues` on `SqlJobQueueStrategy`
+now correctly prevents, and because a future strategy change should be checked against the same
+question this section answers.
 
-**`@vendure/job-queue-plugin`'s BullMQ integration stores every Vendure queue's jobs in a single
+## The one fact that mattered under BullMQ (no longer applicable — see above)
+
+**`@vendure/job-queue-plugin`'s BullMQ integration stored every Vendure queue's jobs in a single
 underlying BullMQ queue (`vendure-job-queue`), keyed by a `data.name` field per job, not one real
-BullMQ queue per Vendure `queueName`.** Every worker process connects to that same one queue, and
-**the single underlying BullMQ `Worker` in each process pulls jobs off that queue indiscriminately
-— `activeQueues` does not stop a process from dequeuing a job type it doesn't own,** even when
-every running worker declares an explicit, non-overlapping list. `JobQueueOptions.activeQueues` is
-checked by `JobQueueService.shouldStartQueue()` only when a queue is being registered/started in
-this process (gating whether a _processor_ gets attached) — it is not consulted by the BullMQ
-consumer's own pull loop, which has no concept of "leave this one for someone else."
+BullMQ queue per Vendure `queueName`.** Every worker process connected to that same one queue, and
+**the single underlying BullMQ `Worker` in each process pulled jobs off that queue indiscriminately
+— `activeQueues` did not stop a process from dequeuing a job type it doesn't own,** even when
+every running worker declared an explicit, non-overlapping list. `JobQueueOptions.activeQueues` was
+checked by `JobQueueService.shouldStartQueue()` only when a queue was being registered/started in
+that process (gating whether a _processor_ got attached) — it was not consulted by the BullMQ
+consumer's own pull loop, which had no concept of "leave this one for someone else."
 
-**Confirmed empirically twice in this project, same day (2026-09-20):**
+**Confirmed empirically twice in this project, same day (2026-09-20), under the old BullMQ strategy:**
 
 1. First attempt: a dedicated worker with `activeQueues: ['send-email']` run _alongside_
    `worker.ts` left on Vendure's documented default (empty/unset = "process every queue") — the
@@ -50,27 +59,26 @@ consumer's own pull loop, which has no concept of "leave this one for someone el
    matter how you configure it**, because every process's BullMQ `Worker` shares the exact same
    underlying queue and blindly pulls from it.
 
-**Do not trust `activeQueues` alone for isolation with this strategy — not even with a fully
-non-overlapping, "textbook-correct" configuration on every worker.** This directly matches
-Vendure's own community-documented caveat: _"all Vendure job types are stored in a single BullMQ
-queue, and any worker can process any job type... for strict per-queue concurrency isolation, you
-would need to create separate BullMQ queues per Vendure queue, though this requires custom
-implementation."_
+This was the reason `activeQueues` alone did not give isolation **under BullMQ specifically** —
+it directly matched Vendure's own community-documented caveat: _"all Vendure job types are stored
+in a single BullMQ queue, and any worker can process any job type... for strict per-queue
+concurrency isolation, you would need to create separate BullMQ queues per Vendure queue, though
+this requires custom implementation."_ Since #128, `SqlJobQueueStrategy`'s `next()` genuinely
+filters by `queueName` at the SQL level, so this workaround is no longer needed — the section
+below is kept only in case a future strategy change reintroduces the same shape of problem.
 
-## The real fix: genuinely separate BullMQ queues, not `activeQueues`
+## The old workaround for BullMQ (superseded by the #128 migration itself)
 
-To actually isolate one queue (e.g. `send-email`) from contention by everything else, the queue
-itself must be a **different underlying BullMQ queue**, not just a different Vendure-level
-`activeQueues` allowlist on top of the same one. This means a custom `JobQueueStrategy` (or a
-thin wrapper around `BullMQJobQueueStrategy`) that routes specific `queueName`s to their own,
-separately-named BullMQ `Queue`/`Worker` pair — see `worker-email.ts`'s own implementation and
-comments for how this project does it, and update this section if that implementation changes
-shape.
+Under BullMQ, isolating one queue (e.g. `send-email`) from contention required the queue itself to
+be a **different underlying BullMQ queue**, not just a different Vendure-level `activeQueues`
+allowlist on top of the same one — a custom `JobQueueStrategy` routing specific `queueName`s to
+their own, separately-named BullMQ `Queue`/`Worker` pair. This project never actually built that
+custom strategy; #128's migration to `SqlJobQueueStrategy` solved the same problem more simply, by
+switching to a strategy where `activeQueues` already does the filtering correctly.
 
-**Do not fall back to `JobQueueOptions.prefix`** as a shortcut — that option namespaces an entire
-_deployment's_ queues from another deployment sharing the same Redis (e.g. staging vs. prod), not
-individual queue types within one deployment; giving one worker a different `prefix` just makes it
-stop seeing jobs published under the default prefix entirely, it doesn't create a routing split.
+(`JobQueueOptions.prefix` was a BullMQ-specific option for namespacing an entire _deployment's_
+queues on a shared Redis — not applicable to `SqlJobQueueStrategy`, and not a fix for per-queue
+isolation within one deployment even under BullMQ.)
 
 ## `apply-collection-filters` has no idempotency of its own — a known, open, upstream Vendure gap
 
@@ -99,9 +107,9 @@ recompute) — a full sweep over hundreds of collections × their product sets i
 (this project measured ~5-6 sec/collection, ~44 minutes for a full 516-collection sweep that
 completed successfully on its own, pre-fix). Before assuming a stuck job is hung/crashed:
 
-1. Check the job's Redis lock (`bull:vendure-job-queue:<id>:lock`) — if its TTL is actively
-   refreshing, the worker genuinely still holds and is working the job, not an orphan from a dead
-   process.
+1. Since #128, check the `job_record` row's `state`/`progress`/`updatedAt` columns directly in
+   Postgres (there is no Redis lock to inspect anymore) — an actively advancing `updatedAt` means
+   the worker genuinely still holds and is working the job, not an orphan from a dead process.
 2. Check `data.collectionIds` — empty array means full sweep, expect it to take a while.
 3. Check whether **multiple** full-sweep jobs are running concurrently — that's the overlap gap
    above, now guarded against; if it recurs, the guard itself is the thing to debug first.
@@ -123,8 +131,8 @@ plugin/service rather than as a `VendureConfig` literal.
 ## Restarting a worker process
 
 Per the `dev-environment` skill, use the Makefile / respawn (`ts-node-dev --respawn`) in dev —
-never manually `kill -9` a worker mid-job without checking what it's holding first (a job with a
-live, refreshing Redis lock means the worker is doing real, uninterrupted work; abruptly killing it
+never manually `kill -9` a worker mid-job without checking what it's holding first (a `job_record`
+row actively advancing means the worker is doing real, uninterrupted work; abruptly killing it
 just orphans that job instead of letting it finish or fail cleanly). On a contour connected to a
 real external broker (staging-integration), be extra careful — see `AGENTS.md`'s Dev process
 management section and this session's own experience: an in-app permission classifier will refuse

@@ -2,16 +2,13 @@ import { bootstrapWorker } from '@vendure/core';
 import { config } from './vendure-config';
 
 // Every known JobQueueService queue in this codebase EXCEPT `send-email` (that one is owned
-// exclusively by worker-email.ts — see its own doc comment for why the split needs to be this
-// explicit, not "this worker keeps everything, that one also takes send-email"). Real incident
-// (2026-09-20): a naive dedicated email worker with activeQueues: ['send-email'] run *alongside*
-// this worker left with no activeQueues (Vendure's "empty = all" default) actively raced this
-// worker for every job type — activeQueues is checked only after a job is already dequeued from
-// the single shared BullMQ list, not before, so a worker that doesn't own a job type it happens
-// to pull FAILS it outright rather than leaving it for the right worker. Four real
-// apply-collection-filters jobs were permanently failed this way within seconds. The only safe
-// pattern is every concurrently-running worker declaring an explicit, non-overlapping
-// activeQueues set — never one restricted worker paired with one left on the "all" default.
+// exclusively by worker-email.ts — see its own doc comment). Since issue #128's migration off
+// BullMQJobQueuePlugin to Vendure's own DefaultJobQueuePlugin (SqlJobQueueStrategy), this list
+// gives genuine per-process isolation: activeQueues is a real `WHERE queueName = ...` filter at
+// the query level, not a post-dequeue check, so a worker never dequeues a job type it doesn't
+// declare here. Kept as an explicit, non-overlapping list (rather than "this worker keeps
+// everything, that one also takes send-email") for clarity and because it's what worked under
+// BullMQ too — see the vendure-workers skill for the historical incident this split fixed.
 const ALL_QUEUES_EXCEPT_EMAIL = [
     'apply-collection-filters', // Vendure core (CollectionService)
     'clean-sessions', // Vendure core (SessionService)

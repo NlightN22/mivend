@@ -142,12 +142,6 @@ importers:
             '@vendure/email-plugin':
                 specifier: ^3.7.3
                 version: 3.7.3(supports-color@8.1.1)(svgo@4.1.0)(typescript@5.9.3)
-            '@vendure/job-queue-plugin':
-                specifier: ^3.7.3
-                version: 3.7.3(bullmq@5.79.1(supports-color@8.1.1))(ioredis@5.10.1(supports-color@8.1.1))
-            bullmq:
-                specifier: ^5.0.0
-                version: 5.79.1(supports-color@8.1.1)
             graphql:
                 specifier: ^16.14.2
                 version: 16.14.2
@@ -4116,54 +4110,6 @@ packages:
             '@cfworker/json-schema':
                 optional: true
 
-    '@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.4':
-        resolution:
-            {
-                integrity: sha512-LCkGo6JDfaBhgST7UpPWgNgLINpcpabaHfyz5OBx75nUYxBsaEPxjnyNjWpeb/xBup/682QnBfRBy2/LvPutZQ==,
-            }
-        cpu: [arm64]
-        os: [darwin]
-
-    '@msgpackr-extract/msgpackr-extract-darwin-x64@3.0.4':
-        resolution:
-            {
-                integrity: sha512-zExlW9zUJKZH/tOtVMttwjKa4Xm/3KcNjnE3dPN92uCktwavMxpgCA3MoJK/DOnTWsQgo224OaST27/mPNAf+w==,
-            }
-        cpu: [x64]
-        os: [darwin]
-
-    '@msgpackr-extract/msgpackr-extract-linux-arm64@3.0.4':
-        resolution:
-            {
-                integrity: sha512-dgX0P/9wGPJeHFBG+ZmhgE6bmtMt7NP5CRBGyyktpopdk/mW4POnrpQsSLtKI1dwpc+pPLuXHDh6vvskyQE/sw==,
-            }
-        cpu: [arm64]
-        os: [linux]
-
-    '@msgpackr-extract/msgpackr-extract-linux-arm@3.0.4':
-        resolution:
-            {
-                integrity: sha512-Tg3yX65f5GbtXLkrYEHE5oibZG9epyYWas7FogTTEJeDEF9JlXJzKgXaNhT3UXlTOeA+AfZpYZYZ0uPj7Cfquw==,
-            }
-        cpu: [arm]
-        os: [linux]
-
-    '@msgpackr-extract/msgpackr-extract-linux-x64@3.0.4':
-        resolution:
-            {
-                integrity: sha512-8TNXMEjJc3QEy7R/x1INhgiU+XakDAFUzBhaz7+Rbrs8NH5UQeHQxxmzsSBJGyV6I1jW79undiQm8tOI+D+8FQ==,
-            }
-        cpu: [x64]
-        os: [linux]
-
-    '@msgpackr-extract/msgpackr-extract-win32-x64@3.0.4':
-        resolution:
-            {
-                integrity: sha512-CmCXPQrkbwExx3j946/PtHWHbYJiCRBRDl4BlkRQcJB/YOwQxJRTpoo7aTsortjgoJ1x7opzTSxn7C+ASSLVjQ==,
-            }
-        cpu: [x64]
-        os: [win32]
-
     '@mswjs/interceptors@0.41.9':
         resolution:
             {
@@ -6645,20 +6591,6 @@ packages:
                 integrity: sha512-jP8X+QEp9g8sKTmBzTVJuX7Iza8E35iicxdsleiF4LM81ojVI5DsmOTxhpiz63vpj02NX+y5dy47uIiKYJ9eAg==,
             }
 
-    '@vendure/job-queue-plugin@3.7.3':
-        resolution:
-            {
-                integrity: sha512-4g7ID+1kFsYNoLQbrCbqJMUEMdyN0kdgutvWTRrNLhFLv4a8DWX+7H9AvEmrbjU5gw3ZtZPDDcYQCZqgGNf3ew==,
-            }
-        peerDependencies:
-            bullmq: ^5.4.2
-            ioredis: ^5.3.2
-        peerDependenciesMeta:
-            bullmq:
-                optional: true
-            ioredis:
-                optional: true
-
     '@vitejs/plugin-react@5.2.0':
         resolution:
             {
@@ -7429,18 +7361,6 @@ packages:
                 integrity: sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==,
             }
 
-    bullmq@5.79.1:
-        resolution:
-            {
-                integrity: sha512-cteoHRr1FGOTUgzFrnMyBNGtQhNeVR8Ej6nImNSHQDJi4tj6GMD0p9ZG65ZsTnvR9RVf18dhRxWu4kFl634QGA==,
-            }
-        engines: { node: '>=12.22.0' }
-        peerDependencies:
-            redis: '>=5.0.0'
-        peerDependenciesMeta:
-            redis:
-                optional: true
-
     bundle-name@4.1.0:
         resolution:
             {
@@ -8034,14 +7954,6 @@ packages:
             {
                 integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==,
             }
-
-    cron-parser@4.9.0:
-        resolution:
-            {
-                integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==,
-            }
-        engines: { node: '>=12.0.0' }
-        deprecated: v4 is no longer maintained, upgrade to v5
 
     cron-time-generator@2.0.3:
         resolution:
@@ -11165,13 +11077,6 @@ packages:
         peerDependencies:
             react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-    luxon@3.7.2:
-        resolution:
-            {
-                integrity: sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==,
-            }
-        engines: { node: '>=12' }
-
     magic-string@0.30.21:
         resolution:
             {
@@ -11687,19 +11592,6 @@ packages:
                 integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==,
             }
 
-    msgpackr-extract@3.0.4:
-        resolution:
-            {
-                integrity: sha512-4kmO/MdyUIkLIvTPr8VHLil4AtoKIoniWPIEk5+CDy0xnWC84azhSFmuJ7PxZdsYtiP5kEeQsORAVIeMgxT+Hw==,
-            }
-        hasBin: true
-
-    msgpackr@2.0.2:
-        resolution:
-            {
-                integrity: sha512-c5hYOXFbP79Slh6Dzd2wzk+jnV7mX1UxfMYtilnY1NmalXPqG8DGb5cYCMBrW4AsH3zekBBZd4QrKz9NhtvYLQ==,
-            }
-
     msw-storybook-addon@2.0.7:
         resolution:
             {
@@ -11875,13 +11767,6 @@ packages:
                 integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==,
             }
         engines: { node: ^12.20.0 || ^14.13.1 || >=16.0.0 }
-
-    node-gyp-build-optional-packages@5.2.2:
-        resolution:
-            {
-                integrity: sha512-s+w+rBWnpTMwSFbaE0UXsRlg7hU4FjekKU4eyAih5T8nJuNZT1nNsskXpxmeqSK9UzkBl6UgRlnKc8hz8IEqOw==,
-            }
-        hasBin: true
 
     node-gyp-build@4.8.4:
         resolution:
@@ -13586,14 +13471,6 @@ packages:
         resolution:
             {
                 integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==,
-            }
-        engines: { node: '>=10' }
-        hasBin: true
-
-    semver@7.8.1:
-        resolution:
-            {
-                integrity: sha512-rkVq3IXh+4FDGch+KwzX3aV9W3kO54GyEgpvBzSyctDA6Xtd7RJQV1xmXbeQp5v7+VzLOfVqiutSE6GICgPFvg==,
             }
         engines: { node: '>=10' }
         hasBin: true
@@ -17406,7 +17283,8 @@ snapshots:
 
     '@intlify/shared@9.14.5': {}
 
-    '@ioredis/commands@1.5.1': {}
+    '@ioredis/commands@1.5.1':
+        optional: true
 
     '@isaacs/cliui@8.0.2':
         dependencies:
@@ -17588,24 +17466,6 @@ snapshots:
             zod-to-json-schema: 3.25.2(zod@3.25.76)
         transitivePeerDependencies:
             - supports-color
-
-    '@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.4':
-        optional: true
-
-    '@msgpackr-extract/msgpackr-extract-darwin-x64@3.0.4':
-        optional: true
-
-    '@msgpackr-extract/msgpackr-extract-linux-arm64@3.0.4':
-        optional: true
-
-    '@msgpackr-extract/msgpackr-extract-linux-arm@3.0.4':
-        optional: true
-
-    '@msgpackr-extract/msgpackr-extract-linux-x64@3.0.4':
-        optional: true
-
-    '@msgpackr-extract/msgpackr-extract-win32-x64@3.0.4':
-        optional: true
 
     '@mswjs/interceptors@0.41.9':
         dependencies:
@@ -19390,11 +19250,6 @@ snapshots:
             - typescript
             - uncss
 
-    '@vendure/job-queue-plugin@3.7.3(bullmq@5.79.1(supports-color@8.1.1))(ioredis@5.10.1(supports-color@8.1.1))':
-        optionalDependencies:
-            bullmq: 5.79.1(supports-color@8.1.1)
-            ioredis: 5.10.1(supports-color@8.1.1)
-
     '@vitejs/plugin-react@5.2.0(supports-color@8.1.1)(vite@7.3.6(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))':
         dependencies:
             '@babel/core': 7.29.7(supports-color@8.1.1)
@@ -19897,17 +19752,6 @@ snapshots:
             base64-js: 1.5.1
             ieee754: 1.2.1
 
-    bullmq@5.79.1(supports-color@8.1.1):
-        dependencies:
-            cron-parser: 4.9.0
-            ioredis: 5.10.1(supports-color@8.1.1)
-            msgpackr: 2.0.2
-            node-abort-controller: 3.1.1
-            semver: 7.8.1
-            tslib: 2.8.1
-        transitivePeerDependencies:
-            - supports-color
-
     bundle-name@4.1.0:
         dependencies:
             run-applescript: 7.1.0
@@ -20149,7 +19993,8 @@ snapshots:
 
     clsx@2.1.1: {}
 
-    cluster-key-slot@1.1.2: {}
+    cluster-key-slot@1.1.2:
+        optional: true
 
     cmdk@1.1.1(@types/react-dom@19.2.7(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
         dependencies:
@@ -20300,10 +20145,6 @@ snapshots:
             typescript: 5.9.3
 
     create-require@1.1.1: {}
-
-    cron-parser@4.9.0:
-        dependencies:
-            luxon: 3.7.2
 
     cron-time-generator@2.0.3: {}
 
@@ -20544,7 +20385,8 @@ snapshots:
 
     delayed-stream@1.0.0: {}
 
-    denque@2.1.0: {}
+    denque@2.1.0:
+        optional: true
 
     depd@2.0.0: {}
 
@@ -21688,6 +21530,7 @@ snapshots:
             standard-as-callback: 2.1.0
         transitivePeerDependencies:
             - supports-color
+        optional: true
 
     ip-address@10.7.0: {}
 
@@ -22087,11 +21930,13 @@ snapshots:
             lodash: 4.18.1
             lodash-es: 4.18.1
 
-    lodash.defaults@4.2.0: {}
+    lodash.defaults@4.2.0:
+        optional: true
 
     lodash.groupby@4.6.0: {}
 
-    lodash.isarguments@3.1.0: {}
+    lodash.isarguments@3.1.0:
+        optional: true
 
     lodash.memoize@4.1.2: {}
 
@@ -22171,8 +22016,6 @@ snapshots:
     lucide-react@0.575.0(react@19.2.7):
         dependencies:
             react: 19.2.7
-
-    luxon@3.7.2: {}
 
     magic-string@0.30.21:
         dependencies:
@@ -22761,22 +22604,6 @@ snapshots:
 
     ms@2.1.3: {}
 
-    msgpackr-extract@3.0.4:
-        dependencies:
-            node-gyp-build-optional-packages: 5.2.2
-        optionalDependencies:
-            '@msgpackr-extract/msgpackr-extract-darwin-arm64': 3.0.4
-            '@msgpackr-extract/msgpackr-extract-darwin-x64': 3.0.4
-            '@msgpackr-extract/msgpackr-extract-linux-arm': 3.0.4
-            '@msgpackr-extract/msgpackr-extract-linux-arm64': 3.0.4
-            '@msgpackr-extract/msgpackr-extract-linux-x64': 3.0.4
-            '@msgpackr-extract/msgpackr-extract-win32-x64': 3.0.4
-        optional: true
-
-    msgpackr@2.0.2:
-        optionalDependencies:
-            msgpackr-extract: 3.0.4
-
     msw-storybook-addon@2.0.7(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3)):
         dependencies:
             is-node-process: 1.2.0
@@ -22871,11 +22698,6 @@ snapshots:
             data-uri-to-buffer: 4.0.1
             fetch-blob: 3.2.0
             formdata-polyfill: 4.0.10
-
-    node-gyp-build-optional-packages@5.2.2:
-        dependencies:
-            detect-libc: 2.1.2
-        optional: true
 
     node-gyp-build@4.8.4: {}
 
@@ -23794,11 +23616,13 @@ snapshots:
             tiny-invariant: 1.3.3
             victory-vendor: 36.9.2
 
-    redis-errors@1.2.0: {}
+    redis-errors@1.2.0:
+        optional: true
 
     redis-parser@3.0.0:
         dependencies:
             redis-errors: 1.2.0
+        optional: true
 
     reflect-metadata@0.2.2: {}
 
@@ -23946,8 +23770,6 @@ snapshots:
     semver@6.3.1: {}
 
     semver@7.7.4: {}
-
-    semver@7.8.1: {}
 
     semver@7.8.5: {}
 
@@ -24214,7 +24036,8 @@ snapshots:
 
     stackback@0.0.2: {}
 
-    standard-as-callback@2.1.0: {}
+    standard-as-callback@2.1.0:
+        optional: true
 
     statuses@2.0.2: {}
 

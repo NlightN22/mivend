@@ -35,7 +35,7 @@ import type { ErpIntegrationPluginOptions } from './types';
 // it does not wait for the (potentially very slow, tens of minutes on this project's real
 // catalog size) apply-collection-filters job to finish. Vendure's own ScheduledTask/scheduler
 // locking only prevents *this function* from running concurrently with itself across worker
-// instances; it has no idea the BullMQ job it kicked off is still running. With the default
+// instances; it has no idea the job it kicked off is still running. With the default
 // 3-minute interval and a full sweep sometimes taking ~44 minutes (516 collections × their
 // products), several full sweeps piled up and contended for the same Postgres rows — looked
 // exactly like a hung job, wasn't. The `isSettled: false` check below is the actual overlap

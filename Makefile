@@ -93,8 +93,10 @@ endif
 # Minimal branch-instance test stack: server + worker only (no separate storefront/manager dev
 # servers — see docs/architecture.md's branch-identity/scope design). Safe to run alongside an
 # already-running `make dev` central stack: only kills branch-tagged processes (see
-# dev-kill-branch.sh), reuses the shared postgres-branch/redis/rabbitmq/elasticsearch containers,
-# and is isolated from central's BullMQ queues via REDIS_DB (see apps/server/.env.branch).
+# dev-kill-branch.sh), reuses the shared postgres-branch/redis/rabbitmq/elasticsearch containers.
+# Since issue #128 (job queue moved off BullMQ/Redis to Vendure's DB-backed
+# DefaultJobQueuePlugin), job isolation from central comes from the separate postgres-branch
+# database itself, not REDIS_DB.
 dev-branch:
 	@bash infrastructure/scripts/dev-kill-branch.sh
 	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --wait postgres-branch redis rabbitmq elasticsearch
@@ -105,10 +107,10 @@ dev-branch:
 
 # Deliberately-launched staging-integration contour (issue #68) — the ONLY way to validate the
 # real Kafka contract against Integration Service's actual staging broker. Never the default
-# `make dev` target. Its own database (mivend_central_staging_integration) and REDIS_DB=2, so it
-# can never share state with `make dev`'s synthetic local contour (REDIS_DB=0) or
-# `make dev-branch` (REDIS_DB=1) — see apps/server/.env.central.staging-integration and
-# docs/environments.md. Requires apps/server/.env.central.staging-integration to exist (copy from
+# `make dev` target. Its own database (mivend_central_staging_integration), so it can never share
+# job/state data with `make dev`'s synthetic local contour or `make dev-branch` — see
+# apps/server/.env.central.staging-integration and docs/environments.md. Requires
+# apps/server/.env.central.staging-integration to exist (copy from
 # .env.central.staging-integration.example and fill in real credentials) — never commit that file.
 # Does NOT run its own `tsc -b --watch` plugin compiler — dist/ is shared across contours and
 # running a second watcher alongside `make dev`'s is exactly the duplicate-process/stale-dist

@@ -72,20 +72,17 @@ Nothing in code enforces that the local and staging-integration contours use dif
 databases — it's enforced by convention (`DB_NAME` in each `.env.central*` file) plus the
 Makefile targets each creating/expecting their own database (`mivend_central` vs.
 `mivend_central_staging_integration`). Do not point `.env.central.staging-integration` at the
-same `DB_NAME`/`REDIS_DB` as `.env.central` — doing so would let real Integration Service data
-intermix with `make seed-all`'s synthetic data, which is the exact bug this document exists to
-prevent.
+same `DB_NAME` as `.env.central` — doing so would let real Integration Service data intermix with
+`make seed-all`'s synthetic data, which is the exact bug this document exists to prevent.
 
 Postgres has its own container/port per instance type (`mivend_central`/`mivend_central_staging_integration`
 both live in `docker-postgres-central-1`, distinguished by `DB_NAME`; the branch instance's own
-`docker-postgres-branch-1` is separate again), but **Redis is one shared container on port 6380**
-across every contour of the central instance (see `infrastructure/docker/docker-compose.dev.yml`'s
-`redis` service) — isolation there is by `REDIS_DB` (logical DB index) alone, not by container.
-Current assignment, and this must stay unique per contour/instance sharing that Redis: local
-(`.env.central`) = `0`, branch (`.env.branch`) = `1`, staging-integration
-(`.env.central.staging-integration`) = `2`. Before adding a fourth contour/instance onto this same
-Redis, pick the next unused index — reusing one silently shares BullMQ queues/keys between
-contours.
+`docker-postgres-branch-1` is separate again). Since issue #128 (job queue migrated off
+BullMQ/Redis to Vendure's DB-backed `DefaultJobQueuePlugin`), job records live in each contour's
+own Postgres database and are isolated by `DB_NAME` the same way everything else is — the
+`REDIS_DB` index scheme this section used to describe for per-contour BullMQ queue isolation no
+longer applies to jobs. The `redis` container/env vars (`REDIS_HOST`/`REDIS_PORT`/`REDIS_DB`)
+remain in the compose files and `.env.*` examples as unused legacy config, not yet removed.
 
 ## Testing must stay within the local contour
 
