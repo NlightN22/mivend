@@ -75,13 +75,19 @@ function requiredKafkaId(envVar: string): string {
 const instancePlugins = instanceType === 'central' ? [AcquiringPlugin.init({})] : [];
 
 // Issue #121: devMode writes real emails (real token/link, same code path as production) to
-// disk and serves them at /mailbox instead of sending — covers local + staging-integration
-// (neither ever has NODE_ENV=production, see docs/environments.md's contour table), same
-// non-production gate already used by dbConnectionOptions.synchronize above. Production
-// transport (SMTP relay vs. a transactional-email API) is a deliberately open decision — see
-// #121 — so a production boot without it fails loudly instead of silently defaulting to a
-// provider nobody's confirmed access to.
-const emailDevMode = process.env.NODE_ENV !== 'production';
+// disk and serves them at /mailbox instead of sending. Deliberately NOT gated on
+// NODE_ENV !== 'production' (unlike dbConnectionOptions.synchronize above, which genuinely must
+// stay production-only — auto schema sync against a real DB is dangerous in a way an unsent
+// email is not): the SMTP-relay vs. transactional-email-API decision (#121) is still open, and
+// production always sets NODE_ENV=production (Dockerfile/docker-compose.yml) regardless of
+// whether that decision has landed yet — tying devMode to NODE_ENV would mean password-
+// reset/account-activation links (#119/#120) simply vanish in production until #121's provider
+// is chosen. Instead: devMode is on whenever no real transport has been configured at all
+// (EMAIL_TRANSPORT unset), independent of contour — so the mailbox stays reachable in production
+// too until a real provider is wired in via EMAIL_TRANSPORT.
+const emailTransportConfigured = Boolean(process.env.EMAIL_TRANSPORT);
+const emailDevMode = !emailTransportConfigured;
+
 const emailPlugin = EmailPlugin.init(
     emailDevMode
         ? {
@@ -93,12 +99,16 @@ const emailPlugin = EmailPlugin.init(
               ),
               handlers: [emailVerificationHandler, passwordResetHandler, emailAddressChangeHandler],
           }
-        : ((): never => {
+        : // EMAIL_TRANSPORT is set, but no real transport (SMTP relay vs. transactional-email
+          // API — #121) is implemented yet. This only throws when someone explicitly opts in by
+          // setting EMAIL_TRANSPORT, never on an ordinary boot, so it doesn't reintroduce the
+          // "unrelated deploy crashes over an email decision" problem devMode's own gate avoids.
+          ((): never => {
               throw new Error(
-                  'EmailPlugin has no production transport configured — see issue #121: the ' +
-                      'SMTP-relay vs. transactional-email-API decision is deliberately not made ' +
-                      'yet. Configure a real EmailTransportOptions here before running with ' +
-                      'NODE_ENV=production.',
+                  `EMAIL_TRANSPORT=${process.env.EMAIL_TRANSPORT} was set, but no real ` +
+                      'EmailTransportOptions is implemented yet — see issue #121 (the SMTP-relay ' +
+                      'vs. transactional-email-API decision is still open). Implement the chosen ' +
+                      'transport here, or unset EMAIL_TRANSPORT to keep using devMode.',
               );
           })(),
 );
