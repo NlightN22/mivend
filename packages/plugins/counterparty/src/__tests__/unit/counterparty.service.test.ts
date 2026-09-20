@@ -81,10 +81,9 @@ const mockAccessScopeService = {
                     }
                     break;
                 case 'department':
-                    if (
-                        counterparty.departmentId !== (scope.departmentId ?? null) ||
-                        counterparty.branchId !== (scope.branchId ?? null)
-                    ) {
+                    // branchId is deliberately never compared here — see the real
+                    // AccessScopeService.assertCounterpartyWritable's own comment.
+                    if (counterparty.departmentId !== (scope.departmentId ?? null)) {
                         throw new ForbiddenError();
                     }
                     break;
@@ -418,7 +417,12 @@ describe('CounterpartyService', () => {
             );
         });
 
-        it('filters by department/branch for "department" scope', async () => {
+        // Counterparty is never filtered by branchId, even when the caller's scope carries one
+        // — see docs/access-control.md's "Branch scope" section. A prior bug filtered by
+        // `c.branchId = scope.branchId` too; it only "worked" because both sides happened to
+        // hold the same raw ERP id before Administrator.customFields.branchId was fixed to hold
+        // a real Branch.id.
+        it('filters by departmentId only for "department" scope, ignoring any branchId on the scope', async () => {
             const qb = mockQueryBuilder();
             (
                 mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
@@ -433,10 +437,9 @@ describe('CounterpartyService', () => {
 
             await service.findVisible(mockCtx);
 
-            expect(qb.andWhere).toHaveBeenCalledWith(
-                'c.departmentId = :scopeDept AND c.branchId = :scopeBranch',
-                { scopeDept: 'dept-1', scopeBranch: 'branch-a' },
-            );
+            expect(qb.andWhere).toHaveBeenCalledWith('c.departmentId = :scopeDept', {
+                scopeDept: 'dept-1',
+            });
         });
 
         it('applies no filter for "all" scope', async () => {

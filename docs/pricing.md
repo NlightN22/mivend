@@ -65,6 +65,9 @@ PriceResolutionService.resolve(ctx, variantId)
 
 1b. FALLBACK (#70, when step 1/2 can't resolve the customer's own price):
     branchId = counterparty's own branchId, else GlobalSettings.defaultBranchId
+    — in practice this always takes the GlobalSettings.defaultBranchId branch today:
+      Counterparty.branchId is never populated (no auto-assignment rule exists yet,
+      see docs/access-control.md's "Branch scope" section and issue #65)
     defaultPriceTypeId = BranchSettingsService.resolveEffective(branchId).defaultPriceTypeId
     basePrice = PriceEntryService.getForVariant(ctx, variantId, defaultPriceTypeId)
     percent = DiscountRuleService.getBestPercent(ctx, defaultPriceTypeId, facetValues, now,

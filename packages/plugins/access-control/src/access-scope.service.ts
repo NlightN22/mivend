@@ -55,6 +55,11 @@ export class AccessScopeService {
     // filter a list, but as an assertion for a single record ahead of a write. Shared by any
     // service that writes data owned by a Counterparty (e.g. TradingPointService) so the
     // own/department/all switch isn't duplicated per plugin.
+    //
+    // `counterparty.branchId` is accepted for call-site convenience (every caller already has
+    // the full row in hand) but deliberately never compared here — see
+    // CounterpartyService.findVisible's identical department-case comment for why
+    // Counterparty.branchId must never be a scope filter.
     async assertCounterpartyWritable(
         ctx: RequestContext,
         counterparty: {
@@ -78,10 +83,7 @@ export class AccessScopeService {
                 }
                 break;
             case 'department':
-                if (
-                    counterparty.departmentId !== (scope.departmentId ?? null) ||
-                    counterparty.branchId !== (scope.branchId ?? null)
-                ) {
+                if (counterparty.departmentId !== (scope.departmentId ?? null)) {
                     throw new ForbiddenError();
                 }
                 break;

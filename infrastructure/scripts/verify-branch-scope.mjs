@@ -1,24 +1,36 @@
-// E2E verification of branch-scope access-control rules (docs/access-control.md's "Branch scope
-// is a separate axis"). Automates the manual curl-based check performed live during the
-// branch-identity/access-control design session — see docs/architecture.md and
+// E2E verification of department-scope access-control rules for Counterparty
+// (docs/access-control.md's "Branch scope is a separate axis" / "Branch is mivend's own entity;
+// Department is a pure 1C mirror" sections). Automates the manual curl-based check performed
+// live during the branch-identity/access-control design session — see docs/architecture.md and
 // docs/access-control.md.
 //
 // Run against an already-running, already-seeded central instance: node infrastructure/scripts/verify-branch-scope.mjs
 // Requires: make dev + make seed-all already run (cnt-001, olga.depthead@mivend.dev,
-// nikolai.director@mivend.dev must exist).
+// nikolai.director@mivend.dev, dept-purchasing must exist).
 //
-// Deliberately does NOT reassign an existing administrator's branchId to test the "different
-// branch" case — Vendure's default session cache (authOptions.sessionCacheTTL, several minutes)
-// caches an administrator's resolved data, so flipping the same user's branchId and immediately
-// re-checking in a fresh login can read stale cached scope, not the real DB value (this was
-// hit and diagnosed live while writing this script). Instead creates a genuinely new, disposable
-// Administrator scoped to the second branch — a brand-new user has no stale cache entry to hit —
-// and deletes it in cleanup. Safe to run repeatedly, including CI.
+// Renamed in spirit from its original "branch scope" name (kept as the filename for history) —
+// Counterparty is now correctly NEVER filtered by branchId (see
+// CounterpartyService.findVisible's own comment; this used to be a live bug, fixed once
+// Administrator.customFields.branchId/Counterparty.branchId stopped coincidentally holding the
+// same raw ERP id). This script instead verifies: (1) departmentId is still the real scope
+// filter, and (2) branchId is deliberately NOT a filter — two administrators in the same
+// department but with different (or no) branchId assignments must see the exact same
+// counterparties.
+//
+// Deliberately does NOT reassign an existing administrator's departmentId to test the
+// "different department" case — Vendure's default session cache (authOptions.sessionCacheTTL,
+// several minutes) caches an administrator's resolved data, so flipping the same user's
+// departmentId and immediately re-checking in a fresh login can read stale cached scope, not the
+// real DB value (this was hit and diagnosed live while writing the original version of this
+// script, then for branchId). Instead creates genuinely new, disposable Administrators — a
+// brand-new user has no stale cache entry to hit — and deletes them in cleanup. Safe to run
+// repeatedly, including CI.
 
 const BASE_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 const ERP_TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-token';
 const PASSWORD = 'Password123!';
-const VERIFY_EMAIL = 'verify-branch-scope@mivend.dev';
+const VERIFY_OTHER_DEPT_EMAIL = 'verify-other-dept@mivend.dev';
+const VERIFY_SAME_DEPT_DIFFERENT_BRANCH_EMAIL = 'verify-same-dept-diff-branch@mivend.dev';
 
 let failures = 0;
 
@@ -65,7 +77,7 @@ async function loginAs(email, password = PASSWORD) {
 
 async function listCounterparties(cookie) {
     const { data } = await adminGraphqlWithSession(
-        `{ counterparties(options: { take: 50 }) { totalItems items { erpId branchId } } }`,
+        `{ counterparties(options: { take: 50 }) { totalItems items { erpId departmentId branchId } } }`,
         undefined,
         cookie,
     );
@@ -85,9 +97,9 @@ async function postBatch(exchangeId, records) {
     return json;
 }
 
-async function deleteVerifyAdminIfExists(superadminCookie) {
+async function deleteVerifyAdminIfExists(superadminCookie, email) {
     const { data } = await adminGraphqlWithSession(
-        `{ administrators(options: { filter: { emailAddress: { eq: "${VERIFY_EMAIL}" } } }) { items { id } } }`,
+        `{ administrators(options: { filter: { emailAddress: { eq: "${email}" } } }) { items { id } } }`,
         undefined,
         superadminCookie,
     );
@@ -101,7 +113,7 @@ async function deleteVerifyAdminIfExists(superadminCookie) {
     }
 }
 
-async function createVerifyAdmin(superadminCookie) {
+async function createVerifyAdmin(superadminCookie, email, customFields) {
     const { data: rolesData } = await adminGraphqlWithSession(
         `{ roles(options: { take: 20 }) { items { id code } } }`,
         undefined,
@@ -115,11 +127,11 @@ async function createVerifyAdmin(superadminCookie) {
         {
             input: {
                 firstName: 'Verify',
-                lastName: 'BranchScope',
-                emailAddress: VERIFY_EMAIL,
+                lastName: 'DeptScope',
+                emailAddress: email,
                 password: PASSWORD,
                 roleIds: [role.id],
-                customFields: { departmentId: 'dept-sales', branchId: 'branch-north-verify' },
+                customFields,
             },
         },
         superadminCookie,
@@ -128,24 +140,24 @@ async function createVerifyAdmin(superadminCookie) {
 }
 
 async function main() {
-    console.log('── Verifying branch-scope access control ──\n');
+    console.log('── Verifying department-scope access control (branchId is NOT a filter) ──\n');
 
-    console.log('Setting up: second branch + a counterparty scoped to it...');
-    await postBatch('verify-branch-scope-setup', [
-        { type: 'branch', data: { erpId: 'branch-north-verify', name: 'North Branch (verify)' } },
+    console.log('Setting up: a counterparty in a different department (dept-purchasing)...');
+    await postBatch('verify-dept-scope-setup', [
         {
             type: 'counterparty',
             data: {
-                erpId: 'cnt-branch-north-verify',
-                legalName: 'North Branch Verify Co',
-                shortName: 'North Verify',
+                erpId: 'cnt-dept-purchasing-verify',
+                legalName: 'Purchasing Dept Verify Co',
+                shortName: 'Purchasing Verify',
                 creditLimit: 0,
                 creditBalance: 0,
                 paymentDelayDays: 0,
                 priceType: 'RETAIL',
                 isActive: true,
-                departmentId: 'dept-sales',
-                branchId: 'branch-north-verify',
+                departmentId: 'dept-purchasing',
+                // branchId intentionally omitted — Counterparty.branchId is never set by any
+                // automatic path today (see docs/access-control.md, issue #65).
             },
         },
     ]);
@@ -154,42 +166,67 @@ async function main() {
         process.env.SUPERADMIN_USERNAME ?? 'superadmin',
         process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
     );
-    await deleteVerifyAdminIfExists(superadminCookie);
-    await createVerifyAdmin(superadminCookie);
+    await deleteVerifyAdminIfExists(superadminCookie, VERIFY_OTHER_DEPT_EMAIL);
+    await deleteVerifyAdminIfExists(superadminCookie, VERIFY_SAME_DEPT_DIFFERENT_BRANCH_EMAIL);
+    await createVerifyAdmin(superadminCookie, VERIFY_OTHER_DEPT_EMAIL, {
+        departmentId: 'dept-purchasing',
+    });
+    // Same department as olga (dept-sales), but a deliberately different branchId — this is the
+    // regression check: branchId must never narrow Counterparty visibility.
+    await createVerifyAdmin(superadminCookie, VERIFY_SAME_DEPT_DIFFERENT_BRANCH_EMAIL, {
+        departmentId: 'dept-sales',
+        branchId: 'a-branch-id-olga-does-not-have',
+    });
 
     try {
-        console.log('\nScenario: department-head fixed on branch-central (olga, unchanged)...');
+        console.log('\nScenario: department-head in dept-sales (olga, unchanged)...');
         const olgaCookie = await loginAs('olga.depthead@mivend.dev');
         const olgaView = await listCounterparties(olgaCookie);
         check(
-            olgaView.items.every(c => c.branchId !== 'branch-north-verify'),
-            'does NOT see the branch-north-verify counterparty',
+            olgaView.items.every(c => c.erpId !== 'cnt-dept-purchasing-verify'),
+            'does NOT see the dept-purchasing counterparty',
         );
-        check(olgaView.totalItems >= 3, 'still sees its own branch-central counterparties');
+        check(olgaView.totalItems >= 3, 'still sees its own dept-sales counterparties');
 
-        console.log('\nScenario: a different department-head, scoped to branch-north-verify...');
-        const verifyCookie = await loginAs(VERIFY_EMAIL);
-        const verifyView = await listCounterparties(verifyCookie);
+        console.log('\nScenario: department-head in a different department (dept-purchasing)...');
+        const otherDeptCookie = await loginAs(VERIFY_OTHER_DEPT_EMAIL);
+        const otherDeptView = await listCounterparties(otherDeptCookie);
         check(
-            verifyView.items.every(c => c.branchId === 'branch-north-verify'),
-            'sees ONLY branch-north-verify counterparties',
+            otherDeptView.items.every(c => c.departmentId === 'dept-purchasing'),
+            'sees ONLY dept-purchasing counterparties',
         );
         check(
-            verifyView.items.some(c => c.erpId === 'cnt-branch-north-verify'),
-            'specifically sees the branch-north-verify counterparty',
+            otherDeptView.items.some(c => c.erpId === 'cnt-dept-purchasing-verify'),
+            'specifically sees the dept-purchasing counterparty',
+        );
+
+        console.log(
+            '\nScenario: department-head in dept-sales but a DIFFERENT branchId than olga...',
+        );
+        const sameDeptDiffBranchCookie = await loginAs(VERIFY_SAME_DEPT_DIFFERENT_BRANCH_EMAIL);
+        const sameDeptDiffBranchView = await listCounterparties(sameDeptDiffBranchCookie);
+        check(
+            sameDeptDiffBranchView.totalItems === olgaView.totalItems &&
+                new Set(sameDeptDiffBranchView.items.map(c => c.erpId)).size ===
+                    new Set(olgaView.items.map(c => c.erpId)).size &&
+                olgaView.items.every(oc =>
+                    sameDeptDiffBranchView.items.some(c => c.erpId === oc.erpId),
+                ),
+            'sees the EXACT SAME dept-sales counterparties as olga, despite a different branchId — branchId does not narrow Counterparty visibility',
         );
 
         console.log("\nScenario: general-director (scope 'all')...");
         const nikolaiCookie = await loginAs('nikolai.director@mivend.dev');
         const allView = await listCounterparties(nikolaiCookie);
         check(
-            allView.items.some(c => c.branchId === 'branch-central') &&
-                allView.items.some(c => c.branchId === 'branch-north-verify'),
-            'sees counterparties from BOTH branches regardless of scope',
+            allView.items.some(c => c.departmentId === 'dept-sales') &&
+                allView.items.some(c => c.departmentId === 'dept-purchasing'),
+            'sees counterparties from BOTH departments regardless of scope',
         );
     } finally {
         console.log('\nCleaning up...');
-        await deleteVerifyAdminIfExists(superadminCookie);
+        await deleteVerifyAdminIfExists(superadminCookie, VERIFY_OTHER_DEPT_EMAIL);
+        await deleteVerifyAdminIfExists(superadminCookie, VERIFY_SAME_DEPT_DIFFERENT_BRANCH_EMAIL);
     }
 
     console.log(`\n${failures === 0 ? '✓ All checks passed' : `✗ ${failures} check(s) failed`}`);

@@ -333,9 +333,20 @@ export class CounterpartyService {
                 this.accessScopeService.applyOwnCounterpartyFilter(qb, 'c', scope.administratorId);
                 break;
             case 'department':
-                qb.andWhere('c.departmentId = :scopeDept AND c.branchId = :scopeBranch', {
+                // departmentId only — never Counterparty.branchId. Per docs/access-control.md's
+                // "Branch scope" section, Counterparty.branchId is display/default-assignment
+                // only, never a scope filter: a chain/network customer can have trading points
+                // served by several branches, so filtering the parent Counterparty by branch
+                // would incorrectly hide it from (or wrongly show all of it to) a branch that
+                // only services part of it. The real branch-scope filter for anything
+                // order/invoice-shaped is each row's own denormalized branchId (see
+                // OrderVisibilityService/InvoiceVisibilityService's identical comment) — this
+                // query previously also filtered by `c.branchId = :scopeBranch`, which happened
+                // to "work" only because Administrator.customFields.branchId and
+                // Counterparty.branchId both held the same raw, unresolved ERP id before both
+                // were fixed to their documented conventions; that was a bug, not a feature.
+                qb.andWhere('c.departmentId = :scopeDept', {
                     scopeDept: scope.departmentId ?? null,
-                    scopeBranch: scope.branchId ?? null,
                 });
                 break;
             case 'all':

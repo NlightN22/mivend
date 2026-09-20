@@ -143,10 +143,10 @@ async findVisible(ctx: RequestContext, args: ListArgs) {
       qb.where('c.assignedManagerId = :id', { id: scope.administratorId });
       break;
     case 'department':
-      qb.where('c.departmentId = :d AND c.branchId = :b', {
-        d: scope.departmentId,
-        b: scope.branchId,
-      });
+      // departmentId only — Counterparty is never filtered by branchId. See "Branch scope is a
+      // separate axis" below for why: a resource with its own denormalized branchId (Order,
+      // Invoice, TradingPoint) applies `scope.branchId` against *that* column instead.
+      qb.where('c.departmentId = :d', { d: scope.departmentId });
       break;
     case 'all':
       break;
@@ -210,6 +210,15 @@ design decision, not an oversight:**
   multi-location fuel station chain) can have trading points served by several different
   branches; filtering the parent `Counterparty` record itself by branch would incorrectly hide it
   from — or wrongly show all of it to — a branch that only services part of it.
+  **Historical bug, fixed**: `CounterpartyService.findVisible`/`AccessScopeService.assertCounterpartyWritable`
+  used to violate this rule and filter by `c.branchId = scope.branchId` anyway. It "worked" only
+  by accident — `Administrator.customFields.branchId` and `Counterparty.branchId` both held the
+  same raw, unresolved ERP id before the "Branch vs Department" fix above, so the comparison
+  coincidentally matched. Once `Administrator.customFields.branchId` was fixed to hold a real
+  `Branch.id` (and `Counterparty.branchId` was fixed to stay `null` until issue #65), that
+  accidental match broke — department-scoped staff with a branch assigned saw **zero**
+  counterparties. Fixed by removing the branch comparison from both, matching this section's
+  documented design (which predates the bug, and was simply never enforced in code).
 - **`TradingPoint.servicingBranchId`** is the real access-scope filter for a customer's locations
   and everything derived from them (`Order`, `Reservation` inherit `branchId` from the
   `TradingPoint` selected at creation time, denormalized onto the row for filtering without a
