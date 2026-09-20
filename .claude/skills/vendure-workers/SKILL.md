@@ -10,6 +10,16 @@ This project runs more than one `bootstrapWorker()` process per contour (`worker
 touching either file, adding a third worker, or adding any new `JobQueueService.createQueue()`
 call in a plugin.
 
+**Planned, not yet done: issue #128 — migrate off `BullMQJobQueuePlugin` to Vendure's default
+polling (DB-backed) `JobQueueStrategy`.** No specific load requirement drove the original BullMQ
+choice; it was picked as "more forward-looking" at the time. The polling strategy implements
+`activeQueues` as a real SQL `WHERE queueName = ...` filter (verified in
+`polling-job-queue-strategy.js`), which would make the `worker.ts`/`worker-email.ts` split already
+written in this skill actually work as originally intended, with no further code changes to
+either file. Everything below describing BullMQ's specific limitations is accurate for the
+strategy in use as of this writing — re-verify it against #128 once that migration lands, and
+trim the now-historical BullMQ-specific warnings if they no longer apply.
+
 ## The one fact that matters most
 
 **`@vendure/job-queue-plugin`'s BullMQ integration stores every Vendure queue's jobs in a single
