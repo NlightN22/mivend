@@ -10,6 +10,7 @@
         "start:worker": "node dist/worker.js"
     },
     "dependencies": {
+        "@graphql-tools/schema": "^10.0.23",
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-acquiring": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
@@ -34,10 +35,10 @@
         "@nestjs/graphql": "^13.1.0",
         "@nestjs/swagger": "^11.0.0",
         "@nestjs/terminus": "^11.1.1",
-        "@graphql-tools/schema": "^10.0.23",
         "@vendure/asset-server-plugin": "^3.7.3",
         "@vendure/core": "^3.7.3",
         "@vendure/dashboard": "^3.7.3",
+        "@vendure/email-plugin": "^3.7.3",
         "@vendure/job-queue-plugin": "^3.7.3",
         "bullmq": "^5.0.0",
         "graphql": "^16.14.2",

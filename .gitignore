@@ -20,6 +20,9 @@ docs/ai/
 **/static/assets/**
 storybook-static/
 
+# devMode EmailPlugin output (issue #121) — real generated emails, never source
+**/static/email/test-mailbox/**
+
 # Logs
 *.log
 

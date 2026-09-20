@@ -5,6 +5,13 @@ import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { offlineTermsPaymentHandler, onlineStubPaymentHandler } from './payment-method-handlers';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
+import {
+    EmailPlugin,
+    FileBasedTemplateLoader,
+    emailVerificationHandler,
+    passwordResetHandler,
+    emailAddressChangeHandler,
+} from '@vendure/email-plugin';
 import { DashboardPlugin } from '@vendure/dashboard/plugin';
 import { BullMQJobQueuePlugin } from '@vendure/job-queue-plugin/package/bullmq';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
@@ -66,6 +73,35 @@ function requiredKafkaId(envVar: string): string {
 
 // Only central talks to the ERP/payment providers (the external-integration-rules skill)
 const instancePlugins = instanceType === 'central' ? [AcquiringPlugin.init({})] : [];
+
+// Issue #121: devMode writes real emails (real token/link, same code path as production) to
+// disk and serves them at /mailbox instead of sending — covers local + staging-integration
+// (neither ever has NODE_ENV=production, see docs/environments.md's contour table), same
+// non-production gate already used by dbConnectionOptions.synchronize above. Production
+// transport (SMTP relay vs. a transactional-email API) is a deliberately open decision — see
+// #121 — so a production boot without it fails loudly instead of silently defaulting to a
+// provider nobody's confirmed access to.
+const emailDevMode = process.env.NODE_ENV !== 'production';
+const emailPlugin = EmailPlugin.init(
+    emailDevMode
+        ? {
+              devMode: true,
+              outputPath: path.join(__dirname, '../static/email/test-mailbox'),
+              route: 'mailbox',
+              templateLoader: new FileBasedTemplateLoader(
+                  path.join(__dirname, '../static/email/templates'),
+              ),
+              handlers: [emailVerificationHandler, passwordResetHandler, emailAddressChangeHandler],
+          }
+        : ((): never => {
+              throw new Error(
+                  'EmailPlugin has no production transport configured — see issue #121: the ' +
+                      'SMTP-relay vs. transactional-email-API decision is deliberately not made ' +
+                      'yet. Configure a real EmailTransportOptions here before running with ' +
+                      'NODE_ENV=production.',
+              );
+          })(),
+);
 
 export const config: VendureConfig = {
     apiOptions: {
@@ -414,6 +450,7 @@ export const config: VendureConfig = {
             // the storefront is served from (see storefront/vite.config.ts).
             assetUrlPrefix: process.env.ASSET_URL_PREFIX ?? '/assets/',
         }),
+        emailPlugin,
         BullMQJobQueuePlugin.init({
             connection: {
                 host: process.env.REDIS_HOST ?? 'localhost',
