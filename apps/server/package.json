@@ -5,6 +5,7 @@
     "scripts": {
         "dev": "ts-node-dev --respawn --transpile-only --debounce 500 src/main.ts",
         "dev:worker": "ts-node-dev --respawn --transpile-only --debounce 500 src/worker.ts",
+        "dev:worker-email": "ts-node-dev --respawn --transpile-only --debounce 500 src/worker-email.ts",
         "build": "tsc",
         "start": "node dist/main.js",
         "start:worker": "node dist/worker.js"

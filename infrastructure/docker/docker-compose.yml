@@ -49,6 +49,30 @@ services:
                 condition: service_healthy
         restart: unless-stopped
 
+    worker-email:
+        image: ghcr.io/nlightn22/mivend-server:${IMAGE_TAG:-latest}
+        command: ['node', 'dist/worker-email.js']
+        environment:
+            NODE_ENV: production
+            DB_HOST: postgres
+            DB_PORT: 5432
+            DB_USERNAME: ${POSTGRES_USER:-postgres}
+            DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+            DB_NAME: ${POSTGRES_DB:-mivend}
+            REDIS_HOST: redis
+            REDIS_PORT: 6379
+            INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
+            SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
+            SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-superadmin}
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        restart: unless-stopped
+
     postgres:
         image: postgres:16-alpine
         environment:
