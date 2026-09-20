@@ -39,6 +39,13 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
         // scale — the job queue could never drain. Disabled here (worker process only, matching
         // where ProductStreamHandler's Kafka-driven product creates/updates actually happen) and
         // replaced by createCollectionFiltersRecomputeTask's own batched, periodic recompute.
+        //
+        // DO NOT remove this call without also removing/replacing
+        // createCollectionFiltersRecomputeTask (collection-filters-recompute.scheduled-task.ts)
+        // — the two exist as one pair, not independently. Confirmed still present and working
+        // during a 2026-09-20 incident where it was briefly, mistakenly suspected of having been
+        // removed (it was not — see that file's own doc comment for the full account and the
+        // *actual* bug found that day).
         // Manual admin/manager-portal product edits are unaffected — those run in the SERVER
         // process, which has its own separate CollectionService instance with this still enabled.
         this.collectionService.setApplyAllFiltersOnProductUpdates(false);
