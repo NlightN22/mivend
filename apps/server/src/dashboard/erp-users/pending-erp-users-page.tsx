@@ -100,15 +100,20 @@ export function PendingErpUsersPage({ route }: { route: AnyRoute }) {
                 actions: true,
             }}
             defaultColumnOrder={['fullName', 'email', 'erpId', 'departmentId', 'firstSeenAt', 'actions']}
-            additionalColumns={{
+            customizeColumns={{
+                // Overrides the auto-generated "Department Id" column in place — additionalColumns
+                // would add a second, duplicate-keyed column instead (real incident: shipped that
+                // way first, React warned "two children with the same key, `departmentId`" and the
+                // page rendered both the raw id and the resolved name as separate columns).
                 departmentId: {
-                    meta: { dependencies: ['departmentId'] },
                     header: 'Department',
                     cell: ({ row }) =>
                         row.original.departmentId
                             ? (departmentNames[row.original.departmentId] ?? row.original.departmentId)
                             : '—',
                 },
+            }}
+            additionalColumns={{
                 actions: {
                     meta: { dependencies: ['erpId', 'fullName', 'email'] },
                     header: 'Actions',
