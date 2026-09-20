@@ -7,7 +7,7 @@ import {
     ResetAdministratorPasswordDocument,
     SetAdministratorActiveDocument,
     type AdministratorListOptions,
-    type PendingErpUserListOptions,
+    type ErpUserListOptions,
     type PortalUserStatus,
 } from './generated/graphql';
 
@@ -58,7 +58,7 @@ export interface PendingErpUserRow {
 }
 
 export async function fetchPendingErpUsers(
-    options: PendingErpUserListOptions,
+    options: ErpUserListOptions,
 ): Promise<{ items: PendingErpUserRow[]; totalItems: number }> {
     const result = await adminApi(PendingErpUsersPageDocument, { options });
     return result.pendingErpUsers;
