@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { Administrator, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { AdministratorActivationService } from './administrator-activation.service';
+import { PendingErpUserService } from './pending-erp-user.service';
 import { loggerCtx } from './types';
 
 export interface UserEnrichmentInput {
@@ -11,6 +13,10 @@ export interface UserEnrichmentInput {
     // UserStreamHandler's own comment.
     email?: string | null;
     departmentId?: string | null;
+    // Issue #119: only meaningful once an Administrator is linked (AdministratorActivationService
+    // no-ops otherwise) — never used to decide whether to create/keep a PendingErpUser row.
+    fullName?: string | null;
+    isActive?: boolean;
 }
 
 // Issue #109: correlates Integration Service's `user` Kafka stream (UserChanged, 1C's
@@ -31,7 +37,11 @@ export interface UserEnrichmentInput {
 // higher-level service+events API.
 @Injectable()
 export class UserEnrichmentService {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private pendingErpUserService: PendingErpUserService,
+        private administratorActivationService: AdministratorActivationService,
+    ) {}
 
     async linkAndEnrich(
         ctx: RequestContext,
@@ -45,6 +55,12 @@ export class UserEnrichmentService {
                     `user ${input.erpId}: no Administrator linked yet and no email to match by, skipping`,
                     loggerCtx,
                 );
+                await this.pendingErpUserService.upsert(ctx, {
+                    erpId: input.erpId,
+                    fullName: input.fullName,
+                    email: input.email,
+                    departmentId: input.departmentId,
+                });
                 return null;
             }
             admin = await repo.findOne({ where: { emailAddress: input.email } });
@@ -53,9 +69,18 @@ export class UserEnrichmentService {
                     `No Administrator found for user email "${input.email}" (erpId=${input.erpId}) — skipping. Administrator accounts are provisioned manually, not created by this stream.`,
                     loggerCtx,
                 );
+                // Issue #119: surfaced as a candidate for a human to review/create manually —
+                // never auto-created here.
+                await this.pendingErpUserService.upsert(ctx, {
+                    erpId: input.erpId,
+                    fullName: input.fullName,
+                    email: input.email,
+                    departmentId: input.departmentId,
+                });
                 return null;
             }
             admin.customFields = { ...admin.customFields, erpId: input.erpId };
+            await this.pendingErpUserService.deleteByErpId(ctx, input.erpId);
             Logger.verbose(
                 `Linked administrator ${input.email} to erpId=${input.erpId}`,
                 loggerCtx,
@@ -64,7 +89,11 @@ export class UserEnrichmentService {
         if (input.departmentId !== undefined) {
             admin.customFields = { ...admin.customFields, departmentId: input.departmentId };
         }
-        return repo.save(admin);
+        const saved = await repo.save(admin);
+        if (input.isActive !== undefined) {
+            await this.administratorActivationService.syncFromErp(ctx, input.erpId, input.isActive);
+        }
+        return saved;
     }
 
     // Issue #104's managerId chain: resolves a 1C User erpId (CounterpartyChanged.manager_id/
@@ -86,8 +115,12 @@ export class UserEnrichmentService {
     // schema for plugin-owned entities, and a full e2e Vendure bootstrap just to verify this one
     // query's syntax would be disproportionate to this change. Flagged as a deliberate, reported
     // gap rather than silently skipped — verify manually against a real DB if this ever misbehaves.
+    // `withDeleted: true` — the correlation must still resolve after AdministratorActivationService
+    // soft-deletes the linked Administrator, otherwise a later reactivation event would find "no
+    // Administrator" and incorrectly fall back to the email-match/PendingErpUser path instead of
+    // reactivating the existing one.
     private async findByErpId(ctx: RequestContext, erpId: string): Promise<Administrator | null> {
         const repo = this.connection.getRepository(ctx, Administrator);
-        return repo.findOne({ where: { customFields: { erpId } } });
+        return repo.findOne({ where: { customFields: { erpId } }, withDeleted: true });
     }
 }

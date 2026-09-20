@@ -3,10 +3,13 @@ import type { AdministratorService, RequestContext } from '@vendure/core';
 
 import { AccessControlResolver } from '../../access-control.resolver';
 import { AccessScopeService } from '../../access-scope.service';
+import { AdministratorActivationService } from '../../administrator-activation.service';
+import { AdministratorProvisioningService } from '../../administrator-provisioning.service';
 import { BranchService } from '../../branch.service';
 import { BranchSettingsService } from '../../branch-settings.service';
 import { CreditTermLimitService } from '../../credit-term-limit.service';
 import { DepartmentService } from '../../department.service';
+import { PendingErpUserService } from '../../pending-erp-user.service';
 import { RoleScopeConfigService } from '../../role-scope-config.service';
 import { WarehouseService } from '../../warehouse.service';
 
@@ -44,6 +47,9 @@ describe('AccessControlResolver.teamMembers', () => {
             {} as CreditTermLimitService,
             administratorService as unknown as AdministratorService,
             {} as AccessScopeService,
+            {} as PendingErpUserService,
+            {} as AdministratorProvisioningService,
+            {} as AdministratorActivationService,
         );
         administratorService.findAll.mockResolvedValue({
             items: [
@@ -87,6 +93,9 @@ describe('AccessControlResolver.teamDirectory', () => {
             {} as CreditTermLimitService,
             administratorService as unknown as AdministratorService,
             accessScopeService as unknown as AccessScopeService,
+            {} as PendingErpUserService,
+            {} as AdministratorProvisioningService,
+            {} as AdministratorActivationService,
         );
     });
 

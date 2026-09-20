@@ -88,4 +88,9 @@ export const CustomPermission = {
         description:
             'Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84)',
     }),
+    ManageAdministratorLifecycle: new PermissionDefinition({
+        name: 'ManageAdministratorLifecycle',
+        description:
+            'Decide who has an Administrator login at all — review PendingErpUser candidates, create an Administrator anchored on erpId, and manually activate/deactivate one (issue #119); distinct from ManageAccessControl, which is RBAC role/scope configuration once a login already exists',
+    }),
 } as const;

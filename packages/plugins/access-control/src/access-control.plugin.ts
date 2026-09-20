@@ -8,16 +8,20 @@ import gql from 'graphql-tag';
 
 import { AccessControlResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
+import { AdministratorActivationService } from './administrator-activation.service';
+import { AdministratorProvisioningService } from './administrator-provisioning.service';
 import { BranchService } from './branch.service';
 import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
 import { EmployeeService } from './employee.service';
+import { PendingErpUserService } from './pending-erp-user.service';
 import { UserEnrichmentService } from './user-enrichment.service';
 import { Branch } from './entities/branch.entity';
 import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
+import { PendingErpUser } from './entities/pending-erp-user.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
 import { RoleScopeConfigService } from './role-scope-config.service';
 import { Warehouse } from './entities/warehouse.entity';
@@ -81,6 +85,16 @@ const adminApiSchema = gql`
         maxAmount: Int
     }
 
+    type PendingErpUser {
+        id: ID!
+        erpId: String!
+        fullName: String
+        email: String
+        departmentId: String
+        firstSeenAt: DateTime!
+        lastSeenAt: DateTime!
+    }
+
     extend type Query {
         departments: [Department!]!
         branches: [Branch!]!
@@ -90,6 +104,7 @@ const adminApiSchema = gql`
         teamDirectory: [TeamDirectoryMember!]!
         creditTermLimit(roleCode: String!): CreditTermLimit
         roleAccessScopeConfig(roleCode: String!): String
+        pendingErpUsers: [PendingErpUser!]!
     }
 
     extend type Mutation {
@@ -108,12 +123,22 @@ const adminApiSchema = gql`
             visibleWarehouseIds: [String!]
         ): BranchSettings!
         createBranch(name: String!): Branch!
+        createAdministratorFromErpUser(erpId: String!): Administrator!
+        setAdministratorActive(administratorId: ID!, isActive: Boolean!): Boolean!
     }
 `;
 
 @VendurePlugin({
     imports: [PluginCommonModule],
-    entities: [RoleAccessScope, Department, Branch, Warehouse, BranchSettings, CreditTermLimit],
+    entities: [
+        RoleAccessScope,
+        Department,
+        Branch,
+        Warehouse,
+        BranchSettings,
+        CreditTermLimit,
+        PendingErpUser,
+    ],
     providers: [
         AccessScopeService,
         RoleScopeConfigService,
@@ -124,6 +149,9 @@ const adminApiSchema = gql`
         EmployeeService,
         CreditTermLimitService,
         UserEnrichmentService,
+        PendingErpUserService,
+        AdministratorActivationService,
+        AdministratorProvisioningService,
     ],
     exports: [
         AccessScopeService,
@@ -135,6 +163,9 @@ const adminApiSchema = gql`
         EmployeeService,
         CreditTermLimitService,
         UserEnrichmentService,
+        PendingErpUserService,
+        AdministratorActivationService,
+        AdministratorProvisioningService,
     ],
     adminApiExtensions: {
         schema: adminApiSchema,
@@ -183,6 +214,7 @@ const adminApiSchema = gql`
                 name: 'erpId',
                 type: 'string' as const,
                 nullable: true,
+                unique: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP User ID' }],
             },
         ];

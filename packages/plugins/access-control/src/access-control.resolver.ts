@@ -1,7 +1,16 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Permission } from '@vendure/common/lib/generated-types';
-import { Allow, AdministratorService, Ctx, RequestContext, Transaction } from '@vendure/core';
+import {
+    Administrator,
+    Allow,
+    AdministratorService,
+    Ctx,
+    RequestContext,
+    Transaction,
+} from '@vendure/core';
 
+import { AdministratorActivationService } from './administrator-activation.service';
+import { AdministratorProvisioningService } from './administrator-provisioning.service';
 import { CustomPermission } from './custom-permission';
 import { AccessScopeService } from './access-scope.service';
 import { BranchService } from './branch.service';
@@ -12,7 +21,9 @@ import { Branch } from './entities/branch.entity';
 import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
+import { PendingErpUser } from './entities/pending-erp-user.entity';
 import { Warehouse } from './entities/warehouse.entity';
+import { PendingErpUserService } from './pending-erp-user.service';
 import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.service';
 import { WarehouseService } from './warehouse.service';
 
@@ -45,6 +56,9 @@ export class AccessControlResolver {
         private creditTermLimitService: CreditTermLimitService,
         private administratorService: AdministratorService,
         private accessScopeService: AccessScopeService,
+        private pendingErpUserService: PendingErpUserService,
+        private administratorProvisioningService: AdministratorProvisioningService,
+        private administratorActivationService: AdministratorActivationService,
     ) {}
 
     // Names + role codes only — used to label the "Manager" filter/column on the Orders and
@@ -241,5 +255,41 @@ export class AccessControlResolver {
             args.maxExtraDays,
             args.maxAmount ?? null,
         );
+    }
+
+    // Issue #119: unlinked 1C users awaiting a human decision — see PendingErpUser's own comment.
+    @Query()
+    @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
+    async pendingErpUsers(@Ctx() ctx: RequestContext): Promise<PendingErpUser[]> {
+        return this.pendingErpUserService.findAll(ctx);
+    }
+
+    // Issue #119, Decision 3: the only Administrator creation path anchored on erpId — zero
+    // roles, password set via emailed reset link, never a plaintext password.
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
+    async createAdministratorFromErpUser(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { erpId: string },
+    ): Promise<Administrator> {
+        return this.administratorProvisioningService.createFromPending(ctx, args.erpId);
+    }
+
+    // Issue #119, Decision 2: manual override on top of the automatic 1C-driven sync in
+    // UserEnrichmentService/AdministratorActivationService.syncFromErp.
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
+    async setAdministratorActive(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { administratorId: string; isActive: boolean },
+    ): Promise<boolean> {
+        await this.administratorActivationService.setActive(
+            ctx,
+            args.administratorId,
+            args.isActive,
+        );
+        return true;
     }
 }

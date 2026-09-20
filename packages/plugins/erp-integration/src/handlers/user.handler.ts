@@ -10,9 +10,13 @@ const loggerCtx = 'IntegrationUserHandler';
 // company.customers.events.v1.user-changed). Issue #109: enrichment-only, never creates an
 // Administrator — matches an existing one by email on first sight of an erpId, then persists
 // erpId for idempotent re-processing (see UserEnrichmentService.linkAndEnrich's own comment).
-// Only email/departmentId are consumed here — role/positionId are deliberately deferred (mivend
-// #117's Position-entity design isn't finalized yet, even though search-platform's own
-// PositionChanged stream/position_id field are already live).
+// Issue #119 extends this with fullName/isActive/isDeleted: fullName seeds the PendingErpUser
+// candidate row's display name; isActive/isDeleted drive automatic deactivate/reactivate of an
+// already-linked Administrator (UserEnrichmentService delegates to
+// AdministratorActivationService.syncFromErp) — never used to create/keep a PendingErpUser row.
+// role/positionId are deliberately still deferred (mivend #117's Position-entity design isn't
+// finalized yet, even though search-platform's own PositionChanged stream/position_id field are
+// already live).
 @Injectable()
 export class UserStreamHandler implements InboundStreamHandler {
     constructor(private readonly userEnrichmentService: UserEnrichmentService) {}
@@ -29,11 +33,18 @@ export class UserStreamHandler implements InboundStreamHandler {
             'departmentId' in payload
                 ? ((payload.departmentId as string | null) ?? null)
                 : undefined;
+        const fullName =
+            'fullName' in payload ? ((payload.fullName as string | null) ?? null) : undefined;
+        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
+        // bool zero-value omission), same fold-in-isDeleted rule every sibling handler uses.
+        const isActive = payload.isActive === true && payload.isDeleted !== true;
 
         const admin = await this.userEnrichmentService.linkAndEnrich(ctx, {
             erpId: entityId,
             email,
             departmentId,
+            fullName,
+            isActive,
         });
         if (!admin) {
             Logger.verbose(`user ${entityId}: no linked Administrator (skipped)`, loggerCtx);
