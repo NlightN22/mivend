@@ -95,8 +95,8 @@ describe('UserEnrichmentService', () => {
             });
         });
 
-        // No email to match by and no existing link — an ordinary, expected case (e.g. a
-        // deletion tombstone), not an error. Still surfaced as a candidate.
+        // No email to match by and no existing link, but still active in 1C — an ordinary,
+        // expected case, not an error. Still surfaced as a candidate.
         it('returns null and upserts a PendingErpUser when unlinked and no email is available to match by', async () => {
             repo.findOne.mockResolvedValueOnce(null);
 
@@ -110,6 +110,26 @@ describe('UserEnrichmentService', () => {
                 email: undefined,
                 departmentId: undefined,
             });
+        });
+
+        // Issue #119 follow-up: a deleted/inactive 1C user must never become (or stay) a
+        // candidate a human can click "Create Administrator" for — confirmed live against real
+        // staging data.
+        it('never upserts a PendingErpUser, and deletes any existing candidate row, when isActive is false and unlinked', async () => {
+            repo.findOne.mockResolvedValueOnce(null); // findByErpId
+
+            const result = await service.linkAndEnrich(ctx, {
+                erpId: 'user-1',
+                email: 'nobody@example.com',
+                fullName: 'Deleted Person',
+                isActive: false,
+            });
+
+            expect(result).toBeNull();
+            expect(pendingErpUserService.upsert).not.toHaveBeenCalled();
+            expect(pendingErpUserService.deleteByErpId).toHaveBeenCalledWith(ctx, 'user-1');
+            // No email-match lookup attempted at all — deciding "inactive" short-circuits before it.
+            expect(repo.findOne).toHaveBeenCalledTimes(1);
         });
 
         it('deletes the PendingErpUser row the moment an email-match link is established', async () => {

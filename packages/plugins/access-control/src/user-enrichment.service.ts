@@ -50,6 +50,19 @@ export class UserEnrichmentService {
         const repo = this.connection.getRepository(ctx, Administrator);
         let admin = await this.findByErpId(ctx, input.erpId);
         if (!admin) {
+            if (input.isActive === false) {
+                // 1C already reports this user as inactive/deleted — never surface it as a
+                // "create Administrator" candidate in the first place (confirmed live: issue
+                // #119 follow-up — a deleted 1C user was showing up in Pending ERP users with a
+                // working "Create Administrator" button). Also removes an earlier candidate row
+                // if this same erpId was queued while still active and has since been deleted.
+                await this.pendingErpUserService.deleteByErpId(ctx, input.erpId);
+                Logger.verbose(
+                    `user ${input.erpId}: inactive/deleted in 1C, not queued as a pending candidate`,
+                    loggerCtx,
+                );
+                return null;
+            }
             if (!input.email) {
                 Logger.verbose(
                     `user ${input.erpId}: no Administrator linked yet and no email to match by, skipping`,
