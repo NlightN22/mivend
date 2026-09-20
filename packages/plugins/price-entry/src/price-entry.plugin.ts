@@ -24,6 +24,7 @@ import { DiscountGrantResolver } from './discount-grant.resolver';
 import { DiscountRegistryResolver } from './discount-registry.resolver';
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService } from './discount-rule.service';
+import { PromoDiscountRuleService } from './promo-discount-rule.service';
 import { PriceResolutionService } from './price-resolution.service';
 import { TierRebalanceService } from './tier-rebalance.service';
 import { PriceAdjustmentGateService } from './price-adjustment-gate.service';
@@ -86,7 +87,8 @@ const adminApiSchema = gql`
     type DiscountRule {
         id: ID!
         erpId: String!
-        priceTypeCode: String!
+        "Null for a promo rule (issue #107) — those apply regardless of price type."
+        priceTypeCode: String
         facetCode: String
         facetValueCode: String
         percent: Int!
@@ -94,6 +96,12 @@ const adminApiSchema = gql`
         validTo: DateTime!
         minWeightKg: Float
         minAmount: Int
+        "Promo-rule fields (issue #107) — null for a facet/priceType-threshold rule."
+        triggerProductErpId: String
+        triggerQuantity: Float
+        giftProductErpId: String
+        giftQuantity: Float
+        operationKind: String
     }
 
     input DiscountRuleInput {
@@ -281,6 +289,7 @@ const adminApiSchema = gql`
     providers: [
         PriceEntryService,
         DiscountRuleService,
+        PromoDiscountRuleService,
         PriceResolutionService,
         TierRebalanceService,
         PriceAdjustmentGateService,
@@ -288,7 +297,12 @@ const adminApiSchema = gql`
         DiscountGrantService,
         DiscountRegistryService,
     ],
-    exports: [PriceEntryService, DiscountRuleService, PriceResolutionService],
+    exports: [
+        PriceEntryService,
+        DiscountRuleService,
+        PromoDiscountRuleService,
+        PriceResolutionService,
+    ],
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.OrderLine = [
             ...(config.customFields.OrderLine ?? []),

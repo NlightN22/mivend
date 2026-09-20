@@ -16,6 +16,14 @@ function isPortalOrigin(erpId: string): boolean {
     return erpId.startsWith('portal-');
 }
 
+// Issue #107: promo rules (PromoRuleChanged) carry no priceTypeCode at all — they are never
+// priceType-scoped, so they never belong in the priceType-scoped /discounts registry
+// (DiscountRegistryEntry.priceTypeCode is a required column). Same skip mechanism as
+// isPortalOrigin above, different reason.
+function isPromoRuleOrigin(rule: Pick<DiscountRule, 'triggerProductErpId'>): boolean {
+    return rule.triggerProductErpId != null;
+}
+
 export interface DiscountRuleInput {
     erpId: string;
     priceTypeCode: string;
@@ -64,8 +72,14 @@ export class DiscountRuleService {
             record = repo.create(input);
         }
         const saved = await repo.save(record);
-        if (!isPortalOrigin(saved.erpId)) {
-            await this.discountRegistryService.upsertFromRule(ctx, saved);
+        if (!isPortalOrigin(saved.erpId) && !isPromoRuleOrigin(saved)) {
+            // DiscountRuleInput.priceTypeCode is a required string — this branch only ever sees
+            // a facet/priceType-threshold rule (isPromoRuleOrigin already excluded above), so
+            // saved.priceTypeCode is guaranteed non-null here despite the column's nullable type.
+            await this.discountRegistryService.upsertFromRule(ctx, {
+                ...saved,
+                priceTypeCode: saved.priceTypeCode as string,
+            });
         }
         return saved;
     }
@@ -77,16 +91,25 @@ export class DiscountRuleService {
     // the /discounts registry itself no longer calls this unfiltered (see
     // DiscountRegistryService.findAllPaginated), so the 200 cap only bounds this method's other,
     // narrower callers now.
+    // Promo rules (issue #107, triggerProductErpId set) are excluded here — they carry no
+    // priceTypeCode at all and don't belong in a "rules for this price type"/"every facet-scoped
+    // rule" listing; the manager portal has no promo-rule display surface yet (deliberately out
+    // of scope for issue #107, see its own issue body).
     async findByPriceType(
         ctx: RequestContext,
         priceTypeCode?: string,
         take = 200,
     ): Promise<DiscountRule[]> {
-        return this.connection.getRepository(ctx, DiscountRule).find({
-            where: priceTypeCode ? { priceTypeCode } : {},
-            order: { validTo: 'DESC' },
-            take: priceTypeCode ? undefined : take,
-        });
+        const repo = this.connection.getRepository(ctx, DiscountRule);
+        if (priceTypeCode) {
+            return repo.find({ where: { priceTypeCode }, order: { validTo: 'DESC' } });
+        }
+        return repo
+            .createQueryBuilder('dr')
+            .where('dr.triggerProductErpId IS NULL')
+            .orderBy('dr.validTo', 'DESC')
+            .take(take)
+            .getMany();
     }
 
     async bulkUpsert(ctx: RequestContext, entries: DiscountRuleInput[]): Promise<number> {

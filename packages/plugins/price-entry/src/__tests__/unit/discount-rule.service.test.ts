@@ -19,6 +19,8 @@ const mockQb = {
     execute: vi.fn(),
     where: vi.fn(),
     andWhere: vi.fn(),
+    orderBy: vi.fn(),
+    take: vi.fn(),
     getMany: vi.fn(),
 };
 mockQb.insert.mockReturnValue(mockQb);
@@ -27,6 +29,8 @@ mockQb.values.mockReturnValue(mockQb);
 mockQb.orUpdate.mockReturnValue(mockQb);
 mockQb.where.mockReturnValue(mockQb);
 mockQb.andWhere.mockReturnValue(mockQb);
+mockQb.orderBy.mockReturnValue(mockQb);
+mockQb.take.mockReturnValue(mockQb);
 
 const mockConnection = {
     getRepository: vi.fn(() => mockRepo),
@@ -560,28 +564,20 @@ describe('DiscountRuleService', () => {
             expect(mockRepo.find).toHaveBeenCalledWith({
                 where: { priceTypeCode: 'WHOLESALE' },
                 order: { validTo: 'DESC' },
-                take: undefined,
             });
         });
 
-        it('returns every rule across all price types when omitted, bounded at 200 by default (issue #39)', async () => {
-            mockRepo.find.mockResolvedValue([]);
+        it('returns every rule across all price types when omitted, bounded at 200 by default (issue #39), excluding promo rules', async () => {
+            mockQb.getMany.mockResolvedValue([]);
             await service.findByPriceType(mockCtx);
-            expect(mockRepo.find).toHaveBeenCalledWith({
-                where: {},
-                order: { validTo: 'DESC' },
-                take: 200,
-            });
+            expect(mockQb.where).toHaveBeenCalledWith('dr.triggerProductErpId IS NULL');
+            expect(mockQb.take).toHaveBeenCalledWith(200);
         });
 
         it('respects an explicit take override', async () => {
-            mockRepo.find.mockResolvedValue([]);
+            mockQb.getMany.mockResolvedValue([]);
             await service.findByPriceType(mockCtx, undefined, 50);
-            expect(mockRepo.find).toHaveBeenCalledWith({
-                where: {},
-                order: { validTo: 'DESC' },
-                take: 50,
-            });
+            expect(mockQb.take).toHaveBeenCalledWith(50);
         });
     });
 });

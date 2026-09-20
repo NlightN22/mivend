@@ -14,6 +14,7 @@ import {
     PriceChangedSchema,
     PriceTypeChangedSchema,
     ProductChangedSchema,
+    PromoRuleChangedSchema,
     StockChangedSchema,
     StockOrganizationChangedSchema,
     StorageLocationChangedSchema,
@@ -86,6 +87,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     counterparty: CounterpartyChangedSchema,
     'counterparty-credit-balance': CounterpartyCreditBalanceChangedSchema,
     user: UserChangedSchema,
+    'promo-rule': PromoRuleChangedSchema,
 };
 
 @Injectable()

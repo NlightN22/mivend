@@ -52,6 +52,7 @@ import { StorageLocationStreamHandler } from './handlers/storage-location.handle
 import { UserStreamHandler } from './handlers/user.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
+import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
@@ -130,6 +131,7 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
         UserStreamHandler,
         OrderRegistrationResultHandler,
         OrderChangedStreamHandler,
+        PromoRuleStreamHandler,
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,

@@ -9,6 +9,9 @@ export type {
     VariantFacetValue,
     DiscountTierVM,
 } from './src/discount-rule.service';
+export type { DiscountRuleOperationKind } from './src/discount-rule.entity';
+export { PromoDiscountRuleService } from './src/promo-discount-rule.service';
+export type { PromoDiscountRuleInput } from './src/promo-discount-rule.service';
 export { PriceResolutionService } from './src/price-resolution.service';
 export type { ResolvedPrice, TierProgressVM } from './src/price-resolution.service';
 export { PriceAdjustmentGateService } from './src/price-adjustment-gate.service';

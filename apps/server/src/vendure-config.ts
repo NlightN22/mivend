@@ -625,6 +625,11 @@ export const config: VendureConfig = {
                     user:
                         process.env.INTEGRATION_KAFKA_TOPIC_USER ??
                         'company.customers.events.v1.user-changed',
+                    // Issue #107: per-product gift/percent promo rules, same company.customers
+                    // domain as department/counterparty/user above — see PromoRuleStreamHandler.
+                    'promo-rule':
+                        process.env.INTEGRATION_KAFKA_TOPIC_PROMO_RULE ??
+                        'company.customers.events.v1.promo-rule-changed',
                 },
             },
             schemaRegistry: {

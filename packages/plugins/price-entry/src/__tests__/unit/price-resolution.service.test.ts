@@ -14,7 +14,7 @@ interface FakeFacetValue {
 interface FakeVariant {
     id: string;
     facetValues: FakeFacetValue[];
-    product?: { facetValues: FakeFacetValue[] };
+    product?: { facetValues: FakeFacetValue[]; customFields?: { externalId?: string | null } };
     customFields: { weight: number | null };
 }
 
@@ -69,6 +69,7 @@ describe('PriceResolutionService', () => {
         getBestPercent: ReturnType<typeof vi.fn>;
         getTiers: ReturnType<typeof vi.fn>;
     };
+    let promoDiscountRuleService: { getBestPromoPercent: ReturnType<typeof vi.fn> };
     let customerService: { findOneByUserId: ReturnType<typeof vi.fn> };
     let counterpartyService: { getForCustomer: ReturnType<typeof vi.fn> };
     let branchSettingsService: { resolveEffective: ReturnType<typeof vi.fn> };
@@ -91,6 +92,7 @@ describe('PriceResolutionService', () => {
             getBestPercent: vi.fn(async () => null),
             getTiers: vi.fn(async () => []),
         };
+        promoDiscountRuleService = { getBestPromoPercent: vi.fn(async () => null) };
         customerService = { findOneByUserId: vi.fn(async () => null) };
         counterpartyService = { getForCustomer: vi.fn(async () => null) };
         // Default: no BranchSettings configured anywhere (genuine empty-bootstrap) — tests that
@@ -103,6 +105,7 @@ describe('PriceResolutionService', () => {
             customerService as unknown as import('@vendure/core').CustomerService,
             counterpartyService as unknown as import('@mivend/plugin-counterparty').CounterpartyService,
             branchSettingsService as unknown as import('@mivend/plugin-access-control').BranchSettingsService,
+            promoDiscountRuleService as unknown as import('../../promo-discount-rule.service').PromoDiscountRuleService,
         );
     });
 
@@ -440,6 +443,103 @@ describe('PriceResolutionService', () => {
             const result = await service.resolveTierProgress(mockCtx, 'v1', { order, quantity: 1 });
 
             expect(result).toBeNull();
+        });
+    });
+
+    // Issue #107: per-product promo rules (PromoRuleChanged), applied alongside the existing
+    // facet/priceType-threshold percent via DiscountRuleService.getBestPromoPercent.
+    describe('promo rules (issue #107)', () => {
+        it('never evaluates a promo rule for catalog display (no orderContext)', async () => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-gift' } },
+                customFields: { weight: 0 },
+            };
+
+            await service.resolve(mockCtx, 'v1');
+
+            expect(promoDiscountRuleService.getBestPromoPercent).not.toHaveBeenCalled();
+        });
+
+        it('applies a promo percent on top of the facet percent, picking the higher of the two', async () => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-gift' } },
+                customFields: { weight: 0 },
+            };
+            pricesByVariantId.v1 = 1000;
+            discountRuleService.getBestPercent.mockResolvedValue(10);
+            promoDiscountRuleService.getBestPromoPercent.mockResolvedValue(99);
+
+            const order = { lines: [] } as unknown as Order;
+            const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            expect(result.customerPrice).toBe(10); // 1000 * (1 - 99/100)
+            expect(result.compareAtPrice).toBe(1000);
+        });
+
+        it("passes this variant's own erpId with its order quantity to getBestPromoPercent", async () => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-trigger' } },
+                customFields: { weight: 0 },
+            };
+
+            const order = { lines: [] } as unknown as Order;
+            await service.resolve(mockCtx, 'v1', { order, quantity: 4 });
+
+            expect(promoDiscountRuleService.getBestPromoPercent).toHaveBeenCalledWith(
+                mockCtx,
+                'prod-trigger',
+                expect.any(Date),
+                new Map([['prod-trigger', 4]]),
+            );
+        });
+
+        it('sums this variant plus other order lines by product erpId for the promo quantity check', async () => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-trigger' } },
+                customFields: { weight: 0 },
+            };
+            variantsById.v2 = {
+                id: 'v2',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-trigger' } },
+                customFields: { weight: 0 },
+            };
+
+            const order = {
+                lines: [{ productVariantId: 'v2', quantity: 2 }],
+            } as unknown as Order;
+            await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            const quantities = promoDiscountRuleService.getBestPromoPercent.mock.calls[0][3] as Map<
+                string,
+                number
+            >;
+            expect(quantities.get('prod-trigger')).toBe(3);
+        });
+
+        it('falls back to the facet percent when no promo rule qualifies', async () => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-x' } },
+                customFields: { weight: 0 },
+            };
+            pricesByVariantId.v1 = 1000;
+            discountRuleService.getBestPercent.mockResolvedValue(10);
+            promoDiscountRuleService.getBestPromoPercent.mockResolvedValue(null);
+
+            const order = { lines: [] } as unknown as Order;
+            const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            expect(result.customerPrice).toBe(900);
         });
     });
 });

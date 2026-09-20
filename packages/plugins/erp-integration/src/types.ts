@@ -121,7 +121,13 @@ export type InboundStream =
     // search-platform#129: register-driven creditBalance for Counterparty
     // (AccumulationRegister_ВзаиморасчетыСКонтрагентами), independent of CounterpartyChanged's own
     // catalog-change trigger. See CounterpartyCreditBalanceStreamHandler.
-    | 'counterparty-credit-balance';
+    | 'counterparty-credit-balance'
+    // Issue #107: 1C's promo-rule ("Скидка/Наценка" гиft/percent promotions keyed by a trigger
+    // product), company.customers.events.v1.PromoRuleChanged. Feeds the same
+    // @mivend/plugin-price-entry DiscountRule entity as the existing facet/priceType-threshold
+    // rules — see PromoRuleStreamHandler and DiscountRule's own doc comment for the two-shape
+    // invariant.
+    | 'promo-rule';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -198,6 +204,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     counterparty: true,
     'counterparty-credit-balance': true,
     user: true,
+    'promo-rule': true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

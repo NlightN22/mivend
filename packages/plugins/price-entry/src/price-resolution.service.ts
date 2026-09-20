@@ -12,6 +12,8 @@ import { BranchSettingsService } from '@mivend/plugin-access-control';
 
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService, DiscountTierVM, VariantFacetValue } from './discount-rule.service';
+import { PromoDiscountRuleService } from './promo-discount-rule.service';
+import { getProductErpId, buildProductErpQuantities } from './promo-product-lookup';
 import './types';
 
 export interface ResolvedPrice {
@@ -60,6 +62,7 @@ export class PriceResolutionService {
         private customerService: CustomerService,
         private counterpartyService: CounterpartyService,
         private branchSettingsService: BranchSettingsService,
+        private promoDiscountRuleService: PromoDiscountRuleService,
     ) {}
 
     async resolve(
@@ -152,9 +155,33 @@ export class PriceResolutionService {
             effectiveCounterpartyId,
         );
 
-        if (percent === null) return { customerPrice: basePrice, compareAtPrice: null };
+        // Issue #107: per-product promo rules (PromoRuleChanged) are evaluated independently of
+        // the facet/priceType-threshold percent above and only apply with real order context —
+        // no order line quantities means no promo can ever qualify (catalog display never
+        // triggers a promo, same as the tier ladder's own order-context requirement elsewhere in
+        // this file).
+        const promoPercent = orderContext
+            ? await this.promoDiscountRuleService.getBestPromoPercent(
+                  ctx,
+                  await getProductErpId(this.connection, ctx, variantId),
+                  new Date(),
+                  await buildProductErpQuantities(
+                      this.connection,
+                      ctx,
+                      variantId,
+                      orderContext.order,
+                      orderContext.quantity,
+                  ),
+              )
+            : null;
+
+        const bestPercent = [percent, promoPercent]
+            .filter((p): p is number => p !== null)
+            .reduce((max, p) => Math.max(max, p), -Infinity);
+
+        if (bestPercent === -Infinity) return { customerPrice: basePrice, compareAtPrice: null };
         return {
-            customerPrice: Math.round(basePrice * (1 - percent / 100)),
+            customerPrice: Math.round(basePrice * (1 - bestPercent / 100)),
             compareAtPrice: basePrice,
         };
     }
