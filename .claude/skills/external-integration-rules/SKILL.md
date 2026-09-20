@@ -263,9 +263,10 @@ The correct shape, always:
 
 Reference implementation: `plugin-acquiring`'s `IncomingPaymentEvent` + `InboxService`
 (enqueue/claimBatch/markProcessed/markFailed) + `PaymentInboxProcessorService` (the actual
-processing) + `PaymentInboxWorker` (BullMQ, sweeping once a minute — mirrors
-`ReservationExpiryWorker`/`OutboxWorker`, the established periodic-worker pattern here). Applies
-beyond payments: any future webhook/callback surface must follow the same shape.
+processing), swept once a minute by `payment-inbox.scheduled-task.ts` (Vendure `ScheduledTask`,
+same pattern as `reservation-expiry.scheduled-task.ts`/`outbox.scheduled-task.ts` — not a raw
+BullMQ worker). Applies beyond payments: any future webhook/callback surface must follow the
+same shape.
 
 **Known pre-existing violation, not yet fixed**: `plugin-erp-import`'s `POST /erp/import/batch`
 still processes synchronously inline. Flagged, not refactored — don't copy this pattern into new

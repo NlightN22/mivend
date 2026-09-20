@@ -13,7 +13,7 @@ export type IntegrationInboxEventStatus = 'pending' | 'processing' | 'processed'
 
 // Durable inbox for the inbound half of the Kafka exchange with Integration Service (issue #62
 // Milestone 1, the external-integration-rules skill). The Kafka consumer only ever writes a row here — never
-// processes an event inline — and a separate BullMQ worker sweeps `pending` rows for real
+// processes an event inline — and a separate scheduled task sweeps `pending` rows for real
 // processing. `status` is a genuine per-row lifecycle, not a seen-boolean, per rule #12's
 // explicit correction of the plugin-acquiring incident (see IncomingPaymentEvent for the
 // original reference fix this mirrors).
