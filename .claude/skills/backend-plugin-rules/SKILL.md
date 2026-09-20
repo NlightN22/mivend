@@ -187,6 +187,10 @@ Checklist for any change that touches a REST payload:
 
 ## Recurring/periodic work
 
+**Adding, splitting, or reconfiguring a worker process (`apps/server/src/worker*.ts`,
+`jobQueueOptions.activeQueues`) is covered by the `vendure-workers` skill, not this section** —
+read it before touching any of that; this section is about `ScheduledTask`, a different mechanism.
+
 **Any recurring/periodic plugin work (sweeps, cleanups, polling, retries-on-a-timer) must be a
 Vendure `ScheduledTask`, registered via the plugin's own `configuration(config)` hook pushing
 into `config.schedulerOptions.tasks`. This is a mandatory requirement, not a preference** — issue
