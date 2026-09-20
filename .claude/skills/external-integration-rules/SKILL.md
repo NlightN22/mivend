@@ -83,6 +83,49 @@ established "check first, ship if quick, track as a blocker otherwise" process) 
 Service should coordinate the exact field name/type with mivend before shipping a schema change
 mivend depends on, not ship first and let mivend adapt after the fact.
 
+## Always implement against the currently-published contract version, never a version pinned in an old issue/comment
+
+**Real incident, 2026-09-20**: an issue's own "unblocked" comment named a specific
+`@nlightn22/event-contracts` version as the one that had been verified live against real orders.
+By the time the issue was actually implemented, the real published package had moved many minor
+versions further (the comment's version was long superseded) — but the implementation was done
+against the old, stale version named in the comment instead of checking what was actually
+current. This produced a working-but-already-outdated consumer and, separately, meant a genuine
+breaking rename in the newer versions (`order_registration_result_pb` → `order_change_result_pb`,
+`OrderChangeResult`, plus an `isDeleted` field changing from a plain `bool` to `optional bool` on
+more than one message) went unnoticed and unhandled.
+
+**Rule: before implementing or changing consumption of any Integration Service Kafka stream,
+always check the actual latest published version first** —
+`npm view @nlightn22/event-contracts version --registry=https://npm.pkg.github.com` (or
+`versions` for the full list) — never trust a version number quoted in an issue body/comment,
+`docs/ai/erp-streams-map.md`, or any other written note as still being current. Those are a
+snapshot from whenever they were written; the package is not.
+
+**Bump to that actual latest version** (not an arbitrary older "known good" one picked to avoid
+touching unrelated code) unless there is a _specific, currently-verified_ reason not to — e.g. a
+real, confirmed breaking change between the current version and latest that would require
+non-trivial rework of another, unrelated stream's handler in the same change. Even then, that is
+a reason to **also fix the breaking change as part of the same or an immediately-following piece
+of work**, not a reason to stay pinned to the old version indefinitely. Diff the generated
+`.d.ts` for every message this repo currently decodes (`node_modules/@nlightn22/event-contracts/
+dist/generated/**/*.d.ts` after installing latest, or `npm pack`+extract to a scratch dir before
+committing to the bump) against what's currently implemented — a rename, a field changing
+`optional`↔plain, or a field being removed needs its own explicit fix, not a silent skip.
+
+**Implement the full entity/field set the current contract actually carries, not a subset chosen
+to match what an old issue's research happened to describe.** An issue's own "Implementation
+scope"/"Out of scope" sections reflect the contract shape _at the time the issue was written_ —
+by the time it's implemented, check the current `.d.ts` for that message directly and treat any
+field present there as in-scope by default. A field an old issue marked "out of scope" because it
+didn't exist yet, or because a _different, not-yet-implemented_ mivend feature was going to
+consume it, still needs an explicit, current decision (consume it now / explicitly defer with a
+reason tied to a real still-open blocker) — never carry forward a stale "out of scope" verdict
+without re-checking whether its own stated reason is still true. When updating an issue for this,
+edit the issue's own body to reflect the current, real contract shape and implementation status —
+a body left describing an outdated schema is exactly what caused this incident; a comment added
+on top of a stale body doesn't fix that, since the body is what gets read first on the next pass.
+
 ## Kafka consumer resilience patterns
 
 Live incident, 2026-09-05: `plugin-erp-integration`'s Kafka consumer (`KafkaConsumerService`)
