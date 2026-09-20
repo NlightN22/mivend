@@ -52,6 +52,53 @@ An alert's `check()` must fail closed (return the "nothing to report" value, e.g
 `false`) inside a `try/catch` — a viewer lacking the underlying query's permission, or a
 transient network error, must never crash the whole `<Alerts>` shell for every other extension.
 
+## Mandatory: any tabular/list page MUST use the native `ListPage` framework component
+
+Every native Dashboard list screen (`Administrators`, `Roles`, **`Sellers`** — see reference
+below, `Products`, ...) is built on `@vendure/dashboard`'s own `ListPage` component
+(`@/vdb/framework/page/list-page.js`), not a hand-rolled `useState` + `api.query` fetch loop. It
+is the single source of every "standard list screen" UI element a reviewer/user will expect by
+habit — you do not get to skip pieces of it or reinvent your own subset:
+
+- A **search input + funnel filter icon + bookmark icon** row directly under the title — this is
+  `ListPage`'s own faceted-filter UI, not something a page builds itself. If your page has no
+  visible filter row, it is not using `ListPage` correctly (or at all) — this exact gap was
+  flagged by the user comparing our custom pages against the native `Roles` screen: the filter
+  _icon_ alone with no filter _row_ under it means the page skipped `ListPage`'s real filtering
+  wiring.
+- **Sortable, resizable, show/hide-able columns** with a column-visibility toggle — configured via
+  `customizeColumns`/`additionalColumns`/`defaultColumnOrder`/`defaultVisibility`, never a
+  fixed hand-written `<TableHeader>` row.
+- **Pagination footer** ("Rows per page", "Page N of M", prev/next) — automatic, tied to the
+  `listQuery`'s `PaginatedList` shape (`items`/`totalItems`).
+- **Bulk actions** (row checkboxes + an actions bar that appears once ≥1 row is selected) via the
+  `bulkActions` prop — e.g. delete.
+- The **"+ New X" button's standard position** (top-right of the title, blue/primary variant,
+  `PlusIcon` + label) is a child `<ActionBarItem itemId="create-button" requiresPermission={[...]}>`
+  of `<ListPage>` — not a bespoke button placed wherever felt natural on the page.
+
+**Reference implementation — read before writing any new list page:** `Sellers`
+(`node_modules/@vendure/dashboard/.../app/routes/_authenticated/_sellers/sellers.tsx`, and its
+sibling `sellers.graphql.ts`/`components/seller-bulk-actions.tsx`). It's deliberately the
+smallest complete example (one column, no custom cell logic beyond a name link, one bulk action)
+— use it as the literal shape to copy for a new page's skeleton, then add columns/customization on
+top the way `administrators.tsx` (same directory tree, `_administrators/administrators.tsx`) does
+for a busier list. Both ship in `node_modules/@vendure/dashboard`, so they're always available to
+read directly, not just from memory.
+
+**Existing non-compliant pages in this repo — legacy, do not copy their table/list code:**
+`branches-page.tsx`, `erp-reconciliation-page.tsx`, `organizations-page.tsx`,
+`integration-health-page.tsx` all hand-roll `useState` + `api.query` + a manually-built
+`Table`/`TableRow` instead of `ListPage` — none of them has the standard filter row, column
+visibility, or bulk-actions. They predate this rule. **Do not use them as a reference for a new
+list-style page** — only their non-list bits (a single-metric summary panel, a create-only form
+with no list of existing records) are still legitimate hand-rolled layout, built on `Page`/
+`PageLayout`/`PageActionBar` (from `../layout-engine/page-layout.js`), never `ListPage`. If you
+are touching one of these files for an unrelated reason and it's a real list of records (e.g.
+`branches-page.tsx`'s branch list), migrating it to `ListPage` while you're in there is
+encouraged, not required — but a **new** page must use `ListPage` from the start, no exceptions,
+for any screen whose core content is a list of records with more than a handful of rows.
+
 ## UI: use `@vendure/dashboard`'s own components first, never raw HTML/inline styles
 
 `@vendure/dashboard` re-exports a full set of themed UI primitives built on its own design
@@ -161,3 +208,11 @@ never wrong, they just don't cover this failure mode at all.
 consolidation/` (alert + page + mutation), `.../integration-health/` (alert + page combining two
 independent data sources on one page rather than one page per metric — see its own doc comments
 for why).
+
+**For the standard list-page UI itself (filter row, columns, pagination, bulk actions, "+ New X"
+button placement)**, the reference is native `@vendure/dashboard`, not anything in this repo yet:
+`node_modules/@vendure/dashboard/.../app/routes/_authenticated/_sellers/sellers.tsx` (simplest
+complete example — kept intentionally minimal/near-empty in this project, safe to treat as a
+stable read-only reference) and `.../_administrators/administrators.tsx` (busier example with
+custom columns). See "Mandatory: any tabular/list page MUST use the native `ListPage` framework
+component" above.
