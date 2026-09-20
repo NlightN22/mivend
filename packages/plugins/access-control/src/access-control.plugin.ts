@@ -85,7 +85,16 @@ const adminApiSchema = gql`
         maxAmount: Int
     }
 
-    type PendingErpUser {
+    # implements Node/PaginatedList — not just server-side convention (backend-plugin-rules
+    # skill's own "generateListOptions auto-detects PaginatedList" mechanism, confirmed safe
+    # here since it only ever merges into an existing same-named ListOptions/appends an options
+    # arg when no arg of that type already exists, never duplicates). Also required client-side:
+    # @vendure/dashboard's ListPage/useGeneratedColumns silently produces zero auto-generated
+    # columns for a list item type that doesn't implement these — confirmed live (issue #119
+    # Phase 1's own "Pending ERP users" page rendered only its one additionalColumn until this
+    # was added), unlike deactivatedAdministrators, which reuses the native, already-compliant
+    # Administrator/AdministratorList.
+    type PendingErpUser implements Node {
         id: ID!
         erpId: String!
         fullName: String
@@ -95,7 +104,7 @@ const adminApiSchema = gql`
         lastSeenAt: DateTime!
     }
 
-    type PendingErpUserList {
+    type PendingErpUserList implements PaginatedList {
         items: [PendingErpUser!]!
         totalItems: Int!
     }
