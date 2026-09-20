@@ -126,6 +126,7 @@ export { default as MvSelect } from './components/MvSelect/MvSelect.vue';
 export type { SelectOption } from './components/MvSelect/MvSelect.vue';
 
 export { default as MvCheckbox } from './components/MvCheckbox/MvCheckbox.vue';
+export { default as MvSwitch } from './components/MvSwitch/MvSwitch.vue';
 export { default as MvColumnToggle } from './components/MvColumnToggle/MvColumnToggle.vue';
 export { useColumnVisibility } from './composables/useColumnVisibility';
 export type { ColumnVisibilityDef } from './composables/useColumnVisibility';
