@@ -1,3 +1,5 @@
+export { default as MvAvatar } from './components/MvAvatar/MvAvatar.vue';
+export type { AvatarSize } from './components/MvAvatar/MvAvatar.vue';
 export { default as MvSearchInput } from './components/MvSearchInput/MvSearchInput.vue';
 export type {
     SuggestionGroup,

@@ -2,6 +2,7 @@ import path from 'path';
 import { readFileSync } from 'fs';
 import {
     DefaultJobQueuePlugin,
+    DefaultPasswordValidationStrategy,
     DefaultSchedulerPlugin,
     LanguageCode,
     VendureConfig,
@@ -92,6 +93,15 @@ const instancePlugins = instanceType === 'central' ? [AcquiringPlugin.init({})] 
 const emailTransportConfigured = Boolean(process.env.EMAIL_TRANSPORT);
 const emailDevMode = !emailTransportConfigured;
 
+// Issue #119: password-reset links (Administrator lifecycle) point at the manager portal's
+// /set-password page, not at this server itself — Vendure core has no concept of "my frontend's
+// public URL" (there are three frontends here, each with its own port per contour, see
+// docs/environments.md's port table), so this can only come from an explicit, per-contour env
+// var, same convention as INTEGRATION_SERVICE_BASE_URL/SEARCH_SERVICE_URL. Left unset, the
+// resulting link has no host at all (`?token=...`) rather than crashing the server — this is a
+// broken link, not a broken boot, and a missing env var shouldn't take down the whole server.
+const managerPublicUrl = process.env.MANAGER_PUBLIC_URL ?? '';
+
 const emailPlugin = EmailPlugin.init(
     emailDevMode
         ? {
@@ -102,6 +112,10 @@ const emailPlugin = EmailPlugin.init(
                   path.join(__dirname, '../static/email/templates'),
               ),
               handlers: [emailVerificationHandler, passwordResetHandler, emailAddressChangeHandler],
+              globalTemplateVars: {
+                  fromAddress: '"mivend" <noreply@example.com>',
+                  passwordResetUrl: `${managerPublicUrl}/set-password`,
+              },
           }
         : // EMAIL_TRANSPORT is set, but no real transport (SMTP relay vs. transactional-email
           // API — #121) is implemented yet. This only throws when someone explicitly opts in by
@@ -130,6 +144,12 @@ export const config: VendureConfig = {
             password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
         },
         customPermissions: Object.values(CustomPermission),
+        // Issue #119: the manager-portal /set-password page tells the person "use at least 8
+        // characters" — this is what actually enforces that, otherwise Vendure's own default
+        // (minLength: 4) would let the copy on that page lie. No regexp/complexity requirement —
+        // the page's own copy only promises a length floor, so the policy shouldn't demand more
+        // than what's advertised.
+        passwordValidationStrategy: new DefaultPasswordValidationStrategy({ minLength: 8 }),
     },
     dbConnectionOptions: {
         type: 'postgres',

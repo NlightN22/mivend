@@ -13,6 +13,7 @@ import {
     fetchPendingErpUsers,
     fetchPortalUserCounts,
     setAdministratorActive,
+    resendAdministratorPasswordReset,
     createAdministratorFromErpUser,
     type PortalUser,
     type PendingErpUserRow,
@@ -47,6 +48,8 @@ const savingRoleId = ref<string | null>(null);
 // state cleared in `finally`, so the UI looked like nothing had happened at all instead of
 // surfacing an error.
 const actionError = ref('');
+const actionNotice = ref('');
+const resendingId = ref<string | null>(null);
 
 // Users dataset state
 const pageSize = ref(20);
@@ -179,6 +182,20 @@ async function onToggleActive(user: PortalUser, isActive: boolean): Promise<void
     }
 }
 
+async function onResendPasswordReset(user: PortalUser): Promise<void> {
+    actionError.value = '';
+    actionNotice.value = '';
+    resendingId.value = user.id;
+    try {
+        await resendAdministratorPasswordReset(user.id);
+        actionNotice.value = `Password-reset link resent to ${user.emailAddress}.`;
+    } catch (e) {
+        actionError.value = e instanceof Error ? e.message : 'Could not resend the reset link';
+    } finally {
+        resendingId.value = null;
+    }
+}
+
 async function onChangeRole(user: PortalUser, roleId: string): Promise<void> {
     actionError.value = '';
     savingRoleId.value = user.id;
@@ -231,6 +248,7 @@ onMounted(async () => {
         <SettingsSubNav active="users" />
 
         <MvNotice v-if="actionError" variant="error">{{ actionError }}</MvNotice>
+        <MvNotice v-else-if="actionNotice" variant="success">{{ actionNotice }}</MvNotice>
 
         <UsersDataTable
             v-if="view === 'users'"
@@ -243,12 +261,14 @@ onMounted(async () => {
             :search-filter="searchFilter"
             :roles="roles"
             :saving-role-id="savingRoleId"
+            :resending-id="resendingId"
             :department-name="departmentName"
             @update:filters="onUsersFilters"
             @update:page="page = $event"
             @update:page-size="pageSize = $event"
             @toggle-active="onToggleActive"
             @change-role="onChangeRole"
+            @resend-password-reset="onResendPasswordReset"
         >
             <template #view-chips>
                 <MvFilterChips :chips="viewChips" :active="view" @select="view = $event as ViewKey" />

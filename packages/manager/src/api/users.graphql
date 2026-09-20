@@ -23,6 +23,10 @@ mutation SetAdministratorActive($id: ID!, $isActive: Boolean!) {
     setAdministratorActive(administratorId: $id, isActive: $isActive)
 }
 
+mutation ResendAdministratorPasswordReset($id: ID!) {
+    resendAdministratorPasswordReset(administratorId: $id)
+}
+
 query PendingErpUsersPage($options: ErpUserListOptions) {
     pendingErpUsers(options: $options) {
         items {
@@ -57,5 +61,13 @@ mutation ResetAdministratorPassword($token: String!, $password: String!) {
     resetAdministratorPassword(token: $token, password: $password) {
         success
         reason
+    }
+}
+
+query AdministratorForPasswordResetToken($token: String!) {
+    administratorForPasswordResetToken(token: $token) {
+        firstName
+        lastName
+        emailAddress
     }
 }

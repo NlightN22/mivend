@@ -29,6 +29,7 @@ const props = defineProps<{
     // Row-scoped async state, keyed by administrator id — mirrors CustomerTeamTab.vue's
     // rowState shape for the same "saving one row at a time" concern.
     savingRoleId: string | null;
+    resendingId: string | null;
     departmentName: (departmentId: string | null) => string;
 }>();
 
@@ -38,6 +39,7 @@ const emit = defineEmits<{
     'update:page-size': [size: number];
     'toggle-active': [user: PortalUser, isActive: boolean];
     'change-role': [user: PortalUser, roleId: string];
+    'resend-password-reset': [user: PortalUser];
 }>();
 
 const ALL_COLUMNS: AdvancedDataTableColumn[] = [
@@ -66,6 +68,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         mobile: { badge: true },
     },
     { field: 'active', header: 'Active', width: 90, filterConfig: { type: 'none' } },
+    { field: 'actions', header: '', width: 130, filterConfig: { type: 'none' } },
 ];
 
 interface UserFilterState {
@@ -191,6 +194,16 @@ function confirmDeactivate(): void {
                 :model-value="(data as UserRow).isActive"
                 @update:model-value="onToggle(data as UserRow, $event)"
             />
+        </template>
+        <template #cell-actions="{ data }">
+            <MvButton
+                variant="secondary"
+                size="sm"
+                :loading="resendingId === (data as UserRow).id"
+                @click="emit('resend-password-reset', (data as UserRow).user)"
+            >
+                Resend reset link
+            </MvButton>
         </template>
     </MvAdvancedDataTable>
 

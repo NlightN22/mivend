@@ -10764,6 +10764,14 @@ export type SetAdministratorActiveMutationVariables = Exact<{
 
 export type SetAdministratorActiveMutation = { setAdministratorActive: boolean };
 
+export type ResendAdministratorPasswordResetMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type ResendAdministratorPasswordResetMutation = {
+    resendAdministratorPasswordReset: boolean;
+};
+
 export type PendingErpUsersPageQueryVariables = Exact<{
     options?: InputMaybe<ErpUserListOptions>;
 }>;
@@ -10803,6 +10811,18 @@ export type ResetAdministratorPasswordMutationVariables = Exact<{
 
 export type ResetAdministratorPasswordMutation = {
     resetAdministratorPassword: { success: boolean; reason: string | null };
+};
+
+export type AdministratorForPasswordResetTokenQueryVariables = Exact<{
+    token: Scalars['String']['input'];
+}>;
+
+export type AdministratorForPasswordResetTokenQuery = {
+    administratorForPasswordResetToken: {
+        firstName: string;
+        lastName: string;
+        emailAddress: string;
+    } | null;
 };
 
 export class TypedDocumentString<TResult, TVariables>
@@ -13417,6 +13437,14 @@ export const SetAdministratorActiveDocument = new TypedDocumentString(`
     SetAdministratorActiveMutation,
     SetAdministratorActiveMutationVariables
 >;
+export const ResendAdministratorPasswordResetDocument = new TypedDocumentString(`
+    mutation ResendAdministratorPasswordReset($id: ID!) {
+  resendAdministratorPasswordReset(administratorId: $id)
+}
+    `) as unknown as TypedDocumentString<
+    ResendAdministratorPasswordResetMutation,
+    ResendAdministratorPasswordResetMutationVariables
+>;
 export const PendingErpUsersPageDocument = new TypedDocumentString(`
     query PendingErpUsersPage($options: ErpUserListOptions) {
   pendingErpUsers(options: $options) {
@@ -13464,4 +13492,16 @@ export const ResetAdministratorPasswordDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ResetAdministratorPasswordMutation,
     ResetAdministratorPasswordMutationVariables
+>;
+export const AdministratorForPasswordResetTokenDocument = new TypedDocumentString(`
+    query AdministratorForPasswordResetToken($token: String!) {
+  administratorForPasswordResetToken(token: $token) {
+    firstName
+    lastName
+    emailAddress
+  }
+}
+    `) as unknown as TypedDocumentString<
+    AdministratorForPasswordResetTokenQuery,
+    AdministratorForPasswordResetTokenQueryVariables
 >;

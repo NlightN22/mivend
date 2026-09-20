@@ -7,6 +7,8 @@ import {
     EventBus,
     PasswordResetEvent,
     RequestContext,
+    TransactionalConnection,
+    User,
     UserService,
 } from '@vendure/core';
 
@@ -24,6 +26,7 @@ export class AdministratorProvisioningService {
         private userService: UserService,
         private eventBus: EventBus,
         private erpUserService: ErpUserService,
+        private connection: TransactionalConnection,
     ) {}
 
     // Decision 4: zero roles at creation — the Administrator exists but can perform no action
@@ -66,12 +69,58 @@ export class AdministratorProvisioningService {
         await this.erpUserService.markLinked(ctx, erpId, admin.id);
         await this.eventBus.publish(new AdministratorLinkedEvent(ctx, erpId, admin.id));
 
-        const user = await this.userService.setPasswordResetToken(ctx, pending.email);
+        await this.sendPasswordResetLink(ctx, pending.email);
+
+        return admin;
+    }
+
+    // Issue #119: neither native Dashboard nor manager-portal Administrators screens have a
+    // "resend password reset" action — the only place a reset link was ever sent from was
+    // createFromPending, at creation time. This reuses that same token/event mechanism for an
+    // Administrator who already exists (lost/expired the original link, or the mailbox that
+    // devMode's own email test-mailbox is not a substitute for a person actually checking).
+    async resendPasswordReset(ctx: RequestContext, administratorId: string): Promise<void> {
+        const admin = await this.administratorService.findOne(ctx, administratorId);
+        if (!admin) {
+            throw new Error(`No Administrator found for id=${administratorId}`);
+        }
+        await this.sendPasswordResetLink(ctx, admin.emailAddress);
+    }
+
+    // Issue #119: the /set-password page has no session and nothing else to identify whose
+    // password it's about to change — this lets it show a name before (and after) submission,
+    // for a person to sanity-check "is this actually my account" before setting a password.
+    // Deliberately does not validate/consume the token (unlike resetPasswordByToken) — it's a
+    // read-only lookup, shown on the expired/invalid states too, not just the form.
+    async findAdministratorByResetToken(
+        ctx: RequestContext,
+        token: string,
+    ): Promise<{ firstName: string; lastName: string; emailAddress: string } | null> {
+        const user = await this.connection
+            .getRepository(ctx, User)
+            .createQueryBuilder('user')
+            .leftJoin('user.authenticationMethods', 'authenticationMethod')
+            .where('authenticationMethod.passwordResetToken = :token', { token })
+            .getOne();
+        if (!user) {
+            return null;
+        }
+        const admin = await this.administratorService.findOneByUserId(ctx, user.id);
+        if (!admin) {
+            return null;
+        }
+        return {
+            firstName: admin.firstName,
+            lastName: admin.lastName,
+            emailAddress: admin.emailAddress,
+        };
+    }
+
+    private async sendPasswordResetLink(ctx: RequestContext, emailAddress: string): Promise<void> {
+        const user = await this.userService.setPasswordResetToken(ctx, emailAddress);
         if (user) {
             await this.eventBus.publish(new PasswordResetEvent(ctx, user));
         }
-
-        return admin;
     }
 
     // Issue #119 Phase 2: completes the reset-link flow started by createFromPending above (also

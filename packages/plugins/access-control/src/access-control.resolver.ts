@@ -293,6 +293,20 @@ export class AccessControlResolver {
         return this.administratorProvisioningService.createFromPending(ctx, args.erpId);
     }
 
+    // Issue #119: no "resend" action existed anywhere — createFromPending only ever sent the
+    // link once, at creation time. Reuses the same token/event mechanism for an existing
+    // Administrator.
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
+    async resendAdministratorPasswordReset(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { administratorId: string },
+    ): Promise<boolean> {
+        await this.administratorProvisioningService.resendPasswordReset(ctx, args.administratorId);
+        return true;
+    }
+
     // Issue #119, Decision 2: manual override on top of the automatic 1C-driven sync in
     // UserEnrichmentService/AdministratorActivationService.syncFromErp.
     @Transaction()
@@ -344,6 +358,18 @@ export class AccessControlResolver {
         return result.success
             ? { success: true, reason: null }
             : { success: false, reason: result.reason };
+    }
+
+    // Issue #119 Phase 2: lets /set-password show whose account it's about to change, before and
+    // after submission. Deliberately Public, same reasoning as resetAdministratorPassword above —
+    // read-only, does not consume the token.
+    @Query()
+    @Allow(Permission.Public)
+    async administratorForPasswordResetToken(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { token: string },
+    ): Promise<{ firstName: string; lastName: string; emailAddress: string } | null> {
+        return this.administratorProvisioningService.findAdministratorByResetToken(ctx, args.token);
     }
 }
 

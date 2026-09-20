@@ -1,9 +1,11 @@
 import { adminApi } from './client';
 import {
+    AdministratorForPasswordResetTokenDocument,
     CreateAdministratorFromErpUserDocument,
     PendingErpUsersPageDocument,
     PortalUserCountsDocument,
     PortalUsersDocument,
+    ResendAdministratorPasswordResetDocument,
     ResetAdministratorPasswordDocument,
     SetAdministratorActiveDocument,
     type AdministratorListOptions,
@@ -49,6 +51,12 @@ export async function setAdministratorActive(id: string, isActive: boolean): Pro
     await adminApi(SetAdministratorActiveDocument, { id, isActive });
 }
 
+// Issue #119: the only other way to get a fresh reset link was creating the account in the
+// first place — this reuses the same token/event mechanism for an account that already exists.
+export async function resendAdministratorPasswordReset(id: string): Promise<void> {
+    await adminApi(ResendAdministratorPasswordResetDocument, { id });
+}
+
 export interface PendingErpUserRow {
     id: string;
     erpId: string;
@@ -90,4 +98,19 @@ export async function resetAdministratorPassword(
         reason:
             (result.resetAdministratorPassword.reason as ResetAdministratorPasswordReason) ?? null,
     };
+}
+
+export interface PasswordResetIdentity {
+    firstName: string;
+    lastName: string;
+    emailAddress: string;
+}
+
+// Issue #119: read-only lookup so /set-password can show whose account it's about to change —
+// does not validate/consume the token, safe to call even on an expired/invalid link.
+export async function fetchAdministratorForPasswordResetToken(
+    token: string,
+): Promise<PasswordResetIdentity | null> {
+    const result = await adminApi(AdministratorForPasswordResetTokenDocument, { token });
+    return result.administratorForPasswordResetToken ?? null;
 }

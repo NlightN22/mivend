@@ -156,6 +156,12 @@ const adminApiSchema = gql`
         reason: String
     }
 
+    type PasswordResetIdentity {
+        firstName: String!
+        lastName: String!
+        emailAddress: String!
+    }
+
     extend type Query {
         departments: [Department!]!
         branches: [Branch!]!
@@ -172,6 +178,9 @@ const adminApiSchema = gql`
         # Issue #119 Phase 2: backs the manager-portal Settings > Users screen — every
         # Administrator, filterable by status (omit status for "All").
         portalUsers(options: AdministratorListOptions, status: PortalUserStatus): AdministratorList!
+        # Issue #119 Phase 2: lets /set-password show whose account it's about to change — public,
+        # same reasoning as resetAdministratorPassword's own schema comment below.
+        administratorForPasswordResetToken(token: String!): PasswordResetIdentity
     }
 
     extend type Mutation {
@@ -198,6 +207,7 @@ const adminApiSchema = gql`
         ): BranchSettings!
         createBranch(name: String!): Branch!
         createAdministratorFromErpUser(erpId: String!): Administrator!
+        resendAdministratorPasswordReset(administratorId: ID!): Boolean!
         setAdministratorActive(administratorId: ID!, isActive: Boolean!): Boolean!
     }
 `;
@@ -246,24 +256,44 @@ const adminApiSchema = gql`
         resolvers: [AccessControlResolver, AdministratorStatusResolver],
     },
     configuration: (config: RuntimeVendureConfig) => {
+        // All five fields below are system-managed, never hand-entered: `readonly: true` strips
+        // each from the GraphQL Update/CreateAdministratorCustomFieldsInput the Dashboard and
+        // manager portal forms are generated from, so neither surface renders an editable
+        // control for them — editing any of these by hand would silently break the
+        // correlation/sync mechanism that owns it (see each field's own comment for which one).
+        // `readonly` only affects the GraphQL input schema, not direct TS service calls — every
+        // writer below (EmployeeService, UserEnrichmentService, AdministratorProvisioningService,
+        // plugin-sync) calls AdministratorService.update/create() directly, bypassing that input
+        // type entirely, so none of them are affected by this.
         config.customFields.Administrator = [
             ...(config.customFields.Administrator ?? []),
             {
+                // Set by EmployeeService from 1C org-structure import (EmployeeRecordInput) —
+                // see employee.service.ts. Purely informational (never a scope gate — see
+                // docs/access-control.md's "departmentId must never gate visibility").
                 name: 'departmentId',
                 type: 'string' as const,
                 nullable: true,
+                readonly: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Department ID' }],
             },
             {
+                // Set by EmployeeService, resolved from 1C's department/division id to a real
+                // mivend Branch.id (see employee.service.ts's own comment on that resolution) —
+                // the real access-scope filter axis, per docs/access-control.md.
                 name: 'branchId',
                 type: 'string' as const,
                 nullable: true,
+                readonly: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Branch ID' }],
             },
             {
+                // Set by EmployeeService from 1C org-structure import, same record as
+                // departmentId/branchId above.
                 name: 'position',
                 type: 'string' as const,
                 nullable: true,
+                readonly: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Job position' }],
             },
             {
@@ -276,19 +306,23 @@ const adminApiSchema = gql`
                 name: 'sourceAdministratorId',
                 type: 'string' as const,
                 nullable: true,
+                readonly: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Source Administrator ID' }],
             },
             {
-                // Issue #109: correlates this Administrator with 1C's own "Пользователи" GUID
-                // (UserChanged.entity_id) — see UserEnrichmentService.linkAndEnrich. Matched once
-                // by email, then persisted here for every later event so re-matching by email
-                // (which can itself change in 1C) is never needed again. Application-level
-                // uniqueness only (looked up before assigning) — Vendure customFields don't
-                // support a DB-level unique constraint here, same as branchId/departmentId above.
+                // Issue #119, Decision 5: anchored once at Administrator creation
+                // (AdministratorProvisioningService.createFromPending) — never re-derived or
+                // hand-edited afterwards, that's the whole point of anchoring on erpId instead of
+                // re-matching by email. Also correlates with 1C's own "Пользователи" GUID
+                // (UserChanged.entity_id) for #109's enrichment-only path — see
+                // UserEnrichmentService.linkAndEnrich. `unique: true` gets Vendure's real
+                // DB-level unique constraint (CustomFieldConfig supports this natively — verified
+                // against @vendure/core source), not just an application-level check.
                 name: 'erpId',
                 type: 'string' as const,
                 nullable: true,
                 unique: true,
+                readonly: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP User ID' }],
             },
         ];
