@@ -96,7 +96,14 @@ export type InboundStream =
     // 1C's "Подразделение" (org-structure division) — feeds the existing, previously-unfed
     // Department entity in @mivend/plugin-access-control. Different domain than the 10 streams
     // above (company.customers, not company.catalog/orders) — see DepartmentStreamHandler.
-    | 'department';
+    | 'department'
+    // 1C's "Контрагент" (counterparty) — feeds @mivend/plugin-counterparty's Counterparty entity.
+    // Same company.customers domain as department above. Issue #104: partial-create of name/
+    // isActive only — creditLimit/creditBalance/paymentDelayDays/priceType/inn/departmentId/
+    // branchId/erpGroupLabel stay erp-import/REST-only fields, never fabricated here (see
+    // CounterpartyStreamHandler). manager_id/manager_ids deliberately not consumed yet — blocked
+    // on #109 (no erpId↔Administrator mapping exists).
+    | 'counterparty';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -169,6 +176,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'stock-organization': true,
     'order-registration-result': true,
     department: true,
+    counterparty: true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

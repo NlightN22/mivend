@@ -42,6 +42,43 @@ export class CounterpartyService {
         return saved;
     }
 
+    // Issue #104: Integration Service's `counterparty` Kafka stream only carries name/isActive/
+    // isDeleted/managerId(s) — never creditLimit/creditBalance/paymentDelayDays/priceType/inn/
+    // departmentId/branchId/erpGroupLabel, which stay erp-import/REST-only fields (same shape as
+    // #88's OrganizationChanged vs. OrganizationRequisitesRecord gap). Distinct from upsert()
+    // above, which expects the full REST payload shape and must not be reused here. Always
+    // creates/updates a row so a counterparty mivend only knows about via Kafka (e.g. the
+    // staging-integration contour, which never runs erp-import — issue #68) is not permanently
+    // absent; every other column stays at its existing value or entity default until erp-import's
+    // own record arrives, if it ever does in this contour — never fabricated here.
+    //
+    // `name: null` (deletion tombstone): the stream's deletion events never carry a name, only
+    // entityId/isDeleted — same convention confirmed for organization/department. Updates
+    // isActive on an already-known counterparty without touching legalName/shortName, and is a
+    // deliberate no-op (never creates a row) when no existing row matches erpId — a deletion
+    // tombstone must never fabricate a brand-new counterparty with a blank name.
+    async upsertActiveState(
+        ctx: RequestContext,
+        erpId: string,
+        name: string | null,
+        isActive: boolean,
+    ): Promise<void> {
+        const repo = this.connection.getRepository(ctx, Counterparty);
+        const entity = await repo.findOne({ where: { erpId } });
+        if (entity) {
+            if (name) {
+                entity.legalName = name;
+                entity.shortName = name;
+            }
+            entity.isActive = isActive;
+            await repo.save(entity);
+            return;
+        }
+        if (!name) return;
+        await repo.save(repo.create({ erpId, legalName: name, shortName: name, isActive }));
+        Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);
+    }
+
     async deactivate(ctx: RequestContext, erpId: string): Promise<void> {
         const repo = this.connection.getRepository(ctx, Counterparty);
         await repo.update({ erpId }, { isActive: false });

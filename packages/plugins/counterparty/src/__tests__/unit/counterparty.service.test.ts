@@ -149,6 +149,86 @@ describe('CounterpartyService', () => {
         });
     });
 
+    describe('upsertActiveState', () => {
+        // Issue #104: partial-create from the `counterparty` Kafka stream — creditLimit/
+        // creditBalance/paymentDelayDays/priceType/inn/departmentId/branchId/erpGroupLabel must
+        // never be fabricated here, same as #88's organization precedent.
+        it('creates a partial row when no counterparty exists for that erpId, never fabricating REST-only fields', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            mockRepo.create.mockImplementation((input: unknown) => input);
+            await service.upsertActiveState(mockCtx, 'cp-unknown', 'Acme Corp', true);
+            expect(mockRepo.create).toHaveBeenCalledWith({
+                erpId: 'cp-unknown',
+                legalName: 'Acme Corp',
+                shortName: 'Acme Corp',
+                isActive: true,
+            });
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    erpId: 'cp-unknown',
+                    legalName: 'Acme Corp',
+                    shortName: 'Acme Corp',
+                    isActive: true,
+                }),
+            );
+        });
+
+        it('updates legalName/shortName/isActive on an existing row, never touching REST-only fields', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'cp-1',
+                legalName: 'Old Name',
+                shortName: 'Old Name',
+                isActive: true,
+                inn: '123456',
+                creditLimit: 1000,
+                priceType: 'wholesale',
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'cp-1', 'New Name', false);
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    legalName: 'New Name',
+                    shortName: 'New Name',
+                    isActive: false,
+                    inn: '123456',
+                    creditLimit: 1000,
+                    priceType: 'wholesale',
+                }),
+            );
+        });
+
+        // A deletion tombstone never carries a name — must still update isActive on an
+        // already-known counterparty, never touching legalName/shortName.
+        it('updates isActive only when name is null but the row already exists', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'cp-1',
+                legalName: 'Existing Name',
+                shortName: 'Existing Name',
+                isActive: true,
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'cp-1', null, false);
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    legalName: 'Existing Name',
+                    shortName: 'Existing Name',
+                    isActive: false,
+                }),
+            );
+        });
+
+        // Never fabricate a brand-new counterparty with a blank name — a deletion tombstone for
+        // an entity mivend never created locally must stay a true no-op.
+        it('does not create a row when name is null and none exists yet', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            await service.upsertActiveState(mockCtx, 'cp-unknown', null, false);
+            expect(mockRepo.create).not.toHaveBeenCalled();
+            expect(mockRepo.save).not.toHaveBeenCalled();
+        });
+    });
+
     describe('findVisible', () => {
         function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
             const qb: Record<string, ReturnType<typeof vi.fn>> = {};

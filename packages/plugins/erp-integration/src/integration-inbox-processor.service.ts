@@ -3,6 +3,7 @@ import { RequestContext, RequestContextService } from '@vendure/core';
 import { DataSource } from 'typeorm';
 
 import { CategoryStreamHandler } from './handlers/category.handler';
+import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
 import { DepartmentStreamHandler } from './handlers/department.handler';
 import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
@@ -39,6 +40,7 @@ export class IntegrationInboxProcessorService {
         warehouseHandler: WarehouseStreamHandler,
         organizationHandler: OrganizationStreamHandler,
         departmentHandler: DepartmentStreamHandler,
+        counterpartyHandler: CounterpartyStreamHandler,
         storageLocationHandler: StorageLocationStreamHandler,
         orderRegistrationResultHandler: OrderRegistrationResultHandler,
     ) {
@@ -50,6 +52,7 @@ export class IntegrationInboxProcessorService {
             organization: organizationHandler,
             warehouse: warehouseHandler,
             department: departmentHandler,
+            counterparty: counterpartyHandler,
             'price-type': priceTypeHandler,
             offer: new DeferredStreamHandler('offer'),
             'storage-location': storageLocationHandler,

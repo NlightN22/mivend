@@ -210,6 +210,33 @@ export const config: VendureConfig = {
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Registration Status' }],
             },
+            {
+                // Raw `status` string from company.orders.events.v1.order-changed (issue #110) —
+                // this stream's own current-state view, fired repeatedly over the order's
+                // lifetime, distinct from erpRegistrationStatus (order-registration-result's
+                // one-shot registration outcome, a different 1C fact with its own timing). Kept
+                // as a separate field rather than reused, since order-changed can report a
+                // different value/timing than the one-time registration result and overwriting
+                // that field would lose the registration-time fact. Passed through verbatim,
+                // never mapped to a mivend enum. Empty string means the field was absent (plain,
+                // non-optional proto3 string — zero-value-omission rule).
+                name: 'erpOrderStatus',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP Order Status' }],
+            },
+            {
+                // Flat GUID ref to a 1C "Договор" (contract) — OrderChanged.contract_id (issue
+                // #110/#123), a real proto `optional string` (genuinely absent, not a zero-value-
+                // omission case). Purely informational for now: no Contract entity exists yet in
+                // this repo, this just persists the source system's own identifier (see the
+                // external-integration-rules skill's "External reference id" rule) for #50/#105's
+                // future per-contract credit-limit attribution once that entity exists.
+                name: 'erpContractId',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP Contract ID' }],
+            },
         ],
         Product: [
             {
@@ -569,12 +596,25 @@ export const config: VendureConfig = {
                     'order-registration-result':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_REGISTRATION_RESULT ??
                         'company.orders.events.v1.order-registration-result',
+                    // Issue #110/#72: the order's ongoing current-state view (status,
+                    // reservedQuantity, contractId), fired repeatedly over the order's lifetime —
+                    // distinct from order-registration-result's one-shot registration outcome. See
+                    // OrderChangedStreamHandler/ReservationWriteOffSyncService.handleOrderChanged.
+                    'order-changed':
+                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CHANGED ??
+                        'company.orders.events.v1.order-changed',
                     // 1C's "Подразделение" — feeds the Department entity in
                     // @mivend/plugin-access-control. Different domain (company.customers) than
                     // the catalog/orders streams above — see DepartmentStreamHandler.
                     department:
                         process.env.INTEGRATION_KAFKA_TOPIC_DEPARTMENT ??
                         'company.customers.events.v1.department-changed',
+                    // 1C's counterparty ("Контрагент") — feeds the Counterparty entity in
+                    // @mivend/plugin-counterparty. Same domain (company.customers) as department
+                    // above — see CounterpartyStreamHandler (issue #104).
+                    counterparty:
+                        process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY ??
+                        'company.customers.events.v1.counterparty-changed',
                 },
             },
             schemaRegistry: {
