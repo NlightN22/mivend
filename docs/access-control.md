@@ -145,9 +145,10 @@ async findVisible(ctx: RequestContext, args: ListArgs) {
     case 'department':
       // `departmentId` never gates visibility of anything, here or anywhere else — see "Branch
       // scope is the only real filtering axis" below. `branchId` is the only real filter axis,
-      // but *which column* it applies to is resource-specific (see that section for why
-      // Counterparty itself is a special case, currently unfiltered) — this generic example
-      // intentionally does not prescribe one for Counterparty.
+      // but *which column* it applies to is resource-specific (see that section) — for
+      // Counterparty this is `c.branchId = :scopeBranch` with no `IS NULL` carve-out
+      // (deny-by-default for unassigned rows); this generic example intentionally does not
+      // prescribe the exact column/carve-out choice for every resource.
       break;
     case 'all':
       break;
@@ -232,13 +233,17 @@ for `'department'`-kind scope (name aside). Central-only roles (`general-directo
 **Where `branchId` actually lives is not the same field for every resource — this was a real
 design decision, not an oversight:**
 
-- **`Counterparty.branchId`** is the customer's _home/reporting_ branch — display and default
-  assignment only, **never used as an access-scope filter on the `Counterparty` record itself**.
-  A chain/network customer (e.g. a multi-location fuel station chain) can have trading points
-  served by several different branches; filtering the parent `Counterparty` record itself by
-  branch would incorrectly hide it from — or wrongly show all of it to — a branch that only
-  services part of it.
-  **Historical bugs, fixed (2026-09-20, two rounds)**: (1) `CounterpartyService.findVisible`/
+- **`Counterparty.branchId`** is the customer's _home/reporting_ branch — display/default-
+  assignment field, **and, as of the round-3 correction below, also the real access-scope filter
+  for the `Counterparty` record itself** (explicit product decision, security takes priority over
+  the chain-account precision concern that originally argued against this — see that concern
+  below, still real, not yet solved). A chain/network customer (e.g. a multi-location fuel
+  station chain) can have trading points served by several different branches; filtering the
+  parent `Counterparty` record by its single `branchId` can therefore still hide it from — or
+  wrongly show all of it to — a branch that only services part of it. That imprecision is an
+  accepted, known limitation until issue #65/#123's real per-entity branch-assignment/triage
+  workflow ships; it does not justify going back to no filtering at all, per the round-3 decision.
+  **Historical bugs, fixed (2026-09-20, three rounds)**: (1) `CounterpartyService.findVisible`/
   `AccessScopeService.assertCounterpartyWritable` used to filter by `c.branchId =
 scope.branchId` anyway. It "worked" only by accident — `Administrator.customFields.branchId`
   and `Counterparty.branchId` both held the same raw, unresolved ERP id before the "Branch vs
@@ -246,12 +251,27 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   `Administrator.customFields.branchId` was fixed to hold a real `Branch.id`, that accidental
   match broke and department-scoped staff with a branch assigned saw **zero** counterparties.
   (2) The first fix's replacement — filtering by `departmentId` instead — was itself wrong per
-  the corrected rule above (`departmentId` must never filter anything). **Current state,
-  deliberately temporary**: `Counterparty`'s `'department'`-kind case applies **no filter at
-  all** (same as `'all'`) until issue #65/#123's real branch-assignment-and-triage workflow
-  ships and `Counterparty.branchId` is actually populated for real accounts. Once it is, this
-  must filter by `c.branchId = scope.branchId`, with unassigned (`branchId IS NULL`) rows routed
-  to a dedicated triage list rather than silently shown or hidden here.
+  the corrected rule above (`departmentId` must never filter anything). That round's replacement
+  — applying **no filter at all** for `'department'`-kind scope, on the reasoning that
+  `Counterparty.branchId` has no automatic-assignment worker yet (issue #65/#123) so filtering by
+  it would show zero counterparties to every branch-scoped role — was itself rejected as a
+  security regression (round 3, same day, explicit product decision): a branch-scoped manager
+  must never see a Counterparty that isn't theirs, full stop, even if that means they see none
+  until #65/#123 ships. **Current, correct state**: `'department'`-kind scope filters by
+  `c.branchId = scope.branchId` (exact match) in both `CounterpartyService.findVisible`/
+  `findVisiblePage`/`findOneVisible` and `AccessScopeService.assertCounterpartyWritable`.
+  Deliberately **no** `OR c.branchId IS NULL` carve-out — an unassigned Counterparty is invisible
+  to every branch-scoped role (deny-by-default), visible only to `'all'`-scope roles
+  (general-director, portal-admin), until issue #65/#123's real assignment/triage workflow
+  populates `branchId` for real accounts. This intentionally differs from Order/Invoice's own
+  `OR branchId IS NULL` carve-out below — those resources denormalize a _different_, more
+  reliably-populated `branchId` (from `TradingPoint.servicingBranchId`/an order's placement-time
+  snapshot), where the permissive carve-out was itself a targeted bug fix (a real order silently
+  invisible to its own department). Counterparty's own `branchId` has no such reliable population
+  path yet, so the safe default is deny, not allow.
+  A user-supplied narrowing filter (`findVisiblePage`'s `options.branchId` — e.g. a manager-portal
+  UI dropdown) is applied in addition to this scope filter, never instead of it; it cannot widen
+  what a branch-scoped caller sees.
 - **`TradingPoint.servicingBranchId`** is the real access-scope filter for a customer's locations
   and everything derived from them (`Order`, `Reservation` inherit `branchId` from the
   `TradingPoint` selected at creation time, denormalized onto the row for filtering without a

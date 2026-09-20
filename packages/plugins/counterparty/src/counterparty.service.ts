@@ -375,14 +375,19 @@ export class CounterpartyService {
                 // visibility of anything — only `Branch` (mivend's own entity) is a real
                 // access-scope dimension. `departmentId` is deliberately never compared here.
                 //
-                // TEMPORARY: Counterparty has no populated `branchId` yet (no automatic
-                // assignment exists — see issue #65/#123, "unsorted, needs manual triage").
-                // Until that per-entity triage workflow ships, this case applies NO filter at
-                // all (same as 'all') rather than showing zero counterparties to every
-                // department/branch-scoped role. Once #65/#123 land and Counterparty.branchId is
-                // populated for real, this must filter by `c.branchId = scope.branchId` (with an
-                // `OR c.branchId IS NULL` carve-out routing unassigned rows to a separate triage
-                // list, not silently hiding or silently showing them here).
+                // Security-first correction (2026-09-20, same day, per an explicit product
+                // decision overriding the temporary no-op this replaces): a branch-scoped
+                // manager must never see a Counterparty that isn't theirs, full stop — including
+                // one with no `branchId` assigned yet. `Counterparty.branchId` has no automatic
+                // assignment worker yet (issue #65/#123, "unsorted, needs manual triage"), so
+                // until it ships, unassigned rows are invisible to every branch-scoped role, not
+                // shown to all of them — deny-by-default, not permissive-by-default. Only
+                // 'all'-scope roles (general-director, portal-admin) see unassigned rows, same as
+                // every other counterparty. There is deliberately no `OR c.branchId IS NULL`
+                // carve-out here (unlike Order/Invoice's own denormalized-branch filter) — see
+                // docs/access-control.md's "Branch scope" section for why Counterparty's
+                // no-carve-out rule differs from Order/Invoice's.
+                qb.andWhere('c.branchId = :scopeBranch', { scopeBranch: scope.branchId ?? null });
                 break;
             case 'all':
                 break;

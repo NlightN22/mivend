@@ -155,7 +155,11 @@ describe('CounterpartyService.findVisible (integration, real Postgres)', () => {
         expect(result.map(c => c.erpId)).not.toContain('cp-own-other');
     });
 
-    it('"department" scope sees all counterparties in the department/branch, not other departments', async () => {
+    // Per e251388/docs/access-control.md "Branch vs Department": departmentId must never gate
+    // Counterparty visibility. `branchId` IS the real gate for 'department'-kind scope
+    // (security-first correction, 2026-09-20 round 3) — a branch-scoped caller sees only
+    // counterparties whose branchId matches its own, never another branch's.
+    it('"department" scope sees only counterparties in its own branch, not another branch', async () => {
         await seedCounterparties();
         mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
             kind: 'department',
@@ -167,6 +171,31 @@ describe('CounterpartyService.findVisible (integration, real Postgres)', () => {
 
         expect(result.map(c => c.erpId).sort()).toEqual(['cp-own-mine', 'cp-own-other']);
         expect(result.map(c => c.erpId)).not.toContain('cp-other-dept');
+    });
+
+    // Deny-by-default: an unassigned Counterparty.branchId (no automatic-assignment worker yet,
+    // issue #65/#123) must be invisible to every branch-scoped role, not shown to all of them —
+    // no `OR branchId IS NULL` carve-out, unlike Order/Invoice's own denormalized-branch filter.
+    it('"department" scope never sees a Counterparty with no branchId assigned', async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            {
+                erpId: 'cp-unassigned',
+                legalName: 'Unassigned LLC',
+                shortName: 'Unassigned',
+                assignedManagerId: null,
+                departmentId: null,
+                branchId: null,
+            },
+        ]);
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'department',
+            departmentId: 'dept-1',
+            branchId: 'branch-a',
+        });
+
+        const result = await service.findVisible(mockCtx);
+
+        expect(result.map(c => c.erpId)).not.toContain('cp-unassigned');
     });
 
     it('"all" scope sees every counterparty across departments', async () => {
@@ -224,6 +253,9 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         expect(result.totalItems).toBe(1);
     });
 
+    // 'department'-kind scope filters by branchId (see the identical comment on the findVisible
+    // describe block above, and docs/access-control.md) — a caller only "in scope" for a
+    // counterparty whose branchId matches its own.
     it('findOneVisible returns the entity when in scope, null when outside scope', async () => {
         await seedCounterparties();
         const all = await dataSource.getRepository(TestCounterparty).find();
@@ -343,7 +375,11 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         expect(result.totalItems).toBe(2);
     });
 
-    it('findVisiblePage unassignedOnly still respects the access scope (department sees only its own orphans)', async () => {
+    // Per docs/access-control.md "Branch scope is the only real filtering axis": departmentId
+    // must never gate Counterparty visibility, but branchId IS the real gate for 'department'
+    // scope (security-first correction, 2026-09-20 round 3) — unassignedOnly must still respect
+    // it, same as any other listing.
+    it('findVisiblePage unassignedOnly still respects the access scope (department sees only its own branch orphans)', async () => {
         await dataSource.getRepository(TestCounterparty).save([
             {
                 erpId: 'cp-orphan-dept1',

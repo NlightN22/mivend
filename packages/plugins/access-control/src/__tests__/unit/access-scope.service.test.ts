@@ -92,11 +92,12 @@ describe('AccessScopeService', () => {
     });
 
     describe('assertCounterpartyWritable', () => {
-        // Neither departmentId nor branchId gates a write for "department" scope today —
         // departmentId is pure display information (1C org data), never a scope gate; branchId
-        // will become the real gate once Counterparty.branchId is populated (issue #65/#123),
-        // but until then this is deliberately permissive.
-        it('"department" scope never rejects — a departmentId mismatch is not gated (temporary, pending issue #65/#123)', async () => {
+        // IS the real gate for "department" scope (security-first correction, 2026-09-20 round
+        // 3) — deny-by-default, so a departmentId mismatch alone must not reject as long as
+        // branchId matches, and a branchId mismatch (including a null Counterparty.branchId)
+        // must reject.
+        it('"department" scope ignores a departmentId mismatch when branchId matches', async () => {
             administratorService.findOneByUserId.mockResolvedValue(
                 mockAdmin('admin-6', { departmentId: 'dept-1', branchId: 'branch-a' }),
             );
@@ -106,9 +107,39 @@ describe('AccessScopeService', () => {
                 service.assertCounterpartyWritable(ctx, {
                     assignedManagerId: null,
                     departmentId: 'dept-OTHER',
-                    branchId: null,
+                    branchId: 'branch-a',
                 }),
             ).resolves.toBeUndefined();
+        });
+
+        it('"department" scope rejects a branchId mismatch even when departmentId matches', async () => {
+            administratorService.findOneByUserId.mockResolvedValue(
+                mockAdmin('admin-6b', { departmentId: 'dept-1', branchId: 'branch-a' }),
+            );
+            roleScopeConfigService.maxScopeFor.mockResolvedValue('department');
+
+            await expect(
+                service.assertCounterpartyWritable(ctx, {
+                    assignedManagerId: null,
+                    departmentId: 'dept-1',
+                    branchId: 'branch-b',
+                }),
+            ).rejects.toThrow();
+        });
+
+        it('"department" scope rejects an unassigned (null) Counterparty.branchId — deny-by-default', async () => {
+            administratorService.findOneByUserId.mockResolvedValue(
+                mockAdmin('admin-6c', { departmentId: 'dept-1', branchId: 'branch-a' }),
+            );
+            roleScopeConfigService.maxScopeFor.mockResolvedValue('department');
+
+            await expect(
+                service.assertCounterpartyWritable(ctx, {
+                    assignedManagerId: null,
+                    departmentId: 'dept-1',
+                    branchId: null,
+                }),
+            ).rejects.toThrow();
         });
 
         it('"own" scope rejects when assignedManagerId does not match the caller', async () => {
