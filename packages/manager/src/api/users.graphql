@@ -1,0 +1,61 @@
+query PortalUsers($options: AdministratorListOptions, $status: PortalUserStatus) {
+    portalUsers(options: $options, status: $status) {
+        items {
+            id
+            firstName
+            lastName
+            emailAddress
+            isActive
+            customFields {
+                departmentId
+            }
+            user {
+                roles {
+                    code
+                }
+            }
+        }
+        totalItems
+    }
+}
+
+mutation SetAdministratorActive($id: ID!, $isActive: Boolean!) {
+    setAdministratorActive(administratorId: $id, isActive: $isActive)
+}
+
+query PendingErpUsersPage($options: PendingErpUserListOptions) {
+    pendingErpUsers(options: $options) {
+        items {
+            id
+            erpId
+            fullName
+            email
+            departmentId
+        }
+        totalItems
+    }
+}
+
+mutation CreateAdministratorFromErpUser($erpId: String!) {
+    createAdministratorFromErpUser(erpId: $erpId) {
+        id
+    }
+}
+
+# Cheap counts (take: 0) for the Users/Pending switcher chip labels — never derived client-side
+# from whatever page happens to be loaded, per the manager-table-standard skill.
+query PortalUserCounts {
+    users: portalUsers(options: { take: 0 }) {
+        totalItems
+    }
+    pending: pendingErpUsers(options: { take: 0 }) {
+        totalItems
+    }
+}
+
+mutation ResetAdministratorPassword($token: String!, $password: String!) {
+    resetAdministratorPassword(token: $token, password: $password) {
+        success
+        reason
+    }
+}

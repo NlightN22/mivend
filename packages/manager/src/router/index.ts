@@ -10,6 +10,14 @@ export const router = createRouter({
             meta: { layout: 'auth' },
         },
         {
+            // Issue #119 Phase 2 — reached from the emailed password-reset link, no session yet
+            // (see AdministratorProvisioningService.createFromPending), so it lives outside
+            // DefaultLayout the same way /login does.
+            path: '/set-password',
+            component: () => import('../pages/auth/SetPasswordPage.vue'),
+            meta: { layout: 'auth' },
+        },
+        {
             path: '/',
             component: () => import('../layouts/DefaultLayout.vue'),
             children: [
@@ -114,9 +122,9 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
-                    path: 'settings/team',
-                    name: 'settings-team',
-                    component: () => import('../pages/settings/TeamPage.vue'),
+                    path: 'settings/users',
+                    name: 'settings-users',
+                    component: () => import('../pages/settings/UsersPage.vue'),
                     meta: { requiresAuth: true },
                 },
                 {

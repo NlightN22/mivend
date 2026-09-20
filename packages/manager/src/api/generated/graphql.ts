@@ -98,6 +98,7 @@ export type Administrator = Node & {
     emailAddress: Scalars['String']['output'];
     firstName: Scalars['String']['output'];
     id: Scalars['ID']['output'];
+    isActive: Scalars['Boolean']['output'];
     lastName: Scalars['String']['output'];
     updatedAt: Scalars['DateTime']['output'];
     user: User;
@@ -106,6 +107,7 @@ export type Administrator = Node & {
 export type AdministratorCustomFields = {
     branchId: Maybe<Scalars['String']['output']>;
     departmentId: Maybe<Scalars['String']['output']>;
+    erpId: Maybe<Scalars['String']['output']>;
     position: Maybe<Scalars['String']['output']>;
     sourceAdministratorId: Maybe<Scalars['String']['output']>;
 };
@@ -117,8 +119,10 @@ export type AdministratorFilterParameter = {
     createdAt?: InputMaybe<DateOperators>;
     departmentId?: InputMaybe<StringOperators>;
     emailAddress?: InputMaybe<StringOperators>;
+    erpId?: InputMaybe<StringOperators>;
     firstName?: InputMaybe<StringOperators>;
     id?: InputMaybe<IdOperators>;
+    isActive?: InputMaybe<BooleanOperators>;
     lastName?: InputMaybe<StringOperators>;
     position?: InputMaybe<StringOperators>;
     sourceAdministratorId?: InputMaybe<StringOperators>;
@@ -164,6 +168,7 @@ export type AdministratorSortParameter = {
     createdAt?: InputMaybe<SortOrder>;
     departmentId?: InputMaybe<SortOrder>;
     emailAddress?: InputMaybe<SortOrder>;
+    erpId?: InputMaybe<SortOrder>;
     firstName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     lastName?: InputMaybe<SortOrder>;
@@ -1010,6 +1015,7 @@ export type CreateAddressInput = {
 export type CreateAdministratorCustomFieldsInput = {
     branchId?: InputMaybe<Scalars['String']['input']>;
     departmentId?: InputMaybe<Scalars['String']['input']>;
+    erpId?: InputMaybe<Scalars['String']['input']>;
     position?: InputMaybe<Scalars['String']['input']>;
     sourceAdministratorId?: InputMaybe<Scalars['String']['input']>;
 };
@@ -1180,6 +1186,7 @@ export type CreatePaymentMethodInput = {
 export type CreateProductCustomFieldsInput = {
     externalId?: InputMaybe<Scalars['String']['input']>;
     fullName?: InputMaybe<Scalars['String']['input']>;
+    manufacturerId?: InputMaybe<Scalars['ID']['input']>;
     onSale?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
@@ -2088,11 +2095,18 @@ export type DiscountRule = {
     erpId: Scalars['String']['output'];
     facetCode: Maybe<Scalars['String']['output']>;
     facetValueCode: Maybe<Scalars['String']['output']>;
+    giftProductErpId: Maybe<Scalars['String']['output']>;
+    giftQuantity: Maybe<Scalars['Float']['output']>;
     id: Scalars['ID']['output'];
     minAmount: Maybe<Scalars['Int']['output']>;
     minWeightKg: Maybe<Scalars['Float']['output']>;
+    operationKind: Maybe<Scalars['String']['output']>;
     percent: Scalars['Int']['output'];
-    priceTypeCode: Scalars['String']['output'];
+    /** Null for a promo rule (issue #107) — those apply regardless of price type. */
+    priceTypeCode: Maybe<Scalars['String']['output']>;
+    /** Promo-rule fields (issue #107) — null for a facet/priceType-threshold rule. */
+    triggerProductErpId: Maybe<Scalars['String']['output']>;
+    triggerQuantity: Maybe<Scalars['Float']['output']>;
     validFrom: Scalars['DateTime']['output'];
     validTo: Scalars['DateTime']['output'];
 };
@@ -3274,6 +3288,12 @@ export type ManualPaymentStateError = ErrorResult & {
     message: Scalars['String']['output'];
 };
 
+export type Manufacturer = {
+    externalId: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    name: Maybe<Scalars['String']['output']>;
+};
+
 export type MimeTypeError = ErrorResult & {
     errorCode: ErrorCode;
     fileName: Scalars['String']['output'];
@@ -3406,6 +3426,7 @@ export type Mutation = {
     confirmOrder: Array<Reservation>;
     /** Create a new Administrator */
     createAdministrator: Administrator;
+    createAdministratorFromErpUser: Administrator;
     /**
      * Generates a new API-Key and attaches it to an Administrator.
      * Returns the generated API-Key.
@@ -3638,6 +3659,7 @@ export type Mutation = {
     requestCreditTermExtension: ApprovalRequest;
     requestDiscountGrant: ApprovalRequest;
     requestPriceAdjustment: PriceAdjustmentResult;
+    resetAdministratorPassword: ResetAdministratorPasswordResult;
     /** Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved. */
     resolveErpReconciliationIssue: ErpReconciliationIssue;
     resolveNotification: Notification;
@@ -3652,6 +3674,7 @@ export type Mutation = {
     runPendingSearchIndexUpdates: Success;
     runScheduledTask: Success;
     saveTableView: SavedTableView;
+    setAdministratorActive: Scalars['Boolean']['output'];
     setBranchSettings: BranchSettings;
     setCreditTermLimit: CreditTermLimit;
     setCustomerForDraftOrder: SetCustomerForDraftOrderResult;
@@ -3896,6 +3919,10 @@ export type MutationConfirmOrderArgs = {
 
 export type MutationCreateAdministratorArgs = {
     input: CreateAdministratorInput;
+};
+
+export type MutationCreateAdministratorFromErpUserArgs = {
+    erpId: Scalars['String']['input'];
 };
 
 export type MutationCreateApiKeyArgs = {
@@ -4417,6 +4444,11 @@ export type MutationRequestPriceAdjustmentArgs = {
     requestedPrice: Scalars['Int']['input'];
 };
 
+export type MutationResetAdministratorPasswordArgs = {
+    password: Scalars['String']['input'];
+    token: Scalars['String']['input'];
+};
+
 export type MutationResolveErpReconciliationIssueArgs = {
     id: Scalars['ID']['input'];
     resolution: Scalars['String']['input'];
@@ -4440,6 +4472,11 @@ export type MutationSaveTableViewArgs = {
     name: Scalars['String']['input'];
     pageKey: Scalars['String']['input'];
     visibleColumns: Array<Scalars['String']['input']>;
+};
+
+export type MutationSetAdministratorActiveArgs = {
+    administratorId: Scalars['ID']['input'];
+    isActive: Scalars['Boolean']['input'];
 };
 
 export type MutationSetBranchSettingsArgs = {
@@ -4954,7 +4991,11 @@ export type OrderAddress = {
 
 export type OrderCustomFields = {
     branchId: Maybe<Scalars['String']['output']>;
+    erpContractId: Maybe<Scalars['String']['output']>;
     erpOrderId: Maybe<Scalars['String']['output']>;
+    erpOrderStatus: Maybe<Scalars['String']['output']>;
+    erpRegistrationDocumentNumber: Maybe<Scalars['String']['output']>;
+    erpRegistrationStatus: Maybe<Scalars['String']['output']>;
     erpStatus: Maybe<Scalars['String']['output']>;
     erpStatusAt: Maybe<Scalars['DateTime']['output']>;
     latestFulfillmentState: Maybe<Scalars['String']['output']>;
@@ -4978,7 +5019,11 @@ export type OrderFilterParameter = {
     createdAt?: InputMaybe<DateOperators>;
     currencyCode?: InputMaybe<StringOperators>;
     customerLastName?: InputMaybe<StringOperators>;
+    erpContractId?: InputMaybe<StringOperators>;
     erpOrderId?: InputMaybe<StringOperators>;
+    erpOrderStatus?: InputMaybe<StringOperators>;
+    erpRegistrationDocumentNumber?: InputMaybe<StringOperators>;
+    erpRegistrationStatus?: InputMaybe<StringOperators>;
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
     id?: InputMaybe<IdOperators>;
@@ -5178,7 +5223,11 @@ export type OrderSortParameter = {
     code?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
     customerLastName?: InputMaybe<SortOrder>;
+    erpContractId?: InputMaybe<SortOrder>;
     erpOrderId?: InputMaybe<SortOrder>;
+    erpOrderStatus?: InputMaybe<SortOrder>;
+    erpRegistrationDocumentNumber?: InputMaybe<SortOrder>;
+    erpRegistrationStatus?: InputMaybe<SortOrder>;
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
@@ -5449,6 +5498,51 @@ export type PaymentStateTransitionError = ErrorResult & {
     transitionError: Scalars['String']['output'];
 };
 
+export type PendingErpUser = Node & {
+    departmentId: Maybe<Scalars['String']['output']>;
+    email: Maybe<Scalars['String']['output']>;
+    erpId: Scalars['String']['output'];
+    firstSeenAt: Scalars['DateTime']['output'];
+    fullName: Maybe<Scalars['String']['output']>;
+    id: Scalars['ID']['output'];
+    lastSeenAt: Scalars['DateTime']['output'];
+};
+
+export type PendingErpUserFilterParameter = {
+    _and?: InputMaybe<Array<PendingErpUserFilterParameter>>;
+    _or?: InputMaybe<Array<PendingErpUserFilterParameter>>;
+    departmentId?: InputMaybe<StringOperators>;
+    email?: InputMaybe<StringOperators>;
+    erpId?: InputMaybe<StringOperators>;
+    firstSeenAt?: InputMaybe<DateOperators>;
+    fullName?: InputMaybe<StringOperators>;
+    id?: InputMaybe<IdOperators>;
+    lastSeenAt?: InputMaybe<DateOperators>;
+};
+
+export type PendingErpUserList = PaginatedList & {
+    items: Array<PendingErpUser>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type PendingErpUserListOptions = {
+    filter?: InputMaybe<PendingErpUserFilterParameter>;
+    filterOperator?: InputMaybe<LogicalOperator>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<PendingErpUserSortParameter>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type PendingErpUserSortParameter = {
+    departmentId?: InputMaybe<SortOrder>;
+    email?: InputMaybe<SortOrder>;
+    erpId?: InputMaybe<SortOrder>;
+    firstSeenAt?: InputMaybe<SortOrder>;
+    fullName?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    lastSeenAt?: InputMaybe<SortOrder>;
+};
+
 /**
  * @description
  * Permissions for administrators and customers. Used to control access to
@@ -5586,6 +5680,8 @@ export type Permission =
     | 'DeleteZone'
     /** Manage role scope configuration (departmentId/branchId, max scope per resource) */
     | 'ManageAccessControl'
+    /** Decide who has an Administrator login at all — review PendingErpUser candidates, create an Administrator anchored on erpId, and manually activate/deactivate one (issue #119); distinct from ManageAccessControl, which is RBAC role/scope configuration once a login already exists */
+    | 'ManageAdministratorLifecycle'
     /** Create/edit WorkflowDefinition chains (layer 5, /settings) */
     | 'ManageApprovalWorkflows'
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
@@ -5723,6 +5819,8 @@ export type PermissionDefinition = {
     name: Scalars['String']['output'];
 };
 
+export type PortalUserStatus = 'active' | 'inactive';
+
 export type PreviewCollectionVariantsInput = {
     filters: Array<ConfigurableOperationInput>;
     inheritFilters: Scalars['Boolean']['input'];
@@ -5807,6 +5905,7 @@ export type ProductCrossReference = {
 export type ProductCustomFields = {
     externalId: Maybe<Scalars['String']['output']>;
     fullName: Maybe<Scalars['String']['output']>;
+    manufacturer: Maybe<Manufacturer>;
     onSale: Maybe<Scalars['Boolean']['output']>;
 };
 
@@ -6006,6 +6105,7 @@ export type ProductSortParameter = {
     externalId?: InputMaybe<SortOrder>;
     fullName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
+    manufacturer?: InputMaybe<SortOrder>;
     name?: InputMaybe<SortOrder>;
     onSale?: InputMaybe<SortOrder>;
     slug?: InputMaybe<SortOrder>;
@@ -6375,6 +6475,7 @@ export type Query = {
     customers: CustomerList;
     /** Get metrics for the given date range and metric types. */
     dashboardMetricSummary: Array<DashboardMetricSummary>;
+    deactivatedAdministrators: AdministratorList;
     departments: Array<Department>;
     discountGrantsForCounterparty: DiscountGrantForCustomerList;
     discountRegistryPage: DiscountRegistryEntryList;
@@ -6441,8 +6542,10 @@ export type Query = {
     paymentMethods: PaymentMethodList;
     /** Seed-script idempotency helper only — see seed-payment-refunds.mjs. */
     paymentRefundExists: Scalars['Boolean']['output'];
+    pendingErpUsers: PendingErpUserList;
     pendingPriceAdjustmentOrderIds: Array<Scalars['String']['output']>;
     pendingSearchIndexUpdates: Scalars['Int']['output'];
+    portalUsers: AdministratorList;
     /** Used for real-time previews of the contents of a Collection */
     previewCollectionVariants: ProductVariantList;
     priceAdjustmentRequestsForOrder: Array<ApprovalRequest>;
@@ -6618,6 +6721,10 @@ export type QueryDashboardMetricSummaryArgs = {
     input?: InputMaybe<DashboardMetricSummaryInput>;
 };
 
+export type QueryDeactivatedAdministratorsArgs = {
+    options?: InputMaybe<AdministratorListOptions>;
+};
+
 export type QueryDiscountGrantsForCounterpartyArgs = {
     counterpartyId: Scalars['ID']['input'];
     options?: InputMaybe<DiscountGrantForCustomerListOptions>;
@@ -6779,6 +6886,15 @@ export type QueryPaymentMethodsArgs = {
 
 export type QueryPaymentRefundExistsArgs = {
     providerRefundId: Scalars['String']['input'];
+};
+
+export type QueryPendingErpUsersArgs = {
+    options?: InputMaybe<PendingErpUserListOptions>;
+};
+
+export type QueryPortalUsersArgs = {
+    options?: InputMaybe<AdministratorListOptions>;
+    status?: InputMaybe<PortalUserStatus>;
 };
 
 export type QueryPreviewCollectionVariantsArgs = {
@@ -7190,6 +7306,11 @@ export type ReservationReconciliationIssue = {
 export type ReservationReconciliationIssueList = {
     items: Array<ReservationReconciliationIssue>;
     totalItems: Scalars['Int']['output'];
+};
+
+export type ResetAdministratorPasswordResult = {
+    reason: Maybe<Scalars['String']['output']>;
+    success: Scalars['Boolean']['output'];
 };
 
 export type Return = Node &
@@ -8109,6 +8230,7 @@ export type UpdateAddressInput = {
 export type UpdateAdministratorCustomFieldsInput = {
     branchId?: InputMaybe<Scalars['String']['input']>;
     departmentId?: InputMaybe<Scalars['String']['input']>;
+    erpId?: InputMaybe<Scalars['String']['input']>;
     position?: InputMaybe<Scalars['String']['input']>;
     sourceAdministratorId?: InputMaybe<Scalars['String']['input']>;
 };
@@ -8276,7 +8398,11 @@ export type UpdateOrderAddressInput = {
 
 export type UpdateOrderCustomFieldsInput = {
     branchId?: InputMaybe<Scalars['String']['input']>;
+    erpContractId?: InputMaybe<Scalars['String']['input']>;
     erpOrderId?: InputMaybe<Scalars['String']['input']>;
+    erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
+    erpRegistrationDocumentNumber?: InputMaybe<Scalars['String']['input']>;
+    erpRegistrationStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
     latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;
@@ -8333,6 +8459,7 @@ export type UpdatePaymentMethodInput = {
 export type UpdateProductCustomFieldsInput = {
     externalId?: InputMaybe<Scalars['String']['input']>;
     fullName?: InputMaybe<Scalars['String']['input']>;
+    manufacturerId?: InputMaybe<Scalars['ID']['input']>;
     onSale?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
@@ -10602,6 +10729,74 @@ export type TeamDirectoryQuery = {
         branchId: string | null;
         position: string | null;
     }>;
+};
+
+export type PortalUsersQueryVariables = Exact<{
+    options?: InputMaybe<AdministratorListOptions>;
+    status?: InputMaybe<PortalUserStatus>;
+}>;
+
+export type PortalUsersQuery = {
+    portalUsers: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            firstName: string;
+            lastName: string;
+            emailAddress: string;
+            isActive: boolean;
+            customFields: { departmentId: string | null } | null;
+            user: { roles: Array<{ code: string }> };
+        }>;
+    };
+};
+
+export type SetAdministratorActiveMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    isActive: Scalars['Boolean']['input'];
+}>;
+
+export type SetAdministratorActiveMutation = { setAdministratorActive: boolean };
+
+export type PendingErpUsersPageQueryVariables = Exact<{
+    options?: InputMaybe<PendingErpUserListOptions>;
+}>;
+
+export type PendingErpUsersPageQuery = {
+    pendingErpUsers: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            erpId: string;
+            fullName: string | null;
+            email: string | null;
+            departmentId: string | null;
+        }>;
+    };
+};
+
+export type CreateAdministratorFromErpUserMutationVariables = Exact<{
+    erpId: Scalars['String']['input'];
+}>;
+
+export type CreateAdministratorFromErpUserMutation = {
+    createAdministratorFromErpUser: { id: string };
+};
+
+export type PortalUserCountsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PortalUserCountsQuery = {
+    users: { totalItems: number };
+    pending: { totalItems: number };
+};
+
+export type ResetAdministratorPasswordMutationVariables = Exact<{
+    token: Scalars['String']['input'];
+    password: Scalars['String']['input'];
+}>;
+
+export type ResetAdministratorPasswordMutation = {
+    resetAdministratorPassword: { success: boolean; reason: string | null };
 };
 
 export class TypedDocumentString<TResult, TVariables>
@@ -13186,3 +13381,81 @@ export const TeamDirectoryDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<TeamDirectoryQuery, TeamDirectoryQueryVariables>;
+export const PortalUsersDocument = new TypedDocumentString(`
+    query PortalUsers($options: AdministratorListOptions, $status: PortalUserStatus) {
+  portalUsers(options: $options, status: $status) {
+    items {
+      id
+      firstName
+      lastName
+      emailAddress
+      isActive
+      customFields {
+        departmentId
+      }
+      user {
+        roles {
+          code
+        }
+      }
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<PortalUsersQuery, PortalUsersQueryVariables>;
+export const SetAdministratorActiveDocument = new TypedDocumentString(`
+    mutation SetAdministratorActive($id: ID!, $isActive: Boolean!) {
+  setAdministratorActive(administratorId: $id, isActive: $isActive)
+}
+    `) as unknown as TypedDocumentString<
+    SetAdministratorActiveMutation,
+    SetAdministratorActiveMutationVariables
+>;
+export const PendingErpUsersPageDocument = new TypedDocumentString(`
+    query PendingErpUsersPage($options: PendingErpUserListOptions) {
+  pendingErpUsers(options: $options) {
+    items {
+      id
+      erpId
+      fullName
+      email
+      departmentId
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    PendingErpUsersPageQuery,
+    PendingErpUsersPageQueryVariables
+>;
+export const CreateAdministratorFromErpUserDocument = new TypedDocumentString(`
+    mutation CreateAdministratorFromErpUser($erpId: String!) {
+  createAdministratorFromErpUser(erpId: $erpId) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CreateAdministratorFromErpUserMutation,
+    CreateAdministratorFromErpUserMutationVariables
+>;
+export const PortalUserCountsDocument = new TypedDocumentString(`
+    query PortalUserCounts {
+  users: portalUsers(options: {take: 0}) {
+    totalItems
+  }
+  pending: pendingErpUsers(options: {take: 0}) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<PortalUserCountsQuery, PortalUserCountsQueryVariables>;
+export const ResetAdministratorPasswordDocument = new TypedDocumentString(`
+    mutation ResetAdministratorPassword($token: String!, $password: String!) {
+  resetAdministratorPassword(token: $token, password: $password) {
+    success
+    reason
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ResetAdministratorPasswordMutation,
+    ResetAdministratorPasswordMutationVariables
+>;
