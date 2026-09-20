@@ -10,6 +10,11 @@ Catalog scale: tens of thousands of SKUs.
 
 ## Hub-spoke: autonomous branch instances
 
+**Naming note**: "branch" here means a deployed server instance (`INSTANCE_TYPE=branch`) — an
+unrelated homonym of the `Branch` _entity_ (`packages/plugins/access-control`, warehouse/ATP
+consolidation + branch-scoped access control) described in `docs/access-control.md`'s "Branch
+vs Department" section. Same English word, two unrelated concepts — don't conflate them.
+
 Each business location runs its own independent Vendure instance with its own PostgreSQL database.
 Branch instances sync periodically with a central hub.
 The central hub is the only node that communicates with the legacy ERP side of the exchange.

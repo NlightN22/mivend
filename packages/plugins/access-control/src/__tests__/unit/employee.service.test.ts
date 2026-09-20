@@ -49,6 +49,7 @@ function createMockRequestContextService(
 describe('EmployeeService', () => {
     let adminRepo: { findOne: ReturnType<typeof vi.fn> };
     let roleRepo: { findOne: ReturnType<typeof vi.fn> };
+    let branchRepo: { findOne: ReturnType<typeof vi.fn> };
     let userQueryBuilder: ReturnType<typeof createUserQueryBuilder>;
     let administratorService: ReturnType<typeof createMockAdministratorService>;
     let roleService: ReturnType<typeof createMockRoleService>;
@@ -60,12 +61,14 @@ describe('EmployeeService', () => {
     beforeEach(() => {
         adminRepo = { findOne: vi.fn() };
         roleRepo = { findOne: vi.fn() };
+        branchRepo = { findOne: vi.fn() };
         userQueryBuilder = createUserQueryBuilder();
         const userRepo = { createQueryBuilder: () => userQueryBuilder };
         const connection = {
             getRepository: (_ctx: unknown, entity: { name: string }) => {
                 if (entity.name === 'Administrator') return adminRepo;
                 if (entity.name === 'User') return userRepo;
+                if (entity.name === 'Branch') return branchRepo;
                 return roleRepo;
             },
         };
@@ -90,19 +93,58 @@ describe('EmployeeService', () => {
         expect(administratorService.update).not.toHaveBeenCalled();
     });
 
-    it('assigns departmentId/branchId customFields via an elevated system context', async () => {
+    it('resolves branchErpId to the mivend Branch.id before assigning departmentId/branchId customFields', async () => {
+        adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
+        branchRepo.findOne.mockResolvedValue({ id: 'branch-row-5', erpId: 'branch-a' });
+        await service.upsert(ctx, {
+            erpId: 'emp-1',
+            email: 'admin@example.com',
+            departmentErpId: 'dept-sales',
+            branchErpId: 'branch-a',
+        });
+        expect(branchRepo.findOne).toHaveBeenCalledWith({ where: { erpId: 'branch-a' } });
+        expect(administratorService.update).toHaveBeenCalledWith(
+            systemCtx,
+            expect.objectContaining({
+                id: 'admin-1',
+                customFields: {
+                    departmentId: 'dept-sales',
+                    branchId: 'branch-row-5',
+                    position: null,
+                },
+            }),
+        );
+    });
+
+    it('leaves branchId null (never fabricated) when branchErpId does not resolve to a known Branch', async () => {
+        adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
+        branchRepo.findOne.mockResolvedValue(null);
+        await service.upsert(ctx, {
+            erpId: 'emp-1',
+            email: 'admin@example.com',
+            departmentErpId: 'dept-sales',
+            branchErpId: 'branch-unknown',
+        });
+        expect(administratorService.update).toHaveBeenCalledWith(
+            systemCtx,
+            expect.objectContaining({
+                customFields: { departmentId: 'dept-sales', branchId: null, position: null },
+            }),
+        );
+    });
+
+    it('leaves branchId null without querying Branch when branchErpId is omitted', async () => {
         adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
         await service.upsert(ctx, {
             erpId: 'emp-1',
             email: 'admin@example.com',
             departmentErpId: 'dept-sales',
-            branchId: 'branch-a',
         });
+        expect(branchRepo.findOne).not.toHaveBeenCalled();
         expect(administratorService.update).toHaveBeenCalledWith(
             systemCtx,
             expect.objectContaining({
-                id: 'admin-1',
-                customFields: { departmentId: 'dept-sales', branchId: 'branch-a', position: null },
+                customFields: { departmentId: 'dept-sales', branchId: null, position: null },
             }),
         );
     });

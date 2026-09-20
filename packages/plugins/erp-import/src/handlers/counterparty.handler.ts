@@ -19,7 +19,14 @@ export class CounterpartyHandler {
             priceType: record.priceType,
             isActive: record.isActive,
             departmentId: record.departmentId ?? null,
-            branchId: record.branchId ?? null,
+            // branchId is deliberately never set here — no automatic ERP-driven or
+            // rule-based branch assignment for counterparties exists yet (tracked in issue #65,
+            // "Counterparty→Branch auto-assignment worker"). Leaving it unset (rather than
+            // passing through record.branchId raw) avoids exactly the bug docs/access-control.md
+            // now calls out: a raw ERP-sourced id here is not the same value space as the mivend
+            // Branch.id every real branchId consumer (AccessScopeService, BranchSettingsService,
+            // Warehouse.branchId) expects. #65's worker is the intended, single place that will
+            // ever set this field, once it exists.
             erpGroupLabel: record.erpGroupLabel ?? null,
         });
     }

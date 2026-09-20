@@ -14,13 +14,20 @@ import {
     UserInputError,
 } from '@vendure/core';
 
+import { Branch } from './entities/branch.entity';
 import { loggerCtx } from './types';
 
 export interface EmployeeRecordInput {
     erpId: string;
     email: string;
     departmentErpId: string;
-    branchId?: string | null;
+    // The ERP's own branch/point code (Branch.erpId) — NOT a mivend Branch.id. Resolved against
+    // Branch the same way WarehouseService.upsert resolves WarehouseChanged.branchId, before
+    // ever being written to Administrator.customFields.branchId — see docs/access-control.md's
+    // "Branch vs Department" section for why this resolution step is mandatory (a raw, unresolved
+    // ERP id here is a different value space than the mivend Branch.id every other branchId
+    // consumer — AccessScopeService, BranchSettingsService, Warehouse.branchId — expects).
+    branchErpId?: string | null;
     roleCode?: string | null;
     position?: string | null;
 }
@@ -52,11 +59,13 @@ export class EmployeeService {
             return;
         }
 
+        const branchId = await this.resolveBranchId(ctx, record);
+
         const updateInput: UpdateAdministratorInput = {
             id: admin.id,
             customFields: {
                 departmentId: record.departmentErpId,
-                branchId: record.branchId ?? null,
+                branchId,
                 position: record.position ?? null,
             },
         };
@@ -79,9 +88,33 @@ export class EmployeeService {
         const systemCtx = await this.getSystemContext(ctx);
         await this.administratorService.update(systemCtx, updateInput);
         Logger.verbose(
-            `Assigned department=${record.departmentErpId} branch=${record.branchId ?? 'null'} to administrator ${record.email}`,
+            `Assigned department=${record.departmentErpId} branch=${branchId ?? 'null'} to administrator ${record.email}`,
             loggerCtx,
         );
+    }
+
+    // Mirrors WarehouseService.upsert's resolution of an ERP-side branch/point code into the
+    // mivend Branch.id every other branchId consumer (AccessScopeService, BranchSettingsService,
+    // Warehouse.branchId) expects — see EmployeeRecordInput.branchErpId's own comment. Leaves
+    // branchId null (never fabricated) rather than skipping the whole record when the code
+    // doesn't resolve to a known Branch yet — same "assign manually later" fallback Warehouse
+    // uses, since org-structure import for other fields must still proceed.
+    private async resolveBranchId(
+        ctx: RequestContext,
+        record: EmployeeRecordInput,
+    ): Promise<string | null> {
+        if (!record.branchErpId) return null;
+        const branch = await this.connection
+            .getRepository(ctx, Branch)
+            .findOne({ where: { erpId: record.branchErpId } });
+        if (!branch) {
+            Logger.warn(
+                `employee erpId=${record.erpId}: branch erpId=${record.branchErpId} not found — leaving branchId unassigned`,
+                loggerCtx,
+            );
+            return null;
+        }
+        return String(branch.id);
     }
 
     private async getSystemContext(ctx: RequestContext): Promise<RequestContext> {

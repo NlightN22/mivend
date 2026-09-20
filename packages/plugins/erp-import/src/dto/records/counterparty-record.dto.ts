@@ -45,7 +45,10 @@ export class CounterpartyRecordDto {
     @ApiPropertyOptional({
         type: String,
         nullable: true,
-        description: 'erpId of the branch this counterparty belongs to (see Branch).',
+        description:
+            'Accepted but currently never persisted — no automatic branch-assignment rule ' +
+            'exists yet (issue #65). A future value must resolve to a mivend Branch.id, not be ' +
+            'passed through raw.',
     })
     branchId?: string | null;
 

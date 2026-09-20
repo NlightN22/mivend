@@ -159,6 +159,41 @@ Resources whose visibility is derived from another resource (e.g. `/documents` i
 counterparty visibility) call `resolveCounterpartyScope` directly — they do not get their own
 `resolve<Resource>Scope` method duplicating the same logic.
 
+### `Branch` is mivend's own entity; `Department` is a pure 1C mirror — never conflate the two
+
+These are two different entities, owned by two different systems, and must never be treated as
+interchangeable id spaces:
+
+- **`Department`** (`packages/plugins/access-control/src/entities/department.entity.ts`) is
+  entirely 1C's own org-structure data — 1C's "Подразделение". It is only ever upserted from
+  Integration Service's `department` Kafka stream (`DepartmentService.upsert`); there is no
+  manual-creation path. Treat it as read-only, informational org-structure data mirrored for
+  display and for `Administrator.customFields.departmentId`/`Counterparty.departmentId` (both
+  hold 1C's `Department.erpId` directly, unresolved — that's correct here, since the whole point
+  is to show "which 1C division" something belongs to). Not a scope-filter axis by itself,
+  though the `department` `AccessScopeKind` (own/department/all) borrows its name from it.
+- **`Branch`** (`.../entities/branch.entity.ts`) is mivend's own entity for warehouse/ATP
+  consolidation and branch-scoped access control — it is **not** a 1:1 mirror of anything in 1C.
+  A `Branch` row can be created two ways: resolved from an ERP-side branch/point code
+  (`BranchService.upsert`, matched by `Branch.erpId`, itself the same GUID space as 1C's
+  `Department`/division concept — see `department.handler.ts`'s own comment for why that
+  overlap is deliberate, not a bug) **or** created manually with no ERP link at all
+  (`BranchService.createManual`, staff-managed, independent of ERP entirely — issue #80). Either
+  way, **every real consumer of a `branchId` field must hold the mivend `Branch.id` (the
+  Vendure-generated primary key), never a raw ERP id** — `Warehouse.branchId`
+  (`WarehouseService.upsert`), `BranchSettings.branchId`, and the `AccessScopeService`/
+  `RoleScopeConfigService` scope-config UI all use and compare `Branch.id` values.
+  `Administrator.customFields.branchId` (via `EmployeeService.upsert`) resolves an incoming ERP
+  branch code the same way before storing it — never store an ERP id there directly.
+  `Counterparty.branchId` currently has **no automatic assignment at all** (deliberately left
+  unset — see issue #65, "Counterparty→Branch auto-assignment worker"); a future writer of that
+  field must follow the same resolve-to-`Branch.id` rule.
+- **Unrelated naming collision, don't confuse the two**: `docs/architecture.md` also uses the
+  word "Branch" for a completely different concept — a **deployed server instance**
+  (`INSTANCE_TYPE=branch`, the "Central Hub / Branch Instance" topology). That has nothing to do
+  with the `Branch` _entity_ described here; it's the same English word for two unrelated ideas
+  in two different parts of this codebase's own vocabulary.
+
 ### Branch scope is a separate axis from own/department/all, and lives on different entities per resource
 
 `branchId` is a hard, additive filter — orthogonal to the `own`/`department`/`all` scope above,

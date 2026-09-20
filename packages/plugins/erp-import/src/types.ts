@@ -60,10 +60,13 @@ export interface CounterpartyRecord {
     paymentDelayDays: number;
     priceType: string;
     isActive: boolean;
-    // erpId of the Department/Branch this counterparty belongs to — see AccessScopeService
-    // (packages/plugins/access-control), which resolves 'department' scope by comparing these
-    // against the caller's own department/branch.
+    // departmentId: erpId of the 1C Department this counterparty belongs to — pure 1C org data,
+    // mirrored as-is (informational; see docs/access-control.md's "Branch vs Department" note).
     departmentId?: string | null;
+    // branchId: accepted on the wire but deliberately never written anywhere yet — see
+    // CounterpartyHandler.upsert's own comment. No automatic branch-assignment rule exists
+    // (tracked in issue #65); a future value here must resolve to a mivend Branch.id, never be
+    // passed through raw.
     branchId?: string | null;
     // Free-text group/segment label from the ERP — display and filtering only, never used for
     // access control or business rules (1C's own grouping concept is inconsistent). See

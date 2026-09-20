@@ -19,9 +19,11 @@ export class EmployeeRecordDto {
         type: String,
         nullable: true,
         description:
-            'Physical branch/point code — operational visibility, independent of departmentId.',
+            'erpId of the branch/point this employee works at (see Branch) — resolved to a ' +
+            'mivend Branch.id before being stored, same as WarehouseChanged.branchId. ' +
+            'Operational visibility, independent of departmentId.',
     })
-    branchId?: string | null;
+    branchErpId?: string | null;
 
     @ApiPropertyOptional({
         type: String,

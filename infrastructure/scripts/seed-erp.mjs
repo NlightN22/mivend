@@ -988,10 +988,10 @@ async function main() {
     }
 
     const employees = [
-        { erpId: 'emp-001', email: 'ivan.operator@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'operator', position: 'Sales operator' },
-        { erpId: 'emp-002', email: 'petr.manager@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'manager', position: 'Sales manager' },
-        { erpId: 'emp-003', email: 'olga.depthead@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'department-head', position: 'Head of sales' },
-        { erpId: 'emp-004', email: 'nikolai.director@mivend.dev', departmentErpId: 'dept-sales', branchId: 'branch-central', roleCode: 'general-director', position: 'General director' },
+        { erpId: 'emp-001', email: 'ivan.operator@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'operator', position: 'Sales operator' },
+        { erpId: 'emp-002', email: 'petr.manager@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'manager', position: 'Sales manager' },
+        { erpId: 'emp-003', email: 'olga.depthead@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'department-head', position: 'Head of sales' },
+        { erpId: 'emp-004', email: 'nikolai.director@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'general-director', position: 'General director' },
     ];
     console.log(`Sending ${employees.length} employees...`);
     const employeeResult = await postBatch(`seed-employees-${run}`, employees.map(data => ({ type: 'employee', data })));
