@@ -126,6 +126,62 @@ edit the issue's own body to reflect the current, real contract shape and implem
 a body left describing an outdated schema is exactly what caused this incident; a comment added
 on top of a stale body doesn't fix that, since the body is what gets read first on the next pass.
 
+**Second real incident, same day, immediately following the fix above**: even after re-verifying
+against the actual latest contract version, the resulting stream handler still silently left four
+real fields (`customer_id`/`organization_id`/`warehouse_id`/`quantity` on `order-changed`)
+unconsumed with zero written decision anywhere — not the handler's own comment block, not
+`docs/ai/erp-streams-map.md`, not the issue body — while three _other_ unconsumed fields on the
+same message (`appliedDiscountAmount`/`priceTypeId`/`comment`) did get an explicit documented
+reason. Checking the current version was necessary but not sufficient — every field the current
+contract carries also needs an explicit, individual, written fate. 1C/Integration Service is the
+source of truth (see this skill's own "ERP is master for business data") — a field silently
+dropped on the floor is silently disagreeing with the source of truth without saying so anywhere
+a human or the next session would find it.
+
+### Mandatory checklist — implementer's side
+
+Before calling any stream handler (new or changed) done, produce and satisfy this checklist —
+not from memory, from actually re-deriving it against the real current contract each time:
+
+1. **Latest version, verified, not assumed.** `npm view @nlightn22/event-contracts version
+--registry=https://npm.pkg.github.com` (or `versions`) run fresh, this session, for this
+   change — never reused from an earlier check in the same conversation if any time has passed,
+   never taken from an issue/comment/doc.
+2. **Full current field list, read from the real `.d.ts`, not from an issue's field list.** `npm
+pack`+extract to a scratch dir (or read the freshly-bumped `node_modules` copy) and list every
+   single field on every message this handler touches — header message and every nested/repeated
+   sub-message. Write this list down somewhere durable (the handler's own comment block at
+   minimum) as the thing you're checking off against, not just in your own working memory.
+3. **Every field on that list gets one of exactly two outcomes, no third option:**
+    - **Consumed** — read, mapped, and written/used somewhere real.
+    - **Explicitly deferred** — a comment, at the point in code where you'd otherwise read it (or
+      immediately next to where sibling fields on the same message ARE consumed), stating: which
+      field, why it's not consumed _right now_ (redundant with already-known local data / no
+      current mivend feature reads it yet / blocked on a specific other issue), and what would
+      make it worth consuming later. "Not needed" and "not needed yet, see #NNN" are both valid —
+      silence is not.
+4. **The same two-outcome accounting goes in three places, not one**: the handler's own comment
+   block (for the next person reading the code), `docs/ai/erp-streams-map.md`'s row for that
+   stream (for the next person doing the streams-map lookup), and the tracking issue's own body
+   (for the next person reading the issue) — the same incident this skill already documents above
+   (a body describing a stale schema) applies equally to a body that's silent about a field
+   instead of wrong about it. Don't rely on only one of the three; each serves a different reader
+   who won't necessarily check the other two.
+
+### Mandatory checklist — auditor's side
+
+A final audit of any stream-consumption change (`mivend.audit.*`'s own remit, AGENTS.md's "Final
+audit" section) must, as one of its own checklist items, independently re-derive the full current
+field list per the implementer's checklist above (don't trust the implementer's own list without
+re-pulling the `.d.ts` yourself) and confirm **every single field has a documented outcome**
+(consumed or explicitly deferred, findable in at least the handler's own comment). Any field with
+no outcome at all — not wrongly documented, just silent — is a real finding on its own, the same
+severity as a functional bug: it means the source-of-truth system is asserting something mivend
+is neither acting on nor has decided not to act on, an open question left open by omission. The
+audit does not pass with an unresolved field left as "probably fine, didn't flag it" — every field
+gets tracked down to either a real implementation or a real, written, reasoned deferral before the
+audit reports done.
+
 ## Kafka consumer resilience patterns
 
 Live incident, 2026-09-05: `plugin-erp-integration`'s Kafka consumer (`KafkaConsumerService`)
