@@ -1,5 +1,5 @@
 import { AnyRoute } from '@tanstack/react-router';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, Button, graphql, ListPage } from '@vendure/dashboard';
 import { toast } from 'sonner';
 
@@ -35,8 +35,30 @@ const createAdministratorFromErpUserDocument = graphql(`
     }
 `);
 
+// erpId -> Department.name, for the departmentId column below — the raw erpId alone means
+// nothing to a human reviewing this list. Same resolution the manager-portal's own Settings >
+// Users > Pending tab already does (UsersPage.vue's departmentName()); this page had no
+// equivalent (a real, reported gap — the column just showed the raw id).
+const departmentsDocument = graphql(`
+    query DepartmentsForErpUsersDashboard {
+        departments {
+            erpId
+            name
+        }
+    }
+`);
+
 export function PendingErpUsersPage({ route }: { route: AnyRoute }) {
     const refreshRef = useRef<() => void>(() => {});
+    const [departmentNames, setDepartmentNames] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        void api.query(departmentsDocument).then(data => {
+            setDepartmentNames(
+                Object.fromEntries(data.departments.map(d => [d.erpId, d.name])),
+            );
+        });
+    }, []);
 
     async function handleCreate(erpId: string, label: string): Promise<void> {
         try {
@@ -79,6 +101,14 @@ export function PendingErpUsersPage({ route }: { route: AnyRoute }) {
             }}
             defaultColumnOrder={['fullName', 'email', 'erpId', 'departmentId', 'firstSeenAt', 'actions']}
             additionalColumns={{
+                departmentId: {
+                    meta: { dependencies: ['departmentId'] },
+                    header: 'Department',
+                    cell: ({ row }) =>
+                        row.original.departmentId
+                            ? (departmentNames[row.original.departmentId] ?? row.original.departmentId)
+                            : '—',
+                },
                 actions: {
                     meta: { dependencies: ['erpId', 'fullName', 'email'] },
                     header: 'Actions',
