@@ -56,10 +56,13 @@ export class AccessScopeService {
     // service that writes data owned by a Counterparty (e.g. TradingPointService) so the
     // own/department/all switch isn't duplicated per plugin.
     //
-    // `counterparty.branchId` is accepted for call-site convenience (every caller already has
-    // the full row in hand) but deliberately never compared here — see
-    // CounterpartyService.findVisible's identical department-case comment for why
-    // Counterparty.branchId must never be a scope filter.
+    // `counterparty.departmentId`/`branchId` are accepted for call-site convenience (every
+    // caller already has the full row in hand) but currently never compared — see
+    // CounterpartyService.findVisible's identical department-case comment. `departmentId` is
+    // pure informational 1C data, never a scope gate. `branchId` will become the real gate once
+    // Counterparty.branchId is actually populated (issue #65/#123) — until then this is
+    // deliberately permissive (same temporary state as findVisible), not silently denying every
+    // department/branch-scoped write.
     async assertCounterpartyWritable(
         ctx: RequestContext,
         counterparty: {
@@ -83,9 +86,6 @@ export class AccessScopeService {
                 }
                 break;
             case 'department':
-                if (counterparty.departmentId !== (scope.departmentId ?? null)) {
-                    throw new ForbiddenError();
-                }
                 break;
             case 'all':
                 break;

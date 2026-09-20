@@ -92,27 +92,13 @@ describe('AccessScopeService', () => {
     });
 
     describe('assertCounterpartyWritable', () => {
-        it('"department" scope ignores a branchId mismatch — only departmentId gates the write', async () => {
+        // Neither departmentId nor branchId gates a write for "department" scope today —
+        // departmentId is pure display information (1C org data), never a scope gate; branchId
+        // will become the real gate once Counterparty.branchId is populated (issue #65/#123),
+        // but until then this is deliberately permissive.
+        it('"department" scope never rejects — a departmentId mismatch is not gated (temporary, pending issue #65/#123)', async () => {
             administratorService.findOneByUserId.mockResolvedValue(
                 mockAdmin('admin-6', { departmentId: 'dept-1', branchId: 'branch-a' }),
-            );
-            roleScopeConfigService.maxScopeFor.mockResolvedValue('department');
-
-            // Counterparty.branchId is always null today (see docs/access-control.md's "Branch
-            // scope" section) — this must not throw despite the branch mismatch with the
-            // caller's own branchId.
-            await expect(
-                service.assertCounterpartyWritable(ctx, {
-                    assignedManagerId: null,
-                    departmentId: 'dept-1',
-                    branchId: null,
-                }),
-            ).resolves.toBeUndefined();
-        });
-
-        it('"department" scope still rejects a departmentId mismatch', async () => {
-            administratorService.findOneByUserId.mockResolvedValue(
-                mockAdmin('admin-7', { departmentId: 'dept-1', branchId: 'branch-a' }),
             );
             roleScopeConfigService.maxScopeFor.mockResolvedValue('department');
 
@@ -122,7 +108,7 @@ describe('AccessScopeService', () => {
                     departmentId: 'dept-OTHER',
                     branchId: null,
                 }),
-            ).rejects.toThrow();
+            ).resolves.toBeUndefined();
         });
 
         it('"own" scope rejects when assignedManagerId does not match the caller', async () => {

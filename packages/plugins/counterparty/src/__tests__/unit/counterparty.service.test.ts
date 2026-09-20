@@ -417,12 +417,13 @@ describe('CounterpartyService', () => {
             );
         });
 
-        // Counterparty is never filtered by branchId, even when the caller's scope carries one
-        // — see docs/access-control.md's "Branch scope" section. A prior bug filtered by
-        // `c.branchId = scope.branchId` too; it only "worked" because both sides happened to
-        // hold the same raw ERP id before Administrator.customFields.branchId was fixed to hold
-        // a real Branch.id.
-        it('filters by departmentId only for "department" scope, ignoring any branchId on the scope', async () => {
+        // Neither departmentId nor branchId filters Counterparty for "department" scope today.
+        // departmentId (1C org data) is pure display information, never an access-scope gate —
+        // see docs/access-control.md's "Branch vs Department" section. branchId would be the
+        // real gate once Counterparty.branchId is populated (issue #65/#123), but until then
+        // this is deliberately a no-op (same as 'all') rather than showing zero counterparties
+        // to every department/branch-scoped role.
+        it('applies no filter for "department" scope (temporary, pending issue #65/#123)', async () => {
             const qb = mockQueryBuilder();
             (
                 mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
@@ -437,9 +438,7 @@ describe('CounterpartyService', () => {
 
             await service.findVisible(mockCtx);
 
-            expect(qb.andWhere).toHaveBeenCalledWith('c.departmentId = :scopeDept', {
-                scopeDept: 'dept-1',
-            });
+            expect(qb.andWhere).not.toHaveBeenCalled();
         });
 
         it('applies no filter for "all" scope', async () => {

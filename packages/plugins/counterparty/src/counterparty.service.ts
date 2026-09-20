@@ -333,21 +333,19 @@ export class CounterpartyService {
                 this.accessScopeService.applyOwnCounterpartyFilter(qb, 'c', scope.administratorId);
                 break;
             case 'department':
-                // departmentId only — never Counterparty.branchId. Per docs/access-control.md's
-                // "Branch scope" section, Counterparty.branchId is display/default-assignment
-                // only, never a scope filter: a chain/network customer can have trading points
-                // served by several branches, so filtering the parent Counterparty by branch
-                // would incorrectly hide it from (or wrongly show all of it to) a branch that
-                // only services part of it. The real branch-scope filter for anything
-                // order/invoice-shaped is each row's own denormalized branchId (see
-                // OrderVisibilityService/InvoiceVisibilityService's identical comment) — this
-                // query previously also filtered by `c.branchId = :scopeBranch`, which happened
-                // to "work" only because Administrator.customFields.branchId and
-                // Counterparty.branchId both held the same raw, unresolved ERP id before both
-                // were fixed to their documented conventions; that was a bug, not a feature.
-                qb.andWhere('c.departmentId = :scopeDept', {
-                    scopeDept: scope.departmentId ?? null,
-                });
+                // Corrected direction (2026-09-20, per an explicit product decision): `Department`
+                // (1C's own org unit) is pure display/informational data and must NEVER gate
+                // visibility of anything — only `Branch` (mivend's own entity) is a real
+                // access-scope dimension. `departmentId` is deliberately never compared here.
+                //
+                // TEMPORARY: Counterparty has no populated `branchId` yet (no automatic
+                // assignment exists — see issue #65/#123, "unsorted, needs manual triage").
+                // Until that per-entity triage workflow ships, this case applies NO filter at
+                // all (same as 'all') rather than showing zero counterparties to every
+                // department/branch-scoped role. Once #65/#123 land and Counterparty.branchId is
+                // populated for real, this must filter by `c.branchId = scope.branchId` (with an
+                // `OR c.branchId IS NULL` carve-out routing unassigned rows to a separate triage
+                // list, not silently hiding or silently showing them here).
                 break;
             case 'all':
                 break;

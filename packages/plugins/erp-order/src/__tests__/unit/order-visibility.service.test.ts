@@ -64,7 +64,7 @@ describe('OrderVisibilityService', () => {
         );
     });
 
-    it('filters by department + the order\'s own servicing branch for "department" scope', async () => {
+    it('filters by the order\'s own servicing branch for "department" scope, ignoring departmentId entirely', async () => {
         accessScopeService.resolveOrderScope.mockResolvedValue({
             kind: 'department',
             departmentId: 'dept-1',
@@ -76,10 +76,12 @@ describe('OrderVisibilityService', () => {
         // Filters by the order's own denormalized branchId (customFieldsBranchid), not
         // Counterparty.branchId — a chain account's orders can be serviced by a different
         // branch than the customer's nominal "home" branch, see order-visibility.service.ts.
-        // The `OR ... IS NULL` clause is required, not optional — see the next test.
+        // departmentId is never compared — Department (1C org data) is pure display
+        // information, never an access-scope gate. The `OR ... IS NULL` clause is required,
+        // not optional — see the next test.
         expect(qb.andWhere).toHaveBeenCalledWith(
-            'counterparty.departmentId = :departmentId AND ("order"."customFieldsBranchid" = :branchId OR "order"."customFieldsBranchid" IS NULL)',
-            { departmentId: 'dept-1', branchId: 'branch-1' },
+            '("order"."customFieldsBranchid" = :branchId OR "order"."customFieldsBranchid" IS NULL)',
+            { branchId: 'branch-1' },
         );
     });
 

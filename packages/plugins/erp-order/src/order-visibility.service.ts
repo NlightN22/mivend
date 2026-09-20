@@ -89,10 +89,10 @@ export class OrderVisibilityService {
                 // (`${qb.alias}."customFieldsBranchid"`, set at placement time from the
                 // customer's preferred TradingPoint — see ErpOrderService.onOrderPlaced), not
                 // Counterparty.branchId. A chain account's "home" branch and the branch that
-                // actually services a given order can differ; department-scoped roles (e.g.
-                // branch-office-director) must see orders their own branch handles, not orders
-                // for customers nominally "based" there. See docs/access-control.md's "Branch
-                // scope is a separate axis" section.
+                // actually services a given order can differ. `departmentId` is deliberately
+                // never compared — Department (1C org data) is pure display information, never
+                // an access-scope gate; only Branch (mivend's own entity) is (2026-09-20
+                // correction, see docs/access-control.md's "Branch vs Department" section).
                 // `order` is a reserved SQL keyword — TypeORM's alias.property auto-quoting
                 // only fires for a bare `alias.propertyName` it can resolve against entity
                 // metadata; mixing the raw alias with an already-quoted raw column name here
@@ -106,17 +106,16 @@ export class OrderVisibilityService {
                 // branchId when the customer has a `preferredTradingPointId` set, which is
                 // optional (a customer can have trading points and place real orders without
                 // ever marking one preferred). Without this OR, `column = :branchId` is `NULL`
-                // (neither true nor false) for every such order in Postgres, so a plain AND
-                // silently hid it from every department-scoped viewer regardless of department —
-                // a real bug, not just a test artifact (confirmed against live seeded data: a
-                // real order with a real matching departmentId was invisible to its own
-                // department head purely because branchId was null). A branch-less order still
-                // requires the department to match — it's just not further narrowed by branch,
-                // consistent with the 'own' scope's identical "no branch restriction" carve-out
-                // above.
+                // (neither true nor false) for every such order in Postgres, so a plain
+                // comparison silently hides it from every branch-scoped viewer — a real bug
+                // confirmed against live seeded data, not just a test artifact. TEMPORARY: this
+                // carve-out currently makes every branch-less order visible to every
+                // branch-scoped viewer, rather than routing it to a dedicated triage list — see
+                // issue #123 for the real "unsorted, needs manual triage" workflow this should
+                // become once designed.
                 qb.andWhere(
-                    `counterparty.departmentId = :departmentId AND ("${qb.alias}"."customFieldsBranchid" = :branchId OR "${qb.alias}"."customFieldsBranchid" IS NULL)`,
-                    { departmentId: scope.departmentId ?? null, branchId: scope.branchId ?? null },
+                    `("${qb.alias}"."customFieldsBranchid" = :branchId OR "${qb.alias}"."customFieldsBranchid" IS NULL)`,
+                    { branchId: scope.branchId ?? null },
                 );
                 break;
             case 'all':

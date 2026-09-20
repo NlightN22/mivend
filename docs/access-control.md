@@ -143,10 +143,11 @@ async findVisible(ctx: RequestContext, args: ListArgs) {
       qb.where('c.assignedManagerId = :id', { id: scope.administratorId });
       break;
     case 'department':
-      // departmentId only — Counterparty is never filtered by branchId. See "Branch scope is a
-      // separate axis" below for why: a resource with its own denormalized branchId (Order,
-      // Invoice, TradingPoint) applies `scope.branchId` against *that* column instead.
-      qb.where('c.departmentId = :d', { d: scope.departmentId });
+      // `departmentId` never gates visibility of anything, here or anywhere else — see "Branch
+      // scope is the only real filtering axis" below. `branchId` is the only real filter axis,
+      // but *which column* it applies to is resource-specific (see that section for why
+      // Counterparty itself is a special case, currently unfiltered) — this generic example
+      // intentionally does not prescribe one for Counterparty.
       break;
     case 'all':
       break;
@@ -170,8 +171,24 @@ interchangeable id spaces:
   manual-creation path. Treat it as read-only, informational org-structure data mirrored for
   display and for `Administrator.customFields.departmentId`/`Counterparty.departmentId` (both
   hold 1C's `Department.erpId` directly, unresolved — that's correct here, since the whole point
-  is to show "which 1C division" something belongs to). Not a scope-filter axis by itself,
-  though the `department` `AccessScopeKind` (own/department/all) borrows its name from it.
+  is to show "which 1C division" something belongs to). **`departmentId` must never gate
+  visibility of anything, anywhere, full stop** (2026-09-20 product decision, corrects an earlier
+  version of this doc/several services that did filter by it — see "Branch scope" below). The
+  `AccessScopeKind` enum still has a `'department'` value for historical reasons — its cases in
+  `AccessScopeService`/`CounterpartyService`/`OrderVisibilityService`/`InvoiceVisibilityService`
+  no longer compare `departmentId` at all; renaming the enum value itself (e.g. to `'branch'`) is
+  an open question for issue #123, not done yet.
+  **Confirmed against the real Kafka contracts** (`@nlightn22/event-contracts`,
+  `counterparty_changed.proto`/`user_changed.proto`): 1C only ever sends `department_id` for
+  both `Counterparty` and `Administrator`(`user`) — there is no `branch_id` field in either
+  contract. The one place a `branch_id` field does exist on the wire (`warehouse_changed.proto`)
+  is explicitly documented in that .proto's own comment as "1C division/branch key
+  (Подразделение_Key)" — i.e. the exact same 1C division-id space as `Department`, just reused
+  for warehouses; 1C itself has no separate "branch" concept distinct from department at all.
+  `branchId` as mivend understands it below is **entirely mivend's own invention**, never sourced
+  from 1C directly except as an optional convenience match against that same reused GUID (see
+  `Branch` below) — flagged to the Integration Service team to reconsider that field's naming,
+  search-platform#140.
 - **`Branch`** (`.../entities/branch.entity.ts`) is mivend's own entity for warehouse/ATP
   consolidation and branch-scoped access control — it is **not** a 1:1 mirror of anything in 1C.
   A `Branch` row can be created two ways: resolved from an ERP-side branch/point code
@@ -194,37 +211,56 @@ interchangeable id spaces:
   with the `Branch` _entity_ described here; it's the same English word for two unrelated ideas
   in two different parts of this codebase's own vocabulary.
 
-### Branch scope is a separate axis from own/department/all, and lives on different entities per resource
+### Branch scope is the only real filtering axis — `departmentId` never gates anything
 
-`branchId` is a hard, additive filter — orthogonal to the `own`/`department`/`all` scope above,
-not a fourth value in that enum. When an administrator's `customFields.branchId` is set, it is
-always applied as `AND branchId = :branchId` before the own/department/all logic narrows further
-within that branch. Central-only roles (`general-director`, `portal-admin`) have `branchId = null`
-— no branch filter is applied, they see every branch.
+**`departmentId` (1C's own "Подразделение") is pure display/informational data — it must never
+gate visibility of anything, in any resource, full stop.** `branchId` (mivend's own `Branch`
+entity) is the sole real access-scope filter. The `AccessScopeKind` enum still has a
+`'department'` value and `AccessScope.departmentId` still exists as a field for now (legacy
+naming — renaming to something like `'branch'` is an open question for issue #123, not done
+yet), but every consumer's `'department'` case must compare `branchId` only, never
+`departmentId`. This corrects an earlier version of this section/several services
+(`CounterpartyService.findVisible`, `AccessScopeService.assertCounterpartyWritable`,
+`OrderVisibilityService`, `InvoiceVisibilityService`) that did filter by `departmentId` — see
+"Branch vs Department" above for why, and for the confirmed proto evidence that 1C never sends a
+distinct "branch" concept at all.
+
+When an administrator's `customFields.branchId` is set, it is applied as the sole scope filter
+for `'department'`-kind scope (name aside). Central-only roles (`general-director`,
+`portal-admin`) have `branchId = null` — no branch filter is applied, they see everything.
 
 **Where `branchId` actually lives is not the same field for every resource — this was a real
 design decision, not an oversight:**
 
 - **`Counterparty.branchId`** is the customer's _home/reporting_ branch — display and default
-  assignment only, **never used as an access-scope filter**. A chain/network customer (e.g. a
-  multi-location fuel station chain) can have trading points served by several different
-  branches; filtering the parent `Counterparty` record itself by branch would incorrectly hide it
-  from — or wrongly show all of it to — a branch that only services part of it.
-  **Historical bug, fixed**: `CounterpartyService.findVisible`/`AccessScopeService.assertCounterpartyWritable`
-  used to violate this rule and filter by `c.branchId = scope.branchId` anyway. It "worked" only
-  by accident — `Administrator.customFields.branchId` and `Counterparty.branchId` both held the
-  same raw, unresolved ERP id before the "Branch vs Department" fix above, so the comparison
-  coincidentally matched. Once `Administrator.customFields.branchId` was fixed to hold a real
-  `Branch.id` (and `Counterparty.branchId` was fixed to stay `null` until issue #65), that
-  accidental match broke — department-scoped staff with a branch assigned saw **zero**
-  counterparties. Fixed by removing the branch comparison from both, matching this section's
-  documented design (which predates the bug, and was simply never enforced in code).
+  assignment only, **never used as an access-scope filter on the `Counterparty` record itself**.
+  A chain/network customer (e.g. a multi-location fuel station chain) can have trading points
+  served by several different branches; filtering the parent `Counterparty` record itself by
+  branch would incorrectly hide it from — or wrongly show all of it to — a branch that only
+  services part of it.
+  **Historical bugs, fixed (2026-09-20, two rounds)**: (1) `CounterpartyService.findVisible`/
+  `AccessScopeService.assertCounterpartyWritable` used to filter by `c.branchId =
+scope.branchId` anyway. It "worked" only by accident — `Administrator.customFields.branchId`
+  and `Counterparty.branchId` both held the same raw, unresolved ERP id before the "Branch vs
+  Department" fix above, so the comparison coincidentally matched; once
+  `Administrator.customFields.branchId` was fixed to hold a real `Branch.id`, that accidental
+  match broke and department-scoped staff with a branch assigned saw **zero** counterparties.
+  (2) The first fix's replacement — filtering by `departmentId` instead — was itself wrong per
+  the corrected rule above (`departmentId` must never filter anything). **Current state,
+  deliberately temporary**: `Counterparty`'s `'department'`-kind case applies **no filter at
+  all** (same as `'all'`) until issue #65/#123's real branch-assignment-and-triage workflow
+  ships and `Counterparty.branchId` is actually populated for real accounts. Once it is, this
+  must filter by `c.branchId = scope.branchId`, with unassigned (`branchId IS NULL`) rows routed
+  to a dedicated triage list rather than silently shown or hidden here.
 - **`TradingPoint.servicingBranchId`** is the real access-scope filter for a customer's locations
   and everything derived from them (`Order`, `Reservation` inherit `branchId` from the
   `TradingPoint` selected at creation time, denormalized onto the row for filtering without a
   join — same pattern as `Reservation.stockLocationId`). Defaults to the parent `Counterparty`'s
   `branchId` at `TradingPoint` creation time (covers the ~90–95% single-branch case with zero
-  manual work); explicitly overridable per point for chain accounts.
+  manual work); explicitly overridable per point for chain accounts. `OrderVisibilityService`/
+  `InvoiceVisibilityService` already correctly filtered by this denormalized `branchId` (never
+  `Counterparty.branchId`) before today's fix — the only change there was dropping the
+  additional, wrong `departmentId` comparison they also used to apply.
 
 This is the standard **Key Account Management vs. Territory Management** split used in mature B2B
 CRM/ERP systems (Salesforce territory model, SAP Account/Territory): one axis owns the commercial

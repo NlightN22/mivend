@@ -92,7 +92,7 @@ describe('InvoiceVisibilityService', () => {
         );
     });
 
-    it('filters by department + the invoice\'s own denormalized branch for "department" scope', async () => {
+    it('filters by the invoice\'s own denormalized branch for "department" scope, ignoring departmentId entirely', async () => {
         accessScopeService.resolveInvoiceScope.mockResolvedValue({
             kind: 'department',
             departmentId: 'dept-1',
@@ -101,10 +101,9 @@ describe('InvoiceVisibilityService', () => {
 
         await service.findVisible(mockCtx);
 
-        expect(qb.andWhere).toHaveBeenCalledWith(
-            'counterparty.departmentId = :departmentId AND invoice.branchId = :branchId',
-            { departmentId: 'dept-1', branchId: 'branch-1' },
-        );
+        expect(qb.andWhere).toHaveBeenCalledWith('invoice.branchId = :branchId', {
+            branchId: 'branch-1',
+        });
     });
 
     it('applies no scope filter for "all" scope', async () => {
