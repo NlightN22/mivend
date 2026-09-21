@@ -57,9 +57,19 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                 const facet = (id: string): unknown => {
                     const entry = filter?._and?.find(f => id in f);
                     const raw = entry?.[id];
-                    // Checkbox-style faceted filters always send an array, even for a single
-                    // selection — this page only ever acts on the first choice.
-                    return Array.isArray(raw) ? raw[0] : raw;
+                    // Checkbox-style faceted filters (e.g. a String column) always send an
+                    // array, even for a single selection. A Boolean column's facetedFilter
+                    // renders as radio buttons instead (@vendure/dashboard's own
+                    // DataTableFacetedFilter branches on fieldInfo.type === 'Boolean') and calls
+                    // `column.setFilterValue({ eq: value })` — sending that object straight to
+                    // the resolver as-is (a real, live bug caught here: the isActive filter
+                    // silently only half-applied, `{"status":{"eq":"active"}}` sent to a plain
+                    // `status: String` arg) instead of unwrapping it first.
+                    if (Array.isArray(raw)) return raw[0];
+                    if (raw && typeof raw === 'object' && 'eq' in raw) {
+                        return (raw as { eq: unknown }).eq;
+                    }
+                    return raw;
                 };
                 const status = facet('isActive') as 'active' | 'inactive' | undefined;
                 const managerErpId = facet('managerErpId') as string | undefined;
