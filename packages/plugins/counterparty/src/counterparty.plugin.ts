@@ -197,6 +197,8 @@ export const adminApiSchema = gql`
         "active | inactive"
         status: String
         managerId: ID
+        "Exact match against Counterparty.managerErpId — the raw ERP-side manager assignment, independent of whether it has resolved to an Administrator yet"
+        managerErpId: String
         branchId: String
         "Exact match against Counterparty.erpGroupLabel"
         groupLabel: String

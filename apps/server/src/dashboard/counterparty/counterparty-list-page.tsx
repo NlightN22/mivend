@@ -6,11 +6,6 @@ import { counterpartyListDocument, administratorNamesForCounterpartyDocument } f
 import { formatBranch, formatLinkStatus, formatManager } from './counterparty-display.js';
 import { AssignManagerBulkAction } from './components/counterparty-bulk-actions.js';
 
-// Sentinel for the Manager facet's "Unassigned" option — CounterpartyListOptions has no concept
-// of a manager id meaning "none", only a separate unassignedOnly boolean (see
-// CounterpartyService.findVisiblePage), so this never leaves the page/is never sent as a real id.
-const UNASSIGNED_MANAGER_VALUE = '__unassigned__';
-
 // Issue #133 Phase 2 — native ListPage-based Counterparty list, replacing the hand-rolled table
 // in the reviewed concept. Manager names are resolved client-side against a lightweight
 // administrators lookup (see counterparty.graphql.ts) rather than adding a server-side field
@@ -49,11 +44,11 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
             // the raw search term into that filter object, and transformVariables reshapes the
             // whole thing into what this backend query actually accepts before it's sent.
             onSearchTermChange={searchTerm => ({ __search: searchTerm }) as any}
-            // Status/Manager facetedFilters below land here as columnFilters entries under
+            // The Status facetedFilter and ERP Manager's own auto-generated scalar-field filter
+            // (managerErpId, enabled below) both land here as columnFilters entries under
             // `options.filter._and` (PaginatedListDataTable's own shape: one `{ [columnId]:
-            // value }` object per active facet) — pulled out and translated into
-            // CounterpartyListOptions' real fields (status/managerId/unassignedOnly), same
-            // resolver params the manager portal's own Customers list already uses.
+            // value }` object per active filter) — pulled out and translated into
+            // CounterpartyListOptions' real fields.
             transformVariables={variables => {
                 const filter = variables.options?.filter as
                     | { __search?: string; _and?: Array<Record<string, unknown>> }
@@ -62,21 +57,19 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                 const facet = (id: string): unknown => {
                     const entry = filter?._and?.find(f => id in f);
                     const raw = entry?.[id];
-                    // Checkbox-style faceted filters always send an array, even for a
-                    // single selection — this page only ever acts on the first choice.
+                    // Checkbox-style faceted filters always send an array, even for a single
+                    // selection — this page only ever acts on the first choice.
                     return Array.isArray(raw) ? raw[0] : raw;
                 };
                 const status = facet('status') as 'active' | 'inactive' | undefined;
-                const manager = facet('manager') as string | undefined;
+                const managerErpId = facet('managerErpId') as string | undefined;
                 return {
                     options: {
                         take: variables.options?.take,
                         skip: variables.options?.skip,
                         search: search || undefined,
                         status: status || undefined,
-                        unassignedOnly: manager === UNASSIGNED_MANAGER_VALUE || undefined,
-                        managerId:
-                            manager && manager !== UNASSIGNED_MANAGER_VALUE ? manager : undefined,
+                        managerErpId: managerErpId || undefined,
                     },
                 } as typeof variables;
             }}
@@ -116,34 +109,18 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                     header: 'Price type',
                     cell: ({ row }) => row.original.priceType,
                 },
-                // These are real scalar fields on Counterparty, so ListPage generates a column
-                // for each of them too (see the Node comment above) even though every one is
-                // already surfaced through a curated column above/below (erpId inline under
-                // "Counterparty", creditLimit/creditBalance combined into "credit", etc). Left
-                // enabled, the column-visibility picker fills up with a dozen raw duplicate
-                // fields the reviewed concept (docs/ai — Counterparty ERP list concept) never
-                // had — `meta.disabled` is the only way to stop the column from being generated
-                // at all, not just hidden from the default view.
-                erpId: { meta: { disabled: true } },
-                legalName: { meta: { disabled: true } },
-                creditLimit: { meta: { disabled: true } },
-                creditBalance: { meta: { disabled: true } },
-                paymentDelayDays: { meta: { disabled: true } },
-                isActive: { meta: { disabled: true } },
-                assignedManagerId: { meta: { disabled: true } },
-                managerErpId: { meta: { disabled: true } },
-                linkedCustomerId: { meta: { disabled: true } },
-                branchId: { meta: { disabled: true } },
-            }}
-            additionalColumns={{
-                branch: {
-                    meta: { dependencies: ['branchId'] },
-                    header: () => 'Branch',
-                    cell: ({ row }) => formatBranch(row.original.branchId),
-                },
-                manager: {
+                // "ERP Manager" — kept as the REAL scalar column (not a synthetic
+                // additionalColumns entry) specifically so it gets ListPage's standard
+                // scalar-field filter for free (same equalsString text filter INN/Price Type
+                // already have, visible in the funnel menu) — this is genuinely ERP-sourced data
+                // (the assignment 1C sent), independent of whether it has resolved to a mivend
+                // Administrator yet, per an explicit product decision: filtering must work
+                // against the raw id, not only against resolved Administrators (most rows aren't
+                // resolved at all — see formatManager's own fallback). The displayed cell still
+                // prefers the resolved name when one exists, exactly like the column always did.
+                managerErpId: {
+                    header: 'ERP Manager',
                     meta: { dependencies: ['assignedManagerId', 'managerErpId'] },
-                    header: () => 'Manager',
                     cell: ({ row }) =>
                         formatManager(
                             {
@@ -152,6 +129,22 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                             },
                             administrators,
                         ),
+                },
+                erpId: { meta: { disabled: true } },
+                legalName: { meta: { disabled: true } },
+                creditLimit: { meta: { disabled: true } },
+                creditBalance: { meta: { disabled: true } },
+                paymentDelayDays: { meta: { disabled: true } },
+                isActive: { meta: { disabled: true } },
+                assignedManagerId: { meta: { disabled: true } },
+                linkedCustomerId: { meta: { disabled: true } },
+                branchId: { meta: { disabled: true } },
+            }}
+            additionalColumns={{
+                branch: {
+                    meta: { dependencies: ['branchId'] },
+                    header: () => 'Branch',
+                    cell: ({ row }) => formatBranch(row.original.branchId),
                 },
                 credit: {
                     meta: { dependencies: ['creditLimit', 'creditBalance'] },
@@ -191,10 +184,6 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
             // linkedCustomerId). There is no backend filter for the Linked/Unlinked distinction
             // yet; labelling these options plainly as "Active (ERP)"/"Inactive (ERP)" so the
             // filter doesn't imply it can narrow by link status too.
-            //
-            // Manager options show the same resolved administrator name as the Manager column
-            // (falling back to nothing here, not the raw managerErpId — filtering by an id you
-            // can't see the name for isn't useful) plus a separate "Unassigned" entry.
             facetedFilters={{
                 status: {
                     title: 'Status',
@@ -203,19 +192,12 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                         { label: 'Inactive (ERP)', value: 'inactive' },
                     ],
                 },
-                manager: {
-                    title: 'Manager',
-                    options: [
-                        { label: 'Unassigned', value: UNASSIGNED_MANAGER_VALUE },
-                        ...administrators.map(a => ({ label: a.name, value: a.id })),
-                    ],
-                },
             }}
             defaultColumnOrder={[
                 'shortName',
                 'inn',
                 'branch',
-                'manager',
+                'managerErpId',
                 'credit',
                 'terms',
                 'priceType',
@@ -225,7 +207,7 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                 shortName: true,
                 inn: true,
                 branch: true,
-                manager: true,
+                managerErpId: true,
                 credit: true,
                 terms: true,
                 priceType: true,

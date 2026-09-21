@@ -94,6 +94,7 @@ export class CounterpartyResolver {
                 search?: string;
                 status?: string;
                 managerId?: ID;
+                managerErpId?: string;
                 branchId?: string;
                 groupLabel?: string;
                 unassignedOnly?: boolean;

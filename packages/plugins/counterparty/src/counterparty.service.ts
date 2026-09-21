@@ -241,6 +241,7 @@ export class CounterpartyService {
             search?: string;
             status?: string;
             managerId?: ID;
+            managerErpId?: string;
             branchId?: string;
             groupLabel?: string;
             unassignedOnly?: boolean;
@@ -272,6 +273,15 @@ export class CounterpartyService {
         } else if (options.managerId) {
             qb = qb.andWhere('c.assignedManagerId = :managerId', {
                 managerId: String(options.managerId),
+            });
+        }
+        // Independent of managerId/unassignedOnly above — the raw ERP-side assignment, which
+        // exists on every row regardless of whether it has resolved to an Administrator yet (see
+        // the Dashboard Counterparty list's "ERP Manager" column/filter, issue #133). Deliberately
+        // not mutually exclusive with managerId/unassignedOnly: they filter different fields.
+        if (options.managerErpId) {
+            qb = qb.andWhere('c.managerErpId = :managerErpId', {
+                managerErpId: options.managerErpId,
             });
         }
         if (options.branchId) {
