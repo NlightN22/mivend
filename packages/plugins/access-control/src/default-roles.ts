@@ -108,6 +108,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ManageApprovalWorkflows',
             'ReassignCounterpartyManager',
             'ManageCounterpartyTeam',
+            'ManageCounterpartyPortalAccess',
         ],
         accessScopeConfig: {
             counterparty: 'all',
@@ -156,6 +157,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ManageApprovalWorkflows',
             'ReassignCounterpartyManager',
             'ManageCounterpartyTeam',
+            'ManageCounterpartyPortalAccess',
             'ReadEntityHistory',
             'ReadAdministrator',
             'UpdateAdministrator',
