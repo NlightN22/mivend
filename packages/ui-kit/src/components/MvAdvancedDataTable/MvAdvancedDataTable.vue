@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue';
 import DataTable, { type DataTableFilterMeta } from 'primevue/datatable';
 import Column from 'primevue/column';
-import { Setting, Sort, SortUp, SortDown, Rank } from '@element-plus/icons-vue';
+import { Setting, Sort, SortUp, SortDown } from '@element-plus/icons-vue';
 import MvColumnToggle from '../MvColumnToggle/MvColumnToggle.vue';
 import MvActiveFilterChips from '../MvActiveFilterChips/MvActiveFilterChips.vue';
 import MvScrollFadeOverlay from '../MvScrollFadeOverlay/MvScrollFadeOverlay.vue';
@@ -24,8 +24,12 @@ import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import type { AdvancedDataTableColumn, AdvancedDataTableSearchConfig, AdvancedDataTableRowClickPayload } from './advancedDataTableTypes';
 
 // The standard desktop table for the manager portal (see the manager-portal-rules skill) —
-// column toggle/reorder/resize, per-column typed filters, active filter chips, server pagination,
-// single-column sort, stable scroll height, horizontal scroll-fade. Deliberately knows nothing
+// column toggle/resize, per-column typed filters, active filter chips, server pagination,
+// single-column sort, stable scroll height, horizontal scroll-fade. Column reorder lives only in
+// the MvColumnToggle settings menu (drag-in-header reorder was removed — real feedback: it was
+// unwanted table-header clutter, and its leftover header mousedown-correction hack still left a
+// misleading "move" cursor over empty header space with no actual drag behind it). Deliberately
+// knows nothing
 // about Vue Router, GraphQL, Vendure types, money formatting, view-chip business logic, data
 // loading, entity scoping, page URLs, or localStorage — every consumer keeps its own GraphQL
 // query, sort-field mapping, currency formatting, routing, and state persistence
@@ -149,12 +153,6 @@ function onColumnResizeEnd(event: { element: HTMLElement; delta: number }): void
     const current = tableState.value.columnWidths[col.field] ?? col.width;
     tableState.value.columnWidths = { ...tableState.value.columnWidths, [col.field]: current + event.delta };
 }
-function onColumnReorder(event: { dragIndex: number; dropIndex: number }): void {
-    const order = [...tableState.value.columnOrder];
-    const [moved] = order.splice(event.dragIndex, 1);
-    order.splice(event.dropIndex, 0, moved);
-    tableState.value.columnOrder = order;
-}
 
 // Fully custom, single-column sort (not PrimeVue's own `sortable`/`sort-mode` — fighting its
 // whole-header click binding and internal hover/selected classes broke sorting outright in the
@@ -171,21 +169,6 @@ function sortIconFor(col: AdvancedDataTableColumn): Component {
     const active = tableState.value.sort[0];
     if (active?.field !== col.field) return Sort;
     return active.order === 1 ? SortUp : SortDown;
-}
-
-// See CustomerOrdersDataTable.vue's original doc comment (moved here verbatim): PrimeVue's own
-// header mousedown handler arms a native HTML5 column-drag on any mousedown in a sortable/
-// reorderable `th` that isn't an <input>/<textarea>/the resize handle — nothing in that check
-// knows about this component's own sort button or reorder handle, so without this, dragging the
-// title, the sort button, or empty header space all start a column drag too. Bubble-phase
-// listener on a stable ancestor, always runs after the `th`'s own mousedown already set
-// `draggable`, so this only has to correct it back to `false`.
-function onHeaderMousedown(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    const th = target.closest('th');
-    if (!th) return;
-    const isHandle = !!target.closest('.mv-advanced-data-table__reorder-handle');
-    if (!isHandle) (th as HTMLElement).draggable = false;
 }
 
 // PrimeVue only renders a column's funnel icon + filter overlay when the DataTable has
@@ -320,7 +303,7 @@ const isMobile = useIsMobileViewport(800);
 </script>
 
 <template>
-    <div class="mv-advanced-data-table" @mousedown="onHeaderMousedown">
+    <div class="mv-advanced-data-table">
         <div class="mv-advanced-data-table__toolbar">
             <div class="mv-advanced-data-table__toolbar-start">
                 <MvColumnFilterText
@@ -402,13 +385,11 @@ const isMobile = useIsMobileViewport(800);
                 :scroll-height="dynamicScrollHeight"
                 resizable-columns
                 column-resize-mode="expand"
-                reorderable-columns
                 filter-display="menu"
                 v-model:filters="columnFilters"
                 row-hover
                 class="mv-advanced-data-table__grid"
                 @page="onPage"
-                @column-reorder="onColumnReorder"
                 @column-resize-end="onColumnResizeEnd"
                 @row-click="onRowClick"
             >
@@ -438,9 +419,6 @@ const isMobile = useIsMobileViewport(800);
                         >
                             <component :is="sortIconFor(col)" class="mv-advanced-data-table__sort-icon" />
                         </button>
-                        <span class="mv-advanced-data-table__reorder-handle" title="Drag to reorder column">
-                            <Rank class="mv-advanced-data-table__reorder-icon" />
-                        </span>
                     </template>
 
                     <template #body="{ data }">
@@ -543,29 +521,6 @@ const isMobile = useIsMobileViewport(800);
 .mv-advanced-data-table__sort-icon {
     width: 16px;
     height: 16px;
-}
-
-.mv-advanced-data-table__reorder-handle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    margin-inline: 4px 6px;
-    border-radius: 6px;
-    color: var(--el-text-color-secondary, #98a2b3);
-    cursor: grab;
-    transition: background-color 0.15s, color 0.15s;
-}
-
-.mv-advanced-data-table__reorder-handle:hover {
-    background: var(--el-color-primary-light-9, #e6faf4);
-    color: var(--el-color-primary, #00b894);
-}
-
-.mv-advanced-data-table__reorder-icon {
-    width: 15px;
-    height: 15px;
 }
 
 :deep(.p-datatable-column-resizer)::after {
