@@ -7,11 +7,11 @@
 // ApprovalRequest is a real business-workflow state machine, not ERP master data — it cannot be
 // expressed as an erp-import record type (see AGENTS.md "Dev seed rules" exception clause).
 // Goes through the real Admin GraphQL mutations instead (same pattern as
-// packages/e2e/global-setup.ts and this script's own seed-access-roles.mjs), so every request
+// packages/e2e/global-setup.ts and packages/plugins/access-control/src/default-roles.ts), so every request
 // created here is exactly as real/valid as one a manager would create by hand.
 //
 // Run: node infrastructure/scripts/seed-approvals.mjs
-// Requires: server running, `make seed-access-roles` + `make seed` already run (needs the six
+// Requires: server running (roles self-provision at boot — issue #134), `make seed` already run (needs the six
 // manager-portal roles, the demo administrators, and counterparty cnt-001 to exist).
 
 const API_URL = `http://localhost:${process.env.PORT ?? '3000'}/admin-api`;

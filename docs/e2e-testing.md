@@ -13,12 +13,11 @@ SERVER_URL=http://localhost:3000 \
   pnpm --filter @mivend/e2e test
 ```
 
-Requires a running dev stack (`make dev`) and seeded data. For manager portal tests, seed access
-roles _before_ the ERP seed, since `seed-erp.mjs` skips creating manager-portal Administrators
-for any role it can't find:
+Requires a running dev stack (`make dev`) and seeded data. Manager-portal roles self-provision
+at server boot (issue #134, `RoleProvisioningService`), so by the time the server is up
+`seed-erp.mjs` can already find them when creating manager-portal Administrators:
 
 ```bash
-make seed-access-roles
 make seed
 ```
 

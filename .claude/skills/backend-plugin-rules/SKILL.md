@@ -372,11 +372,11 @@ The seed script sends data **only through the `erp-import` plugin REST endpoint*
 - TypeORM repositories called outside the plugin
 - Any other bypass of `erp-import`
 
-The only exception: data that structurally cannot be expressed as an import record (e.g. Vendure system configuration, channel setup, tax zones). In that case, document the reason inline in the seed script with a comment explaining why the plugin cannot handle it. Existing exceptions: `seed-access-roles.mjs` (RBAC roles/scope config), `seed-erp.mjs`'s `ensureOrgStructureAdmins` (demo Administrator logins), `seed-approvals.mjs` (`ApprovalRequest` rows — a real workflow state machine, not ERP master data; goes through the real Admin GraphQL mutations, same as a manager would use).
+The only exception: data that structurally cannot be expressed as an import record (e.g. Vendure system configuration, channel setup, tax zones). In that case, document the reason inline in the seed script with a comment explaining why the plugin cannot handle it. Existing exceptions: RBAC roles/scope config (self-provisioned at server boot by `RoleProvisioningService` from `packages/plugins/access-control/src/default-roles.ts` — issue #134, no longer a manual seed script), `seed-erp.mjs`'s `ensureOrgStructureAdmins` (demo Administrator logins), `seed-approvals.mjs` (`ApprovalRequest` rows — a real workflow state machine, not ERP master data; goes through the real Admin GraphQL mutations, same as a manager would use).
 
 If a new data type needs seeding — **add a record type to `erp-import` first**, then use it from the seed script.
 
-Use **`make seed-all`** to run the full local seeding order in one command: `seed-access-roles` → `seed` → `seed-approvals` (also what `dev-fresh.sh` runs). The three targets stay separate (and order-dependent — `seed-approvals` needs roles/administrators/counterparty `cnt-001` already existing) only for the occasional case of re-running just one without wiping the others.
+Use **`make seed-all`** to run the full local seeding order in one command: `seed` → `seed-approvals` (also what `dev-fresh.sh` runs) — manager-portal roles are no longer part of this order, they self-provision at server boot. The targets stay separate (and order-dependent — `seed-approvals` needs administrators/counterparty `cnt-001` already existing) only for the occasional case of re-running just one without wiping the others.
 
 ---
 

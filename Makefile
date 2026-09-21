@@ -16,7 +16,7 @@ export
         docker-build docker-push \
         preview-build preview-up preview-down \
         prod-up prod-down \
-        dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-access-roles seed-approvals seed-payment-refunds \
+        dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-approvals seed-payment-refunds \
         seed-customer-detail seed-all \
         verify-branch-scope \
         storybook storybook-ui-kit storybook-manager storybook-storefront storybook-down \
@@ -131,14 +131,10 @@ seed:
 	@echo "Server ready. Seeding..."
 	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-token} node infrastructure/scripts/seed-erp.mjs
 
-seed-access-roles:
-	@echo "Waiting for server on :3000..."
-	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
-	@echo "Server ready. Seeding access-control roles..."
-	node infrastructure/scripts/seed-access-roles.mjs
-
-# Requires seed-access-roles + seed to have already run (roles, demo administrators,
-# counterparty cnt-001 must exist).
+# Requires seed to have already run (demo administrators, counterparty cnt-001 must exist).
+# The manager-portal roles themselves no longer need a manual seed step — issue #134's
+# RoleProvisioningService self-provisions them idempotently at every server boot
+# (packages/plugins/access-control/src/role-provisioning.service.ts).
 seed-approvals:
 	@echo "Waiting for server on :3000..."
 	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
@@ -162,11 +158,12 @@ seed-customer-detail:
 	@echo "Server ready. Topping up customer-detail tabs..."
 	node infrastructure/scripts/seed-customer-detail.mjs
 
-# One command for the full local seeding order (roles → ERP data → approval requests — this
-# exact order matters, see seed-approvals' own comment above). This is what you want by default;
-# the targets above stay separate only because occasionally you need to re-run just one
-# (e.g. re-seeding ERP data without wiping roles/administrators).
-seed-all: seed-access-roles seed seed-approvals seed-payment-refunds seed-customer-detail
+# One command for the full local seeding order (ERP data → approval requests — this exact order
+# matters, see seed-approvals' own comment above; manager-portal roles are no longer part of this
+# order, see seed-approvals' own comment above). This is what you want by default; the targets
+# above stay separate only because occasionally you need to re-run just one (e.g. re-seeding ERP
+# data without wiping administrators).
+seed-all: seed seed-approvals seed-payment-refunds seed-customer-detail
 
 # E2E verification of branch-scope access control against an already-running, already-seeded
 # central instance (make dev + make seed-all first). Safe to run repeatedly — creates its own

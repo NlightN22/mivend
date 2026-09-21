@@ -51,6 +51,7 @@ import { ErpReconciliationDashboardPlugin } from './erp-reconciliation-dashboard
 import { OrganizationsDashboardPlugin } from './organizations-dashboard.plugin';
 import { ErpUsersDashboardPlugin } from './erp-users-dashboard.plugin';
 import { CounterpartyDashboardPlugin } from './counterparty-dashboard.plugin';
+import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const integrationKafkaEnabled = process.env.INTEGRATION_KAFKA_ENABLED === 'true';
@@ -561,6 +562,11 @@ export const config: VendureConfig = {
         // read-only Counterparty list+detail pages under the native "customers" section — see
         // src/dashboard/counterparty/index.ts.
         CounterpartyDashboardPlugin,
+        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #134 Part 2) —
+        // manager-portal role/scope-config provisioning drift, defense in depth for
+        // AccessControlPlugin's own bootstrap-time self-provisioning — see
+        // src/dashboard/role-provisioning/index.ts.
+        RoleProvisioningDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({}),

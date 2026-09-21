@@ -111,4 +111,38 @@ describe('RoleScopeConfigService', () => {
             expect(await service.getScopeFor(ctx, 'broken-role')).toBeNull();
         });
     });
+
+    describe('getProvisioningStatus', () => {
+        it('reports every DEFAULT_ROLES entry as missing when the table is empty', async () => {
+            repo.find.mockResolvedValue([]);
+            const status = await service.getProvisioningStatus(ctx);
+            expect(status.length).toBeGreaterThan(0);
+            expect(status.every(item => item.missing)).toBe(true);
+        });
+
+        it('reports a role as not missing when its stored config exactly matches DEFAULT_ROLES', async () => {
+            repo.find.mockResolvedValue([
+                scopeRow('manager', { counterparty: 'own', order: 'own', invoice: 'own' }),
+            ]);
+            const status = await service.getProvisioningStatus(ctx);
+            const manager = status.find(item => item.roleCode === 'manager');
+            expect(manager?.missing).toBe(false);
+        });
+
+        it('reports a role as missing when its stored config has drifted from DEFAULT_ROLES', async () => {
+            repo.find.mockResolvedValue([
+                scopeRow('manager', { counterparty: 'all', order: 'own', invoice: 'own' }),
+            ]);
+            const status = await service.getProvisioningStatus(ctx);
+            const manager = status.find(item => item.roleCode === 'manager');
+            expect(manager?.missing).toBe(true);
+        });
+
+        it('reports a role as missing when its stored config JSON is invalid', async () => {
+            repo.find.mockResolvedValue([scopeRow('manager', '{not json')]);
+            const status = await service.getProvisioningStatus(ctx);
+            const manager = status.find(item => item.roleCode === 'manager');
+            expect(manager?.missing).toBe(true);
+        });
+    });
 });

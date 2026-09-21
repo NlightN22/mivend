@@ -235,6 +235,16 @@ export class AccessControlResolver {
         return config ? JSON.stringify(config) : null;
     }
 
+    // Issue #134 Part 2 — same gate as roleAccessScopeConfig/setRoleAccessScopeConfig above
+    // (this is the same Settings > Roles & Access surface's own health signal).
+    @Query()
+    @Allow(CustomPermission.ManageAccessControl.Permission)
+    async roleAccessScopeProvisioningStatus(
+        @Ctx() ctx: RequestContext,
+    ): Promise<Array<{ roleCode: string; missing: boolean }>> {
+        return this.roleScopeConfigService.getProvisioningStatus(ctx);
+    }
+
     @Query()
     @Allow(CustomPermission.ManageAccessControl.Permission)
     async creditTermLimit(

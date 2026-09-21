@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, Role, TransactionalConnection } from '@vendure/core';
 import { In } from 'typeorm';
 
+import { DEFAULT_ROLES } from './default-roles';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
 import { AccessScopeKind, loggerCtx } from './types';
 
@@ -9,6 +10,13 @@ const SCOPE_RANK: Record<AccessScopeKind, number> = { own: 0, department: 1, all
 
 export interface AccessScopeConfig {
     [resource: string]: AccessScopeKind;
+}
+
+function configsMatch(a: AccessScopeConfig, b: AccessScopeConfig): boolean {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    return keysA.every(key => a[key] === b[key]);
 }
 
 function parseAccessScopeConfig(row: RoleAccessScope): AccessScopeConfig | null {
@@ -58,6 +66,26 @@ export class RoleScopeConfigService {
             .getRepository(ctx, RoleAccessScope)
             .findOne({ where: { roleCode } });
         return row ? parseAccessScopeConfig(row) : null;
+    }
+
+    // Issue #134 Part 2 — defense in depth for RoleProvisioningService's bootstrap-time
+    // self-provisioning: detects a RoleAccessScope row later deleted/corrupted (e.g. a manual
+    // truncate), or a role added to DEFAULT_ROLES with no reboot yet to provision it. Compares
+    // the hardcoded DEFAULT_ROLES list against what's actually stored right now — does not
+    // re-run provisioning itself, just reports drift for the health-check alert to surface.
+    async getProvisioningStatus(
+        ctx: RequestContext,
+    ): Promise<Array<{ roleCode: string; missing: boolean }>> {
+        const rows = await this.connection.getRepository(ctx, RoleAccessScope).find();
+        const rowByCode = new Map(rows.map(row => [row.roleCode, row]));
+        return DEFAULT_ROLES.map(definition => {
+            const row = rowByCode.get(definition.code);
+            const config = row ? parseAccessScopeConfig(row) : null;
+            return {
+                roleCode: definition.code,
+                missing: !config || !configsMatch(config, definition.accessScopeConfig),
+            };
+        });
     }
 
     async setScopeFor(

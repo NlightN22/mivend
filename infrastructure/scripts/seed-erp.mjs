@@ -221,9 +221,11 @@ async function ensureShippingAndPaymentSetup() {
     }
 }
 
-// Demo administrators for the org-structure import below. Requires the manager-portal roles
-// to already exist (`make seed-access-roles`) — if a role is missing, the admin is skipped
-// with a warning rather than failing the whole seed run.
+// Demo administrators for the org-structure import below. The manager-portal roles are
+// self-provisioned by RoleProvisioningService at server boot (issue #134) — no manual seed step
+// needed — but this still looks the role up by code and skips with a warning rather than failing
+// the whole seed run, in case a role name here ever drifts from
+// packages/plugins/access-control/src/default-roles.ts.
 async function ensureOrgStructureAdmins() {
     let session = await adminGraphqlWithSession(`
         mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
@@ -250,11 +252,11 @@ async function ensureOrgStructureAdmins() {
         { email: 'olga.depthead@mivend.dev', firstName: 'Olga', lastName: 'DeptHead', roleCode: 'department-head' },
         // Company-wide scope + ReadCounterpartyCredit — the only seeded role that can see every
         // counterparty's credit numbers (department-head/operator/manager cannot, see
-        // seed-access-roles.mjs). Needed to exercise credit-visible UI (e.g. manager portal
+        // default-roles.ts). Needed to exercise credit-visible UI (e.g. manager portal
         // Customers page risk meter) against real data.
         { email: 'nikolai.director@mivend.dev', firstName: 'Nikolai', lastName: 'Director', roleCode: 'general-director' },
         // ManageAccessControl — needed to exercise the manager portal's Settings > Roles &
-        // Access page (see seed-access-roles.mjs's portal-admin permissions).
+        // Access page (see default-roles.ts's portal-admin permissions).
         { email: 'anna.portaladmin@mivend.dev', firstName: 'Anna', lastName: 'PortalAdmin', roleCode: 'portal-admin' },
         // ApproveSecurityLimit — the only seeded role that can decide the first step of an
         // escalated credit-term-extension request (see seed-approvals.mjs / CreditTermGateService).
@@ -266,7 +268,7 @@ async function ensureOrgStructureAdmins() {
         if (existingEmails.has(admin.email)) continue;
         const roleId = roleIdByCode[admin.roleCode];
         if (!roleId) {
-            console.warn(`  Role "${admin.roleCode}" not found — run "make seed-access-roles" first. Skipping ${admin.email}.`);
+            console.warn(`  Role "${admin.roleCode}" not found — check default-roles.ts / restart the server to provision it. Skipping ${admin.email}.`);
             continue;
         }
         await adminGraphqlWithSession(`

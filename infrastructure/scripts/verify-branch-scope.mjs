@@ -120,7 +120,7 @@ async function createVerifyAdmin(superadminCookie, email, customFields) {
         superadminCookie,
     );
     const role = rolesData.roles.items.find(r => r.code === 'department-head');
-    if (!role) throw new Error('department-head role not found — run make seed-access-roles first');
+    if (!role) throw new Error('department-head role not found — roles self-provision at server boot (issue #134), check the server started correctly');
 
     const { data } = await adminGraphqlWithSession(
         `mutation($input: CreateAdministratorInput!) { createAdministrator(input: $input) { id } }`,

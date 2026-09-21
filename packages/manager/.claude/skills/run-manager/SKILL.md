@@ -71,7 +71,7 @@ Options:
 | `--width` / `--height` | `1440` / `900` | viewport size — keep ≥ 800px wide unless you're specifically testing the mobile breakpoint (`MvAppTopbar`/`MvAppMobileNav`'s own `max-width: 800px` switch) |
 | `--viewport-only`      | _(off)_        | screenshot only the viewport instead of the full scrollable page                                                                                            |
 
-Test accounts (all seeded by `make seed-access-roles && make seed`, password `Password123!` for
+Test accounts (roles self-provisioned at server boot, administrators seeded by `make seed`, password `Password123!` for
 all four — same accounts `packages/e2e/global-setup.ts` itself logs in with):
 
 | `--account` key         | email                       | role                                                                |
@@ -112,18 +112,18 @@ seed` last ran, not to "now," so a table can show **0 rows** (or far fewer than 
   because of this filter, looking like a broken page when it isn't. Before asserting on table
   contents, widen the relevant filter first, e.g.:
 
-    ```js
-    const dateSelect = page
-        .locator('select')
-        .filter({ has: page.locator('option', { hasText: 'Last 7 days' }) });
-    await dateSelect
-        .first()
-        .selectOption({ label: 'All time' })
-        .catch(() => {});
-    ```
+        ```js
+        const dateSelect = page
+            .locator('select')
+            .filter({ has: page.locator('option', { hasText: 'Last 7 days' }) });
+        await dateSelect
+            .first()
+            .selectOption({ label: 'All time' })
+            .catch(() => {});
+        ```
 
-    (`manual-driver.mjs` doesn't do this automatically — it's page-specific. Add it inline in a
-    throwaway script built on top of the driver's `login()`/navigation pattern if you need it.)
+        (`manual-driver.mjs` doesn't do this automatically — it's page-specific. Add it inline in a
+        throwaway script built on top of the driver's `login()`/navigation pattern if you need it.)
 
 - **A click that "does nothing" needs lower-level tools than a screenshot.** A real bug found this
   session: a leftover capture-phase `@click.capture` handler on an ancestor `<div>` was silently

@@ -114,9 +114,10 @@ files) — the failure was going around it.
    wrong DB name — instead of the real error).
 
 7. **After any `make dev`/`make down`/`dev-fresh` cycle that recreates Docker
-   volumes**, seeded data is gone. Re-run the full seed sequence in order:
-   `make seed-access-roles` → `make seed` → `make seed-approvals` (the last one
-   depends on roles/administrators/`cnt-001` already existing).
+   volumes**, seeded data is gone. Manager-portal roles self-provision at server boot
+   (issue #134, RoleProvisioningService) — no manual step needed for those. Re-run the
+   rest of the seed sequence in order: `make seed` → `make seed-approvals` (the latter
+   depends on administrators/`cnt-001` already existing).
 
 ## Quick reference
 
@@ -126,5 +127,5 @@ files) — the failure was going around it.
 | Docker infra only, safe to repeat         | `make up`                                                                                                                     |
 | Stop everything                           | `make down` — only if you're sure nothing else depends on it                                                                  |
 | Integration tests                         | `make test-int` — be aware it calls `make up`; do not let it (or you) call `make down` if a separate `make dev` stack is live |
-| Re-seed after a volume reset              | `make seed-access-roles && make seed && make seed-approvals`                                                                  |
+| Re-seed after a volume reset              | `make seed && make seed-approvals` (roles self-provision at server boot)                                                      |
 | Simulate an outage without touching infra | `kill -STOP <server-pid>` / `kill -CONT <server-pid>`, with explicit user go-ahead                                            |

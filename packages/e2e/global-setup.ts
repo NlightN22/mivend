@@ -15,7 +15,8 @@ const SUPERADMIN = {
     password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
 };
 
-// Seeded by infrastructure/scripts/seed-access-roles.mjs + seed-erp.mjs (run via `make seed`,
+// Roles self-provisioned at server boot (packages/plugins/access-control/src/default-roles.ts,
+// issue #134); administrators seeded by seed-erp.mjs (run via `make seed`,
 // a prerequisite for e2e per docs/e2e-testing.md) — same accounts as .tests/accounts.md. Not
 // re-seeded here, only logged in, one per manager-portal dashboard KPI variant we test.
 const MANAGER_ACCOUNTS = {
@@ -151,7 +152,7 @@ export default async function globalSetup(): Promise<void> {
     }
 
     // A real, deterministic order for the manager-portal Orders/Order Detail specs — operator
-    // has department-wide visibility (see infrastructure/scripts/seed-access-roles.mjs), so an
+    // has department-wide visibility (see packages/plugins/access-control/src/default-roles.ts), so an
     // order for the e2e counterparty's customer is visible to all three manager-portal test
     // roles. Written to a JSON file since the order code is server-generated, not fixed.
     const operatorLogin = await adminGql<{

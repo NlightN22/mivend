@@ -23,6 +23,7 @@ import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
 import { ErpUser } from './entities/erp-user.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
+import { RoleProvisioningService } from './role-provisioning.service';
 import { RoleScopeConfigService } from './role-scope-config.service';
 import { Warehouse } from './entities/warehouse.entity';
 import { WarehouseService } from './warehouse.service';
@@ -83,6 +84,14 @@ const adminApiSchema = gql`
         roleCode: String!
         maxExtraDays: Int!
         maxAmount: Int
+    }
+
+    # Issue #134 Part 2 — defense in depth for RoleProvisioningService's bootstrap-time
+    # self-provisioning. "missing" also covers a drifted (not just absent) scope config — see
+    # RoleScopeConfigService.getProvisioningStatus.
+    type RoleAccessScopeProvisioningStatusItem {
+        roleCode: String!
+        missing: Boolean!
     }
 
     # implements Node/PaginatedList — not just server-side convention (backend-plugin-rules
@@ -171,6 +180,7 @@ const adminApiSchema = gql`
         teamDirectory: [TeamDirectoryMember!]!
         creditTermLimit(roleCode: String!): CreditTermLimit
         roleAccessScopeConfig(roleCode: String!): String
+        roleAccessScopeProvisioningStatus: [RoleAccessScopeProvisioningStatusItem!]!
         # Issue #119 Phase 1: both real server-side pagination, backing the Dashboard "ERP
         # users" screens' ListPage components — see access-control.resolver.ts's own comments.
         pendingErpUsers(options: ErpUserListOptions): ErpUserList!
@@ -236,6 +246,7 @@ const adminApiSchema = gql`
         ErpUserService,
         AdministratorActivationService,
         AdministratorProvisioningService,
+        RoleProvisioningService,
     ],
     exports: [
         AccessScopeService,
