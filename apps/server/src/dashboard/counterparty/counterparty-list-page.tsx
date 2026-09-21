@@ -61,7 +61,7 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                     // selection — this page only ever acts on the first choice.
                     return Array.isArray(raw) ? raw[0] : raw;
                 };
-                const status = facet('status') as 'active' | 'inactive' | undefined;
+                const status = facet('isActive') as 'active' | 'inactive' | undefined;
                 const managerErpId = facet('managerErpId') as string | undefined;
                 return {
                     options: {
@@ -130,12 +130,21 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                             administrators,
                         ),
                 },
+                // isActive is deliberately NOT disabled, unlike the other raw fields below — it
+                // needs a real, fieldInfo-bearing generated column for the Status facetedFilter
+                // to attach to (see the facetedFilters comment). @vendure/dashboard's own
+                // DataTableFacetedFilter reads `column.columnDef.meta.fieldInfo.type` with no
+                // null-check on fieldInfo itself — attaching a facetedFilter to a synthetic
+                // additionalColumns key (meta has no fieldInfo at all) crashes the whole page
+                // with "can't access property 'type', ... fieldInfo is undefined" (confirmed
+                // live). Hidden from the default view via defaultVisibility below — the "Status"
+                // badge column already covers everything a viewer needs to see.
+                isActive: { header: 'Is Active (ERP)' },
                 erpId: { meta: { disabled: true } },
                 legalName: { meta: { disabled: true } },
                 creditLimit: { meta: { disabled: true } },
                 creditBalance: { meta: { disabled: true } },
                 paymentDelayDays: { meta: { disabled: true } },
-                isActive: { meta: { disabled: true } },
                 assignedManagerId: { meta: { disabled: true } },
                 linkedCustomerId: { meta: { disabled: true } },
                 branchId: { meta: { disabled: true } },
@@ -185,7 +194,7 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
             // yet; labelling these options plainly as "Active (ERP)"/"Inactive (ERP)" so the
             // filter doesn't imply it can narrow by link status too.
             facetedFilters={{
-                status: {
+                isActive: {
                     title: 'Status',
                     options: [
                         { label: 'Active (ERP)', value: 'active' },
@@ -212,6 +221,7 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                 terms: true,
                 priceType: true,
                 status: true,
+                isActive: false,
             }}
             // Link to Customer / Unlink from Customer (#120's own activation/deactivation
             // mutations) are deliberately not wired up here at all, not even as a disabled
