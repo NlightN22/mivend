@@ -14,13 +14,25 @@ interface ManagerResolution {
 const loggerCtx = 'IntegrationCounterpartyHandler';
 
 // Applies Integration Service's `counterparty` stream (CounterpartyChanged, 1C's "Контрагент",
-// company.customers.events.v1.counterparty-changed). Issue #104, verified live against
-// @nlightn22/event-contracts@0.38.0 (search-platform#92/#118 — do not trust older issue comments
-// claiming inn/erpGroupLabel/departmentId are unavailable; they shipped): this stream carries
-// name/isActive/isDeleted/managerId(s)/inn/erpGroupLabel/departmentId — never creditLimit/
-// paymentDelayDays/priceType/branchId, which stay erp-import's own richer REST record (see
-// CounterpartyService.upsertActiveState's own comment). creditBalance moved to its own
-// register-driven stream (search-platform#129) — see CounterpartyCreditBalanceStreamHandler.
+// company.customers.events.v1.counterparty-changed). Issue #104, re-verified live against
+// @nlightn22/event-contracts@0.39.0 (issue #131 — do not trust older issue comments claiming a
+// field is unavailable; check the current .d.ts fresh each time, per external-integration-rules).
+// Full current field-by-field accounting for this message (envelope fields event_id/occurred_at/
+// entity_id/version/updated_at are handled generically by KafkaConsumerService, not listed here):
+//   - name/isActive/isDeleted/managerId(s)/inn/erpGroupLabel/departmentId — consumed, see below.
+//   - legalAddress (field 15, pre-existing since before this bump) — consumed (issue #131):
+//     display/completeness per #120's Decision 1, not an activation gate.
+//   - factualAddress/phone/officialEmail (fields 17/18/20, new in 0.39.0) — consumed (issue
+//     #131): phone+officialEmail unblock #120's portal-access activation (Decision 1/2);
+//     factualAddress is display/completeness only, same status as legalAddress.
+//   - notificationPhone (field 19, new in 0.39.0) — deliberately NOT consumed. Confirmed a
+//     genuinely separate 1C fact from `phone` (not the same field read two ways, see #120's
+//     Decision 3 investigation), but #120's Decision 1/2 only need phone+officialEmail for
+//     activation and no other mivend feature reads it yet. Revisit if a real consumer appears.
+//   - creditLimit/paymentDelayDays/priceType/branchId are never carried on this stream at all —
+//     they stay erp-import's own richer REST record (see CounterpartyService.upsertActiveState's
+//     own comment). creditBalance moved to its own register-driven stream (search-platform#129)
+//     — see CounterpartyCreditBalanceStreamHandler.
 //
 // manager_id/manager_ids: issue #109 shipped the erpId↔Administrator correlation
 // (UserEnrichmentService, fed by the `user` stream) this was blocked on — resolved here to
@@ -80,6 +92,21 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                     : undefined,
             assignedManagerId,
             managerErpId,
+            legalAddress:
+                'legalAddress' in payload
+                    ? ((payload.legalAddress as string | null) ?? null)
+                    : undefined,
+            factualAddress:
+                'factualAddress' in payload
+                    ? ((payload.factualAddress as string | null) ?? null)
+                    : undefined,
+            phone: 'phone' in payload ? ((payload.phone as string | null) ?? null) : undefined,
+            officialEmail:
+                'officialEmail' in payload
+                    ? ((payload.officialEmail as string | null) ?? null)
+                    : undefined,
+            // notificationPhone: deliberately unread — see this file's own top-of-file field
+            // accounting comment.
         });
         if (!name) {
             Logger.verbose(

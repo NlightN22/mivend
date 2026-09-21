@@ -42,6 +42,10 @@ describe('CounterpartyStreamHandler', () => {
             departmentId: undefined,
             assignedManagerId: undefined,
             managerErpId: undefined,
+            legalAddress: undefined,
+            factualAddress: undefined,
+            phone: undefined,
+            officialEmail: undefined,
         });
     });
 
@@ -58,6 +62,10 @@ describe('CounterpartyStreamHandler', () => {
             departmentId: undefined,
             assignedManagerId: undefined,
             managerErpId: undefined,
+            legalAddress: undefined,
+            factualAddress: undefined,
+            phone: undefined,
+            officialEmail: undefined,
         });
     });
 
@@ -116,7 +124,7 @@ describe('CounterpartyStreamHandler', () => {
         );
     });
 
-    // Issue #104 follow-up, verified live against @nlightn22/event-contracts@0.38.0
+    // Issue #104 follow-up, verified live against @nlightn22/event-contracts@0.39.0
     // (search-platform#92/#118): inn/erpGroupLabel/departmentId are real fields on this stream
     // today — do not skip them just because an older issue comment claimed they were missing.
     it('passes through inn/erpGroupLabel/departmentId when present', async () => {
@@ -138,6 +146,10 @@ describe('CounterpartyStreamHandler', () => {
             departmentId: 'dept-1',
             assignedManagerId: undefined,
             managerErpId: undefined,
+            legalAddress: undefined,
+            factualAddress: undefined,
+            phone: undefined,
+            officialEmail: undefined,
         });
     });
 
@@ -174,7 +186,89 @@ describe('CounterpartyStreamHandler', () => {
             departmentId: null,
             assignedManagerId: undefined,
             managerErpId: undefined,
+            legalAddress: undefined,
+            factualAddress: undefined,
+            phone: undefined,
+            officialEmail: undefined,
         });
+    });
+
+    // Issue #131 — factualAddress/phone/officialEmail (new in 0.39.0) and legalAddress
+    // (pre-existing, field 15) are real optional-scalar fields with the same
+    // presence-vs-absence semantics as inn/erpGroupLabel/departmentId above.
+    it('passes through legalAddress/factualAddress/phone/officialEmail when present', async () => {
+        const { handler, counterpartyService } = makeHandler();
+
+        await handler.apply(ctx, 'cp-1', {
+            name: 'Acme Corp',
+            isActive: true,
+            legalAddress: 'Legal St 1',
+            factualAddress: 'Actual Ave 2',
+            phone: '+70000000000',
+            officialEmail: 'contact@acme.example',
+        });
+
+        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'cp-1',
+            expect.objectContaining({
+                legalAddress: 'Legal St 1',
+                factualAddress: 'Actual Ave 2',
+                phone: '+70000000000',
+                officialEmail: 'contact@acme.example',
+            }),
+        );
+    });
+
+    it('passes undefined for legalAddress/factualAddress/phone/officialEmail when absent from the payload', async () => {
+        const { handler, counterpartyService } = makeHandler();
+
+        await handler.apply(ctx, 'cp-1', { name: 'Acme Corp', isActive: true });
+
+        const call = counterpartyService.upsertActiveState.mock.calls[0][2];
+        expect(call.legalAddress).toBeUndefined();
+        expect(call.factualAddress).toBeUndefined();
+        expect(call.phone).toBeUndefined();
+        expect(call.officialEmail).toBeUndefined();
+    });
+
+    it('passes through an explicit null for legalAddress/factualAddress/phone/officialEmail', async () => {
+        const { handler, counterpartyService } = makeHandler();
+
+        await handler.apply(ctx, 'cp-1', {
+            name: 'Acme Corp',
+            isActive: true,
+            legalAddress: null,
+            factualAddress: null,
+            phone: null,
+            officialEmail: null,
+        });
+
+        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'cp-1',
+            expect.objectContaining({
+                legalAddress: null,
+                factualAddress: null,
+                phone: null,
+                officialEmail: null,
+            }),
+        );
+    });
+
+    // notificationPhone is deliberately never read (see counterparty.handler.ts's own field
+    // accounting comment) — must never leak into upsertActiveState even when present.
+    it('never forwards notificationPhone even when present in the payload', async () => {
+        const { handler, counterpartyService } = makeHandler();
+
+        await handler.apply(ctx, 'cp-1', {
+            name: 'Acme Corp',
+            isActive: true,
+            notificationPhone: '+79999999999',
+        });
+
+        const call = counterpartyService.upsertActiveState.mock.calls[0][2];
+        expect(call.notificationPhone).toBeUndefined();
     });
 
     // Issue #109 unblocked this — managerId is now resolved to a Vendure Administrator.id via

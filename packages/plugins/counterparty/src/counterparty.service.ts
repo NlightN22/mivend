@@ -84,6 +84,10 @@ export class CounterpartyService {
             // assignedManagerId itself is undefined/null. See Counterparty.managerErpId's own
             // doc comment.
             managerErpId?: string | null;
+            legalAddress?: string | null;
+            factualAddress?: string | null;
+            phone?: string | null;
+            officialEmail?: string | null;
         },
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, Counterparty);
@@ -101,6 +105,12 @@ export class CounterpartyService {
                 entity.assignedManagerId = fields.assignedManagerId;
             }
             if (fields.managerErpId !== undefined) entity.managerErpId = fields.managerErpId;
+            if (fields.legalAddress !== undefined) entity.legalAddress = fields.legalAddress;
+            if (fields.factualAddress !== undefined) {
+                entity.factualAddress = fields.factualAddress;
+            }
+            if (fields.phone !== undefined) entity.phone = fields.phone;
+            if (fields.officialEmail !== undefined) entity.officialEmail = fields.officialEmail;
             await repo.save(entity);
             return;
         }
@@ -116,6 +126,10 @@ export class CounterpartyService {
                 departmentId: fields.departmentId ?? null,
                 assignedManagerId: fields.assignedManagerId ?? null,
                 managerErpId: fields.managerErpId ?? null,
+                legalAddress: fields.legalAddress ?? null,
+                factualAddress: fields.factualAddress ?? null,
+                phone: fields.phone ?? null,
+                officialEmail: fields.officialEmail ?? null,
             }),
         );
         Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);

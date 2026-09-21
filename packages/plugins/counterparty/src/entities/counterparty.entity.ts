@@ -71,4 +71,33 @@ export class Counterparty extends VendureEntity {
     // (pushing this back to 1C) is not wired yet — see CreditTermApprovedEvent.
     @Column({ type: 'int', nullable: true })
     creditTermOverrideExtraDays!: number | null;
+
+    // Issue #131 (event-contracts@0.39.0's CounterpartyChanged): the counterparty's own
+    // Юридический адрес — 1C requires this filled to save a Counterparty. Display/completeness
+    // only per #120's Decision 1, does not gate portal-access activation.
+    @Column({ type: 'varchar', nullable: true })
+    legalAddress!: string | null;
+
+    // Фактический адрес контрагента — same "1C requires it, mivend just stores it" status as
+    // legalAddress above. #120's Decision 1: display/completeness, not an activation gate.
+    @Column({ type: 'varchar', nullable: true })
+    factualAddress!: string | null;
+
+    // Телефон контрагента — required (with officialEmail below) by #120's Decision 2 before the
+    // portal-access activation toggle can be turned on for this counterparty.
+    @Column({ type: 'varchar', nullable: true })
+    phone!: string | null;
+
+    // Служебный адрес электронной почты контрагента (1C's own "Служебный адрес электронной
+    // почты контрагента" contact-info kind) — the counterparty's real login-eligible email per
+    // #120's Decision 1, not a legal/registration address. Required (with phone above) by
+    // #120's Decision 2 before portal-access activation.
+    @Column({ type: 'varchar', nullable: true })
+    officialEmail!: string | null;
+
+    // notificationPhone ("Телефон для оповещения контрагента") deliberately has no column here:
+    // confirmed a genuinely separate 1C fact from `phone` (not the same field read two ways),
+    // but #120's Decision 1/2 only need phone+officialEmail for activation, and no other mivend
+    // feature reads it yet. Deferred, not dropped — CounterpartyStreamHandler documents the same
+    // deferral at the point it would otherwise be read. Add a column once a real consumer exists.
 }

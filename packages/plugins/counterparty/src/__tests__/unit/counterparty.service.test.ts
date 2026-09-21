@@ -169,6 +169,10 @@ describe('CounterpartyService', () => {
                 departmentId: null,
                 assignedManagerId: null,
                 managerErpId: null,
+                legalAddress: null,
+                factualAddress: null,
+                phone: null,
+                officialEmail: null,
             });
             expect(mockRepo.save).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -180,7 +184,7 @@ describe('CounterpartyService', () => {
             );
         });
 
-        // Issue #104 follow-up, verified live against @nlightn22/event-contracts@0.38.0
+        // Issue #104 follow-up, verified live against @nlightn22/event-contracts@0.39.0
         // (search-platform#92/#118): inn/erpGroupLabel/departmentId are real fields on this
         // stream today — a stale earlier read of the issue's own comments had wrongly treated
         // them as unavailable.
@@ -204,7 +208,89 @@ describe('CounterpartyService', () => {
                 departmentId: 'dept-1',
                 assignedManagerId: null,
                 managerErpId: null,
+                legalAddress: null,
+                factualAddress: null,
+                phone: null,
+                officialEmail: null,
             });
+        });
+
+        // Issue #131: legalAddress/factualAddress/phone/officialEmail follow the same
+        // presence/absence/explicit-null semantics as inn/erpGroupLabel/departmentId above.
+        it('creates a partial row with legalAddress/factualAddress/phone/officialEmail when the payload carries them', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+            mockRepo.create.mockImplementation((input: unknown) => input);
+            await service.upsertActiveState(mockCtx, 'cp-unknown', {
+                name: 'Acme Corp',
+                isActive: true,
+                legalAddress: 'Legal St 1',
+                factualAddress: 'Actual Ave 2',
+                phone: '+70000000000',
+                officialEmail: 'contact@acme.example',
+            });
+            expect(mockRepo.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    legalAddress: 'Legal St 1',
+                    factualAddress: 'Actual Ave 2',
+                    phone: '+70000000000',
+                    officialEmail: 'contact@acme.example',
+                }),
+            );
+        });
+
+        it('leaves legalAddress/factualAddress/phone/officialEmail untouched when omitted from fields', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'cp-1',
+                legalName: 'Old Name',
+                shortName: 'Old Name',
+                isActive: true,
+                legalAddress: 'Legal St 1',
+                factualAddress: 'Actual Ave 2',
+                phone: '+70000000000',
+                officialEmail: 'contact@acme.example',
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'cp-1', { name: 'New Name', isActive: false });
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    legalAddress: 'Legal St 1',
+                    factualAddress: 'Actual Ave 2',
+                    phone: '+70000000000',
+                    officialEmail: 'contact@acme.example',
+                }),
+            );
+        });
+
+        it('applies an explicit null for legalAddress/factualAddress/phone/officialEmail', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'cp-1',
+                legalName: 'Old Name',
+                shortName: 'Old Name',
+                isActive: true,
+                legalAddress: 'Legal St 1',
+                factualAddress: 'Actual Ave 2',
+                phone: '+70000000000',
+                officialEmail: 'contact@acme.example',
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'cp-1', {
+                name: 'New Name',
+                isActive: false,
+                legalAddress: null,
+                factualAddress: null,
+                phone: null,
+                officialEmail: null,
+            });
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    legalAddress: null,
+                    factualAddress: null,
+                    phone: null,
+                    officialEmail: null,
+                }),
+            );
         });
 
         it('updates legalName/shortName/isActive on an existing row, never touching REST-only fields', async () => {

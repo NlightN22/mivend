@@ -13,7 +13,7 @@ allowBuilds:
     sharp: true
     vue-demi: true
 minimumReleaseAgeExclude:
-    - '@nlightn22/event-contracts@0.4.0 || 0.5.0 || 0.13.0 || 0.38.0'
+    - '@nlightn22/event-contracts@0.4.0 || 0.5.0 || 0.13.0 || 0.38.0 || 0.39.0'
 overrides:
     # 2026-09-12 incident: graphql-upload@17 (a transitive dep, likely pulled in via
     # @nestjs/graphql/@vendure/dashboard) resolves @types/express@5.0.6 alongside every plugin's
