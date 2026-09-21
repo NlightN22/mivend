@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AdministratorService, EventBus, RequestContext, UserService } from '@vendure/core';
+import type {
+    AdministratorService,
+    EventBus,
+    RequestContext,
+    TransactionalConnection,
+    UserService,
+} from '@vendure/core';
 
 import { AdministratorProvisioningService } from '../../administrator-provisioning.service';
 import { AdministratorLinkedEvent } from '../../administrator-linked.event';
@@ -16,6 +22,7 @@ describe('AdministratorProvisioningService', () => {
         findByErpId: ReturnType<typeof vi.fn>;
         markLinked: ReturnType<typeof vi.fn>;
     };
+    let connection: { getRepository: ReturnType<typeof vi.fn> };
     let service: AdministratorProvisioningService;
     const ctx = {} as unknown as RequestContext;
 
@@ -24,11 +31,13 @@ describe('AdministratorProvisioningService', () => {
         userService = { setPasswordResetToken: vi.fn(), resetPasswordByToken: vi.fn() };
         eventBus = { publish: vi.fn() };
         erpUserService = { findByErpId: vi.fn(), markLinked: vi.fn() };
+        connection = { getRepository: vi.fn() };
         service = new AdministratorProvisioningService(
             administratorService as unknown as AdministratorService,
             userService as unknown as UserService,
             eventBus as unknown as EventBus,
             erpUserService as unknown as ErpUserService,
+            connection as unknown as TransactionalConnection,
         );
     });
 
