@@ -163,6 +163,16 @@ export const router = createRouter({
                     component: () => import('../pages/team/TeamPage.vue'),
                     meta: { requiresAuth: true, title: 'Team' },
                 },
+                {
+                    // "Обработки" (Bulk Operations) nav section — issue #120, thin shell: one
+                    // tab (Counterparty Activation) today, per the carried-over decision not to
+                    // build a generic bulk-operations framework preemptively.
+                    path: 'bulk-operations/counterparty-activation',
+                    name: 'bulk-operations-counterparty-activation',
+                    component: () =>
+                        import('../pages/bulk-operations/CounterpartyActivationPage.vue'),
+                    meta: { requiresAuth: true, title: 'Активация клиентов' },
+                },
                 ...[
                     { path: 'customers/new', title: 'New client' },
                     { path: 'profile', title: 'Profile' },

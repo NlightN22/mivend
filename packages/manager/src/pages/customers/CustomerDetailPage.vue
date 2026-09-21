@@ -29,6 +29,7 @@ import {
     IconFolder,
     IconUsers,
     IconHistory,
+    IconKey,
 } from '@tabler/icons-vue';
 import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.vue';
 import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
@@ -37,6 +38,7 @@ import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTa
 import CustomerInvoicesTab from '../../components/customers/CustomerInvoicesTab.vue';
 import CustomerPaymentsTab from '../../components/customers/CustomerPaymentsTab.vue';
 import CustomerTeamTab from '../../components/customers/CustomerTeamTab.vue';
+import CustomerPortalUsersTab from '../../components/customers/CustomerPortalUsersTab.vue';
 import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue';
 
 // Human labels for the generic EntityHistoryPanel widget — only the entity types this page
@@ -68,6 +70,9 @@ const notFound = ref(false);
 // future Team tab, gated to specific roles, not here.
 const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory'));
 const canManageTeam = computed(() => authStore.hasPermission('ManageCounterpartyTeam'));
+// Issue #120, Decision 5 — same permission gates both this tab's visibility and its Deactivate
+// action (one permission, two surfaces, per the carried-over decision).
+const canManagePortalAccess = computed(() => authStore.hasPermission('ManageCounterpartyPortalAccess'));
 
 type CustomerDetailTab =
     | 'overview'
@@ -77,6 +82,7 @@ type CustomerDetailTab =
     | 'discounts'
     | 'documents'
     | 'team'
+    | 'portalUsers'
     | 'history';
 const TABS: CustomerDetailTab[] = [
     'overview',
@@ -86,6 +92,7 @@ const TABS: CustomerDetailTab[] = [
     'discounts',
     'documents',
     'team',
+    'portalUsers',
     'history',
 ];
 const TAB_LABELS: Record<CustomerDetailTab, string> = {
@@ -96,6 +103,7 @@ const TAB_LABELS: Record<CustomerDetailTab, string> = {
     discounts: 'Discounts',
     documents: 'Documents',
     team: 'Team',
+    portalUsers: 'Portal Users',
     history: 'History',
 };
 const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
@@ -106,6 +114,7 @@ const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
     discounts: IconDiscount,
     documents: IconFolder,
     team: IconUsers,
+    portalUsers: IconKey,
     history: IconHistory,
 };
 
@@ -126,7 +135,11 @@ function handleMobileQueryChange(e: MediaQueryListEvent): void {
 }
 
 const PRIMARY_TAB_COUNT = 3;
-const visibleTabs = computed(() => TABS.filter(t => t !== 'history' || canViewHistory.value));
+const visibleTabs = computed(() =>
+    TABS.filter(t => t !== 'history' || canViewHistory.value).filter(
+        t => t !== 'portalUsers' || canManagePortalAccess.value,
+    ),
+);
 const primaryTabs = computed(() => (isMobile.value ? visibleTabs.value.slice(0, PRIMARY_TAB_COUNT) : visibleTabs.value));
 const overflowTabs = computed(() => (isMobile.value ? visibleTabs.value.slice(PRIMARY_TAB_COUNT) : []));
 const isOverflowActive = computed(() => overflowTabs.value.includes(activeTab.value));
@@ -410,6 +423,11 @@ function initials(name: string | null): string {
                 :managers="managers"
                 :can-manage="canManageTeam"
                 @loaded="teamMembers = $event"
+            />
+            <CustomerPortalUsersTab
+                v-else-if="activeTab === 'portalUsers'"
+                :counterparty-id="customer.id"
+                :can-manage="canManagePortalAccess"
             />
             <EntityHistoryPanel
                 v-else
