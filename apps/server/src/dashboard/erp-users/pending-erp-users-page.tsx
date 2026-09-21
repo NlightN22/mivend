@@ -1,7 +1,6 @@
 import { AnyRoute } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
-import { api, Button, graphql, ListPage } from '@vendure/dashboard';
-import { toast } from 'sonner';
+import { api, Button, graphql, ListPage, toast } from '@vendure/dashboard';
 
 // Issue #119 Phase 1 — "Pending" section of the "ERP users" Dashboard surface: 1C users
 // (UserChanged) not yet linked to any Administrator (ErpUserService's own candidate list,

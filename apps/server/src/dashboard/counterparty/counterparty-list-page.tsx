@@ -88,6 +88,24 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                     header: 'Price type',
                     cell: ({ row }) => row.original.priceType,
                 },
+                // These are real scalar fields on Counterparty, so ListPage generates a column
+                // for each of them too (see the Node comment above) even though every one is
+                // already surfaced through a curated column above/below (erpId inline under
+                // "Counterparty", creditLimit/creditBalance combined into "credit", etc). Left
+                // enabled, the column-visibility picker fills up with a dozen raw duplicate
+                // fields the reviewed concept (docs/ai — Counterparty ERP list concept) never
+                // had — `meta.disabled` is the only way to stop the column from being generated
+                // at all, not just hidden from the default view.
+                erpId: { meta: { disabled: true } },
+                legalName: { meta: { disabled: true } },
+                creditLimit: { meta: { disabled: true } },
+                creditBalance: { meta: { disabled: true } },
+                paymentDelayDays: { meta: { disabled: true } },
+                isActive: { meta: { disabled: true } },
+                assignedManagerId: { meta: { disabled: true } },
+                managerErpId: { meta: { disabled: true } },
+                linkedCustomerId: { meta: { disabled: true } },
+                branchId: { meta: { disabled: true } },
             }}
             additionalColumns={{
                 branch: {

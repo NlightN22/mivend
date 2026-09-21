@@ -1,7 +1,6 @@
 import { AnyRoute } from '@tanstack/react-router';
 import { useRef } from 'react';
-import { api, Button, graphql, ListPage } from '@vendure/dashboard';
-import { toast } from 'sonner';
+import { api, Button, graphql, ListPage, toast } from '@vendure/dashboard';
 
 // Issue #119 Phase 1 — "Deactivated" section of the "ERP users" Dashboard surface. Structurally
 // unreachable from the native Administrators page: AdministratorService.findAll/findOne
