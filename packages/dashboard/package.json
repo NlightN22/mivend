@@ -10,7 +10,8 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@vendure/dashboard": "^3.7.3"
+        "@vendure/dashboard": "^3.7.3",
+        "lucide-react": "^0.475.0"
     },
     "devDependencies": {
         "typescript": "^5.4.0",
