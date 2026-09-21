@@ -93,4 +93,9 @@ export const CustomPermission = {
         description:
             'Decide who has an Administrator login at all — review ErpUser candidates, create an Administrator anchored on erpId, and manually activate/deactivate one (issue #119); distinct from ManageAccessControl, which is RBAC role/scope configuration once a login already exists',
     }),
+    ManageCounterpartyPortalAccess: new PermissionDefinition({
+        name: 'ManageCounterpartyPortalAccess',
+        description:
+            "Activate/deactivate a Counterparty's storefront portal login (Customer created from its phone/officialEmail) and view/deactivate its already-created portal sub-users (issue #120) — scoped via AccessScopeService.resolveCounterpartyScope, same own/department/all model as ReassignCounterpartyManager",
+    }),
 } as const;
