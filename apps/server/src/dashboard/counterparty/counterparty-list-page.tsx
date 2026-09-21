@@ -71,6 +71,13 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
             customizeColumns={{
                 shortName: {
                     header: 'Counterparty',
+                    // erpId has no column of its own (disabled below) — without this dependency
+                    // declaration, ListPage prunes erpId out of the actual GraphQL selection
+                    // entirely once nothing else references it, silently emptying the "ERP ID:"
+                    // line below (a real regression caught live: erpId disappeared from the raw
+                    // network response, not just the screen, the moment its own column was
+                    // disabled).
+                    meta: { dependencies: ['erpId'] },
                     cell: ({ row }) => (
                         <div>
                             <DetailPageButton id={row.original.id} label={row.original.shortName} />
