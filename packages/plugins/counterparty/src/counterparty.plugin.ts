@@ -41,6 +41,11 @@ import { TradingPointService } from './trading-point.service';
 import { CreditTermGateService } from './credit-term-gate.service';
 import { CreditTermService } from './credit-term.service';
 import { AdministratorLinkedListener } from './administrator-linked.listener';
+import { CounterpartyPortalAccessService } from './counterparty-portal-access.service';
+import {
+    CounterpartyPortalAccessFieldResolver,
+    CounterpartyPortalAccessMutationResolver,
+} from './counterparty-portal-access.resolver';
 
 const tradingPointFields = gql`
     type ContactPerson {
@@ -168,6 +173,21 @@ export const adminApiSchema = gql`
         tradingPoints: [TradingPoint!]!
         "Additional managers beyond the Owner (assignedManagerId) — see CounterpartyTeamMember."
         teamMembers: [CounterpartyTeamMember!]!
+        "Customers linked to this Counterparty via customFields.counterpartyId, active or deactivated — issue #120."
+        portalUsers: [Customer!]!
+    }
+
+    "activate | deactivate — one entry in a bulk portal-access batch (issue #120)."
+    input CounterpartyPortalAccessChangeInput {
+        counterpartyId: ID!
+        action: String!
+    }
+
+    type CounterpartyPortalAccessChangeResult {
+        counterpartyId: ID!
+        success: Boolean!
+        error: String
+        customerId: ID
     }
 
     "backup | observer | accounting-contact — a small fixed technical RBAC role set, not ERP-sourced business data"
@@ -255,6 +275,18 @@ export const adminApiSchema = gql`
         ): CounterpartyTeamMember!
         removeCounterpartyTeamMember(counterpartyId: ID!, administratorId: ID!): Boolean!
 
+        # Issue #120 Decision 7: creates a Customer without a password (AccountRegistrationEvent
+        # fires instead), linked via customFields.counterpartyId. Requires Counterparty.phone AND
+        # .officialEmail to already be set (ERP-sourced, see #131) and isActive=true.
+        activateCounterpartyPortalAccess(counterpartyId: ID!): Customer!
+        # Native Customer soft-delete — same primitive as issue #119's Administrator deactivation.
+        deactivateCounterpartyPortalAccess(customerId: ID!): Customer!
+        # Bulk-activation table's single batch mutation (issue #120) — one item per row, reported
+        # independently so one bad row never blocks the rest of the batch.
+        applyCounterpartyPortalAccessChanges(
+            changes: [CounterpartyPortalAccessChangeInput!]!
+        ): [CounterpartyPortalAccessChangeResult!]!
+
         upsertTradingPoint(
             erpId: String!
             counterpartyErpId: String!
@@ -327,6 +359,8 @@ const adminResolvers = [
     CreditTermResolver,
     CounterpartyTeamFieldResolver,
     CounterpartyTeamMutationResolver,
+    CounterpartyPortalAccessFieldResolver,
+    CounterpartyPortalAccessMutationResolver,
 ];
 
 @VendurePlugin({
@@ -355,6 +389,7 @@ const adminResolvers = [
         CreditTermService,
         CounterpartyTeamService,
         AdministratorLinkedListener,
+        CounterpartyPortalAccessService,
     ],
     exports: [CounterpartyService, TradingPointService],
     configuration: (config: RuntimeVendureConfig) => {
