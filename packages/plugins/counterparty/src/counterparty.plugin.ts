@@ -120,7 +120,10 @@ const shopApiSchema = gql`
     }
 `;
 
-const adminApiSchema = gql`
+// Exported so counterparty-admin-schema.test.ts can assert on the real SDL directly — the
+// mivend.audit.common finding on issue #131 was exactly a field written to the entity/DB with
+// no corresponding SDL field, undetected until a human read the schema by eye.
+export const adminApiSchema = gql`
     ${tradingPointFields}
 
     type Counterparty {
@@ -142,6 +145,14 @@ const adminApiSchema = gql`
         creditTermOverrideExtraDays: Int
         "Free-text group/segment label from the ERP — display and filtering only."
         erpGroupLabel: String
+        "Юридический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1."
+        legalAddress: String
+        "Фактический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1."
+        factualAddress: String
+        "Телефон контрагента (1C) — required with officialEmail before #120's portal-access activation."
+        phone: String
+        "Служебный адрес электронной почты контрагента (1C) — the real login-eligible email, see issue #120."
+        officialEmail: String
         tradingPoints: [TradingPoint!]!
         "Additional managers beyond the Owner (assignedManagerId) — see CounterpartyTeamMember."
         teamMembers: [CounterpartyTeamMember!]!
