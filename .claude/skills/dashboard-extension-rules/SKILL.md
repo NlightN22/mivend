@@ -52,6 +52,32 @@ An alert's `check()` must fail closed (return the "nothing to report" value, e.g
 `false`) inside a `try/catch` — a viewer lacking the underlying query's permission, or a
 transient network error, must never crash the whole `<Alerts>` shell for every other extension.
 
+## Mandatory: any one-time client-side data load MUST live in `useEffect`, never in the render body
+
+A real, live incident: `if (someList.length === 0) { void loadSomeList(); }` written directly in
+a page component's render body (not inside `useEffect`) fires again on every re-render that
+happens before the async call's `setState` lands — and a component re-renders more than once
+before that for reasons that have nothing to do with this code (`ListPage`'s own pagination/
+filter/sort state changes, a sibling `useState` update, React itself re-rendering speculatively).
+The result was a request storm: the same lookup query fired 10+ times back to back, starving the
+browser's connection pool and stalling the page's _real_ list query behind it — visible live as a
+long stuck skeleton loading state, then a batch of cancelled/"blocked" requests in the Network
+panel, which looks exactly like a slow backend/timeout problem and is not one.
+
+**No ESLint rule in this repo catches this** — `eslint-plugin-react-hooks` isn't installed here,
+and even where it is, its `exhaustive-deps` rule only checks dependency arrays _inside_ a
+`useEffect`/similar hook call; it has nothing to say about a plain function invoked straight in
+the render body, which is syntactically ordinary, side-effect-free-looking JS with no hook
+involved at all. This is a manual review item, not a lint failure:
+
+- Any `if (x.length === 0) { voidSomeLoader(); }`-shaped one-time data load in a component body
+  MUST be wrapped in `useEffect(() => { ... }, [])` (or a real dependency array if it should
+  legitimately re-run) — never called bare in the render body, guarded or not.
+- During the mandatory live visual audit below, actually look at the Network panel's request
+  count/timing while the page first loads, not just whether it eventually renders correctly — a
+  page issuing the same admin-api query many times in a row is this exact bug, even if the page
+  "works" once everything eventually settles.
+
 ## Mandatory: any tabular/list page MUST use the native `ListPage` framework component
 
 Every native Dashboard list screen (`Administrators`, `Roles`, **`Sellers`** — see reference

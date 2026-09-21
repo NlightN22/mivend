@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, Badge, DetailPageButton, ListPage } from '@vendure/dashboard';
 import { AnyRoute } from '@tanstack/react-router';
 
@@ -46,12 +46,19 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
         );
     }
 
-    if (administrators.length === 0) {
+    // MUST be useEffect, never called directly in the render body — a real, live incident:
+    // calling `void loadX()` straight in the render body (guarded only by `if (list.length ===
+    // 0)`) fires again on every re-render that happens before the async call's setState lands,
+    // and React re-renders more than once before that (state updates from sibling effects,
+    // ListPage's own pagination/filter state changes, etc). The result was a request storm — the
+    // exact same `admin-api?languageCode=en` query fired 10+ times back to back, starving the
+    // browser's connection pool and stalling the real counterparty list query behind it (visible
+    // live as a long stuck skeleton loading state, then a batch of cancelled/"blocked" requests
+    // in the Network panel). `useEffect(fn, [])` runs exactly once on mount, full stop.
+    useEffect(() => {
         void loadAdministrators();
-    }
-    if (erpUsers.length === 0) {
         void loadErpUsers();
-    }
+    }, []);
 
     return (
         <ListPage
