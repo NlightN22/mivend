@@ -99,6 +99,26 @@ are touching one of these files for an unrelated reason and it's a real list of 
 encouraged, not required — but a **new** page must use `ListPage` from the start, no exceptions,
 for any screen whose core content is a list of records with more than a handful of rows.
 
+## Mandatory: never redeclare an auto-generated column via `additionalColumns`
+
+If the list item type implements `Node` (required anyway — see the backend note below), `ListPage`
+auto-generates a column for **every plain scalar field** on it, using the field name as the column
+key. A field you also want to customize (a link, a formatted value, a fallback for null) must go
+in **`customizeColumns`** (overrides the auto-generated column in place), never
+**`additionalColumns`** (always adds a _second_, separately-keyed column). Putting a real scalar
+field name (e.g. `shortName`, `inn`, `departmentId`) into `additionalColumns` produces two React
+children with the same key — a duplicated column visible on screen, plus a
+`Warning: Encountered two children with the same key` console error. This is not hypothetical —
+it has shipped twice in this repo (`pending-erp-users-page.tsx`'s `departmentId` column, and
+`counterparty-list-page.tsx`'s `shortName`/`inn`/`priceType` columns, both live incidents). Only a
+key that matches **no** real field on the type (a synthetic column like `actions`, or a derived
+one like `manager`/`branch`/`status` whose key deliberately doesn't match the underlying
+`assignedManagerId`/`branchId`/`linkedCustomerId` field name) belongs in `additionalColumns`.
+
+Before writing `additionalColumns`, check every key against the GraphQL type's actual field list
+(the backend schema, not just the page's own fragment) — if a key is also a real field name on
+the type, it goes in `customizeColumns` instead, full stop.
+
 ## UI: use `@vendure/dashboard`'s own components first, never raw HTML/inline styles
 
 `@vendure/dashboard` re-exports a full set of themed UI primitives built on its own design
@@ -189,11 +209,17 @@ type-checks perfectly and still 404s live. Before reporting a dashboard extensio
    errors can mean "healthy pre-login spinner" (normal) or "crashed silently" (not normal);
    distinguish the two by checking for `consoleErrors`/`networkErrors`/`requestFailures` in the
    check output, not just whether navigation itself succeeded.
-4. If the extension is gated by a `CustomPermission` (via the underlying GraphQL query's
+4. For any list page, capture **all** console output (`type() === 'error'` AND `'warning'`), not
+   only hard errors, and read it — React logs a duplicate-column key clash (see the
+   `additionalColumns`/`customizeColumns` rule above) as a `console.error`-level warning, not a
+   thrown exception, so it never surfaces as a `navError`/crash and is trivial to miss if you only
+   check "did the page render some data." A row of data appearing on screen is not proof the page
+   is correct — open the screenshot and count the columns against what you actually declared.
+5. If the extension is gated by a `CustomPermission` (via the underlying GraphQL query's
    `@Allow(...)`), verify with a real account that actually holds that permission — a page that
    "renders" but silently shows nothing because every query 403'd looks identical to one with no
    data yet, unless you check the response status.
-5. Do this **per contour that matters for the task** — a fix verified only on local and never
+6. Do this **per contour that matters for the task** — a fix verified only on local and never
    checked on staging-integration (or vice versa) is not verified; this project runs both
    simultaneously on the same box and the scan-once gotcha above is per-process, so "it works
    locally" says nothing about the other contour.
