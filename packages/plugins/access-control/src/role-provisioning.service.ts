@@ -45,13 +45,23 @@ export class RoleProvisioningService implements OnApplicationBootstrap {
         if (this.processContext.isWorker) return;
 
         const ctx = RequestContext.empty();
+        for (const definition of DEFAULT_ROLES) {
+            await this.provisionRoleSafely(ctx, definition);
+        }
+    }
+
+    // One role's failure must not stop the rest from provisioning — each iteration gets its own
+    // error boundary instead of one try/catch around the whole loop, which previously aborted
+    // provisioning of every role after the first one to throw.
+    private async provisionRoleSafely(
+        ctx: RequestContext,
+        definition: DefaultRoleDefinition,
+    ): Promise<void> {
         try {
-            for (const definition of DEFAULT_ROLES) {
-                await this.provisionRole(ctx, definition);
-            }
+            await this.provisionRole(ctx, definition);
         } catch (err) {
             Logger.error(
-                `Failed to self-provision manager-portal roles: ${
+                `Failed to self-provision role "${definition.code}": ${
                     err instanceof Error ? err.message : String(err)
                 }`,
                 loggerCtx,

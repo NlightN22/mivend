@@ -131,4 +131,29 @@ describe('RoleProvisioningService', () => {
         repo.findOne.mockRejectedValue(new Error('db down'));
         await expect(service.onApplicationBootstrap()).resolves.toBeUndefined();
     });
+
+    it('provisions every other role even when one role fails', async () => {
+        const failingCode = DEFAULT_ROLES[2].code;
+        repo.findOne.mockImplementation(
+            async ({ where: { code } }: { where: { code: string } }) => {
+                if (code === failingCode) {
+                    throw new Error('constraint violation');
+                }
+                return null;
+            },
+        );
+
+        await service.onApplicationBootstrap();
+
+        expect(repo.save).toHaveBeenCalledTimes(DEFAULT_ROLES.length - 1);
+        expect(roleScopeConfigService.setScopeFor).toHaveBeenCalledTimes(DEFAULT_ROLES.length - 1);
+        for (const definition of DEFAULT_ROLES) {
+            if (definition.code === failingCode) continue;
+            expect(roleScopeConfigService.setScopeFor).toHaveBeenCalledWith(
+                expect.anything(),
+                definition.code,
+                definition.accessScopeConfig,
+            );
+        }
+    });
 });
