@@ -21,33 +21,24 @@ describe('formatBranch', () => {
 });
 
 describe('formatManager', () => {
-    const administrators = [{ id: 'admin-1', name: 'Jane Doe' }];
+    const administrators = [{ erpId: 'EMP-001', name: 'Jane Doe' }];
+    const erpUsers = [{ erpId: 'EMP-002', fullName: 'Ivan ERP-Only' }];
 
-    it('shows the resolved Administrator name when assignedManagerId resolves', () => {
-        expect(
-            formatManager(
-                { assignedManagerId: 'admin-1', managerErpId: 'EMP-001' },
-                administrators,
-            ),
-        ).toBe('Jane Doe');
+    it('shows the resolved Administrator name when managerErpId matches one', () => {
+        expect(formatManager('EMP-001', administrators, erpUsers)).toBe('Jane Doe');
     });
 
-    it('falls back to the raw managerErpId when assignedManagerId is unset/unresolved', () => {
-        expect(
-            formatManager({ assignedManagerId: null, managerErpId: 'EMP-001' }, administrators),
-        ).toBe('EMP-001');
-        expect(
-            formatManager(
-                { assignedManagerId: 'admin-unknown', managerErpId: 'EMP-001' },
-                administrators,
-            ),
-        ).toBe('EMP-001');
+    it('falls back to the ERP-reported ErpUser name when no Administrator matches', () => {
+        expect(formatManager('EMP-002', administrators, erpUsers)).toBe('Ivan ERP-Only');
     });
 
-    it('falls back to Unassigned when neither is present', () => {
-        expect(formatManager({ assignedManagerId: null, managerErpId: null }, administrators)).toBe(
-            UNASSIGNED_LABEL,
-        );
+    it('falls back to the raw managerErpId when neither resolves', () => {
+        expect(formatManager('EMP-999', administrators, erpUsers)).toBe('EMP-999');
+    });
+
+    it('falls back to Unassigned when managerErpId is unset', () => {
+        expect(formatManager(null, administrators, erpUsers)).toBe(UNASSIGNED_LABEL);
+        expect(formatManager(undefined, administrators, erpUsers)).toBe(UNASSIGNED_LABEL);
     });
 });
 

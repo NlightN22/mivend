@@ -15,38 +15,51 @@ export function formatBranch(branchId: string | null | undefined): string {
     return branchId && branchId.trim() ? branchId : UNASSIGNED_LABEL;
 }
 
-export interface ManagerLookup {
-    assignedManagerId: string | null | undefined;
-    managerErpId: string | null | undefined;
+export interface ResolvedErpUserName {
+    erpId: string;
+    fullName: string | null | undefined;
 }
 
-export interface ResolvedManagerName {
-    id: string;
+export interface ResolvedAdministratorByErpId {
+    erpId: string | null | undefined;
     name: string;
 }
 
 /**
- * Manager display per issue #133 correction 3: managerErpId is a fallback only. When
- * assignedManagerId resolves to a known Administrator, show that Administrator's name. When it
- * doesn't (unlinked/pending, see #127's three-way resolution), fall back to the raw
- * managerErpId so staff can see what 1C sent even before/if it ever resolves. If neither is
- * present, the counterparty genuinely has no manager assigned.
+ * ERP Manager display, per an explicit product decision: this column is entirely about the
+ * ERP-side assignment (managerErpId) — never Counterparty.assignedManagerId, which is a
+ * different, operational concept (mivend's own current owner, changeable by
+ * reassignCounterpartyManager, deliberately independent of whatever 1C last reported) and has no
+ * place in resolving this column at all. Resolution is keyed on managerErpId alone, matched
+ * against Administrator.customFields.erpId (the unique link UserEnrichmentService writes when an
+ * ERP user becomes a real login) — no join through assignedManagerId needed:
+ * 1. managerErpId matches a known Administrator's own erpId customField → that Administrator's
+ *    current name (more likely up to date than whatever 1C last reported).
+ * 2. Otherwise, managerErpId matches an unlinked ErpUser (access-control's own table, populated
+ *    straight from 1C's UserChanged stream) → its ERP-reported fullName — a real person mivend
+ *    already knows the name of, just not yet a mivend login (#127's three-way resolution). This
+ *    is the common case today — a live incident showed a manager with 254 real counterparties
+ *    rendering as a raw GUID everywhere before this fallback existed.
+ * 3. Neither resolves → the raw managerErpId, so staff can still see *something* 1C sent.
+ * No managerErpId at all → the counterparty genuinely has no ERP manager assigned.
  */
 export function formatManager(
-    counterparty: ManagerLookup,
-    resolvedAdministrators: ReadonlyArray<ResolvedManagerName>,
+    managerErpId: string | null | undefined,
+    resolvedAdministrators: ReadonlyArray<ResolvedAdministratorByErpId>,
+    resolvedErpUsers: ReadonlyArray<ResolvedErpUserName>,
 ): string {
-    const { assignedManagerId, managerErpId } = counterparty;
-    if (assignedManagerId) {
-        const resolved = resolvedAdministrators.find(a => a.id === assignedManagerId);
-        if (resolved) {
-            return resolved.name;
-        }
+    if (!managerErpId) {
+        return UNASSIGNED_LABEL;
     }
-    if (managerErpId) {
-        return managerErpId;
+    const admin = resolvedAdministrators.find(a => a.erpId === managerErpId);
+    if (admin) {
+        return admin.name;
     }
-    return UNASSIGNED_LABEL;
+    const erpUser = resolvedErpUsers.find(u => u.erpId === managerErpId);
+    if (erpUser?.fullName) {
+        return erpUser.fullName;
+    }
+    return managerErpId;
 }
 
 /**

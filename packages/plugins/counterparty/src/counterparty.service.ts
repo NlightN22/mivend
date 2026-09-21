@@ -279,10 +279,24 @@ export class CounterpartyService {
         // exists on every row regardless of whether it has resolved to an Administrator yet (see
         // the Dashboard Counterparty list's "ERP Manager" column/filter, issue #133). Deliberately
         // not mutually exclusive with managerId/unassignedOnly: they filter different fields.
+        //
+        // Substring match against EITHER the raw erpId OR the ERP-reported name from
+        // access-control's erp_user table (joined by raw SQL, not an entity import — same
+        // "counterparty already depends on access-control, not the reverse" direction as the
+        // AccessScopeService import above, just expressed as SQL instead of DI here since this
+        // is a one-off join, not a whole service dependency). Without the name half of this,
+        // typing a manager's name (what the column actually *displays* — see formatManager)
+        // returns nothing for the majority of rows, which are unlinked and have no Administrator
+        // to search by name through — confirmed as a real live incident, not hypothetical: a
+        // manager with 254 real counterparties returned zero results searching by name.
         if (options.managerErpId) {
-            qb = qb.andWhere('c.managerErpId = :managerErpId', {
-                managerErpId: options.managerErpId,
-            });
+            qb = qb.andWhere(
+                `(c."managerErpId" ILIKE :managerErpId OR EXISTS (
+                    SELECT 1 FROM erp_user eu
+                    WHERE eu."erpId" = c."managerErpId" AND eu."fullName" ILIKE :managerErpId
+                ))`,
+                { managerErpId: `%${options.managerErpId}%` },
+            );
         }
         if (options.branchId) {
             qb = qb.andWhere('c.branchId = :branchId', { branchId: options.branchId });

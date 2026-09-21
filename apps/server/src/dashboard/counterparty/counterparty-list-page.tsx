@@ -2,18 +2,24 @@ import { useState } from 'react';
 import { api, Badge, DetailPageButton, ListPage } from '@vendure/dashboard';
 import { AnyRoute } from '@tanstack/react-router';
 
-import { counterpartyListDocument, administratorNamesForCounterpartyDocument } from './counterparty.graphql.js';
+import {
+    counterpartyListDocument,
+    administratorNamesForCounterpartyDocument,
+    pendingErpUsersForCounterpartyDocument,
+} from './counterparty.graphql.js';
 import { formatBranch, formatLinkStatus, formatManager } from './counterparty-display.js';
 import { AssignManagerBulkAction } from './components/counterparty-bulk-actions.js';
 
 // Issue #133 Phase 2 — native ListPage-based Counterparty list, replacing the hand-rolled table
-// in the reviewed concept. Manager names are resolved client-side against a lightweight
-// administrators lookup (see counterparty.graphql.ts) rather than adding a server-side field
-// resolver — the existing assignedManagerId/managerErpId fallback fields already carry
-// everything needed, this just turns an id into a display name for the small page of rows
-// currently on screen.
+// in the reviewed concept. ERP Manager names are resolved client-side against two lightweight
+// lookups (administrators-by-erpId, unlinked ErpUsers — see counterparty.graphql.ts and
+// counterparty-display.ts's formatManager) rather than a server-side field resolver — small,
+// rarely-changing lists, loaded once for the small page of rows currently on screen.
 export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
-    const [administrators, setAdministrators] = useState<Array<{ id: string; name: string }>>([]);
+    const [administrators, setAdministrators] = useState<
+        Array<{ id: string; name: string; erpId: string | null }>
+    >([]);
+    const [erpUsers, setErpUsers] = useState<Array<{ erpId: string; fullName: string | null }>>([]);
 
     async function loadAdministrators(): Promise<void> {
         const data = await api.query(administratorNamesForCounterpartyDocument, {
@@ -23,12 +29,28 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
             (data.administrators?.items ?? []).map(a => ({
                 id: a.id,
                 name: `${a.firstName} ${a.lastName}`,
+                erpId: a.customFields?.erpId ?? null,
+            })),
+        );
+    }
+
+    async function loadErpUsers(): Promise<void> {
+        const data = await api.query(pendingErpUsersForCounterpartyDocument, {
+            options: { take: 999 },
+        });
+        setErpUsers(
+            (data.pendingErpUsers?.items ?? []).map(u => ({
+                erpId: u.erpId,
+                fullName: u.fullName ?? null,
             })),
         );
     }
 
     if (administrators.length === 0) {
         void loadAdministrators();
+    }
+    if (erpUsers.length === 0) {
+        void loadErpUsers();
     }
 
     return (
@@ -61,13 +83,18 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                     // array, even for a single selection. A Boolean column's facetedFilter
                     // renders as radio buttons instead (@vendure/dashboard's own
                     // DataTableFacetedFilter branches on fieldInfo.type === 'Boolean') and calls
-                    // `column.setFilterValue({ eq: value })` — sending that object straight to
-                    // the resolver as-is (a real, live bug caught here: the isActive filter
-                    // silently only half-applied, `{"status":{"eq":"active"}}` sent to a plain
-                    // `status: String` arg) instead of unwrapping it first.
+                    // `column.setFilterValue({ eq: value })`. The generic "add filter" funnel
+                    // menu's own text filter on a String column (managerErpId) sends
+                    // `{ contains: value }` instead. Sending either operator object straight to
+                    // the resolver as-is is a real, live bug caught here — first the isActive
+                    // filter silently only half-applied (`{"status":{"eq":"active"}}` sent to a
+                    // plain `status: String` arg), then the managerErpId text filter did the
+                    // same with `{ contains: ... }` — so both operator shapes need unwrapping,
+                    // not just one.
                     if (Array.isArray(raw)) return raw[0];
-                    if (raw && typeof raw === 'object' && 'eq' in raw) {
-                        return (raw as { eq: unknown }).eq;
+                    if (raw && typeof raw === 'object') {
+                        if ('eq' in raw) return (raw as { eq: unknown }).eq;
+                        if ('contains' in raw) return (raw as { contains: unknown }).contains;
                     }
                     return raw;
                 };
@@ -122,23 +149,15 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                 // "ERP Manager" — kept as the REAL scalar column (not a synthetic
                 // additionalColumns entry) specifically so it gets ListPage's standard
                 // scalar-field filter for free (same equalsString text filter INN/Price Type
-                // already have, visible in the funnel menu) — this is genuinely ERP-sourced data
-                // (the assignment 1C sent), independent of whether it has resolved to a mivend
-                // Administrator yet, per an explicit product decision: filtering must work
-                // against the raw id, not only against resolved Administrators (most rows aren't
-                // resolved at all — see formatManager's own fallback). The displayed cell still
-                // prefers the resolved name when one exists, exactly like the column always did.
+                // already have, visible in the funnel menu). Entirely about managerErpId, per an
+                // explicit product decision: Counterparty.assignedManagerId (a separate,
+                // operational concept — mivend's own current owner, changeable independently of
+                // whatever 1C last reported) plays no part in this column at all, neither for
+                // display nor filtering. The displayed cell resolves a name for managerErpId
+                // itself (see formatManager) rather than showing the raw id whenever possible.
                 managerErpId: {
                     header: 'ERP Manager',
-                    meta: { dependencies: ['assignedManagerId', 'managerErpId'] },
-                    cell: ({ row }) =>
-                        formatManager(
-                            {
-                                assignedManagerId: row.original.assignedManagerId,
-                                managerErpId: row.original.managerErpId,
-                            },
-                            administrators,
-                        ),
+                    cell: ({ row }) => formatManager(row.original.managerErpId, administrators, erpUsers),
                 },
                 // isActive is deliberately NOT disabled, unlike the other raw fields below — it
                 // needs a real, fieldInfo-bearing generated column for the Status facetedFilter
