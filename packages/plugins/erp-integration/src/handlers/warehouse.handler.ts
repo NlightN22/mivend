@@ -6,9 +6,13 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationWarehouseHandler';
 
-// Applies Integration Service's `warehouse` stream (WarehouseChanged: name/branchId/isActive/
-// isFolder — entityId is the warehouse's own 1C GUID, branchId is the owning division's 1C GUID
-// = Branch.erpId). Confirmed architecture (issue #63 plan): warehouse-level stock uses Vendure's
+// Applies Integration Service's `warehouse` stream (WarehouseChanged: name/departmentId/isActive/
+// isFolder — entityId is the warehouse's own 1C GUID, departmentId is the owning division's 1C
+// GUID ("Подразделение_Key"), matched against Branch.erpId here — same id space as Department's
+// own erpId (event-contracts@0.40.0 renamed this field from branch_id for clarity, see that
+// package's issue #140), but mivend's Branch stays its own independent, staff-managed concept
+// (see DepartmentStreamHandler's own comment) — an unresolved match here is expected, not a bug.
+// Confirmed architecture (issue #63 plan): warehouse-level stock uses Vendure's
 // native StockLocation, one per Warehouse — not Channel, since a branch is a soft staff-grouping
 // tag here, not a hard catalog/pricing partition. StockLocation has no native external-id field,
 // so StockLocation.customFields.warehouseErpId is this handler's own idempotency key.
@@ -63,15 +67,15 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
             return;
         }
 
-        // An empty/missing branchId (malformed payload) is handled the same as an unresolvable
+        // An empty/missing departmentId (malformed payload) is handled the same as an unresolvable
         // one — WarehouseService.upsert leaves branchId null either way, never a reason to skip
         // creating the Warehouse itself.
-        const branchId = String(payload.branchId ?? '');
+        const departmentId = String(payload.departmentId ?? '');
 
         await this.warehouseService.upsert(ctx, {
             erpId: entityId,
             name,
-            branchErpId: branchId,
+            branchErpId: departmentId,
             isActive: isActive && !isDeleted,
         });
 

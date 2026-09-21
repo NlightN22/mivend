@@ -36,7 +36,7 @@ describe('WarehouseStreamHandler', () => {
             createConnection(undefined) as never,
         );
 
-        await handler.apply(ctx, 'wh-1', { branchId: 'branch-guid' });
+        await handler.apply(ctx, 'wh-1', { departmentId: 'branch-guid' });
 
         expect(warehouseService.upsert).not.toHaveBeenCalled();
         expect(warehouseService.setActiveStateIfExists).toHaveBeenCalledWith(ctx, 'wh-1', false);
@@ -81,7 +81,7 @@ describe('WarehouseStreamHandler', () => {
 
         await handler.apply(ctx, 'wh-1', {
             name: 'Main warehouse',
-            branchId: 'branch-guid',
+            departmentId: 'branch-guid',
             isActive: true,
         });
 
@@ -107,7 +107,10 @@ describe('WarehouseStreamHandler', () => {
             createConnection({ id: 'loc-1' }) as never,
         );
 
-        await handler.apply(ctx, 'wh-1', { name: 'Renamed warehouse', branchId: 'branch-guid' });
+        await handler.apply(ctx, 'wh-1', {
+            name: 'Renamed warehouse',
+            departmentId: 'branch-guid',
+        });
 
         expect(stockLocationService.update).toHaveBeenCalledWith(ctx, {
             id: 'loc-1',
@@ -130,7 +133,7 @@ describe('WarehouseStreamHandler', () => {
             createConnection(undefined) as never,
         );
 
-        await handler.apply(ctx, 'wh-1', { name: 'Main warehouse', branchId: 'branch-guid' });
+        await handler.apply(ctx, 'wh-1', { name: 'Main warehouse', departmentId: 'branch-guid' });
 
         expect(warehouseService.upsert).toHaveBeenCalledWith(ctx, {
             erpId: 'wh-1',
@@ -151,7 +154,10 @@ describe('WarehouseStreamHandler', () => {
             createConnection(undefined) as never,
         );
 
-        await handler.apply(ctx, 'wh-1', { name: 'Main warehouse', branchId: 'unknown-branch' });
+        await handler.apply(ctx, 'wh-1', {
+            name: 'Main warehouse',
+            departmentId: 'unknown-branch',
+        });
 
         expect(stockLocationService.create).toHaveBeenCalledWith(ctx, {
             name: 'Main warehouse',
@@ -172,7 +178,7 @@ describe('WarehouseStreamHandler', () => {
 
         await handler.apply(ctx, 'wh-folder-1', {
             name: 'Group folder',
-            branchId: 'branch-guid',
+            departmentId: 'branch-guid',
             isActive: true,
             isFolder: true,
         });
@@ -193,7 +199,7 @@ describe('WarehouseStreamHandler', () => {
 
         await handler.apply(ctx, 'wh-1', {
             name: 'Main warehouse',
-            branchId: 'branch-guid',
+            departmentId: 'branch-guid',
             isActive: true,
             isFolder: false,
         });
@@ -210,7 +216,7 @@ describe('WarehouseStreamHandler', () => {
         });
     });
 
-    it('still creates the StockLocation when branchId is entirely absent from the payload', async () => {
+    it('still creates the StockLocation when departmentId is entirely absent from the payload', async () => {
         const warehouseService = {
             upsert: vi.fn().mockResolvedValue({ id: 'w1', branchId: null }),
         };
