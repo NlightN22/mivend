@@ -18,6 +18,14 @@ export default defineConfig(() => {
     const apiTarget = process.env.VITE_API_TARGET ?? 'http://localhost:3000';
 
     return {
+        // Vite's default cacheDir (node_modules/.vite) is per-package, not per dev-server
+        // instance — this package is started twice concurrently on this box under different
+        // VITE_PORT/mode (local contour's `make dev` on 5175, staging-integration's `make
+        // dev-staging-integration` on 5185, see docs/environments.md). Without this, both
+        // processes race on the same optimizeDeps cache directory, corrupting each other's
+        // pre-bundled chunks — observed live as "Loading failed for the module" for
+        // useExperimentalBundle's chunk files on whichever contour restarted more recently.
+        cacheDir: `node_modules/.vite-${process.env.VITE_PORT ?? '5175'}`,
         build: {
             // Vite's default build output dir is `assets/`, which collides with the `/assets`
             // proxy rule below (Vendure's own product-image assetUrlPrefix) — see
