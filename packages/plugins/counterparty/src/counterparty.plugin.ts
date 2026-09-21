@@ -127,7 +127,14 @@ const shopApiSchema = gql`
 export const adminApiSchema = gql`
     ${tradingPointFields}
 
-    type Counterparty {
+    # implements Node/PaginatedList (Counterparty/CounterpartyList below) — required for
+    # @vendure/dashboard's Dashboard Counterparty ERP list (issue #133) to work at all, not just
+    # for its auto-generated columns: without these, ListPage's generated list hook fails to bind
+    # items/totalItems from the response even though the server returns real data over the wire
+    # (confirmed live: the network response had a correct, non-empty items array, but the table
+    # rendered "No results" regardless). Same gotcha already hit and fixed for ErpUser/ErpUserList
+    # in access-control.plugin.ts (issue #119 Phase 1) — see that type's own comment.
+    type Counterparty implements Node {
         id: ID!
         erpId: String!
         legalName: String!
@@ -178,7 +185,7 @@ export const adminApiSchema = gql`
         preferredTradingPoint: TradingPoint
     }
 
-    type CounterpartyList {
+    type CounterpartyList implements PaginatedList {
         items: [Counterparty!]!
         totalItems: Int!
     }
