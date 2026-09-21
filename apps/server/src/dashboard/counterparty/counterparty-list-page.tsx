@@ -4,11 +4,12 @@ import { AnyRoute } from '@tanstack/react-router';
 
 import { counterpartyListDocument, administratorNamesForCounterpartyDocument } from './counterparty.graphql.js';
 import { formatBranch, formatLinkStatus, formatManager } from './counterparty-display.js';
-import {
-    AssignManagerBulkAction,
-    LinkToCustomerBulkAction,
-    UnlinkFromCustomerBulkAction,
-} from './components/counterparty-bulk-actions.js';
+import { AssignManagerBulkAction } from './components/counterparty-bulk-actions.js';
+
+// Sentinel for the Manager facet's "Unassigned" option — CounterpartyListOptions has no concept
+// of a manager id meaning "none", only a separate unassignedOnly boolean (see
+// CounterpartyService.findVisiblePage), so this never leaves the page/is never sent as a real id.
+const UNASSIGNED_MANAGER_VALUE = '__unassigned__';
 
 // Issue #133 Phase 2 — native ListPage-based Counterparty list, replacing the hand-rolled table
 // in the reviewed concept. Manager names are resolved client-side against a lightweight
@@ -48,14 +49,34 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
             // the raw search term into that filter object, and transformVariables reshapes the
             // whole thing into what this backend query actually accepts before it's sent.
             onSearchTermChange={searchTerm => ({ __search: searchTerm }) as any}
+            // Status/Manager facetedFilters below land here as columnFilters entries under
+            // `options.filter._and` (PaginatedListDataTable's own shape: one `{ [columnId]:
+            // value }` object per active facet) — pulled out and translated into
+            // CounterpartyListOptions' real fields (status/managerId/unassignedOnly), same
+            // resolver params the manager portal's own Customers list already uses.
             transformVariables={variables => {
-                const search = (variables.options?.filter as { __search?: string } | undefined)
-                    ?.__search;
+                const filter = variables.options?.filter as
+                    | { __search?: string; _and?: Array<Record<string, unknown>> }
+                    | undefined;
+                const search = filter?.__search;
+                const facet = (id: string): unknown => {
+                    const entry = filter?._and?.find(f => id in f);
+                    const raw = entry?.[id];
+                    // Checkbox-style faceted filters always send an array, even for a
+                    // single selection — this page only ever acts on the first choice.
+                    return Array.isArray(raw) ? raw[0] : raw;
+                };
+                const status = facet('status') as 'active' | 'inactive' | undefined;
+                const manager = facet('manager') as string | undefined;
                 return {
                     options: {
                         take: variables.options?.take,
                         skip: variables.options?.skip,
                         search: search || undefined,
+                        status: status || undefined,
+                        unassignedOnly: manager === UNASSIGNED_MANAGER_VALUE || undefined,
+                        managerId:
+                            manager && manager !== UNASSIGNED_MANAGER_VALUE ? manager : undefined,
                     },
                 } as typeof variables;
             }}
@@ -164,6 +185,32 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                     },
                 },
             }}
+            // Backend only filters Status on the ERP isActive flag (CounterpartyListOptions'
+            // status: "active"|"inactive") — a different, narrower dimension than the Status
+            // *column*'s own Linked/Unlinked/ERP inactive badge (which also folds in
+            // linkedCustomerId). There is no backend filter for the Linked/Unlinked distinction
+            // yet; labelling these options plainly as "Active (ERP)"/"Inactive (ERP)" so the
+            // filter doesn't imply it can narrow by link status too.
+            //
+            // Manager options show the same resolved administrator name as the Manager column
+            // (falling back to nothing here, not the raw managerErpId — filtering by an id you
+            // can't see the name for isn't useful) plus a separate "Unassigned" entry.
+            facetedFilters={{
+                status: {
+                    title: 'Status',
+                    options: [
+                        { label: 'Active (ERP)', value: 'active' },
+                        { label: 'Inactive (ERP)', value: 'inactive' },
+                    ],
+                },
+                manager: {
+                    title: 'Manager',
+                    options: [
+                        { label: 'Unassigned', value: UNASSIGNED_MANAGER_VALUE },
+                        ...administrators.map(a => ({ label: a.name, value: a.id })),
+                    ],
+                },
+            }}
             defaultColumnOrder={[
                 'shortName',
                 'inn',
@@ -184,11 +231,14 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                 priceType: true,
                 status: true,
             }}
-            bulkActions={[
-                { component: AssignManagerBulkAction },
-                { component: LinkToCustomerBulkAction },
-                { component: UnlinkFromCustomerBulkAction },
-            ]}
+            // Link to Customer / Unlink from Customer (#120's own activation/deactivation
+            // mutations) are deliberately not wired up here at all, not even as a disabled
+            // placeholder — a prior attempt shipped them as visually-enabled-looking bulk actions
+            // whose label leaked the internal issue number ("coming with #120") straight into the
+            // product UI, which is not something a real user should ever see. #133 explicitly
+            // allows hiding this affordance entirely until #120 ships; add it back as one real
+            // bulk action once that mutation exists, not as a stub.
+            bulkActions={[{ component: AssignManagerBulkAction }]}
         />
     );
 }

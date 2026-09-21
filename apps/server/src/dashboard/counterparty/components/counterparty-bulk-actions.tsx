@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BulkActionComponent, DataTableBulkActionItem, usePaginatedList } from '@vendure/dashboard';
-import { UserRoundIcon, LinkIcon, UnlinkIcon } from 'lucide-react';
+import { UserRoundIcon } from 'lucide-react';
 
 import { AssignManagerDialog } from './assign-manager-dialog.js';
 
