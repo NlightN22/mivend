@@ -764,6 +764,43 @@ describe('CounterpartyService', () => {
             });
             expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId IS NULL');
         });
+
+        it('applies a requested sort field/order, overriding the default shortName ASC', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, { sort: { officialEmail: 'DESC' } });
+
+            expect(qb.orderBy).toHaveBeenCalledWith('c.officialEmail', 'DESC');
+        });
+
+        it('only applies the first non-null sort key when several are somehow set', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, {
+                sort: { shortName: null, inn: 'ASC', phone: 'DESC' },
+            });
+
+            expect(qb.orderBy).toHaveBeenCalledWith('c.inn', 'ASC');
+            expect(qb.orderBy).not.toHaveBeenCalledWith('c.phone', 'DESC');
+        });
+
+        it('leaves the default shortName ASC order (from baseVisibleQb) when no sort is requested', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, {});
+
+            expect(qb.orderBy).toHaveBeenCalledTimes(1);
+            expect(qb.orderBy).toHaveBeenCalledWith('c.shortName', 'ASC');
+        });
     });
 
     describe('countUnassigned', () => {

@@ -54,10 +54,11 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const COLUMNS: AdvancedDataTableColumn[] = [
-    { field: 'name', header: 'Name / Email', width: 240, filterConfig: { type: 'none' }, mobile: { primary: true } },
-    { field: 'portalRole', header: 'Portal role', width: 150, filterConfig: { type: 'none' } },
+    { field: 'name', header: 'Name / Email', width: 240, sortField: 'name', filterConfig: { type: 'none' }, mobile: { primary: true } },
+    { field: 'portalRole', header: 'Portal role', width: 150, sortField: 'portalRole', filterConfig: { type: 'none' } },
+    // status is a binary active/inactive badge, not a column worth sorting by.
     { field: 'status', header: 'Status', width: 120, filterConfig: { type: 'none' }, mobile: { badge: true } },
-    { field: 'createdAt', header: 'Created', width: 130, filterConfig: { type: 'none' } },
+    { field: 'createdAt', header: 'Created', width: 130, sortField: 'createdAt', filterConfig: { type: 'none' } },
     { field: 'actions', header: 'Actions', width: 150, filterConfig: { type: 'none' } },
 ];
 
@@ -85,6 +86,10 @@ interface Row {
     portalRole: string;
     active: boolean;
     createdAt: string;
+    // Real timestamp, kept alongside the locale-formatted `createdAt` display string above —
+    // sorting the display string lexically would give a wrong order across month/year
+    // boundaries (locale date formats aren't sortable text).
+    createdAtSortKey: number;
 }
 
 const rows = computed<Row[]>(() =>
@@ -95,8 +100,26 @@ const rows = computed<Row[]>(() =>
         portalRole: u.portalRole ? (ROLE_LABEL[u.portalRole] ?? u.portalRole) : '—',
         active: u.active,
         createdAt: new Date(u.createdAt).toLocaleDateString(),
+        createdAtSortKey: new Date(u.createdAt).getTime(),
     })),
 );
+
+// This table is exempt from server-side pagination (see the comment on `load()` above) — sort
+// is applied client-side over the already-fully-loaded `rows`, driven by the same tableState.sort
+// MvAdvancedDataTable already tracks, rather than adding backend sort support for a bounded list
+// that never needs it.
+const sortedRows = computed<Row[]>(() => {
+    const active = tableState.value.sort[0];
+    if (!active) return rows.value;
+    const { field, order } = active;
+    return [...rows.value].sort((a, b) => {
+        const av = field === 'createdAt' ? a.createdAtSortKey : a[field as keyof Row];
+        const bv = field === 'createdAt' ? b.createdAtSortKey : b[field as keyof Row];
+        if (av === bv) return 0;
+        const cmp = av! < bv! ? -1 : 1;
+        return order === 1 ? cmp : -cmp;
+    });
+});
 
 function openConfirm(row: Row): void {
     const user = users.value.find(u => u.id === row.id);
@@ -124,7 +147,7 @@ async function handleDeactivate(): Promise<void> {
         <MvAdvancedDataTable
             v-model:table-state="tableState"
             :columns="COLUMNS"
-            :rows="rows"
+            :rows="sortedRows"
             :loading="loading"
             :total-items="rows.length"
             :page="1"

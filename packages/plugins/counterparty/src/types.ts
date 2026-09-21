@@ -3,6 +3,16 @@ export const loggerCtx = 'CounterpartyPlugin';
 export const PORTAL_ROLES = ['client_admin', 'buyer', 'accountant', 'observer'] as const;
 export type PortalRole = (typeof PORTAL_ROLES)[number];
 
+// Mirrors the GraphQL `CounterpartySortParameter` input (counterparty.plugin.ts) — only real
+// Counterparty columns, see that input's own doc comment for what's deliberately excluded.
+export interface CounterpartySortParameter {
+    shortName?: 'ASC' | 'DESC' | null;
+    inn?: 'ASC' | 'DESC' | null;
+    managerErpId?: 'ASC' | 'DESC' | null;
+    phone?: 'ASC' | 'DESC' | null;
+    officialEmail?: 'ASC' | 'DESC' | null;
+}
+
 export interface CounterpartyUpsertPayload {
     erpId: string;
     legalName: string;

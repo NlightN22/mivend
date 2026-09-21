@@ -224,6 +224,16 @@ export const adminApiSchema = gql`
         groupLabel: String
         "When true, overrides managerId and filters to counterparties with no assigned manager"
         unassignedOnly: Boolean
+        sort: CounterpartySortParameter
+    }
+
+    "Only real Counterparty columns a human would actually want to order by — never a UUID/id-shaped one (branchId), and never a derived/joined display value (the Manager column shows an ERP-resolved name, not managerErpId itself) — see manager-table-standard skill's sorting follow-up, issue #138."
+    input CounterpartySortParameter {
+        shortName: SortOrder
+        inn: SortOrder
+        managerErpId: SortOrder
+        phone: SortOrder
+        officialEmail: SortOrder
     }
 
     type CounterpartySummary {

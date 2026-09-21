@@ -9,6 +9,7 @@ import {
     fetchManagerLookup,
     formatManagerName,
     type ActivationCandidate,
+    type CounterpartySortParameter,
     type ManagerLookup,
 } from '../../api/counterpartyPortalAccess';
 import CounterpartyActivationDataTable from '../../components/bulk-operations/CounterpartyActivationDataTable.vue';
@@ -24,6 +25,8 @@ const totalItems = ref(0);
 const items = ref<ActivationCandidate[]>([]);
 const searchFilter = ref('');
 const statusFilter = ref<'active' | 'inactive' | ''>('');
+// Mirrors CounterpartyService.baseVisibleQb's own default until the table changes it.
+const sort = ref<CounterpartySortParameter>({ shortName: 'ASC' });
 
 const managerLookup = ref<ManagerLookup>({ administrators: [], erpUsers: [] });
 const branches = ref<BranchOption[]>([]);
@@ -71,6 +74,7 @@ const { loading, run: loadCandidates } = useLatestRequest(
             skip: (page.value - 1) * pageSize.value,
             search: searchFilter.value || undefined,
             status: statusFilter.value || undefined,
+            sort: sort.value,
         }),
     result => {
         items.value = result.items;
@@ -101,10 +105,14 @@ void safeLoad();
 watch([statusFilter, searchFilter, pageSize], () => {
     page.value = 1;
 });
-watch([page, statusFilter, searchFilter, pageSize], () => {
+watch([page, statusFilter, searchFilter, pageSize, sort], () => {
     void safeLoad();
     toQuery(buildUrlFilters(), page);
 });
+
+function handleSortChange(next: CounterpartySortParameter): void {
+    sort.value = next;
+}
 
 function toggleRow(id: string): void {
     const next = new Set(selectedIds.value);
@@ -199,6 +207,7 @@ async function applyPending(): Promise<void> {
             @update:search="searchFilter = $event"
             @update:page="page = $event"
             @update:page-size="pageSize = $event"
+            @update:sort="handleSortChange"
             @toggle-row="toggleRow"
             @select-page="selectPage"
             @clear-selection="clearSelection"

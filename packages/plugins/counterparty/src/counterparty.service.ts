@@ -16,7 +16,18 @@ import { AccessScopeService } from '@mivend/plugin-access-control';
 import { VersioningService } from '@mivend/plugin-versioning';
 
 import { Counterparty } from './entities/counterparty.entity';
-import { CounterpartyUpsertPayload, loggerCtx } from './types';
+import { CounterpartySortParameter, CounterpartyUpsertPayload, loggerCtx } from './types';
+
+// Whitelisted against CounterpartySortParameter's own fields — never derive a column name from
+// caller input directly, that's SQL-injection-shaped even though it'd currently only ever come
+// from GraphQL's own validated enum keys.
+const SORTABLE_COLUMNS: Record<keyof CounterpartySortParameter, string> = {
+    shortName: 'c.shortName',
+    inn: 'c.inn',
+    managerErpId: 'c.managerErpId',
+    phone: 'c.phone',
+    officialEmail: 'c.officialEmail',
+};
 
 @Injectable()
 export class CounterpartyService {
@@ -245,10 +256,12 @@ export class CounterpartyService {
             branchId?: string;
             groupLabel?: string;
             unassignedOnly?: boolean;
+            sort?: CounterpartySortParameter;
         } = {},
     ): Promise<PaginatedList<Counterparty>> {
         let qb = this.baseVisibleQb(ctx);
         qb = await this.applyVisibilityScope(ctx, qb);
+        this.applySort(qb, options.sort);
         if (options.search) {
             qb = qb.andWhere(
                 '(c.shortName ILIKE :search OR c.legalName ILIKE :search OR c.inn ILIKE :search)',
@@ -396,6 +409,23 @@ export class CounterpartyService {
             .getRepository(ctx, Counterparty)
             .createQueryBuilder('c')
             .orderBy('c.shortName', 'ASC');
+    }
+
+    // Only the first non-null sort key is applied — same "single active sort" convention as the
+    // manager portal's own MvAdvancedDataTable (one column at a time, see its toggleSort). Falls
+    // back to baseVisibleQb's own default (shortName ASC) when no sort is requested at all.
+    private applySort(
+        qb: SelectQueryBuilder<Counterparty>,
+        sort?: CounterpartySortParameter,
+    ): void {
+        if (!sort) return;
+        for (const [field, order] of Object.entries(sort) as Array<
+            [keyof CounterpartySortParameter, 'ASC' | 'DESC' | null | undefined]
+        >) {
+            if (!order) continue;
+            qb.orderBy(SORTABLE_COLUMNS[field], order);
+            return;
+        }
     }
 
     private async applyVisibilityScope(

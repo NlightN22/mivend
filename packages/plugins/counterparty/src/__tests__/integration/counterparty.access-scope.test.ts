@@ -362,6 +362,30 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         expect(result.totalItems).toBe(0);
     });
 
+    it('findVisiblePage sorts by a requested real column, descending', async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            { erpId: 'cp-alpha', legalName: 'Alpha', shortName: 'Alpha' },
+            { erpId: 'cp-charlie', legalName: 'Charlie', shortName: 'Charlie' },
+            { erpId: 'cp-bravo', legalName: 'Bravo', shortName: 'Bravo' },
+        ]);
+
+        const result = await service.findVisiblePage(mockCtx, { sort: { shortName: 'DESC' } });
+
+        expect(result.items.map(c => c.shortName)).toEqual(['Charlie', 'Bravo', 'Alpha']);
+    });
+
+    it('findVisiblePage falls back to shortName ASC when no sort is requested', async () => {
+        await dataSource.getRepository(TestCounterparty).save([
+            { erpId: 'cp-alpha', legalName: 'Alpha', shortName: 'Alpha' },
+            { erpId: 'cp-charlie', legalName: 'Charlie', shortName: 'Charlie' },
+            { erpId: 'cp-bravo', legalName: 'Bravo', shortName: 'Bravo' },
+        ]);
+
+        const result = await service.findVisiblePage(mockCtx, {});
+
+        expect(result.items.map(c => c.shortName)).toEqual(['Alpha', 'Bravo', 'Charlie']);
+    });
+
     it('findVisiblePage unassignedOnly returns only counterparties with no assigned manager', async () => {
         await dataSource.getRepository(TestCounterparty).save([
             { erpId: 'cp-assigned', legalName: 'X', shortName: 'X', assignedManagerId: 'admin-1' },

@@ -40,6 +40,17 @@ export interface ActivationCandidate {
     linkedCustomerId: string | null;
 }
 
+// Mirrors the GraphQL `CounterpartySortParameter` input (counterparty.plugin.ts) — only real,
+// server-sortable Counterparty columns, see that input's own doc comment for what's deliberately
+// excluded (issue #138 tracks the remaining manager-portal tables' own sort audit).
+export interface CounterpartySortParameter {
+    shortName?: 'ASC' | 'DESC';
+    inn?: 'ASC' | 'DESC';
+    managerErpId?: 'ASC' | 'DESC';
+    phone?: 'ASC' | 'DESC';
+    officialEmail?: 'ASC' | 'DESC';
+}
+
 export interface ActivationCandidatesOptions {
     take: number;
     skip: number;
@@ -51,6 +62,7 @@ export interface ActivationCandidatesOptions {
     // 'ready' = has phone+email, ERP-active, not yet linked; 'missing' = ERP-active but missing
     // phone/email; 'activated' = already linked to a Customer.
     portalAccess?: 'ready' | 'missing' | 'activated';
+    sort?: CounterpartySortParameter;
 }
 
 const ACTIVATION_CANDIDATES_QUERY = /* GraphQL */ `
@@ -91,6 +103,7 @@ export async function fetchActivationCandidates(
             managerErpId: options.managerErpId || undefined,
             branchId: options.branchId || undefined,
             groupLabel: options.erpGroupLabel || undefined,
+            sort: options.sort,
         },
     });
     return result.counterparties;

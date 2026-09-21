@@ -8,7 +8,9 @@ import {
     useDataTableState,
     type AdvancedDataTableColumn,
 } from '@mivend/ui-kit';
+import type { DataTableSortMeta } from '@mivend/ui-kit';
 import { activationReadiness, type ActivationCandidate } from '../../api/counterpartyPortalAccess';
+import type { CounterpartySortParameter } from '../../api/counterpartyPortalAccess';
 
 // Issue #120 — bulk "Активация клиентов" table. Shortname is the identifying/searched column
 // (manager-table-standard point 1), same role Company name plays in the reviewed concept.
@@ -37,6 +39,7 @@ const emit = defineEmits<{
     'update:search': [search: string];
     'update:page': [page: number];
     'update:page-size': [size: number];
+    'update:sort': [sort: CounterpartySortParameter];
     'toggle-row': [id: string];
     'select-page': [];
     'clear-selection': [];
@@ -49,14 +52,18 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         header: 'Company name',
         width: 220,
         required: true,
+        sortField: 'shortName',
         filterConfig: { type: 'text', placeholder: 'Company name contains…' },
         mobile: { primary: true },
     },
-    { field: 'inn', header: 'INN', width: 130, filterConfig: { type: 'none' } },
-    { field: 'manager', header: 'Manager', width: 160, filterConfig: { type: 'none' } },
+    { field: 'inn', header: 'INN', width: 130, sortField: 'inn', filterConfig: { type: 'none' } },
+    // Sorts by the raw managerErpId column (real, server-sortable) even though the cell displays
+    // a resolved name via props.managerName — sorting by the resolved display string would need
+    // a client-side sort instead, not worth it for a column that's secondary to shortName/inn.
+    { field: 'manager', header: 'Manager', width: 160, sortField: 'managerErpId', filterConfig: { type: 'none' } },
     { field: 'branch', header: 'Branch', width: 140, filterConfig: { type: 'none' } },
-    { field: 'phone', header: 'Phone', width: 150, filterConfig: { type: 'none' }, mobile: { hidden: true } },
-    { field: 'officialEmail', header: 'Official email', width: 200, filterConfig: { type: 'none' } },
+    { field: 'phone', header: 'Phone', width: 150, sortField: 'phone', filterConfig: { type: 'none' }, mobile: { hidden: true } },
+    { field: 'officialEmail', header: 'Official email', width: 200, sortField: 'officialEmail', filterConfig: { type: 'none' } },
     {
         field: 'readiness',
         header: 'Portal access',
@@ -78,7 +85,9 @@ const { state: tableState } = useDataTableState<FilterState>(
         columnOrder: ALL_COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
         hiddenColumns: [],
-        sort: [],
+        // Mirrors the backend's own default (CounterpartyService.baseVisibleQb's shortName ASC)
+        // so the sort button UI reflects reality on first load, not "no sort active".
+        sort: [{ field: 'shortName', order: 1 }],
         filters: { shortName: props.searchFilter },
         pageSize: props.pageSize,
     },
@@ -91,6 +100,16 @@ const { state: tableState } = useDataTableState<FilterState>(
 
 watch(() => tableState.value.filters, f => emit('update:search', f.shortName), { deep: true });
 watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
+
+// Same "single active sort" mapping as CustomerOrdersDataTable.vue's sortToVendure — only the
+// first sort entry is ever meaningful (see MvAdvancedDataTable's own toggleSort, one column at
+// a time).
+function sortToApi(meta: DataTableSortMeta[]): CounterpartySortParameter {
+    const [entry] = meta;
+    if (!entry) return {};
+    return { [entry.field]: entry.order === 1 ? 'ASC' : 'DESC' } as CounterpartySortParameter;
+}
+watch(() => tableState.value.sort, meta => emit('update:sort', sortToApi(meta)), { deep: true });
 watch(() => props.searchFilter, v => {
     tableState.value.filters = { ...tableState.value.filters, shortName: v };
 });

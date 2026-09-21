@@ -13,6 +13,7 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyService } from './counterparty.service';
+import { CounterpartySortParameter } from './types';
 
 @Resolver('Customer')
 export class CustomerCounterpartyResolver {
@@ -98,6 +99,7 @@ export class CounterpartyResolver {
                 branchId?: string;
                 groupLabel?: string;
                 unassignedOnly?: boolean;
+                sort?: CounterpartySortParameter;
             };
         },
     ): Promise<PaginatedList<Counterparty>> {
