@@ -50,6 +50,7 @@ import { IntegrationHealthDashboardPlugin } from './integration-health-dashboard
 import { ErpReconciliationDashboardPlugin } from './erp-reconciliation-dashboard.plugin';
 import { OrganizationsDashboardPlugin } from './organizations-dashboard.plugin';
 import { ErpUsersDashboardPlugin } from './erp-users-dashboard.plugin';
+import { CounterpartyDashboardPlugin } from './counterparty-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const integrationKafkaEnabled = process.env.INTEGRATION_KAFKA_ENABLED === 'true';
@@ -556,6 +557,10 @@ export const config: VendureConfig = {
         // AccessControlPlugin's Administrator-lifecycle backend — see
         // src/dashboard/erp-users/index.ts.
         ErpUsersDashboardPlugin,
+        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #133 Phase 2) —
+        // read-only Counterparty list+detail pages under the native "customers" section — see
+        // src/dashboard/counterparty/index.ts.
+        CounterpartyDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
         AccessControlPlugin,
         SessionManagementPlugin.init({}),
