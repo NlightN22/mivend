@@ -74,9 +74,22 @@ involved at all. This is a manual review item, not a lint failure:
   MUST be wrapped in `useEffect(() => { ... }, [])` (or a real dependency array if it should
   legitimately re-run) — never called bare in the render body, guarded or not.
 - During the mandatory live visual audit below, actually look at the Network panel's request
-  count/timing while the page first loads, not just whether it eventually renders correctly — a
-  page issuing the same admin-api query many times in a row is this exact bug, even if the page
-  "works" once everything eventually settles.
+  count for each distinct one-time query while the page first loads — don't just eyeball "a lot"
+  vs "not a lot", count it, and expect one of exactly two numbers depending on which contour you
+  are checking:
+    - **Dev contour (`make dev`/`make dev-staging-integration`'s Vite dev server)**: exactly **2**
+      firings per query. React's `StrictMode` (dev-only, on by default in `@vendure/dashboard`'s
+      own app shell) deliberately double-invokes effects to surface exactly this class of bug — a
+      correctly-`useEffect`-wrapped one-time load fires twice here, not once, and that is correct,
+      not a regression to chase.
+    - **Production build (`make preview-up`/a real deployed container)**: exactly **1** firing per
+      query. `StrictMode`'s double-invoke is a dev-only diagnostic aid and does not happen in a
+      production build — if a production build still shows 2+ firings of the same one-time query,
+      that IS a real bug (the render-body antipattern above, or a missing/wrong dependency array),
+      not "expected dev behavior leaking through."
+    - Any count other than these two exact numbers for the contour you're checking — in particular
+      anything in the double digits — is the request-storm bug above, confirmed live once already
+      on this exact page (10+ firings) before the `useEffect` fix.
 
 ## Mandatory: any tabular/list page MUST use the native `ListPage` framework component
 
