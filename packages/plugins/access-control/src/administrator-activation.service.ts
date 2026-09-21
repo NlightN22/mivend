@@ -35,14 +35,18 @@ export class AdministratorActivationService {
     // auto-exclude soft-deleted rows, so `.withDeleted()` here is a no-op safety net; the real
     // work is the explicit `deletedAt IS NOT NULL` filter, which is what actually restricts this
     // to deactivated accounts.
+    //
+    // Deliberately not scoped to erpId-linked accounts (dropped that filter after a real report:
+    // an old, never-1C-linked seed Administrator was soft-deleted but invisible here while still
+    // showing on the manager-portal's own Settings > Users list, which never had that scoping —
+    // this screen should show every deactivated Administrator, same as that one, not just ones
+    // that came from the 1C sync).
     async findDeactivated(
         ctx: RequestContext,
         options?: AdministratorListOptions,
     ): Promise<PaginatedList<Administrator>> {
         const qb = this.listQueryBuilder.build(Administrator, options, { ctx });
-        qb.withDeleted()
-            .andWhere(`${qb.alias}.deletedAt IS NOT NULL`)
-            .andWhere(`${qb.alias}.customFieldsErpid IS NOT NULL`);
+        qb.withDeleted().andWhere(`${qb.alias}.deletedAt IS NOT NULL`);
         const [items, totalItems] = await qb.getManyAndCount();
         return { items, totalItems };
     }

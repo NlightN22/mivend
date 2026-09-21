@@ -119,7 +119,7 @@ describe('AdministratorActivationService', () => {
     });
 
     describe('findDeactivated', () => {
-        it('queries with soft-deleted rows included, filtered to deletedAt set and erpId set', async () => {
+        it('queries with soft-deleted rows included, filtered to deletedAt set, regardless of erpId', async () => {
             const qb = {
                 alias: 'administrator',
                 withDeleted: vi.fn(),
@@ -134,7 +134,9 @@ describe('AdministratorActivationService', () => {
 
             expect(qb.withDeleted).toHaveBeenCalled();
             expect(qb.andWhere).toHaveBeenCalledWith('administrator.deletedAt IS NOT NULL');
-            expect(qb.andWhere).toHaveBeenCalledWith('administrator.customFieldsErpid IS NOT NULL');
+            expect(qb.andWhere).not.toHaveBeenCalledWith(
+                'administrator.customFieldsErpid IS NOT NULL',
+            );
             expect(result).toEqual({ items: [{ id: 'admin-1' }], totalItems: 1 });
         });
     });
