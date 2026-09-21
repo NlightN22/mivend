@@ -5,14 +5,19 @@ import { adminApi } from './client';
 //
 // Written as raw query strings (adminApi's pre-codegen escape hatch, see client.ts's own doc
 // comment on issue #86) rather than through packages/manager/codegen.ts's generated
-// TypedDocumentNode pipeline: at the time this file was written, a parallel session was still
-// landing the backend mutations/fields this page needs, so running codegen against the live
-// schema here would fail. `activateCounterpartyPortalAccess`/`deactivateCounterpartyPortalAccess`/
-// `Counterparty.portalUsers` are ASSUMED names, chosen to match this project's existing
-// convention (`reassignCounterpartyManager`, `Counterparty.linkedCustomerId`) — reconcile these
-// against the backend's actual schema once it lands, then migrate this file into
-// customers.graphql + real codegen'd documents, same as every other api/*.ts file in this
-// package.
+// TypedDocumentNode pipeline. Reconciled against the backend's actual shipped schema
+// (packages/plugins/counterparty/src/counterparty-portal-access.resolver.ts) after both the
+// backend and frontend halves of #120 landed in parallel:
+// - There is no plural `activateCounterpartyPortalAccess(counterpartyIds: [ID!]!)` — the real
+//   bulk path is the single `applyCounterpartyPortalAccessChanges(changes: [...])` batch mutation,
+//   one item per row with an independent per-row result.
+// - There is no separate `deactivateCounterpartyPortalUser` — the Portal Users tab's per-row
+//   deactivate reuses the same `deactivateCounterpartyPortalAccess(customerId: ID!): Customer!`
+//   the bulk table's batch path uses internally.
+// - Batch result fields are `{ counterpartyId, success, error, customerId }`, not `{ ..., message }`.
+// This file should still migrate into customers.graphql + real codegen'd documents, same as every
+// other api/*.ts file in this package — left as raw strings here only because that migration is
+// unrelated to the reconciliation itself.
 //
 // `phone`/`officialEmail`/`linkedCustomerId` themselves are NOT assumed — they already exist on
 // the admin schema's Counterparty type, ERP-sourced and read-only since issue #131 (see
@@ -100,22 +105,15 @@ export function activationReadiness(
     return 'ready';
 }
 
-const ACTIVATE_MUTATION = /* GraphQL */ `
-    mutation ActivateCounterpartyPortalAccess($counterpartyIds: [ID!]!) {
-        activateCounterpartyPortalAccess(counterpartyIds: $counterpartyIds) {
+const APPLY_CHANGES_MUTATION = /* GraphQL */ `
+    mutation ApplyCounterpartyPortalAccessChanges(
+        $changes: [CounterpartyPortalAccessChangeInput!]!
+    ) {
+        applyCounterpartyPortalAccessChanges(changes: $changes) {
             counterpartyId
             success
-            message
-        }
-    }
-`;
-
-const DEACTIVATE_MUTATION = /* GraphQL */ `
-    mutation DeactivateCounterpartyPortalAccess($counterpartyIds: [ID!]!) {
-        deactivateCounterpartyPortalAccess(counterpartyIds: $counterpartyIds) {
-            counterpartyId
-            success
-            message
+            error
+            customerId
         }
     }
 `;
@@ -123,28 +121,27 @@ const DEACTIVATE_MUTATION = /* GraphQL */ `
 export interface PortalAccessBatchResult {
     counterpartyId: string;
     success: boolean;
-    message: string | null;
+    error: string | null;
+    customerId: string | null;
 }
 
-// One real batch mutation per action, not N sequential calls — per #120's own carried-over
-// bulk-edit decision.
-export async function activateCounterpartyPortalAccess(
-    counterpartyIds: string[],
-): Promise<PortalAccessBatchResult[]> {
-    const result = await adminApi<{ activateCounterpartyPortalAccess: PortalAccessBatchResult[] }>(
-        ACTIVATE_MUTATION,
-        { counterpartyIds },
-    );
-    return result.activateCounterpartyPortalAccess;
+export type PortalAccessAction = 'activate' | 'deactivate';
+
+export interface PortalAccessChange {
+    counterpartyId: string;
+    action: PortalAccessAction;
 }
 
-export async function deactivateCounterpartyPortalAccess(
-    counterpartyIds: string[],
+// One real batch mutation, not N sequential calls — per #120's own carried-over bulk-edit
+// decision. Both Activate and Deactivate go through this same mutation, distinguished by each
+// change's own `action` field, matching the backend's actual single-mutation shape.
+export async function applyCounterpartyPortalAccessChanges(
+    changes: PortalAccessChange[],
 ): Promise<PortalAccessBatchResult[]> {
     const result = await adminApi<{
-        deactivateCounterpartyPortalAccess: PortalAccessBatchResult[];
-    }>(DEACTIVATE_MUTATION, { counterpartyIds });
-    return result.deactivateCounterpartyPortalAccess;
+        applyCounterpartyPortalAccessChanges: PortalAccessBatchResult[];
+    }>(APPLY_CHANGES_MUTATION, { changes });
+    return result.applyCounterpartyPortalAccessChanges;
 }
 
 // Manager-name resolution for the managerErpId column — same two-source fallback dashboard's
@@ -264,21 +261,23 @@ export async function fetchCounterpartyPortalUsers(
     }));
 }
 
-const DEACTIVATE_PORTAL_USER_MUTATION = /* GraphQL */ `
-    mutation DeactivateCounterpartyPortalUser($customerId: ID!) {
-        deactivateCounterpartyPortalUser(customerId: $customerId) {
+const DEACTIVATE_PORTAL_ACCESS_MUTATION = /* GraphQL */ `
+    mutation DeactivateCounterpartyPortalAccess($customerId: ID!) {
+        deactivateCounterpartyPortalAccess(customerId: $customerId) {
             id
-            success
-            message
         }
     }
 `;
 
+// Same mutation the bulk table's batch path uses internally for a 'deactivate' change — there is
+// no separate single-customer variant. Throws on failure (e.g. no linked Customer); the caller
+// shows the thrown message, there is no {success, message} result shape here.
 export async function deactivateCounterpartyPortalUser(
     customerId: string,
-): Promise<{ id: string; success: boolean; message: string | null }> {
-    const result = await adminApi<{
-        deactivateCounterpartyPortalUser: { id: string; success: boolean; message: string | null };
-    }>(DEACTIVATE_PORTAL_USER_MUTATION, { customerId });
-    return result.deactivateCounterpartyPortalUser;
+): Promise<{ id: string }> {
+    const result = await adminApi<{ deactivateCounterpartyPortalAccess: { id: string } }>(
+        DEACTIVATE_PORTAL_ACCESS_MUTATION,
+        { customerId },
+    );
+    return result.deactivateCounterpartyPortalAccess;
 }

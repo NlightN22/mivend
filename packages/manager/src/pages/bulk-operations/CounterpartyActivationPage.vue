@@ -4,8 +4,7 @@ import { useLatestRequest, MvButton, MvModal, MvNotice } from '@mivend/ui-kit';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import { fetchBranchOptions, type BranchOption } from '../../api/orders';
 import {
-    activateCounterpartyPortalAccess,
-    deactivateCounterpartyPortalAccess,
+    applyCounterpartyPortalAccessChanges,
     fetchActivationCandidates,
     fetchManagerLookup,
     formatManagerName,
@@ -149,20 +148,16 @@ async function applyPending(): Promise<void> {
     applying.value = true;
     actionError.value = '';
     actionNotice.value = '';
-    const toActivate: string[] = [];
-    const toDeactivate: string[] = [];
-    for (const [id, action] of pendingActions.value) {
-        (action === 'activate' ? toActivate : toDeactivate).push(id);
-    }
+    const changes = Array.from(pendingActions.value, ([counterpartyId, action]) => ({
+        counterpartyId,
+        action,
+    }));
     try {
-        const results = await Promise.all([
-            toActivate.length ? activateCounterpartyPortalAccess(toActivate) : Promise.resolve([]),
-            toDeactivate.length ? deactivateCounterpartyPortalAccess(toDeactivate) : Promise.resolve([]),
-        ]);
-        const failures = results.flat().filter(r => !r.success);
+        const results = await applyCounterpartyPortalAccessChanges(changes);
+        const failures = results.filter(r => !r.success);
         if (failures.length > 0) {
             actionError.value = `${failures.length} counterparty(ies) failed: ${failures
-                .map(f => f.message ?? f.counterpartyId)
+                .map(f => f.error ?? f.counterpartyId)
                 .join('; ')}`;
         } else {
             actionNotice.value = `Applied ${pendingActions.value.size} change(s).`;
