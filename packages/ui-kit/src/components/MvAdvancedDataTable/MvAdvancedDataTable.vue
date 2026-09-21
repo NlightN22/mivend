@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from
 import DataTable, { type DataTableFilterMeta } from 'primevue/datatable';
 import Column from 'primevue/column';
 import { Setting, Sort, SortUp, SortDown } from '@element-plus/icons-vue';
+import MvButton from '../MvButton/MvButton.vue';
+import MvCheckbox from '../MvCheckbox/MvCheckbox.vue';
 import MvColumnToggle from '../MvColumnToggle/MvColumnToggle.vue';
 import MvActiveFilterChips from '../MvActiveFilterChips/MvActiveFilterChips.vue';
 import MvScrollFadeOverlay from '../MvScrollFadeOverlay/MvScrollFadeOverlay.vue';
@@ -56,11 +58,28 @@ const props = withDefaults(
         // a default value).
         defaultFilters: Record<string, unknown>;
         emptyMessage?: string;
+        // Opt-in row selection (Vendure-dashboard-style: a checkbox column, a header select-all-
+        // on-page checkbox, and — once something's selected — the toolbar's search/filters swap
+        // for a "N selected" bar with the consumer's own bulk actions + a Reset selection button).
+        // Off by default — most tables have no bulk actions at all.
+        selectable?: boolean;
+        // Only meaningful when `selectable`. Row ids currently selected, as strings (matching
+        // `String(row[dataKey])` — the same coercion `data-key` itself implies). Owned by the
+        // consumer (a v-model), never persisted by this component — selection is a live, in-
+        // session action, not a display preference like column order/width/sort.
+        selectedIds?: Set<string>;
+        // Only meaningful when `selectable`. Gates which rows can be selected at all (e.g. a row
+        // that's missing required data or already in a terminal state) — defaults to "every row
+        // selectable" when omitted.
+        rowSelectable?: (row: TRow) => boolean;
     }>(),
     {
         rowsPerPageOptions: () => [10, 20, 50],
         search: undefined,
         emptyMessage: 'No data',
+        selectable: false,
+        selectedIds: () => new Set(),
+        rowSelectable: () => true,
     },
 );
 
@@ -73,6 +92,7 @@ const emit = defineEmits<{
     // (e.g. Orders' `payment` column, a `custom`-type filter escape hatch wired to a business
     // prop/emit entirely outside tableState.filters).
     'clear-filters': [];
+    'update:selectedIds': [ids: Set<string>];
 }>();
 
 const tableState = defineModel<DataTableState>('tableState', { required: true });
@@ -276,6 +296,46 @@ function onRowClick(event: { data: TRow; originalEvent: Event }): void {
     emit('row-click', { row: event.data, originalEvent: event.originalEvent });
 }
 
+// Selection only ever spans the currently loaded page — same known, already-tracked limitation
+// as every consumer's previous ad hoc "Select page" button (issue #136, "bulk-select all rows
+// matching the current filter, not just the loaded page"), not solved here.
+function rowId(row: TRow): string {
+    return String(row[props.dataKey]);
+}
+function isRowSelected(row: TRow): boolean {
+    return props.selectedIds.has(rowId(row));
+}
+function toggleRowSelected(row: TRow): void {
+    if (!props.rowSelectable(row)) return;
+    const next = new Set(props.selectedIds);
+    const id = rowId(row);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    emit('update:selectedIds', next);
+}
+const selectablePageRows = computed(() => props.rows.filter(r => props.rowSelectable(r)));
+const headerCheckboxState = computed<{ checked: boolean; indeterminate: boolean }>(() => {
+    const selectable = selectablePageRows.value;
+    if (selectable.length === 0) return { checked: false, indeterminate: false };
+    const selectedCount = selectable.filter(isRowSelected).length;
+    return {
+        checked: selectedCount === selectable.length,
+        indeterminate: selectedCount > 0 && selectedCount < selectable.length,
+    };
+});
+function toggleSelectAllOnPage(): void {
+    const next = new Set(props.selectedIds);
+    if (headerCheckboxState.value.checked) {
+        for (const row of selectablePageRows.value) next.delete(rowId(row));
+    } else {
+        for (const row of selectablePageRows.value) next.add(rowId(row));
+    }
+    emit('update:selectedIds', next);
+}
+function resetSelection(): void {
+    emit('update:selectedIds', new Set());
+}
+
 // Row/header height must be the real minimum rendered height — see usePagedScrollHeight's own
 // doc comment: a `<td>`'s `height` CSS is only a minimum a browser can never shrink below, so
 // these must be measured against the actual rendered table, not guessed.
@@ -305,7 +365,15 @@ const isMobile = useIsMobileViewport(800);
 <template>
     <div class="mv-advanced-data-table">
         <div class="mv-advanced-data-table__toolbar">
-            <div class="mv-advanced-data-table__toolbar-start">
+            <!-- Selection replaces search/filters/view-chips entirely while anything is selected
+                 (Vendure-dashboard-style bulk bar) — real feedback: the count + bulk actions +
+                 Reset selection is what matters at that point, not the filter UI underneath it. -->
+            <div v-if="selectable && selectedIds.size > 0" class="mv-advanced-data-table__toolbar-start">
+                <span class="mv-advanced-data-table__selection-count">{{ selectedIds.size }} selected</span>
+                <slot name="selection-actions" :selected-ids="selectedIds" :count="selectedIds.size" />
+                <MvButton size="sm" variant="ghost" @click="resetSelection">✕ Reset selection</MvButton>
+            </div>
+            <div v-else class="mv-advanced-data-table__toolbar-start">
                 <MvColumnFilterText
                     v-if="search"
                     :config="{ type: 'text', placeholder: search.placeholder, debounceMs: search.debounceMs }"
@@ -339,8 +407,14 @@ const isMobile = useIsMobileViewport(800);
 
         <!-- Per-column filters (the thing these chips summarize) have no UI at all on mobile —
              see MvAdvancedMobileCardList.vue's own doc comment — so there's nothing for this to
-             ever show there. Desktop-only, same reasoning as MvColumnToggle above. -->
-        <MvActiveFilterChips v-if="!isMobile" :chips="activeFilterChips" @remove="onRemoveFilterChip" @clear-all="clearFilters" />
+             ever show there. Desktop-only, same reasoning as MvColumnToggle above. Also hidden
+             while selection is active, same reasoning as the toolbar swap above. -->
+        <MvActiveFilterChips
+            v-if="!isMobile && !(selectable && selectedIds.size > 0)"
+            :chips="activeFilterChips"
+            @remove="onRemoveFilterChip"
+            @clear-all="clearFilters"
+        />
 
         <MvAdvancedMobileCardList
             v-if="isMobile"
@@ -396,6 +470,22 @@ const isMobile = useIsMobileViewport(800);
                 <template #empty>
                     <slot name="empty">{{ emptyMessage }}</slot>
                 </template>
+                <Column v-if="selectable" field="__select" :style="{ width: '48px' }">
+                    <template #header>
+                        <MvCheckbox
+                            :model-value="headerCheckboxState.checked"
+                            :indeterminate="headerCheckboxState.indeterminate"
+                            @update:model-value="toggleSelectAllOnPage"
+                        />
+                    </template>
+                    <template #body="{ data }">
+                        <MvCheckbox
+                            :model-value="isRowSelected(data as TRow)"
+                            :disabled="!rowSelectable(data as TRow)"
+                            @update:model-value="toggleRowSelected(data as TRow)"
+                        />
+                    </template>
+                </Column>
                 <Column
                     v-for="col in visibleColumns"
                     :key="col.field"
@@ -464,6 +554,12 @@ const isMobile = useIsMobileViewport(800);
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.mv-advanced-data-table__selection-count {
+    font-weight: 600;
+    color: var(--el-text-color-primary, #17212b);
+    white-space: nowrap;
 }
 
 .mv-advanced-data-table__btn-icon {

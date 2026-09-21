@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import {
-    MvButton,
-    MvCheckbox,
     MvStatusBadge,
     MvAdvancedDataTable,
     useDataTableState,
@@ -15,13 +13,12 @@ import type { CounterpartySortParameter } from '../../api/counterpartyPortalAcce
 // Issue #120 — bulk "Активация клиентов" table. Shortname is the identifying/searched column
 // (manager-table-standard point 1), same role Company name plays in the reviewed concept.
 //
-// Row selection: MvAdvancedDataTable (@mivend/ui-kit) has no built-in row-selection/checkbox
-// mechanism today (checked — no selection/selectable prop, no header-slot to add a "select all"
-// checkbox into). Built here as a plain per-row checkbox cell + explicit "Select page"/"Clear
-// selection" toolbar buttons instead of a header checkbox. This table only ever selects the
-// currently loaded page, same limitation already tracked project-wide as issue #136
-// ("bulk-select all rows matching the current filter, not just the loaded page") — not
-// re-solved here, since #136 explicitly scopes that as its own cross-page investigation.
+// Row selection: MvAdvancedDataTable's own built-in `selectable`/`selectedIds`/`rowSelectable`
+// (header select-all-on-page checkbox + per-row checkbox + the "N selected" bulk bar) — this
+// table only ever selects the currently loaded page, same limitation already tracked
+// project-wide as issue #136 ("bulk-select all rows matching the current filter, not just the
+// loaded page") — not re-solved here, since #136 explicitly scopes that as its own cross-page
+// investigation.
 const props = defineProps<{
     items: ActivationCandidate[];
     loading: boolean;
@@ -40,13 +37,10 @@ const emit = defineEmits<{
     'update:page': [page: number];
     'update:page-size': [size: number];
     'update:sort': [sort: CounterpartySortParameter];
-    'toggle-row': [id: string];
-    'select-page': [];
-    'clear-selection': [];
+    'update:selectedIds': [ids: Set<string>];
 }>();
 
 const ALL_COLUMNS: AdvancedDataTableColumn[] = [
-    { field: 'select', header: 'Select', width: 60, filterConfig: { type: 'none' } },
     {
         field: 'shortName',
         header: 'Company name',
@@ -181,28 +175,15 @@ const READINESS_LABEL: Record<Row['readiness'], string> = {
         :default-filters="BLANK_FILTERS"
         :search="{ filterKey: 'shortName', placeholder: 'Search company name…' }"
         empty-message="No counterparties match these filters"
+        selectable
+        :selected-ids="selectedIds"
+        :row-selectable="canSelect"
         @update:page="p => emit('update:page', p)"
         @reset-page="emit('update:page', 1)"
+        @update:selected-ids="emit('update:selectedIds', $event)"
     >
-        <template #toolbar-start>
-            <MvButton size="sm" variant="ghost" @click="emit('select-page')">Select page</MvButton>
-            <MvButton
-                v-if="selectedIds.size > 0"
-                size="sm"
-                variant="ghost"
-                @click="emit('clear-selection')"
-            >
-                Clear selection ({{ selectedIds.size }})
-            </MvButton>
-        </template>
-
-        <template #cell-select="{ data }">
-            <MvCheckbox
-                :model-value="selectedIds.has((data as Row).id)"
-                :disabled="!canSelect(data as Row)"
-                :title="(data as Row).disabledReason ?? undefined"
-                @update:model-value="emit('toggle-row', (data as Row).id)"
-            />
+        <template #selection-actions="slotProps">
+            <slot name="selection-actions" v-bind="slotProps" />
         </template>
 
         <template #cell-readiness="{ data }">

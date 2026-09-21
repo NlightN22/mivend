@@ -114,24 +114,6 @@ function handleSortChange(next: CounterpartySortParameter): void {
     sort.value = next;
 }
 
-function toggleRow(id: string): void {
-    const next = new Set(selectedIds.value);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    selectedIds.value = next;
-}
-function selectPage(): void {
-    const next = new Set(selectedIds.value);
-    for (const c of items.value) {
-        if (!c.isActive || c.linkedCustomerId) continue;
-        if (!c.phone || !c.officialEmail) continue;
-        next.add(c.id);
-    }
-    selectedIds.value = next;
-}
-function clearSelection(): void {
-    selectedIds.value = new Set();
-}
 
 function queuePending(action: 'activate' | 'deactivate'): void {
     const next = new Map(pendingActions.value);
@@ -208,19 +190,17 @@ async function applyPending(): Promise<void> {
             @update:page="page = $event"
             @update:page-size="pageSize = $event"
             @update:sort="handleSortChange"
-            @toggle-row="toggleRow"
-            @select-page="selectPage"
-            @clear-selection="clearSelection"
+            @update:selected-ids="selectedIds = $event"
         >
+            <template #selection-actions>
+                <MvButton size="sm" @click="queuePending('activate')">Activate portal access</MvButton>
+                <MvButton size="sm" variant="danger" @click="queuePending('deactivate')">
+                    Deactivate portal access
+                </MvButton>
+                <MvButton size="sm" variant="ghost" @click="clearPending">Clear pending changes</MvButton>
+            </template>
+
             <template #toolbar-end>
-                <div v-if="selectedIds.size > 0" class="counterparty-activation-page__bulk-bar">
-                    <span class="counterparty-activation-page__count">{{ selectedIds.size }} selected</span>
-                    <MvButton size="sm" @click="queuePending('activate')">Activate portal access</MvButton>
-                    <MvButton size="sm" variant="danger" @click="queuePending('deactivate')">
-                        Deactivate portal access
-                    </MvButton>
-                    <MvButton size="sm" variant="ghost" @click="clearPending">Clear pending changes</MvButton>
-                </div>
                 <MvButton
                     v-if="hasPending"
                     size="sm"
@@ -263,17 +243,6 @@ async function applyPending(): Promise<void> {
     margin: 0;
     color: var(--el-text-color-secondary, #6b7280);
     font-size: 13px;
-}
-
-.counterparty-activation-page__bulk-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.counterparty-activation-page__count {
-    font-weight: 700;
-    color: var(--el-color-primary, #0f766e);
 }
 
 .counterparty-activation-page__modal-actions {
