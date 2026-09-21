@@ -66,10 +66,16 @@ defineDashboardExtension({
             path: '/branches',
             component: BranchesPage,
             navMenuItem: {
-                sectionId: 'system',
+                // Issue #126: Branch is a precondition for warehouse-event processing to work
+                // at all (see branchConsolidationAlert above), so this sits near the top of
+                // "settings" rather than buried at the bottom of "system". Native "Sellers" is
+                // order: 100, "Channels" is order: 200 (@vendure/dashboard's own defaults.ts) —
+                // 150 places Branches directly between them.
+                sectionId: 'settings',
                 id: 'branches',
                 title: 'Branches',
                 url: '/branches',
+                order: 150,
             },
         },
     ],
