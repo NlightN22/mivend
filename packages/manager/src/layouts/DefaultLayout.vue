@@ -68,6 +68,11 @@ const menuItems = computed<AppSidebarItem[]>(() => {
         { label: 'Approvals', path: '/approvals', badgeCount: approvalsBadgeCount.value },
         { label: 'Team', path: '/team' },
     );
+    // Issue #120 — gated on ManageCounterpartyPortalAccess, the new permission covering both
+    // this bulk-activation page and the Counterparty detail page's Portal Users tab.
+    if (authStore.hasPermission('ManageCounterpartyPortalAccess')) {
+        items.push({ label: 'Обработки', path: '/bulk-operations/counterparty-activation' });
+    }
     // Gated on the same ManageAccessControl permission the Settings > Roles & Access page
     // itself checks — not a role-code allowlist, so granting/revoking this via the native
     // Vendure admin UI (any role) is enough, no manager-portal code change needed.
