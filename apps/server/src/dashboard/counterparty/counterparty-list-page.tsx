@@ -59,15 +59,18 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                     },
                 } as typeof variables;
             }}
-            additionalColumns={{
-                // Counterparty is a plugin-defined GraphQL type, not one of @vendure/dashboard's
-                // own native entities — its scalar fields (shortName/inn/priceType) aren't
-                // auto-generated into columns the way a native type's fields are, so every
-                // displayed field is declared explicitly here rather than mixed with
-                // customizeColumns (which only customizes an already auto-generated column).
+            // Counterparty implements Node (required for ListPage to read the list response at
+            // all, see counterparty.plugin.ts's own comment) — that also makes ListPage
+            // auto-generate a column for every plain scalar field, including shortName/inn/
+            // priceType. Those three MUST go in customizeColumns (overrides the auto-generated
+            // column in place), never additionalColumns (adds a second, same-keyed column) — real
+            // incident: shipped via additionalColumns first, React warned "two children with the
+            // same key" and the list rendered duplicate Short Name/Inn/Price Type columns
+            // alongside the intended ones. Same documented pitfall as
+            // pending-erp-users-page.tsx's departmentId column.
+            customizeColumns={{
                 shortName: {
-                    meta: { dependencies: ['id', 'shortName', 'erpId'] },
-                    header: () => 'Counterparty',
+                    header: 'Counterparty',
                     cell: ({ row }) => (
                         <div>
                             <DetailPageButton id={row.original.id} label={row.original.shortName} />
@@ -78,15 +81,15 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                     ),
                 },
                 inn: {
-                    meta: { dependencies: ['inn'] },
-                    header: () => 'INN',
+                    header: 'INN',
                     cell: ({ row }) => row.original.inn || '—',
                 },
                 priceType: {
-                    meta: { dependencies: ['priceType'] },
-                    header: () => 'Price type',
+                    header: 'Price type',
                     cell: ({ row }) => row.original.priceType,
                 },
+            }}
+            additionalColumns={{
                 branch: {
                     meta: { dependencies: ['branchId'] },
                     header: () => 'Branch',
