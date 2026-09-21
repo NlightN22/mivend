@@ -33,6 +33,11 @@ describe('counterparty admin API schema', () => {
         expect(fieldNames).toContain('legalAddress');
     });
 
+    it('exposes managerErpId/linkedCustomerId on Counterparty (issue #133)', () => {
+        expect(fieldNames).toContain('managerErpId');
+        expect(fieldNames).toContain('linkedCustomerId');
+    });
+
     // notificationPhone is deliberately deferred (no entity column, no consumer) — must not
     // silently reappear in the SDL without an entity/handler change accompanying it.
     it('does not expose notificationPhone (deliberately deferred, see counterparty.handler.ts)', () => {

@@ -62,6 +62,22 @@ export class CounterpartyCreditResolver {
     }
 }
 
+// Read-only reverse-link visibility for issue #133's Dashboard Counterparty detail page. This
+// does not require #120's activation feature to exist yet — it just reports whatever link
+// already exists (e.g. a legacy email-matched Customer), returning null otherwise.
+@Resolver('Counterparty')
+export class CounterpartyCustomerLinkResolver {
+    constructor(private counterpartyService: CounterpartyService) {}
+
+    @ResolveField()
+    async linkedCustomerId(
+        @Ctx() ctx: RequestContext,
+        @Parent() counterparty: Counterparty,
+    ): Promise<ID | null> {
+        return this.counterpartyService.getLinkedCustomerId(ctx, counterparty.id);
+    }
+}
+
 @Resolver('Counterparty')
 export class CounterpartyResolver {
     constructor(private counterpartyService: CounterpartyService) {}

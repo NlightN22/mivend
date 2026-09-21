@@ -419,6 +419,18 @@ export class CounterpartyService {
         return result[0] ?? null;
     }
 
+    // Reverse direction of getForCustomer, for issue #133's Dashboard "Customer binding" card —
+    // read-only visibility of whatever link already exists, independent of #120's activation
+    // mutation (which is what would create that link in the first place).
+    async getLinkedCustomerId(ctx: RequestContext, counterpartyId: ID): Promise<ID | null> {
+        const result = await this.connection.rawConnection.query(
+            `SELECT cu.id AS id FROM customer cu
+             WHERE cu."customFieldsCounterpartyid"::text = $1`,
+            [String(counterpartyId)],
+        );
+        return result[0]?.id ?? null;
+    }
+
     async setCustomerCounterparty(
         ctx: RequestContext,
         customerId: ID,

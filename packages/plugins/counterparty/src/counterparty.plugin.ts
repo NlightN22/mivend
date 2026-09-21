@@ -20,6 +20,7 @@ import {
     CustomerCounterpartyResolver,
     CounterpartyResolver,
     CounterpartyCreditResolver,
+    CounterpartyCustomerLinkResolver,
 } from './counterparty.resolver';
 import {
     CounterpartyTeamFieldResolver,
@@ -140,6 +141,10 @@ export const adminApiSchema = gql`
         priceType: String!
         isActive: Boolean!
         assignedManagerId: String
+        "Raw ERP manager id (1C) — fallback display when assignedManagerId hasn't resolved yet, see issue #133."
+        managerErpId: String
+        "The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation)."
+        linkedCustomerId: ID
         departmentId: String
         branchId: String
         creditTermOverrideExtraDays: Int
@@ -308,6 +313,7 @@ const adminResolvers = [
     TradingPointResolver,
     CounterpartyResolver,
     CounterpartyCreditResolver,
+    CounterpartyCustomerLinkResolver,
     TradingPointAdminResolver,
     CreditTermResolver,
     CounterpartyTeamFieldResolver,
