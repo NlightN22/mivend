@@ -45,6 +45,13 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         field: 'shortName',
         header: 'Company name',
         width: 220,
+        // Real incident this guards: a real ERP legal name ("ИНДИВИДУАЛЬНЫЙ ПРЕДПРИНИМАТЕЛЬ
+        // ГЛАВА КРЕСТЬЯНСКОГО...") is far longer than any reasonable column width — without a
+        // maxWidth, MvAdvancedDataTable's table-layout:fixed still respects a resized width, so
+        // an unbounded manual resize could re-create the same "one column pushes every other one
+        // off-screen" problem this was fixed for at the base-component level.
+        minWidth: 160,
+        maxWidth: 340,
         required: true,
         sortField: 'shortName',
         filterConfig: { type: 'text', placeholder: 'Company name contains…' },
@@ -61,7 +68,10 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'readiness',
         header: 'Portal access',
-        width: 180,
+        // Wide enough for its longest real cell content, the "Missing data → Open Counterparty"
+        // link (custom #cell-readiness slot content isn't ellipsis-truncated by the base
+        // component the way its own default text cells are).
+        width: 240,
         filterConfig: { type: 'none' },
         mobile: { badge: true },
     },

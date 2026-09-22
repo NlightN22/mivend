@@ -10,6 +10,13 @@ export interface AdvancedDataTableColumn {
     field: string;
     header: string;
     width: number;
+    // Optional floor/ceiling on this column's rendered width — the table itself renders with
+    // `table-layout: fixed` (see MvAdvancedDataTable's own doc comment on why), so `width` alone
+    // is already a hard cap by default; these only matter for a column a page wants to let the
+    // user resize within a bounded range, or that should never shrink below a legibility floor
+    // (e.g. a status badge column). Omit either for "no extra constraint beyond `width` itself."
+    minWidth?: number;
+    maxWidth?: number;
     // Never hideable via the column toggle.
     required?: boolean;
     // Omit entirely for a column with no server-side sort support — no sort UI renders for it.

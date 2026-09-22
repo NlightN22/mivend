@@ -171,7 +171,23 @@ function onColumnResizeEnd(event: { element: HTMLElement; delta: number }): void
     const col = props.columns.find(c => c.header === headerText);
     if (!col) return;
     const current = tableState.value.columnWidths[col.field] ?? col.width;
-    tableState.value.columnWidths = { ...tableState.value.columnWidths, [col.field]: current + event.delta };
+    let next = current + event.delta;
+    if (col.minWidth) next = Math.max(next, col.minWidth);
+    if (col.maxWidth) next = Math.min(next, col.maxWidth);
+    tableState.value.columnWidths = { ...tableState.value.columnWidths, [col.field]: next };
+}
+
+// `table-layout: fixed` (see the component's own doc comment) makes `width` an exact,
+// non-negotiable column width — long unbroken cell content (e.g. a legal name) truncates via
+// ellipsis instead of stretching the column and squeezing every column after it off-screen
+// (real incident: exactly this, reported live on the Activation table). `minWidth`/`maxWidth`
+// only matter for user-driven resize (onColumnResizeEnd clamps to them) since `width` alone
+// already fixes the column's width otherwise.
+function columnStyle(col: AdvancedDataTableColumn): Record<string, string> {
+    const style: Record<string, string> = { width: `${col.width}px` };
+    if (col.minWidth) style.minWidth = `${col.minWidth}px`;
+    if (col.maxWidth) style.maxWidth = `${col.maxWidth}px`;
+    return style;
 }
 
 // Fully custom, single-column sort (not PrimeVue's own `sortable`/`sort-mode` — fighting its
@@ -475,6 +491,7 @@ const isMobile = useIsMobileViewport(800);
                         <MvCheckbox
                             :model-value="headerCheckboxState.checked"
                             :indeterminate="headerCheckboxState.indeterminate"
+                            :disabled="selectablePageRows.length === 0"
                             @update:model-value="toggleSelectAllOnPage"
                         />
                     </template>
@@ -490,7 +507,7 @@ const isMobile = useIsMobileViewport(800);
                     v-for="col in visibleColumns"
                     :key="col.field"
                     :field="col.field"
-                    :style="{ width: col.width + 'px' }"
+                    :style="columnStyle(col)"
                     :pt="{ headerCell: { class: filterActiveClass(col.field) } }"
                     :show-filter-match-modes="false"
                     :show-filter-operator="false"
@@ -512,7 +529,13 @@ const isMobile = useIsMobileViewport(800);
                     </template>
 
                     <template #body="{ data }">
-                        <slot :name="`cell-${col.field}`" :data="data">{{ defaultCellText(col.field, (data as Record<string, unknown>)[col.field]) }}</slot>
+                        <slot :name="`cell-${col.field}`" :data="data">
+                            <span
+                                class="mv-advanced-data-table__cell-text"
+                                :title="defaultCellText(col.field, (data as Record<string, unknown>)[col.field])"
+                                >{{ defaultCellText(col.field, (data as Record<string, unknown>)[col.field]) }}</span
+                            >
+                        </slot>
                     </template>
 
                     <template v-if="col.filterConfig.type === 'custom'" #filter>
@@ -571,6 +594,23 @@ const isMobile = useIsMobileViewport(800);
     width: 100%;
 }
 
+/* PrimeVue's default `table-layout: auto` treats a column's declared `width` as a hint, not a
+   cap — the browser still grows a column past it to fit unbroken cell content (a long legal
+   name), squeezing every column after it off-screen. `fixed` makes `width` authoritative; the
+   default text cell (see `mv-advanced-data-table__cell-text` below) truncates with ellipsis
+   instead. Real incident this fixes: the Activation table's long counterparty names pushed
+   Manager/Branch/Phone/Official email columns out of view entirely. */
+:deep(.mv-advanced-data-table__grid table) {
+    table-layout: fixed;
+}
+
+.mv-advanced-data-table__cell-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+
 .mv-advanced-data-table__scroll-host {
     position: relative;
 }
@@ -587,6 +627,10 @@ const isMobile = useIsMobileViewport(800);
 
 .mv-advanced-data-table__col-title {
     cursor: default;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .mv-advanced-data-table__sort-btn {
