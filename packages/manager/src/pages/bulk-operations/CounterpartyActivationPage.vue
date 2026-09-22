@@ -24,6 +24,7 @@ const pageSize = ref(20);
 const totalItems = ref(0);
 const items = ref<ActivationCandidate[]>([]);
 const searchFilter = ref('');
+const managerFilter = ref('');
 const statusFilter = ref<'active' | 'inactive' | ''>('');
 // Mirrors CounterpartyService.baseVisibleQb's own default until the table changes it.
 const sort = ref<CounterpartySortParameter>({ shortName: 'ASC' });
@@ -50,9 +51,10 @@ interface UrlFilters {
     [key: string]: string;
     status: string;
     search: string;
+    manager: string;
     pageSize: string;
 }
-const URL_FILTER_DEFAULTS: UrlFilters = { status: '', search: '', pageSize: '20' };
+const URL_FILTER_DEFAULTS: UrlFilters = { status: '', search: '', manager: '', pageSize: '20' };
 const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
 
 {
@@ -60,11 +62,17 @@ const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
     fromQuery(parsed, page);
     if (parsed.status) statusFilter.value = parsed.status as 'active' | 'inactive';
     if (parsed.search) searchFilter.value = parsed.search;
+    if (parsed.manager) managerFilter.value = parsed.manager;
     if (parsed.pageSize) pageSize.value = Number(parsed.pageSize);
 }
 
 function buildUrlFilters(): UrlFilters {
-    return { status: statusFilter.value, search: searchFilter.value, pageSize: String(pageSize.value) };
+    return {
+        status: statusFilter.value,
+        search: searchFilter.value,
+        manager: managerFilter.value,
+        pageSize: String(pageSize.value),
+    };
 }
 
 const { loading, run: loadCandidates } = useLatestRequest(
@@ -74,6 +82,7 @@ const { loading, run: loadCandidates } = useLatestRequest(
             skip: (page.value - 1) * pageSize.value,
             search: searchFilter.value || undefined,
             status: statusFilter.value || undefined,
+            managerErpId: managerFilter.value || undefined,
             sort: sort.value,
         }),
     result => {
@@ -102,10 +111,10 @@ async function loadLookups(): Promise<void> {
 void loadLookups();
 void safeLoad();
 
-watch([statusFilter, searchFilter, pageSize], () => {
+watch([statusFilter, searchFilter, managerFilter, pageSize], () => {
     page.value = 1;
 });
-watch([page, statusFilter, searchFilter, pageSize, sort], () => {
+watch([page, statusFilter, searchFilter, managerFilter, pageSize, sort], () => {
     void safeLoad();
     toQuery(buildUrlFilters(), page);
 });
@@ -182,11 +191,15 @@ async function applyPending(): Promise<void> {
             :page="page"
             :page-size="pageSize"
             :search-filter="searchFilter"
+            :manager-filter="managerFilter"
+            :status-filter="statusFilter"
             :selected-ids="selectedIds"
             :pending-actions="pendingActions"
             :manager-name="managerName"
             :branch-name="branchName"
             @update:search="searchFilter = $event"
+            @update:manager-filter="managerFilter = $event"
+            @update:status-filter="statusFilter = $event"
             @update:page="page = $event"
             @update:page-size="pageSize = $event"
             @update:sort="handleSortChange"

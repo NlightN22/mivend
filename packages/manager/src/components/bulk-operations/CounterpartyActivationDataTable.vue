@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import {
+    MvSelect,
     MvStatusBadge,
     MvAdvancedDataTable,
     useDataTableState,
@@ -26,6 +27,8 @@ const props = defineProps<{
     page: number;
     pageSize: number;
     searchFilter: string;
+    managerFilter: string;
+    statusFilter: 'active' | 'inactive' | '';
     selectedIds: Set<string>;
     pendingActions: Map<string, 'activate' | 'deactivate'>;
     managerName: (managerErpId: string | null) => string;
@@ -34,12 +37,17 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     'update:search': [search: string];
+    'update:manager-filter': [value: string];
+    'update:status-filter': [value: 'active' | 'inactive' | ''];
     'update:page': [page: number];
     'update:page-size': [size: number];
     'update:sort': [sort: CounterpartySortParameter];
     'update:selectedIds': [ids: Set<string>];
 }>();
 
+// Real backend support already exists for both (CounterpartyListOptions.managerErpId/status)
+// but had no UI at all before this — the manager portal's own version of the Vendure Dashboard's
+// Counterparty list filters (ERP Manager text filter, Status facetedFilter).
 const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'shortName',
@@ -61,17 +69,30 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     // Sorts by the raw managerErpId column (real, server-sortable) even though the cell displays
     // a resolved name via props.managerName — sorting by the resolved display string would need
     // a client-side sort instead, not worth it for a column that's secondary to shortName/inn.
-    { field: 'manager', header: 'Manager', width: 160, sortField: 'managerErpId', filterConfig: { type: 'none' } },
+    // The filter is real too, backed by CounterpartyListOptions.managerErpId (ILIKE against the
+    // raw erpId or the ERP-reported administrator name, see counterparty.service.ts) — text, not
+    // select, since there's no small bounded list of ERP managers to pick from.
+    {
+        field: 'manager',
+        header: 'Manager',
+        width: 160,
+        sortField: 'managerErpId',
+        filterConfig: { type: 'text', placeholder: 'Manager contains…' },
+    },
+    // No filter here (yet): CounterpartyListOptions.branchId exists server-side, but this
+    // codebase has two directly conflicting doc comments about what value space
+    // Counterparty.branchId actually lives in — orders.ts's BranchOption says Branch.erpId,
+    // employee.service.ts says every branchId consumer (AccessScopeService,
+    // BranchSettingsService, Warehouse.branchId) expects the resolved mivend Branch.id. Shipping
+    // a filter against the wrong one would silently match nothing — needs its own investigation
+    // before adding this, not a guess bolted onto an unrelated table-UI change.
     { field: 'branch', header: 'Branch', width: 140, filterConfig: { type: 'none' } },
     { field: 'phone', header: 'Phone', width: 150, sortField: 'phone', filterConfig: { type: 'none' }, mobile: { hidden: true } },
     { field: 'officialEmail', header: 'Official email', width: 200, sortField: 'officialEmail', filterConfig: { type: 'none' } },
     {
         field: 'readiness',
         header: 'Portal access',
-        // Wide enough for its longest real cell content, the "Missing data → Open Counterparty"
-        // link (custom #cell-readiness slot content isn't ellipsis-truncated by the base
-        // component the way its own default text cells are).
-        width: 240,
+        width: 200,
         filterConfig: { type: 'none' },
         mobile: { badge: true },
     },
@@ -80,8 +101,9 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
 interface FilterState {
     [key: string]: unknown;
     shortName: string;
+    manager: string;
 }
-const BLANK_FILTERS: FilterState = { shortName: '' };
+const BLANK_FILTERS: FilterState = { shortName: '', manager: '' };
 
 const { state: tableState } = useDataTableState<FilterState>(
     'bulk-operations-counterparty-activation-datatable',
@@ -92,17 +114,18 @@ const { state: tableState } = useDataTableState<FilterState>(
         // Mirrors the backend's own default (CounterpartyService.baseVisibleQb's shortName ASC)
         // so the sort button UI reflects reality on first load, not "no sort active".
         sort: [{ field: 'shortName', order: 1 }],
-        filters: { shortName: props.searchFilter },
+        filters: { shortName: props.searchFilter, manager: props.managerFilter },
         pageSize: props.pageSize,
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ['shortName'],
-        externallyOwned: { pageSize: true, filterKeys: ['shortName'] },
+        allowedFilterKeys: ['shortName', 'manager'],
+        externallyOwned: { pageSize: true, filterKeys: ['shortName', 'manager'] },
     },
 );
 
 watch(() => tableState.value.filters, f => emit('update:search', f.shortName), { deep: true });
+watch(() => tableState.value.filters, f => emit('update:manager-filter', f.manager), { deep: true });
 watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
 
 // See counterpartySort.ts's mapSortToApi for the mapping logic + the real bug it guards against.
@@ -114,9 +137,18 @@ watch(
 watch(() => props.searchFilter, v => {
     tableState.value.filters = { ...tableState.value.filters, shortName: v };
 });
+watch(() => props.managerFilter, v => {
+    tableState.value.filters = { ...tableState.value.filters, manager: v };
+});
 watch(() => props.pageSize, v => {
     tableState.value.pageSize = v;
 });
+
+const STATUS_OPTIONS = [
+    { value: '', label: 'Any status' },
+    { value: 'active', label: 'Active (ERP)' },
+    { value: 'inactive', label: 'Inactive (ERP)' },
+];
 
 interface Row {
     [key: string]: unknown;
@@ -134,11 +166,16 @@ interface Row {
 const rows = computed<Row[]>(() =>
     props.items.map(c => {
         const readiness = activationReadiness(c);
+        // "on the Counterparty page" used to promise a fix that doesn't exist there — phone/
+        // officialEmail aren't shown or editable anywhere in the manager portal (they're
+        // ERP-sourced and read-only, see counterpartyPortalAccess.ts's own doc comment); the
+        // only real fix is upstream, in the ERP integration itself. Never imply a destination
+        // page can resolve this.
         const disabledReason =
             readiness === 'erp-inactive'
                 ? 'ERP inactive: activation not allowed'
                 : readiness === 'missing-data'
-                  ? 'Missing phone/official email — fill it in on the Counterparty page'
+                  ? 'Missing phone/official email — sourced from the ERP integration, not editable here'
                   : readiness === 'activated'
                     ? 'Already activated'
                     : null;
@@ -189,6 +226,14 @@ const READINESS_LABEL: Record<Row['readiness'], string> = {
         @reset-page="emit('update:page', 1)"
         @update:selected-ids="emit('update:selectedIds', $event)"
     >
+        <template #toolbar-start>
+            <MvSelect
+                :model-value="statusFilter"
+                :options="STATUS_OPTIONS"
+                @update:model-value="emit('update:status-filter', $event as 'active' | 'inactive' | '')"
+            />
+        </template>
+
         <template #selection-actions="slotProps">
             <slot name="selection-actions" v-bind="slotProps" />
         </template>
@@ -200,9 +245,9 @@ const READINESS_LABEL: Record<Row['readiness'], string> = {
                 </MvStatusBadge>
             </template>
             <template v-else-if="(data as Row).readiness === 'missing-data'">
-                <router-link class="counterparty-activation__missing-link" :to="`/customers/${(data as Row).id}`">
-                    Missing data → Open Counterparty
-                </router-link>
+                <MvStatusBadge variant="warning" title="Sourced from the ERP integration — not editable in the manager portal">
+                    Missing data (ERP)
+                </MvStatusBadge>
             </template>
             <MvStatusBadge
                 v-else
@@ -219,15 +264,3 @@ const READINESS_LABEL: Record<Row['readiness'], string> = {
         </template>
     </MvAdvancedDataTable>
 </template>
-
-<style scoped>
-.counterparty-activation__missing-link {
-    color: var(--el-color-primary, #0f766e);
-    font-weight: 600;
-    text-decoration: none;
-}
-
-.counterparty-activation__missing-link:hover {
-    text-decoration: underline;
-}
-</style>
