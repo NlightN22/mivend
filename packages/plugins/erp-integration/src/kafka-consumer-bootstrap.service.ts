@@ -1,8 +1,19 @@
 import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { CollectionService, Logger, ProcessContext } from '@vendure/core';
+import {
+    ChannelService,
+    CollectionService,
+    Logger,
+    ProcessContext,
+    RequestContext,
+} from '@vendure/core';
 
 import { KafkaConsumerService } from './kafka-consumer.service';
-import { ERP_INTEGRATION_PLUGIN_OPTIONS, KAFKA_ENABLED_DEFAULT, loggerCtx } from './types';
+import {
+    ERP_INTEGRATION_PLUGIN_OPTIONS,
+    KAFKA_ENABLED_DEFAULT,
+    PRICES_INCLUDE_TAX_DEFAULT,
+    loggerCtx,
+} from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
 // Central-hub-only bootstrap for the Kafka consumer (issue #62 design point 1 / the
@@ -24,12 +35,19 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
         private readonly kafkaConsumer: KafkaConsumerService,
         private readonly processContext: ProcessContext,
         private readonly collectionService: CollectionService,
+        private readonly channelService: ChannelService,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
     ) {}
 
     async onApplicationBootstrap(): Promise<void> {
         if (this.options.instanceType !== 'central') return;
+
+        // Issue #141: independent of kafkaEnabled/isWorker below — this is a plain Vendure
+        // Channel setting, not a Kafka connection, so it must apply on every central-instance
+        // process (main + worker) and every contour, not gated behind the broker opt-in.
+        await this.ensurePricesIncludeTax();
+
         if (!(this.options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return;
         if (!this.processContext.isWorker) return;
 
@@ -61,5 +79,19 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
                 loggerCtx,
             );
         }
+    }
+
+    // Issue #141: replaces infrastructure/scripts/seed-erp.mjs's one-off
+    // `updateChannel({ pricesIncludeTax: true })` step — the ERP always sends gross/tax-inclusive
+    // prices, so this is a property of the integration itself, not a manual setup step. Idempotent:
+    // a no-op update every run once the channel already matches.
+    private async ensurePricesIncludeTax(): Promise<void> {
+        const desired = this.options.pricesIncludeTax ?? PRICES_INCLUDE_TAX_DEFAULT;
+        const ctx = RequestContext.empty();
+        const defaultChannel = await this.channelService.getDefaultChannel(ctx);
+        if (defaultChannel.pricesIncludeTax === desired) return;
+
+        await this.channelService.update(ctx, { id: defaultChannel.id, pricesIncludeTax: desired });
+        Logger.info(`Set Channel.pricesIncludeTax=${desired}`, loggerCtx);
     }
 }

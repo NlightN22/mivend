@@ -54,6 +54,9 @@ import { UserStreamHandler } from './handlers/user.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
 import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
+import { VatRateStreamHandler } from './handlers/vat-rate.handler';
+import { TaxCategoryAutoCreateService } from './tax-category-auto-create.service';
+import { TaxZoneService } from './tax-zone.service';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
@@ -133,6 +136,9 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
         OrderRegistrationResultHandler,
         OrderChangedStreamHandler,
         PromoRuleStreamHandler,
+        VatRateStreamHandler,
+        TaxCategoryAutoCreateService,
+        TaxZoneService,
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,

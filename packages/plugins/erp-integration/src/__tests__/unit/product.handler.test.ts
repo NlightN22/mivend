@@ -60,6 +60,10 @@ function makeManufacturerService(): { upsert: ReturnType<typeof vi.fn> } {
     return { upsert: vi.fn().mockResolvedValue({ id: 'manufacturer-1' }) };
 }
 
+function makeTaxCategoryAutoCreateService(): { findOrCreate: ReturnType<typeof vi.fn> } {
+    return { findOrCreate: vi.fn().mockResolvedValue({ id: 'tax-auto-created' }) };
+}
+
 function makeProductAncillaryDataService(): {
     replaceBarcodes: ReturnType<typeof vi.fn>;
     replaceCharacteristics: ReturnType<typeof vi.fn>;
@@ -90,6 +94,7 @@ function makeHandler(overrides?: {
     productCategoryFlagService?: { report: ReturnType<typeof vi.fn> };
     manufacturerService?: { upsert: ReturnType<typeof vi.fn> };
     productAncillaryDataService?: ReturnType<typeof makeProductAncillaryDataService>;
+    taxCategoryAutoCreateService?: { findOrCreate: ReturnType<typeof vi.fn> };
 }): {
     handler: ProductStreamHandler;
     productService: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
@@ -103,6 +108,7 @@ function makeHandler(overrides?: {
     productCategoryFlagService: { report: ReturnType<typeof vi.fn> };
     manufacturerService: { upsert: ReturnType<typeof vi.fn> };
     productAncillaryDataService: ReturnType<typeof makeProductAncillaryDataService>;
+    taxCategoryAutoCreateService: { findOrCreate: ReturnType<typeof vi.fn> };
 } {
     const connection = overrides?.connection ?? makeConnection(undefined);
     const productService = overrides?.productService ?? {
@@ -127,6 +133,8 @@ function makeHandler(overrides?: {
     const manufacturerService = overrides?.manufacturerService ?? makeManufacturerService();
     const productAncillaryDataService =
         overrides?.productAncillaryDataService ?? makeProductAncillaryDataService();
+    const taxCategoryAutoCreateService =
+        overrides?.taxCategoryAutoCreateService ?? makeTaxCategoryAutoCreateService();
 
     const handler = new ProductStreamHandler(
         connection as never,
@@ -139,6 +147,7 @@ function makeHandler(overrides?: {
         productCategoryFlagService as never,
         manufacturerService as never,
         productAncillaryDataService as never,
+        taxCategoryAutoCreateService as never,
     );
     return {
         handler,
@@ -148,6 +157,7 @@ function makeHandler(overrides?: {
         productCategoryFlagService,
         manufacturerService,
         productAncillaryDataService,
+        taxCategoryAutoCreateService,
     };
 }
 
@@ -236,20 +246,40 @@ describe('ProductStreamHandler', () => {
         expect(productTaxCodeFlagService.report).not.toHaveBeenCalled();
     });
 
-    it('falls back to the default TaxCategory and reports a flag for an unrecognized VAT code', async () => {
-        const { handler, productVariantService, productTaxCodeFlagService } = makeHandler();
+    it('auto-creates a TaxCategory for a never-seen-before VAT code instead of flagging', async () => {
+        const {
+            handler,
+            productVariantService,
+            productTaxCodeFlagService,
+            taxCategoryAutoCreateService,
+        } = makeHandler();
 
         await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget', vatCode: 'НДС999' });
 
-        expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
-            expect.objectContaining({ taxCategoryId: 'tax-default' }),
-        ]);
-        expect(productTaxCodeFlagService.report).toHaveBeenCalledWith(
+        expect(taxCategoryAutoCreateService.findOrCreate).toHaveBeenCalledWith(
             ctx,
-            'p-1',
             'НДС999',
-            expect.objectContaining({ reason: 'unrecognized' }),
+            'НДС999',
         );
+        expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
+            expect.objectContaining({ taxCategoryId: 'tax-auto-created' }),
+        ]);
+        expect(productTaxCodeFlagService.report).not.toHaveBeenCalled();
+    });
+
+    it('auto-creates a TaxCategory for a recognized code with no matching TaxCategory configured yet', async () => {
+        const { handler, productVariantService, taxCategoryAutoCreateService } = makeHandler();
+
+        await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget', vatCode: 'НДС20' });
+
+        expect(taxCategoryAutoCreateService.findOrCreate).toHaveBeenCalledWith(
+            ctx,
+            'NDS20',
+            'НДС20',
+        );
+        expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
+            expect.objectContaining({ taxCategoryId: 'tax-auto-created' }),
+        ]);
     });
 
     // issue #116 — category_id resolution (Tier 1)

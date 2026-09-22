@@ -661,6 +661,9 @@ export const config: VendureConfig = {
                     'price-type':
                         process.env.INTEGRATION_KAFKA_TOPIC_PRICE_TYPE ??
                         'company.catalog.events.v1.price-type-changed',
+                    'vat-rate':
+                        process.env.INTEGRATION_KAFKA_TOPIC_VAT_RATE ??
+                        'company.catalog.events.v1.vat-rate-changed',
                     product:
                         process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT ??
                         'company.catalog.events.v1.product-changed',

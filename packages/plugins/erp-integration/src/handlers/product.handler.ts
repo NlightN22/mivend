@@ -14,6 +14,7 @@ import { ProductTaxCodeFlagService } from '../product-tax-code-flag.service';
 import { ProductCategoryFlagService } from '../product-category-flag.service';
 import { ManufacturerService } from '../manufacturer.service';
 import { ProductAncillaryDataService } from '../product-ancillary-data.service';
+import { TaxCategoryAutoCreateService } from '../tax-category-auto-create.service';
 import { resolveVatCode } from '../vat-code-resolver';
 import { resolveCategoryFacetValueId } from '../category-resolver';
 import {
@@ -59,6 +60,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         private readonly productCategoryFlagService: ProductCategoryFlagService,
         private readonly manufacturerService: ManufacturerService,
         private readonly productAncillaryDataService: ProductAncillaryDataService,
+        private readonly taxCategoryAutoCreateService: TaxCategoryAutoCreateService,
     ) {}
 
     private taxCategoriesCache?: {
@@ -251,6 +253,20 @@ export class ProductStreamHandler implements InboundStreamHandler {
             taxCategoryIdByErpVatCode,
             String(defaultTaxCategory.id),
         );
+
+        if (resolution.kind === 'auto-create') {
+            // Issue #141: replaces the old default-category-plus-review-flag fallback — an
+            // unmapped-but-real code is auto-created on the spot rather than flagged for a human.
+            // Bust the short-lived TaxCategory cache so a second product with the same new code in
+            // the same batch sees the row just created instead of racing to create it twice.
+            const created = await this.taxCategoryAutoCreateService.findOrCreate(
+                ctx,
+                resolution.erpVatCode,
+                resolution.rawCode,
+            );
+            this.taxCategoriesCache = undefined;
+            return String(created.id);
+        }
 
         if (resolution.flag) {
             Logger.log(

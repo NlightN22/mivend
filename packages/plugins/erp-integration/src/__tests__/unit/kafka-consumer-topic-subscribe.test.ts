@@ -62,6 +62,7 @@ function makeOptions(): ErpIntegrationPluginOptions {
                 'counterparty-credit-balance': 'cpcb',
                 user: 'usr',
                 'promo-rule': 'pr2',
+                'vat-rate': 'vr2',
             },
         },
         schemaRegistry: { url: 'http://x' },
@@ -81,7 +82,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(17);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(18);
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
 
@@ -109,7 +110,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
 
         await consumerPromise;
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(17);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(18);
         // run() must still be reached even though one subscribe() rejected.
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });

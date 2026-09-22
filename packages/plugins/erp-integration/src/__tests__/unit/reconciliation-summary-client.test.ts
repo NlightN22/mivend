@@ -28,6 +28,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             'counterparty-credit-balance': 'cpcb',
             user: 'usr',
             'promo-rule': 'pr2',
+            'vat-rate': 'vr2',
         },
     },
     schemaRegistry: { url: 'http://x' },

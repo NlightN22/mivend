@@ -127,7 +127,11 @@ export type InboundStream =
     // @mivend/plugin-price-entry DiscountRule entity as the existing facet/priceType-threshold
     // rules — see PromoRuleStreamHandler and DiscountRule's own doc comment for the two-shape
     // invariant.
-    | 'promo-rule';
+    | 'promo-rule'
+    // Issue #141: reference-data feed for VAT code -> zone -> percent, company.catalog.events.v1.
+    // VatRateChanged. Not product-keyed — upserts TaxRate.value by (erpVatCode, zone), independent
+    // of ProductChanged arrival order. See VatRateStreamHandler and vat-code-resolver.ts.
+    | 'vat-rate';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -144,6 +148,10 @@ export type InboundStream =
 
 export interface ErpIntegrationPluginOptions {
     instanceType: 'central' | 'branch';
+    // Issue #141: the ERP always sends gross/tax-inclusive prices. Enforced idempotently on the
+    // active channel at bootstrap (KafkaConsumerBootstrapService), replacing the old one-off
+    // seed-erp.mjs step. Defaults to true.
+    pricesIncludeTax?: boolean;
     // Issue #68: separate axis from `instanceType`. A plain `make dev` must never reach a real
     // Integration Service broker just because `instanceType === 'central'` — this must be
     // explicitly opted into per contour (see docs/environments.md). Defaults to `false` when
@@ -205,6 +213,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'counterparty-credit-balance': true,
     user: true,
     'promo-rule': true,
+    'vat-rate': true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,
@@ -267,6 +276,16 @@ export class MissingDependencyError extends Error {
 
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
 export const KAFKA_ENABLED_DEFAULT = false;
+export const PRICES_INCLUDE_TAX_DEFAULT = true;
+// Issue #141: placeholder TaxRate.value written only by the product-side auto-create path when a
+// real, unmapped VAT code first arrives — never written by VatRateStreamHandler for an absent
+// `percent` (absence there means "skip the upsert", see vat-rate.handler.ts).
+export const VAT_PLACEHOLDER_RATE_VALUE = 0;
+// Issue #141: single default zone key ("Russia") — Zone has no natural external-id field in
+// Vendure core, so this finds-or-creates by name (the ERP's own `zone` field, e.g. "RU", is only
+// used to look up the *stable* zone name below, not stored as a key itself — a name is the only
+// stable, human-visible handle Vendure's Zone entity offers).
+export const DEFAULT_TAX_ZONE_NAME = 'Russia';
 export const MAX_RETRY_DEFAULT = 5;
 export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_POLL_INTERVAL_DEFAULT = 5000;

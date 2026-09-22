@@ -80,9 +80,9 @@ describe('ProductTaxCodeFlagService (integration, real Postgres)', () => {
 
     it('findRecent orders flags newest-first and respects take/skip', async () => {
         for (let i = 0; i < 3; i++) {
-            await service.report(ctx, `ext-prod-${i}`, 'НДС999', {
-                reason: 'unrecognized',
-                detail: 'unrecognized',
+            await service.report(ctx, `ext-prod-${i}`, '', {
+                reason: 'unset',
+                detail: 'unset',
             });
         }
 

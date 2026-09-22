@@ -33,6 +33,7 @@ function makeOptions(
                 'counterparty-credit-balance': 'cpcb',
                 user: 'usr',
                 'promo-rule': 'pr2',
+                'vat-rate': 'vr2',
             },
         },
         schemaRegistry: { url: 'http://x' },
@@ -47,6 +48,16 @@ function makeCollectionService(): { setApplyAllFiltersOnProductUpdates: ReturnTy
     return { setApplyAllFiltersOnProductUpdates: vi.fn() };
 }
 
+function makeChannelService(pricesIncludeTax = true): {
+    getDefaultChannel: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+} {
+    return {
+        getDefaultChannel: vi.fn().mockResolvedValue({ id: 'default-channel', pricesIncludeTax }),
+        update: vi.fn().mockResolvedValue(undefined),
+    };
+}
+
 // Central-hub-only guard (the external-integration-rules skill / issue #62 design point 1) — a branch instance
 // must never start a Kafka connection to Integration Service. Also worker-process-only (issue
 // #67) — running in both `main.ts` and `worker.ts` joined the same Kafka consumer group twice,
@@ -58,6 +69,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             { start } as never,
             makeProcessContext(true),
             makeCollectionService() as never,
+            makeChannelService() as never,
             makeOptions('central'),
         );
         await service.onApplicationBootstrap();
@@ -70,6 +82,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             { start } as never,
             makeProcessContext(false),
             makeCollectionService() as never,
+            makeChannelService() as never,
             makeOptions('central'),
         );
         await service.onApplicationBootstrap();
@@ -82,6 +95,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             { start } as never,
             makeProcessContext(true),
             makeCollectionService() as never,
+            makeChannelService() as never,
             makeOptions('branch'),
         );
         await service.onApplicationBootstrap();
@@ -97,6 +111,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             { start } as never,
             makeProcessContext(true),
             makeCollectionService() as never,
+            makeChannelService() as never,
             makeOptions('central', false),
         );
         await service.onApplicationBootstrap();
@@ -111,6 +126,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             { start } as never,
             makeProcessContext(true),
             makeCollectionService() as never,
+            makeChannelService() as never,
             options,
         );
         await service.onApplicationBootstrap();
@@ -128,6 +144,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             { start: vi.fn().mockResolvedValue(undefined) } as never,
             makeProcessContext(true),
             collectionService as never,
+            makeChannelService() as never,
             makeOptions('central'),
         );
         await service.onApplicationBootstrap();
@@ -140,6 +157,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             { start: vi.fn().mockResolvedValue(undefined) } as never,
             makeProcessContext(false),
             collectionService as never,
+            makeChannelService() as never,
             makeOptions('central'),
         );
         await service.onApplicationBootstrap();
@@ -152,6 +170,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             { start: vi.fn().mockResolvedValue(undefined) } as never,
             makeProcessContext(true),
             collectionService as never,
+            makeChannelService() as never,
             makeOptions('branch'),
         );
         await service.onApplicationBootstrap();
@@ -164,6 +183,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             { start: vi.fn().mockResolvedValue(undefined) } as never,
             makeProcessContext(true),
             collectionService as never,
+            makeChannelService() as never,
             makeOptions('central', false),
         );
         await service.onApplicationBootstrap();
