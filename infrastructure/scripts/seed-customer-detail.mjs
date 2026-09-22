@@ -404,7 +404,7 @@ async function topUpFulfillmentVariety(directorToken, customerId) {
     }
 }
 
-// Real 1C-driven cancellation only exists as an ERP callback today (see
+// Real ERP-driven cancellation only exists as an ERP callback today (see
 // ReservationErpSyncService.handleErpOrderStatus / ErpOrderService.updateStatus) — there is no
 // manager-portal "Cancel order" button and reservation expiry never auto-cancels (see the open
 // cancellation issues logged from this investigation). This mirrors that real callback so the

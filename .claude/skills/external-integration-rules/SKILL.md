@@ -6,7 +6,7 @@ description: Mandatory rules for anything touching an external system — Integr
 # External integration rules
 
 This covers the boundary between mivend and anything **outside** mivend's own hub↔branch
-topology: Integration Service (1C via Kafka), a payment provider, a fiscal registrar/operator,
+topology: Integration Service (ERP via Kafka), a payment provider, a fiscal registrar/operator,
 or any future external API/webhook. For the hub↔branch RabbitMQ boundary instead, see the
 `internal-sync-rules` skill.
 
@@ -34,7 +34,7 @@ already recorded there from scratch.
 
 **`plugin-erp-integration` (central-hub-only) is the single owner of all traffic to/from
 Integration Service, over Kafka exclusively — never a direct HTTP/REST call to Integration
-Service or to 1C from this repo, in either direction.** No RPC channel of any kind (see
+Service or to the ERP from this repo, in either direction.** No RPC channel of any kind (see
 `docs/sync.md`'s "Why Kafka both ways, not Kafka + RPC"). Inbound catalog/price/stock streams are
 consumed from Kafka topics (`company.catalog.events.v1.*`) into `IntegrationInboxEvent`; outbound
 business events (e.g. `OrderSubmitted`) are published via `IntegrationOutboxEntry`, both
@@ -133,7 +133,7 @@ unconsumed with zero written decision anywhere — not the handler's own comment
 `docs/ai/erp-streams-map.md`, not the issue body — while three _other_ unconsumed fields on the
 same message (`appliedDiscountAmount`/`priceTypeId`/`comment`) did get an explicit documented
 reason. Checking the current version was necessary but not sufficient — every field the current
-contract carries also needs an explicit, individual, written fate. 1C/Integration Service is the
+contract carries also needs an explicit, individual, written fate. ERP/Integration Service is the
 source of truth (see this skill's own "ERP is master for business data") — a field silently
 dropped on the floor is silently disagreeing with the source of truth without saying so anywhere
 a human or the next session would find it.
@@ -242,7 +242,7 @@ inbound event dedup, business-level uniqueness): `docs/payments.md`.
 
 ## Never process a risky inbound event synchronously
 
-A webhook, an ERP/1C exchange callback, or any other external/unreliable integration entry point
+A webhook, an ERP/ERP exchange callback, or any other external/unreliable integration entry point
 must never process a critical event synchronously as part of accepting it. The source only knows
 "did you acknowledge receipt," not "did your business logic actually finish" — if those are the
 same synchronous call and processing fails or the instance is down, the fact can be lost forever.
@@ -276,7 +276,7 @@ code.
 
 Real incident (issue #95's investigation): several `plugin-erp-integration` stream handlers
 (`stock`, `price`, `storage-location`, `order-registration-result`, at least) resolve a foreign
-reference to another 1C entity synced via a _different_ Kafka stream (a `Warehouse` by erpId, a
+reference to another ERP entity synced via a _different_ Kafka stream (a `Warehouse` by erpId, a
 `PriceType`, a `ProductVariant` by external id). When that lookup came back empty — most commonly
 because the referenced entity's own stream hasn't delivered it yet, an ordinary race with no
 topic-level sequencing guarantee in Kafka — the handler logged a warning and `return`ed normally.
@@ -340,13 +340,13 @@ tell which is which; do not guess from the field's own semantics.
 **Two real incidents from getting this wrong, same root cause, different field/type:**
 
 - issue #89: `isActive`/`isDeleted` bool fields — an absent key was read as "defaults to active",
-  making real deactivations from 1C silently invisible. Fixed via the `=== true` explicit-boolean
+  making real deactivations from the ERP silently invisible. Fixed via the `=== true` explicit-boolean
   read pattern (see `types.ts`'s `InboundStream` comment) — now applied consistently across every
   handler reading these two fields.
 - mivend.issue.84.88 (2026-09-15): `stock.handler.ts`'s `availableQuantity` (a `double`, not a
   bool) had the identical bug in a different type — `payload.availableQuantity != null ? Number(
 ...) : null` treated an absent key as "no data, don't write anything", when it actually meant
-  "1C reports zero available stock" — exactly the case the downstream ATP cap
+  "the ERP reports zero available stock" — exactly the case the downstream ATP cap
   (`ReservationAvailabilityService`, issue #72) most needs to catch. This silently skipped writing
   the ATP cap for every affected row (a real oversell-risk gap, not just cosmetic) and, separately,
   broke an unrelated reconciliation feature that used the same field's nullness as a proxy for "did
@@ -448,16 +448,16 @@ own reference, not only this platform's internal id.
 
 ## Hierarchical/catalog-like entities — check for a folder/group discriminator first
 
-Real incident, issue #94: 1C's warehouse tree includes folder/group nodes (e.g. "Branch X,
+Real incident, issue #94: the ERP's warehouse tree includes folder/group nodes (e.g. "Branch X,
 Address Y (group)"), not just real leaf warehouses. `warehouse_changed.proto` already carried the
 discriminator (`bool is_folder = 8`, `optional string parent_id = 7`), but the handler read only
 `name`/`branchId`/`isActive`/`isDeleted` and created a real Vendure `StockLocation` for every row
 unconditionally — folders got treated as physical warehouses, with stock quantities that made no
 physical sense, and it went undetected until someone spotted it live in production admin.
 
-**Before writing a new Kafka consumer/stream handler for any hierarchical or catalog-like 1C
+**Before writing a new Kafka consumer/stream handler for any hierarchical or catalog-like ERP
 entity** (warehouses, categories, organizational units, price groups, or anything else with a
-natural parent/child or folder structure in 1C):
+natural parent/child or folder structure in the ERP):
 
 1. Check the proto contract for a folder/group/hierarchy discriminator field (`is_folder`,
    `is_group`, `parent_id`, or similarly named).
@@ -465,14 +465,14 @@ natural parent/child or folder structure in 1C):
    `=== true` explicit-boolean pattern already used for `isActive`/`isDeleted` (proto3 omits
    false/zero values on the wire, see `types.ts`) — or explicitly document in a comment why it's
    safe to ignore. Never assume a flat list once a hierarchy field is visible in the contract.
-3. If no such field is visible in the contract but the entity is plausibly hierarchical in 1C
-   (folders/groups are a common 1C catalog pattern), stop and ask the user/domain owner how
-   folder/group nodes should be represented on this stream — or get explicit confirmation that 1C
+3. If no such field is visible in the contract but the entity is plausibly hierarchical in the ERP
+   (folders/groups are a common ERP catalog pattern), stop and ask the user/domain owner how
+   folder/group nodes should be represented on this stream — or get explicit confirmation that ERP
    never sends them here — rather than assuming a flat list and finding out live in production.
 
 As of issue #94, `warehouse_changed.proto` is the only contract under
 `event-contracts/proto/company/` with this kind of field — re-check this per-entity whenever a new
-handler is added or an existing one is touched, since 1C is free to add a similar flag later.
+handler is added or an existing one is touched, since ERP is free to add a similar flag later.
 
 ## Testing — never against the real external system
 

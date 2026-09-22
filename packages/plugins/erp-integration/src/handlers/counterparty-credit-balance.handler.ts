@@ -29,7 +29,7 @@ export class CounterpartyCreditBalanceStreamHandler implements InboundStreamHand
             );
             return;
         }
-        // A deleted register entry is not the same as "balance is now zero" — 1C's own retraction
+        // A deleted register entry is not the same as "balance is now zero" — the ERP's own retraction
         // of a settlement entry doesn't imply the counterparty's real balance became zero, so this
         // stays a logged no-op rather than fabricating a zero balance.
         if (payload.isDeleted === true) {

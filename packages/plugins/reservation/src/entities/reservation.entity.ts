@@ -12,10 +12,10 @@ export type ReservationStatus = 'active' | 'released' | 'expired';
 // touches stockOnHand/stockAllocated itself.
 //
 // Stays `active` (and keeps being subtracted from ATP) through RESERVED/CONFIRMED — those are
-// bare status labels on the generic order-status callback with no reliable guarantee that 1C has
+// bare status labels on the generic order-status callback with no reliable guarantee that the ERP has
 // actually written off physical stock yet (see ReservationErpSyncService's own doc comment for
 // the full reasoning and the two abandoned approaches this settled on instead of). Only a real
-// CANCELLED releases it today; the actual "1C really wrote this off" release trigger — 1C's
+// CANCELLED releases it today; the actual "ERP really wrote this off" release trigger — the ERP's
 // per-line reservedLines on company.orders.events.v1.order-registration-result — is not consumed
 // yet (issue #72/#74).
 //
@@ -90,8 +90,8 @@ export class Reservation extends VendureEntity {
     @Column({ type: 'timestamp', nullable: true })
     interventionFlaggedAt!: Date | null;
 
-    // Stable idempotency key for the 1C outbox "confirmed" command (see docs/order-flow.md "1C
-    // integration" — "Each command needs a stable reservationOperationId so 1C can safely
+    // Stable idempotency key for the ERP outbox "confirmed" command (see docs/order-flow.md "ERP
+    // integration" — "Each command needs a stable reservationOperationId so ERP can safely
     // receive the same command twice without creating a duplicate document/reservation").
     // Generated once at reserveOrder() write time; used as sync_outbox's eventId by
     // plugin-sync's ReservationConsumer. A separate id is used for the "released" command (see
@@ -103,8 +103,8 @@ export class Reservation extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     erpReleaseOperationId!: string | null;
 
-    // Set once when 1C's own order-status callback reports RESERVED/CONFIRMED for this
-    // reservation's order — closes the loop for staff visibility that 1C actually picked up
+    // Set once when the ERP's own order-status callback reports RESERVED/CONFIRMED for this
+    // reservation's order — closes the loop for staff visibility that ERP actually picked up
     // the command (see ReservationService.handleErpOrderStatus).
     @Column({ type: 'timestamp', nullable: true })
     erpConfirmedAt!: Date | null;

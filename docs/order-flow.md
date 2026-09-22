@@ -44,30 +44,30 @@ correctly-but-unhelpfully enter the manual confirmation queue.
 
 Stages 5–6 are also done:
 
-- **1C outbox** — `plugin-reservation` publishes `ReservationConfirmedEvent`/
+- **ERP outbox** — `plugin-reservation` publishes `ReservationConfirmedEvent`/
   `ReservationReleasedEvent` (never touches RabbitMQ/outbox directly, per the
   internal-sync-rules skill's ownership rule); a new `ReservationConsumer` in `plugin-sync`
   writes `reservation.created`/
   `reservation.released` to `sync_outbox` (`target: 'erp'`), keyed by `Reservation`'s
   `erpOperationId`/`erpReleaseOperationId` (two distinct stable ids — reusing one across both
   commands would collide on `sync_outbox`'s unique `eventId`). `packages/shared/src/sync.ts`'s
-  `ReservationCreatedPayload`/`ReservationReleasedPayload` gained `orderCode` so 1C can
-  correlate the command with its own document. Inbound: 1C's existing
+  `ReservationCreatedPayload`/`ReservationReleasedPayload` gained `orderCode` so ERP can
+  correlate the command with its own document. Inbound: the ERP's existing
   `POST /erp/callback/order-status` → `ErpOrderStatusEvent` is now also consumed by
   `plugin-reservation` — `RESERVED`/`CONFIRMED` sets `Reservation.erpConfirmedAt`;
-  `CANCELLED` releases the local hold (1C wins conflicts, per this project's explicit
+  `CANCELLED` releases the local hold (the ERP wins conflicts, per this project's explicit
   decision). **Deliberately does NOT release on RESERVED/CONFIRMED/SHIPPED/DELIVERED** (tried
   and reverted same-day, issue #72, 2026-09-05) — those are bare status labels with no reliable
-  guarantee 1C has actually written off physical stock yet; releasing on an unverified status
+  guarantee the ERP has actually written off physical stock yet; releasing on an unverified status
   reopens an oversell window with no backstop (issue #73 isn't built). The real release trigger
   needs `company.orders.events.v1.order-registration-result`'s per-line `reservedLines` (not
   consumed yet — issue #72/#74), which is emitted as a direct, same-transaction consequence of
-  1C actually posting the document. Filed [#43](https://github.com/NlightN22/mivend/issues/43) — the general gap that
+  ERP actually posting the document. Filed [#43](https://github.com/NlightN22/mivend/issues/43) — the general gap that
   most other `SyncEventSchema` event types still have no real outbound producer
   (`order.consumer.ts`'s `OrderReadyForErpEvent` handler is still a stub); this round only
   fixes it for reservations, as a template.
 - **MOQ** — new `packages/plugins/moq` (`ProductVariant.customFields.multiplicity`, populated
-  from 1C via `erp-import`'s `product.handler.ts`) enforces pack-size via Vendure's own
+  from the ERP via `erp-import`'s `product.handler.ts`) enforces pack-size via Vendure's own
   `OrderInterceptor` extension point (`willAddItemToOrder`/`willAdjustOrderLine`) — covers the
   shop API and the admin draft-order flow in one hook. `reserveOrder()` re-validates the same
   rule as defense in depth. The manager portal's Catalog table still shows a hardcoded `1` for
@@ -134,8 +134,8 @@ genuinely custom to this project (`plugin-reservation`).
 - Prepaid orders should auto-reserve stock immediately.
 - Non-prepaid orders require manual staff confirmation before reservation — this _is_ "order
   confirmation" in this business.
-- ERP-side (1C): reservation transitions the order to "на согласование" (pending
-  reconciliation) in 1C; reservation TTL is set at that same transition.
+- ERP-side (the ERP): reservation transitions the order to "на согласование" (pending
+  reconciliation) in the ERP; reservation TTL is set at that same transition.
 - After reservation, credit-limit/price/discount checks apply via the existing
   `approval-workflow` plugin — out of scope here.
 - Completed/cancelled orders never re-enter "awaiting confirmation."
@@ -224,7 +224,7 @@ Reserve the whole order or nothing: if any line can't be fully reserved, the ope
 doesn't proceed, any reservations already written within that attempt roll back, and the
 staff member sees exactly which lines failed and why. Partial reservation (splitting an
 order, waiting on partial restock) is a real feature but adds significant complexity
-(commercial re-approval on a changed order, 1C integration complexity) — defer until there's
+(commercial re-approval on a changed order, the ERP integration complexity) — defer until there's
 a confirmed business need for it.
 
 ### TTL (decided)
@@ -252,16 +252,16 @@ Per-channel/per-customer-segment overrides are not needed for stage 1.
 uniqueness key: `orderId + orderLineId + stockLocationId + reservationGeneration`, with at
 most one active reservation per order line + stock location at a time.
 
-### 1C integration — outbox, not a shared transaction
+### ERP integration — outbox, not a shared transaction
 
-Reservation-write (local DB) and the 1C status transition cannot be one transaction across
+Reservation-write (local DB) and the ERP status transition cannot be one transaction across
 two systems. This project already has a hard rule for this exact situation (the outbox-pattern
 messaging invariant, see the `internal-sync-rules`/`external-integration-rules` skills): write to `sync_outbox` in the same local transaction as the reservation, and let
 a separate worker deliver the ERP command, retrying with backoff, never silently dropping a
-failure. Each command needs a stable `reservationOperationId` so 1C can safely receive the
+failure. Each command needs a stable `reservationOperationId` so ERP can safely receive the
 same command twice without creating a duplicate document/reservation.
 
-**On 1C unavailability**: keep the local reservation active (don't cancel it just because the
+**On ERP unavailability**: keep the local reservation active (don't cancel it just because the
 ERP is briefly unreachable), queue the outbound command for retry, surface an "ERP sync
 error" status to staff, and only escalate to a task/notification after a configured retry
 limit — releasing stock on a transient sync failure risks reselling something already
@@ -279,7 +279,7 @@ steps.
 
 Independent of the reservation work above. `multiplicity` (already a visible field in the
 manager Catalog table) is the single source of truth — the current dev/seed data is a
-placeholder only; real ERP-sourced `multiplicity` values are confirmed correct once 1C
+placeholder only; real ERP-sourced `multiplicity` values are confirmed correct once ERP
 integration is live, so no separate data-audit step is needed before enforcing validation.
 Normalize: null/0/negative = data error, `1` = no constraint, `>1` = required step. Enforce
 server-side at every mutation point that can change order quantity (add line, update
@@ -287,17 +287,17 @@ quantity, checkout, order-confirm, API-driven changes) — this is the one point
 non-optional; product-page/cart-level checks are UX sugar on top, not a substitute. Don't
 auto-round silently.
 
-**Only some SKUs are constrained — this is intentional, not a partial implementation.** In 1C,
+**Only some SKUs are constrained — this is intentional, not a partial implementation.** In ERP,
 a package multiplicity only applies to items whose default sales unit of measure
 ("Ед. изм. для продажи по умолчанию") is itself a package (a screenshot from the client showed
 this: a boxed item has a "упак" unit with a quantity coefficient, e.g. 20 pcs/pack; most items
 have no such package unit and sell by piece with no constraint). `multiplicity` is nullable for
-exactly this reason: **1C should only send it for items that actually have this default
+exactly this reason: **ERP should only send it for items that actually have this default
 package sales unit set**, as the single resolved coefficient (e.g. `20`), not as the two raw
-1C fields (default sales UoM + package coefficient) separately — omit the field entirely for
+ERP fields (default sales UoM + package coefficient) separately — omit the field entirely for
 everything else. See `ProductRecordDto.multiplicity`'s Swagger description
 (`packages/plugins/erp-import/src/dto/records/product-record.dto.ts`) for the exact contract
-given to 1C's integrators — that description is the source of truth for the ERP side, keep it
+given to the ERP's integrators — that description is the source of truth for the ERP side, keep it
 in sync with this paragraph if either changes.
 
 ### Permissions
@@ -356,7 +356,7 @@ qty/location context, so the manager-portal UI can show exactly what's wrong per
   `PaymentMethod.customFields.reservationTtlDays`, same native Admin UI.
 - `safetyStock`: not needed — dropped from the ATP formula.
 - Audit: reuse Vendure's `HistoryEntry`/`ReadEntityHistory` — no new audit table.
-- `multiplicity` data: will arrive correctly once 1C integration is live; current seed data
+- `multiplicity` data: will arrive correctly once the ERP integration is live; current seed data
   is a placeholder only — no separate data-cleanup step needed before enforcing validation.
 
 ## Implementation order
@@ -365,7 +365,7 @@ Follow the staged rollout from "Recommended sequence" implicit above: (1) data m
 `Reservation`/`stockAllocated` relationship, ATP formula, reservation-state field; (2) single
 `ReservationService.reserveOrder()` with concurrency-safe write + idempotency; (3) manual
 confirmation path (`ConfirmOrder` permission, `AWAITING_CONFIRMATION` queue, manager-portal
-UI); (4) automatic prepaid path (`PaymentMethod` customFields, `EventBus` listener); (5) 1C
+UI); (4) automatic prepaid path (`PaymentMethod` customFields, `EventBus` listener); (5) ERP
 outbox integration for the reservation → "на согласование" transition; (6) pack-size/MOQ
 server-side validation; (7) deferred items (trusted-customer auto-confirm etc.) only after
 the above is stable.

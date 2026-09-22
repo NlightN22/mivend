@@ -92,7 +92,7 @@ describe('AccessScopeService', () => {
     });
 
     describe('assertCounterpartyWritable', () => {
-        // departmentId is pure display information (1C org data), never a scope gate; branchId
+        // departmentId is pure display information (ERP org data), never a scope gate; branchId
         // IS the real gate for "department" scope (security-first correction, 2026-09-20 round
         // 3) — deny-by-default, so a departmentId mismatch alone must not reject as long as
         // branchId matches, and a branchId mismatch (including a null Counterparty.branchId)

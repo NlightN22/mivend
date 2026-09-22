@@ -8,7 +8,7 @@
 // - issue #89: isActive/isDeleted (bool) read as "absent = active" instead of "absent = false".
 // - mivend.issue.84.88 (2026-09-15): stock.handler.ts's availableQuantity (double) read as
 //   "absent = no data, don't write" instead of "absent = 0" — silently skipped the ATP cap for
-//   every row where 1C reported zero available stock, and separately broke an ERP-reconciliation
+//   every row where the ERP reported zero available stock, and separately broke an ERP-reconciliation
 //   counter that (wrongly) used this field's nullness as an unrelated "did we receive an event"
 //   signal.
 //

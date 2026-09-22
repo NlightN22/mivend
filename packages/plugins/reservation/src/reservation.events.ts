@@ -4,7 +4,7 @@ import { RequestContext, VendureEvent } from '@vendure/core';
 import { Reservation } from './entities/reservation.entity';
 
 // Consumed by plugin-sync's ReservationConsumer, which writes these to sync_outbox for
-// delivery to 1C — see docs/order-flow.md "1C integration — outbox, not a shared transaction".
+// delivery to the ERP — see docs/order-flow.md "ERP integration — outbox, not a shared transaction".
 // plugin-reservation never touches RabbitMQ/the outbox directly (see the internal-sync-rules skill's ownership rule).
 export class ReservationConfirmedEvent extends VendureEvent {
     constructor(

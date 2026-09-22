@@ -206,7 +206,7 @@ the async contract.
 **Producers** (who calls `enqueue()`, i.e. who is `provider`):
 
 - `provider: 'erp'` — `POST /erp/callback/payment` (`plugin-sync`'s `ErpCallbackController`,
-  body typed as `ErpPaymentReportedDto` with Swagger docs at `/api-docs`, for 1C developers to
+  body typed as `ErpPaymentReportedDto` with Swagger docs at `/api-docs`, for ERP developers to
   implement against) publishes `ErpPaymentReportedEvent` on the `EventBus`; `plugin-acquiring`'s
   `PaymentEventListener` subscribes and enqueues with `providerEventId = erpEventId` (the ERP's
   own id for the payment fact — a resend is a safe no-op). Also the simulation entry point until
@@ -372,10 +372,10 @@ async ERP acknowledgement is not compatible with this.
   reference `invoiceId` (nullable today — see "Not yet designed" below), not a bare
   `organizationId` — `Invoice` is the single source of truth for which organization a payment
   belongs to.
-- The organization-per-product mapping (today only known inside 1C's warehouse/storage-location
+- The organization-per-product mapping (today only known inside the ERP's warehouse/storage-location
   data) is imported into the platform as **catalog master data**, the same way `PriceEntry` is
   (the external-integration-rules skill — ERP is master; the platform holds a local read replica so checkout
-  doesn't need a synchronous round-trip to 1C): `ProductVariant.customFields.organizationId`, set
+  doesn't need a synchronous round-trip to the ERP): `ProductVariant.customFields.organizationId`, set
   by `erp-import`'s product record. `OrderLine.customFields.organizationId` is derived from it at
   add-to-cart time.
 - **Split mechanism (decided): lightweight `customFields`, not Vendure's full `Seller`/`Channel`
@@ -392,11 +392,11 @@ async ERP acknowledgement is not compatible with this.
 - **Split-payment acquirer (decided): Robokassa.** ЮKassa "Сплитование платежей" and Т-Банк
   "Мультирасчёты" are the same category of product and were considered, but Robokassa is the
   integration target for `plugin-acquiring`'s online-acquiring flow.
-- **Bootstrapping without a real 1C export**: don't wait for 1C to actually expose
+- **Bootstrapping without a real ERP export**: don't wait for ERP to actually expose
   `organizationId` per storage location — 3 synthetic organizations are seeded directly
   (`OrganizationRequisites` via `make seed`) and `erp-import`'s product record carries an
   `organizationId` field now, so the real split can be built and exercised end-to-end today. Swap
-  in the real 1C export later without changing the platform-side contract shape.
+  in the real ERP export later without changing the platform-side contract shape.
 - **Enforcement (decided): a hard requirement gated by an admin-controlled toggle, not a silent
   fallback.** `GlobalSettings.customFields.organizationSplitEnabled` (boolean, defaults `true`,
   shows up automatically in Admin UI's Settings screen since it's a `GlobalSettings` customField)
@@ -412,7 +412,7 @@ seed` configures, so those fixtures will now fail import unless updated; not yet
   here rather than silently left broken.
 
 **Counterparty-side note (does not need modeling yet):** a counterparty can itself belong to a
-"holding" grouping in 1C, but that's purely an analytical tag — one `Counterparty` is always
+"holding" grouping in the ERP, but that's purely an analytical tag — one `Counterparty` is always
 exactly one legal entity on the buyer side. Not a design gap; no action needed here.
 
 **Deferred (decided to postpone, not blocking online payment):**
@@ -504,11 +504,11 @@ operation), a bank transfer is a fact the ERP already knows about (an accountant
 bank statement) and needs to push **into** this platform — the reverse direction:
 
 ```
-1.  1C posts a payment document against an Invoice it knows about (organizationId/counterpartyId
+1.  ERP posts a payment document against an Invoice it knows about (organizationId/counterpartyId
     resolved on the ERP side, same as any other ERP-sourced fact).
-2.  1C calls POST /erp/callback/payment (plugin-sync's ErpCallbackController) with
+2.  ERP calls POST /erp/callback/payment (plugin-sync's ErpCallbackController) with
     { invoiceId, outcome, erpEventId } — see ErpPaymentReportedDto, documented at /api-docs for
-    1C developers to implement against directly.
+    ERP developers to implement against directly.
 3.  plugin-sync publishes ErpPaymentReportedEvent on the EventBus and returns { ok: true }
     immediately — this ack is unconditional and fast; it says "received", not "processed".
 4.  plugin-acquiring's PaymentEventListener enqueues the event into the payment inbox
@@ -516,7 +516,7 @@ bank statement) and needs to push **into** this platform — the reverse directi
 5.  PaymentInboxWorker's next sweep (or an ops-triggered triggerPaymentInboxSweep) calls
     PaymentAttemptService.payInvoice, which does the real, transactional work: create the
     PaymentAttempt, run FIFO cash-application via SettlementEntryService.allocate.
-6.  A resend of the same erpEventId (1C retrying after a timeout, a duplicate exchange record)
+6.  A resend of the same erpEventId (ERP retrying after a timeout, a duplicate exchange record)
     is a no-op at step 4 — InboxService.enqueue returns the existing row instead of creating a
     second one.
 ```

@@ -20,7 +20,7 @@ export interface ErpUserUpsertInput {
     active?: boolean;
 }
 
-// Issue #119: the 1C-user mirror table — see ErpUser's own doc comment for the full rationale.
+// Issue #119: the ERP-user mirror table — see ErpUser's own doc comment for the full rationale.
 @Injectable()
 export class ErpUserService {
     constructor(
@@ -93,11 +93,11 @@ export class ErpUserService {
     }
 
     // Real server-side pagination (AGENTS.md's pagination rule) — this list accumulates over
-    // every 1C "user" ever seen. Backs the Dashboard "ERP users" > Pending screen and the
+    // every ERP "user" ever seen. Backs the Dashboard "ERP users" > Pending screen and the
     // manager-portal Settings > Users > Pending tab's ListPage/table — both must only ever see
     // rows still worth a human's decision: `status: 'unlinked'` (a `linked` row has already been
     // decided, and would otherwise reappear here forever now that rows are never deleted) AND
-    // not known-inactive (a 1C user already reported inactive/deleted will never sensibly become
+    // not known-inactive (an ERP user already reported inactive/deleted will never sensibly become
     // an Administrator — same UX guard issue #119's own follow-up fix established before this
     // table stopped deleting rows on link, see `active`'s own doc comment on ErpUser).
     async findAllPaginated(

@@ -57,7 +57,7 @@ describe('ReservationErpSyncService.handleErpOrderStatus', () => {
         expect(reservationRepo.update).not.toHaveBeenCalled();
     });
 
-    it('releases active reservations when ERP cancels the order — 1C wins the conflict', async () => {
+    it('releases active reservations when ERP cancels the order — the ERP wins the conflict', async () => {
         reservationService.releaseReservations.mockResolvedValue(2);
         await service.handleErpOrderStatus(ctx, 'ORD-1', 'CANCELLED');
         expect(reservationService.releaseReservations).toHaveBeenCalledWith(ctx, 'order-1');

@@ -51,10 +51,10 @@ export class ProductRecordDto {
     @ApiPropertyOptional({
         description:
             'Required order-quantity step (pack size) — omit entirely for products with no ' +
-            'package constraint (most SKUs). Only send this when the 1C item has a default ' +
+            'package constraint (most SKUs). Only send this when the ERP item has a default ' +
             'sales unit of measure set to a package ("Ед. изм. для продажи по умолчанию" = ' +
             'упаковка) — send the RESOLVED package coefficient as a single number (e.g. 20 for ' +
-            'a 20-pack), not the two raw 1C fields (default sales UoM + package coefficient) ' +
+            'a 20-pack), not the two raw ERP fields (default sales UoM + package coefficient) ' +
             'separately. Unset/0/negative on our side = no constraint (treated as a data error, ' +
             'not enforced); 1 = no constraint; >1 = required step. See docs/order-flow.md ' +
             '"Pack-size / MOQ".',
@@ -64,8 +64,8 @@ export class ProductRecordDto {
     @ApiPropertyOptional({
         description:
             'Which of our own legal entities (OrganizationRequisites.id) owns the stock this ' +
-            'product is fulfilled from — driven by 1C warehouse storage-location assignment. ' +
-            'Not yet sourced from a real 1C export.',
+            'product is fulfilled from — driven by the ERP warehouse storage-location assignment. ' +
+            'Not yet sourced from a real ERP export.',
     })
     organizationId?: number;
 }

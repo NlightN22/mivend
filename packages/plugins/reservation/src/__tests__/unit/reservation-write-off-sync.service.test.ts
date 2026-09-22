@@ -285,7 +285,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         expect(reservationService.setOrderReservationState).not.toHaveBeenCalled();
     });
 
-    // Staff need 1C's own document number and raw status to cross-reference the order in 1C —
+    // Staff need the ERP's own document number and raw status to cross-reference the order in the ERP —
     // purely informational, must never affect release/quantity-match logic below.
     it('persists documentNumber/status onto Order.customFields, even on a rejected result', async () => {
         await service.handleOrderRegistrationResult(ctx, {

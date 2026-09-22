@@ -1,7 +1,7 @@
 declare module '@vendure/core' {
     interface CustomProductFields {
         // Owned by apps/server/src/vendure-config.ts's customFields config. A relation to the
-        // Manufacturer entity (issue #116) — ProductChanged's `manufacturer` is a 1C directory
+        // Manufacturer entity (issue #116) — ProductChanged's `manufacturer` is an ERP directory
         // GUID, not a display name, so this is a real relation, not a plain string field. See
         // manufacturer.entity.ts / manufacturer.service.ts.
         manufacturer?: import('./entities/manufacturer.entity').Manufacturer | null;
@@ -25,7 +25,7 @@ declare module '@vendure/core' {
     }
 
     interface CustomStockLevelFields {
-        // Owned by apps/server/src/vendure-config.ts's customFields config. 1C's own
+        // Owned by apps/server/src/vendure-config.ts's customFields config. the ERP's own
         // availableQuantity (StockChanged) for this (productVariant, stockLocation) — issue #72's
         // ATP cap. See StockStreamHandler and ReservationAvailabilityService.
         erpAvailableQuantity?: number | null;
@@ -93,17 +93,17 @@ export type InboundStream =
     | 'storage-location'
     | 'stock-organization'
     | 'order-registration-result'
-    // 1C's order-changed stream (issue #110/#72) — the order's ongoing, current-state view
+    // The ERP's order-changed stream (issue #110/#72) — the order's ongoing, current-state view
     // (status/reservedQuantity/contractId), fired repeatedly over the order's lifetime, distinct
     // from order-registration-result's one-shot registration outcome. Bulk lane, not critical:
     // unlike order-registration-result this is not the sole reservation-release trigger, so a
     // backlog behind catalog/price/stock does not block the release-latency-sensitive path.
     | 'order-changed'
-    // 1C's "Подразделение" (org-structure division) — feeds the existing, previously-unfed
+    // The ERP's "Подразделение" (org-structure division) — feeds the existing, previously-unfed
     // Department entity in @mivend/plugin-access-control. Different domain than the 10 streams
     // above (company.customers, not company.catalog/orders) — see DepartmentStreamHandler.
     | 'department'
-    // 1C's "Контрагент" (counterparty) — feeds @mivend/plugin-counterparty's Counterparty entity.
+    // The ERP's "Контрагент" (counterparty) — feeds @mivend/plugin-counterparty's Counterparty entity.
     // Same company.customers domain as department above. Issue #104: partial-create of name/
     // isActive/inn/erpGroupLabel/departmentId (verified live against
     // @nlightn22/event-contracts@0.38.0, search-platform#92/#118) — creditLimit/paymentDelayDays/
@@ -112,7 +112,7 @@ export type InboundStream =
     // Administrator via the 'user' stream below (issue #109 unblocked). creditBalance lives on
     // its own separate stream, see 'counterparty-credit-balance' below.
     | 'counterparty'
-    // 1C's "Пользователи" (user) — enrichment-only correlation of an Administrator with 1C's own
+    // The ERP's "Пользователи" (user) — enrichment-only correlation of an Administrator with the ERP's own
     // user GUID, matched by email once (see UserEnrichmentService). Issue #109. Feeds
     // Administrator.customFields.erpId/departmentId — never creates an Administrator. Also the
     // resolution target for CounterpartyChanged's manager_id/manager_ids above. role/positionId
@@ -122,7 +122,7 @@ export type InboundStream =
     // (AccumulationRegister_ВзаиморасчетыСКонтрагентами), independent of CounterpartyChanged's own
     // catalog-change trigger. See CounterpartyCreditBalanceStreamHandler.
     | 'counterparty-credit-balance'
-    // Issue #107: 1C's promo-rule ("Скидка/Наценка" гиft/percent promotions keyed by a trigger
+    // Issue #107: the ERP's promo-rule ("Скидка/Наценка" гиft/percent promotions keyed by a trigger
     // product), company.customers.events.v1.PromoRuleChanged. Feeds the same
     // @mivend/plugin-price-entry DiscountRule entity as the existing facet/priceType-threshold
     // rules — see PromoRuleStreamHandler and DiscountRule's own doc comment for the two-shape

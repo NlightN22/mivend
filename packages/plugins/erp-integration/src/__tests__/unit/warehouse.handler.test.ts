@@ -165,7 +165,7 @@ describe('WarehouseStreamHandler', () => {
         });
     });
 
-    // Issue #94: 1C's warehouse hierarchy includes folder/group nodes, not just real leaf
+    // Issue #94: the ERP's warehouse hierarchy includes folder/group nodes, not just real leaf
     // warehouses — a folder must never become a Warehouse or StockLocation row.
     it('skips folder rows entirely (isFolder === true), even when a matching StockLocation already exists', async () => {
         const warehouseService = { upsert: vi.fn() };

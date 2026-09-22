@@ -205,7 +205,7 @@ onMounted(loadAll);
             <template #subheader>
                 <p class="branch-settings-page__description">
                     Confirm which branch each warehouse belongs to and whether it counts toward that
-                    branch's available-to-promise stock — 1C's own branch/isActive values are shown
+                    branch's available-to-promise stock — the ERP's own branch/isActive values are shown
                     as read-only reference and are not always reliable.
                 </p>
             </template>

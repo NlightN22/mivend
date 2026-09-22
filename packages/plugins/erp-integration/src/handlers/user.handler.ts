@@ -6,7 +6,7 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationUserHandler';
 
-// Applies Integration Service's `user` stream (UserChanged, 1C's "Пользователи",
+// Applies Integration Service's `user` stream (UserChanged, the ERP's "Пользователи",
 // company.customers.events.v1.user-changed). Issue #109: enrichment-only, never creates an
 // Administrator — matches an existing one by email on first sight of an erpId, then persists
 // erpId for idempotent re-processing (see UserEnrichmentService.linkAndEnrich's own comment).
@@ -27,7 +27,7 @@ export class UserStreamHandler implements InboundStreamHandler {
         payload: Record<string, unknown>,
     ): Promise<void> {
         // These are real optional-scalar fields — `undefined` (key absent) means "leave
-        // unchanged", `null`/empty is a real value 1C explicitly sent.
+        // unchanged", `null`/empty is a real value ERP explicitly sent.
         const email = 'email' in payload ? ((payload.email as string | null) ?? null) : undefined;
         const departmentId =
             'departmentId' in payload

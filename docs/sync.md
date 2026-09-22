@@ -51,7 +51,7 @@ commands/queries. That was based on a partial reading of Integration Service's o
 was wrong: their own architecture already routes outbound business commands (order-registration,
 reservations, payment confirmations) through Kafka too — the hub publishes a business event
 (e.g. `OrderSubmitted`), Integration Service's own consumer turns it into a durable outbound
-command, delivered to 1C on 1C's own regulated-job PULL/ACK cycle. A synchronous RPC channel is
+command, delivered to the ERP on the ERP's own regulated-job PULL/ACK cycle. A synchronous RPC channel is
 reserved there only for genuinely rare cases needing an immediate real-time answer (e.g. a
 credit-limit check at order time) — explicitly not the default transport, and not needed for
 anything in this repo's current scope. Adopt the same default here: **one transport
@@ -250,8 +250,8 @@ kept here only as the current, still-running shape:
 - `pushOrder`/`pushInventoryDelta` (direct HTTP to the ERP) is replaced by publishing a MiVend
   business event (e.g. `OrderSubmitted`) to Kafka — via this repo's own outbox pattern, the same
   shape already used for `sync_outbox`/RabbitMQ — that Integration Service's own consumer turns
-  into a durable outbound command, delivered to 1C on 1C's own regulated-job pull/ack cycle. This
-  repo never calls 1C, or Integration Service, synchronously for this — no RPC channel, Kafka
+  into a durable outbound command, delivered to the ERP on the ERP's own regulated-job pull/ack cycle. This
+  repo never calls ERP, or Integration Service, synchronously for this — no RPC channel, Kafka
   both ways (see "Why Kafka both ways" above).
 
 Do not extend or "fix" `ErpAdapter` for new functionality — new work in this area should target
@@ -374,7 +374,7 @@ both landing in `plugin-acquiring`'s payment inbox rather than mutating an `Invo
 from `plugin-sync`:
 
 - **ERP → Central**: `plugin-sync`'s `ErpCallbackController` (`POST /erp/callback/payment`)
-  receives a payment document 1C already posted, and publishes `ErpPaymentReportedEvent` on the
+  receives a payment document ERP already posted, and publishes `ErpPaymentReportedEvent` on the
   `EventBus` — it does not call into `plugin-acquiring` directly, and does not touch RabbitMQ for
   this (no branch is involved).
 - **Branch → Central**: a branch-witnessed cash payment (`recordWitnessedPayment`) travels

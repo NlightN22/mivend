@@ -18,7 +18,7 @@ export class ErpCallbackController {
 
     @Post('order-status')
     @HttpCode(200)
-    @ApiOperation({ summary: 'Receive an order status update pushed from the ERP (1C)' })
+    @ApiOperation({ summary: 'Receive an order status update pushed from the ERP (the ERP)' })
     @ApiBody({ type: ErpStatusUpdateDto })
     @ApiResponse({ status: 200, schema: { example: { ok: true } } })
     async receiveOrderStatus(
@@ -41,7 +41,7 @@ export class ErpCallbackController {
     @HttpCode(200)
     @ApiOperation({
         summary:
-            'Receive a payment fact pushed from the ERP (1C) for an Invoice — durably ' +
+            'Receive a payment fact pushed from the ERP (the ERP) for an Invoice — durably ' +
             'enqueued by plugin-acquiring, never processed inline (the external-integration-rules skill). ' +
             'Also the simulation entry point until a real ERP integration exists.',
     })

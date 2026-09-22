@@ -166,7 +166,7 @@ describe('ReservationAvailabilityService', () => {
         expect(available).toBe(5);
     });
 
-    it('excludes a warehouse curated out of branch ATP even when 1C still flags it isActive=true', async () => {
+    it('excludes a warehouse curated out of branch ATP even when the ERP still flags it isActive=true', async () => {
         const service = createService({
             warehouses: [
                 { branchId: 'branch-a', erpId: 'wh-1', isActive: true, includedInBranchAtp: true },
@@ -213,7 +213,7 @@ describe('ReservationAvailabilityService', () => {
         });
         const available = await service.getAvailableToPromise(ctx, 'variant-1');
         // 15 - 3 - 4 = 8, regardless of confirm state — closes the oversell window that existed
-        // when a confirmed reservation stopped being subtracted locally while waiting for 1C's
+        // when a confirmed reservation stopped being subtracted locally while waiting for the ERP's
         // own StockChanged to catch up.
         expect(available).toBe(8);
     });
@@ -234,7 +234,7 @@ describe('ReservationAvailabilityService', () => {
         expect(available).toBe(8);
     });
 
-    it('caps ATP at erpAvailableQuantity when 1C reports a lower number (a reservation from another channel mivend never saw)', async () => {
+    it('caps ATP at erpAvailableQuantity when the ERP reports a lower number (a reservation from another channel mivend never saw)', async () => {
         const service = createService({
             stockLevels: [
                 {
@@ -247,12 +247,12 @@ describe('ReservationAvailabilityService', () => {
             reservations: [],
         });
         const available = await service.getAvailableToPromise(ctx, 'variant-1');
-        // Local would be 15, but 1C only reports 3 free (another channel's hold mivend has no
+        // Local would be 15, but ERP only reports 3 free (another channel's hold mivend has no
         // event for) — the lower number wins.
         expect(available).toBe(3);
     });
 
-    it('falls back to the local number when 1C has never reported a StockChanged for this location (erpAvailableQuantity null)', async () => {
+    it('falls back to the local number when the ERP has never reported a StockChanged for this location (erpAvailableQuantity null)', async () => {
         const service = createService({
             stockLevels: [{ stockLocationId: 'location-1', stockOnHand: 15, stockAllocated: 3 }],
             reservations: [],
@@ -268,7 +268,7 @@ describe('ReservationAvailabilityService', () => {
                     stockLocationId: 'location-1',
                     stockOnHand: 5,
                     stockAllocated: 0,
-                    // Malformed/negative value from 1C — not expected in practice, but
+                    // Malformed/negative value from the ERP — not expected in practice, but
                     // stock.handler.ts doesn't validate the incoming payload.
                     customFields: { erpAvailableQuantity: -3 },
                 },

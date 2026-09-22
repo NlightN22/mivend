@@ -138,7 +138,7 @@ async function ensureTaxSetup() {
         }
     `, { zoneId, catId: taxCategoryId }, cookie);
 
-    // Assign tax zone to the default channel. pricesIncludeTax: true because the ERP (1C) sends
+    // Assign tax zone to the default channel. pricesIncludeTax: true because the ERP (the ERP) sends
     // gross prices (already including VAT) — without this, Vendure treats every incoming price
     // as net and adds tax on top a second time at checkout. See docs/ai/PROJECT_CONTEXT.md.
     const channelRes = await adminGraphqlWithSession(`{ channels { items { id } } }`, undefined, cookie);
@@ -312,7 +312,7 @@ async function postBatch(exchangeId, records) {
 }
 
 // Resolves erpId -> platform auto-increment id for OrganizationRequisites, so product records
-// can carry a real organizationId. No real 1C export for this exists yet (see docs/payments.md
+// can carry a real organizationId. No real ERP export for this exists yet (see docs/payments.md
 // "Organizations") — organizationRequisites are seeded directly below and looked up here.
 async function resolveOrganizationIds() {
     let session = await adminGraphqlWithSession(`
@@ -449,7 +449,7 @@ async function main() {
     }
 
     // Seeded before products so their platform ids can be assigned to
-    // ProductVariant.customFields.organizationId below — no real 1C export for this exists yet
+    // ProductVariant.customFields.organizationId below — no real ERP export for this exists yet
     // (see docs/payments.md "Organizations"; 3 synthetic organizations unblock building/testing
     // the real order-split flow without waiting for it).
     const organizationRequisites = [

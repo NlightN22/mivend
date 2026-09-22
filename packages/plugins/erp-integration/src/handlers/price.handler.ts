@@ -9,7 +9,7 @@ import { MissingDependencyError } from '../types';
 const loggerCtx = 'IntegrationPriceHandler';
 
 // Applies Integration Service's `price` stream (PriceChanged: productId/priceTypeId/value).
-// priceTypeId is 1C's own GUID for the price type — resolved to a local PriceType via
+// priceTypeId is the ERP's own GUID for the price type — resolved to a local PriceType via
 // PriceType.externalId (see PriceTypeStreamHandler/issue #63's now-closed mapping gap).
 @Injectable()
 export class PriceStreamHandler implements InboundStreamHandler {

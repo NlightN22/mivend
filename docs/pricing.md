@@ -124,7 +124,7 @@ Vendure's default `OrderItemPriceCalculationStrategy` just uses
 `ProductVariant.listPrice` — a single, price-type-agnostic value. Without a custom
 strategy, `customerPrice`/`compareAtPrice` would be **catalog-display only**: the
 customer would see a wholesale/discounted price in the storefront, but the order itself
-— and whatever total reaches 1C — would be priced from the raw ERP import price. This
+— and whatever total reaches ERP — would be priced from the raw ERP import price. This
 was a real (now fixed) gap; the fix must be understood before touching pricing again.
 
 `CustomerPriceCalculationStrategy` (`apps/server/src/customer-price-calculation.strategy.ts`)
@@ -169,7 +169,7 @@ rules can be edited or reissued from the ERP with the same identity.
   is rare; it applies to every variant for that price type.
 - If a variant matches multiple active rules, the **highest percent wins**. No stacking.
 - Discount periods (`validFrom`/`validTo`) are **always fully bounded** — the business
-  never runs open-ended discounts, and 1C currently caps periods at ~3 months. Periods
+  never runs open-ended discounts, and ERP currently caps periods at ~3 months. Periods
   for the same facet/price-type combination don't overlap in practice.
 - "Now" for period matching is server time at the moment of resolution — a catalog
   browse and an order placement can reasonably see different results if a period

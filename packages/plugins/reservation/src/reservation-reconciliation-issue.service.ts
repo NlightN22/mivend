@@ -14,7 +14,7 @@ export interface OpenReservationReconciliationIssueListOptions {
     skip?: number;
 }
 
-// Reports a detected reservation/1C drift for a human to resolve — kept intentionally minimal
+// Reports a detected reservation/ERP drift for a human to resolve — kept intentionally minimal
 // (report only), same as plugin-acquiring's PaymentReconciliationIssueService.
 // Resolution/triage tooling is future scope, not part of detecting the issue.
 @Injectable()
@@ -47,7 +47,7 @@ export class ReservationReconciliationIssueService {
     }
 
     // mivend.audit.72's HIGH finding: an unresolvable productId->ProductVariant mapping used to
-    // be silently indistinguishable from "1C hasn't confirmed this line yet" and blocked release
+    // be silently indistinguishable from "the ERP hasn't confirmed this line yet" and blocked release
     // forever with no escalation. Reported as its own issue type instead.
     async reportUnresolvedProductMapping(
         ctx: RequestContext,

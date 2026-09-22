@@ -159,7 +159,7 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                 // already have, visible in the funnel menu). Entirely about managerErpId, per an
                 // explicit product decision: Counterparty.assignedManagerId (a separate,
                 // operational concept — mivend's own current owner, changeable independently of
-                // whatever 1C last reported) plays no part in this column at all, neither for
+                // whatever ERP last reported) plays no part in this column at all, neither for
                 // display nor filtering. The displayed cell resolves a name for managerErpId
                 // itself (see formatManager) rather than showing the raw id whenever possible.
                 managerErpId: {

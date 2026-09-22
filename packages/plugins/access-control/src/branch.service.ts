@@ -5,8 +5,8 @@ import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Branch } from './entities/branch.entity';
 import { loggerCtx } from './types';
 
-// Prefix distinguishes a mivend-created Branch from a real 1C GUID at a glance (e.g. in an
-// admin list or a support query) — never collides with a real 1C erpId, which is always a plain
+// Prefix distinguishes a mivend-created Branch from a real ERP GUID at a glance (e.g. in an
+// admin list or a support query) — never collides with a real ERP erpId, which is always a plain
 // GUID with no prefix.
 const MANUAL_ERP_ID_PREFIX = 'mivend-manual:';
 
@@ -41,7 +41,7 @@ export class BranchService {
     // BranchRecord — but that REST sync has never run on Kafka-only contours, leaving Branch
     // permanently empty there and blocking WarehouseCurationTable's branch picker entirely.
     // mivend's own warehouse→branch grouping is deliberately independent of whatever org unit
-    // 1C's Kafka streams represent (see WarehouseStreamHandler's own comment) — staff need to be
+    // the ERP's Kafka streams represent (see WarehouseStreamHandler's own comment) — staff need to be
     // able to define their own branches without waiting on ERP data at all.
     async createManual(ctx: RequestContext, name: string): Promise<Branch> {
         const repo = this.connection.getRepository(ctx, Branch);

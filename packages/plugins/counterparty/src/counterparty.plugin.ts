@@ -153,7 +153,7 @@ export const adminApiSchema = gql`
         priceType: String!
         isActive: Boolean!
         assignedManagerId: String
-        "Raw ERP manager id (1C) — fallback display when assignedManagerId hasn't resolved yet, see issue #133."
+        "Raw ERP manager id (the ERP) — fallback display when assignedManagerId hasn't resolved yet, see issue #133."
         managerErpId: String
         "The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation)."
         linkedCustomerId: ID
@@ -162,13 +162,13 @@ export const adminApiSchema = gql`
         creditTermOverrideExtraDays: Int
         "Free-text group/segment label from the ERP — display and filtering only."
         erpGroupLabel: String
-        "Юридический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1."
+        "Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1."
         legalAddress: String
-        "Фактический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1."
+        "Фактический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1."
         factualAddress: String
-        "Телефон контрагента (1C) — required with officialEmail before #120's portal-access activation."
+        "Телефон контрагента (the ERP) — required with officialEmail before #120's portal-access activation."
         phone: String
-        "Служебный адрес электронной почты контрагента (1C) — the real login-eligible email, see issue #120."
+        "Служебный адрес электронной почты контрагента (the ERP) — the real login-eligible email, see issue #120."
         officialEmail: String
         tradingPoints: [TradingPoint!]!
         "Additional managers beyond the Owner (assignedManagerId) — see CounterpartyTeamMember."

@@ -98,7 +98,7 @@ fact/decision/rule must survive in summarized form.
 
 Before finalizing the context update, scan the session's diff (`git diff --name-only`, plus
 whatever the conversation touched) for a specific, recurring anti-pattern documented in
-AGENTS.md's sync rules (rule #12): **a webhook, ERP/1C exchange callback, or any other
+AGENTS.md's sync rules (rule #12): **a webhook, ERP/ERP exchange callback, or any other
 external/unreliable integration entry point that processes a critical event synchronously**,
 instead of durably recording it first (a real inbox with a `pending`/`processing`/`processed`/
 `failed` status, not a bare "seen" boolean) and processing it asynchronously via a retry-capable

@@ -45,7 +45,7 @@ describe('BranchService', () => {
         expect(repo.find).toHaveBeenCalledWith({ order: { name: 'ASC' } });
     });
 
-    it('createManual generates a prefixed erpId that can never collide with a real 1C GUID', async () => {
+    it('createManual generates a prefixed erpId that can never collide with a real ERP GUID', async () => {
         const branch = await service.createManual(ctx, 'Warehouse district A');
         expect(repo.create).toHaveBeenCalledWith(
             expect.objectContaining({

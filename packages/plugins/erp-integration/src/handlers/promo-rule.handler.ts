@@ -6,7 +6,7 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationPromoRuleHandler';
 
-// The four raw 1C `operation_kind` values PromoRuleChanged.proto documents (a closed 1C enum,
+// The four raw ERP `operation_kind` values PromoRuleChanged.proto documents (a closed ERP enum,
 // carried as a plain string on the wire — see the field's own proto comment: "new values can
 // appear without a schema change", so an unrecognized value below is treated as a malformed
 // payload, not silently coerced). See DiscountRule's own doc comment for percent-type vs.
@@ -37,16 +37,16 @@ const GIFT_TYPE_PERCENT = 99;
 // Full current field list (event-contracts@0.38.0, PromoRuleChanged) and each field's outcome —
 // see the external-integration-rules skill's mandatory checklist:
 //   event_id            — not consumed (inbox already dedupes by its own (stream, entityId,
-//                          version); no local use for the 1C-side event id itself).
-//   occurred_at          — not consumed (no local field tracks 1C's own event timestamp; updated_at
+//                          version); no local use for the ERP-side event id itself).
+//   occurred_at          — not consumed (no local field tracks the ERP's own event timestamp; updated_at
 //                          below already serves as the record's own last-change marker).
 //   entity_id            — consumed (handler `entityId` param = DiscountRule.erpId).
 //   version              — consumed by IntegrationInboxProcessorService's own out-of-order guard,
 //                          upstream of this handler; not read again here.
 //   updated_at           — not consumed (VendureEntity.updatedAt already tracks local upsert time;
-//                          no feature currently needs 1C's own updated_at distinct from that).
-//   source_document_id  — not consumed (no local field for "which 1C document created this rule";
-//                          nothing currently needs to trace a promo rule back to a specific 1C
+//                          no feature currently needs the ERP's own updated_at distinct from that).
+//   source_document_id  — not consumed (no local field for "which the ERP document created this rule";
+//                          nothing currently needs to trace a promo rule back to a specific ERP
 //                          document — see the erpId itself for cross-system reconciliation).
 //   trigger_product_id  — consumed -> DiscountRule.triggerProductErpId.
 //   trigger_quantity     — consumed -> DiscountRule.triggerQuantity.
@@ -57,7 +57,7 @@ const GIFT_TYPE_PERCENT = 99;
 //   gift_quantity         — consumed -> DiscountRule.giftQuantity (0 for percent-type).
 //   percent               — consumed -> DiscountRule.percent for percent-type rules; gift-type
 //                          rules use GIFT_TYPE_PERCENT instead (see its own comment above) since
-//                          the business decision is "near-free", not whatever raw percent 1C sends
+//                          the business decision is "near-free", not whatever raw percent ERP sends
 //                          for a gift rule (0 per the proto's own field comment).
 //   operation_kind        — consumed -> DiscountRule.operationKind (mapped via
 //                          RAW_OPERATION_KIND_TO_KIND, never stored raw).

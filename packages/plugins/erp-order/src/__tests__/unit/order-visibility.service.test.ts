@@ -76,7 +76,7 @@ describe('OrderVisibilityService', () => {
         // Filters by the order's own denormalized branchId (customFieldsBranchid), not
         // Counterparty.branchId — a chain account's orders can be serviced by a different
         // branch than the customer's nominal "home" branch, see order-visibility.service.ts.
-        // departmentId is never compared — Department (1C org data) is pure display
+        // departmentId is never compared — Department (ERP org data) is pure display
         // information, never an access-scope gate. The `OR ... IS NULL` clause is required,
         // not optional — see the next test.
         expect(qb.andWhere).toHaveBeenCalledWith(

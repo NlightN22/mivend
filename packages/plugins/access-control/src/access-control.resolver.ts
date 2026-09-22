@@ -269,7 +269,7 @@ export class AccessControlResolver {
         );
     }
 
-    // Issue #119: unlinked 1C users awaiting a human decision — see ErpUser's own comment.
+    // Issue #119: unlinked ERP users awaiting a human decision — see ErpUser's own comment.
     @Query()
     @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
     async pendingErpUsers(
@@ -317,7 +317,7 @@ export class AccessControlResolver {
         return true;
     }
 
-    // Issue #119, Decision 2: manual override on top of the automatic 1C-driven sync in
+    // Issue #119, Decision 2: manual override on top of the automatic ERP-driven sync in
     // UserEnrichmentService/AdministratorActivationService.syncFromErp.
     @Transaction()
     @Mutation()

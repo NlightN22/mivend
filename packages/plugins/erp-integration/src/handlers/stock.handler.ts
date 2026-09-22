@@ -18,16 +18,16 @@ const loggerCtx = 'IntegrationStockHandler';
 // to a real StockLocation via Warehouse.erpId -> StockLocation.customFields.warehouseErpId
 // (WarehouseStreamHandler's own idempotency key). `quantity` (the physical on-hand count) maps to
 // StockLevel.stockOnHand. `availableQuantity` maps to StockLevel.customFields.erpAvailableQuantity
-// (issue #72) — 1C's own ATP number, used by ReservationAvailabilityService to cap mivend's local
-// ATP, since 1C receives reservations from other channels mivend never sees as events.
-// `reservedQuantity` still has no destination — issue #72's revised ATP formula only needs 1C's
+// (issue #72) — the ERP's own ATP number, used by ReservationAvailabilityService to cap mivend's local
+// ATP, since ERP receives reservations from other channels mivend never sees as events.
+// `reservedQuantity` still has no destination — issue #72's revised ATP formula only needs the ERP's
 // *available* number as a ceiling, not its own reserved breakdown.
 //
 // `available_quantity` is a plain (non-optional) proto3 `double` in Integration Service's
 // contract — same zero-value-omission shape as `isActive`/`isDeleted` documented in types.ts's
 // InboundStream comment, just for a numeric field instead of a bool: when the value is exactly
 // 0, @bufbuild/protobuf's JSON encoder OMITS the key entirely rather than sending `0`. Reading
-// `payload.availableQuantity != null` therefore silently drops every message where 1C reports
+// `payload.availableQuantity != null` therefore silently drops every message where the ERP reports
 // zero available stock — the exact case the ATP cap most needs to catch (mivend.issue.84.88,
 // confirmed live: 68 production stock rows had a real applied event with no erpAvailableQuantity
 // ever written, because the field was 0 and absent from JSON, not missing). The correct read

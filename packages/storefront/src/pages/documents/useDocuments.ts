@@ -12,7 +12,7 @@ export interface MyDocumentsOptions {
     search?: string;
 }
 
-// ERP-pushed documents (return/reconciliation) carry a direct fileUrl (1C
+// ERP-pushed documents (return/reconciliation) carry a direct fileUrl (ERP
 // already hosts the file). Self-generated documents (invoice/contract) carry
 // `asset` instead, whose `source` is already a full absolute URL built by
 // Vendure's own Asset resolver — never construct download URLs client-side.

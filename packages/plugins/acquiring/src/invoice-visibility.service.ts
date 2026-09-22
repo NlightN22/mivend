@@ -106,7 +106,7 @@ export class InvoiceVisibilityService {
                 // Filtered by the invoice's own denormalized branch, not Counterparty.branchId
                 // (a chain account's "home" branch and the branch actually servicing a given
                 // invoice can differ) — see docs/access-control.md. `departmentId` is
-                // deliberately never compared — Department (1C org data) is pure display
+                // deliberately never compared — Department (ERP org data) is pure display
                 // information, never an access-scope gate; only Branch (mivend's own entity) is
                 // (2026-09-20 correction, see docs/access-control.md).
                 qb.andWhere(`${invoiceAlias}.branchId = :branchId`, {

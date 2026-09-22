@@ -10,7 +10,7 @@ import type { SyncPluginOptions } from '../types';
 
 // The real implementation of the pattern order.consumer.ts's OrderReadyForErpEvent subscriber
 // still stubs (see that file's TODO) — writes reservation confirm/release commands to
-// sync_outbox for delivery to 1C. See docs/order-flow.md "1C integration — outbox, not a
+// sync_outbox for delivery to the ERP. See docs/order-flow.md "ERP integration — outbox, not a
 // shared transaction". plugin-reservation never touches RabbitMQ/the outbox directly (see
 // the internal-sync-rules skill's ownership rule) — it only publishes these two EventBus events, this consumer (owned by
 // plugin-sync) does the actual outbox write.

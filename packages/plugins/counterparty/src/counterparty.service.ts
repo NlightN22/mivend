@@ -61,7 +61,7 @@ export class CounterpartyService {
     // register-driven stream (search-platform#129 — see updateCreditBalance below), not part of
     // this event. `assignedManagerId` here is an already-resolved Vendure Administrator.id (see
     // CounterpartyStreamHandler/UserEnrichmentService, issue #109) — this method itself never
-    // does 1C-erpId↔Administrator resolution, only writes whatever id the caller already
+    // does ERP-erpId↔Administrator resolution, only writes whatever id the caller already
     // resolved. Distinct from upsert() above, which expects the full REST payload shape and must
     // not be reused here. Always creates/updates a row so a counterparty mivend only knows about
     // via Kafka (e.g. the staging-integration contour, which never runs erp-import — issue #68)
@@ -77,7 +77,7 @@ export class CounterpartyService {
     //
     // `fields.inn`/`erpGroupLabel`/`departmentId`/`assignedManagerId` are `undefined` when the
     // event omits them (real optional-scalar presence, not the proto3 zero-value-omission
-    // ambiguity — see #135) and `null` when 1C explicitly cleared them (or, for
+    // ambiguity — see #135) and `null` when ERP explicitly cleared them (or, for
     // `assignedManagerId`, when the caller found no manager assigned at all) — only `undefined`
     // is treated as "leave unchanged"; `null` is applied like any other real value.
     async upsertActiveState(
@@ -439,7 +439,7 @@ export class CounterpartyService {
                 break;
             case 'department':
                 // Corrected direction (2026-09-20, per an explicit product decision): `Department`
-                // (1C's own org unit) is pure display/informational data and must NEVER gate
+                // (the ERP's own org unit) is pure display/informational data and must NEVER gate
                 // visibility of anything — only `Branch` (mivend's own entity) is a real
                 // access-scope dimension. `departmentId` is deliberately never compared here.
                 //

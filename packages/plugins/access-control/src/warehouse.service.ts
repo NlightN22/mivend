@@ -130,7 +130,7 @@ export class WarehouseService {
     }
 
     // Manager-portal curation (issue #66) — staff confirm/override the branch a Warehouse
-    // belongs to and whether it counts toward that branch's ATP aggregation. 1C's own
+    // belongs to and whether it counts toward that branch's ATP aggregation. the ERP's own
     // branchId/isActive (set by upsert above) stay untouched as the read-only suggested default;
     // this is the only place that ever changes includedInBranchAtp.
     async setBranchAssignment(

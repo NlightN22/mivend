@@ -296,7 +296,7 @@ export async function fetchManagerOptions(): Promise<ManagerOption[]> {
 
 export interface BranchOption {
     // The mivend Branch.id (DB primary key) — NOT the same value space as `erpId` below. Branch
-    // is a purely mivend-internal entity (1C/the ERP has no "branch" concept at all, only
+    // is a purely mivend-internal entity (ERP/the ERP has no "branch" concept at all, only
     // Department/"Подразделение" — see docs/access-control.md's "Branch vs Department" section);
     // `Counterparty.branchId`/`Administrator.customFields.branchId`/every other real branchId
     // consumer (AccessScopeService, Warehouse.branchId) store and compare THIS value, never

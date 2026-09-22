@@ -102,7 +102,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
             rawCategoryId,
         );
 
-        // issue #116 Tier 2 — Manufacturer is a real entity (find-or-create by the 1C GUID,
+        // issue #116 Tier 2 — Manufacturer is a real entity (find-or-create by the ERP GUID,
         // name backfilled from the 'attributes' map's own 'Производитель' key), never a plain
         // string custom field (that field is a GUID, not a display name).
         const manufacturerExternalId = extractManufacturerId(payload);

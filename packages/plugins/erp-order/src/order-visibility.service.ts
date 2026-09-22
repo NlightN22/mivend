@@ -90,7 +90,7 @@ export class OrderVisibilityService {
                 // customer's preferred TradingPoint — see ErpOrderService.onOrderPlaced), not
                 // Counterparty.branchId. A chain account's "home" branch and the branch that
                 // actually services a given order can differ. `departmentId` is deliberately
-                // never compared — Department (1C org data) is pure display information, never
+                // never compared — Department (ERP org data) is pure display information, never
                 // an access-scope gate; only Branch (mivend's own entity) is (2026-09-20
                 // correction, see docs/access-control.md's "Branch vs Department" section).
                 // `order` is a reserved SQL keyword — TypeORM's alias.property auto-quoting

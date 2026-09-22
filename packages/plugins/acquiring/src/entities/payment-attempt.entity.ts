@@ -74,7 +74,7 @@ export class PaymentAttempt extends VendureEntity {
     // receipt/cheque number, an ERP payment-document id, or (until a real acquirer is wired in)
     // a clearly-marked stub value generated server-side. Without this, a payment can never be
     // reconciled against the external system that actually witnessed it (the acquirer, the
-    // branch kassa, or 1C) — see docs/payments.md.
+    // branch kassa, or ERP) — see docs/payments.md.
     @Index()
     @Column({ type: 'varchar' })
     providerPaymentId!: string;

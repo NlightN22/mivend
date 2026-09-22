@@ -24,7 +24,7 @@ declare module '@vendure/core' {
         // order-registration-result outcome) since the two streams report at different times with
         // no guaranteed relationship between their values.
         erpOrderStatus?: string | null;
-        // OrderChanged.contract_id (issue #110) — a flat GUID ref to a 1C contract, real optional
+        // OrderChanged.contract_id (issue #110) — a flat GUID ref to an ERP contract, real optional
         // presence. Purely informational until a Contract entity exists (#50/#105).
         erpContractId?: string | null;
     }

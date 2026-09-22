@@ -10,7 +10,7 @@ export const shopApiExtensions = gql`
         currencyCode: String
         status: String!
         orderId: ID
-        # ERP-pushed documents (return/reconciliation) carry a direct fileUrl (1C
+        # ERP-pushed documents (return/reconciliation) carry a direct fileUrl (ERP
         # already hosts the file). Self-generated documents (invoice/contract) expose
         # \`asset\` instead — Vendure's own Asset.source resolver (registered by
         # AssetServerPlugin) builds the correct absolute URL from the live request,

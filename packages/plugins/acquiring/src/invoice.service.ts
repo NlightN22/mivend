@@ -32,7 +32,7 @@ export interface InvoiceListOptions {
 // payment is requested (a split-payment acquirer needs the full recipient/amount breakdown
 // upfront), so this runs at checkout time, not from an async ERP callback. organizationId comes
 // from ProductVariant.customFields.organizationId (ERP-imported catalog master data, mirroring
-// PriceEntry) — not yet backed by a real 1C export, see docs/payments.md.
+// PriceEntry) — not yet backed by a real ERP export, see docs/payments.md.
 @Injectable()
 export class InvoiceService {
     constructor(

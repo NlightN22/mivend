@@ -68,7 +68,7 @@ onMounted(loadAll);
         <MvPanel title="Manual visibility overrides">
             <template #subheader>
                 <p class="category-visibility-page__description">
-                    Force a category's storefront visibility regardless of what the 1C feed
+                    Force a category's storefront visibility regardless of what the ERP feed
                     reports. "Auto" follows the feed (hidden when the upstream category is
                     inactive or deleted); "Hidden"/"Visible" pin the category and survive the next
                     feed update.

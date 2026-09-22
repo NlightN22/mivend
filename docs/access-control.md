@@ -161,18 +161,18 @@ Resources whose visibility is derived from another resource (e.g. `/documents` i
 counterparty visibility) call `resolveCounterpartyScope` directly — they do not get their own
 `resolve<Resource>Scope` method duplicating the same logic.
 
-### `Branch` is mivend's own entity; `Department` is a pure 1C mirror — never conflate the two
+### `Branch` is mivend's own entity; `Department` is a pure ERP mirror — never conflate the two
 
 These are two different entities, owned by two different systems, and must never be treated as
 interchangeable id spaces:
 
 - **`Department`** (`packages/plugins/access-control/src/entities/department.entity.ts`) is
-  entirely 1C's own org-structure data — 1C's "Подразделение". It is only ever upserted from
+  entirely the ERP's own org-structure data — the ERP's "Подразделение". It is only ever upserted from
   Integration Service's `department` Kafka stream (`DepartmentService.upsert`); there is no
   manual-creation path. Treat it as read-only, informational org-structure data mirrored for
   display and for `Administrator.customFields.departmentId`/`Counterparty.departmentId` (both
-  hold 1C's `Department.erpId` directly, unresolved — that's correct here, since the whole point
-  is to show "which 1C division" something belongs to). **`departmentId` must never gate
+  hold the ERP's `Department.erpId` directly, unresolved — that's correct here, since the whole point
+  is to show "which ERP division" something belongs to). **`departmentId` must never gate
   visibility of anything, anywhere, full stop** (2026-09-20 product decision, corrects an earlier
   version of this doc/several services that did filter by it — see "Branch scope" below). The
   `AccessScopeKind` enum still has a `'department'` value for historical reasons — its cases in
@@ -180,20 +180,20 @@ interchangeable id spaces:
   no longer compare `departmentId` at all; renaming the enum value itself (e.g. to `'branch'`) is
   an open question for issue #123, not done yet.
   **Confirmed against the real Kafka contracts** (`@nlightn22/event-contracts`,
-  `counterparty_changed.proto`/`user_changed.proto`): 1C only ever sends `department_id` for
+  `counterparty_changed.proto`/`user_changed.proto`): ERP only ever sends `department_id` for
   both `Counterparty` and `Administrator`(`user`) — there is no `branch_id` field in either
   contract. The one place a `branch_id` field does exist on the wire (`warehouse_changed.proto`)
-  is explicitly documented in that .proto's own comment as "1C division/branch key
-  (Подразделение_Key)" — i.e. the exact same 1C division-id space as `Department`, just reused
-  for warehouses; 1C itself has no separate "branch" concept distinct from department at all.
+  is explicitly documented in that .proto's own comment as "ERP division/branch key
+  (Подразделение_Key)" — i.e. the exact same ERP division-id space as `Department`, just reused
+  for warehouses; ERP itself has no separate "branch" concept distinct from department at all.
   `branchId` as mivend understands it below is **entirely mivend's own invention**, never sourced
-  from 1C directly except as an optional convenience match against that same reused GUID (see
+  from the ERP directly except as an optional convenience match against that same reused GUID (see
   `Branch` below) — flagged to the Integration Service team to reconsider that field's naming,
   search-platform#140.
 - **`Branch`** (`.../entities/branch.entity.ts`) is mivend's own entity for warehouse/ATP
-  consolidation and branch-scoped access control — it is **not** a 1:1 mirror of anything in 1C.
+  consolidation and branch-scoped access control — it is **not** a 1:1 mirror of anything in the ERP.
   A `Branch` row can be created two ways: resolved from an ERP-side branch/point code
-  (`BranchService.upsert`, matched by `Branch.erpId`, itself the same GUID space as 1C's
+  (`BranchService.upsert`, matched by `Branch.erpId`, itself the same GUID space as the ERP's
   `Department`/division concept — see `department.handler.ts`'s own comment for why that
   overlap is deliberate, not a bug) **or** created manually with no ERP link at all
   (`BranchService.createManual`, staff-managed, independent of ERP entirely — issue #80). Either
@@ -214,7 +214,7 @@ interchangeable id spaces:
 
 ### Branch scope is the only real filtering axis — `departmentId` never gates anything
 
-**`departmentId` (1C's own "Подразделение") is pure display/informational data — it must never
+**`departmentId` (the ERP's own "Подразделение") is pure display/informational data — it must never
 gate visibility of anything, in any resource, full stop.** `branchId` (mivend's own `Branch`
 entity) is the sole real access-scope filter. The `AccessScopeKind` enum still has a
 `'department'` value and `AccessScope.departmentId` still exists as a field for now (legacy
@@ -223,7 +223,7 @@ yet), but every consumer's `'department'` case must compare `branchId` only, nev
 `departmentId`. This corrects an earlier version of this section/several services
 (`CounterpartyService.findVisible`, `AccessScopeService.assertCounterpartyWritable`,
 `OrderVisibilityService`, `InvoiceVisibilityService`) that did filter by `departmentId` — see
-"Branch vs Department" above for why, and for the confirmed proto evidence that 1C never sends a
+"Branch vs Department" above for why, and for the confirmed proto evidence that the ERP never sends a
 distinct "branch" concept at all.
 
 When an administrator's `customFields.branchId` is set, it is applied as the sole scope filter

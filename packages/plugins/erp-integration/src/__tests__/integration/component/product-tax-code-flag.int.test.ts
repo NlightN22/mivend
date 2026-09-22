@@ -66,7 +66,7 @@ describe('ProductTaxCodeFlagService (integration, real Postgres)', () => {
     it('persists a reported flag with the raw code and reason intact', async () => {
         await service.report(ctx, 'ext-prod-1', 'НДС18', {
             reason: 'legacy',
-            detail: 'Legacy VAT rate on product, review in 1C',
+            detail: 'Legacy VAT rate on product, review in the ERP',
         });
 
         const rows = await dataSource.getRepository(TestProductTaxCodeFlag).find();

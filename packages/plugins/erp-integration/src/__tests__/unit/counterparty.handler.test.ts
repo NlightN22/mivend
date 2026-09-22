@@ -166,7 +166,7 @@ describe('CounterpartyStreamHandler', () => {
         expect(call.departmentId).toBeUndefined();
     });
 
-    // An explicit null (1C cleared the field) must be applied, not treated as "leave unchanged".
+    // An explicit null (ERP cleared the field) must be applied, not treated as "leave unchanged".
     it('passes through an explicit null for inn/erpGroupLabel/departmentId', async () => {
         const { handler, counterpartyService } = makeHandler();
 
@@ -331,7 +331,7 @@ describe('CounterpartyStreamHandler', () => {
             );
         });
 
-        // Neither field present (1C has no manager assigned at all) must leave an existing
+        // Neither field present (the ERP has no manager assigned at all) must leave an existing
         // REST/portal-assigned manager untouched — never clear it to null.
         it('leaves assignedManagerId/managerErpId untouched when neither managerId nor managerIds is present', async () => {
             const { handler, counterpartyService, userEnrichmentService } = makeHandler();

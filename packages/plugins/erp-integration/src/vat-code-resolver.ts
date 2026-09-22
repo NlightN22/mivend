@@ -1,6 +1,6 @@
-// Pure resolution of 1C's per-product `СтавкаНДС` enum string to a TaxCategory to assign, plus an
+// Pure resolution of the ERP's per-product `СтавкаНДС` enum string to a TaxCategory to assign, plus an
 // optional non-blocking review flag. Issue #79: tax classification must never block product
-// import (1C sends gross/tax-inclusive prices, so a wrong/missing TaxCategory only skews internal
+// import (ERP sends gross/tax-inclusive prices, so a wrong/missing TaxCategory only skews internal
 // tax reporting, not what the customer pays) — every branch below falls back to the configured
 // default TaxCategory and, where the input looks worth a human's attention, attaches a flag for
 // ProductTaxCodeFlagService to persist. No I/O here; the caller resolves the raw code to
@@ -18,7 +18,7 @@ export interface VatCodeResolution {
     flag?: VatCodeFlag;
 }
 
-// 1C's raw enum values (Cyrillic) mapped to this project's stable `TaxCategory.customFields.erpVatCode`
+// The ERP's raw enum values (Cyrillic) mapped to this project's stable `TaxCategory.customFields.erpVatCode`
 // values (Latin) — kept separate so the ERP's own enum spelling never leaks into stored config.
 const RAW_CODE_TO_ERP_VAT_CODE: Readonly<Record<string, string>> = {
     НДС20: 'NDS20',
@@ -27,8 +27,8 @@ const RAW_CODE_TO_ERP_VAT_CODE: Readonly<Record<string, string>> = {
 };
 
 // НДС18 predates the 2019 20% VAT rate change — per the developer, seeing it on a product today
-// almost certainly means stale/unsynced 1C data, not a rate mivend needs to support going
-// forward. Flagged distinctly from a fully unrecognized code so it routes to "review in 1C", not
+// almost certainly means stale/unsynced ERP data, not a rate mivend needs to support going
+// forward. Flagged distinctly from a fully unrecognized code so it routes to "review in the ERP", not
 // "review the mapping".
 const LEGACY_RAW_CODE = 'НДС18';
 
@@ -49,7 +49,7 @@ export function resolveVatCode(
             taxCategoryId: defaultTaxCategoryId,
             flag: {
                 reason: 'legacy',
-                detail: `Legacy VAT rate '${rawCode}' on product — data likely stale (deleted/superseded/not resynced), review in 1C`,
+                detail: `Legacy VAT rate '${rawCode}' on product — data likely stale (deleted/superseded/not resynced), review in the ERP`,
             },
         };
     }

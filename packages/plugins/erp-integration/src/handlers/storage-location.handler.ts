@@ -12,7 +12,7 @@ interface CurrentAssignment {
     organizationSourceEntityId: string | null;
 }
 
-// Applies Integration Service's `storage-location` stream (StorageLocationChanged, 1C's
+// Applies Integration Service's `storage-location` stream (StorageLocationChanged, the ERP's
 // МестаХраненияНоменклатуры register) — the real source for ProductVariant.customFields
 // .organizationId (docs/payments.md "Organizations": one storage location = one product = one
 // organization). Only ~4/30142 rows carry organization_id (see the proto's own doc comment) — a

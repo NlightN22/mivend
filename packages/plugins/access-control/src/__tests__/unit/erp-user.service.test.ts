@@ -102,7 +102,7 @@ describe('ErpUserService', () => {
             );
         });
 
-        it('applies an explicit active=false signal (1C reported inactive/deleted)', async () => {
+        it('applies an explicit active=false signal (the ERP reported inactive/deleted)', async () => {
             repo.findOne.mockResolvedValue(null);
 
             await service.upsert(ctx, { erpId: 'user-1', active: false });

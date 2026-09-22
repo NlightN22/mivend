@@ -94,7 +94,7 @@ export const administratorNamesForCounterpartyDocument = graphql(`
 `);
 
 // Resolves managerErpId to a real name for managers who have no Administrator account at all yet
-// (access-control's ErpUser, populated straight from 1C's UserChanged stream regardless of
+// (access-control's ErpUser, populated straight from the ERP's UserChanged stream regardless of
 // linking status — see counterparty-display.ts's formatManager for why this fallback level
 // exists). `pendingErpUsers` already filters to `status: 'unlinked'`, which is exactly this
 // page's use case: an already-linked erpId's name comes from the administrators query above

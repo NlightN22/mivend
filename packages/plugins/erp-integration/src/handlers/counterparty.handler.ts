@@ -13,7 +13,7 @@ interface ManagerResolution {
 
 const loggerCtx = 'IntegrationCounterpartyHandler';
 
-// Applies Integration Service's `counterparty` stream (CounterpartyChanged, 1C's "Контрагент",
+// Applies Integration Service's `counterparty` stream (CounterpartyChanged, the ERP's "Контрагент",
 // company.customers.events.v1.counterparty-changed). Issue #104, re-verified live against
 // @nlightn22/event-contracts@0.39.0 (issue #131 — do not trust older issue comments claiming a
 // field is unavailable; check the current .d.ts fresh each time, per external-integration-rules).
@@ -26,7 +26,7 @@ const loggerCtx = 'IntegrationCounterpartyHandler';
 //     #131): phone+officialEmail unblock #120's portal-access activation (Decision 1/2);
 //     factualAddress is display/completeness only, same status as legalAddress.
 //   - notificationPhone (field 19, new in 0.39.0) — deliberately NOT consumed. Confirmed a
-//     genuinely separate 1C fact from `phone` (not the same field read two ways, see #120's
+//     genuinely separate ERP fact from `phone` (not the same field read two ways, see #120's
 //     Decision 3 investigation), but #120's Decision 1/2 only need phone+officialEmail for
 //     activation and no other mivend feature reads it yet. Revisit if a real consumer appears.
 //   - creditLimit/paymentDelayDays/priceType/branchId are never carried on this stream at all —
@@ -36,13 +36,13 @@ const loggerCtx = 'IntegrationCounterpartyHandler';
 //
 // manager_id/manager_ids: issue #109 shipped the erpId↔Administrator correlation
 // (UserEnrichmentService, fed by the `user` stream) this was blocked on — resolved here to
-// Counterparty.assignedManagerId (a Vendure Administrator.id, never a raw 1C erpId).
+// Counterparty.assignedManagerId (a Vendure Administrator.id, never a raw ERP erpId).
 //
 // access-control-review note (docs/access-control.md, layer 3): this writes assignedManagerId
 // directly, bypassing CounterpartyService.reassignManager's own department-scope authorization
 // check — deliberate, not an oversight. Same precedent as departmentId/branchId already being
 // ERP-authoritative (EmployeeService's REST path writes Administrator.customFields.departmentId
-// the same way) — "ERP is master for business data" (AGENTS.md/external-integration-rules). 1C
+// the same way) — "ERP is master for business data" (AGENTS.md/external-integration-rules). ERP
 // can silently change who holds `own`-scope access to a counterparty; the portal's own
 // reassignManager mutation stays a manual override tool on top of that, not the sole path.
 @Injectable()
@@ -77,7 +77,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         await this.counterpartyService.upsertActiveState(ctx, entityId, {
             name,
             isActive,
-            // These are real optional-scalar fields (undefined = "1C didn't send this", distinct
+            // These are real optional-scalar fields (undefined = "the ERP didn't send this", distinct
             // from a proto3 zero-value ambiguity) — `in` checks presence explicitly rather than
             // reading `payload.inn` directly, since an intentional `null`/empty string must still
             // be applied, not treated as "leave unchanged".
@@ -121,7 +121,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
 
     // Primary manager_id wins; else the first entry of manager_ids; else `undefined` (leave
     // assignedManagerId untouched) — mirrors search-platform#92's own established fallback
-    // decision, never invented on Integration Service's side. Both keys are omitted by 1C itself
+    // decision, never invented on Integration Service's side. Both keys are omitted by the ERP itself
     // (real optional-scalar/empty-repeated-field presence, not proto3 zero-value ambiguity) when
     // no manager is assigned at all — that case must never clear an existing REST/portal-assigned
     // manager just because this event omitted the field.

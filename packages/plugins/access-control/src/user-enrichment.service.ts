@@ -15,7 +15,7 @@ import { loggerCtx } from './types';
 
 export interface UserEnrichmentInput {
     erpId: string;
-    // `undefined` (the stream omitted the field) means "leave unchanged"; `null` (1C explicitly
+    // `undefined` (the stream omitted the field) means "leave unchanged"; `null` (ERP explicitly
     // cleared it) is applied like any other real value. Distinct meanings, see
     // UserStreamHandler's own comment.
     email?: string | null;
@@ -26,18 +26,18 @@ export interface UserEnrichmentInput {
     isActive?: boolean;
 }
 
-// Result of resolving a 1C User erpId to whatever this system currently knows about it — see
+// Result of resolving an ERP User erpId to whatever this system currently knows about it — see
 // findManagerLink's own doc comment for how counterparty.handler.ts (and any future
 // manager-erpId-dependent handler) must interpret each case.
 export type ManagerLinkResolution = { found: false } | { found: true; administratorId: ID | null };
 
-// Issue #109: correlates Integration Service's `user` Kafka stream (UserChanged, 1C's
+// Issue #109: correlates Integration Service's `user` Kafka stream (UserChanged, the ERP's
 // "Пользователи") with an existing Vendure `Administrator` — enrichment-only, never creates an
 // Administrator (account provisioning stays manual, same rule EmployeeService's own comment
 // already establishes for the REST path). On first sight of an erpId with no existing link,
 // matches by email (same rule EmployeeService.upsert already uses) and persists erpId onto
 // Administrator.customFields for idempotent re-processing on every later event — no more email
-// lookups needed once linked, so a later rename in 1C's own full_name/email never breaks the
+// lookups needed once linked, so a later rename in the ERP's own full_name/email never breaks the
 // correlation.
 //
 // Written via a raw repo save, not AdministratorService.update() — the latter enforces Vendure's
@@ -64,9 +64,9 @@ export class UserEnrichmentService {
         let admin = await this.findByErpId(ctx, input.erpId);
         if (!admin) {
             if (input.isActive === false) {
-                // 1C already reports this user as inactive/deleted — never surface it as a
+                // ERP already reports this user as inactive/deleted — never surface it as a
                 // "create Administrator" candidate (confirmed live: issue #119 follow-up — a
-                // deleted 1C user was showing up in Pending ERP users with a working "Create
+                // deleted ERP user was showing up in Pending ERP users with a working "Create
                 // Administrator" button). The row itself is kept (mivend.audit.common,
                 // 2026-09-20 — deleting it made counterparty.handler.ts unable to tell "never
                 // seen" from "known, will never link"), just flagged `active: false` so
@@ -79,7 +79,7 @@ export class UserEnrichmentService {
                     active: false,
                 });
                 Logger.verbose(
-                    `user ${input.erpId}: inactive/deleted in 1C, not queued as a pending candidate`,
+                    `user ${input.erpId}: inactive/deleted in the ERP, not queued as a pending candidate`,
                     loggerCtx,
                 );
                 return null;
@@ -135,7 +135,7 @@ export class UserEnrichmentService {
         return saved;
     }
 
-    // Issue #104's managerId chain: resolves a 1C User erpId (CounterpartyChanged.manager_id/
+    // Issue #104's managerId chain: resolves an ERP User erpId (CounterpartyChanged.manager_id/
     // manager_ids) against the ErpUser table — see mivend.audit.common's 2026-09-20 diagnosis of
     // the `counterparty` stream inbox backlog this replaces `findAdministratorIdByErpId` for.
     // Three distinct cases the caller (CounterpartyStreamHandler) must handle differently:
@@ -143,7 +143,7 @@ export class UserEnrichmentService {
     //     eventual-consistency race (the `user` event for that manager may simply not have
     //     arrived yet). Retryable — the caller should throw MissingDependencyError.
     //   - `{ found: true, administratorId: null }` — known, still `unlinked`: NOT a race. A
-    //     human hasn't decided whether this 1C user becomes an Administrator, which can take
+    //     human hasn't decided whether this ERP user becomes an Administrator, which can take
     //     days, not seconds — retrying it as a race grows an unbounded inbox backlog (the actual
     //     incident this fixes: 65k+ pending counterparty-stream retries in staging-integration).
     //     The caller must save with no manager assigned and must NOT retry.

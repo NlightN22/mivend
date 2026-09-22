@@ -25,7 +25,7 @@ declare module '@vendure/core' {
         warehouseErpId?: string | null;
     }
     // Owned by @mivend/plugin-erp-integration (declaration merging) — ReservationAvailabilityService
-    // reads this to cap its ATP formula at 1C's own availableQuantity, see issue #72 and
+    // reads this to cap its ATP formula at the ERP's own availableQuantity, see issue #72 and
     // StockStreamHandler, without taking a package dependency on erp-integration.
     interface CustomStockLevelFields {
         erpAvailableQuantity?: number | null;

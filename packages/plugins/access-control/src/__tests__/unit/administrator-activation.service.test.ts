@@ -44,7 +44,7 @@ describe('AdministratorActivationService', () => {
             expect(administratorService.softDelete).not.toHaveBeenCalled();
         });
 
-        it('soft-deletes a linked, currently-active Administrator when 1C reports inactive', async () => {
+        it('soft-deletes a linked, currently-active Administrator when the ERP reports inactive', async () => {
             repo.findOne.mockResolvedValue({ id: 'admin-1', deletedAt: null });
 
             await service.syncFromErp(ctx, 'user-1', false);
@@ -60,7 +60,7 @@ describe('AdministratorActivationService', () => {
             expect(administratorService.softDelete).not.toHaveBeenCalled();
         });
 
-        it('reactivates a soft-deleted Administrator when 1C reports active again', async () => {
+        it('reactivates a soft-deleted Administrator when the ERP reports active again', async () => {
             repo.findOne
                 .mockResolvedValueOnce({ id: 'admin-1', deletedAt: new Date() }) // findByErpId
                 .mockResolvedValueOnce({

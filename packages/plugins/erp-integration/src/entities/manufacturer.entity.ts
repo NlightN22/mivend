@@ -2,7 +2,7 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// ProductChanged's top-level `manufacturer` field is a 1C directory GUID, NOT a display name —
+// ProductChanged's top-level `manufacturer` field is an ERP directory GUID, NOT a display name —
 // confirmed live with Search Platform (issue #116): the field's OpenAPI description
 // ("Manufacturer/brand name") is misleading, and the same GUID also appears as the `valueRef`...
 // no — as the value of `attributes['Производитель'].raw` alongside the human-readable name,
@@ -14,7 +14,7 @@ export class Manufacturer extends VendureEntity {
         super(input);
     }
 
-    // The 1C directory GUID (ProductChanged.manufacturer) — stable identity, never the display
+    // The ERP directory GUID (ProductChanged.manufacturer) — stable identity, never the display
     // name. Same "own Vendure id + separate indexed ERP id" convention as every other entity in
     // this plugin (Warehouse.erpId, ProductTaxCodeFlag.externalProductId, ...).
     @Index({ unique: true })

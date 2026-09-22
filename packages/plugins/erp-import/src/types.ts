@@ -21,8 +21,8 @@ export interface ProductRecord {
     weight?: number;
     multiplicity?: number;
     // Which of our own legal entities (OrganizationRequisites.id) owns the stock this product
-    // is fulfilled from — driven by 1C's warehouse storage-location assignment. See
-    // docs/payments.md "Organizations". Not yet sourced from a real 1C export — seeded directly
+    // is fulfilled from — driven by the ERP's warehouse storage-location assignment. See
+    // docs/payments.md "Organizations". Not yet sourced from a real ERP export — seeded directly
     // for now (infrastructure/scripts/seed-erp.mjs).
     organizationId?: number;
 }
@@ -60,7 +60,7 @@ export interface CounterpartyRecord {
     paymentDelayDays: number;
     priceType: string;
     isActive: boolean;
-    // departmentId: erpId of the 1C Department this counterparty belongs to — pure 1C org data,
+    // departmentId: erpId of the ERP Department this counterparty belongs to — pure ERP org data,
     // mirrored as-is (informational; see docs/access-control.md's "Branch vs Department" note).
     departmentId?: string | null;
     // branchId: accepted on the wire but deliberately never written anywhere yet — see
@@ -69,7 +69,7 @@ export interface CounterpartyRecord {
     // passed through raw.
     branchId?: string | null;
     // Free-text group/segment label from the ERP — display and filtering only, never used for
-    // access control or business rules (1C's own grouping concept is inconsistent). See
+    // access control or business rules (the ERP's own grouping concept is inconsistent). See
     // Counterparty.erpGroupLabel's doc comment.
     erpGroupLabel?: string | null;
 }

@@ -342,7 +342,7 @@ describe('CounterpartyService', () => {
             );
         });
 
-        // An explicit null (1C cleared the field) must be applied, distinct from `undefined`.
+        // An explicit null (ERP cleared the field) must be applied, distinct from `undefined`.
         it('applies an explicit null for inn/erpGroupLabel/departmentId', async () => {
             const entity = {
                 id: '1',
@@ -562,7 +562,7 @@ describe('CounterpartyService', () => {
             );
         });
 
-        // departmentId (1C org data) is pure display information, never an access-scope gate —
+        // departmentId (ERP org data) is pure display information, never an access-scope gate —
         // see docs/access-control.md's "Branch vs Department" section. branchId IS the real gate
         // for "department"-kind scope (security-first correction, 2026-09-20 round 3) — a
         // branch-scoped manager must never see a Counterparty that isn't theirs, including one

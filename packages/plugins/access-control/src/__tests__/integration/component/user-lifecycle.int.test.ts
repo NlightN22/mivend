@@ -26,7 +26,7 @@ import { AdministratorActivationService } from '../../../administrator-activatio
 import { ErpUserService } from '../../../erp-user.service';
 import { UserEnrichmentService } from '../../../user-enrichment.service';
 
-// Real end-to-end chain for issue #119's own scenario request: a 1C user arrives (active or
+// Real end-to-end chain for issue #119's own scenario request: an ERP user arrives (active or
 // inactive), gets queued as an ErpUser candidate (or not), and — once linked — gets
 // deactivated/reactivated for real. `user-enrichment.service.test.ts`/`administrator-activation.
 // service.test.ts` already prove the *decision logic* against a fully mocked repo; this file
@@ -215,7 +215,7 @@ describe('UserEnrichmentService.linkAndEnrich (real DB)', () => {
         expect(row).toMatchObject({ erpId: 'user-inactive-1', status: 'unlinked', active: false });
     });
 
-    it('keeps (never deletes) the ErpUser row once 1C reports the same user inactive, just flips active:false', async () => {
+    it('keeps (never deletes) the ErpUser row once the ERP reports the same user inactive, just flips active:false', async () => {
         await service.linkAndEnrich(mockCtx, { erpId: 'user-flip-1', isActive: true });
         const beforeRow = await dataSource
             .getRepository(TestErpUser)

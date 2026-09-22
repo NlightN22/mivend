@@ -56,7 +56,7 @@ export class OrganizationRequisites extends VendureEntity {
     // Set via the Admin API (setOrganizationLogo), never via ERP push — a logo
     // is a design/branding asset, not transactional ERP data. Deliberately not
     // part of the ERP-pushed record shape so a routine requisites upsert from
-    // 1C can never clobber it.
+    // ERP can never clobber it.
     @Column({ type: 'varchar', nullable: true })
     logoAssetId!: string | null;
 }

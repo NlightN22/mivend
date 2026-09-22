@@ -279,7 +279,7 @@ const adminApiSchema = gql`
         config.customFields.Administrator = [
             ...(config.customFields.Administrator ?? []),
             {
-                // Set by EmployeeService from 1C org-structure import (EmployeeRecordInput) —
+                // Set by EmployeeService from the ERP org-structure import (EmployeeRecordInput) —
                 // see employee.service.ts. Purely informational (never a scope gate — see
                 // docs/access-control.md's "departmentId must never gate visibility").
                 name: 'departmentId',
@@ -289,7 +289,7 @@ const adminApiSchema = gql`
                 label: [{ languageCode: LanguageCode.en, value: 'Department ID' }],
             },
             {
-                // Set by EmployeeService, resolved from 1C's department/division id to a real
+                // Set by EmployeeService, resolved from the ERP's department/division id to a real
                 // mivend Branch.id (see employee.service.ts's own comment on that resolution) —
                 // the real access-scope filter axis, per docs/access-control.md.
                 name: 'branchId',
@@ -299,7 +299,7 @@ const adminApiSchema = gql`
                 label: [{ languageCode: LanguageCode.en, value: 'Branch ID' }],
             },
             {
-                // Set by EmployeeService from 1C org-structure import, same record as
+                // Set by EmployeeService from the ERP org-structure import, same record as
                 // departmentId/branchId above.
                 name: 'position',
                 type: 'string' as const,
@@ -324,7 +324,7 @@ const adminApiSchema = gql`
                 // Issue #119, Decision 5: anchored once at Administrator creation
                 // (AdministratorProvisioningService.createFromPending) — never re-derived or
                 // hand-edited afterwards, that's the whole point of anchoring on erpId instead of
-                // re-matching by email. Also correlates with 1C's own "Пользователи" GUID
+                // re-matching by email. Also correlates with the ERP's own "Пользователи" GUID
                 // (UserChanged.entity_id) for #109's enrichment-only path — see
                 // UserEnrichmentService.linkAndEnrich. `unique: true` gets Vendure's real
                 // DB-level unique constraint (CustomFieldConfig supports this natively — verified

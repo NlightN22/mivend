@@ -11,7 +11,7 @@ const loggerCtx = 'IntegrationOrderChangedHandler';
 // real motivating need issue #72). Unlike order-registration-result (a one-shot registration
 // outcome), this reports the order's CURRENT state and fires repeatedly over its lifetime — same
 // "entity's current state, not a diff" convention every other stream in this plugin follows. Only
-// decodes the payload shape and resolves lines' 1C productId to a Vendure ProductVariant id (same
+// decodes the payload shape and resolves lines' ERP productId to a Vendure ProductVariant id (same
 // join OrderRegistrationResultHandler/StockStreamHandler already use) — the actual order
 // correlation, status/contractId persistence, and release/quantity-match decision live in
 // ReservationWriteOffSyncService.handleOrderChanged, kept plugin-reservation's own concern.

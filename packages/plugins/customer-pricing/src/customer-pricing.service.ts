@@ -108,7 +108,7 @@ export class CustomerPricingService {
 
     // Used by erp-integration's PriceTypeStreamHandler (issue #63). `code` is never touched on
     // update — an admin may have already renamed it via the admin-facing upsertPriceType
-    // mutation, and 1C's name is not the source of truth for the business code after creation.
+    // mutation, and the ERP's name is not the source of truth for the business code after creation.
     async upsertPriceTypeByExternalId(
         ctx: RequestContext,
         externalId: string,

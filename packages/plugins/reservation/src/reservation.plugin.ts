@@ -93,7 +93,7 @@ const adminApiSchema = gql`
         orderReservations(orderId: ID!): [Reservation!]!
         availableStock(productVariantId: ID!): Int!
         reservationExtensionLimit(roleCode: String!): ReservationExtensionLimit
-        "Open reservation/1C drift issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76)."
+        "Open reservation/ERP drift issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76)."
         openReservationReconciliationIssues(
             options: OpenReservationReconciliationIssueListOptions
         ): ReservationReconciliationIssueList!
@@ -290,8 +290,8 @@ export class ReservationPlugin implements OnApplicationBootstrap {
             loggerCtx,
         );
 
-        // 1C's own order-status callback is authoritative — see docs/order-flow.md "1C
-        // integration" and this project's explicit decision that 1C wins in conflicts.
+        // The ERP's own order-status callback is authoritative — see docs/order-flow.md "ERP
+        // integration" and this project's explicit decision that the ERP wins in conflicts.
         subscribeAndLog(
             this.eventBus,
             ErpOrderStatusEvent,

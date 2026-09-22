@@ -4,7 +4,7 @@ import { Column, Entity, Index } from 'typeorm';
 
 export type ErpUserStatus = 'unlinked' | 'linked';
 
-// Issue #119: a 1C "user" (UserChanged) mirrored into mivend, in one of two states — `unlinked`
+// Issue #119: an ERP "user" (UserChanged) mirrored into mivend, in one of two states — `unlinked`
 // (a candidate, no Vendure Administrator login exists yet) or `linked` (a human has created one,
 // see AdministratorProvisioningService.createFromPending, or UserEnrichmentService matched one
 // by email). Surfaced to a human while `unlinked` so they can decide whether it becomes a real
@@ -52,9 +52,9 @@ export class ErpUser extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     administratorId!: ID | null;
 
-    // Last known 1C isActive/isDeleted signal for this user, distinct from `status` (which only
-    // tracks the Administrator link, not the 1C-side lifecycle). `null` means "never told either
-    // way". Used only to keep an inactive/deleted 1C user from showing a "Create administrator"
+    // Last known the ERP isActive/isDeleted signal for this user, distinct from `status` (which only
+    // tracks the Administrator link, not the ERP-side lifecycle). `null` means "never told either
+    // way". Used only to keep an inactive/deleted ERP user from showing a "Create administrator"
     // action while `unlinked` — see ErpUserService.findAllPaginated's own comment. Never itself
     // drives the counterparty.handler.ts manager-resolution decision, which only looks at
     // `status`/`administratorId`.

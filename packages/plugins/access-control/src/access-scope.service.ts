@@ -58,7 +58,7 @@ export class AccessScopeService {
     //
     // `counterparty.departmentId` is accepted for call-site convenience (every caller already
     // has the full row in hand) but never compared — see CounterpartyService.findVisible's
-    // identical department-case comment: `departmentId` is pure informational 1C data, never a
+    // identical department-case comment: `departmentId` is pure informational ERP data, never a
     // scope gate. `counterparty.branchId` IS compared below (2026-09-20 security-first
     // correction, same decision as CounterpartyService.findVisible's identical case) — a
     // branch-scoped caller must never write a Counterparty that isn't theirs, including one with

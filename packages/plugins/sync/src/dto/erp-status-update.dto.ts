@@ -16,7 +16,7 @@ export class ErpStatusUpdateDto {
         required: false,
         nullable: true,
         description:
-            '1C document code, optional — never used as a lookup key, stored for reference only.',
+            'ERP document code, optional — never used as a lookup key, stored for reference only.',
         example: 'DOC-0012345',
     })
     erpOrderId?: string;

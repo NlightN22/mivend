@@ -29,18 +29,18 @@ export interface ResolvedAdministratorByErpId {
  * ERP Manager display, per an explicit product decision: this column is entirely about the
  * ERP-side assignment (managerErpId) — never Counterparty.assignedManagerId, which is a
  * different, operational concept (mivend's own current owner, changeable by
- * reassignCounterpartyManager, deliberately independent of whatever 1C last reported) and has no
+ * reassignCounterpartyManager, deliberately independent of whatever ERP last reported) and has no
  * place in resolving this column at all. Resolution is keyed on managerErpId alone, matched
  * against Administrator.customFields.erpId (the unique link UserEnrichmentService writes when an
  * ERP user becomes a real login) — no join through assignedManagerId needed:
  * 1. managerErpId matches a known Administrator's own erpId customField → that Administrator's
- *    current name (more likely up to date than whatever 1C last reported).
+ *    current name (more likely up to date than whatever ERP last reported).
  * 2. Otherwise, managerErpId matches an unlinked ErpUser (access-control's own table, populated
- *    straight from 1C's UserChanged stream) → its ERP-reported fullName — a real person mivend
+ *    straight from the ERP's UserChanged stream) → its ERP-reported fullName — a real person mivend
  *    already knows the name of, just not yet a mivend login (#127's three-way resolution). This
  *    is the common case today — a live incident showed a manager with 254 real counterparties
  *    rendering as a raw GUID everywhere before this fallback existed.
- * 3. Neither resolves → the raw managerErpId, so staff can still see *something* 1C sent.
+ * 3. Neither resolves → the raw managerErpId, so staff can still see *something* ERP sent.
  * No managerErpId at all → the counterparty genuinely has no ERP manager assigned.
  */
 export function formatManager(

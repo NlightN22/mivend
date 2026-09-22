@@ -6,13 +6,13 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationDepartmentHandler';
 
-// Applies Integration Service's `department` stream (DepartmentChanged — 1C's "Подразделение",
-// company.customers.events.v1.department-changed). entityId is 1C's own GUID
+// Applies Integration Service's `department` stream (DepartmentChanged — the ERP's "Подразделение",
+// company.customers.events.v1.department-changed). entityId is the ERP's own GUID
 // ("Подразделение_Key") — the same value WarehouseChanged.branchId refers to, though this
 // handler only upserts the Department record itself; it deliberately does not drive any
 // warehouse→branch linkage (see WarehouseStreamHandler/BranchStockLocationStrategy's own
 // comments — mivend's branch assignment is its own, staff-managed concept, independent of
-// whatever org unit 1C calls a "division" for its own purposes).
+// whatever org unit ERP calls a "division" for its own purposes).
 @Injectable()
 export class DepartmentStreamHandler implements InboundStreamHandler {
     constructor(private readonly departmentService: DepartmentService) {}
@@ -25,7 +25,7 @@ export class DepartmentStreamHandler implements InboundStreamHandler {
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
         // bool zero-value omission). isDeleted folds in the same way every sibling handler does
         // (mivend.issue.88 follow-up, 2026-09-15) — this handler previously never read either
-        // field at all, despite DepartmentChanged carrying both; a deactivated/deleted 1C
+        // field at all, despite DepartmentChanged carrying both; a deactivated/deleted ERP
         // department had no way to reflect that locally (Department had no isActive column).
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 

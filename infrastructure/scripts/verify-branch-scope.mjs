@@ -1,6 +1,6 @@
 // E2E verification of department-scope access-control rules for Counterparty
 // (docs/access-control.md's "Branch scope is a separate axis" / "Branch is mivend's own entity;
-// Department is a pure 1C mirror" sections). Automates the manual curl-based check performed
+// Department is a pure ERP mirror" sections). Automates the manual curl-based check performed
 // live during the branch-identity/access-control design session — see docs/architecture.md and
 // docs/access-control.md.
 //

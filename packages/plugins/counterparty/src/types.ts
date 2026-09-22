@@ -23,7 +23,7 @@ export interface CounterpartyUpsertPayload {
     paymentDelayDays: number;
     priceType: string;
     isActive: boolean;
-    // departmentId is the ERP's own id (Department.erpId) — pure 1C org-structure data, display/
+    // departmentId is the ERP's own id (Department.erpId) — pure ERP org-structure data, display/
     // informational, mirrored as-is (see docs/access-control.md's "Branch vs Department" note).
     //
     // branchId is NOT an ERP id despite the stale convention this comment used to describe —

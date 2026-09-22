@@ -1,7 +1,7 @@
 import { Order, ProductVariant, RequestContext, TransactionalConnection } from '@vendure/core';
 
 // Issue #107: split out of PriceResolutionService (which was already over AGENTS.md's 200-300
-// line limit) — this is a self-contained lookup (1C product erpId + per-order quantities by
+// line limit) — this is a self-contained lookup (ERP product erpId + per-order quantities by
 // erpId) that PromoDiscountRuleService.getBestPromoPercent needs, unrelated to that file's own
 // facet/weight/amount aggregation logic.
 

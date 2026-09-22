@@ -18,7 +18,7 @@ import type { BranchOption, Warehouse } from '../../api/branchSettings';
 // search + funnel filter. The search is client-side (see BranchSettingsPage.vue's own doc
 // comment on why this table is exempt from server pagination) and, to preserve the previous
 // behavior, matches against `name` OR `erpId` — still a "real filter", just not a server one.
-// `erpId`/`erpIsActive` are 1C's own suggested values, shown read-only next to the
+// `erpId`/`erpIsActive` are the ERP's own suggested values, shown read-only next to the
 // human-curated `assignedBranch`/`includedInBranchAtp` columns — neither is filterable, since
 // there's no operational reason to filter by them and the backend `warehouses` query has no
 // filter args at all. No `createdAt` column: `warehouses` doesn't expose it (a static ERP
@@ -63,7 +63,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     { field: 'erpId', header: 'ERP id', width: 140, filterConfig: { type: 'none' }, mobile: { hidden: true } },
     {
         field: 'erpIsActive',
-        header: '1C isActive',
+        header: 'ERP isActive',
         width: 130,
         filterConfig: { type: 'none' },
         mobile: { hidden: true },

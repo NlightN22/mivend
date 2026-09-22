@@ -53,7 +53,7 @@ export class Document extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     assetId!: string | null;
 
-    // ERP-hosted file passthrough for return/reconciliation documents — 1C already
+    // ERP-hosted file passthrough for return/reconciliation documents — ERP already
     // serves the file, no need to re-upload it into Vendure's asset storage.
     @Column({ type: 'varchar', nullable: true })
     fileUrl!: string | null;

@@ -16,7 +16,7 @@ import { loggerCtx } from './types';
 
 // Issue #119, Decision 1/2: `deletedAt` (Vendure's native soft-delete) is the deactivation
 // mechanism — a real login block (UserService.getUserByEmailAddress filters
-// `WHERE user.deletedAt IS NULL`), not a custom isActive flag. 1C is trusted as master for this
+// `WHERE user.deletedAt IS NULL`), not a custom isActive flag. ERP is trusted as master for this
 // state and applied automatically, no human confirmation step (same "ERP is master" principle as
 // Counterparty.assignedManagerId/departmentId elsewhere in this plugin).
 @Injectable()
@@ -37,10 +37,10 @@ export class AdministratorActivationService {
     // to deactivated accounts.
     //
     // Deliberately not scoped to erpId-linked accounts (dropped that filter after a real report:
-    // an old, never-1C-linked seed Administrator was soft-deleted but invisible here while still
+    // an old, never-ERP-linked seed Administrator was soft-deleted but invisible here while still
     // showing on the manager-portal's own Settings > Users list, which never had that scoping —
     // this screen should show every deactivated Administrator, same as that one, not just ones
-    // that came from the 1C sync).
+    // that came from the ERP sync).
     async findDeactivated(
         ctx: RequestContext,
         options?: AdministratorListOptions,
@@ -85,19 +85,19 @@ export class AdministratorActivationService {
         if (!isActive && !isSoftDeleted) {
             await this.administratorService.softDelete(ctx, admin.id);
             Logger.verbose(
-                `Deactivated administrator erpId=${erpId} (1C reported inactive)`,
+                `Deactivated administrator erpId=${erpId} (the ERP reported inactive)`,
                 loggerCtx,
             );
         } else if (isActive && isSoftDeleted) {
             await this.reactivate(ctx, admin.id);
             Logger.verbose(
-                `Reactivated administrator erpId=${erpId} (1C reported active)`,
+                `Reactivated administrator erpId=${erpId} (the ERP reported active)`,
                 loggerCtx,
             );
         }
     }
 
-    // Manual override on top of syncFromErp above — e.g. for a case 1C hasn't caught up on yet,
+    // Manual override on top of syncFromErp above — e.g. for a case the ERP hasn't caught up on yet,
     // or a deliberate business exception.
     async setActive(ctx: RequestContext, administratorId: ID, isActive: boolean): Promise<void> {
         const repo = this.connection.getRepository(ctx, Administrator);

@@ -3,7 +3,7 @@ import '@vendure/core';
 declare module '@vendure/core' {
     interface CustomProductFields {
         // Owned by apps/server/src/vendure-config.ts's customFields config / plugin-erp-import's
-        // own Product handling — 1C's product GUID. Declared here (not imported from another
+        // own Product handling — the ERP's product GUID. Declared here (not imported from another
         // plugin) since price-entry only needs to read it, same "declaration merging without a
         // package dependency" precedent as plugin-access-control's sourceAdministratorId — see
         // promo-product-lookup.ts's getProductErpId.

@@ -183,7 +183,7 @@ export default [
         },
     },
     // REST controllers and EventBus listeners — the actual entry points for external, unreliable
-    // event sources (a webhook, an ERP/1C callback, a branch→central sync consumer) — must never
+    // event sources (a webhook, an ERP/the ERP callback, a branch→central sync consumer) — must never
     // call a risky payment-processing method directly. See AGENTS.md sync rule #12 and
     // eslint-rules/no-sync-payment-processing.js's own header comment for the full rationale.
     // GraphQL *resolvers* are deliberately NOT in scope here: a mutation like `payInvoice` invoked

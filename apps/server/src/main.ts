@@ -21,7 +21,7 @@ function mountApiDocs(app: INestApplication): void {
         new DocumentBuilder()
             .setTitle('mivend REST API')
             .setDescription(
-                'External REST endpoints used by the ERP integration (1C). ' +
+                'External REST endpoints used by the ERP integration. ' +
                     'Shop/Admin APIs are GraphQL — see /shop-api and /admin-api.',
             )
             .addBearerAuth({ type: 'http', scheme: 'bearer' }, 'erp-import-token')

@@ -101,7 +101,7 @@ describe('UserEnrichmentService', () => {
             });
         });
 
-        // No email to match by and no existing link, but still active in 1C — an ordinary,
+        // No email to match by and no existing link, but still active in the ERP — an ordinary,
         // expected case, not an error. Still surfaced as a candidate.
         it('returns null and upserts an unlinked ErpUser when unlinked and no email is available to match by', async () => {
             repo.findOne.mockResolvedValueOnce(null);
@@ -119,7 +119,7 @@ describe('UserEnrichmentService', () => {
             });
         });
 
-        // Issue #119 follow-up: a deleted/inactive 1C user must never show a "Create
+        // Issue #119 follow-up: a deleted/inactive ERP user must never show a "Create
         // Administrator" action — confirmed live against real staging data. mivend.audit.common
         // (2026-09-20): the row itself is now kept, not deleted, just flagged active:false so
         // ErpUserService.findAllPaginated excludes it from the Pending list.

@@ -239,7 +239,7 @@ describe('StockStreamHandler', () => {
     // mivend.issue.84.88: Integration Service's contract declares available_quantity as a plain
     // (non-optional) proto3 double — its zero-value (0) is OMITTED from the decoded JSON payload,
     // same shape as isActive/isDeleted's own documented zero-value omission (types.ts). An absent
-    // key here means "1C reports zero available," not "no data" — confirmed live as a real
+    // key here means "the ERP reports zero available," not "no data" — confirmed live as a real
     // production gap (68 stock rows silently never got an ATP cap written at all).
     it('treats an absent availableQuantity as an explicit 0, not "no data" (proto3 zero-value omission)', async () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };

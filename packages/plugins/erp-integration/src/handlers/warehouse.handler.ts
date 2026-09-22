@@ -7,7 +7,7 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 const loggerCtx = 'IntegrationWarehouseHandler';
 
 // Applies Integration Service's `warehouse` stream (WarehouseChanged: name/departmentId/isActive/
-// isFolder — entityId is the warehouse's own 1C GUID, departmentId is the owning division's 1C
+// isFolder — entityId is the warehouse's own ERP GUID, departmentId is the owning division's ERP
 // GUID ("Подразделение_Key"), matched against Branch.erpId here — same id space as Department's
 // own erpId (event-contracts@0.40.0 renamed this field from branch_id for clarity, see that
 // package's issue #140), but mivend's Branch stays its own independent, staff-managed concept
@@ -17,7 +17,7 @@ const loggerCtx = 'IntegrationWarehouseHandler';
 // tag here, not a hard catalog/pricing partition. StockLocation has no native external-id field,
 // so StockLocation.customFields.warehouseErpId is this handler's own idempotency key.
 //
-// 1C's warehouse hierarchy has folder/group nodes as well as real leaf warehouses (issue #94).
+// The ERP's warehouse hierarchy has folder/group nodes as well as real leaf warehouses (issue #94).
 // isFolder === true skips the row entirely — no Warehouse, no StockLocation. Vendure has no
 // native hierarchy concept for StockLocation, and Branch already covers the organizational
 // grouping need, so no synthetic folder representation is introduced.
@@ -38,7 +38,7 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         // zero-value omission).
         const isActive = payload.isActive === true;
         const isDeleted = payload.isDeleted === true;
-        // 1C's warehouse hierarchy includes folder/group nodes, not just real leaf warehouses
+        // The ERP's warehouse hierarchy includes folder/group nodes, not just real leaf warehouses
         // (issue #94) — Vendure has no StockLocation/Warehouse hierarchy concept, and Branch
         // already covers the organizational grouping need, so folders are skipped entirely.
         const isFolder = payload.isFolder === true;

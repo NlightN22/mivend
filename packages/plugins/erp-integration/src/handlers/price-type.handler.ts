@@ -6,8 +6,8 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationPriceTypeHandler';
 
-// Applies Integration Service's `price-type` stream (PriceTypeChanged). entityId is 1C's own
-// GUID for the price type, verified against Integration Service's real 1C export code to be the
+// Applies Integration Service's `price-type` stream (PriceTypeChanged). entityId is the ERP's own
+// GUID for the price type, verified against Integration Service's real ERP export code to be the
 // same value PriceChanged.priceTypeId refers back to — see PriceStreamHandler. Only name/isActive
 // are used here; currency/isPurchasePriceType/ceilingPriceMultiplier are a separate, out-of-scope
 // feature (issue #63).

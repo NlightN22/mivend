@@ -9,7 +9,7 @@ const loggerCtx = 'IntegrationOrderRegistrationResultHandler';
 
 // Applies Integration Service's company.orders.events.v1.order-registration-result stream
 // (issue #75, the real reservation-release trigger issue #72's release-on-status attempts
-// deferred to). Only decodes the payload shape and resolves reservedLines' 1C productId to a
+// deferred to). Only decodes the payload shape and resolves reservedLines' ERP productId to a
 // Vendure ProductVariant id (same join StockStreamHandler already uses) — the actual
 // order-correlation, release, and discrepancy decision live in
 // ReservationWriteOffSyncService, kept plugin-reservation's own concern.

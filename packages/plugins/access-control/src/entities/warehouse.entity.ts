@@ -32,7 +32,7 @@ export class Warehouse extends VendureEntity {
     isActive!: boolean;
 
     // Human-curated "does this warehouse hold real sellable stock for its branch's ATP
-    // aggregation" flag (issue #66) — deliberately separate from isActive, which is only 1C's
+    // aggregation" flag (issue #66) — deliberately separate from isActive, which is only the ERP's
     // own suggested default and has been observed to be an unreliable signal (a branch's
     // largest-stock warehouse flagged isActive=false, several near-empty ones flagged true).
     // Defaults to true (not to isActive's value) so a fresh warehouse participates in ATP until

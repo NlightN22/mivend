@@ -166,7 +166,7 @@ export const config: VendureConfig = {
     customFields: {
         TaxCategory: [
             {
-                // Stable ERP-side code (see 1C's Catalog_Номенклатура.СтавкаНДС enum) that
+                // Stable ERP-side code (see the ERP's Catalog_Номенклатура.СтавкаНДС enum) that
                 // packages/plugins/erp-integration's product handler resolves against — never
                 // matched by `name`, which is free text an admin can rename/localize at will.
                 // See issue #79.
@@ -262,10 +262,10 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'Placed By (Administrator)' }],
             },
             {
-                // 1C's own document number for this order's registration (Document.Номер) — set
+                // The ERP's own document number for this order's registration (Document.Номер) — set
                 // from company.orders.events.v1.OrderRegistrationResult.document_number, a real
                 // proto `optional string` (genuinely absent, not a zero-value-omission case).
-                // Staff need this to cross-reference the order against 1C directly. See #74's
+                // Staff need this to cross-reference the order against ERP directly. See #74's
                 // order-registration-result follow-up.
                 name: 'erpRegistrationDocumentNumber',
                 type: 'string',
@@ -273,7 +273,7 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Registration Document #' }],
             },
             {
-                // Raw `status` string from the same event — 1C's own label, passed through
+                // Raw `status` string from the same event — the ERP's own label, passed through
                 // verbatim, never mapped to a mivend enum (no fixed value set is documented by
                 // Integration Service yet). Empty string means the field was absent (plain,
                 // non-optional proto3 string — zero-value-omission rule applies, not `optional`).
@@ -286,7 +286,7 @@ export const config: VendureConfig = {
                 // Raw `status` string from company.orders.events.v1.order-changed (issue #110) —
                 // this stream's own current-state view, fired repeatedly over the order's
                 // lifetime, distinct from erpRegistrationStatus (order-registration-result's
-                // one-shot registration outcome, a different 1C fact with its own timing). Kept
+                // one-shot registration outcome, a different ERP fact with its own timing). Kept
                 // as a separate field rather than reused, since order-changed can report a
                 // different value/timing than the one-time registration result and overwriting
                 // that field would lose the registration-time fact. Passed through verbatim,
@@ -298,7 +298,7 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Order Status' }],
             },
             {
-                // Flat GUID ref to a 1C "Договор" (contract) — OrderChanged.contract_id (issue
+                // Flat GUID ref to an ERP "Договор" (contract) — OrderChanged.contract_id (issue
                 // #110/#123), a real proto `optional string` (genuinely absent, not a zero-value-
                 // omission case). Purely informational for now: no Contract entity exists yet in
                 // this repo, this just persists the source system's own identifier (see the
@@ -324,7 +324,7 @@ export const config: VendureConfig = {
                 defaultValue: false,
                 label: [{ languageCode: LanguageCode.en, value: 'On Sale' }],
             },
-            // Issue #116 — ProductChanged's `manufacturer` field is a 1C directory GUID, not a
+            // Issue #116 — ProductChanged's `manufacturer` field is an ERP directory GUID, not a
             // display name (confirmed live with Search Platform — the field's own OpenAPI
             // description is misleading). A relation to the real Manufacturer entity, not a
             // plain string field; ProductStreamHandler resolves/creates the Manufacturer and
@@ -358,7 +358,7 @@ export const config: VendureConfig = {
             },
             {
                 // Which of our own legal entities (OrganizationRequisites, plugin-documents)
-                // owns the stock this variant is fulfilled from — driven by 1C's warehouse
+                // owns the stock this variant is fulfilled from — driven by the ERP's warehouse
                 // storage-location assignment (one storage location = one product = one
                 // organization). See docs/payments.md "Organizations".
                 name: 'organizationId',
@@ -399,7 +399,7 @@ export const config: VendureConfig = {
             {
                 // Idempotency key for erp-integration's WarehouseStreamHandler: correlates this
                 // StockLocation with the Warehouse it was created for (Warehouse.erpId, the
-                // warehouse's own 1C GUID) — StockLocation has no native external-id field.
+                // warehouse's own ERP GUID) — StockLocation has no native external-id field.
                 name: 'warehouseErpId',
                 type: 'string',
                 nullable: true,
@@ -409,9 +409,9 @@ export const config: VendureConfig = {
         ],
         StockLevel: [
             {
-                // 1C's own availableQuantity for this (productVariant, stockLocation) — from
+                // The ERP's own availableQuantity for this (productVariant, stockLocation) — from
                 // StockChanged (issue #72). Caps ReservationAvailabilityService's own ATP
-                // formula: 1C receives reservations from other channels that never reach mivend
+                // formula: ERP receives reservations from other channels that never reach mivend
                 // as events, so mivend's own local ledger alone cannot be trusted as the ceiling.
                 // Previously decoded and discarded entirely — see StockStreamHandler.
                 name: 'erpAvailableQuantity',
@@ -674,18 +674,18 @@ export const config: VendureConfig = {
                         process.env.INTEGRATION_KAFKA_TOPIC_STOCK ??
                         'company.catalog.events.v1.stock-changed',
                     // Issue #71: product+warehouse+organization storage-location assignment
-                    // (1C's МестаХраненияНоменклатуры register) — the real source for
+                    // (the ERP's МестаХраненияНоменклатуры register) — the real source for
                     // ProductVariant.customFields.organizationId, see StorageLocationStreamHandler.
                     'storage-location':
                         process.env.INTEGRATION_KAFKA_TOPIC_STORAGE_LOCATION ??
                         'company.catalog.events.v1.storage-location-changed',
-                    // Organization-level stock split (1C's ТоварыОрганизаций register) — quantity
+                    // Organization-level stock split (the ERP's ТоварыОрганизаций register) — quantity
                     // dimension deliberately deferred to issue #72, not a second organizationId
                     // source (StorageLocationChanged is sole source of truth for that).
                     'stock-organization':
                         process.env.INTEGRATION_KAFKA_TOPIC_STOCK_ORGANIZATION ??
                         'company.catalog.events.v1.stock-organization-changed',
-                    // Issue #75: 1C's own, same-transaction confirmation that an order document
+                    // Issue #75: the ERP's own, same-transaction confirmation that an order document
                     // was posted and stock written off — the real reservation-release trigger.
                     // Different domain from the 8 catalog streams above (company.orders, not
                     // company.catalog) — see OrderRegistrationResultHandler/
@@ -700,13 +700,13 @@ export const config: VendureConfig = {
                     'order-changed':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CHANGED ??
                         'company.orders.events.v1.order-changed',
-                    // 1C's "Подразделение" — feeds the Department entity in
+                    // The ERP's "Подразделение" — feeds the Department entity in
                     // @mivend/plugin-access-control. Different domain (company.customers) than
                     // the catalog/orders streams above — see DepartmentStreamHandler.
                     department:
                         process.env.INTEGRATION_KAFKA_TOPIC_DEPARTMENT ??
                         'company.customers.events.v1.department-changed',
-                    // 1C's counterparty ("Контрагент") — feeds the Counterparty entity in
+                    // The ERP's counterparty ("Контрагент") — feeds the Counterparty entity in
                     // @mivend/plugin-counterparty. Same domain (company.customers) as department
                     // above — see CounterpartyStreamHandler (issue #104).
                     counterparty:

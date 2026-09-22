@@ -15,7 +15,7 @@ import type { OrganizationRequisites } from '../../api/organizations';
 // reference list of the business's own legal entities, exempt from server pagination per the
 // backend-plugin-rules skill's Pagination section, same exemption class as
 // WarehouseCurationTable.vue) so the search/filter here is client-side, matching only
-// `legalName`. `erpId` is a read-only 1C reference value with no operational reason to filter by
+// `legalName`. `erpId` is a read-only ERP reference value with no operational reason to filter by
 // it, so it stays `filterConfig: { type: 'none' }` like WarehouseCurationTable.vue's own `erpId`
 // column. This is a v1 read-only list (issue #88): no create/edit/delete action.
 const props = defineProps<{

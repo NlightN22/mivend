@@ -22,16 +22,16 @@ export class ReservationAvailabilityService {
         private warehouseService: WarehouseService,
     ) {}
 
-    // ATP = stockOnHand - stockAllocated - activeReservations, capped per-location at 1C's own
-    // availableQuantity where known (issue #72's revised formula) — 1C is the sole source of
+    // ATP = stockOnHand - stockAllocated - activeReservations, capped per-location at the ERP's own
+    // availableQuantity where known (issue #72's revised formula) — ERP is the sole source of
     // truth for reservations, since it receives holds from other channels that never reach
     // mivend as events at all, so its own number is the only defense against those.
     //
     // A local Reservation is subtracted for as long as it stays `status: 'active'` — REGARDLESS
     // of erpConfirmedAt. An earlier revision of this method stopped subtracting a reservation
-    // once 1C confirmed it, reasoning that 1C's own availableQuantity would already reflect the
+    // once ERP confirmed it, reasoning that the ERP's own availableQuantity would already reflect the
     // hold by then and double-subtracting would understate ATP. That reasoning solved a minor,
-    // harmless problem (a slightly-too-conservative number) by creating a real one: if 1C's own
+    // harmless problem (a slightly-too-conservative number) by creating a real one: if the ERP's own
     // StockChanged confirming the hold was itself delayed or dropped, NEITHER number reflected
     // the held unit for that whole window — a genuine oversell risk (mivend.audit.72 HIGH).
     // Reverted per the same reasoning that makes the cap below safe in the first place: min() by
@@ -41,13 +41,13 @@ export class ReservationAvailabilityService {
     // held unit is accounted for locally from the moment it's created until it's actually
     // released (today: only a real CANCELLED does that — see ReservationErpSyncService, which
     // deliberately does NOT release on RESERVED/CONFIRMED/SHIPPED/DELIVERED either, for the same
-    // "don't trust an unverified status" reasoning), with 1C's own number only ever tightening
+    // "don't trust an unverified status" reasoning), with the ERP's own number only ever tightening
     // the cap further (for holds from OTHER channels mivend has no reservation row for at all),
     // never being the sole thing standing between "held" and "shown as free".
     //
-    // The cap is applied PER StockLocation, not after summing across locations — 1C's
+    // The cap is applied PER StockLocation, not after summing across locations — the ERP's
     // availableQuantity is itself location-scoped (StockChanged is per warehouse), so capping
-    // after summing would mix numbers from different scopes. No cap is applied for a location 1C
+    // after summing would mix numbers from different scopes. No cap is applied for a location ERP
     // has never reported a StockChanged for (erpAvailableQuantity still null) — falls back to the
     // local-only number for that location, same bootstrap behavior as every other ERP-sourced
     // field in this codebase.
@@ -79,7 +79,7 @@ export class ReservationAvailabilityService {
             const erpCap = level.customFields?.erpAvailableQuantity;
             const capped = erpCap != null ? Math.min(localFree, erpCap) : localFree;
             // Floored at 0 (mivend.audit.72 LOW) — a malformed/negative erpAvailableQuantity from
-            // 1C (not expected under normal operation, but stock.handler.ts doesn't validate the
+            // ERP (not expected under normal operation, but stock.handler.ts doesn't validate the
             // incoming value) must not turn into a negative contribution once summed across
             // locations, which would silently understate ATP for the whole branch.
             total += Math.max(0, capped);
@@ -133,7 +133,7 @@ export class ReservationAvailabilityService {
         if (!branchId) {
             return [await this.getDefaultStockLocationId(ctx)];
         }
-        // includedInBranchAtp is the human-curated flag (issue #66) — isActive is only 1C's own
+        // includedInBranchAtp is the human-curated flag (issue #66) — isActive is only the ERP's own
         // suggested default and has been observed to be an unreliable "holds real stock" signal
         // (a branch's largest-stock warehouse was flagged isActive=false in a real check), so it
         // is deliberately not part of this filter.

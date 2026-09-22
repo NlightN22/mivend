@@ -116,7 +116,7 @@ export class ReservationService {
                 // ErpExportDataMissingError's doc comment) — verify every piece of data
                 // erp-integration's order.submitted event will need is already resolvable
                 // *before* writing any Reservation, rather than allowing a reservation that can
-                // never be reported to 1C. Full-order-only, same as the stock/multiplicity checks.
+                // never be reported to the ERP. Full-order-only, same as the stock/multiplicity checks.
                 const branchId = order.customFields.branchId ?? null;
                 const candidateLocations = branchId
                     ? await this.warehouseService.findActiveStockLocationsForBranch(txCtx, branchId)

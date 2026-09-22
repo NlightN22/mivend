@@ -263,12 +263,12 @@ export class DocumentsService {
 
     // Used by seed scripts/admin tooling to resolve an ERP-side org erpId to the platform's
     // own auto-increment id — e.g. to populate ProductVariant.customFields.organizationId
-    // before the real 1C export exists (see docs/payments.md "Organizations").
+    // before the real ERP export exists (see docs/payments.md "Organizations").
     async findAllRequisites(ctx: RequestContext): Promise<OrganizationRequisites[]> {
         return this.connection.getRepository(ctx, OrganizationRequisites).find();
     }
 
-    // Resolves 1C's own organization GUID (erpId) to this platform's auto-increment id — used by
+    // Resolves the ERP's own organization GUID (erpId) to this platform's auto-increment id — used by
     // erp-integration's StorageLocationStreamHandler to populate ProductVariant.customFields
     // .organizationId from a real StorageLocationChanged event.
     async findRequisitesIdByErpId(ctx: RequestContext, erpId: string): Promise<number | null> {
