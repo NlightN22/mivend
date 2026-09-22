@@ -52,6 +52,48 @@ An alert's `check()` must fail closed (return the "nothing to report" value, e.g
 `false`) inside a `try/catch` — a viewer lacking the underlying query's permission, or a
 transient network error, must never crash the whole `<Alerts>` shell for every other extension.
 
+## Mandatory: one actionable alert per action, never a bundled checklist
+
+If an alert's fix is "go do N different, independently-actionable things" (create a Zone, create
+a Tax Category, enable a Payment Method, ...), register **N separate `DashboardAlertDefinition`s**,
+each with its own `actions` entry linking straight to the page that fixes that one thing — never
+one alert whose `title`/`description` lists multiple unrelated missing items as a comma-joined
+string with no link at all. A viewer reading "System configuration incomplete: At least one Zone,
+At least one Tax Category, ..." has to go figure out where each of those lives; a viewer reading
+"No Tax Category defined yet" next to an "Add a Tax Category" button does not.
+
+**This is not "unjustified duplication" under AGENTS.md's no-excess-code rule** — each item is a
+distinct action leading to a distinct destination page, which is exactly the kind of difference
+that justifies a separate unit (AGENTS.md's own "modularity first": _"if something can be a
+separate file/unit, it should be"_). Bundling them saves a few lines of `index.ts` at the cost of
+making every one of them non-actionable — that trade is backwards. `system-health/index.ts`
+originally did this (`systemHealthAlert`, one alert covering 6 conditions) citing that same rule
+incorrectly; issue #140 split it into 6 standalone alerts (`zoneMissingAlert`,
+`taxCategoryMissingAlert`, `taxRateMissingAlert`, `defaultTaxZoneMissingAlert`,
+`shippingMethodMissingAlert`, `paymentMethodMissingAlert`) as the reference implementation — each
+with its own tiny GraphQL probe query, its own pure predicate in `system-health-check.ts`
+(`isZoneMissing`, `isTaxCategoryMissing`, ...), and its own `actions: [{ label: 'Add a Zone',
+onClick: () => window.location.href = '/zones' }]`-style link to the exact settings page.
+
+Two shapes, depending on what the alert is actually about:
+
+- **One entity instance is missing/misconfigured** (a Zone, a Branch, a channel's default tax
+  zone): link straight to the page that creates/edits it — `branch-consolidation`'s "Add a
+  branch" → `/branches`, or `system-health`'s `defaultTaxZoneMissingAlert` → `/channels/${channelId}`
+  (built from data the `check()` already fetched, not a static route, since which channel is
+  "active" is itself data).
+- **Many homogeneous rows need attention** (e.g. "12 products have no ERP VAT code mapped"): if
+  the destination list page supports a filter that isolates exactly those rows, link to that
+  filtered URL (a query string on the list route) rather than the unfiltered list — the viewer
+  should land already looking at the rows that need fixing, not need to re-derive the filter
+  themselves. If no such filter exists, link to the plain (unfiltered) list page — that's still
+  strictly better than no link, but don't invent a query param the list page doesn't actually
+  support.
+
+Only bundle multiple conditions into one alert when they are genuinely **one action with one
+destination** (e.g. "review N flagged items on this one review page") — the split is about
+distinct _destinations_, not an arbitrary cap on how many conditions one alert may summarize.
+
 ## Mandatory: any one-time client-side data load MUST live in `useEffect`, never in the render body
 
 A real, live incident: `if (someList.length === 0) { void loadSomeList(); }` written directly in
@@ -269,7 +311,8 @@ never wrong, they just don't cover this failure mode at all.
 
 ## Reference implementations
 
-`apps/server/src/dashboard/system-health/` (alert only, pure-logic file tested), `.../branch-
+`apps/server/src/dashboard/system-health/` (6 standalone per-entity alerts, each with its own
+pure predicate + link — the "one actionable alert per action" reference above), `.../branch-
 consolidation/` (alert + page + mutation), `.../integration-health/` (alert + page combining two
 independent data sources on one page rather than one page per metric — see its own doc comments
 for why).

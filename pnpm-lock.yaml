@@ -170,6 +170,9 @@ importers:
             '@types/node':
                 specifier: ^20.0.0
                 version: 20.19.43
+            '@types/pg':
+                specifier: ^8.23.1
+                version: 8.23.1
             '@types/react':
                 specifier: ^19.2.4
                 version: 19.2.17
@@ -6311,6 +6314,12 @@ packages:
         resolution:
             {
                 integrity: sha512-4tgJ1Z3elF/tOMpA8JLVuR9spt9Ynsf7+JjqsQ2IqtiPJtcLoHoXcT6qU4E10cPFqyXX5HDm9QwIzZhBSkLxsw==,
+            }
+
+    '@types/pg@8.23.1':
+        resolution:
+            {
+                integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==,
             }
 
     '@types/qs@6.15.1':
@@ -18800,6 +18809,12 @@ snapshots:
             '@types/node': 20.19.43
 
     '@types/object-path@0.11.4': {}
+
+    '@types/pg@8.23.1':
+        dependencies:
+            '@types/node': 20.19.43
+            pg-protocol: 1.15.0
+            pg-types: 2.2.0
 
     '@types/qs@6.15.1': {}
 
