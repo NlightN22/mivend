@@ -6,9 +6,9 @@ import {
     useDataTableState,
     type AdvancedDataTableColumn,
 } from '@mivend/ui-kit';
-import type { DataTableSortMeta } from '@mivend/ui-kit';
 import { activationReadiness, type ActivationCandidate } from '../../api/counterpartyPortalAccess';
 import type { CounterpartySortParameter } from '../../api/counterpartyPortalAccess';
+import { mapSortToApi } from './counterpartySort';
 
 // Issue #120 — bulk "Активация клиентов" table. Shortname is the identifying/searched column
 // (manager-table-standard point 1), same role Company name plays in the reviewed concept.
@@ -95,15 +95,12 @@ const { state: tableState } = useDataTableState<FilterState>(
 watch(() => tableState.value.filters, f => emit('update:search', f.shortName), { deep: true });
 watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
 
-// Same "single active sort" mapping as CustomerOrdersDataTable.vue's sortToVendure — only the
-// first sort entry is ever meaningful (see MvAdvancedDataTable's own toggleSort, one column at
-// a time).
-function sortToApi(meta: DataTableSortMeta[]): CounterpartySortParameter {
-    const [entry] = meta;
-    if (!entry) return {};
-    return { [entry.field]: entry.order === 1 ? 'ASC' : 'DESC' } as CounterpartySortParameter;
-}
-watch(() => tableState.value.sort, meta => emit('update:sort', sortToApi(meta)), { deep: true });
+// See counterpartySort.ts's mapSortToApi for the mapping logic + the real bug it guards against.
+watch(
+    () => tableState.value.sort,
+    meta => emit('update:sort', mapSortToApi(meta, ALL_COLUMNS)),
+    { deep: true },
+);
 watch(() => props.searchFilter, v => {
     tableState.value.filters = { ...tableState.value.filters, shortName: v };
 });
