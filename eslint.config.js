@@ -5,6 +5,7 @@ import prettierConfig from 'eslint-config-prettier';
 import noRawGraphql from './eslint-rules/no-raw-graphql.js';
 import noSyncPaymentProcessing from './eslint-rules/no-sync-payment-processing.js';
 import noNullCheckOnPlainProtoScalar from './eslint-rules/no-null-check-on-plain-proto-scalar.js';
+import maxCommentLines from './eslint-rules/max-comment-lines.js';
 
 export default [
     js.configs.recommended,
@@ -15,9 +16,16 @@ export default [
         },
         plugins: {
             '@typescript-eslint': tsPlugin,
+            // Own namespace, not `local` — that key is redefined per-block further down for
+            // narrower rules, and flat config rejects two different plugin objects registered
+            // under the same key across overlapping file globs.
+            mivend: { rules: { 'max-comment-lines': maxCommentLines } },
         },
         rules: {
             ...tsPlugin.configs.recommended.rules,
+            // 'warn': large pre-existing backlog of longer comments — a nudge, not a rewrite gate.
+            // .ts only (no .vue ESLint parser configured here), so <script setup> isn't covered.
+            'mivend/max-comment-lines': 'warn',
             '@typescript-eslint/no-explicit-any': 'error',
             // allowExpressions: true is typescript-eslint's documented exemption for function
             // expressions that aren't part of a declaration (e.g. vue-router's

@@ -192,6 +192,13 @@ Write no comments by default.
 Add a comment only when the **why** is non-obvious: a hidden constraint, a workaround for a specific bug, a subtle invariant.
 Never comment what the code does — names do that.
 
+**Hard cap: 1–2 lines per comment, full stop.** No multi-paragraph "real incident this fixes"
+narratives, no restating the commit message inline, no explaining background/history/who-asked.
+If the why genuinely needs more than 2 lines, that's a sign it belongs in `docs/`, not inline —
+link to the doc instead of inlining the essay. This applies to every agent working in this repo,
+not just new code — when touching a file, trim an existing comment that violates this instead of
+leaving it or adding to it.
+
 ---
 
 ## License
