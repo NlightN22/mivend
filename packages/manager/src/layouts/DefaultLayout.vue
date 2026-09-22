@@ -9,6 +9,7 @@ import {
     MvAppMobileMoreSheet,
     MvFab,
     MvScrollNav,
+    MvConnectionBar,
     MvNotice,
     MvNotificationBell,
     MvNotificationPanel,
@@ -133,6 +134,12 @@ async function handleLogout(): Promise<void> {
 
 <template>
     <div class="layout">
+        <!-- Fixed to the viewport (not inside .layout__content, unlike the old static notice)
+             so a background reconnect stays visible regardless of scroll position or which page
+             is open — see stores/auth.ts's isReconnecting for when this actually fires (only
+             after adminApi's own bounded retry is exhausted, so this never flashes for a single
+             blip). -->
+        <MvConnectionBar v-if="authStore.isReconnecting" />
         <MvAppTopbar
             :user-name="authStore.fullName"
             :user-role-label="authStore.roleLabel ?? authStore.roleCode"
@@ -161,9 +168,6 @@ async function handleLogout(): Promise<void> {
         <div class="layout__body">
             <MvAppSidebar :items="menuItems" section-title="Workspace" />
             <main class="layout__content" :class="{ 'layout__content--with-fab': showCreateOrderFab }">
-                <MvNotice v-if="authStore.isReconnecting" variant="warning" class="layout__reconnecting">
-                    Reconnecting to the server… your session is still active.
-                </MvNotice>
                 <MvNotice
                     v-if="authStore.isDefaultSuperadminAccount"
                     variant="warning"
@@ -237,10 +241,6 @@ async function handleLogout(): Promise<void> {
 
 .layout__new-order:hover {
     filter: brightness(1.05);
-}
-
-.layout__reconnecting {
-    margin-bottom: 16px;
 }
 
 .layout__default-account {
