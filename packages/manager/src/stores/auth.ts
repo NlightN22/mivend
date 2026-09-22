@@ -39,6 +39,9 @@ type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 // network failure is not the same as 'logged out'" gotcha.
 const BACKGROUND_RETRY_INITIAL_MS = 2_000;
 const BACKGROUND_RETRY_MAX_MS = 20_000;
+// Lets a session dying server-side surface while the user sits on a page, not only on their
+// next navigation (the router guard's own moment for a confirmed logout).
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 export const useAuthStore = defineStore('auth', () => {
     const administrator = ref<ActiveAdministrator | null>(null);
@@ -57,6 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
     // retry loop from an earlier call can detect it's been superseded and stop touching state.
     let generation = 0;
     let backgroundRetryTimer: ReturnType<typeof setTimeout> | null = null;
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
     const isLoggedIn = computed(() => administrator.value !== null);
 
@@ -147,6 +151,7 @@ export const useAuthStore = defineStore('auth', () => {
         if (administrator.value) clearPersonalUiState(administrator.value.id);
         generation++;
         stopBackgroundRetry();
+        stopHeartbeat();
         administrator.value = null;
         authStatus.value = 'unauthenticated';
         isReconnecting.value = false;
@@ -163,6 +168,22 @@ export const useAuthStore = defineStore('auth', () => {
         reconnectingSince.value = null;
     }
 
+    // Re-checks activeAdministrator on a timer while authenticated, so a session dying
+    // server-side is noticed while the user sits on a page, not only on their next navigation.
+    function startHeartbeat(): void {
+        if (heartbeatTimer !== null) return;
+        heartbeatTimer = setInterval(() => {
+            void fetchActiveAdministrator();
+        }, HEARTBEAT_INTERVAL_MS);
+    }
+
+    function stopHeartbeat(): void {
+        if (heartbeatTimer !== null) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
+
     function applyResult(
         myGeneration: number,
         result: { activeAdministrator: ActiveAdministratorFieldsFragment | null },
@@ -173,6 +194,11 @@ export const useAuthStore = defineStore('auth', () => {
             : null;
         authStatus.value = result.activeAdministrator ? 'authenticated' : 'unauthenticated';
         isReconnecting.value = false;
+        if (result.activeAdministrator) {
+            startHeartbeat();
+        } else {
+            stopHeartbeat();
+        }
     }
 
     // Keeps retrying indefinitely (capped backoff) after adminApi's own bounded ~4.2s retry is

@@ -126,6 +126,7 @@ onMounted(async () => {
     }
 });
 
+
 async function handleLogout(): Promise<void> {
     await authStore.logout();
     await router.push('/login');
@@ -152,6 +153,15 @@ function handleRelogin(): void {
         <MvConnectionBar
             v-if="authStore.isReconnecting"
             :since="authStore.reconnectingSince"
+            @relogin="handleRelogin"
+        />
+        <!-- Server is reachable but the session itself is confirmed dead (e.g. a stale session
+             cache after a server restart) — never auto-navigates away from whatever the user is
+             doing; they click "Log in again" on their own terms, same as the outage bar above. -->
+        <MvConnectionBar
+            v-else-if="authStore.authStatus === 'unauthenticated' && authStore.initialized"
+            :since="null"
+            logged-out
             @relogin="handleRelogin"
         />
         <MvAppTopbar

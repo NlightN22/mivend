@@ -9,9 +9,13 @@ const ESCALATE_AFTER_MS = 2 * 60 * 1000;
 
 interface Props {
   since: number | null;
+  // A confirmed dead session (server reachable, just not logged in anymore) — distinct from
+  // "reconnecting": shown immediately, never auto-navigates, always carries the relogin button.
+  // The user decides when to act on it, same as this bar's own outage-escalation button.
+  loggedOut?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { loggedOut: false });
 const emit = defineEmits<{ relogin: [] }>();
 
 const now = ref(Date.now());
@@ -26,13 +30,14 @@ onBeforeUnmount(() => {
   if (tickTimer !== null) clearInterval(tickTimer);
 });
 
-const escalated = computed(() => props.since !== null && now.value - props.since >= ESCALATE_AFTER_MS);
+const timedOut = computed(() => props.since !== null && now.value - props.since >= ESCALATE_AFTER_MS);
+const escalated = computed(() => props.loggedOut || timedOut.value);
 
-const message = computed(() =>
-  escalated.value
-    ? 'Server unavailable for a while — try again later.'
-    : 'Reconnecting to the server…',
-);
+const message = computed(() => {
+  if (props.loggedOut) return 'Your session has ended — log in again when you’re ready.';
+  if (timedOut.value) return 'Server unavailable for a while — try again later.';
+  return 'Reconnecting to the server…';
+});
 </script>
 
 <template>
