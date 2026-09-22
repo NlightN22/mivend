@@ -99,6 +99,7 @@ query TeamMembers {
 
 query Branches {
     branches {
+        id
         erpId
         name
     }

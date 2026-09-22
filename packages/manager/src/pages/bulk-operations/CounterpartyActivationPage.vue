@@ -25,6 +25,7 @@ const totalItems = ref(0);
 const items = ref<ActivationCandidate[]>([]);
 const searchFilter = ref('');
 const managerFilter = ref('');
+const branchFilter = ref('');
 const statusFilter = ref<'active' | 'inactive' | ''>('');
 // Mirrors CounterpartyService.baseVisibleQb's own default until the table changes it.
 const sort = ref<CounterpartySortParameter>({ shortName: 'ASC' });
@@ -35,9 +36,12 @@ const branches = ref<BranchOption[]>([]);
 function managerName(managerErpId: string | null): string {
     return formatManagerName(managerErpId, managerLookup.value);
 }
+// c.branchId (Counterparty.branchId) is a mivend Branch.id, never Branch.erpId — see
+// BranchOption's own doc comment (real, live bug this fixes elsewhere in the app: comparing
+// against `b.erpId` here never matched).
 function branchName(branchId: string | null): string {
     if (!branchId) return 'Unassigned';
-    return branches.value.find(b => b.erpId === branchId)?.name ?? branchId;
+    return branches.value.find(b => b.id === branchId)?.name ?? branchId;
 }
 
 const selectedIds = ref<Set<string>>(new Set());
@@ -52,9 +56,10 @@ interface UrlFilters {
     status: string;
     search: string;
     manager: string;
+    branch: string;
     pageSize: string;
 }
-const URL_FILTER_DEFAULTS: UrlFilters = { status: '', search: '', manager: '', pageSize: '20' };
+const URL_FILTER_DEFAULTS: UrlFilters = { status: '', search: '', manager: '', branch: '', pageSize: '20' };
 const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
 
 {
@@ -63,6 +68,7 @@ const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
     if (parsed.status) statusFilter.value = parsed.status as 'active' | 'inactive';
     if (parsed.search) searchFilter.value = parsed.search;
     if (parsed.manager) managerFilter.value = parsed.manager;
+    if (parsed.branch) branchFilter.value = parsed.branch;
     if (parsed.pageSize) pageSize.value = Number(parsed.pageSize);
 }
 
@@ -71,6 +77,7 @@ function buildUrlFilters(): UrlFilters {
         status: statusFilter.value,
         search: searchFilter.value,
         manager: managerFilter.value,
+        branch: branchFilter.value,
         pageSize: String(pageSize.value),
     };
 }
@@ -83,6 +90,7 @@ const { loading, run: loadCandidates } = useLatestRequest(
             search: searchFilter.value || undefined,
             status: statusFilter.value || undefined,
             managerErpId: managerFilter.value || undefined,
+            branchId: branchFilter.value || undefined,
             sort: sort.value,
         }),
     result => {
@@ -111,10 +119,10 @@ async function loadLookups(): Promise<void> {
 void loadLookups();
 void safeLoad();
 
-watch([statusFilter, searchFilter, managerFilter, pageSize], () => {
+watch([statusFilter, searchFilter, managerFilter, branchFilter, pageSize], () => {
     page.value = 1;
 });
-watch([page, statusFilter, searchFilter, managerFilter, pageSize, sort], () => {
+watch([page, statusFilter, searchFilter, managerFilter, branchFilter, pageSize, sort], () => {
     void safeLoad();
     toQuery(buildUrlFilters(), page);
 });
@@ -192,13 +200,16 @@ async function applyPending(): Promise<void> {
             :page-size="pageSize"
             :search-filter="searchFilter"
             :manager-filter="managerFilter"
+            :branch-filter="branchFilter"
             :status-filter="statusFilter"
+            :branch-options="branches"
             :selected-ids="selectedIds"
             :pending-actions="pendingActions"
             :manager-name="managerName"
             :branch-name="branchName"
             @update:search="searchFilter = $event"
             @update:manager-filter="managerFilter = $event"
+            @update:branch-filter="branchFilter = $event"
             @update:status-filter="statusFilter = $event"
             @update:page="page = $event"
             @update:page-size="pageSize = $event"

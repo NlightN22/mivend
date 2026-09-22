@@ -32,9 +32,12 @@ function managerName(id: string | null | undefined): string {
     return props.managers.find(m => m.id === id)?.name ?? '—';
 }
 
-function branchName(erpId: string | null | undefined): string {
-    if (!erpId) return '—';
-    return props.branches.find(b => b.erpId === erpId)?.name ?? '—';
+// branchId (Counterparty.branchId) is a mivend Branch.id, never Branch.erpId — see
+// BranchOption's own doc comment (real, live bug this fixes: comparing against `b.erpId` here
+// never matched a real branch assignment).
+function branchName(branchId: string | null | undefined): string {
+    if (!branchId) return '—';
+    return props.branches.find(b => b.id === branchId)?.name ?? '—';
 }
 
 const columns = computed<Column<TableRow>[]>(() => {

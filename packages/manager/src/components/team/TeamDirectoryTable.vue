@@ -10,9 +10,12 @@ const props = defineProps<{
     branches: BranchOption[];
 }>();
 
+// `member.branchId` (Administrator.customFields.branchId) is a mivend Branch.id, never
+// Branch.erpId — see BranchOption's own doc comment (real, live bug this fixes: every team
+// member with a real branch assignment silently showed "—" here before).
 function branchName(branchId: string | null): string {
     if (!branchId) return '—';
-    return props.branches.find(b => b.erpId === branchId)?.name ?? '—';
+    return props.branches.find(b => b.id === branchId)?.name ?? '—';
 }
 
 const columns = computed<Column<TableRow>[]>(() => [

@@ -295,8 +295,21 @@ export async function fetchManagerOptions(): Promise<ManagerOption[]> {
 }
 
 export interface BranchOption {
-    // erpId, not Branch's DB row id — Counterparty.branchId (see OrderListItem.customer.
-    // counterparty.branchId) stores the ERP id, same convention as departmentId.
+    // The mivend Branch.id (DB primary key) — NOT the same value space as `erpId` below. Branch
+    // is a purely mivend-internal entity (1C/the ERP has no "branch" concept at all, only
+    // Department/"Подразделение" — see docs/access-control.md's "Branch vs Department" section);
+    // `Counterparty.branchId`/`Administrator.customFields.branchId`/every other real branchId
+    // consumer (AccessScopeService, Warehouse.branchId) store and compare THIS value, never
+    // `erpId`. A previous version of this comment claimed the opposite (confusing Branch with
+    // Department, which really is ERP-sourced) — that was wrong and caused a real, live bug:
+    // TeamDirectoryTable.vue's/OrdersTable.vue's/CustomersTable.vue's own branch-name lookups
+    // compared this field's `erpId` against a real `Branch.id` value and never matched, silently
+    // showing "—"/the raw id for every row with an actually-assigned branch.
+    id: string;
+    // `Branch.erpId` — only meaningful for a Branch that was resolved from an ERP-side branch/
+    // point code (`BranchService.upsert`); a manually-created Branch (`BranchService.
+    // createManual`) has no real ERP link. Display-only; never compare this against a
+    // `branchId` field.
     erpId: string;
     name: string;
 }

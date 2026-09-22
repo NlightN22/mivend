@@ -835,7 +835,7 @@ export type CoordinateInput = {
     y: Scalars['Float']['input'];
 };
 
-export type Counterparty = {
+export type Counterparty = Node & {
     assignedManagerId: Maybe<Scalars['String']['output']>;
     branchId: Maybe<Scalars['String']['output']>;
     /** Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver */
@@ -847,11 +847,25 @@ export type Counterparty = {
     /** Free-text group/segment label from the ERP — display and filtering only. */
     erpGroupLabel: Maybe<Scalars['String']['output']>;
     erpId: Scalars['String']['output'];
+    /** Фактический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    factualAddress: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
     inn: Maybe<Scalars['String']['output']>;
     isActive: Scalars['Boolean']['output'];
+    /** Юридический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    legalAddress: Maybe<Scalars['String']['output']>;
     legalName: Scalars['String']['output'];
+    /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
+    linkedCustomerId: Maybe<Scalars['ID']['output']>;
+    /** Raw ERP manager id (1C) — fallback display when assignedManagerId hasn't resolved yet, see issue #133. */
+    managerErpId: Maybe<Scalars['String']['output']>;
+    /** Служебный адрес электронной почты контрагента (1C) — the real login-eligible email, see issue #120. */
+    officialEmail: Maybe<Scalars['String']['output']>;
     paymentDelayDays: Scalars['Int']['output'];
+    /** Телефон контрагента (1C) — required with officialEmail before #120's portal-access activation. */
+    phone: Maybe<Scalars['String']['output']>;
+    /** Customers linked to this Counterparty via customFields.counterpartyId, active or deactivated — issue #120. */
+    portalUsers: Array<Customer>;
     priceType: Scalars['String']['output'];
     shortName: Scalars['String']['output'];
     /** Additional managers beyond the Owner (assignedManagerId) — see CounterpartyTeamMember. */
@@ -859,23 +873,107 @@ export type Counterparty = {
     tradingPoints: Array<TradingPoint>;
 };
 
-export type CounterpartyList = {
+export type CounterpartyFilterParameter = {
+    _and?: InputMaybe<Array<CounterpartyFilterParameter>>;
+    _or?: InputMaybe<Array<CounterpartyFilterParameter>>;
+    assignedManagerId?: InputMaybe<StringOperators>;
+    branchId?: InputMaybe<StringOperators>;
+    /** Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver */
+    creditBalance?: InputMaybe<NumberOperators>;
+    /** Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver */
+    creditLimit?: InputMaybe<NumberOperators>;
+    creditTermOverrideExtraDays?: InputMaybe<NumberOperators>;
+    departmentId?: InputMaybe<StringOperators>;
+    /** Free-text group/segment label from the ERP — display and filtering only. */
+    erpGroupLabel?: InputMaybe<StringOperators>;
+    erpId?: InputMaybe<StringOperators>;
+    /** Фактический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    factualAddress?: InputMaybe<StringOperators>;
+    id?: InputMaybe<IdOperators>;
+    inn?: InputMaybe<StringOperators>;
+    isActive?: InputMaybe<BooleanOperators>;
+    /** Юридический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    legalAddress?: InputMaybe<StringOperators>;
+    legalName?: InputMaybe<StringOperators>;
+    /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
+    linkedCustomerId?: InputMaybe<IdOperators>;
+    /** Raw ERP manager id (1C) — fallback display when assignedManagerId hasn't resolved yet, see issue #133. */
+    managerErpId?: InputMaybe<StringOperators>;
+    /** Служебный адрес электронной почты контрагента (1C) — the real login-eligible email, see issue #120. */
+    officialEmail?: InputMaybe<StringOperators>;
+    paymentDelayDays?: InputMaybe<NumberOperators>;
+    /** Телефон контрагента (1C) — required with officialEmail before #120's portal-access activation. */
+    phone?: InputMaybe<StringOperators>;
+    priceType?: InputMaybe<StringOperators>;
+    shortName?: InputMaybe<StringOperators>;
+};
+
+export type CounterpartyList = PaginatedList & {
     items: Array<Counterparty>;
     totalItems: Scalars['Int']['output'];
 };
 
 export type CounterpartyListOptions = {
     branchId?: InputMaybe<Scalars['String']['input']>;
+    /** Allows the results to be filtered */
+    filter?: InputMaybe<CounterpartyFilterParameter>;
+    /** Specifies whether multiple top-level "filter" fields should be combined with a logical AND or OR operation. Defaults to AND. */
+    filterOperator?: InputMaybe<LogicalOperator>;
     /** Exact match against Counterparty.erpGroupLabel */
     groupLabel?: InputMaybe<Scalars['String']['input']>;
+    /** Substring match (case-insensitive) against Counterparty.managerErpId OR the ERP-reported administrator name (access-control's erp_user.fullName) — the raw ERP-side manager assignment, independent of whether it has resolved to an Administrator yet */
+    managerErpId?: InputMaybe<Scalars['String']['input']>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<CounterpartySortParameter>;
     /** active | inactive */
     status?: InputMaybe<Scalars['String']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
     /** When true, overrides managerId and filters to counterparties with no assigned manager */
     unassignedOnly?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+/** activate | deactivate — one entry in a bulk portal-access batch (issue #120). */
+export type CounterpartyPortalAccessChangeInput = {
+    action: Scalars['String']['input'];
+    counterpartyId: Scalars['ID']['input'];
+};
+
+export type CounterpartyPortalAccessChangeResult = {
+    counterpartyId: Scalars['ID']['output'];
+    customerId: Maybe<Scalars['ID']['output']>;
+    error: Maybe<Scalars['String']['output']>;
+    success: Scalars['Boolean']['output'];
+};
+
+export type CounterpartySortParameter = {
+    assignedManagerId?: InputMaybe<SortOrder>;
+    branchId?: InputMaybe<SortOrder>;
+    /** Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver */
+    creditBalance?: InputMaybe<SortOrder>;
+    /** Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver */
+    creditLimit?: InputMaybe<SortOrder>;
+    creditTermOverrideExtraDays?: InputMaybe<SortOrder>;
+    departmentId?: InputMaybe<SortOrder>;
+    /** Free-text group/segment label from the ERP — display and filtering only. */
+    erpGroupLabel?: InputMaybe<SortOrder>;
+    erpId?: InputMaybe<SortOrder>;
+    /** Фактический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    factualAddress?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    inn?: InputMaybe<SortOrder>;
+    /** Юридический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    legalAddress?: InputMaybe<SortOrder>;
+    legalName?: InputMaybe<SortOrder>;
+    /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
+    linkedCustomerId?: InputMaybe<SortOrder>;
+    managerErpId?: InputMaybe<SortOrder>;
+    officialEmail?: InputMaybe<SortOrder>;
+    paymentDelayDays?: InputMaybe<SortOrder>;
+    phone?: InputMaybe<SortOrder>;
+    priceType?: InputMaybe<SortOrder>;
+    shortName?: InputMaybe<SortOrder>;
 };
 
 export type CounterpartySummary = {
@@ -1012,16 +1110,8 @@ export type CreateAddressInput = {
     streetLine2?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type CreateAdministratorCustomFieldsInput = {
-    branchId?: InputMaybe<Scalars['String']['input']>;
-    departmentId?: InputMaybe<Scalars['String']['input']>;
-    erpId?: InputMaybe<Scalars['String']['input']>;
-    position?: InputMaybe<Scalars['String']['input']>;
-    sourceAdministratorId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type CreateAdministratorInput = {
-    customFields?: InputMaybe<CreateAdministratorCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     emailAddress: Scalars['String']['input'];
     firstName: Scalars['String']['input'];
     lastName: Scalars['String']['input'];
@@ -3417,6 +3507,7 @@ export type MultipleOrderError = ErrorResult & {
 };
 
 export type Mutation = {
+    activateCounterpartyPortalAccess: Customer;
     addCounterpartyTeamMember: CounterpartyTeamMember;
     /** Add Customers to a CustomerGroup */
     addCustomersToGroup: CustomerGroup;
@@ -3441,6 +3532,7 @@ export type Mutation = {
     addOptionGroupToProduct: Product;
     /** Adjusts a draft OrderLine. If custom fields are defined on the OrderLine entity, a third argument 'customFields' of type `OrderLineCustomFieldsInput` will be available. */
     adjustDraftOrderLine: UpdateOrderItemsResult;
+    applyCounterpartyPortalAccessChanges: Array<CounterpartyPortalAccessChangeResult>;
     /** Applies the given coupon code to the draft Order */
     applyCouponCodeToDraftOrder: ApplyCouponCodeResult;
     /** Assign assets to channel */
@@ -3536,6 +3628,7 @@ export type Mutation = {
     createTaxRate: TaxRate;
     /** Create a new Zone */
     createZone: Zone;
+    deactivateCounterpartyPortalAccess: Customer;
     decideApprovalRequest: ApprovalRequest;
     decideCreditTermRequest: ApprovalRequest;
     decideDiscountGrantRequest: ApprovalRequest;
@@ -3710,6 +3803,7 @@ export type Mutation = {
     requestCreditTermExtension: ApprovalRequest;
     requestDiscountGrant: ApprovalRequest;
     requestPriceAdjustment: PriceAdjustmentResult;
+    resendAdministratorPasswordReset: Scalars['Boolean']['output'];
     resetAdministratorPassword: ResetAdministratorPasswordResult;
     /** Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved. */
     resolveErpReconciliationIssue: ErpReconciliationIssue;
@@ -3834,6 +3928,10 @@ export type Mutation = {
     upsertWorkflowDefinition: WorkflowDefinition;
 };
 
+export type MutationActivateCounterpartyPortalAccessArgs = {
+    counterpartyId: Scalars['ID']['input'];
+};
+
 export type MutationAddCounterpartyTeamMemberArgs = {
     administratorId: Scalars['ID']['input'];
     counterpartyId: Scalars['ID']['input'];
@@ -3880,6 +3978,10 @@ export type MutationAddOptionGroupToProductArgs = {
 export type MutationAdjustDraftOrderLineArgs = {
     input: AdjustDraftOrderLineInput;
     orderId: Scalars['ID']['input'];
+};
+
+export type MutationApplyCounterpartyPortalAccessChangesArgs = {
+    changes: Array<CounterpartyPortalAccessChangeInput>;
 };
 
 export type MutationApplyCouponCodeToDraftOrderArgs = {
@@ -4089,6 +4191,10 @@ export type MutationCreateTaxRateArgs = {
 
 export type MutationCreateZoneArgs = {
     input: CreateZoneInput;
+};
+
+export type MutationDeactivateCounterpartyPortalAccessArgs = {
+    customerId: Scalars['ID']['input'];
 };
 
 export type MutationDecideApprovalRequestArgs = {
@@ -4493,6 +4599,10 @@ export type MutationRequestPriceAdjustmentArgs = {
     orderId: Scalars['ID']['input'];
     orderLineId: Scalars['ID']['input'];
     requestedPrice: Scalars['Int']['input'];
+};
+
+export type MutationResendAdministratorPasswordResetArgs = {
+    administratorId: Scalars['ID']['input'];
 };
 
 export type MutationResetAdministratorPasswordArgs = {
@@ -5356,6 +5466,12 @@ export type PaginatedList = {
     totalItems: Scalars['Int']['output'];
 };
 
+export type PasswordResetIdentity = {
+    emailAddress: Scalars['String']['output'];
+    firstName: Scalars['String']['output'];
+    lastName: Scalars['String']['output'];
+};
+
 export type Payment = Node & {
     amount: Scalars['Money']['output'];
     createdAt: Scalars['DateTime']['output'];
@@ -5690,6 +5806,8 @@ export type Permission =
     | 'ManageAdministratorLifecycle'
     /** Create/edit WorkflowDefinition chains (layer 5, /settings) */
     | 'ManageApprovalWorkflows'
+    /** Activate/deactivate a Counterparty's storefront portal login (Customer created from its phone/officialEmail) and view/deactivate its already-created portal sub-users (issue #120) — scoped via AccessScopeService.resolveCounterpartyScope, same own/department/all model as ReassignCounterpartyManager */
+    | 'ManageCounterpartyPortalAccess'
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
     | 'ManageCounterpartyTeam'
     /** Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84) */
@@ -6447,6 +6565,7 @@ export type Query = {
     activeAdministrator: Maybe<Administrator>;
     activeChannel: Channel;
     administrator: Maybe<Administrator>;
+    administratorForPasswordResetToken: Maybe<PasswordResetIdentity>;
     administrators: AdministratorList;
     apiKey: Maybe<ApiKey>;
     apiKeys: ApiKeyList;
@@ -6582,6 +6701,7 @@ export type Query = {
     reservationExtensionLimit: Maybe<ReservationExtensionLimit>;
     role: Maybe<Role>;
     roleAccessScopeConfig: Maybe<Scalars['String']['output']>;
+    roleAccessScopeProvisioningStatus: Array<RoleAccessScopeProvisioningStatusItem>;
     roles: RoleList;
     scheduledTasks: Array<ScheduledTask>;
     search: SearchResponse;
@@ -6621,6 +6741,10 @@ export type Query = {
 
 export type QueryAdministratorArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryAdministratorForPasswordResetTokenArgs = {
+    token: Scalars['String']['input'];
 };
 
 export type QueryAdministratorsArgs = {
@@ -7338,6 +7462,11 @@ export type Role = Node & {
     id: Scalars['ID']['output'];
     permissions: Array<Permission>;
     updatedAt: Scalars['DateTime']['output'];
+};
+
+export type RoleAccessScopeProvisioningStatusItem = {
+    missing: Scalars['Boolean']['output'];
+    roleCode: Scalars['String']['output'];
 };
 
 export type RoleFilterParameter = {
@@ -8203,7 +8332,7 @@ export type TransitionOrderToStateResult = Order | OrderStateTransitionError;
 export type TransitionPaymentToStateResult = Payment | PaymentStateTransitionError;
 
 export type UpdateActiveAdministratorInput = {
-    customFields?: InputMaybe<UpdateAdministratorCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     emailAddress?: InputMaybe<Scalars['String']['input']>;
     firstName?: InputMaybe<Scalars['String']['input']>;
     lastName?: InputMaybe<Scalars['String']['input']>;
@@ -8233,16 +8362,8 @@ export type UpdateAddressInput = {
     streetLine2?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type UpdateAdministratorCustomFieldsInput = {
-    branchId?: InputMaybe<Scalars['String']['input']>;
-    departmentId?: InputMaybe<Scalars['String']['input']>;
-    erpId?: InputMaybe<Scalars['String']['input']>;
-    position?: InputMaybe<Scalars['String']['input']>;
-    sourceAdministratorId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type UpdateAdministratorInput = {
-    customFields?: InputMaybe<UpdateAdministratorCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     emailAddress?: InputMaybe<Scalars['String']['input']>;
     firstName?: InputMaybe<Scalars['String']['input']>;
     id: Scalars['ID']['input'];
@@ -10384,7 +10505,7 @@ export type TeamMembersQuery = {
 
 export type BranchesQueryVariables = Exact<{ [key: string]: never }>;
 
-export type BranchesQuery = { branches: Array<{ erpId: string; name: string }> };
+export type BranchesQuery = { branches: Array<{ id: string; erpId: string; name: string }> };
 
 export type SavedTableViewFieldsFragment = {
     id: string;
@@ -13004,6 +13125,7 @@ export const TeamMembersDocument = new TypedDocumentString(`
 export const BranchesDocument = new TypedDocumentString(`
     query Branches {
   branches {
+    id
     erpId
     name
   }

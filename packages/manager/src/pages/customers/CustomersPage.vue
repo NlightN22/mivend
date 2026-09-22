@@ -116,9 +116,13 @@ const managerOptions = computed(() => [
     { value: UNASSIGNED_SENTINEL, label: 'Unassigned' },
     ...managers.value.map(m => ({ value: m.id, label: m.name })),
 ]);
+// `branchId` value sent as CounterpartyListOptions.branchId, which compares against a real
+// mivend Branch.id — never Branch.erpId, see BranchOption's own doc comment (real, live bug this
+// fixes: selecting a branch here always sent the wrong value space and could never match a real
+// counterparty).
 const branchOptions = computed(() => [
     { value: '', label: 'All branches' },
-    ...branches.value.map(b => ({ value: b.erpId, label: b.name })),
+    ...branches.value.map(b => ({ value: b.id, label: b.name })),
 ]);
 
 const activeClientsCount = computed(() => summary.value?.activeCount ?? 0);

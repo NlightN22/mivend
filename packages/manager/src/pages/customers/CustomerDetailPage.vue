@@ -243,9 +243,13 @@ const backupManagerName = computed(() => {
 });
 const observerCount = computed(() => teamMembers.value.filter(m => m.role === 'observer').length);
 
-function branchName(erpId: string | null): string | null {
-    if (!erpId) return null;
-    return branches.value.find(b => b.erpId === erpId)?.name ?? null;
+// `customer.branchId` (Counterparty.branchId) is a mivend Branch.id, never Branch.erpId — see
+// BranchOption's own doc comment for why (real, live bug this fixes: this used to compare
+// against `b.erpId`, which never matched, silently showing "—" for every counterparty with a
+// real branch assigned).
+function branchName(branchId: string | null): string | null {
+    if (!branchId) return null;
+    return branches.value.find(b => b.id === branchId)?.name ?? null;
 }
 
 // No photo data for administrators (ManagerOption has no avatar URL) — initials on a plain

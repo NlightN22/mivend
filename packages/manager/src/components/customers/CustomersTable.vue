@@ -29,9 +29,12 @@ function money(amount: number): string {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount / 100);
 }
 
-function branchName(erpId: string | null): string {
-    if (!erpId) return '';
-    return props.branches.find(b => b.erpId === erpId)?.name ?? '';
+// branchId (Counterparty.branchId) is a mivend Branch.id, never Branch.erpId — see
+// BranchOption's own doc comment (real, live bug this fixes: comparing against `b.erpId` here
+// never matched a real branch assignment).
+function branchName(branchId: string | null): string {
+    if (!branchId) return '';
+    return props.branches.find(b => b.id === branchId)?.name ?? '';
 }
 
 // Same thresholds as the "Credit balance used" KPI card's "N clients above 80%" caption — see
