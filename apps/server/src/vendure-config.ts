@@ -174,6 +174,7 @@ export const config: VendureConfig = {
                 name: 'erpVatCode',
                 type: 'string',
                 nullable: true,
+                unique: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP VAT Code' }],
             },
         ],
