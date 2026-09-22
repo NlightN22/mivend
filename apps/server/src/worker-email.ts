@@ -1,5 +1,6 @@
 import { bootstrapWorker } from '@vendure/core';
 import { config } from './vendure-config';
+import { assertDatabaseLocale } from './db-locale-check';
 
 // Dedicated worker for the `send-email` queue only (issue #119/#120's live incident, 2026-09-20:
 // three stuck built-in `apply-collection-filters` jobs occupied every one of worker.ts's default
@@ -10,10 +11,13 @@ import { config } from './vendure-config';
 // in the vendure-workers skill's historical section. See issue #81 (closed) for why a fuller
 // Docker-container-per-queue-group split was decided against — this is a narrower, additive fix
 // for one specific queue, not that broader redesign.
-bootstrapWorker({
-    ...config,
-    jobQueueOptions: { ...(config.jobQueueOptions ?? {}), activeQueues: ['send-email'] },
-})
+assertDatabaseLocale()
+    .then(() =>
+        bootstrapWorker({
+            ...config,
+            jobQueueOptions: { ...(config.jobQueueOptions ?? {}), activeQueues: ['send-email'] },
+        }),
+    )
     .then(worker => worker.startJobQueue())
     .catch(err => {
         console.error(err);

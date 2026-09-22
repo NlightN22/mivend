@@ -1,5 +1,6 @@
 import { bootstrapWorker } from '@vendure/core';
 import { config } from './vendure-config';
+import { assertDatabaseLocale } from './db-locale-check';
 
 // Every known JobQueueService queue in this codebase EXCEPT `send-email` (that one is owned
 // exclusively by worker-email.ts — see its own doc comment). Since issue #128's migration off
@@ -18,10 +19,16 @@ const ALL_QUEUES_EXCEPT_EMAIL = [
     'generate-document', // this project's own (plugin-documents, PdfGeneratorService)
 ];
 
-bootstrapWorker({
-    ...config,
-    jobQueueOptions: { ...(config.jobQueueOptions ?? {}), activeQueues: ALL_QUEUES_EXCEPT_EMAIL },
-})
+assertDatabaseLocale()
+    .then(() =>
+        bootstrapWorker({
+            ...config,
+            jobQueueOptions: {
+                ...(config.jobQueueOptions ?? {}),
+                activeQueues: ALL_QUEUES_EXCEPT_EMAIL,
+            },
+        }),
+    )
     .then(worker => worker.startJobQueue())
     .catch(err => {
         console.error(err);

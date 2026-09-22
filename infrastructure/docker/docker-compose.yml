@@ -8,6 +8,7 @@ services:
             DB_USERNAME: ${POSTGRES_USER:-postgres}
             DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
             DB_NAME: ${POSTGRES_DB:-mivend}
+            DB_EXPECTED_LOCALE: ${DB_ICU_LOCALE:?DB_ICU_LOCALE must be set explicitly (e.g. ru-RU) — see docs/environments.md}
             INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
             PORT: 3000
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
@@ -31,6 +32,7 @@ services:
             DB_USERNAME: ${POSTGRES_USER:-postgres}
             DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
             DB_NAME: ${POSTGRES_DB:-mivend}
+            DB_EXPECTED_LOCALE: ${DB_ICU_LOCALE:?DB_ICU_LOCALE must be set explicitly (e.g. ru-RU) — see docs/environments.md}
             INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
             SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-superadmin}
@@ -51,6 +53,7 @@ services:
             DB_USERNAME: ${POSTGRES_USER:-postgres}
             DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
             DB_NAME: ${POSTGRES_DB:-mivend}
+            DB_EXPECTED_LOCALE: ${DB_ICU_LOCALE:?DB_ICU_LOCALE must be set explicitly (e.g. ru-RU) — see docs/environments.md}
             INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
             SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-superadmin}
@@ -62,11 +65,16 @@ services:
         restart: unless-stopped
 
     postgres:
-        image: postgres:16-alpine
+        build: ./postgres
         environment:
             POSTGRES_USER: ${POSTGRES_USER:-postgres}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
             POSTGRES_DB: ${POSTGRES_DB:-mivend}
+            POSTGRES_APP_DB: ${POSTGRES_DB:-mivend}
+            # Issue #120 follow-up: Postgres collation is fixed at initdb time, so a missing
+            # locale here would silently ship a database that sorts Cyrillic text wrong with no
+            # error. No default — production must set this explicitly.
+            DB_ICU_LOCALE: ${DB_ICU_LOCALE:?DB_ICU_LOCALE must be set explicitly (e.g. ru-RU) — see docs/environments.md}
         volumes:
             - postgres-data:/var/lib/postgresql/data
         healthcheck:

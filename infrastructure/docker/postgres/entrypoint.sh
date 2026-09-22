@@ -1,6 +1,15 @@
 #!/bin/sh
 set -e
 
+# Issue #120: locale is fixed at initdb time and can't be changed later — fail fast instead of
+# silently defaulting to a locale that sorts Cyrillic wrong. See docs/environments.md.
+if [ -z "$DB_ICU_LOCALE" ]; then
+    echo "entrypoint.sh: DB_ICU_LOCALE must be set (e.g. ru-RU) — refusing to start with an" >&2
+    echo "unspecified locale; see docs/environments.md" >&2
+    exit 1
+fi
+export POSTGRES_INITDB_ARGS="--locale-provider=icu --icu-locale=$DB_ICU_LOCALE ${POSTGRES_INITDB_ARGS:-}"
+
 # Start postgres in background using the official entrypoint
 docker-entrypoint.sh postgres "$@" &
 PG_PID=$!

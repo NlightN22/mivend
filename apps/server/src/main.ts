@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { config } from './vendure-config';
 import { mountNotificationSubscriptions } from './subscriptions';
+import { assertDatabaseLocale } from './db-locale-check';
 
 // Documents only the custom REST endpoints (ERP import/callback) — Shop/Admin
 // APIs are GraphQL and already self-documenting via introspection. See issue
@@ -30,16 +31,20 @@ function mountApiDocs(app: INestApplication): void {
     SwaggerModule.setup('api-docs', app, document);
 }
 
-bootstrap(config, {
-    onBeforeAppListen: app => {
-        mountApiDocs(app);
-        // Needs the plain Node HTTP server before app.listen() takes it over — see
-        // subscriptions.ts's own comment for why this can't go through Vendure's ApiOptions, and
-        // for why (unlike an earlier version of this call) it no longer needs a second phase
-        // after bootstrap() resolves.
-        mountNotificationSubscriptions(app);
-    },
-}).catch(err => {
-    console.error(err);
-    process.exit(1);
-});
+assertDatabaseLocale()
+    .then(() =>
+        bootstrap(config, {
+            onBeforeAppListen: app => {
+                mountApiDocs(app);
+                // Needs the plain Node HTTP server before app.listen() takes it over — see
+                // subscriptions.ts's own comment for why this can't go through Vendure's
+                // ApiOptions, and for why (unlike an earlier version of this call) it no longer
+                // needs a second phase after bootstrap() resolves.
+                mountNotificationSubscriptions(app);
+            },
+        }),
+    )
+    .catch(err => {
+        console.error(err);
+        process.exit(1);
+    });

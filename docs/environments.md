@@ -21,11 +21,46 @@ within the local-dev contour below, but that is out of scope for issue #68 and u
 
 Three contours, always for a **central** instance (branches never touch Integration Service):
 
-| Contour                                  | Env file                                       | Makefile target                | Database                             | Real Integration Service Kafka?                                                                            |
-| ---------------------------------------- | ---------------------------------------------- | ------------------------------ | ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| **local** (isolated dev)                 | `apps/server/.env.central`                     | `make dev`                     | `mivend_central`                     | Never — `INTEGRATION_KAFKA_ENABLED=false`. Only synthetic data via `make seed-all` (`erp-import`).         |
-| **staging-integration** (external Kafka) | `apps/server/.env.central.staging-integration` | `make dev-staging-integration` | `mivend_central_staging_integration` | Yes, deliberately — validates the real Kafka contract against Integration Service's actual staging broker. |
-| **production**                           | real prod env (deploy pipeline)                | (deploy pipeline)              | prod DB                              | Yes, real prod Integration Service.                                                                        |
+| Contour                                  | Env file                                       | Makefile target                | Database                                 | Real Integration Service Kafka?                                                                            |
+| ---------------------------------------- | ---------------------------------------------- | ------------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **local** (isolated dev)                 | `apps/server/.env.central`                     | `make dev`                     | `mivend_central`                         | Never — `INTEGRATION_KAFKA_ENABLED=false`. Only synthetic data via `make seed-all` (`erp-import`).         |
+| **staging-integration** (external Kafka) | `apps/server/.env.central.staging-integration` | `make dev-staging-integration` | `mivend_central_staging_integration`     | Yes, deliberately — validates the real Kafka contract against Integration Service's actual staging broker. |
+| **production**                           | `infrastructure/docker/.env.production`        | `make prod-up`                 | `postgres` service, `docker-compose.yml` | Yes, real prod Integration Service.                                                                        |
+
+Production Postgres is **not** an externally-managed database — it's a container this same repo
+provisions (`infrastructure/docker/docker-compose.yml`'s `postgres` service, built from
+`infrastructure/docker/postgres/` — the same image the local/staging-integration contours above
+use, see `.env.production.example` in that directory).
+
+### Database locale (issue #120 follow-up)
+
+Postgres collation is fixed at `CREATE DATABASE` time and cannot be changed for an existing data
+directory — the wrong locale silently sorts Cyrillic text by raw code point instead of alphabet
+(this is what happened before #120: `en_US.utf8`, the glibc default, produced a nonsensical
+company-name sort order), with no error until someone notices broken UI ordering.
+
+- All three contours' Postgres containers build from `infrastructure/docker/postgres/`, whose
+  `entrypoint.sh` **requires** `DB_ICU_LOCALE` (e.g. `ru-RU`) to be set and refuses to start
+  without it — see that file's own comment.
+- `docker-compose.dev.yml` sets `DB_ICU_LOCALE=ru-RU` for `postgres-central`/`postgres-branch`
+  (covers local and staging-integration, which share the same dev stack per this doc's own model).
+- `docker-compose.yml` (production) requires `DB_ICU_LOCALE` with no default — `make prod-up`
+  fails immediately with a clear error if it's unset, rather than silently provisioning a
+  wrong-locale database. See `infrastructure/docker/.env.production.example`.
+- Independently, `apps/server/src/db-locale-check.ts` runs on every `main.ts`/`worker.ts`/
+  `worker-email.ts` boot **when `NODE_ENV=production`** and refuses to start unless the actual
+  database's ICU locale (`pg_database.daticulocale`) matches `DB_EXPECTED_LOCALE`. This is
+  defense in depth against a wrongly-provisioned production DB regardless of how it got that way
+  (restored from an old dump, manually created, etc.) — it doesn't depend on this repo's own
+  entrypoint having provisioned it.
+- Local/CI databases (`make dev`, CI's plain `postgres:16` service) are **not** required to have
+  an ICU locale — `db-locale-check.ts` only enforces this when `NODE_ENV=production`, since a
+  synthetic/throwaway dev or CI database sorting Cyrillic wrong is a known limitation, not an
+  incident.
+- Changing an **existing** non-empty database's locale requires a dump/recreate/restore (locale
+  is fixed at creation time) plus a full `REINDEX` afterwards — not a rolling/in-place change. For
+  local dev this just means `make dev-reset` (synthetic seed data, cheap to regenerate); for
+  staging-integration/production with real data this needs a maintenance window.
 
 **Storefront search backend per contour (issue #69)**: `local` uses `internal` (`ElasticsearchPlugin`
 against local Elasticsearch, `SEARCH_BACKEND=internal` or unset); `staging-integration` and
