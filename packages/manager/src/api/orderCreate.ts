@@ -175,7 +175,8 @@ export async function requestPriceAdjustment(
     return result.requestPriceAdjustment as PriceAdjustmentResult;
 }
 
-// Only two payment handlers actually exist (see apps/server/src/payment-method-handlers.ts) —
+// Only two payment handlers actually exist (see @mivend/plugin-acquiring's
+// offline-terms-handler.ts and @mivend/plugin-online-payment's online-stub-handler.ts) —
 // "Deferred"/"Invoice" from the design concept both map to the same offline-terms handler.
 export const PAYMENT_METHOD_OPTIONS = [
     { value: 'online-stub', label: 'Online payment' },

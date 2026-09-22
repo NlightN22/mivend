@@ -9,8 +9,8 @@ import {
 } from '@vendure/core';
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
-import { offlineTermsPaymentHandler, onlineStubPaymentHandler } from './payment-method-handlers';
 import { DeferredPaymentPlugin, deferredPaymentHandler } from '@mivend/plugin-deferred-payment';
+import { OnlinePaymentPlugin, onlineStubPaymentHandler } from '@mivend/plugin-online-payment';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import {
     EmailPlugin,
@@ -42,7 +42,7 @@ import { NotificationPlugin } from '@mivend/plugin-notification';
 import { MoqPlugin } from '@mivend/plugin-moq';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
-import { AcquiringPlugin } from '@mivend/plugin-acquiring';
+import { AcquiringPlugin, offlineTermsPaymentHandler } from '@mivend/plugin-acquiring';
 import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
 import { SystemHealthDashboardPlugin } from './system-health-dashboard.plugin';
 import { DefaultSuperadminAlertDashboardPlugin } from './default-superadmin-alert-dashboard.plugin';
@@ -581,6 +581,7 @@ export const config: VendureConfig = {
         PriceEntryPlugin,
         DocumentsPlugin,
         DeferredPaymentPlugin,
+        OnlinePaymentPlugin,
         ...(erpImportEnabled ? [ErpImportPlugin] : []),
         CrossReferencePlugin,
         ...searchPlugins,

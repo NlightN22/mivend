@@ -28,7 +28,7 @@ import { PdfBrowserService } from './pdf/pdf-browser.service';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
 
 // Offline-terms (invoice/deferred) payments settle straight to `Authorized`
-// (see apps/server/src/payment-method-handlers.ts), which Vendure's default
+// (see @mivend/plugin-acquiring's offline-terms-handler.ts), which Vendure's default
 // order process transitions to `PaymentAuthorized` — confirmed empirically
 // against a real deferred-payment checkout in dev (see docs/ai/PROJECT_CONTEXT.md
 // "checkout never actually placed orders"). Online-stub payments settle straight

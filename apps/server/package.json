@@ -25,6 +25,7 @@
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-moq": "workspace:*",
         "@mivend/plugin-notification": "workspace:*",
+        "@mivend/plugin-online-payment": "workspace:*",
         "@mivend/plugin-popular-products": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",

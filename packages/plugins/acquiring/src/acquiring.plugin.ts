@@ -26,6 +26,7 @@ import { PaymentRefundService } from './payment-refund.service';
 import { SettlementEntryService } from './settlement-entry.service';
 import { InvoiceVisibilityService } from './invoice-visibility.service';
 import { PaymentVisibilityService } from './payment-visibility.service';
+import { OfflineTermsBootstrapService } from './offline-terms-bootstrap.service';
 import {
     InvoiceAdminResolver,
     InvoiceShopResolver,
@@ -74,6 +75,7 @@ import type { AcquiringPluginOptions } from './types';
         DisputeService,
         InvoiceVisibilityService,
         PaymentVisibilityService,
+        OfflineTermsBootstrapService,
         {
             provide: ACQUIRING_PLUGIN_OPTIONS,
             useFactory: (): AcquiringPluginOptions => AcquiringPlugin.options,

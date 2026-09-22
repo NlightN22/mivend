@@ -13,6 +13,7 @@
         { "path": "./counterparty" },
         { "path": "./documents" },
         { "path": "./deferred-payment" },
+        { "path": "./online-payment" },
         { "path": "./search" },
         { "path": "./sync" },
         { "path": "./erp-integration" },

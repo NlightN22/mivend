@@ -7,7 +7,8 @@
 // only creates the difference up to TARGET_COUNT. Safe to re-run.
 //
 // Invoice (plugin-acquiring) is only ever materialized by the payment-method handlers'
-// createPayment (apps/server/src/payment-method-handlers.ts's computeInvoiceSplit) — there is no
+// createPayment (computeInvoiceSplit, in plugin-acquiring's/plugin-online-payment's own handler
+// files) — there is no
 // GraphQL mutation to create one directly, by design (an Invoice must only ever come from a real
 // checkout, never be synthesized). So Orders/Invoices/Payments here are all seeded together via
 // one real shop-api checkout per order (login as the customer, add items, pay), cycling through
@@ -78,7 +79,7 @@ async function shopLogin(username, password) {
 // InvoiceService.computeSplit actually produces more than one Invoice for the order — see
 // packages/e2e/storefront/invoices/helpers.ts's pickTwoVariantsFromDifferentOrganizations).
 // `paymentPlan` selects which payment-method handler code path to exercise (see
-// payment-method-handlers.ts):
+// plugin-acquiring's offline-terms-handler.ts / plugin-online-payment's online-stub-handler.ts):
 // 'online-succeeded' -> Settled order, Invoice(s) 'paid', real PaymentAttempt 'success'
 // 'online-pending'   -> Authorized order, Invoice(s) 'issued', real PaymentAttempt 'pending'
 // 'online-failed'    -> Declined order, Invoice(s) stay 'pending' (never touched), PaymentAttempt 'failed'

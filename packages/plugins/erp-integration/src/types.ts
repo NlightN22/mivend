@@ -9,8 +9,9 @@ declare module '@vendure/core' {
 
     interface CustomProductVariantFields {
         // Owned by apps/server/src/vendure-config.ts's customFields config (ERP-sourced storage-
-        // location assignment, see the external-integration-rules skill and payment-method-handlers.ts's
-        // organization-split comment) — read here without taking a package dependency on
+        // location assignment, see the external-integration-rules skill and
+        // @mivend/plugin-acquiring's offline-terms-handler.ts's organization-split comment) —
+        // read here without taking a package dependency on
         // whichever plugin ends up owning it, same established pattern as plugin-sync/types.ts.
         // Lives on ProductVariant, NOT Order — an order can span multiple organizations (see
         // GlobalSettings.organizationSplitEnabled / InvoiceService.createInvoicesForOrder), so

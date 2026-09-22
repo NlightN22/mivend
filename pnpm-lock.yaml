@@ -97,6 +97,9 @@ importers:
             '@mivend/plugin-notification':
                 specifier: workspace:*
                 version: link:../../packages/plugins/notification
+            '@mivend/plugin-online-payment':
+                specifier: workspace:*
+                version: link:../../packages/plugins/online-payment
             '@mivend/plugin-popular-products':
                 specifier: workspace:*
                 version: link:../../packages/plugins/popular-products
@@ -814,6 +817,25 @@ importers:
             vitest:
                 specifier: ^4.1.9
                 version: 4.1.9(@types/node@20.19.43)(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3))(vite@8.1.0(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+
+    packages/plugins/online-payment:
+        dependencies:
+            '@mivend/plugin-acquiring':
+                specifier: workspace:*
+                version: link:../acquiring
+        devDependencies:
+            '@nestjs/common':
+                specifier: ^11.0.0
+                version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
+            '@vendure/core':
+                specifier: ^3.7.3
+                version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+            typescript:
+                specifier: ^5.4.0
+                version: 5.9.3
+            vitest:
+                specifier: ^1.0.0
+                version: 1.6.1(@types/node@20.19.43)(lightningcss@1.32.0)(supports-color@8.1.1)
 
     packages/plugins/popular-products:
         dependencies:

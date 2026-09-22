@@ -13,7 +13,8 @@ test.describe('Invoice lifecycle: order split, payment, status, filters', () => 
         expect(orderCode).toBeTruthy();
 
         // Invoices are only materialized by the payment-method handler's createPayment
-        // (apps/server/src/payment-method-handlers.ts), not at ArrangingPayment itself — trigger
+        // (@mivend/plugin-online-payment's online-stub-handler.ts), not at ArrangingPayment
+        // itself — trigger
         // it via addPaymentToOrder with the 'pending' stub status, which Authorizes without
         // settling, so we can assert the pre-payment 'issued' state distinctly from 'paid' below.
         await gql(

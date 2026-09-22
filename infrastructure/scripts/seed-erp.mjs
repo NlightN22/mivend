@@ -157,10 +157,12 @@ async function ensureTaxSetup() {
     console.log('  Created default tax zone and 0% tax rate.');
 }
 
-// ShippingMethod and PaymentMethod are Vendure system config — cannot go through
-// erp-import plugin. Without at least one of each, checkout can never transition
-// an order out of AddingItems (see docs/ai/PROJECT_CONTEXT.md "Order code strategy"
-// section neighbor "Checkout order-state transition" note).
+// ShippingMethod is Vendure system config — cannot go through erp-import plugin. Without at
+// least one, checkout can never transition an order out of AddingItems (see
+// docs/ai/PROJECT_CONTEXT.md "Order code strategy" section neighbor "Checkout order-state
+// transition" note). PaymentMethods (offline-terms, online-stub, deferred-payment) are no longer
+// seeded here — each idempotently self-provisions at server boot from its own owning plugin
+// (plugin-acquiring, plugin-online-payment, plugin-deferred-payment).
 async function ensureShippingAndPaymentSetup() {
     let session = await adminGraphqlWithSession(`
         mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
@@ -193,32 +195,6 @@ async function ensureShippingAndPaymentSetup() {
         console.log('  Created "pickup" shipping method.');
     } else {
         console.log('  Shipping method already configured, skipping.');
-    }
-
-    const paymentMethodsRes = await adminGraphqlWithSession(
-        `{ paymentMethods { items { id code } } }`, undefined, cookie,
-    );
-    const existingCodes = new Set(paymentMethodsRes.data.paymentMethods.items.map(m => m.code));
-    const paymentMethodsToCreate = [
-        { code: 'offline-terms', handler: 'offline-terms', name: 'Invoice / deferred payment' },
-        { code: 'online-stub', handler: 'online-stub', name: 'Online payment (demo)' },
-    ].filter(m => !existingCodes.has(m.code));
-    for (const m of paymentMethodsToCreate) {
-        await adminGraphqlWithSession(`
-            mutation($code: String!, $handler: String!, $name: String!) {
-                createPaymentMethod(input: {
-                    code: $code
-                    enabled: true
-                    handler: { code: $handler, arguments: [] }
-                    translations: [{ languageCode: en, name: $name }]
-                }) { id }
-            }
-        `, { code: m.code, handler: m.handler, name: m.name }, cookie);
-    }
-    if (paymentMethodsToCreate.length > 0) {
-        console.log(`  Created ${paymentMethodsToCreate.length} payment method(s).`);
-    } else {
-        console.log('  Payment methods already configured, skipping.');
     }
 }
 
