@@ -8,7 +8,11 @@ import {
     pendingErpUsersForCounterpartyDocument,
 } from './counterparty.graphql.js';
 import { formatBranch, formatLinkStatus, formatManager } from './counterparty-display.js';
-import { AssignManagerBulkAction } from './components/counterparty-bulk-actions.js';
+import {
+    AssignManagerBulkAction,
+    LinkToCustomerBulkAction,
+    UnlinkFromCustomerBulkAction,
+} from './components/counterparty-bulk-actions.js';
 
 // Issue #133 Phase 2 — native ListPage-based Counterparty list, replacing the hand-rolled table
 // in the reviewed concept. ERP Manager names are resolved client-side against two lightweight
@@ -259,14 +263,17 @@ export function CounterpartyListPage({ route }: Readonly<{ route: AnyRoute }>) {
                 status: true,
                 isActive: false,
             }}
-            // Link to Customer / Unlink from Customer (#120's own activation/deactivation
-            // mutations) are deliberately not wired up here at all, not even as a disabled
-            // placeholder — a prior attempt shipped them as visually-enabled-looking bulk actions
-            // whose label leaked the internal issue number ("coming with #120") straight into the
-            // product UI, which is not something a real user should ever see. #133 explicitly
-            // allows hiding this affordance entirely until #120 ships; add it back as one real
-            // bulk action once that mutation exists, not as a stub.
-            bulkActions={[{ component: AssignManagerBulkAction }]}
+            // Link to Customer / Unlink from Customer now that #120's own
+            // applyCounterpartyPortalAccessChanges mutation is real — see
+            // components/counterparty-bulk-actions.tsx. (A prior attempt shipped these as
+            // visually-enabled-looking but non-functional stubs whose label leaked the internal
+            // issue number "(coming with #120)" into the product UI — removed entirely until the
+            // real mutation existed, per that incident.)
+            bulkActions={[
+                { component: AssignManagerBulkAction },
+                { component: LinkToCustomerBulkAction },
+                { component: UnlinkFromCustomerBulkAction },
+            ]}
         />
     );
 }

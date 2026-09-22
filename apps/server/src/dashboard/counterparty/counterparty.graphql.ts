@@ -122,3 +122,19 @@ export const reassignCounterpartyManagerDocument = graphql(`
         }
     }
 `);
+
+// Bulk Link/Unlink to Customer — issue #120's own batch portal-access mutation, one item per
+// selected row, each reported independently so one bad row (missing phone/officialEmail, already
+// linked, out of scope) never blocks the rest of the selection.
+export const applyCounterpartyPortalAccessChangesDocument = graphql(`
+    mutation ApplyCounterpartyPortalAccessChangesFromDashboard(
+        $changes: [CounterpartyPortalAccessChangeInput!]!
+    ) {
+        applyCounterpartyPortalAccessChanges(changes: $changes) {
+            counterpartyId
+            success
+            error
+            customerId
+        }
+    }
+`);
