@@ -8,6 +8,16 @@ export default defineConfig(() => {
     const apiTarget = process.env.VITE_API_TARGET ?? 'http://localhost:3000';
 
     return {
+        // Vite's default cacheDir (node_modules/.vite) is per-package, not per dev-server
+        // instance — this package is started twice concurrently on this box under different
+        // VITE_PORT/mode (local contour's `make dev` on 5174, staging-integration's `make
+        // dev-staging-integration` on 5184, see docs/environments.md). Without this, both
+        // processes race on the same optimizeDeps cache directory, corrupting each other's
+        // pre-bundled chunks — same anti-pattern already found and fixed for packages/dashboard
+        // (issue #134 follow-up), just never ported here. Observed live as a hard
+        // `@vitejs/plugin-vue` transformStyle crash on an unrelated component (MvTableFilters.vue)
+        // that doesn't even have a <style> block.
+        cacheDir: `node_modules/.vite-${process.env.VITE_PORT ?? '5174'}`,
         plugins: [vue()],
         resolve: {
             alias: {
