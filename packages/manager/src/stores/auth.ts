@@ -49,6 +49,9 @@ export const useAuthStore = defineStore('auth', () => {
     // outage never force-logs-out a still-valid session.
     const authStatus = ref<AuthStatus>('unknown');
     const isReconnecting = ref(false);
+    // Set the moment isReconnecting flips true, cleared when it flips false — lets the UI (the
+    // connection bar) escalate its own message the longer an outage runs, without polling.
+    const reconnectingSince = ref<number | null>(null);
     let initPromise: Promise<void> | null = null;
     // Bumped on every fetchActiveAdministrator()/login()/logout() call so a stale background
     // retry loop from an earlier call can detect it's been superseded and stop touching state.
@@ -157,6 +160,7 @@ export const useAuthStore = defineStore('auth', () => {
             backgroundRetryTimer = null;
         }
         isReconnecting.value = false;
+        reconnectingSince.value = null;
     }
 
     function applyResult(
@@ -224,6 +228,7 @@ export const useAuthStore = defineStore('auth', () => {
             // stays 'unknown' and hands off to an indefinite background retry rather than
             // blocking this call (and whatever awaits it, e.g. the router guard).
             isReconnecting.value = true;
+            reconnectingSince.value = Date.now();
             scheduleBackgroundRetry(myGeneration, BACKGROUND_RETRY_INITIAL_MS);
         }
     }
@@ -234,6 +239,7 @@ export const useAuthStore = defineStore('auth', () => {
         isLoggedIn,
         authStatus,
         isReconnecting,
+        reconnectingSince,
         fullName,
         roleLabel,
         roleCode,

@@ -130,6 +130,16 @@ async function handleLogout(): Promise<void> {
     await authStore.logout();
     await router.push('/login');
 }
+
+// Deliberately a hard browser navigation, not router.push — this fires from the connection bar
+// after a long, still-unresolved outage (MvConnectionBar's own escalation timer), so the backend
+// call inside authStore.logout() may itself be unreachable/hanging. A full navigation resets
+// every in-memory bit of stuck state (the background-retry timer/generation included) instead of
+// depending on that call to ever resolve — same "just restart" fix the user actually wants here.
+function handleRelogin(): void {
+    void authStore.logout();
+    window.location.href = '/login';
+}
 </script>
 
 <template>
@@ -139,7 +149,11 @@ async function handleLogout(): Promise<void> {
              is open — see stores/auth.ts's isReconnecting for when this actually fires (only
              after adminApi's own bounded retry is exhausted, so this never flashes for a single
              blip). -->
-        <MvConnectionBar v-if="authStore.isReconnecting" />
+        <MvConnectionBar
+            v-if="authStore.isReconnecting"
+            :since="authStore.reconnectingSince"
+            @relogin="handleRelogin"
+        />
         <MvAppTopbar
             :user-name="authStore.fullName"
             :user-role-label="authStore.roleLabel ?? authStore.roleCode"
