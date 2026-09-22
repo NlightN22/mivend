@@ -12,6 +12,7 @@
         { "path": "./price-entry" },
         { "path": "./counterparty" },
         { "path": "./documents" },
+        { "path": "./deferred-payment" },
         { "path": "./search" },
         { "path": "./sync" },
         { "path": "./erp-integration" },

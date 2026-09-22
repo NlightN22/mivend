@@ -10,6 +10,7 @@ import {
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { offlineTermsPaymentHandler, onlineStubPaymentHandler } from './payment-method-handlers';
+import { DeferredPaymentPlugin, deferredPaymentHandler } from '@mivend/plugin-deferred-payment';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import {
     EmailPlugin,
@@ -480,7 +481,11 @@ export const config: VendureConfig = {
         stockLocationStrategy: new BranchStockLocationStrategy(),
     },
     paymentOptions: {
-        paymentMethodHandlers: [offlineTermsPaymentHandler, onlineStubPaymentHandler],
+        paymentMethodHandlers: [
+            offlineTermsPaymentHandler,
+            onlineStubPaymentHandler,
+            deferredPaymentHandler,
+        ],
     },
     plugins: [
         AssetServerPlugin.init({
@@ -575,6 +580,7 @@ export const config: VendureConfig = {
         CounterpartyPlugin,
         PriceEntryPlugin,
         DocumentsPlugin,
+        DeferredPaymentPlugin,
         ...(erpImportEnabled ? [ErpImportPlugin] : []),
         CrossReferencePlugin,
         ...searchPlugins,
