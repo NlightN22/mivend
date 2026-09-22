@@ -324,5 +324,10 @@ e2e-smoke:
 e2e-ui:
 	pnpm --filter @mivend/e2e test:ui
 
+# Recovery-after-transient-failure scenario — see manager/resilience/connection-recovery.spec.ts.
+# Not part of `make e2e`/CI; SIGSTOPs the real local dev server, takes a few minutes.
+e2e-resilience:
+	E2E_RESILIENCE=1 pnpm --filter @mivend/e2e test:resilience
+
 e2e-report:
 	pnpm --filter @mivend/e2e report
