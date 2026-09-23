@@ -10,6 +10,7 @@ import {
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { DeferredPaymentPlugin, deferredPaymentHandler } from '@mivend/plugin-deferred-payment';
+import { PickupShippingPlugin } from '@mivend/plugin-pickup-shipping';
 import { OnlinePaymentPlugin, onlineStubPaymentHandler } from '@mivend/plugin-online-payment';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import {
@@ -587,6 +588,7 @@ export const config: VendureConfig = {
         DocumentsPlugin,
         DeferredPaymentPlugin,
         OnlinePaymentPlugin,
+        PickupShippingPlugin,
         ...(erpImportEnabled ? [ErpImportPlugin] : []),
         CrossReferencePlugin,
         ...searchPlugins,

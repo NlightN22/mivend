@@ -19,6 +19,7 @@
         "@mivend/plugin-cross-reference": "workspace:*",
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-deferred-payment": "workspace:*",
+        "@mivend/plugin-pickup-shipping": "workspace:*",
         "@mivend/plugin-documents": "workspace:*",
         "@mivend/plugin-erp-import": "workspace:*",
         "@mivend/plugin-erp-integration": "workspace:*",
