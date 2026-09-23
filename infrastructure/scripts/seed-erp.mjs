@@ -157,47 +157,6 @@ async function ensureTaxSetup() {
     console.log('  Created default tax zone and 0% tax rate.');
 }
 
-// ShippingMethod is Vendure system config — cannot go through erp-import plugin. Without at
-// least one, checkout can never transition an order out of AddingItems (see
-// docs/ai/PROJECT_CONTEXT.md "Order code strategy" section neighbor "Checkout order-state
-// transition" note). PaymentMethods (offline-terms, online-stub, deferred-payment) are no longer
-// seeded here — each idempotently self-provisions at server boot from its own owning plugin
-// (plugin-acquiring, plugin-online-payment, plugin-deferred-payment).
-async function ensureShippingAndPaymentSetup() {
-    let session = await adminGraphqlWithSession(`
-        mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") {
-            ... on CurrentUser { id }
-            ... on InvalidCredentialsError { message }
-        }}
-    `);
-    if (session.data.login.message) throw new Error(`Admin login failed: ${session.data.login.message}`);
-    const cookie = session.cookie;
-
-    const methodsRes = await adminGraphqlWithSession(
-        `{ shippingMethods { items { id code } } }`, undefined, cookie,
-    );
-    if (methodsRes.data.shippingMethods.items.length === 0) {
-        await adminGraphqlWithSession(`
-            mutation {
-                createShippingMethod(input: {
-                    code: "pickup"
-                    translations: [{ languageCode: en, name: "Pickup", description: "Pickup per contract terms" }]
-                    checker: { code: "default-shipping-eligibility-checker", arguments: [{ name: "orderMinimum", value: "0" }] }
-                    calculator: { code: "default-shipping-calculator", arguments: [
-                        { name: "rate", value: "0" }
-                        { name: "includesTax", value: "auto" }
-                        { name: "taxRate", value: "0" }
-                    ] }
-                    fulfillmentHandler: "manual-fulfillment"
-                }) { id }
-            }
-        `, undefined, cookie);
-        console.log('  Created "pickup" shipping method.');
-    } else {
-        console.log('  Shipping method already configured, skipping.');
-    }
-}
-
 // Demo administrators for the org-structure import below. The manager-portal roles are
 // self-provisioned by RoleProvisioningService at server boot (issue #134) — no manual seed step
 // needed — but this still looks the role up by code and skips with a warning rather than failing
@@ -407,8 +366,10 @@ async function main() {
     console.log('Ensuring tax zone...');
     await ensureTaxSetup();
 
-    console.log('Ensuring shipping/payment methods...');
-    await ensureShippingAndPaymentSetup();
+    // ShippingMethod ("pickup") and PaymentMethods (offline-terms, online-stub,
+    // deferred-payment) are no longer seeded here — each idempotently self-provisions at
+    // server boot from its own owning plugin (plugin-pickup-shipping, plugin-acquiring,
+    // plugin-online-payment, plugin-deferred-payment).
 
     // Administrator accounts are Vendure system config, same carve-out as tax
     // zones/shipping/payment methods above — cannot go through erp-import.
