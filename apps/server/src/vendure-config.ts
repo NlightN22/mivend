@@ -79,8 +79,12 @@ function requiredKafkaId(envVar: string): string {
     return 'mivend-central-hub-local';
 }
 
-// Only central talks to the ERP/payment providers (the external-integration-rules skill)
-const instancePlugins = instanceType === 'central' ? [AcquiringPlugin.init({})] : [];
+// DocumentsPlugin (always loaded, every instance) already imports AcquiringPlugin as a NestJS
+// module dependency, so AcquiringPlugin's entities/services/resolvers run on every instance
+// regardless of this array — confirmed empirically (offline-terms/online-stub/deferred-payment
+// all exist on a branch instance's own DB). `.init({})` is called unconditionally here only so
+// AcquiringPluginOptions is actually set on every instance too, not left undefined on branch.
+const instancePlugins = [AcquiringPlugin.init({})];
 
 // Issue #121: devMode writes real emails (real token/link, same code path as production) to
 // disk and serves them at /mailbox instead of sending. Deliberately NOT gated on

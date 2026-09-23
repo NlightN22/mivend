@@ -1,3 +1,13 @@
+// Owned by apps/server/src/vendure-config.ts's customFields config — declared locally so this
+// package type-checks standalone (packages/plugins/tsconfig.json builds separately from
+// apps/server), same pattern as plugin-erp-integration/src/types.ts. Read by
+// offline-terms-handler.ts's computeInvoiceSplit.
+declare module '@vendure/core' {
+    interface CustomGlobalSettingsFields {
+        organizationSplitEnabled: boolean;
+    }
+}
+
 export const loggerCtx = 'AcquiringPlugin';
 
 export const ACQUIRING_PLUGIN_OPTIONS = Symbol('ACQUIRING_PLUGIN_OPTIONS');
