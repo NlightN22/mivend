@@ -52,8 +52,11 @@ class TestCounterpartyTeamMember {
 let dataSource: DataSource;
 let service: CounterpartyService;
 const mockCtx = {} as RequestContext;
+const mockVersioningService = { recordChange: vi.fn() };
+const mockAdministratorService = { findOne: vi.fn() };
 const mockAccessScopeService = {
     resolveCounterpartyScope: vi.fn(),
+    assertCounterpartyWritable: vi.fn(),
     // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter) so these real-
     // Postgres tests exercise the actual EXISTS-subquery SQL, not a no-op.
     applyOwnCounterpartyFilter: vi.fn(
@@ -97,8 +100,8 @@ beforeAll(async () => {
         { update: vi.fn() } as never,
         { assignCustomerPriceTypeByCode: vi.fn() } as never,
         mockAccessScopeService as unknown as AccessScopeService,
-        { findOne: vi.fn() } as never,
-        { recordChange: vi.fn() } as never,
+        mockAdministratorService as never,
+        mockVersioningService as never,
     );
 });
 
@@ -110,6 +113,8 @@ afterAll(async () => {
 beforeEach(async () => {
     await dataSource.getRepository(TestCounterparty).clear();
     mockAccessScopeService.resolveCounterpartyScope.mockReset();
+    mockAccessScopeService.assertCounterpartyWritable.mockReset();
+    mockVersioningService.recordChange.mockReset();
 });
 
 async function seedCounterparties(): Promise<void> {
@@ -443,5 +448,111 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         const count = await service.countUnassigned(mockCtx);
 
         expect(count).toBe(2);
+    });
+});
+
+describe('CounterpartyService.reassignManagerByFilter (integration, real Postgres, issue #136)', () => {
+    async function managerByErpId(): Promise<Record<string, string | null>> {
+        const rows = await dataSource.getRepository(TestCounterparty).find();
+        return Object.fromEntries(rows.map(r => [r.erpId, r.assignedManagerId]));
+    }
+
+    it('reassigns only rows matching the filter, leaving non-matching rows untouched', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({ kind: 'all' });
+        // 'Own' matches both branch-a rows; 'Other Dept' (branch-b) is out of the filter.
+        const changed = await service.reassignManagerByFilter(
+            mockCtx,
+            { search: 'Own' },
+            'admin-9',
+            2,
+        );
+
+        expect(changed).toBe(2);
+        expect(await managerByErpId()).toEqual({
+            'cp-own-mine': 'admin-9',
+            'cp-own-other': 'admin-9',
+            'cp-other-dept': 'admin-3',
+        });
+        expect(mockVersioningService.recordChange).toHaveBeenCalledTimes(2);
+    });
+
+    it('"department" scope with an empty filter never touches another branch\'s rows', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'department',
+            departmentId: 'dept-1',
+            branchId: 'branch-a',
+        });
+        mockAdministratorService.findOne.mockResolvedValue({
+            customFields: { departmentId: 'dept-1' },
+        });
+
+        const changed = await service.reassignManagerByFilter(mockCtx, {}, 'admin-9', 2);
+
+        expect(changed).toBe(2);
+        expect((await managerByErpId())['cp-other-dept']).toBe('admin-3');
+    });
+
+    it('"department" scope rejects a target administrator from another department, writing nothing', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'department',
+            departmentId: 'dept-1',
+            branchId: 'branch-a',
+        });
+        mockAdministratorService.findOne.mockResolvedValue({
+            customFields: { departmentId: 'dept-2' },
+        });
+        const before = await managerByErpId();
+
+        await expect(service.reassignManagerByFilter(mockCtx, {}, 'admin-9', 2)).rejects.toThrow();
+
+        expect(await managerByErpId()).toEqual(before);
+    });
+
+    it('rejects without writing when the match count differs from expectedCount', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({ kind: 'all' });
+        const before = await managerByErpId();
+
+        await expect(
+            service.reassignManagerByFilter(mockCtx, { search: 'Own' }, 'admin-9', 5),
+        ).rejects.toThrow(/matches 2 counterparties, expected 5/);
+
+        expect(await managerByErpId()).toEqual(before);
+        expect(mockVersioningService.recordChange).not.toHaveBeenCalled();
+    });
+
+    it('rejects without writing any row when one matched row is not writable', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({ kind: 'all' });
+        mockAccessScopeService.assertCounterpartyWritable
+            .mockResolvedValueOnce(undefined)
+            .mockRejectedValueOnce(new Error('forbidden'));
+        const before = await managerByErpId();
+
+        await expect(
+            service.reassignManagerByFilter(mockCtx, { search: 'Own' }, 'admin-9', 2),
+        ).rejects.toThrow('forbidden');
+
+        expect(await managerByErpId()).toEqual(before);
+    });
+
+    it('is idempotent: a repeat run changes nothing and records no new history', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({ kind: 'all' });
+        await service.reassignManagerByFilter(mockCtx, { search: 'Own' }, 'admin-9', 2);
+        mockVersioningService.recordChange.mockClear();
+
+        const changed = await service.reassignManagerByFilter(
+            mockCtx,
+            { search: 'Own' },
+            'admin-9',
+            2,
+        );
+
+        expect(changed).toBe(0);
+        expect(mockVersioningService.recordChange).not.toHaveBeenCalled();
     });
 });

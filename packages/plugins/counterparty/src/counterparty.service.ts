@@ -10,11 +10,13 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import { In } from 'typeorm';
 import type { SelectQueryBuilder } from 'typeorm';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { VersioningService } from '@mivend/plugin-versioning';
 
+import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartySortParameter, CounterpartyUpsertPayload, loggerCtx } from './types';
 
@@ -246,83 +248,28 @@ export class CounterpartyService {
     // (scope 'all').
     async findVisiblePage(
         ctx: RequestContext,
-        options: {
+        options: CounterpartyListFilter & {
             take?: number;
             skip?: number;
-            search?: string;
-            status?: string;
-            managerId?: ID;
-            managerErpId?: string;
-            branchId?: string;
-            groupLabel?: string;
-            unassignedOnly?: boolean;
             sort?: CounterpartySortParameter;
         } = {},
     ): Promise<PaginatedList<Counterparty>> {
-        let qb = this.baseVisibleQb(ctx);
-        qb = await this.applyVisibilityScope(ctx, qb);
+        const qb = await this.visibleFilteredQb(ctx, options);
         this.applySort(qb, options.sort);
-        if (options.search) {
-            qb = qb.andWhere(
-                '(c.shortName ILIKE :search OR c.legalName ILIKE :search OR c.inn ILIKE :search)',
-                { search: `%${options.search}%` },
-            );
-        }
-        // User-chosen narrowing filters, applied on TOP of the access-scope restriction above —
-        // never a replacement for it (a manager's own 'own'/'department' scope still bounds what
-        // they can filter to, this only narrows further within that already-visible set).
-        if (options.status === 'active') {
-            qb = qb.andWhere('c.isActive = true');
-        } else if (options.status === 'inactive') {
-            qb = qb.andWhere('c.isActive = false');
-        }
-        // Separate boolean, not `managerId: null`, since GraphQL/TypeORM would need to
-        // distinguish "field omitted" from "field explicitly null" to express IS NULL safely —
-        // a dedicated flag avoids that ambiguity entirely. Takes precedence over `managerId`
-        // (mutually exclusive from the UI's perspective — the Manager select's "Unassigned"
-        // option sends only `unassignedOnly: true`, never both).
-        if (options.unassignedOnly) {
-            qb = qb.andWhere('c.assignedManagerId IS NULL');
-        } else if (options.managerId) {
-            qb = qb.andWhere('c.assignedManagerId = :managerId', {
-                managerId: String(options.managerId),
-            });
-        }
-        // Independent of managerId/unassignedOnly above — the raw ERP-side assignment, which
-        // exists on every row regardless of whether it has resolved to an Administrator yet (see
-        // the Dashboard Counterparty list's "ERP Manager" column/filter, issue #133). Deliberately
-        // not mutually exclusive with managerId/unassignedOnly: they filter different fields.
-        //
-        // Substring match against EITHER the raw erpId OR the ERP-reported name from
-        // access-control's erp_user table (joined by raw SQL, not an entity import — same
-        // "counterparty already depends on access-control, not the reverse" direction as the
-        // AccessScopeService import above, just expressed as SQL instead of DI here since this
-        // is a one-off join, not a whole service dependency). Without the name half of this,
-        // typing a manager's name (what the column actually *displays* — see formatManager)
-        // returns nothing for the majority of rows, which are unlinked and have no Administrator
-        // to search by name through — confirmed as a real live incident, not hypothetical: a
-        // manager with 254 real counterparties returned zero results searching by name.
-        if (options.managerErpId) {
-            qb = qb.andWhere(
-                `(c."managerErpId" ILIKE :managerErpId OR EXISTS (
-                    SELECT 1 FROM erp_user eu
-                    WHERE eu."erpId" = c."managerErpId" AND eu."fullName" ILIKE :managerErpId
-                ))`,
-                { managerErpId: `%${options.managerErpId}%` },
-            );
-        }
-        if (options.branchId) {
-            qb = qb.andWhere('c.branchId = :branchId', { branchId: options.branchId });
-        }
-        if (options.groupLabel) {
-            qb = qb.andWhere('c.erpGroupLabel = :groupLabel', { groupLabel: options.groupLabel });
-        }
         const totalItems = await qb.getCount();
         const items = await qb
             .take(options.take ?? 50)
             .skip(options.skip ?? 0)
             .getMany();
         return { items, totalItems };
+    }
+
+    private async visibleFilteredQb(
+        ctx: RequestContext,
+        filter: CounterpartyListFilter,
+    ): Promise<SelectQueryBuilder<Counterparty>> {
+        const qb = await this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx));
+        return applyCounterpartyListFilter(qb, filter);
     }
 
     // Single counterparty, visibility-checked the same way as the list — returns null (not
@@ -528,16 +475,7 @@ export class CounterpartyService {
         // comment), so it's used here rather than a bespoke inline department-only check.
         await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
 
-        const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
-        if (scope.kind === 'department') {
-            const target = await this.administratorService.findOne(ctx, administratorId);
-            const targetDepartmentId = (
-                target?.customFields as { departmentId?: string | null } | undefined
-            )?.departmentId;
-            if (!target || targetDepartmentId !== scope.departmentId) {
-                throw new ForbiddenError();
-            }
-        }
+        await this.assertTargetAdministratorAssignable(ctx, administratorId);
 
         const previousManagerId = counterparty.assignedManagerId;
         counterparty.assignedManagerId = String(administratorId);
@@ -555,6 +493,63 @@ export class CounterpartyService {
             },
         });
         return saved;
+    }
+
+    // Issue #136: "assign to every row matching the current list filter" without sending an
+    // unbounded id list. expectedCount rejects the call if the matching set changed since viewing.
+    async reassignManagerByFilter(
+        ctx: RequestContext,
+        filter: CounterpartyListFilter,
+        administratorId: ID,
+        expectedCount: number,
+    ): Promise<number> {
+        const qb = await this.visibleFilteredQb(ctx, filter);
+        const counterparties = await qb.getMany();
+        if (counterparties.length !== expectedCount) {
+            throw new UserInputError(
+                `Filter now matches ${counterparties.length} counterparties, expected ${expectedCount} — refresh the list and retry`,
+            );
+        }
+        for (const counterparty of counterparties) {
+            await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
+        }
+        await this.assertTargetAdministratorAssignable(ctx, administratorId);
+
+        const to = String(administratorId);
+        const changed = counterparties.filter(c => c.assignedManagerId !== to);
+        if (changed.length === 0) return 0;
+        await this.connection
+            .getRepository(ctx, Counterparty)
+            .update({ id: In(changed.map(c => c.id)) }, { assignedManagerId: to });
+        for (const counterparty of changed) {
+            await this.versioningService.recordChange(ctx, {
+                entityName: 'Counterparty',
+                entityId: counterparty.id,
+                action: 'update',
+                changedFields: { assignedManagerId: { from: counterparty.assignedManagerId, to } },
+            });
+        }
+        Logger.verbose(
+            `Reassigned ${changed.length} counterparties to administrator=${to}`,
+            loggerCtx,
+        );
+        return changed.length;
+    }
+
+    // A department-scoped caller may only assign to an administrator in their own department.
+    private async assertTargetAdministratorAssignable(
+        ctx: RequestContext,
+        administratorId: ID,
+    ): Promise<void> {
+        const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
+        if (scope.kind !== 'department') return;
+        const target = await this.administratorService.findOne(ctx, administratorId);
+        const targetDepartmentId = (
+            target?.customFields as { departmentId?: string | null } | undefined
+        )?.departmentId;
+        if (!target || targetDepartmentId !== scope.departmentId) {
+            throw new ForbiddenError();
+        }
     }
 
     private async assignPriceType(

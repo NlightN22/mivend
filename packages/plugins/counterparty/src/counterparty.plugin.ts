@@ -227,6 +227,17 @@ export const adminApiSchema = gql`
         sort: CounterpartySortParameter
     }
 
+    "Narrowing half of CounterpartyListOptions, for mutations that act on every row a list filter matches (issue #136)"
+    input CounterpartyListFilter {
+        search: String
+        status: String
+        managerId: ID
+        managerErpId: String
+        branchId: String
+        groupLabel: String
+        unassignedOnly: Boolean
+    }
+
     "Only real Counterparty columns a human would actually want to order by — never a UUID/id-shaped one (branchId), and never a derived/joined display value (the Manager column shows an ERP-resolved name, not managerErpId itself) — see manager-table-standard skill's sorting follow-up, issue #138."
     input CounterpartySortParameter {
         shortName: SortOrder
@@ -275,6 +286,13 @@ export const adminApiSchema = gql`
         # Department-head only within their own department, portal-admin unrestricted — see
         # CustomPermission.ReassignCounterpartyManager.
         reassignCounterpartyManager(counterpartyId: ID!, administratorId: ID!): Counterparty!
+        # Issue #136: same permission/scope rules, applied to every visible row matching filter.
+        # Fails if the match count differs from expectedCount. Returns the number of rows changed.
+        reassignCounterpartyManagerByFilter(
+            filter: CounterpartyListFilter!
+            administratorId: ID!
+            expectedCount: Int!
+        ): Int!
 
         # Add/remove additional team members beyond the Owner — see CustomPermission.ManageCounterpartyTeam.
         addCounterpartyTeamMember(
