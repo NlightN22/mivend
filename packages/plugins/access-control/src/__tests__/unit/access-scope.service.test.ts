@@ -142,6 +142,21 @@ describe('AccessScopeService', () => {
             ).rejects.toThrow();
         });
 
+        it('"department" scope with no branch of its own rejects even a null-branch Counterparty', async () => {
+            administratorService.findOneByUserId.mockResolvedValue(
+                mockAdmin('admin-6d', { departmentId: 'dept-1', branchId: null }),
+            );
+            roleScopeConfigService.maxScopeFor.mockResolvedValue('department');
+
+            await expect(
+                service.assertCounterpartyWritable(ctx, {
+                    assignedManagerId: null,
+                    departmentId: 'dept-1',
+                    branchId: null,
+                }),
+            ).rejects.toThrow();
+        });
+
         it('"own" scope rejects when assignedManagerId does not match the caller', async () => {
             administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-8'));
             roleScopeConfigService.maxScopeFor.mockResolvedValue('own');

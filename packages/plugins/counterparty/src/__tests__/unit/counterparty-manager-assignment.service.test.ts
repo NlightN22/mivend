@@ -119,6 +119,27 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
         expect(result).toEqual(expect.objectContaining({ assignedManagerId: 'admin-9' }));
     });
 
+    it('rejects "department" scope with no branch, even for a null-branch counterparty and target', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty({ branchId: null }));
+        resolveScope.mockResolvedValue({ kind: 'department', departmentId: 'dept-1' });
+        mockAdministratorService.findOne.mockResolvedValue({ customFields: { branchId: null } });
+
+        await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
+            ForbiddenError,
+        );
+        expect(mockRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects a branchless target administrator even when the counterparty itself is writable', async () => {
+        mockRepo.findOne.mockResolvedValue(counterparty());
+        resolveScope.mockResolvedValue(departmentScope);
+        mockAdministratorService.findOne.mockResolvedValue({ customFields: { branchId: null } });
+
+        await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
+            ForbiddenError,
+        );
+    });
+
     it('rejects when the counterparty does not exist', async () => {
         mockRepo.findOne.mockResolvedValue(null);
 

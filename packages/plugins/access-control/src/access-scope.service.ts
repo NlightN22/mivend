@@ -84,7 +84,8 @@ export class AccessScopeService {
                 }
                 break;
             case 'department':
-                if (counterparty.branchId !== (scope.branchId ?? null)) {
+                // Mirrors the list's SQL `= NULL`: a branchless caller writes nothing.
+                if (scope.branchId == null || counterparty.branchId !== scope.branchId) {
                     throw new ForbiddenError();
                 }
                 break;

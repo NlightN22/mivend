@@ -122,7 +122,7 @@ export class CounterpartyManagerAssignmentService {
         const target = await this.administratorService.findOne(ctx, administratorId);
         const targetBranchId = (target?.customFields as { branchId?: string | null } | undefined)
             ?.branchId;
-        if (!target || (targetBranchId ?? null) !== (scope.branchId ?? null)) {
+        if (!target || scope.branchId == null || targetBranchId !== scope.branchId) {
             throw new ForbiddenError();
         }
     }
