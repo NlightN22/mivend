@@ -5,17 +5,8 @@ import { config } from './vendure-config';
 import { mountNotificationSubscriptions } from './subscriptions';
 import { assertDatabaseLocale } from './db-locale-check';
 
-// Documents only the custom REST endpoints (ERP import/callback) — Shop/Admin
-// APIs are GraphQL and already self-documenting via introspection. See issue
-// #28 and the backend-plugin-rules skill's "REST endpoint documentation
-// (Swagger/OpenAPI)" section (request/response shapes must be classes, never
-// a plain interface).
-//
-// Must run via `onBeforeAppListen`, not after `bootstrap()` resolves — Vendure
-// calls `app.listen()` internally before returning, and Nest finalizes its
-// routing/fallback-handler chain at that point. Routes registered afterward
-// (e.g. in a `.then()`) are silently unreachable (404), even though the
-// OpenAPI document itself builds correctly.
+// Must run in `onBeforeAppListen`: routes registered after bootstrap() resolves are silently 404
+// (Nest finalizes routing at app.listen()). REST-only docs, see issue #28.
 function mountApiDocs(app: INestApplication): void {
     const document = SwaggerModule.createDocument(
         app,
@@ -36,10 +27,7 @@ assertDatabaseLocale()
         bootstrap(config, {
             onBeforeAppListen: app => {
                 mountApiDocs(app);
-                // Needs the plain Node HTTP server before app.listen() takes it over — see
-                // subscriptions.ts's own comment for why this can't go through Vendure's
-                // ApiOptions, and for why (unlike an earlier version of this call) it no longer
-                // needs a second phase after bootstrap() resolves.
+                // Needs the raw HTTP server before app.listen() — see subscriptions.ts.
                 mountNotificationSubscriptions(app);
             },
         }),

@@ -71,9 +71,7 @@ services:
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
             POSTGRES_DB: ${POSTGRES_DB:-mivend}
             POSTGRES_APP_DB: ${POSTGRES_DB:-mivend}
-            # Issue #120 follow-up: Postgres collation is fixed at initdb time, so a missing
-            # locale here would silently ship a database that sorts Cyrillic text wrong with no
-            # error. No default — production must set this explicitly.
+            # Issue #140: fixed at initdb time, no default — see docs/environments.md.
             DB_ICU_LOCALE: ${DB_ICU_LOCALE:?DB_ICU_LOCALE must be set explicitly (e.g. ru-RU) — see docs/environments.md}
         volumes:
             - postgres-data:/var/lib/postgresql/data
