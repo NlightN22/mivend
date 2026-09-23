@@ -1,9 +1,9 @@
 import { Client } from 'pg';
 
-// Issue #120: catches a wrongly-provisioned production DB (wrong/missing ICU locale) regardless
+// Issue #140: catches a wrongly-provisioned production DB (wrong/missing ICU locale) regardless
 // of how it got that way — see docs/environments.md's "Database locale" section.
 export async function assertDatabaseLocale(): Promise<void> {
-    // Local/CI dbs aren't provisioned with an ICU locale — see docs/environments.md.
+    // CI's plain postgres:16 service has no ICU locale — see docs/environments.md.
     if (process.env.NODE_ENV !== 'production') return;
 
     const expectedLocale = process.env.DB_EXPECTED_LOCALE;

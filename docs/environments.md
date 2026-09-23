@@ -32,11 +32,11 @@ provisions (`infrastructure/docker/docker-compose.yml`'s `postgres` service, bui
 `infrastructure/docker/postgres/` — the same image the local/staging-integration contours above
 use, see `.env.production.example` in that directory).
 
-### Database locale (issue #120 follow-up)
+### Database locale (issue #140)
 
 Postgres collation is fixed at `CREATE DATABASE` time and cannot be changed for an existing data
 directory — the wrong locale silently sorts Cyrillic text by raw code point instead of alphabet
-(this is what happened before #120: `en_US.utf8`, the glibc default, produced a nonsensical
+(this is what happened before #140: `en_US.utf8`, the glibc default, produced a nonsensical
 company-name sort order), with no error until someone notices broken UI ordering.
 
 - All three contours' Postgres containers build from `infrastructure/docker/postgres/`, whose
@@ -53,14 +53,17 @@ company-name sort order), with no error until someone notices broken UI ordering
   defense in depth against a wrongly-provisioned production DB regardless of how it got that way
   (restored from an old dump, manually created, etc.) — it doesn't depend on this repo's own
   entrypoint having provisioned it.
-- Local/CI databases (`make dev`, CI's plain `postgres:16` service) are **not** required to have
-  an ICU locale — `db-locale-check.ts` only enforces this when `NODE_ENV=production`, since a
-  synthetic/throwaway dev or CI database sorting Cyrillic wrong is a known limitation, not an
-  incident.
+- CI's plain `postgres:16` service is **not** ICU-provisioned — `db-locale-check.ts` only enforces
+  the locale when `NODE_ENV=production`, since a throwaway CI database sorting Cyrillic wrong is a
+  known limitation, not an incident. Local/staging-integration/branch dev databases **are** ICU
+  `ru-RU` (via `docker-compose.dev.yml` above), just not boot-checked.
 - Changing an **existing** non-empty database's locale requires a dump/recreate/restore (locale
   is fixed at creation time) plus a full `REINDEX` afterwards — not a rolling/in-place change. For
   local dev this just means `make dev-reset` (synthetic seed data, cheap to regenerate); for
-  staging-integration/production with real data this needs a maintenance window.
+  staging-integration/production with real data this needs a maintenance window. Status as of
+  2026-09-23: every dev-stack database (`mivend_central`, `mivend_central_staging_integration`,
+  `mivend_test`, `mivend_branch`) is already ICU `ru-RU`; no production contour exists yet, so no
+  real-data migration is pending.
 
 **Storefront search backend per contour (issue #69)**: `local` uses `internal` (`ElasticsearchPlugin`
 against local Elasticsearch, `SEARCH_BACKEND=internal` or unset); `staging-integration` and

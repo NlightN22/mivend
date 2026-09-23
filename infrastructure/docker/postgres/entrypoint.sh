@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-# Issue #120: locale is fixed at initdb time and can't be changed later — fail fast instead of
+# Issue #140: locale is fixed at initdb time and can't be changed later — fail fast instead of
 # silently defaulting to a locale that sorts Cyrillic wrong. See docs/environments.md.
 if [ -z "$DB_ICU_LOCALE" ]; then
     echo "entrypoint.sh: DB_ICU_LOCALE must be set (e.g. ru-RU) — refusing to start with an" >&2
