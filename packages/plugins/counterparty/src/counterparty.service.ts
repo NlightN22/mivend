@@ -1,20 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
-    AdministratorService,
     CustomerService,
-    ForbiddenError,
     Logger,
     PaginatedList,
     RequestContext,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { In } from 'typeorm';
 import type { SelectQueryBuilder } from 'typeorm';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
-import { VersioningService } from '@mivend/plugin-versioning';
 
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
 import { Counterparty } from './entities/counterparty.entity';
@@ -38,8 +34,6 @@ export class CounterpartyService {
         private customerService: CustomerService,
         private customerPricingService: CustomerPricingService,
         private accessScopeService: AccessScopeService,
-        private administratorService: AdministratorService,
-        private versioningService: VersioningService,
     ) {}
 
     async upsert(ctx: RequestContext, payload: CounterpartyUpsertPayload): Promise<Counterparty> {
@@ -264,7 +258,7 @@ export class CounterpartyService {
         return { items, totalItems };
     }
 
-    private async visibleFilteredQb(
+    async visibleFilteredQb(
         ctx: RequestContext,
         filter: CounterpartyListFilter,
     ): Promise<SelectQueryBuilder<Counterparty>> {
@@ -451,105 +445,6 @@ export class CounterpartyService {
             id: customerId,
             customFields: { portalRole: role } as Record<string, unknown>,
         });
-    }
-
-    // Changes assignedManagerId — department-head only within their own department, portal-admin
-    // unrestricted, matching CustomPermission.ReassignCounterpartyManager's doc comment. Reuses
-    // AccessScopeService's counterparty scope resolution rather than a bespoke role check: a
-    // 'department' scope caller may only reassign a counterparty already in their own
-    // department/branch, and only to an administrator who is themselves in that same
-    // department (never lending a client out to a manager the dept-head doesn't oversee).
-    async reassignManager(
-        ctx: RequestContext,
-        counterpartyId: ID,
-        administratorId: ID,
-    ): Promise<Counterparty> {
-        const repo = this.connection.getRepository(ctx, Counterparty);
-        const counterparty = await repo.findOne({ where: { id: counterpartyId } });
-        if (!counterparty) throw new UserInputError(`Counterparty not found: id=${counterpartyId}`);
-
-        // 'own' scope is never actually reachable here in practice — only department-head/
-        // portal-admin hold CustomPermission.ReassignCounterpartyManager, and those roles are
-        // always 'department'/'all' scoped for the counterparty resource — but
-        // assertCounterpartyWritable is the shared, generically-correct check (see its doc
-        // comment), so it's used here rather than a bespoke inline department-only check.
-        await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
-
-        await this.assertTargetAdministratorAssignable(ctx, administratorId);
-
-        const previousManagerId = counterparty.assignedManagerId;
-        counterparty.assignedManagerId = String(administratorId);
-        const saved = await repo.save(counterparty);
-        Logger.verbose(
-            `Reassigned counterparty id=${counterpartyId} to administrator=${administratorId}`,
-            loggerCtx,
-        );
-        await this.versioningService.recordChange(ctx, {
-            entityName: 'Counterparty',
-            entityId: saved.id,
-            action: 'update',
-            changedFields: {
-                assignedManagerId: { from: previousManagerId, to: saved.assignedManagerId },
-            },
-        });
-        return saved;
-    }
-
-    // Issue #136: "assign to every row matching the current list filter" without sending an
-    // unbounded id list. expectedCount rejects the call if the matching set changed since viewing.
-    async reassignManagerByFilter(
-        ctx: RequestContext,
-        filter: CounterpartyListFilter,
-        administratorId: ID,
-        expectedCount: number,
-    ): Promise<number> {
-        const qb = await this.visibleFilteredQb(ctx, filter);
-        const counterparties = await qb.getMany();
-        if (counterparties.length !== expectedCount) {
-            throw new UserInputError(
-                `Filter now matches ${counterparties.length} counterparties, expected ${expectedCount} — refresh the list and retry`,
-            );
-        }
-        for (const counterparty of counterparties) {
-            await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
-        }
-        await this.assertTargetAdministratorAssignable(ctx, administratorId);
-
-        const to = String(administratorId);
-        const changed = counterparties.filter(c => c.assignedManagerId !== to);
-        if (changed.length === 0) return 0;
-        await this.connection
-            .getRepository(ctx, Counterparty)
-            .update({ id: In(changed.map(c => c.id)) }, { assignedManagerId: to });
-        for (const counterparty of changed) {
-            await this.versioningService.recordChange(ctx, {
-                entityName: 'Counterparty',
-                entityId: counterparty.id,
-                action: 'update',
-                changedFields: { assignedManagerId: { from: counterparty.assignedManagerId, to } },
-            });
-        }
-        Logger.verbose(
-            `Reassigned ${changed.length} counterparties to administrator=${to}`,
-            loggerCtx,
-        );
-        return changed.length;
-    }
-
-    // A department-scoped caller may only assign to an administrator in their own department.
-    private async assertTargetAdministratorAssignable(
-        ctx: RequestContext,
-        administratorId: ID,
-    ): Promise<void> {
-        const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
-        if (scope.kind !== 'department') return;
-        const target = await this.administratorService.findOne(ctx, administratorId);
-        const targetDepartmentId = (
-            target?.customFields as { departmentId?: string | null } | undefined
-        )?.departmentId;
-        if (!target || targetDepartmentId !== scope.departmentId) {
-            throw new ForbiddenError();
-        }
     }
 
     private async assignPriceType(

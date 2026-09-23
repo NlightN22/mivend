@@ -38,13 +38,8 @@ const loggerCtx = 'IntegrationCounterpartyHandler';
 // (UserEnrichmentService, fed by the `user` stream) this was blocked on — resolved here to
 // Counterparty.assignedManagerId (a Vendure Administrator.id, never a raw ERP erpId).
 //
-// access-control-review note (docs/access-control.md, layer 3): this writes assignedManagerId
-// directly, bypassing CounterpartyService.reassignManager's own department-scope authorization
-// check — deliberate, not an oversight. Same precedent as departmentId/branchId already being
-// ERP-authoritative (EmployeeService's REST path writes Administrator.customFields.departmentId
-// the same way) — "ERP is master for business data" (AGENTS.md/external-integration-rules). ERP
-// can silently change who holds `own`-scope access to a counterparty; the portal's own
-// reassignManager mutation stays a manual override tool on top of that, not the sole path.
+// Writes assignedManagerId directly, bypassing the reassignCounterpartyManager scope check on
+// purpose: ERP is master for business data; the mutation is a manual override on top.
 @Injectable()
 export class CounterpartyStreamHandler implements InboundStreamHandler {
     constructor(

@@ -13,6 +13,7 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 
 import type { CounterpartyListFilter } from './counterparty-list-filter';
 import { Counterparty } from './entities/counterparty.entity';
+import { CounterpartyManagerAssignmentService } from './counterparty-manager-assignment.service';
 import { CounterpartyService } from './counterparty.service';
 import { CounterpartySortParameter } from './types';
 
@@ -82,7 +83,10 @@ export class CounterpartyCustomerLinkResolver {
 
 @Resolver('Counterparty')
 export class CounterpartyResolver {
-    constructor(private counterpartyService: CounterpartyService) {}
+    constructor(
+        private counterpartyService: CounterpartyService,
+        private managerAssignmentService: CounterpartyManagerAssignmentService,
+    ) {}
 
     @Query()
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
@@ -213,7 +217,7 @@ export class CounterpartyResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { counterpartyId: string; administratorId: string },
     ): Promise<Counterparty> {
-        return this.counterpartyService.reassignManager(
+        return this.managerAssignmentService.reassignManager(
             ctx,
             args.counterpartyId,
             args.administratorId,
@@ -228,7 +232,7 @@ export class CounterpartyResolver {
         @Args()
         args: { filter: CounterpartyListFilter; administratorId: string; expectedCount: number },
     ): Promise<number> {
-        return this.counterpartyService.reassignManagerByFilter(
+        return this.managerAssignmentService.reassignManagerByFilter(
             ctx,
             args.filter,
             args.administratorId,

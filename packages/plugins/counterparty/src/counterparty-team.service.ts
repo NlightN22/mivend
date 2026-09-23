@@ -28,9 +28,8 @@ export class CounterpartyTeamService {
         });
     }
 
-    // Gated by CustomPermission.ManageCounterpartyTeam at the resolver, same
-    // own/department/all write-scope check reassignManager uses (assertCounterpartyWritable) —
-    // a department-head may only add to a counterparty already in their own department/branch.
+    // Gated by CustomPermission.ManageCounterpartyTeam at the resolver, plus the shared
+    // assertCounterpartyWritable row check.
     async addTeamMember(
         ctx: RequestContext,
         counterpartyId: ID,

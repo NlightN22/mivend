@@ -26,6 +26,7 @@ import {
     CounterpartyTeamFieldResolver,
     CounterpartyTeamMutationResolver,
 } from './counterparty-team.resolver';
+import { CounterpartyManagerAssignmentService } from './counterparty-manager-assignment.service';
 import { CounterpartyTeamService } from './counterparty-team.service';
 import {
     CustomerTradingPointResolver,
@@ -416,6 +417,7 @@ const adminResolvers = [
         CreditTermGateService,
         CreditTermService,
         CounterpartyTeamService,
+        CounterpartyManagerAssignmentService,
         AdministratorLinkedListener,
         CounterpartyPortalAccessService,
     ],

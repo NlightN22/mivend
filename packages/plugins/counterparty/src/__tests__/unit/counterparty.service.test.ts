@@ -1,15 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-    AdministratorService,
     CustomerService,
-    ForbiddenError,
     RequestContext,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
 import type { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
-import type { VersioningService } from '@mivend/plugin-versioning';
 import { CounterpartyService } from '../../counterparty.service';
 import { Counterparty } from '../../entities/counterparty.entity';
 
@@ -34,10 +31,6 @@ const mockCustomerPricingService = {
     assignCustomerPriceTypeByCode: vi.fn(async () => ({})),
 } as unknown as CustomerPricingService;
 
-// assertCounterpartyWritable mirrors AccessScopeService's real own/department/all switch (see
-// packages/plugins/access-control/src/access-scope.service.ts) rather than a no-op stub — the
-// scenarios below rely on it actually enforcing scope, using whatever resolveCounterpartyScope
-// is mocked to return per test.
 const mockAccessScopeService = {
     resolveCounterpartyScope: vi.fn(async () => ({ kind: 'all' })),
     // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter) rather than a
@@ -57,48 +50,7 @@ const mockAccessScopeService = {
                 { ownScopeAdminId: administratorId ?? null },
             ),
     ),
-    assertCounterpartyWritable: vi.fn(
-        async (
-            _ctx: RequestContext,
-            counterparty: {
-                assignedManagerId: string | null;
-                departmentId: string | null;
-                branchId: string | null;
-            },
-        ) => {
-            const scope = await (
-                mockAccessScopeService.resolveCounterpartyScope as unknown as () => Promise<{
-                    kind: string;
-                    administratorId?: string;
-                    departmentId?: string;
-                    branchId?: string;
-                }>
-            )();
-            switch (scope.kind) {
-                case 'own':
-                    if (counterparty.assignedManagerId !== (scope.administratorId ?? null)) {
-                        throw new ForbiddenError();
-                    }
-                    break;
-                case 'department':
-                    // branchId is deliberately never compared here — see the real
-                    // AccessScopeService.assertCounterpartyWritable's own comment.
-                    if (counterparty.departmentId !== (scope.departmentId ?? null)) {
-                        throw new ForbiddenError();
-                    }
-                    break;
-            }
-        },
-    ),
 } as unknown as AccessScopeService;
-
-const mockAdministratorService = {
-    findOne: vi.fn(),
-} as unknown as AdministratorService;
-
-const mockVersioningService = {
-    recordChange: vi.fn(async () => ({})),
-} as unknown as VersioningService;
 
 const mockCtx = {} as unknown as RequestContext;
 
@@ -112,8 +64,6 @@ describe('CounterpartyService', () => {
             mockCustomerService,
             mockCustomerPricingService,
             mockAccessScopeService,
-            mockAdministratorService,
-            mockVersioningService,
         );
     });
 
@@ -820,130 +770,6 @@ describe('CounterpartyService', () => {
 
             expect(qb.andWhere).toHaveBeenCalledWith('c.assignedManagerId IS NULL');
             expect(result).toBe(3);
-        });
-    });
-
-    describe('reassignManager', () => {
-        it('reassigns unconditionally for "all" scope', async () => {
-            mockRepo.findOne.mockResolvedValue({
-                id: 'cp-1',
-                departmentId: 'dept-1',
-                branchId: 'branch-a',
-            });
-            mockRepo.save.mockImplementation(async (c: unknown) => c);
-            (
-                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
-            ).mockResolvedValue({
-                kind: 'all',
-            });
-
-            const result = await service.reassignManager(mockCtx, 'cp-1', 'admin-9');
-
-            expect(result).toEqual(
-                expect.objectContaining({ id: 'cp-1', assignedManagerId: 'admin-9' }),
-            );
-            // Positive: a successful reassignment records a Counterparty version entry —
-            // this is what powers the History tab's "Updated — Counterparty" rows.
-            expect(mockVersioningService.recordChange).toHaveBeenCalledWith(
-                mockCtx,
-                expect.objectContaining({
-                    entityName: 'Counterparty',
-                    entityId: 'cp-1',
-                    action: 'update',
-                    changedFields: expect.objectContaining({
-                        assignedManagerId: { from: undefined, to: 'admin-9' },
-                    }),
-                }),
-            );
-        });
-
-        it('rejects "own" scope entirely', async () => {
-            mockRepo.findOne.mockResolvedValue({
-                id: 'cp-1',
-                departmentId: 'dept-1',
-                branchId: 'branch-a',
-            });
-            (
-                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
-            ).mockResolvedValue({
-                kind: 'own',
-                administratorId: 'admin-1',
-            });
-
-            await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow();
-            // Negative: a rejected reassignment must never record a version entry — the write
-            // never happened, so there is nothing to audit.
-            expect(mockVersioningService.recordChange).not.toHaveBeenCalled();
-        });
-
-        it('rejects "department" scope when the counterparty is outside the caller\'s department', async () => {
-            mockRepo.findOne.mockResolvedValue({
-                id: 'cp-1',
-                departmentId: 'dept-OTHER',
-                branchId: 'branch-a',
-            });
-            (
-                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
-            ).mockResolvedValue({
-                kind: 'department',
-                departmentId: 'dept-1',
-                branchId: 'branch-a',
-            });
-
-            await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow();
-        });
-
-        it('rejects "department" scope when the target administrator is in a different department', async () => {
-            mockRepo.findOne.mockResolvedValue({
-                id: 'cp-1',
-                departmentId: 'dept-1',
-                branchId: 'branch-a',
-            });
-            (
-                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
-            ).mockResolvedValue({
-                kind: 'department',
-                departmentId: 'dept-1',
-                branchId: 'branch-a',
-            });
-            (mockAdministratorService.findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
-                customFields: { departmentId: 'dept-OTHER' },
-            });
-
-            await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow();
-        });
-
-        it('allows "department" scope when both counterparty and target administrator match the department', async () => {
-            mockRepo.findOne.mockResolvedValue({
-                id: 'cp-1',
-                departmentId: 'dept-1',
-                branchId: 'branch-a',
-            });
-            mockRepo.save.mockImplementation(async (c: unknown) => c);
-            (
-                mockAccessScopeService.resolveCounterpartyScope as ReturnType<typeof vi.fn>
-            ).mockResolvedValue({
-                kind: 'department',
-                departmentId: 'dept-1',
-                branchId: 'branch-a',
-            });
-            (mockAdministratorService.findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
-                customFields: { departmentId: 'dept-1' },
-            });
-
-            const result = await service.reassignManager(mockCtx, 'cp-1', 'admin-9');
-
-            expect(result).toEqual(
-                expect.objectContaining({ id: 'cp-1', assignedManagerId: 'admin-9' }),
-            );
-        });
-
-        it('rejects when the counterparty does not exist', async () => {
-            mockRepo.findOne.mockResolvedValue(null);
-
-            await expect(service.reassignManager(mockCtx, 'missing', 'admin-9')).rejects.toThrow(
-                UserInputError,
-            );
         });
     });
 });

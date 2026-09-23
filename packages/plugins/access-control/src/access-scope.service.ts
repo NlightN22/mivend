@@ -12,6 +12,12 @@ import { AccessScope } from './types';
  * same two things: find the caller's max scope for that resource, then attach the identifiers
  * needed to filter by it. See docs/access-control.md, layer 3.
  */
+interface CounterpartyScopeFields {
+    assignedManagerId: string | null;
+    departmentId: string | null;
+    branchId: string | null;
+}
+
 @Injectable()
 export class AccessScopeService {
     constructor(
@@ -50,35 +56,26 @@ export class AccessScopeService {
         return customFields?.departmentId ?? null;
     }
 
-    // Throws ForbiddenError unless the caller's counterparty scope covers the given
-    // counterparty — same own/department/all logic CounterpartyService.findVisible uses to
-    // filter a list, but as an assertion for a single record ahead of a write. Shared by any
-    // service that writes data owned by a Counterparty (e.g. TradingPointService) so the
-    // own/department/all switch isn't duplicated per plugin.
-    //
-    // `counterparty.departmentId` is accepted for call-site convenience (every caller already
-    // has the full row in hand) but never compared — see CounterpartyService.findVisible's
-    // identical department-case comment: `departmentId` is pure informational ERP data, never a
-    // scope gate. `counterparty.branchId` IS compared below (2026-09-20 security-first
-    // correction, same decision as CounterpartyService.findVisible's identical case) — a
-    // branch-scoped caller must never write a Counterparty that isn't theirs, including one with
-    // no `branchId` assigned yet (deny-by-default, not permissive-by-default, pending issue
-    // #65/#123's real assignment worker).
+    // Throws ForbiddenError unless the caller's counterparty scope covers this row. Only
+    // `branchId` gates 'department' scope; `departmentId` is informational (docs/access-control.md).
     async assertCounterpartyWritable(
         ctx: RequestContext,
-        counterparty: {
-            assignedManagerId: string | null;
-            departmentId: string | null;
-            branchId: string | null;
-        },
+        counterparty: CounterpartyScopeFields,
     ): Promise<void> {
-        const scope = await this.resolveCounterpartyScope(ctx);
+        this.assertCounterpartyWritableInScope(
+            await this.resolveCounterpartyScope(ctx),
+            counterparty,
+        );
+    }
+
+    // For batch writes that already resolved the scope once.
+    assertCounterpartyWritableInScope(
+        scope: AccessScope,
+        counterparty: CounterpartyScopeFields,
+    ): void {
         switch (scope.kind) {
             case 'own':
-                // administratorId comes off the Administrator entity's `id: ID`, which can be a
-                // number at runtime under the numeric ID strategy even though Vendure types it
-                // string|number — assignedManagerId is a plain varchar column, so a strict `!==`
-                // between "6" and 6 would always mismatch. Normalize both to string first.
+                // Numeric ID strategy can make administratorId a number; assignedManagerId is varchar.
                 if (
                     counterparty.assignedManagerId !==
                     (scope.administratorId != null ? String(scope.administratorId) : null)
