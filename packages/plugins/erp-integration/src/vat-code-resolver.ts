@@ -34,7 +34,13 @@ export interface VatCodeAutoCreate {
     rawCode: string;
 }
 
-export type VatCodeResolution = VatCodeResolved | VatCodeAutoCreate;
+// `unset`/`legacy` need the default TaxCategory; a fresh contour may not have one yet (#144).
+export interface VatCodeMissingDefault {
+    kind: 'missing-default';
+    reason: VatFlagReason;
+}
+
+export type VatCodeResolution = VatCodeResolved | VatCodeAutoCreate | VatCodeMissingDefault;
 
 // The ERP's raw enum values (Cyrillic) mapped to this project's stable `TaxCategory.customFields.erpVatCode`
 // values (Latin) — kept separate so the ERP's own enum spelling never leaks into stored config.
@@ -63,9 +69,10 @@ export function toErpVatCode(rawCode: string): string {
 export function resolveVatCode(
     rawCode: string,
     taxCategoryIdByErpVatCode: ReadonlyMap<string, string>,
-    defaultTaxCategoryId: string,
+    defaultTaxCategoryId: string | undefined,
 ): VatCodeResolution {
     if (rawCode === '') {
+        if (!defaultTaxCategoryId) return { kind: 'missing-default', reason: 'unset' };
         return {
             kind: 'resolved',
             taxCategoryId: defaultTaxCategoryId,
@@ -74,6 +81,7 @@ export function resolveVatCode(
     }
 
     if (rawCode === LEGACY_RAW_CODE) {
+        if (!defaultTaxCategoryId) return { kind: 'missing-default', reason: 'legacy' };
         return {
             kind: 'resolved',
             taxCategoryId: defaultTaxCategoryId,

@@ -8,6 +8,7 @@ import {
 } from '@vendure/core';
 
 import { KafkaConsumerService } from './kafka-consumer.service';
+import { TaxZoneService } from './tax-zone.service';
 import {
     ERP_INTEGRATION_PLUGIN_OPTIONS,
     KAFKA_ENABLED_DEFAULT,
@@ -36,6 +37,7 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
         private readonly processContext: ProcessContext,
         private readonly collectionService: CollectionService,
         private readonly channelService: ChannelService,
+        private readonly taxZoneService: TaxZoneService,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
     ) {}
@@ -47,6 +49,7 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
         // Channel setting, not a Kafka connection, so it must apply on every central-instance
         // process (main + worker) and every contour, not gated behind the broker opt-in.
         await this.ensurePricesIncludeTax();
+        await this.taxZoneService.ensureChannelDefaultsForExistingZone(RequestContext.empty());
 
         if (!(this.options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return;
         if (!this.processContext.isWorker) return;

@@ -70,6 +70,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             makeProcessContext(true),
             makeCollectionService() as never,
             makeChannelService() as never,
+            { ensureChannelDefaultsForExistingZone: vi.fn() } as never,
             makeOptions('central'),
         );
         await service.onApplicationBootstrap();
@@ -83,6 +84,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             makeProcessContext(false),
             makeCollectionService() as never,
             makeChannelService() as never,
+            { ensureChannelDefaultsForExistingZone: vi.fn() } as never,
             makeOptions('central'),
         );
         await service.onApplicationBootstrap();
@@ -96,6 +98,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             makeProcessContext(true),
             makeCollectionService() as never,
             makeChannelService() as never,
+            { ensureChannelDefaultsForExistingZone: vi.fn() } as never,
             makeOptions('branch'),
         );
         await service.onApplicationBootstrap();
@@ -112,6 +115,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             makeProcessContext(true),
             makeCollectionService() as never,
             makeChannelService() as never,
+            { ensureChannelDefaultsForExistingZone: vi.fn() } as never,
             makeOptions('central', false),
         );
         await service.onApplicationBootstrap();
@@ -127,6 +131,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             makeProcessContext(true),
             makeCollectionService() as never,
             makeChannelService() as never,
+            { ensureChannelDefaultsForExistingZone: vi.fn() } as never,
             options,
         );
         await service.onApplicationBootstrap();
@@ -145,6 +150,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             makeProcessContext(true),
             collectionService as never,
             makeChannelService() as never,
+            { ensureChannelDefaultsForExistingZone: vi.fn() } as never,
             makeOptions('central'),
         );
         await service.onApplicationBootstrap();
@@ -158,6 +164,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             makeProcessContext(false),
             collectionService as never,
             makeChannelService() as never,
+            { ensureChannelDefaultsForExistingZone: vi.fn() } as never,
             makeOptions('central'),
         );
         await service.onApplicationBootstrap();
@@ -171,6 +178,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             makeProcessContext(true),
             collectionService as never,
             makeChannelService() as never,
+            { ensureChannelDefaultsForExistingZone: vi.fn() } as never,
             makeOptions('branch'),
         );
         await service.onApplicationBootstrap();
@@ -184,6 +192,7 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
             makeProcessContext(true),
             collectionService as never,
             makeChannelService() as never,
+            { ensureChannelDefaultsForExistingZone: vi.fn() } as never,
             makeOptions('central', false),
         );
         await service.onApplicationBootstrap();

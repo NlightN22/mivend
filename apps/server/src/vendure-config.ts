@@ -608,6 +608,7 @@ export const config: VendureConfig = {
             // connection must be explicitly opted into per contour (local/staging-integration/prod), never
             // implied by instanceType === 'central' alone. See docs/environments.md.
             kafkaEnabled: integrationKafkaEnabled,
+            defaultVatCode: process.env.INTEGRATION_DEFAULT_VAT_CODE || undefined,
             kafka: {
                 brokers: (process.env.INTEGRATION_KAFKA_BROKERS ?? 'localhost:9094').split(','),
                 clientId: requiredKafkaId('INTEGRATION_KAFKA_CLIENT_ID'),

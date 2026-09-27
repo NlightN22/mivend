@@ -26,6 +26,7 @@ import {
     findManufacturerNameFromAttributes,
     mapProductCharacteristics,
 } from '../product-characteristics-mapper';
+import { MissingDependencyError } from '../types';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationProductHandler';
@@ -224,22 +225,17 @@ export class ProductStreamHandler implements InboundStreamHandler {
 
     // Resolves the raw VAT code to a TaxCategory id via the pure resolveVatCode function,
     // persisting a non-blocking review flag when the resolution isn't a clean match (issue #79).
-    // Returns undefined only when there is no default TaxCategory configured at all yet (a
-    // completely unconfigured environment) — in that case the variant create/update below omits
-    // taxCategoryId entirely, same as this handler's pre-#79 behavior.
+    // Only unset/legacy codes need the default TaxCategory (#144).
     private async resolveTaxCategoryId(
         ctx: RequestContext,
         entityId: string,
         rawVatCode: string,
-    ): Promise<string | undefined> {
+    ): Promise<string> {
         const taxCategoryItems = await this.getTaxCategories(ctx);
-        const defaultTaxCategory = taxCategoryItems.find(tc => tc.isDefault);
-        if (!defaultTaxCategory) {
-            Logger.warn(
-                `product ${entityId}: no default TaxCategory configured, leaving taxCategoryId unset`,
-                loggerCtx,
-            );
-            return undefined;
+        let defaultTaxCategoryId = taxCategoryItems.find(tc => tc.isDefault)?.id;
+        if (!defaultTaxCategoryId) {
+            defaultTaxCategoryId = (await this.taxCategoryAutoCreateService.ensureDefault(ctx))?.id;
+            this.taxCategoriesCache = undefined;
         }
 
         const taxCategoryIdByErpVatCode = new Map(
@@ -251,8 +247,14 @@ export class ProductStreamHandler implements InboundStreamHandler {
         const resolution = resolveVatCode(
             rawVatCode,
             taxCategoryIdByErpVatCode,
-            String(defaultTaxCategory.id),
+            defaultTaxCategoryId ? String(defaultTaxCategoryId) : undefined,
         );
+
+        if (resolution.kind === 'missing-default') {
+            throw new MissingDependencyError(
+                `product ${entityId}: VAT code '${rawVatCode}' (${resolution.reason}) needs a default TaxCategory — set defaultVatCode`,
+            );
+        }
 
         if (resolution.kind === 'auto-create') {
             // Issue #141: replaces the old default-category-plus-review-flag fallback — an

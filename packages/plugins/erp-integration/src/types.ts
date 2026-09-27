@@ -153,6 +153,9 @@ export interface ErpIntegrationPluginOptions {
     // active channel at bootstrap (KafkaConsumerBootstrapService), replacing the old one-off
     // seed-erp.mjs step. Defaults to true.
     pricesIncludeTax?: boolean;
+    // #144: raw ERP VAT code (e.g. from INTEGRATION_DEFAULT_VAT_CODE) made the default
+    // TaxCategory when none exists; products with an unset/legacy code fall back to it.
+    defaultVatCode?: string;
     // Issue #68: separate axis from `instanceType`. A plain `make dev` must never reach a real
     // Integration Service broker just because `instanceType === 'central'` — this must be
     // explicitly opted into per contour (see docs/environments.md). Defaults to `false` when

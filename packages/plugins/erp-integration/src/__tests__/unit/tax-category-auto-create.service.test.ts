@@ -3,9 +3,12 @@ import type { RequestContext } from '@vendure/core';
 
 import { TaxCategoryAutoCreateService } from '../../tax-category-auto-create.service';
 
-function makeService(overrides?: { existingCategory?: { id: string } | null }): {
+function makeService(overrides?: {
+    existingCategory?: { id: string } | null;
+    defaultVatCode?: string;
+}): {
     service: TaxCategoryAutoCreateService;
-    taxCategoryService: { create: ReturnType<typeof vi.fn> };
+    taxCategoryService: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
     taxRateService: { create: ReturnType<typeof vi.fn> };
     taxZoneService: { findOrCreateDefaultZone: ReturnType<typeof vi.fn> };
     findOne: ReturnType<typeof vi.fn>;
@@ -14,6 +17,7 @@ function makeService(overrides?: { existingCategory?: { id: string } | null }): 
     const connection = { getRepository: vi.fn().mockReturnValue({ findOne }) };
     const taxCategoryService = {
         create: vi.fn().mockResolvedValue({ id: 'tax-new' }),
+        update: vi.fn(async (_ctx: unknown, input: { id: string }) => ({ ...input })),
     };
     const taxRateService = { create: vi.fn().mockResolvedValue({ id: 'rate-new' }) };
     const taxZoneService = {
@@ -25,6 +29,7 @@ function makeService(overrides?: { existingCategory?: { id: string } | null }): 
         taxCategoryService as never,
         taxRateService as never,
         taxZoneService as never,
+        { instanceType: 'central', defaultVatCode: overrides?.defaultVatCode } as never,
     );
     return { service, taxCategoryService, taxRateService, taxZoneService, findOne };
 }
@@ -59,5 +64,35 @@ describe('TaxCategoryAutoCreateService', () => {
             ctx,
             expect.objectContaining({ value: 0, categoryId: 'tax-new', zoneId: 'zone-1' }),
         );
+    });
+
+    // #144: VatRateChanged has no default flag — the configured code becomes the default.
+    describe('ensureDefault', () => {
+        it("finds-or-creates the configured code's TaxCategory and marks it default", async () => {
+            const { service, taxCategoryService, findOne } = makeService({
+                existingCategory: { id: 'tax-nds20' },
+                defaultVatCode: 'НДС20',
+            });
+
+            const result = await service.ensureDefault(ctx);
+
+            expect(findOne).toHaveBeenCalledWith({
+                where: { customFields: { erpVatCode: 'NDS20' } },
+            });
+            expect(taxCategoryService.create).not.toHaveBeenCalled();
+            expect(taxCategoryService.update).toHaveBeenCalledWith(ctx, {
+                id: 'tax-nds20',
+                isDefault: true,
+            });
+            expect(result).toEqual(expect.objectContaining({ id: 'tax-nds20', isDefault: true }));
+        });
+
+        it('returns undefined and changes nothing when no defaultVatCode is configured', async () => {
+            const { service, taxCategoryService, findOne } = makeService();
+
+            expect(await service.ensureDefault(ctx)).toBeUndefined();
+            expect(findOne).not.toHaveBeenCalled();
+            expect(taxCategoryService.update).not.toHaveBeenCalled();
+        });
     });
 });

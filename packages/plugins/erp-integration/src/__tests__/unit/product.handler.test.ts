@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { ProductStreamHandler } from '../../handlers/product.handler';
+import { MissingDependencyError } from '../../types';
 
 function makeConnection(existingId: string | undefined): {
     rawConnection: { createQueryBuilder: ReturnType<typeof vi.fn> };
@@ -60,8 +61,14 @@ function makeManufacturerService(): { upsert: ReturnType<typeof vi.fn> } {
     return { upsert: vi.fn().mockResolvedValue({ id: 'manufacturer-1' }) };
 }
 
-function makeTaxCategoryAutoCreateService(): { findOrCreate: ReturnType<typeof vi.fn> } {
-    return { findOrCreate: vi.fn().mockResolvedValue({ id: 'tax-auto-created' }) };
+function makeTaxCategoryAutoCreateService(): {
+    findOrCreate: ReturnType<typeof vi.fn>;
+    ensureDefault: ReturnType<typeof vi.fn>;
+} {
+    return {
+        findOrCreate: vi.fn().mockResolvedValue({ id: 'tax-auto-created' }),
+        ensureDefault: vi.fn().mockResolvedValue(undefined),
+    };
 }
 
 function makeProductAncillaryDataService(): {
@@ -94,7 +101,7 @@ function makeHandler(overrides?: {
     productCategoryFlagService?: { report: ReturnType<typeof vi.fn> };
     manufacturerService?: { upsert: ReturnType<typeof vi.fn> };
     productAncillaryDataService?: ReturnType<typeof makeProductAncillaryDataService>;
-    taxCategoryAutoCreateService?: { findOrCreate: ReturnType<typeof vi.fn> };
+    taxCategoryAutoCreateService?: ReturnType<typeof makeTaxCategoryAutoCreateService>;
 }): {
     handler: ProductStreamHandler;
     productService: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
@@ -108,7 +115,7 @@ function makeHandler(overrides?: {
     productCategoryFlagService: { report: ReturnType<typeof vi.fn> };
     manufacturerService: { upsert: ReturnType<typeof vi.fn> };
     productAncillaryDataService: ReturnType<typeof makeProductAncillaryDataService>;
-    taxCategoryAutoCreateService: { findOrCreate: ReturnType<typeof vi.fn> };
+    taxCategoryAutoCreateService: ReturnType<typeof makeTaxCategoryAutoCreateService>;
 } {
     const connection = overrides?.connection ?? makeConnection(undefined);
     const productService = overrides?.productService ?? {
@@ -244,6 +251,50 @@ describe('ProductStreamHandler', () => {
             expect.objectContaining({ taxCategoryId: 'tax-nds10' }),
         ]);
         expect(productTaxCodeFlagService.report).not.toHaveBeenCalled();
+    });
+
+    // #144: a fresh contour has #141's auto-created categories but none marked default.
+    describe('with no default TaxCategory', () => {
+        const NDS20 = { id: 'tax-nds20', isDefault: false, customFields: { erpVatCode: 'NDS20' } };
+
+        it('still resolves an exactly mapped VAT code', async () => {
+            const { handler, productVariantService } = makeHandler({
+                taxCategoryService: makeTaxCategoryService([NDS20]),
+            });
+
+            await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget', vatCode: 'НДС20' });
+
+            expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
+                expect.objectContaining({ sku: 'SKU-1', taxCategoryId: 'tax-nds20' }),
+            ]);
+        });
+
+        it('uses the default ensured from defaultVatCode for an unset VAT code', async () => {
+            const taxCategoryAutoCreateService = makeTaxCategoryAutoCreateService();
+            taxCategoryAutoCreateService.ensureDefault.mockResolvedValue({ id: 'tax-nds20' });
+            const { handler, productVariantService } = makeHandler({
+                taxCategoryService: makeTaxCategoryService([NDS20]),
+                taxCategoryAutoCreateService,
+            });
+
+            await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' });
+
+            expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
+                expect.objectContaining({ taxCategoryId: 'tax-nds20' }),
+            ]);
+        });
+
+        it('throws MissingDependencyError before creating anything when no default can be ensured', async () => {
+            const { handler, productService, productVariantService } = makeHandler({
+                taxCategoryService: makeTaxCategoryService([NDS20]),
+            });
+
+            await expect(
+                handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' }),
+            ).rejects.toBeInstanceOf(MissingDependencyError);
+            expect(productService.create).not.toHaveBeenCalled();
+            expect(productVariantService.create).not.toHaveBeenCalled();
+        });
     });
 
     it('auto-creates a TaxCategory for a never-seen-before VAT code instead of flagging', async () => {

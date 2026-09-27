@@ -54,4 +54,27 @@ describe('resolveVatCode', () => {
             rawCode: 'НДС18_118',
         });
     });
+
+    // #144: a fresh contour may have no default TaxCategory yet.
+    it('resolves an exact code without needing a default TaxCategory', () => {
+        const map = new Map([['NDS20', 'tax-20']]);
+
+        expect(resolveVatCode('НДС20', map, undefined)).toEqual({
+            kind: 'resolved',
+            taxCategoryId: 'tax-20',
+        });
+    });
+
+    it('reports missing-default for unset/legacy codes when no default TaxCategory exists', () => {
+        const map = new Map([['NDS20', 'tax-20']]);
+
+        expect(resolveVatCode('', map, undefined)).toEqual({
+            kind: 'missing-default',
+            reason: 'unset',
+        });
+        expect(resolveVatCode('НДС18', map, undefined)).toEqual({
+            kind: 'missing-default',
+            reason: 'legacy',
+        });
+    });
 });
