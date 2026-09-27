@@ -50,7 +50,6 @@ export function createIntegrationInboxCriticalTask(
             const { processed, failed } = await injector
                 .get(IntegrationInboxProcessorService)
                 .processPendingBatch(
-                    undefined,
                     [...INBOX_ORDER_REGISTRATION_RESULT_STREAMS],
                     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
                 );
@@ -84,11 +83,7 @@ export function createIntegrationInboxUserTask(
 
             const { processed, failed } = await injector
                 .get(IntegrationInboxProcessorService)
-                .processPendingBatch(
-                    undefined,
-                    [...INBOX_USER_STREAMS],
-                    INBOX_USER_BATCH_SIZE_DEFAULT,
-                );
+                .processPendingBatch([...INBOX_USER_STREAMS], INBOX_USER_BATCH_SIZE_DEFAULT);
             if (processed > 0 || failed > 0) {
                 Logger.verbose(
                     `Integration inbox user-lane sweep: ${processed} processed, ${failed} failed/retrying`,
@@ -133,7 +128,6 @@ export function createIntegrationInboxBulkTask(
             // an unbounded backlog just means more ticks, not a stuck/orphaned task.
             for (;;) {
                 const { processed, failed, claimed } = await processor.processPendingBatch(
-                    undefined,
                     [...INBOX_BULK_STREAMS],
                     INBOX_BULK_BATCH_SIZE_DEFAULT,
                 );

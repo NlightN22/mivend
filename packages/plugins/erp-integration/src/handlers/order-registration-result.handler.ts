@@ -66,7 +66,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
                 // yet), not necessarily a permanently-stale mapping — retry via
                 // MissingDependencyError. A genuinely stale/missing externalId mapping still
                 // surfaces visibly: this row dead-letters (inbox 'failed') once the 24h
-                // wall-clock budget in IntegrationInboxService.markMissingDependency is exceeded,
+                // wall-clock budget in IntegrationInboxService.markFailed is exceeded,
                 // same as mivend.audit.72's HIGH finding required (never silently dropped).
                 //
                 // All-or-nothing trade-off (mivend.audit.90's review of #96, accepted as-is by

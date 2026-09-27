@@ -79,7 +79,6 @@ describe('createIntegrationInboxCriticalTask', () => {
         });
         expect(processPendingBatch).toHaveBeenCalledTimes(1);
         expect(processPendingBatch).toHaveBeenCalledWith(
-            undefined,
             [...INBOX_ORDER_REGISTRATION_RESULT_STREAMS],
             INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
         );
@@ -116,7 +115,6 @@ describe('createIntegrationInboxUserTask', () => {
         });
         expect(processPendingBatch).toHaveBeenCalledTimes(1);
         expect(processPendingBatch).toHaveBeenCalledWith(
-            undefined,
             [...INBOX_USER_STREAMS],
             INBOX_USER_BATCH_SIZE_DEFAULT,
         );
@@ -161,7 +159,6 @@ describe('createIntegrationInboxBulkTask', () => {
 
         expect(processPendingBatch).toHaveBeenCalledTimes(3);
         expect(processPendingBatch).toHaveBeenCalledWith(
-            undefined,
             [...INBOX_BULK_STREAMS],
             INBOX_BULK_BATCH_SIZE_DEFAULT,
         );

@@ -91,56 +91,28 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         expect(rows[0].status).toBe('processed');
     });
 
-    it('retries on handler failure below maxAttempts, dead-letters at the bound', async () => {
-        const apply = vi.fn().mockRejectedValue(new Error('handler exploded'));
+    // One retry policy for every failure: a plain handler error and a MissingDependencyError
+    // both schedule a backoff retry instead of dead-lettering on the first attempts.
+    it.each([
+        ['a plain handler error', new Error('handler exploded')],
+        ['a MissingDependencyError', new MissingDependencyError('warehouse not found yet')],
+    ])('schedules a backoff retry (not a dead-letter) on %s', async (_label, thrown) => {
+        const apply = vi.fn().mockRejectedValue(thrown);
         const row = await inboxService.enqueue({
             stream: 'product',
-            entityId: 'p-2',
+            entityId: 'p-retry',
             version: '1',
-            sourceEventId: 'evt-2',
-            payload: { sku: 'SKU-2' },
+            sourceEventId: 'evt-retry',
+            payload: { sku: 'SKU-R' },
         });
 
-        await makeProcessor(apply).processPendingBatch(2);
-        let updated = await dataSource
-            .getRepository(IntegrationInboxEvent)
-            .findOneOrFail({ where: { id: row.id } });
-        expect(updated.status).toBe('pending');
-        expect(updated.attempts).toBe(1);
-
-        await makeProcessor(apply).processPendingBatch(2);
-        updated = await dataSource
-            .getRepository(IntegrationInboxEvent)
-            .findOneOrFail({ where: { id: row.id } });
-        expect(updated.status).toBe('failed');
-        expect(updated.attempts).toBe(2);
-    });
-
-    // Issue #96: a MissingDependencyError must schedule a backoff retry (stays 'pending',
-    // 'nextRetryAt' set) instead of being dead-lettered immediately like every other error.
-    it('schedules a backoff retry on MissingDependencyError instead of dead-lettering it', async () => {
-        const apply = vi
-            .fn()
-            .mockRejectedValue(new MissingDependencyError('warehouse not found yet'));
-        const row = await inboxService.enqueue({
-            stream: 'stock',
-            entityId: 's-missing-dep',
-            version: '1',
-            sourceEventId: 'evt-missing-dep',
-            payload: { sku: 'SKU-MD' },
-        });
-
-        // maxAttempts=1 would dead-letter on the very first failure via markFailed — proves the
-        // MissingDependencyError path is a genuinely different branch, not just a lucky
-        // maxAttempts headroom.
-        await makeProcessor(apply).processPendingBatch(1);
+        await makeProcessor(apply).processPendingBatch();
 
         const updated = await dataSource
             .getRepository(IntegrationInboxEvent)
             .findOneOrFail({ where: { id: row.id } });
         expect(updated.status).toBe('pending');
         expect(updated.attempts).toBe(1);
-        expect(updated.nextRetryAt).not.toBeNull();
         expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
     });
 
@@ -163,7 +135,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         expect(apply).toHaveBeenCalledTimes(1);
     });
 
-    it('dead-letters a MissingDependencyError row once the 24h wall-clock budget is exceeded', async () => {
+    it('dead-letters a failing row once the 24h wall-clock budget is exceeded', async () => {
         const apply = vi
             .fn()
             .mockRejectedValue(new MissingDependencyError('warehouse not found yet'));
@@ -278,7 +250,6 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         });
 
         const { processed, claimed } = await makeProcessor(apply).processPendingBatch(
-            undefined,
             ['order-registration-result'],
             20,
         );
@@ -309,15 +280,15 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         }
 
         const processor = makeProcessor(apply);
-        const first = await processor.processPendingBatch(undefined, ['price'], 3);
+        const first = await processor.processPendingBatch(['price'], 3);
         expect(first.claimed).toBe(3);
         expect(first.processed).toBe(3);
 
-        const second = await processor.processPendingBatch(undefined, ['price'], 3);
+        const second = await processor.processPendingBatch(['price'], 3);
         expect(second.claimed).toBe(2);
         expect(second.processed).toBe(2);
 
-        const third = await processor.processPendingBatch(undefined, ['price'], 3);
+        const third = await processor.processPendingBatch(['price'], 3);
         expect(third.claimed).toBe(0);
     });
 });

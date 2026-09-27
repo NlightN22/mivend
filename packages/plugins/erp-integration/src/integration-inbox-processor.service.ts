@@ -22,7 +22,7 @@ import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
-import { INBOX_MAX_ATTEMPTS_DEFAULT, MissingDependencyError, loggerCtx } from './types';
+import { MissingDependencyError, loggerCtx } from './types';
 import type { InboundStream } from './types';
 import { isVersionNewer } from './version-compare';
 
@@ -86,7 +86,6 @@ export class IntegrationInboxProcessorService {
     // — see integration-inbox.scheduled-task.ts, which owns the two lanes' schedules and the bulk
     // lane's immediate-reclaim-while-full loop.
     async processPendingBatch(
-        maxAttempts = INBOX_MAX_ATTEMPTS_DEFAULT,
         streams?: InboundStream[],
         batchSize = 20,
     ): Promise<{
@@ -114,18 +113,14 @@ export class IntegrationInboxProcessorService {
 
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
         for (const row of sorted) {
-            const ok = await this.processOne(ctx, row, maxAttempts);
+            const ok = await this.processOne(ctx, row);
             if (ok) processed += 1;
             else failed += 1;
         }
         return { processed, failed, claimed: rows.length };
     }
 
-    private async processOne(
-        ctx: RequestContext,
-        row: IntegrationInboxEvent,
-        maxAttempts: number,
-    ): Promise<boolean> {
+    private async processOne(ctx: RequestContext, row: IntegrationInboxEvent): Promise<boolean> {
         try {
             // Out-of-order guard (issue #62 risk: a lower version arriving after a higher one
             // must not regress state): skip applying (but still mark processed, since this row
@@ -145,19 +140,10 @@ export class IntegrationInboxProcessorService {
             return true;
         } catch (err) {
             const error = err instanceof Error ? err : new Error(String(err));
-            Logger.error(
-                `Failed processing ${row.stream} entityId=${row.entityId} (attempt ${row.attempts + 1}): ${error.message}`,
-                loggerCtx,
-            );
-            // Issue #96: a missing cross-entity dependency is an ordinary eventual-consistency
-            // race (Kafka gives no cross-topic ordering guarantee), not a processing bug — it
-            // gets its own longer backoff-based retry budget instead of markFailed's short/fixed-
-            // attempt dead-letter path.
-            if (error instanceof MissingDependencyError) {
-                await this.inbox.markMissingDependency(row.id, error);
-            } else {
-                await this.inbox.markFailed(row.id, error, maxAttempts);
-            }
+            const message = `Failed processing ${row.stream} entityId=${row.entityId} (attempt ${row.attempts + 1}): ${error.message}`;
+            if (error instanceof MissingDependencyError) Logger.warn(message, loggerCtx);
+            else Logger.error(message, loggerCtx);
+            await this.inbox.markFailed(row.id, error);
             return false;
         }
     }

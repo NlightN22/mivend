@@ -42,6 +42,15 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
+// markFailed only dead-letters past the 24h wall-clock budget, so backdate createdAt first.
+async function deadLetter(id: number): Promise<void> {
+    await dataSource.query(
+        "UPDATE integration_inbox_event SET created_at = now() - interval '25 hours' WHERE id = $1",
+        [id],
+    );
+    await inboxService.markFailed(id, new Error('boom'));
+}
+
 describe('IntegrationInboxService (integration, real Postgres)', () => {
     it('enqueues a new (stream, sourceEventId) as a pending row', async () => {
         const row = await inboxService.enqueue({
@@ -157,7 +166,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(secondClaim).toHaveLength(0);
     });
 
-    it('markFailed dead-letters once attempts reach maxAttempts, else stays pending for retry', async () => {
+    it('markFailed schedules a backoff retry inside the 24h budget, dead-letters after it', async () => {
         const row = await inboxService.enqueue({
             stream: 'price',
             entityId: 'pr-1',
@@ -166,19 +175,21 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             payload: { sku: 'SKU-4', priceTypeCode: 'RETAIL', price: 100 },
         });
 
-        await inboxService.markFailed(row.id, new Error('boom'), 2);
+        await inboxService.markFailed(row.id, new Error('boom'));
         let updated = await dataSource
             .getRepository(IntegrationInboxEvent)
             .findOneOrFail({ where: { id: row.id } });
         expect(updated.status).toBe('pending');
         expect(updated.attempts).toBe(1);
+        expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
 
-        await inboxService.markFailed(row.id, new Error('boom again'), 2);
+        await deadLetter(row.id);
         updated = await dataSource
             .getRepository(IntegrationInboxEvent)
             .findOneOrFail({ where: { id: row.id } });
         expect(updated.status).toBe('failed');
         expect(updated.attempts).toBe(2);
+        expect(updated.nextRetryAt).toBeNull();
     });
 
     it('markProcessed sets status and processedAt', async () => {
@@ -207,7 +218,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 sourceEventId: 'evt-failed',
                 payload: { sku: 'SKU-FAILED' },
             });
-            await inboxService.markFailed(row.id, new Error('boom'), 1);
+            await deadLetter(row.id);
 
             const result = await inboxService.findFailed();
             expect(result.items.map(i => i.id)).toContain(row.id);
@@ -245,7 +256,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                     sourceEventId: `evt-page-${i}`,
                     payload: { sku: `SKU-PAGE-${i}` },
                 });
-                await inboxService.markFailed(row.id, new Error('boom'), 1);
+                await deadLetter(row.id);
             }
 
             const page1 = await inboxService.findFailed({ take: 2, skip: 0 });
@@ -269,7 +280,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                     sourceEventId: `evt-order-${i}`,
                     payload: { sku: `SKU-ORDER-${i}` },
                 });
-                await inboxService.markFailed(row.id, new Error('boom'), 1);
+                await deadLetter(row.id);
                 rows.push(row);
             }
 

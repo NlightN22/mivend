@@ -314,9 +314,11 @@ once). Give up (`failed`, terminal, for manual inspection) once the row has been
 for **24 hours** wall-clock since `createdAt` — a time-based budget, not a fixed attempt count,
 mirroring issue #93's own wall-clock-budget pattern for the bulk lane's reclaim loop (a fixed
 attempt count stops meaning anything once backoff is capped — 24h is the actual guarantee being
-made, so bound on that directly). This is a distinct, longer budget from the default
-`INBOX_MAX_ATTEMPTS_DEFAULT`-based retry used for genuine processing bugs / malformed data, which
-should stay short (fail fast, a human needs to look at it, more waiting won't help).
+made, so bound on that directly). This is the **only** inbox retry policy — every failure,
+whatever the stream or error kind, gets the same backoff + 24h budget (a short fixed-attempt
+dead-letter path used to exist for "genuine" errors; it dead-lettered whole streams on transient
+environment issues, e.g. a missing channel tax zone, and was removed). `MissingDependencyError`
+only changes the log level (warn, an expected race) — not the retry budget.
 
 ## Non-optional proto3 scalar fields — an absent key means the zero value, never "no data"
 
