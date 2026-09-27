@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { ID } from '@vendure/common/lib/shared-types';
 import {
     FacetService,
     FacetValueService,
@@ -153,15 +154,18 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 productId,
             );
             if (variants.items.length > 0) {
-                variantId = String(variants.items[0].id);
+                const [variant] = variants.items;
+                variantId = String(variant.id);
                 const facetValueIds = await this.mergeCategoryFacetValueId(
                     ctx,
-                    variantId,
+                    variant.id,
                     categoryFacetValueId,
                 );
+                // Raw Vendure IDs: a stringified id makes TypeORM's many-to-many save treat the
+                // variant as new under numeric IDs (INSERT without sku, #144).
                 await this.productVariantService.update(ctx, [
                     {
-                        id: variantId,
+                        id: variant.id,
                         enabled: isActive,
                         ...(taxCategoryId ? { taxCategoryId } : {}),
                         ...(facetValueIds ? { facetValueIds } : {}),
@@ -309,13 +313,13 @@ export class ProductStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         rawCategoryId: string | undefined,
-    ): Promise<string | undefined> {
+    ): Promise<ID | undefined> {
         const facet = await this.facetService.findByCode(ctx, CATEGORY_FACET_CODE, LanguageCode.en);
-        const facetValueIdByCategoryCode = new Map<string, string>();
+        const facetValueIdByCategoryCode = new Map<string, ID>();
         if (facet) {
             const values = await this.facetValueService.findByFacetId(ctx, facet.id);
             for (const value of values) {
-                facetValueIdByCategoryCode.set(value.code, String(value.id));
+                facetValueIdByCategoryCode.set(value.code, value.id);
             }
         }
 
@@ -348,9 +352,9 @@ export class ProductStreamHandler implements InboundStreamHandler {
     // no-op empty array.
     private async mergeCategoryFacetValueId(
         ctx: RequestContext,
-        variantId: string,
-        categoryFacetValueId: string | undefined,
-    ): Promise<string[] | undefined> {
+        variantId: ID,
+        categoryFacetValueId: ID | undefined,
+    ): Promise<ID[] | undefined> {
         const variant = await this.productVariantService.findOne(ctx, variantId, ['facetValues']);
         const currentFacetValues = variant?.facetValues ?? [];
         const categoryFacet = await this.facetService.findByCode(
@@ -361,8 +365,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         const nonCategoryFacetValueIds = categoryFacet
             ? currentFacetValues
                   .filter(fv => String(fv.facetId) !== String(categoryFacet.id))
-                  .map(fv => String(fv.id))
-            : currentFacetValues.map(fv => String(fv.id));
+                  .map(fv => fv.id)
+            : currentFacetValues.map(fv => fv.id);
 
         if (
             !categoryFacetValueId &&
@@ -390,7 +394,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         sku: string,
         name: string,
         taxCategoryId: string | undefined,
-        categoryFacetValueId: string | undefined,
+        categoryFacetValueId: ID | undefined,
     ): Promise<string> {
         const [variant] = await this.productVariantService.create(ctx, [
             {

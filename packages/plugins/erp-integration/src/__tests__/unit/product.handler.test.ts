@@ -36,7 +36,9 @@ function makeProductCategoryFlagService(): { report: ReturnType<typeof vi.fn> } 
 }
 
 // Mirrors CategoryStreamHandler's own facet-value shape (code = the category's own entityId).
-function makeFacetServices(categoryFacetValues: Array<{ id: string; code: string }> | undefined): {
+function makeFacetServices(
+    categoryFacetValues: Array<{ id: string | number; code: string }> | undefined,
+): {
     facetService: { findByCode: ReturnType<typeof vi.fn> };
     facetValueService: { findByFacetId: ReturnType<typeof vi.fn> };
 } {
@@ -233,6 +235,40 @@ describe('ProductStreamHandler', () => {
         );
         expect(productVariantService.update).toHaveBeenCalledWith(ctx, [
             { id: 'variant-1', enabled: true, taxCategoryId: 'tax-default' },
+        ]);
+    });
+
+    // #144: stringified ids made TypeORM's many-to-many save INSERT a new variant (numeric IDs).
+    it('on update, passes the variant and category facet value ids through as Vendure IDs', async () => {
+        const productVariantService = {
+            getVariantsByProductId: vi.fn().mockResolvedValue({ items: [{ id: 2 }] }),
+            create: vi.fn(),
+            update: vi.fn().mockResolvedValue([{}]),
+            findOne: vi.fn().mockResolvedValue({
+                id: 2,
+                facetValues: [{ id: 129, facetId: 'facet-category' }],
+            }),
+        };
+        const { facetService, facetValueService } = makeFacetServices([
+            { id: 129, code: 'cat-guid' },
+        ]);
+        const { handler } = makeHandler({
+            connection: makeConnection('existing-product-id'),
+            productService: { create: vi.fn(), update: vi.fn().mockResolvedValue({}) },
+            productVariantService,
+            facetService,
+            facetValueService,
+        });
+
+        await handler.apply(ctx, 'p-1', {
+            sku: 'SKU-1',
+            name: 'Widget',
+            isActive: true,
+            categoryId: 'cat-guid',
+        });
+
+        expect(productVariantService.update).toHaveBeenCalledWith(ctx, [
+            expect.objectContaining({ id: 2, facetValueIds: [129] }),
         ]);
     });
 

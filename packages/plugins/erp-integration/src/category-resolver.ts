@@ -8,6 +8,7 @@
 // the cross-topic-ordering race that error exists for — issue #116's own explicit decision:
 // category resolution must never block product creation, and a later ProductChanged event (or a
 // manual resync) is what corrects it, not a blocking retry loop.
+import type { ID } from '@vendure/common/lib/shared-types';
 
 export type CategoryFlagReason = 'absent' | 'not-found';
 
@@ -17,13 +18,13 @@ export interface CategoryFlag {
 }
 
 export interface CategoryResolution {
-    facetValueId?: string;
+    facetValueId?: ID;
     flag?: CategoryFlag;
 }
 
 export function resolveCategoryFacetValueId(
     categoryId: string | undefined,
-    facetValueIdByCategoryCode: ReadonlyMap<string, string>,
+    facetValueIdByCategoryCode: ReadonlyMap<string, ID>,
 ): CategoryResolution {
     if (!categoryId) {
         return {
