@@ -62,26 +62,8 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
 
             const variantId = await this.findVariantId(productId);
             if (!variantId) {
-                // Issue #96: ordinary eventual-consistency race (product stream not consumed
-                // yet), not necessarily a permanently-stale mapping — retry via
-                // MissingDependencyError. A genuinely stale/missing externalId mapping still
-                // surfaces visibly: this row dead-letters (inbox 'failed') once the 24h
-                // wall-clock budget in IntegrationInboxService.markFailed is exceeded,
-                // same as mivend.audit.72's HIGH finding required (never silently dropped).
-                //
-                // All-or-nothing trade-off (mivend.audit.90's review of #96, accepted as-is by
-                // the developer): throwing here aborts apply() before
-                // reservationWriteOffSyncService is ever called, so every OTHER, already-
-                // resolvable line in the same multi-line order is now held back too, for up to
-                // this handler's own backoff/24h budget — not just the one genuinely unresolved
-                // line. This is the exact stream issue #93 built a dedicated low-latency critical
-                // lane for (reservation release depends on it), so this is a real latency cost on
-                // the most latency-sensitive path in the system whenever a multi-line order has
-                // one late-arriving product mapping. Deliberately accepted over the more complex
-                // alternative (apply resolvable lines immediately, retry only the unresolved
-                // one) — simplicity/correctness (no partial-apply bookkeeping) won over
-                // preserving the pre-#96 per-line-independent latency. Revisit only if this
-                // latency cost is actually observed to matter in practice.
+                // Product not consumed yet (cross-topic race) — retried via the inbox; the whole
+                // order waits, so no line is written half-applied (docs: external-integration-rules).
                 throw new MissingDependencyError(
                     `order-registration-result ${entityId}: variant not found for productId=${productId}`,
                 );

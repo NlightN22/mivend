@@ -89,4 +89,9 @@ export class IntegrationInboxEvent {
     // immediately eligible.
     @Column({ type: 'timestamptz', name: 'next_retry_at', nullable: true })
     nextRetryAt!: Date | null;
+
+    // Start of the 24h retry budget — the first failure, not enqueue time, so a backlog that
+    // waited out a long outage still gets its retries (#145).
+    @Column({ type: 'timestamptz', name: 'first_failed_at', nullable: true })
+    firstFailedAt!: Date | null;
 }

@@ -146,10 +146,9 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
             sourceEventId: 'evt-old',
             payload: { sku: 'SKU-OLD' },
         });
-        // Backdate createdAt past the 24h wall-clock budget directly in the DB (CreateDateColumn
-        // can't be set via the normal repo API).
+        // First failure more than 24h ago: the budget is spent.
         await dataSource.query(
-            "UPDATE integration_inbox_event SET created_at = now() - interval '25 hours' WHERE id = $1",
+            "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
             [row.id],
         );
 

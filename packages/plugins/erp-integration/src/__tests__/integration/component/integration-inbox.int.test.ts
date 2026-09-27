@@ -42,10 +42,10 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-// markFailed only dead-letters past the 24h wall-clock budget, so backdate createdAt first.
+// markFailed only dead-letters 24h after the first failure, so backdate first_failed_at first.
 async function deadLetter(id: number): Promise<void> {
     await dataSource.query(
-        "UPDATE integration_inbox_event SET created_at = now() - interval '25 hours' WHERE id = $1",
+        "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
         [id],
     );
     await inboxService.markFailed(id, new Error('boom'));
@@ -190,6 +190,31 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(updated.status).toBe('failed');
         expect(updated.attempts).toBe(2);
         expect(updated.nextRetryAt).toBeNull();
+    });
+
+    // #145: the budget starts at the first failure, not at enqueue — a backlog that waited out a
+    // long outage must still get retries.
+    it('markFailed schedules a retry for a row enqueued more than 24h ago on its first failure', async () => {
+        const row = await inboxService.enqueue({
+            stream: 'stock',
+            entityId: 's-backlog',
+            version: '1',
+            sourceEventId: 'evt-backlog',
+            payload: { sku: 'SKU-B' },
+        });
+        await dataSource.query(
+            "UPDATE integration_inbox_event SET created_at = now() - interval '3 days' WHERE id = $1",
+            [row.id],
+        );
+
+        await inboxService.markFailed(row.id, new Error('transient'));
+
+        const updated = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .findOneOrFail({ where: { id: row.id } });
+        expect(updated.status).toBe('pending');
+        expect(updated.firstFailedAt).not.toBeNull();
+        expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
     });
 
     it('markProcessed sets status and processedAt', async () => {

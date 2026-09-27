@@ -151,13 +151,14 @@ export class IntegrationInboxService {
             .update({ id }, { status: 'processed', processedAt: new Date() });
     }
 
-    // Every failure retries with backoff (nextRetryAt) and dead-letters only after the 24h
-    // wall-clock budget — one policy for all streams and error kinds.
+    // Every failure retries with backoff (nextRetryAt) and dead-letters only once 24h have passed
+    // since its first failure — one policy for all streams and error kinds (#145).
     async markFailed(id: number, error: Error, random: () => number = Math.random): Promise<void> {
         const repo = this.dataSource.getRepository(IntegrationInboxEvent);
         const row = await repo.findOneOrFail({ where: { id } });
         const attempts = row.attempts + 1;
-        if (Date.now() - row.createdAt.getTime() > INBOX_RETRY_WALL_CLOCK_BUDGET_MS) {
+        const firstFailedAt = row.firstFailedAt ?? new Date();
+        if (Date.now() - firstFailedAt.getTime() > INBOX_RETRY_WALL_CLOCK_BUDGET_MS) {
             await repo.update(
                 { id },
                 { attempts, lastError: error.message, status: 'failed', nextRetryAt: null },
@@ -168,6 +169,7 @@ export class IntegrationInboxService {
             { id },
             {
                 attempts,
+                firstFailedAt,
                 lastError: error.message,
                 status: 'pending',
                 nextRetryAt: new Date(Date.now() + computeInboxRetryBackoffMs(attempts, random)),
