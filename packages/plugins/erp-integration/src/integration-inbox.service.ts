@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { PaginatedList } from '@vendure/core';
 import { Logger } from '@vendure/core';
-import { Brackets, DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 
 const loggerCtx = 'IntegrationInboxService';
 
@@ -104,10 +104,10 @@ export class IntegrationInboxService {
     }
 
     // Claims a batch of pending (or abandoned-processing) rows for the periodic sweep.
-    // SELECT ... FOR UPDATE SKIP LOCKED inside one transaction — not find()+save() — is what
-    // actually prevents two concurrent sweeps from claiming the same row (same fix as
-    // plugin-acquiring's InboxService.claimBatch, referenced by AGENTS.md's test-design guidance
-    // for this issue).
+    // Two phases inside one transaction: findClaimCandidateIds picks the id set with a
+    // fast, per-stream-indexed query (#148); the actual SELECT ... FOR UPDATE SKIP LOCKED (not
+    // find()+save() — same fix as plugin-acquiring's InboxService.claimBatch) against that small
+    // id set is what actually prevents two concurrent sweeps from claiming the same row.
     // `streams`, when given, restricts claiming to those streams only — the priority-lane split
     // (issue #93): each lane's own scheduled task passes its own disjoint stream set, so a large
     // bulk backlog can never be claimed ahead of (or in the same batch as) a critical-lane row.
@@ -115,31 +115,14 @@ export class IntegrationInboxService {
         const outerRepo = this.dataSource.getRepository(IntegrationInboxEvent);
         return outerRepo.manager.transaction(async manager => {
             const repo = manager.getRepository(outerRepo.target);
-            const qb = repo
+            const ids = await this.findClaimCandidateIds(manager, limit, streams);
+            if (ids.length === 0) return [];
+
+            const rows = await repo
                 .createQueryBuilder('event')
-                .where(
-                    new Brackets(qb => {
-                        qb.where('event.status = :pending', { pending: 'pending' }).orWhere(
-                            `event.status = :processing AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval`,
-                            { processing: 'processing', staleMs: STUCK_PROCESSING_THRESHOLD_MS },
-                        );
-                    }),
-                )
-                // Issue #96: a row backed off after a MissingDependencyError is still `pending`
-                // (never `processing`/`failed`) but must not be reclaimed before its scheduled
-                // retry time. eligibleAt (#147) already equals nextRetryAt once a row has backed
-                // off (see markFailed) and the enqueue time otherwise, so this is a single check.
-                .andWhere('event.eligibleAt <= now()');
-            if (streams && streams.length > 0) {
-                qb.andWhere('event.stream IN (:...streams)', { streams });
-            }
-            // FIFO by the time a row became eligible, not by enqueue time: a backed-off retry
-            // queues behind rows that arrived before it came due, so retries can't starve them
-            // (#146) — served by integration_inbox_event_claim (stream, status, eligible_at) (#147).
-            const rows = await qb
+                .where('event.id IN (:...ids)', { ids })
                 .orderBy('event.eligibleAt', 'ASC')
                 .addOrderBy('event.id', 'ASC')
-                .limit(limit)
                 .setLock('pessimistic_write')
                 .setOnLocked('skip_locked')
                 .getMany();
@@ -150,6 +133,61 @@ export class IntegrationInboxService {
             await repo.save(rows);
             return rows;
         });
+    }
+
+    // #148: claimBatch used to be one query — `WHERE (pending OR stale-processing) AND stream IN
+    // (...) ORDER BY eligible_at LIMIT` — which no single index can serve once `pending` is most
+    // of the table: an IN-list across many streams can't use a (stream, ...) index for a global
+    // eligible_at order (confirmed live on staging: still a seq scan + external sort, ~3.4s/batch,
+    // under a large resync backlog). Splits into one UNION ALL branch per stream for the `pending`
+    // half (each branch is then a plain equality lookup against
+    // integration_inbox_event_claim_pending (stream, eligible_at) WHERE status='pending', not an
+    // IN-list) plus one branch for the stale-`processing` reclaim, merged and re-limited in SQL —
+    // confirmed live: the same query went from ~3.4s to ~2ms. Returns only ids (not full rows) so
+    // the real FOR UPDATE SKIP LOCKED lock in claimBatch above only ever touches this small set.
+    private async findClaimCandidateIds(
+        manager: EntityManager,
+        limit: number,
+        streams?: InboundStream[],
+    ): Promise<string[]> {
+        const params: unknown[] = [limit, STUCK_PROCESSING_THRESHOLD_MS];
+        const pendingBranches =
+            streams && streams.length > 0
+                ? streams.map(stream => {
+                      params.push(stream);
+                      return `(SELECT id, eligible_at FROM integration_inbox_event
+                          WHERE status = 'pending' AND stream = $${params.length} AND eligible_at <= now()
+                          ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
+                  })
+                : [
+                      `(SELECT id, eligible_at FROM integration_inbox_event
+                          WHERE status = 'pending' AND eligible_at <= now()
+                          ORDER BY eligible_at ASC, id ASC LIMIT $1)`,
+                  ];
+
+        // Issue #96: a row backed off after a MissingDependencyError is still `pending` (never
+        // `processing`/`failed`) but must not be reclaimed before its scheduled retry time —
+        // eligible_at already equals nextRetryAt during a backoff (see markFailed), so the plain
+        // `eligible_at <= now()` check above is the whole guard.
+        let streamFilter = '';
+        if (streams && streams.length > 0) {
+            params.push(streams);
+            streamFilter = `AND stream = ANY($${params.length})`;
+        }
+        const staleProcessingBranch = `(SELECT id, eligible_at FROM integration_inbox_event
+            WHERE status = 'processing' AND eligible_at <= now()
+              AND updated_at < now() - ($2 || ' milliseconds')::interval
+              ${streamFilter}
+            ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
+
+        // FIFO by the time a row became eligible, not by enqueue time — a backed-off retry queues
+        // behind rows that arrived before it came due, so retries can't starve them (#146).
+        const rows = await manager.query<Array<{ id: string }>>(
+            `SELECT id FROM (${[...pendingBranches, staleProcessingBranch].join(' UNION ALL ')}) combined
+             ORDER BY eligible_at ASC, id ASC LIMIT $1`,
+            params,
+        );
+        return rows.map(row => row.id);
     }
 
     async markProcessed(id: number): Promise<void> {

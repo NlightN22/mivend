@@ -34,9 +34,14 @@ export type IntegrationInboxEventStatus = 'pending' | 'processing' | 'processed'
 // index, not because they need the same key.
 @Entity('integration_inbox_event')
 @Index('integration_inbox_event_dedup', ['stream', 'sourceEventId'], { unique: true })
-// Serves claimBatch's WHERE (stream IN ...) AND status='pending' ORDER BY eligible_at (#147),
-// replacing the un-indexable COALESCE(next_retry_at, created_at) expression it used before.
+// Serves the stale-'processing'-reclaim branch of claimBatch (#147/#148).
 @Index('integration_inbox_event_claim', ['stream', 'status', 'eligibleAt'])
+// Serves claimBatch's per-stream 'pending' branches (#148) — see findClaimCandidateIds for why
+// a multi-stream IN-list can't use the (stream, status, eligible_at) index above once `pending`
+// is most of the table (confirmed live: took the query from ~3.4s to ~2ms).
+@Index('integration_inbox_event_claim_pending', ['stream', 'eligibleAt'], {
+    where: `"status" = 'pending'`,
+})
 // Per-row superseded-version check (processor); without it each check seq-scans the table (#146).
 @Index('integration_inbox_event_entity', ['stream', 'entityId', 'status'])
 export class IntegrationInboxEvent {

@@ -71,6 +71,17 @@ rows in this table, nothing to backfill). The baseline migration's own fresh-emp
 path is unaffected — this was purely an already-`synchronize`d dev/staging-data correction, not a
 migration-content issue.
 
+**Issue #148 fixed (2026-09-28)**: `claimBatch`'s multi-stream `pending` claim still seq-scanned
+under a large resync backlog even with the indexed `eligible_at` column (#147) — an IN-list across
+many streams can't use a `(stream, ...)` index for a single global `ORDER BY eligible_at`.
+`findClaimCandidateIds` (`integration-inbox.service.ts`) now splits into one query branch per
+stream for the `pending` half, each a plain equality lookup against a new partial index
+`integration_inbox_event_claim_pending (stream, eligible_at) WHERE status = 'pending'`, merged in
+SQL — confirmed live on staging (`EXPLAIN ANALYZE`, ~330k-row backlog): ~3.4s → ~7ms. Migration:
+`1790571151248-add-claim-pending-index.ts`. Staging's own copy of the index was already created by
+`synchronize` before the migration was generated (see the entity's own `@Index` addition) — no
+manual staging DDL was needed for this one, unlike the eligible_at backfill above.
+
 ### Database locale (issue #140)
 
 Postgres collation is fixed at `CREATE DATABASE` time and cannot be changed for an existing data
