@@ -151,12 +151,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(totalClaimed).toBe(1);
     });
 
-    // mivend.audit.common's #148 HIGH finding: the two-phase claim (findClaimCandidateIds picks
-    // a fast candidate id set, a second SELECT ... FOR UPDATE SKIP LOCKED locks it) must re-check
-    // eligibility under the lock, not just `id IN (...)`. SKIP LOCKED only skips a row locked by a
-    // still-open transaction — if a competing sweep already claimed and *committed* that row
-    // between phase 1 and phase 2, an id-only recheck would still lock and return it, double-
-    // processing it. Simulates that by committing a competing claim right after phase 1 runs.
+    // #148 HIGH regression — see claimBatch's own comment and docs/environments.md's #148 note.
     it('does not re-claim a row a competing sweep already claimed and committed between the two phases', async () => {
         const row = await inboxService.enqueue({
             stream: 'stock',

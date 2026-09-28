@@ -82,6 +82,22 @@ SQL — confirmed live on staging (`EXPLAIN ANALYZE`, ~330k-row backlog): ~3.4s 
 `synchronize` before the migration was generated (see the entity's own `@Index` addition) — no
 manual staging DDL was needed for this one, unlike the eligible_at backfill above.
 
+**#148 audit HIGH, fixed same day**: splitting `claimBatch` into two phases (a fast candidate-id
+lookup via `findClaimCandidateIds`, then a locked `SELECT ... WHERE id IN (...) FOR UPDATE
+SKIP LOCKED`) lost a correctness guarantee the original single-query design got for free —
+Postgres's lock-time row recheck (EvalPlanQual) re-evaluates the whole `WHERE` clause against the
+latest committed row version once a lock is acquired, but only for conditions actually present in
+that query. `SKIP LOCKED` only skips a row locked by a still-open transaction; if a competing
+sweep already claimed _and committed_ one of phase 1's candidate ids before phase 2 ran, an
+`id IN (...)`-only phase 2 would still lock and return that (already-processing/processed) row —
+double-processing it. Fix: phase 2 repeats the full eligibility condition
+(`(status='pending' OR (status='processing' AND updated_at < stale threshold)) AND
+eligible_at <= now()`) alongside `id IN (...)`, so the recheck now has something to actually drop
+the stale row against. Regression test: `integration-inbox.int.test.ts`'s "does not re-claim a row
+a competing sweep already claimed and committed between the two phases" — spies on
+`findClaimCandidateIds`, lets it run for real, then commits a competing status change to one of
+its returned ids before phase 2 executes, and asserts that row never comes back from `claimBatch`.
+
 ### Database locale (issue #140)
 
 Postgres collation is fixed at `CREATE DATABASE` time and cannot be changed for an existing data

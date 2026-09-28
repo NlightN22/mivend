@@ -103,15 +103,8 @@ export class IntegrationInboxService {
         }
     }
 
-    // Claims a batch of pending (or abandoned-processing) rows for the periodic sweep. Two
-    // phases (#148): findClaimCandidateIds picks a fast, per-stream-indexed candidate id set;
-    // phase 2 repeats the full eligibility condition (not just `id IN (...)`) under
-    // FOR UPDATE SKIP LOCKED — audit HIGH finding: SKIP LOCKED only skips a row locked by a
-    // still-open transaction, so if the id set goes stale because a competing sweep already
-    // claimed (and committed) one of those rows between phase 1 and phase 2, an `id IN (...)`-only
-    // recheck would still lock and return it, double-processing it. Repeating the condition here
-    // is what makes Postgres's own lock-time row recheck (EvalPlanQual) drop it instead — the same
-    // guarantee the old single-query design got for free from one WHERE clause.
+    // Phase 2 repeats the eligibility condition so the lock-time recheck drops rows a competing
+    // sweep already claimed (#148, see docs/environments.md's own note for the full incident).
     async claimBatch(limit = 20, streams?: InboundStream[]): Promise<IntegrationInboxEvent[]> {
         const outerRepo = this.dataSource.getRepository(IntegrationInboxEvent);
         return outerRepo.manager.transaction(async manager => {
