@@ -103,14 +103,15 @@ export class IntegrationInboxService {
         }
     }
 
-    // Claims a batch of pending (or abandoned-processing) rows for the periodic sweep.
-    // Two phases inside one transaction: findClaimCandidateIds picks the id set with a
-    // fast, per-stream-indexed query (#148); the actual SELECT ... FOR UPDATE SKIP LOCKED (not
-    // find()+save() — same fix as plugin-acquiring's InboxService.claimBatch) against that small
-    // id set is what actually prevents two concurrent sweeps from claiming the same row.
-    // `streams`, when given, restricts claiming to those streams only — the priority-lane split
-    // (issue #93): each lane's own scheduled task passes its own disjoint stream set, so a large
-    // bulk backlog can never be claimed ahead of (or in the same batch as) a critical-lane row.
+    // Claims a batch of pending (or abandoned-processing) rows for the periodic sweep. Two
+    // phases (#148): findClaimCandidateIds picks a fast, per-stream-indexed candidate id set;
+    // phase 2 repeats the full eligibility condition (not just `id IN (...)`) under
+    // FOR UPDATE SKIP LOCKED — audit HIGH finding: SKIP LOCKED only skips a row locked by a
+    // still-open transaction, so if the id set goes stale because a competing sweep already
+    // claimed (and committed) one of those rows between phase 1 and phase 2, an `id IN (...)`-only
+    // recheck would still lock and return it, double-processing it. Repeating the condition here
+    // is what makes Postgres's own lock-time row recheck (EvalPlanQual) drop it instead — the same
+    // guarantee the old single-query design got for free from one WHERE clause.
     async claimBatch(limit = 20, streams?: InboundStream[]): Promise<IntegrationInboxEvent[]> {
         const outerRepo = this.dataSource.getRepository(IntegrationInboxEvent);
         return outerRepo.manager.transaction(async manager => {
@@ -121,6 +122,11 @@ export class IntegrationInboxService {
             const rows = await repo
                 .createQueryBuilder('event')
                 .where('event.id IN (:...ids)', { ids })
+                .andWhere(
+                    `(event.status = 'pending' OR (event.status = 'processing' AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval))`,
+                    { staleMs: STUCK_PROCESSING_THRESHOLD_MS },
+                )
+                .andWhere('event.eligibleAt <= now()')
                 .orderBy('event.eligibleAt', 'ASC')
                 .addOrderBy('event.id', 'ASC')
                 .setLock('pessimistic_write')
@@ -135,16 +141,9 @@ export class IntegrationInboxService {
         });
     }
 
-    // #148: claimBatch used to be one query — `WHERE (pending OR stale-processing) AND stream IN
-    // (...) ORDER BY eligible_at LIMIT` — which no single index can serve once `pending` is most
-    // of the table: an IN-list across many streams can't use a (stream, ...) index for a global
-    // eligible_at order (confirmed live on staging: still a seq scan + external sort, ~3.4s/batch,
-    // under a large resync backlog). Splits into one UNION ALL branch per stream for the `pending`
-    // half (each branch is then a plain equality lookup against
-    // integration_inbox_event_claim_pending (stream, eligible_at) WHERE status='pending', not an
-    // IN-list) plus one branch for the stale-`processing` reclaim, merged and re-limited in SQL —
-    // confirmed live: the same query went from ~3.4s to ~2ms. Returns only ids (not full rows) so
-    // the real FOR UPDATE SKIP LOCKED lock in claimBatch above only ever touches this small set.
+    // #148: one branch per stream for the `pending` half (each a plain equality lookup, not an
+    // IN-list — see docs/environments.md's #148 note for why) plus one for stale-`processing`.
+    // Only ids: claimBatch's own recheck+lock does the real work against this small set.
     private async findClaimCandidateIds(
         manager: EntityManager,
         limit: number,
@@ -165,10 +164,7 @@ export class IntegrationInboxService {
                           ORDER BY eligible_at ASC, id ASC LIMIT $1)`,
                   ];
 
-        // Issue #96: a row backed off after a MissingDependencyError is still `pending` (never
-        // `processing`/`failed`) but must not be reclaimed before its scheduled retry time —
-        // eligible_at already equals nextRetryAt during a backoff (see markFailed), so the plain
-        // `eligible_at <= now()` check above is the whole guard.
+        // eligible_at <= now() is the #96 backoff guard — see markFailed/the entity's own comment.
         let streamFilter = '';
         if (streams && streams.length > 0) {
             params.push(streams);

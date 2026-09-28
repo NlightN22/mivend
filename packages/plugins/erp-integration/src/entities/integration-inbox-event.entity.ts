@@ -36,9 +36,8 @@ export type IntegrationInboxEventStatus = 'pending' | 'processing' | 'processed'
 @Index('integration_inbox_event_dedup', ['stream', 'sourceEventId'], { unique: true })
 // Serves the stale-'processing'-reclaim branch of claimBatch (#147/#148).
 @Index('integration_inbox_event_claim', ['stream', 'status', 'eligibleAt'])
-// Serves claimBatch's per-stream 'pending' branches (#148) — see findClaimCandidateIds for why
-// a multi-stream IN-list can't use the (stream, status, eligible_at) index above once `pending`
-// is most of the table (confirmed live: took the query from ~3.4s to ~2ms).
+// Serves claimBatch's per-stream 'pending' branches — see findClaimCandidateIds and
+// docs/environments.md's #148 note (took the claim query from ~3.4s to ~7ms).
 @Index('integration_inbox_event_claim_pending', ['stream', 'eligibleAt'], {
     where: `"status" = 'pending'`,
 })

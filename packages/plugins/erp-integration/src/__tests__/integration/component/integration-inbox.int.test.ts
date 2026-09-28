@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DataSource } from 'typeorm';
 import {
     createTestSchema,
@@ -149,6 +149,39 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         ]);
         const totalClaimed = batchA.length + batchB.length;
         expect(totalClaimed).toBe(1);
+    });
+
+    // mivend.audit.common's #148 HIGH finding: the two-phase claim (findClaimCandidateIds picks
+    // a fast candidate id set, a second SELECT ... FOR UPDATE SKIP LOCKED locks it) must re-check
+    // eligibility under the lock, not just `id IN (...)`. SKIP LOCKED only skips a row locked by a
+    // still-open transaction — if a competing sweep already claimed and *committed* that row
+    // between phase 1 and phase 2, an id-only recheck would still lock and return it, double-
+    // processing it. Simulates that by committing a competing claim right after phase 1 runs.
+    it('does not re-claim a row a competing sweep already claimed and committed between the two phases', async () => {
+        const row = await inboxService.enqueue({
+            stream: 'stock',
+            entityId: 's-race',
+            version: '1',
+            sourceEventId: 'evt-race-committed',
+            payload: {},
+        });
+
+        const privateInbox = inboxService as unknown as {
+            findClaimCandidateIds: (...args: unknown[]) => Promise<string[]>;
+        };
+        const original = privateInbox.findClaimCandidateIds.bind(inboxService);
+        vi.spyOn(privateInbox, 'findClaimCandidateIds').mockImplementationOnce(async (...args) => {
+            const ids = await original(...args);
+            // A separate, already-committed transaction claims the row before phase 2 runs.
+            await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .update(row.id, { status: 'processing' });
+            return ids;
+        });
+
+        const claimed = await inboxService.claimBatch(10, ['stock']);
+
+        expect(claimed).toHaveLength(0);
     });
 
     it('claimBatch does not reclaim a row still actively processing (not yet stale)', async () => {
