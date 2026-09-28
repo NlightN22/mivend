@@ -32,6 +32,25 @@ export interface TradingPointDetailsPatch {
     }>;
 }
 
+export interface CounterpartyRef {
+    id: string;
+    branchId: string | null;
+}
+
+// Partial fields from the `point-of-sale` Kafka stream (issue #100) — `undefined` means "not
+// sent, leave unchanged"; see upsertFromStream's own comment for the create-time exception.
+export interface TradingPointStreamFields {
+    name: string | null;
+    counterpartyId: string;
+    servicingBranchId: string | null;
+    isActive: boolean;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+    // Never used to create a ContactPerson — see upsertFromStream's own comment.
+    contactPhone?: string;
+}
+
 export interface TradingPointUpsertPayload {
     erpId: string;
     counterpartyErpId: string;
@@ -249,6 +268,78 @@ export class TradingPointService {
         const saved = await repo.save(record);
         Logger.verbose(`Upserted trading point erpId=${payload.erpId}`, loggerCtx);
         return saved;
+    }
+
+    // Issue #100: lets PointOfSaleStreamHandler check-then-throw a retryable
+    // MissingDependencyError itself, mirroring CounterpartyStreamHandler's own pattern.
+    async findCounterpartyRefByErpId(
+        ctx: RequestContext,
+        erpId: string,
+    ): Promise<CounterpartyRef | null> {
+        const rows = await this.connection.rawConnection.query(
+            `SELECT id, "branchId" FROM counterparty WHERE "erpId" = $1 LIMIT 1`,
+            [erpId],
+        );
+        return rows[0] ? { id: rows[0].id, branchId: rows[0].branchId ?? null } : null;
+    }
+
+    // Issue #100: partial-create/update from the `point-of-sale` Kafka stream, distinct from
+    // upsert() above. Missing name/address on a brand-new erpId means "don't create yet", not an
+    // error — same rule as organization/counterparty's null-name tombstone.
+    async upsertFromStream(
+        ctx: RequestContext,
+        erpId: string,
+        fields: TradingPointStreamFields,
+    ): Promise<void> {
+        const repo = this.connection.getRepository(ctx, TradingPoint);
+        let record = await repo.findOne({ where: { erpId }, relations: ['contacts'] });
+
+        if (!record) {
+            if (!fields.name || fields.address === undefined) {
+                Logger.verbose(
+                    `trading point ${erpId}: ${
+                        !fields.name ? 'no name (deletion tombstone)' : 'no address yet'
+                    }, no existing row — nothing to create`,
+                    loggerCtx,
+                );
+                return;
+            }
+            record = repo.create({
+                erpId,
+                counterpartyId: fields.counterpartyId,
+                servicingBranchId: fields.servicingBranchId,
+                name: fields.name,
+                address: fields.address,
+                latitude: fields.latitude ?? null,
+                longitude: fields.longitude ?? null,
+                workingHours: null,
+                isActive: fields.isActive,
+                contacts: [],
+            });
+        } else {
+            if (fields.name) record.name = fields.name;
+            record.isActive = fields.isActive;
+            record.counterpartyId = fields.counterpartyId;
+            if (fields.address !== undefined) record.address = fields.address;
+            if (fields.latitude !== undefined) record.latitude = fields.latitude;
+            if (fields.longitude !== undefined) record.longitude = fields.longitude;
+        }
+
+        if (fields.contactPhone !== undefined) {
+            const primary = record.contacts.find(c => c.isPrimary) ?? record.contacts[0];
+            if (primary) {
+                primary.phone = fields.contactPhone;
+            } else {
+                Logger.verbose(
+                    `trading point ${erpId}: contactPhone received but no existing contact ` +
+                        'person to attach it to — skipping, REST/portal must create it first',
+                    loggerCtx,
+                );
+            }
+        }
+
+        await repo.save(record);
+        Logger.verbose(`Upserted trading point erpId=${erpId} from Kafka stream`, loggerCtx);
     }
 
     async deactivate(ctx: RequestContext, erpId: string): Promise<void> {

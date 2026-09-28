@@ -56,6 +56,7 @@ import { OrderRegistrationResultHandler } from './handlers/order-registration-re
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
 import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
+import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
 import { TaxCategoryAutoCreateService } from './tax-category-auto-create.service';
 import { TaxZoneService } from './tax-zone.service';
 import { KafkaProducerService } from './kafka-producer.service';
@@ -139,6 +140,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         OrderChangedStreamHandler,
         PromoRuleStreamHandler,
         VatRateStreamHandler,
+        PointOfSaleStreamHandler,
         TaxCategoryAutoCreateService,
         TaxZoneService,
         KafkaProducerService,

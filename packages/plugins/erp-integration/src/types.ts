@@ -132,7 +132,17 @@ export type InboundStream =
     // Issue #141: reference-data feed for VAT code -> zone -> percent, company.catalog.events.v1.
     // VatRateChanged. Not product-keyed — upserts TaxRate.value by (erpVatCode, zone), independent
     // of ProductChanged arrival order. See VatRateStreamHandler and vat-code-resolver.ts.
-    | 'vat-rate';
+    | 'vat-rate'
+    // Issue #100: the ERP's "Точка продаж" (point of sale) — feeds @mivend/plugin-counterparty's
+    // TradingPoint entity, keyed by counterparty_id. Verified live against
+    // @nlightn22/event-contracts@0.42.0 (search-platform#121): name/code/counterparty_id always
+    // present; is_active/is_deleted/address/latitude/longitude/contact_phone are real optional
+    // fields. code is never consumed (no matching TradingPoint field); contact_phone is consumed
+    // only onto an already-existing ContactPerson (this stream never carries a contact name, and
+    // ContactPerson.name is non-nullable — see PointOfSaleStreamHandler). contactName/
+    // workingHours stay REST/portal-only, same as before this stream existed. See
+    // PointOfSaleStreamHandler and docs/ai/erp-streams-map.md's `point-of-sale` row.
+    | 'point-of-sale';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -221,6 +231,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     user: true,
     'promo-rule': true,
     'vat-rate': true,
+    'point-of-sale': true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

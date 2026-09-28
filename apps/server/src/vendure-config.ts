@@ -747,6 +747,12 @@ export const config: VendureConfig = {
                     'promo-rule':
                         process.env.INTEGRATION_KAFKA_TOPIC_PROMO_RULE ??
                         'company.customers.events.v1.promo-rule-changed',
+                    // Issue #100: the ERP's "Точка продаж" (point of sale) — feeds TradingPoint
+                    // in @mivend/plugin-counterparty, same company.customers domain as
+                    // department/counterparty/user/promo-rule above. See PointOfSaleStreamHandler.
+                    'point-of-sale':
+                        process.env.INTEGRATION_KAFKA_TOPIC_POINT_OF_SALE ??
+                        'company.customers.events.v1.point-of-sale-changed',
                 },
             },
             schemaRegistry: {

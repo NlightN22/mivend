@@ -11,6 +11,7 @@ import {
     OrderChangedSchema,
     OrderRegistrationResultSchema,
     OrganizationChangedSchema,
+    PointOfSaleChangedSchema,
     PriceChangedSchema,
     PriceTypeChangedSchema,
     ProductChangedSchema,
@@ -90,6 +91,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     user: UserChangedSchema,
     'promo-rule': PromoRuleChangedSchema,
     'vat-rate': VatRateChangedSchema,
+    'point-of-sale': PointOfSaleChangedSchema,
 };
 
 @Injectable()
