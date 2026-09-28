@@ -34,6 +34,7 @@ function makeOptions(
                 user: 'usr',
                 'promo-rule': 'pr2',
                 'vat-rate': 'vr2',
+                'point-of-sale': 'pos2',
             },
         },
         schemaRegistry: { url: 'http://x' },

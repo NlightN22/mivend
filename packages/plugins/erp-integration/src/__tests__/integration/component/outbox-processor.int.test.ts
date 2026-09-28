@@ -43,6 +43,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             user: 'usr',
             'promo-rule': 'pr2',
             'vat-rate': 'vr2',
+            'point-of-sale': 'pos2',
         },
     },
     schemaRegistry: { url: 'http://localhost:8081' },
