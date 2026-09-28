@@ -1,8 +1,5 @@
 services:
-    # Issue #147: production runs with synchronize:false and no live contour has existed yet, so
-    # this is a one-shot service, never started by `docker compose up` itself (no `restart`, not
-    # depended on by server/worker) — `make prod-up` runs it to completion (`--rm`) before starting
-    # everything else. See docs/environments.md's "Migrations" section.
+    # Runs to completion before server/worker start — see docs/environments.md "Migrations".
     migrate:
         image: ghcr.io/nlightn22/mivend-server:${IMAGE_TAG:-latest}
         command: ['node', 'dist/migration.js', 'run']

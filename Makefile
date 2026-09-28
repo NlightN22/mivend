@@ -280,9 +280,7 @@ docker-push:
 
 # ── Production ─────────────────────────────────────────────────────────────────
 
-# Issue #147: postgres must be up (and healthy) before migrations can run against it, but the
-# `migrate` service itself is never part of the normal `up -d` set — see its own comment in
-# docker-compose.yml and docs/environments.md's "Migrations" section.
+# Runs to completion before server/worker start — see docs/environments.md "Migrations".
 prod-up:
 	$(COMPOSE_PROD) up -d postgres rabbitmq
 	$(COMPOSE_PROD) run --rm migrate
