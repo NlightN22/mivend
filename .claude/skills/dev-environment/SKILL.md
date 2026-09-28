@@ -55,6 +55,11 @@ files) — the failure was going around it.
 3. **`make up`** (Docker infra only: postgres, rabbitmq, elasticsearch — no Redis since
    issue #128 moved the job queue off BullMQ) is safe to call repeatedly — it does not
    restart already-running containers.
+   `make up` deliberately has no `--build`: with it, a rebuilt postgres image made compose
+   **recreate** the shared postgres containers during a `make test-int` run, killing every
+   contour's DB connections (the staging worker crashed and stayed down). Rebuild explicitly with
+   `make up-rebuild`, only after changing `infrastructure/docker/postgres`, and treat it like
+   `make down`: it interrupts every running contour.
 
 4. **`make down` is NOT contour-scoped — it is one `docker compose down` against the
    single shared `infrastructure/docker/docker-compose.dev.yml`, which every contour

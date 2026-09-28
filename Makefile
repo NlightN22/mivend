@@ -9,7 +9,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
 -include .env.local
 export
 
-.PHONY: up down logs ps restart \
+.PHONY: up up-rebuild down logs ps restart \
         build lint fmt \
         test test-int test-e2e mutation-pilot \
         e2e e2e-smoke e2e-ui e2e-report \
@@ -24,7 +24,12 @@ export
 
 # ── Dev infrastructure ─────────────────────────────────────────────────────────
 
+# No --build: a rebuilt postgres image makes compose recreate the containers every contour shares.
 up:
+	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d
+
+# Only after changing infrastructure/docker/postgres — restarts the shared DB for every contour.
+up-rebuild:
 	GITHUB_REPOSITORY_OWNER=$(GITHUB_REPOSITORY_OWNER) $(COMPOSE_DEV) up -d --build
 
 # infrastructure/docker/docker-compose.dev.yml is ONE shared stack for every contour (local,

@@ -29,7 +29,8 @@ cp apps/server/.env.branch.example  apps/server/.env.branch
 ## Daily commands
 
 ```bash
-make up          # start infrastructure
+make up          # start infrastructure (never recreates running containers)
+make up-rebuild  # rebuild the postgres image after changing infrastructure/docker/postgres — restarts the shared DB for every contour
 make down        # stop infrastructure
 make logs        # follow container logs
 make ps          # container status
