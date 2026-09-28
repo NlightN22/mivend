@@ -247,21 +247,20 @@ export class IntegrationInboxService {
         return [...byStream.values()];
     }
 
-    // Retention (#147): the only thing that still reads `processed` rows is
-    // IntegrationInboxProcessorService.isSupersededByNewerVersion, and it only ever needs the
-    // latest processed version per (stream, entityId) — every older processed duplicate for the
-    // same entity is dead weight that only makes claimBatch's table (and every index on it)
-    // bigger. Deletes everything except the newest-version row per group, one batch of groups at
-    // a time. Returns the number of rows deleted, so the caller can log/decide whether to keep
-    // looping within its own tick.
+    // Retention (#147): only the latest processed version per (stream, entityId) is read
+    // (isSupersededByNewerVersion) — tombstones (payload={}) every older duplicate's payload but
+    // keeps the row, since it's the enqueue dedup key and deleting it would let a real Kafka
+    // redelivery pass dedup as new and reapply stale data (audit HIGH finding).
     async purgeSupersededProcessedRows(): Promise<number> {
         const repo = this.dataSource.getRepository(IntegrationInboxEvent);
+        const tombstone = {};
 
         const groups = await repo
             .createQueryBuilder('event')
             .select('event.stream', 'stream')
             .addSelect('event.entity_id', 'entityId')
             .where('event.status = :status', { status: 'processed' })
+            .andWhere(`event.payload <> '{}'::jsonb`)
             .groupBy('event.stream')
             .addGroupBy('event.entity_id')
             .having('COUNT(*) > 1')
@@ -270,16 +269,16 @@ export class IntegrationInboxService {
 
         if (groups.length === 0) return 0;
 
-        let deleted = 0;
+        let tombstoned = 0;
         for (const group of groups) {
-            const rows = await repo.find({
-                select: { id: true, version: true },
-                where: {
-                    stream: group.stream,
-                    entityId: group.entityId,
-                    status: 'processed',
-                },
-            });
+            const rows = await repo
+                .createQueryBuilder('event')
+                .select(['event.id', 'event.version'])
+                .where('event.stream = :stream', { stream: group.stream })
+                .andWhere('event.entityId = :entityId', { entityId: group.entityId })
+                .andWhere('event.status = :status', { status: 'processed' })
+                .andWhere(`event.payload <> '{}'::jsonb`)
+                .getMany();
             // isVersionNewer, not a SQL/lexicographic MAX(version) — version is not guaranteed
             // fixed-width (see the entity's own column comment), same rule as
             // IntegrationInboxProcessorService.isSupersededByNewerVersion.
@@ -287,12 +286,12 @@ export class IntegrationInboxService {
             for (const row of rows.slice(1)) {
                 if (isVersionNewer(row.version, newest.version)) newest = row;
             }
-            const idsToDelete = rows.filter(row => row.id !== newest.id).map(row => row.id);
-            if (idsToDelete.length === 0) continue;
-            await repo.delete(idsToDelete);
-            deleted += idsToDelete.length;
+            const idsToTombstone = rows.filter(row => row.id !== newest.id).map(row => row.id);
+            if (idsToTombstone.length === 0) continue;
+            await repo.update(idsToTombstone, { payload: tombstone });
+            tombstoned += idsToTombstone.length;
         }
-        return deleted;
+        return tombstoned;
     }
 
     private isUniqueViolation(err: unknown): boolean {

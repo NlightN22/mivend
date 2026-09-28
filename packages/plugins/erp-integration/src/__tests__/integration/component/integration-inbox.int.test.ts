@@ -541,108 +541,165 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     });
 
     // #147: only the latest processed version per (stream, entityId) is still read (the
-    // superseded-version check) — every older processed duplicate is safe to purge.
+    // superseded-version check) — every older processed duplicate's payload is safe to clear.
+    // mivend.audit.common's HIGH finding: the row itself, and its (stream, sourceEventId) dedup
+    // key, must never be deleted — only tombstoned (payload cleared) — or a redelivered Kafka
+    // message with a purged sourceEventId would pass enqueue's dedup as if new and get reapplied.
     describe('purgeSupersededProcessedRows', () => {
-        async function enqueueProcessed(entityId: string, version: string): Promise<number> {
+        async function enqueueProcessed(
+            entityId: string,
+            version: string,
+            payload: Record<string, unknown> = { real: 'data' },
+        ): Promise<number> {
             const row = await inboxService.enqueue({
                 stream: 'price',
                 entityId,
                 version,
                 sourceEventId: `evt-${entityId}-${version}`,
-                payload: {},
+                payload,
             });
             await inboxService.markProcessed(row.id);
             return row.id;
         }
 
-        it('deletes every processed row for an entity except the newest version', async () => {
-            await enqueueProcessed('pr-1', '1');
-            await enqueueProcessed('pr-1', '2');
+        it('tombstones every processed row for an entity except the newest version, keeping every row', async () => {
+            const older1 = await enqueueProcessed('pr-1', '1');
+            const older2 = await enqueueProcessed('pr-1', '2');
             const newest = await enqueueProcessed('pr-1', '3');
 
-            const deleted = await inboxService.purgeSupersededProcessedRows();
+            const tombstoned = await inboxService.purgeSupersededProcessedRows();
 
-            expect(deleted).toBe(2);
-            const remaining = await dataSource
+            expect(tombstoned).toBe(2);
+            const rows = await dataSource
                 .getRepository(IntegrationInboxEvent)
                 .find({ where: { stream: 'price', entityId: 'pr-1' } });
-            expect(remaining.map(r => r.id)).toEqual([newest]);
+            expect(rows).toHaveLength(3);
+            const byId = new Map(rows.map(r => [r.id, r]));
+            expect(byId.get(older1)!.payload).toEqual({});
+            expect(byId.get(older2)!.payload).toEqual({});
+            expect(byId.get(newest)!.payload).toEqual({ real: 'data' });
+        });
+
+        // The HIGH regression this fixes: a purged row's dedup key (stream, sourceEventId) must
+        // survive so a genuine Kafka redelivery of that exact message is still recognized as a
+        // duplicate, not reprocessed as new.
+        it('does not create a new pending row when a tombstoned sourceEventId is redelivered', async () => {
+            const older = await enqueueProcessed('pr-redelivered', '1');
+            await enqueueProcessed('pr-redelivered', '2');
+            await inboxService.purgeSupersededProcessedRows();
+
+            const redelivered = await inboxService.enqueue({
+                stream: 'price',
+                entityId: 'pr-redelivered',
+                version: '1',
+                sourceEventId: 'evt-pr-redelivered-1',
+                payload: { real: 'data' },
+            });
+
+            expect(redelivered.id).toBe(older);
+            expect(redelivered.status).toBe('processed');
+            const rows = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .find({ where: { stream: 'price', entityId: 'pr-redelivered' } });
+            expect(rows).toHaveLength(2);
         });
 
         // Version is compared numerically (isVersionNewer), not lexicographically — "10" must
         // beat "9" even though "10" < "9" as a string.
         it('compares versions numerically, not lexicographically', async () => {
-            await enqueueProcessed('pr-numeric', '9');
+            const older = await enqueueProcessed('pr-numeric', '9');
             const newest = await enqueueProcessed('pr-numeric', '10');
 
             await inboxService.purgeSupersededProcessedRows();
 
-            const remaining = await dataSource
+            const rows = await dataSource
                 .getRepository(IntegrationInboxEvent)
                 .find({ where: { stream: 'price', entityId: 'pr-numeric' } });
-            expect(remaining.map(r => r.id)).toEqual([newest]);
+            const byId = new Map(rows.map(r => [r.id, r]));
+            expect(byId.get(older)!.payload).toEqual({});
+            expect(byId.get(newest)!.payload).toEqual({ real: 'data' });
         });
 
-        it('never deletes a pending or processing row, only processed duplicates', async () => {
+        it('never touches a pending or processing row, only processed duplicates', async () => {
             const processed = await enqueueProcessed('pr-mixed', '1');
             const pending = await inboxService.enqueue({
                 stream: 'price',
                 entityId: 'pr-mixed',
                 version: '2',
                 sourceEventId: 'evt-pr-mixed-pending',
-                payload: {},
+                payload: { real: 'data' },
             });
 
-            const deleted = await inboxService.purgeSupersededProcessedRows();
+            const tombstoned = await inboxService.purgeSupersededProcessedRows();
 
-            expect(deleted).toBe(0);
-            const remaining = await dataSource
+            expect(tombstoned).toBe(0);
+            const rows = await dataSource
                 .getRepository(IntegrationInboxEvent)
                 .find({ where: { stream: 'price', entityId: 'pr-mixed' } });
-            expect(remaining.map(r => r.id).sort()).toEqual([processed, pending.id].sort());
+            const byId = new Map(rows.map(r => [r.id, r]));
+            expect(byId.get(processed)!.payload).toEqual({ real: 'data' });
+            expect(byId.get(pending.id)!.payload).toEqual({ real: 'data' });
         });
 
-        it('leaves a single processed row alone (no duplicate to purge)', async () => {
+        it('leaves a single processed row alone (no duplicate to tombstone)', async () => {
             const only = await enqueueProcessed('pr-single', '1');
 
-            const deleted = await inboxService.purgeSupersededProcessedRows();
+            const tombstoned = await inboxService.purgeSupersededProcessedRows();
 
-            expect(deleted).toBe(0);
-            const remaining = await dataSource
+            expect(tombstoned).toBe(0);
+            const row = await dataSource
                 .getRepository(IntegrationInboxEvent)
-                .find({ where: { stream: 'price', entityId: 'pr-single' } });
-            expect(remaining.map(r => r.id)).toEqual([only]);
+                .findOneOrFail({ where: { id: only } });
+            expect(row.payload).toEqual({ real: 'data' });
+        });
+
+        it('does not re-select an already-tombstoned group on a later sweep', async () => {
+            await enqueueProcessed('pr-converged', '1');
+            const newest = await enqueueProcessed('pr-converged', '2');
+
+            const first = await inboxService.purgeSupersededProcessedRows();
+            const second = await inboxService.purgeSupersededProcessedRows();
+
+            expect(first).toBe(1);
+            expect(second).toBe(0);
+            const row = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .findOneOrFail({ where: { id: newest } });
+            expect(row.payload).toEqual({ real: 'data' });
         });
 
         it('keeps entities from different streams independent even sharing an entityId', async () => {
             await enqueueProcessed('shared-id', '1');
-            const stockRow = await inboxService.enqueue({
+            const stockOlder = await inboxService.enqueue({
                 stream: 'stock',
                 entityId: 'shared-id',
                 version: '1',
                 sourceEventId: 'evt-shared-stock',
-                payload: {},
+                payload: { real: 'data' },
             });
-            await inboxService.markProcessed(stockRow.id);
+            await inboxService.markProcessed(stockOlder.id);
             const stockNewest = await inboxService.enqueue({
                 stream: 'stock',
                 entityId: 'shared-id',
                 version: '2',
                 sourceEventId: 'evt-shared-stock-2',
-                payload: {},
+                payload: { real: 'data' },
             });
             await inboxService.markProcessed(stockNewest.id);
 
             await inboxService.purgeSupersededProcessedRows();
 
-            const priceRemaining = await dataSource
+            const priceRows = await dataSource
                 .getRepository(IntegrationInboxEvent)
                 .find({ where: { stream: 'price', entityId: 'shared-id' } });
-            const stockRemaining = await dataSource
+            const stockRows = await dataSource
                 .getRepository(IntegrationInboxEvent)
                 .find({ where: { stream: 'stock', entityId: 'shared-id' } });
-            expect(priceRemaining).toHaveLength(1);
-            expect(stockRemaining.map(r => r.id)).toEqual([stockNewest.id]);
+            expect(priceRows).toHaveLength(1);
+            expect(priceRows[0].payload).toEqual({ real: 'data' });
+            const stockById = new Map(stockRows.map(r => [r.id, r]));
+            expect(stockById.get(stockOlder.id)!.payload).toEqual({});
+            expect(stockById.get(stockNewest.id)!.payload).toEqual({ real: 'data' });
         });
     });
 });

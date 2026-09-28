@@ -167,9 +167,8 @@ export interface ErpIntegrationPluginOptions {
     maxRetry?: number;
     outboxPollIntervalMs?: number;
     inboxPollIntervalMs?: number;
-    // How often IntegrationInboxService.purgeSupersededProcessedRows runs (#147). Defaults to
-    // INBOX_RETENTION_INTERVAL_DEFAULT — deliberately much less frequent than the poll lanes
-    // above, since it's a housekeeping sweep over `processed` rows, never on the claim path.
+    // How often the retention lane sweeps `processed` rows (#147). Defaults to
+    // INBOX_RETENTION_INTERVAL_DEFAULT.
     inboxRetentionIntervalMs?: number;
     // How often the batched Collection-filter recompute runs (see
     // collection-filters-recompute.scheduled-task.ts) — compensates for
@@ -306,6 +305,9 @@ export const INBOX_RETRY_WALL_CLOCK_BUDGET_MS = 24 * 60 * 60 * 1000;
 // Once every 10 minutes — a housekeeping sweep, not latency-sensitive like the claim lanes above
 // (#147).
 export const INBOX_RETENTION_INTERVAL_DEFAULT = 10 * 60_000;
+// Bounds the retention task's own reclaim loop, same shape as INBOX_BULK_WALL_CLOCK_BUDGET_MS —
+// a resync-sized backlog just means more ticks, never a run that risks the scheduler's timeout.
+export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 60_000;
 // Bigger than the critical lane's batch for bulk throughput, but not jumped straight to
 // 200-500 — keeps the SELECT ... FOR UPDATE SKIP LOCKED transaction size reasonable (issue #93
 // decision). Tune based on real measurement if still insufficient.

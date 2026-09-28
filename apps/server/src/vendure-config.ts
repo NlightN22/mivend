@@ -168,11 +168,7 @@ export const config: VendureConfig = {
         username: process.env.DB_USERNAME ?? 'postgres',
         password: process.env.DB_PASSWORD ?? 'postgres',
         database: process.env.DB_NAME ?? 'mivend',
-        // Issue #147: production has no production contour yet (docs/environments.md), so this
-        // never runs there today — but `synchronize: false` above means production can never boot
-        // against a real DB until it has a migration history, and `migration.ts`/this array is
-        // that history's home. Only production is expected to ever set `migrationsRun: true`
-        // (never both `synchronize` and migrations against the same DB) — see docs/environments.md.
+        // Production-only (synchronize:false there) — see docs/environments.md's "Migrations".
         migrations: [path.join(__dirname, 'migrations/*.+(js|ts)')],
     },
     customFields: {

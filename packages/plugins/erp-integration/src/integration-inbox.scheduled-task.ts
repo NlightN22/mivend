@@ -12,6 +12,7 @@ import {
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
     INBOX_POLL_INTERVAL_DEFAULT,
     INBOX_RETENTION_INTERVAL_DEFAULT,
+    INBOX_RETENTION_WALL_CLOCK_BUDGET_MS,
     INBOX_USER_BATCH_SIZE_DEFAULT,
     INBOX_USER_STREAMS,
     loggerCtx,
@@ -149,10 +150,9 @@ export function createIntegrationInboxBulkTask(
     });
 }
 
-// Retention (#147): a separate, low-frequency housekeeping lane, deliberately independent of the
-// three claim lanes above — it never touches `pending`/`processing` rows, only `processed` ones,
-// so it can never compete with or delay a claim. See
-// IntegrationInboxService.purgeSupersededProcessedRows for what "superseded" means here.
+// Retention (#147): a separate, low-frequency lane that only tombstones `processed` rows, never
+// touching `pending`/`processing`, so it can't compete with a claim. Loops within one tick, same
+// wall-clock-bounded shape as the bulk claim lane, so a resync-sized backlog just means more ticks.
 export function createIntegrationInboxRetentionTask(
     options: ErpIntegrationPluginOptions,
 ): ScheduledTask {
@@ -160,21 +160,27 @@ export function createIntegrationInboxRetentionTask(
     return new ScheduledTask({
         id: 'erp-integration-inbox-retention',
         description:
-            'Purges superseded processed inbox rows, keeping only the latest version per (stream, entityId) (central hub only).',
+            'Tombstones superseded processed inbox rows, keeping only the latest version per (stream, entityId) (central hub only).',
         schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
 
-            const deleted = await injector
-                .get(IntegrationInboxService)
-                .purgeSupersededProcessedRows();
-            if (deleted > 0) {
+            const inbox = injector.get(IntegrationInboxService);
+            let totalTombstoned = 0;
+            const startedAt = Date.now();
+            for (;;) {
+                const tombstoned = await inbox.purgeSupersededProcessedRows();
+                totalTombstoned += tombstoned;
+                if (tombstoned === 0) break;
+                if (Date.now() - startedAt >= INBOX_RETENTION_WALL_CLOCK_BUDGET_MS) break;
+            }
+            if (totalTombstoned > 0) {
                 Logger.verbose(
-                    `Integration inbox retention sweep: purged ${deleted} superseded processed row(s)`,
+                    `Integration inbox retention sweep: tombstoned ${totalTombstoned} superseded processed row(s)`,
                     loggerCtx,
                 );
             }
-            return { deleted };
+            return { tombstoned: totalTombstoned };
         },
     });
 }

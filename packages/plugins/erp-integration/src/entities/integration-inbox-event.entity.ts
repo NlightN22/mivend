@@ -34,9 +34,8 @@ export type IntegrationInboxEventStatus = 'pending' | 'processing' | 'processed'
 // index, not because they need the same key.
 @Entity('integration_inbox_event')
 @Index('integration_inbox_event_dedup', ['stream', 'sourceEventId'], { unique: true })
-// Serves claimBatch's WHERE (stream IN ...) AND status = 'pending' ORDER BY eligible_at (#147) —
-// replaces the old (status, created_at) index, which could not serve the eligibility-ordered
-// claim query at all (no index exists on a COALESCE expression).
+// Serves claimBatch's WHERE (stream IN ...) AND status='pending' ORDER BY eligible_at (#147),
+// replacing the un-indexable COALESCE(next_retry_at, created_at) expression it used before.
 @Index('integration_inbox_event_claim', ['stream', 'status', 'eligibleAt'])
 // Per-row superseded-version check (processor); without it each check seq-scans the table (#146).
 @Index('integration_inbox_event_entity', ['stream', 'entityId', 'status'])
@@ -100,10 +99,8 @@ export class IntegrationInboxEvent {
     @Column({ type: 'timestamptz', name: 'first_failed_at', nullable: true })
     firstFailedAt!: Date | null;
 
-    // The single source of truth for claimBatch's ordering (#147) — set to the enqueue time on
-    // insert (DB default) and to nextRetryAt on every backoff (IntegrationInboxService.markFailed).
-    // Replaces the old `COALESCE(next_retry_at, created_at)` expression in the ORDER BY, which no
-    // index could serve — a real, indexed column can.
+    // claimBatch's sole ordering column (#147) — enqueue time on insert, nextRetryAt on every
+    // backoff (IntegrationInboxService.markFailed). Replaces the un-indexable COALESCE expression.
     @Column({ type: 'timestamptz', name: 'eligible_at', default: () => 'now()' })
     eligibleAt!: Date;
 }

@@ -1,4 +1,23 @@
 services:
+    # Issue #147: production runs with synchronize:false and no live contour has existed yet, so
+    # this is a one-shot service, never started by `docker compose up` itself (no `restart`, not
+    # depended on by server/worker) — `make prod-up` runs it to completion (`--rm`) before starting
+    # everything else. See docs/environments.md's "Migrations" section.
+    migrate:
+        image: ghcr.io/nlightn22/mivend-server:${IMAGE_TAG:-latest}
+        command: ['node', 'dist/migration.js', 'run']
+        environment:
+            NODE_ENV: production
+            DB_HOST: postgres
+            DB_PORT: 5432
+            DB_USERNAME: ${POSTGRES_USER:-postgres}
+            DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+            DB_NAME: ${POSTGRES_DB:-mivend}
+            INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
+        depends_on:
+            postgres:
+                condition: service_healthy
+
     server:
         image: ghcr.io/nlightn22/mivend-server:${IMAGE_TAG:-latest}
         environment:

@@ -12,6 +12,7 @@ import {
     INBOX_BULK_WALL_CLOCK_BUDGET_MS,
     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
+    INBOX_RETENTION_WALL_CLOCK_BUDGET_MS,
     INBOX_USER_BATCH_SIZE_DEFAULT,
     INBOX_USER_STREAMS,
 } from '../../types';
@@ -210,15 +211,39 @@ describe('createIntegrationInboxRetentionTask', () => {
         expect(purgeSupersededProcessedRows).not.toHaveBeenCalled();
     });
 
-    it('purges superseded processed rows on a central instance', async () => {
-        const purgeSupersededProcessedRows = vi.fn().mockResolvedValue(3);
+    it('tombstones superseded processed rows on a central instance, stopping once a call tombstones nothing', async () => {
+        const purgeSupersededProcessedRows = vi
+            .fn()
+            .mockResolvedValueOnce(3)
+            .mockResolvedValueOnce(0);
         const task = createIntegrationInboxRetentionTask(makeOptions('central'));
         const result = await task.options.execute({
             injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
             scheduledContext: {} as never,
             params: {},
         });
+        expect(purgeSupersededProcessedRows).toHaveBeenCalledTimes(2);
+        expect(result).toEqual({ tombstoned: 3 });
+    });
+
+    // mirrors createIntegrationInboxBulkTask's own wall-clock-budget test — a resync-sized
+    // backlog of superseded groups must not keep this task's execute() running forever.
+    it('stops looping once the wall-clock budget is spent, even if still tombstoning rows', async () => {
+        let now = 0;
+        vi.spyOn(Date, 'now').mockImplementation(() => now);
+        const purgeSupersededProcessedRows = vi.fn().mockImplementation(async () => {
+            now += INBOX_RETENTION_WALL_CLOCK_BUDGET_MS;
+            return 5;
+        });
+        const task = createIntegrationInboxRetentionTask(makeOptions('central'));
+
+        const result = await task.options.execute({
+            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+
         expect(purgeSupersededProcessedRows).toHaveBeenCalledTimes(1);
-        expect(result).toEqual({ deleted: 3 });
+        expect(result).toEqual({ tombstoned: 5 });
     });
 });

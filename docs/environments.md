@@ -46,10 +46,30 @@ migration capturing the entire schema as of this issue (generated via Vendure's 
 `generateMigration`, diffed against a genuinely empty database — never against a `synchronize`-
 created one, which would show no diff at all) — not an incremental step on top of an older,
 never-written migration. Any schema change from here on (a new column, a new entity, a new index)
-needs its own incremental migration generated the same way, kept in
-`apps/server/src/migrations/`. `migration:run` must be a deploy-time step before `main.ts`/
-`worker.ts` boot against a production DB — `migrationsRun` is deliberately not set on
-`dbConnectionOptions`, so nothing runs migrations automatically at process boot.
+needs its own incremental migration generated the same way, kept in `apps/server/src/migrations/`.
+
+`migrationsRun` is deliberately not set on `dbConnectionOptions` — nothing runs migrations
+automatically at `main.ts`/`worker.ts`/`worker-email.ts` boot. Instead `make prod-up` runs
+`infrastructure/docker/docker-compose.yml`'s `migrate` service (`node dist/migration.js run`,
+built from the same server image, no `restart`/depends_on beyond Postgres being healthy) to
+completion (`docker compose run --rm migrate`) after Postgres is up but before `up -d` starts
+`server`/`worker`/`worker-email` — the compiled `dist/migration.js` + `dist/migrations/*.js` are
+what the runner image actually has (`apps/server/Dockerfile`'s runner stage copies `dist/`, not
+`src/`), so `ts-node src/migration.ts` (the local `pnpm migration:*` scripts, used for
+generate/revert during development) is not what runs there. Local/staging-integration never need
+any of this — `synchronize: true`.
+
+**One-time backfill done on 2026-09-28 (mivend.audit.common's #147 review, MEDIUM)**: `synchronize`
+added `eligible_at` with `DEFAULT now()`, so every pre-existing row got the `ALTER TABLE` time, not
+`COALESCE(next_retry_at, created_at)` — since `claimBatch` no longer reads `next_retry_at`
+directly, an in-flight backoff row would have become claimable immediately (bypassing its backoff)
+and FIFO order among already-queued rows would have been lost. Fixed with a batched
+`UPDATE ... SET eligible_at = COALESCE(next_retry_at, created_at) WHERE status IN
+('pending','processing')` against `mivend_central_staging_integration` (196,408 rows, 5000/batch —
+staging's resync was actively writing to this table at the time; local's `mivend_central` had zero
+rows in this table, nothing to backfill). The baseline migration's own fresh-empty-DB `INSERT`
+path is unaffected — this was purely an already-`synchronize`d dev/staging-data correction, not a
+migration-content issue.
 
 ### Database locale (issue #140)
 
