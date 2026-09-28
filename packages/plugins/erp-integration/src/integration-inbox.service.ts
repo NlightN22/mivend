@@ -185,9 +185,7 @@ export class IntegrationInboxService {
             .update({ id }, { status: 'processed', processedAt: new Date() });
     }
 
-    // #149 audit MEDIUM: a batch stopped early by deadlineMs left its unprocessed rows claimed
-    // until the 5-minute stale-processing reclaim — under a saturated backlog this hit almost
-    // every tick. Releases them back to 'pending' immediately instead.
+    // Releases a deadline-stopped batch's unprocessed rows back to 'pending' (#149).
     async releaseClaims(ids: number[]): Promise<void> {
         if (ids.length === 0) return;
         await this.dataSource

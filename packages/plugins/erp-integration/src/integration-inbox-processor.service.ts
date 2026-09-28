@@ -85,10 +85,7 @@ export class IntegrationInboxProcessorService {
     // disjoint stream set and batch size, so a large bulk backlog can never delay a critical row
     // — see integration-inbox.scheduled-task.ts, which owns the two lanes' schedules and the bulk
     // lane's immediate-reclaim-while-full loop.
-    // `deadlineMs` bounds this batch's own loop, not just the bulk lane's between-batch reclaim
-    // loop — a single slow-stream batch could otherwise itself exceed the scheduler's timeout
-    // (#149). Rows not reached by the deadline are released back to `pending` immediately (#149
-    // audit) rather than left `processing` for the 5-minute stale reclaim.
+    // `deadlineMs` bounds this batch's own loop (#149); unreached rows are released to `pending`.
     async processPendingBatch(
         streams?: InboundStream[],
         batchSize = 20,

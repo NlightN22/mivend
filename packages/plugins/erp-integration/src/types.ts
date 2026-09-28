@@ -265,9 +265,8 @@ export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.
 export const INBOX_BULK_TASK_TIMEOUT_MS = 120_000;
 export const INBOX_BULK_WALL_CLOCK_BUDGET_MS = 90_000;
 
-// #149: worker-email.ts is also ProcessContext.isWorker=true, but must skip erp-integration's
-// Kafka consumer/tasks. Positive match on its own activeQueues (['send-email'] only, #149 audit
-// MEDIUM — a negative "not the real worker" check would silently misfire on a future worker).
+// worker-email.ts is also isWorker=true but must skip erp-integration entirely (#149) — a
+// positive match on its own activeQueues, not a "not the real worker" negative check.
 export function isEmailOnlyWorker(activeQueues: string[] | undefined): boolean {
     return (
         Array.isArray(activeQueues) &&

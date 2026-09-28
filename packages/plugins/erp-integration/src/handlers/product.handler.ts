@@ -308,9 +308,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return resolution.taxCategoryId;
     }
 
-    // Cached behind CATEGORY_FACET_CACHE_TTL_MS — see that constant's comment (#149).
-    // `forceRefresh` (used by resolveCategoryFacetValueIdForProduct on a cache-miss) bypasses a
-    // stale cache hit for the one case that actually matters, at no extra cost the rest of the time.
+    // Cached behind CATEGORY_FACET_CACHE_TTL_MS; forceRefresh bypasses a stale hit on demand.
     private async getCategoryFacet(
         ctx: RequestContext,
         forceRefresh = false,
