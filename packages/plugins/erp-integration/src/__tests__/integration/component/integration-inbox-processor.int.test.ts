@@ -295,7 +295,10 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
     // the reclaim loop between batches — otherwise one slow-stream batch alone can run past the
     // scheduler's task timeout. Rows claimed but not yet reached when the deadline hits stay
     // `processing`, picked up by the existing stale-processing reclaim on a later sweep.
-    it('stops processing a batch once deadlineMs is reached, leaving the rest claimed for a later sweep', async () => {
+    // #149 audit MEDIUM: rows not reached by the deadline must be immediately re-claimable, not
+    // stuck `processing` until the 5-minute stale reclaim — under a saturated backlog the deadline
+    // fires on nearly every tick, so waiting 5 minutes for the leftover rows breaks FIFO.
+    it('stops processing a batch once deadlineMs is reached, releasing the rest back to pending', async () => {
         const apply = vi.fn().mockResolvedValue(undefined);
         for (let i = 0; i < 3; i++) {
             await inboxService.enqueue({
@@ -320,6 +323,43 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         expect(apply).not.toHaveBeenCalled();
 
         const rows = await dataSource.getRepository(IntegrationInboxEvent).find();
-        expect(rows.every(row => row.status === 'processing')).toBe(true);
+        expect(rows.every(row => row.status === 'pending')).toBe(true);
+
+        // Immediately re-claimable — no need to wait out the stale-processing threshold.
+        const reclaimed = await inboxService.claimBatch(10, ['price']);
+        expect(reclaimed).toHaveLength(3);
+    });
+
+    it('releases only the rows not yet reached when the deadline hits partway through a batch', async () => {
+        let now = Date.now();
+        const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now);
+        const apply = vi.fn().mockImplementation(async () => {
+            now += 1000;
+        });
+        for (let i = 0; i < 3; i++) {
+            await inboxService.enqueue({
+                stream: 'price',
+                entityId: `p-partial-${i}`,
+                version: '1',
+                sourceEventId: `evt-p-partial-${i}`,
+                payload: { sku: `SKU-${i}` },
+            });
+        }
+
+        const processor = makeProcessor(apply);
+        const deadlineMs = now + 1500;
+        const { processed, claimed } = await processor.processPendingBatch(
+            ['price'],
+            10,
+            deadlineMs,
+        );
+        nowSpy.mockRestore();
+
+        expect(claimed).toBe(3);
+        expect(processed).toBe(2);
+
+        const rows = await dataSource.getRepository(IntegrationInboxEvent).find();
+        const statuses = rows.map(row => row.status).sort();
+        expect(statuses).toEqual(['pending', 'processed', 'processed']);
     });
 });

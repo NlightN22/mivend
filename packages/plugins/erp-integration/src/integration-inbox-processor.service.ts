@@ -85,14 +85,10 @@ export class IntegrationInboxProcessorService {
     // disjoint stream set and batch size, so a large bulk backlog can never delay a critical row
     // — see integration-inbox.scheduled-task.ts, which owns the two lanes' schedules and the bulk
     // lane's immediate-reclaim-while-full loop.
-    // #149: a slow stream (e.g. product, ~1s+/row before its own #149 fixes) could make a single
-    // claimed batch's own processing loop run past the scheduler's task timeout — the reclaim-
-    // while-full loop in integration-inbox.scheduled-task.ts only checks wall-clock *between*
-    // whole batches, too late once one batch is itself the problem. `deadlineMs` (an absolute
-    // Date.now() timestamp, optional — only the bulk lane, the one at risk, passes it) stops this
-    // loop early, leaving any not-yet-processed claimed rows in `processing`; they're picked up
-    // by the existing stale-processing reclaim (STUCK_PROCESSING_THRESHOLD_MS) on a later sweep,
-    // same as an abandoned-worker crash already handled today — never left stuck indefinitely.
+    // `deadlineMs` bounds this batch's own loop, not just the bulk lane's between-batch reclaim
+    // loop — a single slow-stream batch could otherwise itself exceed the scheduler's timeout
+    // (#149). Rows not reached by the deadline are released back to `pending` immediately (#149
+    // audit) rather than left `processing` for the 5-minute stale reclaim.
     async processPendingBatch(
         streams?: InboundStream[],
         batchSize = 20,
@@ -121,17 +117,23 @@ export class IntegrationInboxProcessorService {
         });
 
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
-        for (const row of sorted) {
+        let stoppedAt = sorted.length;
+        for (let i = 0; i < sorted.length; i++) {
             if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
-                Logger.warn(
-                    `processPendingBatch: deadline reached mid-batch, leaving ${sorted.length - processed - failed} claimed row(s) for a later sweep`,
-                    loggerCtx,
-                );
+                stoppedAt = i;
                 break;
             }
-            const ok = await this.processOne(ctx, row);
+            const ok = await this.processOne(ctx, sorted[i]);
             if (ok) processed += 1;
             else failed += 1;
+        }
+        if (stoppedAt < sorted.length) {
+            const unprocessedIds = sorted.slice(stoppedAt).map(row => row.id);
+            Logger.warn(
+                `processPendingBatch: deadline reached mid-batch, releasing ${unprocessedIds.length} claimed row(s) back to pending`,
+                loggerCtx,
+            );
+            await this.inbox.releaseClaims(unprocessedIds);
         }
         return { processed, failed, claimed: rows.length };
     }

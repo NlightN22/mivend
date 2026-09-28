@@ -33,9 +33,7 @@ import type { ErpIntegrationPluginOptions } from './types';
 // with no error logged. Only the worker process starts the consumer, matching this same plugin's
 // own IntegrationInboxWorker/IntegrationOutboxWorker (BullMQ workers, worker-process convention).
 //
-// #149: `isWorker` alone isn't enough — `worker-email.ts` is ALSO a Vendure "worker" process
-// (ProcessContext.isWorker is true for it too), but must never join the Kafka consumer group
-// either (same rebalance-stall risk as two worker.ts instances). See isEmailOnlyWorker's comment.
+// `isWorker` alone isn't enough — worker-email.ts is also isWorker=true (#149, isEmailOnlyWorker).
 @Injectable()
 export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
     constructor(

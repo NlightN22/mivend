@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { PaginatedList } from '@vendure/core';
 import { Logger } from '@vendure/core';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, EntityManager, In } from 'typeorm';
 
 const loggerCtx = 'IntegrationInboxService';
 
@@ -183,6 +183,16 @@ export class IntegrationInboxService {
         await this.dataSource
             .getRepository(IntegrationInboxEvent)
             .update({ id }, { status: 'processed', processedAt: new Date() });
+    }
+
+    // #149 audit MEDIUM: a batch stopped early by deadlineMs left its unprocessed rows claimed
+    // until the 5-minute stale-processing reclaim — under a saturated backlog this hit almost
+    // every tick. Releases them back to 'pending' immediately instead.
+    async releaseClaims(ids: number[]): Promise<void> {
+        if (ids.length === 0) return;
+        await this.dataSource
+            .getRepository(IntegrationInboxEvent)
+            .update({ id: In(ids), status: 'processing' }, { status: 'pending' });
     }
 
     // Every failure retries with backoff (nextRetryAt) and dead-letters only once 24h have passed

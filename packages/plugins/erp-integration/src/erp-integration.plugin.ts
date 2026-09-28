@@ -168,11 +168,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
-        // #149: worker-email.ts has no business running erp-integration's own tasks (Kafka
-        // inbox/outbox processing, collection-filter recompute, reconciliation, lag polling) —
-        // see isEmailOnlyWorker's own comment. Each task's own instanceType/kafkaEnabled checks
-        // already made this a no-op there at runtime; skipping registration entirely also stops
-        // it from polling the scheduler's DB lock table for tasks it can never actually win.
+        // worker-email.ts never runs erp-integration's own tasks (#149) — see isEmailOnlyWorker.
         if (!isEmailOnlyWorker(config.jobQueueOptions?.activeQueues)) {
             config.schedulerOptions.tasks = [
                 ...(config.schedulerOptions.tasks ?? []),

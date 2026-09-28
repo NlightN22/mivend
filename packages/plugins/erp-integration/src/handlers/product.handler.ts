@@ -36,14 +36,8 @@ const loggerCtx = 'IntegrationProductHandler';
 // every single ProductChanged event without risking a long-stale erpVatCode mapping.
 const TAX_CATEGORY_CACHE_TTL_MS = 60_000;
 
-// #149: this handler's own resolveCategoryFacetValueIdForProduct AND mergeCategoryFacetValueId
-// each independently called findByCode + findByFacetId (loading every category FacetValue) on
-// EVERY single product event — confirmed live on staging as one of the dominant per-product
-// costs during the full resync (products stalled at ~20/min). A short TTL (much shorter than
-// TaxCategory's, since categories arrive continuously via Kafka, not admin-configured-rarely)
-// keeps the same out-of-order tolerance the old no-cache design had (a category synced within
-// this window still resolves correctly on the very next product event after it expires) while
-// cutting two DB round-trips down to one cache hit for most events in a resync-sized burst.
+// Short (unlike TaxCategory's 60s) since categories arrive continuously via Kafka — a cache-miss
+// forced refresh (see getCategoryFacet) covers the rest of the out-of-order window for free.
 const CATEGORY_FACET_CACHE_TTL_MS = 5_000;
 
 // Same facet code CategoryStreamHandler owns/creates (category.handler.ts) — this handler only
@@ -159,16 +153,9 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 id: productId,
                 enabled: isActive,
                 translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
-                // Omit manufacturerId entirely when this event carries none — an update must
-                // never clear an already-resolved manufacturer relation just because a later
-                // event happens not to mention it (same non-destructive-absence philosophy as
-                // ManufacturerService.upsert's own name backfill). `manufacturerId`, not
-                // `manufacturer`, is the correct input key for a relation customField at this
-                // level (CustomFieldRelationService.updateRelations reads
-                // `${field.name}Id`) — the recurring "Custom field manufacturerId not found"
-                // warning is inherent noise from CustomFieldsValidationSubscriber's own separate,
-                // earlier check on the intermediate entity save, not a sign this key is wrong
-                // (#149 investigation; confirmed by reading @vendure/core's own source).
+                // Omit manufacturerId when unset (never clear an already-resolved relation).
+                // `${field.name}Id` is the input key CustomFieldRelationService reads; the "not
+                // found" warning comes from CustomFieldsValidationSubscriber and is harmless.
                 ...(manufacturerId ? { customFields: { manufacturerId } } : {}),
             });
             const variants = await this.productVariantService.getVariantsByProductId(
@@ -321,15 +308,18 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return resolution.taxCategoryId;
     }
 
-    // #149: both this method and mergeCategoryFacetValueId used to independently call
-    // findByCode + findByFacetId (loading every category FacetValue) on every single product
-    // event — confirmed live as one of the dominant per-product costs. Cached behind
-    // CATEGORY_FACET_CACHE_TTL_MS (see that constant's own comment for the out-of-order
-    // reasoning); busts itself the same short-TTL way getTaxCategories does, just faster.
+    // Cached behind CATEGORY_FACET_CACHE_TTL_MS — see that constant's comment (#149).
+    // `forceRefresh` (used by resolveCategoryFacetValueIdForProduct on a cache-miss) bypasses a
+    // stale cache hit for the one case that actually matters, at no extra cost the rest of the time.
     private async getCategoryFacet(
         ctx: RequestContext,
+        forceRefresh = false,
     ): Promise<{ facetId: ID | undefined; valueIdByCode: Map<string, ID> }> {
-        if (this.categoryFacetCache && this.categoryFacetCache.expiresAt > Date.now()) {
+        if (
+            !forceRefresh &&
+            this.categoryFacetCache &&
+            this.categoryFacetCache.expiresAt > Date.now()
+        ) {
             const { facetId, valueIdByCode } = this.categoryFacetCache;
             return { facetId, valueIdByCode };
         }
@@ -363,7 +353,16 @@ export class ProductStreamHandler implements InboundStreamHandler {
     ): Promise<ID | undefined> {
         const { valueIdByCode: facetValueIdByCategoryCode } = await this.getCategoryFacet(ctx);
 
-        const resolution = resolveCategoryFacetValueId(rawCategoryId, facetValueIdByCategoryCode);
+        let resolution = resolveCategoryFacetValueId(rawCategoryId, facetValueIdByCategoryCode);
+        // A cache miss for a real category id might just mean the category synced after the
+        // cache filled (#149 audit LOW) — one forced re-read closes that window for free.
+        if (resolution.flag?.reason === 'not-found') {
+            const { valueIdByCode: freshValueIdByCategoryCode } = await this.getCategoryFacet(
+                ctx,
+                true,
+            );
+            resolution = resolveCategoryFacetValueId(rawCategoryId, freshValueIdByCategoryCode);
+        }
 
         if (resolution.flag) {
             Logger.warn(`product ${entityId}: category — ${resolution.flag.detail}`, loggerCtx);

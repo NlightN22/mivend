@@ -638,5 +638,37 @@ describe('ProductStreamHandler', () => {
                 vi.useRealTimers();
             }
         });
+
+        // #149 audit LOW: a cache miss for a real category id might just mean the category
+        // synced after the cache filled — one forced re-read should resolve it immediately
+        // instead of waiting out the full TTL and flagging for review.
+        it('forces a fresh read on a cache miss for a real category id, resolving it without waiting for TTL', async () => {
+            const facetService = {
+                findByCode: vi.fn().mockResolvedValue({ id: 'facet-category' }),
+            };
+            const facetValueService = {
+                findByFacetId: vi
+                    .fn()
+                    .mockResolvedValueOnce([])
+                    .mockResolvedValueOnce([
+                        { id: 'fv-1', code: 'cat-1', facetId: 'facet-category' },
+                    ]),
+            };
+            const productCategoryFlagService = makeProductCategoryFlagService();
+            const { handler } = makeHandler({
+                facetService,
+                facetValueService,
+                productCategoryFlagService,
+            });
+
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget 1',
+                categoryId: 'cat-1',
+            });
+
+            expect(facetValueService.findByFacetId).toHaveBeenCalledTimes(2);
+            expect(productCategoryFlagService.report).not.toHaveBeenCalled();
+        });
     });
 });

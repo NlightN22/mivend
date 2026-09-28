@@ -58,10 +58,18 @@ describe('isEmailOnlyWorker', () => {
         expect(isEmailOnlyWorker(undefined)).toBe(false);
     });
 
-    // Not literally worker-email specifically, but any process whose activeQueues doesn't
-    // include 'apply-collection-filters' has no business running the ERP Kafka consumer either —
-    // same reasoning, name kept for the one real case this exists for today.
-    it('is true for an empty activeQueues array (no queues owned, including not this one)', () => {
-        expect(isEmailOnlyWorker([])).toBe(true);
+    it('is false for an empty activeQueues array (not a positive match on send-email)', () => {
+        expect(isEmailOnlyWorker([])).toBe(false);
+    });
+
+    // #149 audit MEDIUM: a future dedicated worker, or a change to worker.ts's own list, must
+    // never be silently treated as email-only just because it happens to omit
+    // 'apply-collection-filters' — only an exact, positive match on ['send-email'] counts.
+    it('is false for a hypothetical future dedicated worker with its own unrelated queue', () => {
+        expect(isEmailOnlyWorker(['generate-document'])).toBe(false);
+    });
+
+    it('is false when send-email is combined with any other queue', () => {
+        expect(isEmailOnlyWorker(['send-email', 'clean-sessions'])).toBe(false);
     });
 });
