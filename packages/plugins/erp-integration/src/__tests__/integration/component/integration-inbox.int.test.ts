@@ -166,6 +166,51 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(secondClaim).toHaveLength(0);
     });
 
+    // #146: order by eligibility time — a retry that came due later can't starve newer rows,
+    // and a retry that came due earlier isn't starved by them.
+    describe('claimBatch fairness between retries and fresh rows', () => {
+        async function enqueueAt(entityId: string, createdAgo: string): Promise<number> {
+            const row = await inboxService.enqueue({
+                stream: 'price',
+                entityId,
+                version: '1',
+                sourceEventId: `evt-${entityId}`,
+                payload: {},
+            });
+            await dataSource.query(
+                `UPDATE integration_inbox_event SET created_at = now() - interval '${createdAgo}' WHERE id = $1`,
+                [row.id],
+            );
+            return row.id;
+        }
+
+        it('claims a fresh row before an older row whose retry came due after it arrived', async () => {
+            const retryId = await enqueueAt('pr-retry', '2 hours');
+            const freshId = await enqueueAt('pr-fresh', '10 minutes');
+            await dataSource.query(
+                "UPDATE integration_inbox_event SET attempts = 5, next_retry_at = now() - interval '1 minute' WHERE id = $1",
+                [retryId],
+            );
+
+            const [first] = await inboxService.claimBatch(1);
+
+            expect(first.id).toBe(freshId);
+        });
+
+        it('claims a retry that came due before a newer fresh row arrived', async () => {
+            const retryId = await enqueueAt('pr-retry', '2 hours');
+            await enqueueAt('pr-fresh', '10 minutes');
+            await dataSource.query(
+                "UPDATE integration_inbox_event SET attempts = 5, next_retry_at = now() - interval '30 minutes' WHERE id = $1",
+                [retryId],
+            );
+
+            const [first] = await inboxService.claimBatch(1);
+
+            expect(first.id).toBe(retryId);
+        });
+    });
+
     it('markFailed schedules a backoff retry inside the 24h budget, dead-letters after it', async () => {
         const row = await inboxService.enqueue({
             stream: 'price',

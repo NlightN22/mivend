@@ -130,9 +130,12 @@ export class IntegrationInboxService {
             if (streams && streams.length > 0) {
                 qb.andWhere('event.stream IN (:...streams)', { streams });
             }
+            // FIFO by the time a row became eligible, not by enqueue time: a backed-off retry
+            // queues behind rows that arrived before it came due, so retries can't starve them (#146).
             const rows = await qb
-                .orderBy('event.createdAt', 'ASC')
-                .take(limit)
+                .orderBy('COALESCE(event.next_retry_at, event.created_at)', 'ASC')
+                .addOrderBy('event.id', 'ASC')
+                .limit(limit)
                 .setLock('pessimistic_write')
                 .setOnLocked('skip_locked')
                 .getMany();
