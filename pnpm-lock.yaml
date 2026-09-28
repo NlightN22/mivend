@@ -172,6 +172,9 @@ importers:
             shared:
                 specifier: workspace:*
                 version: link:../../packages/shared
+            typeorm:
+                specifier: ^0.3.30
+                version: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
             ws:
                 specifier: ^8.21.0
                 version: 8.21.0
@@ -18714,7 +18717,7 @@ snapshots:
     '@ts-morph/common@0.27.0':
         dependencies:
             fast-glob: 3.3.3
-            minimatch: 10.2.5
+            minimatch: 10.2.6
             path-browserify: 1.0.1
 
     '@tsconfig/node10@1.0.12': {}
@@ -20581,7 +20584,7 @@ snapshots:
         dependencies:
             '@one-ini/wasm': 0.2.1
             commander: 14.0.3
-            minimatch: 10.2.5
+            minimatch: 10.2.6
             semver: 7.8.5
 
     ee-first@1.1.1: {}
@@ -21251,7 +21254,7 @@ snapshots:
 
     glob@13.0.6:
         dependencies:
-            minimatch: 10.2.5
+            minimatch: 10.2.6
             minipass: 7.1.3
             path-scurry: 2.0.2
 

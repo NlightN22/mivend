@@ -32,6 +32,25 @@ provisions (`infrastructure/docker/docker-compose.yml`'s `postgres` service, bui
 `infrastructure/docker/postgres/` — the same image the local/staging-integration contours above
 use, see `.env.production.example` in that directory).
 
+### Migrations (issue #147)
+
+Local and staging-integration both run with `synchronize: true` (`dbConnectionOptions.synchronize`
+in `apps/server/src/vendure-config.ts`, gated on `NODE_ENV !== 'production'`) — no migration is
+ever needed or run there. **Production sets `synchronize: false` and is the only contour that uses
+TypeORM migrations**, via `dbConnectionOptions.migrations` (`apps/server/src/migrations/*.ts`) and
+`apps/server/src/migration.ts` (`pnpm migration:generate <name>` / `migration:run` /
+`migration:revert`, run against the target contour's own env file — see that file's own comment).
+
+Since no production contour has ever existed, `1790567453660-baseline.ts` is a single **baseline**
+migration capturing the entire schema as of this issue (generated via Vendure's own
+`generateMigration`, diffed against a genuinely empty database — never against a `synchronize`-
+created one, which would show no diff at all) — not an incremental step on top of an older,
+never-written migration. Any schema change from here on (a new column, a new entity, a new index)
+needs its own incremental migration generated the same way, kept in
+`apps/server/src/migrations/`. `migration:run` must be a deploy-time step before `main.ts`/
+`worker.ts` boot against a production DB — `migrationsRun` is deliberately not set on
+`dbConnectionOptions`, so nothing runs migrations automatically at process boot.
+
 ### Database locale (issue #140)
 
 Postgres collation is fixed at `CREATE DATABASE` time and cannot be changed for an existing data
