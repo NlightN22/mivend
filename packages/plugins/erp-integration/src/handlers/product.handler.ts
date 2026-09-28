@@ -36,6 +36,16 @@ const loggerCtx = 'IntegrationProductHandler';
 // every single ProductChanged event without risking a long-stale erpVatCode mapping.
 const TAX_CATEGORY_CACHE_TTL_MS = 60_000;
 
+// #149: this handler's own resolveCategoryFacetValueIdForProduct AND mergeCategoryFacetValueId
+// each independently called findByCode + findByFacetId (loading every category FacetValue) on
+// EVERY single product event — confirmed live on staging as one of the dominant per-product
+// costs during the full resync (products stalled at ~20/min). A short TTL (much shorter than
+// TaxCategory's, since categories arrive continuously via Kafka, not admin-configured-rarely)
+// keeps the same out-of-order tolerance the old no-cache design had (a category synced within
+// this window still resolves correctly on the very next product event after it expires) while
+// cutting two DB round-trips down to one cache hit for most events in a resync-sized burst.
+const CATEGORY_FACET_CACHE_TTL_MS = 5_000;
+
 // Same facet code CategoryStreamHandler owns/creates (category.handler.ts) — this handler only
 // reads it, never creates a category facet or facet value itself.
 const CATEGORY_FACET_CODE = 'category';
@@ -67,6 +77,12 @@ export class ProductStreamHandler implements InboundStreamHandler {
 
     private taxCategoriesCache?: {
         items: Awaited<ReturnType<TaxCategoryService['findAll']>>['items'];
+        expiresAt: number;
+    };
+
+    private categoryFacetCache?: {
+        facetId: ID | undefined;
+        valueIdByCode: Map<string, ID>;
         expiresAt: number;
     };
 
@@ -146,7 +162,13 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 // Omit manufacturerId entirely when this event carries none — an update must
                 // never clear an already-resolved manufacturer relation just because a later
                 // event happens not to mention it (same non-destructive-absence philosophy as
-                // ManufacturerService.upsert's own name backfill).
+                // ManufacturerService.upsert's own name backfill). `manufacturerId`, not
+                // `manufacturer`, is the correct input key for a relation customField at this
+                // level (CustomFieldRelationService.updateRelations reads
+                // `${field.name}Id`) — the recurring "Custom field manufacturerId not found"
+                // warning is inherent noise from CustomFieldsValidationSubscriber's own separate,
+                // earlier check on the intermediate entity save, not a sign this key is wrong
+                // (#149 investigation; confirmed by reading @vendure/core's own source).
                 ...(manufacturerId ? { customFields: { manufacturerId } } : {}),
             });
             const variants = await this.productVariantService.getVariantsByProductId(
@@ -299,29 +321,47 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return resolution.taxCategoryId;
     }
 
+    // #149: both this method and mergeCategoryFacetValueId used to independently call
+    // findByCode + findByFacetId (loading every category FacetValue) on every single product
+    // event — confirmed live as one of the dominant per-product costs. Cached behind
+    // CATEGORY_FACET_CACHE_TTL_MS (see that constant's own comment for the out-of-order
+    // reasoning); busts itself the same short-TTL way getTaxCategories does, just faster.
+    private async getCategoryFacet(
+        ctx: RequestContext,
+    ): Promise<{ facetId: ID | undefined; valueIdByCode: Map<string, ID> }> {
+        if (this.categoryFacetCache && this.categoryFacetCache.expiresAt > Date.now()) {
+            const { facetId, valueIdByCode } = this.categoryFacetCache;
+            return { facetId, valueIdByCode };
+        }
+
+        const facet = await this.facetService.findByCode(ctx, CATEGORY_FACET_CODE, LanguageCode.en);
+        const valueIdByCode = new Map<string, ID>();
+        if (facet) {
+            const values = await this.facetValueService.findByFacetId(ctx, facet.id);
+            for (const value of values) {
+                valueIdByCode.set(value.code, value.id);
+            }
+        }
+
+        this.categoryFacetCache = {
+            facetId: facet?.id,
+            valueIdByCode,
+            expiresAt: Date.now() + CATEGORY_FACET_CACHE_TTL_MS,
+        };
+        return { facetId: facet?.id, valueIdByCode };
+    }
+
     // Resolves category_id to the 'category' facet's FacetValue id via the pure
     // resolveCategoryFacetValueId function, persisting a non-blocking review flag when
     // unresolved (absent, or not synced yet — issue #116). Returns undefined in both flagged
     // cases; the caller omits the category facet value entirely rather than blocking product
     // create/update — same non-blocking philosophy as resolveTaxCategoryId/issue #79.
-    //
-    // No caching here (unlike getTaxCategories): categories arrive continuously via Kafka, not
-    // admin-configured-rarely like TaxCategory — a cache would risk exactly the out-of-order
-    // "category just synced, product arrives right after" race this method exists to tolerate,
-    // for no proven throughput benefit (see AGENTS.md — no speculative optimization).
     private async resolveCategoryFacetValueIdForProduct(
         ctx: RequestContext,
         entityId: string,
         rawCategoryId: string | undefined,
     ): Promise<ID | undefined> {
-        const facet = await this.facetService.findByCode(ctx, CATEGORY_FACET_CODE, LanguageCode.en);
-        const facetValueIdByCategoryCode = new Map<string, ID>();
-        if (facet) {
-            const values = await this.facetValueService.findByFacetId(ctx, facet.id);
-            for (const value of values) {
-                facetValueIdByCategoryCode.set(value.code, value.id);
-            }
-        }
+        const { valueIdByCode: facetValueIdByCategoryCode } = await this.getCategoryFacet(ctx);
 
         const resolution = resolveCategoryFacetValueId(rawCategoryId, facetValueIdByCategoryCode);
 
@@ -357,14 +397,10 @@ export class ProductStreamHandler implements InboundStreamHandler {
     ): Promise<ID[] | undefined> {
         const variant = await this.productVariantService.findOne(ctx, variantId, ['facetValues']);
         const currentFacetValues = variant?.facetValues ?? [];
-        const categoryFacet = await this.facetService.findByCode(
-            ctx,
-            CATEGORY_FACET_CODE,
-            LanguageCode.en,
-        );
-        const nonCategoryFacetValueIds = categoryFacet
+        const { facetId: categoryFacetId } = await this.getCategoryFacet(ctx);
+        const nonCategoryFacetValueIds = categoryFacetId
             ? currentFacetValues
-                  .filter(fv => String(fv.facetId) !== String(categoryFacet.id))
+                  .filter(fv => String(fv.facetId) !== String(categoryFacetId))
                   .map(fv => fv.id)
             : currentFacetValues.map(fv => fv.id);
 

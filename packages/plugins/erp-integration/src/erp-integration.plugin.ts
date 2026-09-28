@@ -61,7 +61,7 @@ import { TaxZoneService } from './tax-zone.service';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
-import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
+import { ERP_INTEGRATION_PLUGIN_OPTIONS, isEmailOnlyWorker } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 import { adminApiExtensions } from './api/admin.schema';
 import { ReconciliationSummaryClient } from './reconciliation-summary.client';
@@ -168,17 +168,24 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
-        config.schedulerOptions.tasks = [
-            ...(config.schedulerOptions.tasks ?? []),
-            createIntegrationInboxCriticalTask(ErpIntegrationPlugin.options),
-            createIntegrationInboxUserTask(ErpIntegrationPlugin.options),
-            createIntegrationInboxBulkTask(ErpIntegrationPlugin.options),
-            createIntegrationInboxRetentionTask(ErpIntegrationPlugin.options),
-            createIntegrationOutboxTask(ErpIntegrationPlugin.options),
-            createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
-            createReconciliationTask(ErpIntegrationPlugin.options),
-            createKafkaLagPollTask(ErpIntegrationPlugin.options),
-        ];
+        // #149: worker-email.ts has no business running erp-integration's own tasks (Kafka
+        // inbox/outbox processing, collection-filter recompute, reconciliation, lag polling) —
+        // see isEmailOnlyWorker's own comment. Each task's own instanceType/kafkaEnabled checks
+        // already made this a no-op there at runtime; skipping registration entirely also stops
+        // it from polling the scheduler's DB lock table for tasks it can never actually win.
+        if (!isEmailOnlyWorker(config.jobQueueOptions?.activeQueues)) {
+            config.schedulerOptions.tasks = [
+                ...(config.schedulerOptions.tasks ?? []),
+                createIntegrationInboxCriticalTask(ErpIntegrationPlugin.options),
+                createIntegrationInboxUserTask(ErpIntegrationPlugin.options),
+                createIntegrationInboxBulkTask(ErpIntegrationPlugin.options),
+                createIntegrationInboxRetentionTask(ErpIntegrationPlugin.options),
+                createIntegrationOutboxTask(ErpIntegrationPlugin.options),
+                createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
+                createReconciliationTask(ErpIntegrationPlugin.options),
+                createKafkaLagPollTask(ErpIntegrationPlugin.options),
+            ];
+        }
         return config;
     },
     compatibility: '>0.0.0',

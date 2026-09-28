@@ -290,4 +290,36 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         const third = await processor.processPendingBatch(['price'], 3);
         expect(third.claimed).toBe(0);
     });
+
+    // #149: a single claimed batch's own processing loop must respect deadlineMs too, not just
+    // the reclaim loop between batches — otherwise one slow-stream batch alone can run past the
+    // scheduler's task timeout. Rows claimed but not yet reached when the deadline hits stay
+    // `processing`, picked up by the existing stale-processing reclaim on a later sweep.
+    it('stops processing a batch once deadlineMs is reached, leaving the rest claimed for a later sweep', async () => {
+        const apply = vi.fn().mockResolvedValue(undefined);
+        for (let i = 0; i < 3; i++) {
+            await inboxService.enqueue({
+                stream: 'price',
+                entityId: `p-deadline-${i}`,
+                version: '1',
+                sourceEventId: `evt-p-deadline-${i}`,
+                payload: { sku: `SKU-${i}` },
+            });
+        }
+
+        const processor = makeProcessor(apply);
+        const { processed, failed, claimed } = await processor.processPendingBatch(
+            ['price'],
+            10,
+            Date.now() - 1,
+        );
+
+        expect(claimed).toBe(3);
+        expect(processed).toBe(0);
+        expect(failed).toBe(0);
+        expect(apply).not.toHaveBeenCalled();
+
+        const rows = await dataSource.getRepository(IntegrationInboxEvent).find();
+        expect(rows.every(row => row.status === 'processing')).toBe(true);
+    });
 });

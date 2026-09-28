@@ -587,4 +587,56 @@ describe('ProductStreamHandler', () => {
             );
         });
     });
+
+    // #149: findByCode/findByFacetId (loading every category FacetValue) was called on every
+    // single apply() — confirmed live as a dominant per-product cost during a resync. Cached
+    // behind a short TTL (CATEGORY_FACET_CACHE_TTL_MS).
+    describe('category facet caching', () => {
+        it('reuses the cached category facet across apply() calls within the TTL', async () => {
+            const { facetService, facetValueService } = makeFacetServices([
+                { id: 'fv-1', code: 'cat-1' },
+            ]);
+            const { handler } = makeHandler({ facetService, facetValueService });
+
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget 1',
+                categoryId: 'cat-1',
+            });
+            await handler.apply(ctx, 'p-2', {
+                sku: 'SKU-2',
+                name: 'Widget 2',
+                categoryId: 'cat-1',
+            });
+
+            expect(facetService.findByCode).toHaveBeenCalledTimes(1);
+            expect(facetValueService.findByFacetId).toHaveBeenCalledTimes(1);
+        });
+
+        it('refreshes the category facet once the cache TTL has elapsed', async () => {
+            vi.useFakeTimers();
+            try {
+                const { facetService, facetValueService } = makeFacetServices([
+                    { id: 'fv-1', code: 'cat-1' },
+                ]);
+                const { handler } = makeHandler({ facetService, facetValueService });
+
+                await handler.apply(ctx, 'p-1', {
+                    sku: 'SKU-1',
+                    name: 'Widget 1',
+                    categoryId: 'cat-1',
+                });
+                vi.advanceTimersByTime(6_000);
+                await handler.apply(ctx, 'p-2', {
+                    sku: 'SKU-2',
+                    name: 'Widget 2',
+                    categoryId: 'cat-1',
+                });
+
+                expect(facetService.findByCode).toHaveBeenCalledTimes(2);
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+    });
 });

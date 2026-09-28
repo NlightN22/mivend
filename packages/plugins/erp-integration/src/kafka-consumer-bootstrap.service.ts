@@ -2,6 +2,7 @@ import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import {
     ChannelService,
     CollectionService,
+    ConfigService,
     Logger,
     ProcessContext,
     RequestContext,
@@ -13,6 +14,7 @@ import {
     ERP_INTEGRATION_PLUGIN_OPTIONS,
     KAFKA_ENABLED_DEFAULT,
     PRICES_INCLUDE_TAX_DEFAULT,
+    isEmailOnlyWorker,
     loggerCtx,
 } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
@@ -30,6 +32,10 @@ import type { ErpIntegrationPluginOptions } from './types';
 // reassigned partitions silently never resumed fetching after it, stalling consumption entirely
 // with no error logged. Only the worker process starts the consumer, matching this same plugin's
 // own IntegrationInboxWorker/IntegrationOutboxWorker (BullMQ workers, worker-process convention).
+//
+// #149: `isWorker` alone isn't enough — `worker-email.ts` is ALSO a Vendure "worker" process
+// (ProcessContext.isWorker is true for it too), but must never join the Kafka consumer group
+// either (same rebalance-stall risk as two worker.ts instances). See isEmailOnlyWorker's comment.
 @Injectable()
 export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
     constructor(
@@ -38,6 +44,7 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
         private readonly collectionService: CollectionService,
         private readonly channelService: ChannelService,
         private readonly taxZoneService: TaxZoneService,
+        private readonly configService: ConfigService,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
     ) {}
@@ -53,6 +60,7 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
 
         if (!(this.options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return;
         if (!this.processContext.isWorker) return;
+        if (isEmailOnlyWorker(this.configService.jobQueueOptions?.activeQueues)) return;
 
         // Real incident: Vendure's default 50ms-debounced per-ProductEvent recompute enqueued
         // tens of thousands of individual apply-collection-filters jobs (one per product,

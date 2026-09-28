@@ -265,6 +265,19 @@ export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.
 export const INBOX_BULK_TASK_TIMEOUT_MS = 120_000;
 export const INBOX_BULK_WALL_CLOCK_BUDGET_MS = 90_000;
 
+// #149: apps/server/src/worker.ts and worker-email.ts both bootstrap this plugin (both are
+// Vendure "worker" processes — ProcessContext.isWorker is true for either), but only worker.ts
+// should run erp-integration's Kafka consumer/ScheduledTasks — worker-email exists solely for
+// isolated email sending. Neither process sets a dedicated env var for this, but each already
+// passes a distinct `jobQueueOptions.activeQueues` to `bootstrapWorker()` (see the
+// vendure-workers skill) — worker.ts's list includes 'apply-collection-filters' (a queue only
+// the real worker owns), worker-email.ts's is `['send-email']` only. Reusing that existing,
+// already-correct-per-process signal avoids inventing a new one; `main.ts` (not a worker at all)
+// leaves activeQueues unset, so it never matches this check either.
+export function isEmailOnlyWorker(activeQueues: string[] | undefined): boolean {
+    return Array.isArray(activeQueues) && !activeQueues.includes('apply-collection-filters');
+}
+
 // Thrown when another stream's entity hasn't arrived yet (no cross-topic ordering in Kafka).
 // Same retry policy as any failure; only logged as a warning since it's an expected race.
 export class MissingDependencyError extends Error {

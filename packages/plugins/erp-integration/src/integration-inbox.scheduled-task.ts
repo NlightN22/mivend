@@ -123,6 +123,11 @@ export function createIntegrationInboxBulkTask(
             let totalProcessed = 0;
             let totalFailed = 0;
             const startedAt = Date.now();
+            // #149: also bounds each individual batch's own processing loop, not just the number
+            // of batches — a single slow-stream batch (e.g. product, before its own #149 fixes)
+            // could otherwise run past the scheduler's own timeout on its own, unbounded by this
+            // reclaim loop's between-batch check. Same deadline both checks share.
+            const deadlineMs = startedAt + INBOX_BULK_WALL_CLOCK_BUDGET_MS;
             // Immediate reclaim while a batch comes back full (queue likely still has more
             // pending) instead of waiting out the fixed poll interval — only falls back to the
             // normal interval once a batch comes back partial/empty or the wall-clock budget is
@@ -133,11 +138,12 @@ export function createIntegrationInboxBulkTask(
                 const { processed, failed, claimed } = await processor.processPendingBatch(
                     [...INBOX_BULK_STREAMS],
                     INBOX_BULK_BATCH_SIZE_DEFAULT,
+                    deadlineMs,
                 );
                 totalProcessed += processed;
                 totalFailed += failed;
                 if (claimed < INBOX_BULK_BATCH_SIZE_DEFAULT) break;
-                if (Date.now() - startedAt >= INBOX_BULK_WALL_CLOCK_BUDGET_MS) break;
+                if (Date.now() >= deadlineMs) break;
             }
             if (totalProcessed > 0 || totalFailed > 0) {
                 Logger.verbose(

@@ -163,8 +163,38 @@ describe('createIntegrationInboxBulkTask', () => {
         expect(processPendingBatch).toHaveBeenCalledWith(
             [...INBOX_BULK_STREAMS],
             INBOX_BULK_BATCH_SIZE_DEFAULT,
+            expect.any(Number),
         );
         expect(result).toEqual({ processed: 2 * INBOX_BULK_BATCH_SIZE_DEFAULT + 3, failed: 0 });
+    });
+
+    // #149: the same deadline this loop checks between batches is also passed into
+    // processPendingBatch so it can bound a single slow batch's own internal loop.
+    it('passes the same deadline to every call within one execution', async () => {
+        let now = 1_000_000;
+        vi.spyOn(Date, 'now').mockImplementation(() => now);
+        const processPendingBatch = vi
+            .fn()
+            .mockResolvedValueOnce({
+                processed: INBOX_BULK_BATCH_SIZE_DEFAULT,
+                failed: 0,
+                claimed: INBOX_BULK_BATCH_SIZE_DEFAULT,
+            })
+            .mockImplementationOnce(async () => {
+                now += 1;
+                return { processed: 3, failed: 0, claimed: 3 };
+            });
+        const task = createIntegrationInboxBulkTask(makeOptions('central'));
+
+        await task.options.execute({
+            injector: { get: () => ({ processPendingBatch }) } as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+
+        const firstDeadline = processPendingBatch.mock.calls[0][2];
+        const secondDeadline = processPendingBatch.mock.calls[1][2];
+        expect(firstDeadline).toBe(secondDeadline);
     });
 
     // mivend.audit.90's review of issue #93 (MEDIUM-HIGH): the reclaim loop must bound itself by
