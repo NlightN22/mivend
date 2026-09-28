@@ -32,6 +32,7 @@ import { IntegrationInboxProcessorService } from './integration-inbox-processor.
 import {
     createIntegrationInboxBulkTask,
     createIntegrationInboxCriticalTask,
+    createIntegrationInboxRetentionTask,
     createIntegrationInboxUserTask,
 } from './integration-inbox.scheduled-task';
 import { createCollectionFiltersRecomputeTask } from './collection-filters-recompute.scheduled-task';
@@ -172,6 +173,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
             createIntegrationInboxCriticalTask(ErpIntegrationPlugin.options),
             createIntegrationInboxUserTask(ErpIntegrationPlugin.options),
             createIntegrationInboxBulkTask(ErpIntegrationPlugin.options),
+            createIntegrationInboxRetentionTask(ErpIntegrationPlugin.options),
             createIntegrationOutboxTask(ErpIntegrationPlugin.options),
             createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
             createReconciliationTask(ErpIntegrationPlugin.options),

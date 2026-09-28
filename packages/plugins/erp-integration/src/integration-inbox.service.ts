@@ -10,6 +10,7 @@ import type { IntegrationInboxEventStatus } from './entities/integration-inbox-e
 import { computeInboxRetryBackoffMs } from './retry-policy';
 import { INBOX_RETRY_WALL_CLOCK_BUDGET_MS } from './types';
 import type { InboundStream } from './types';
+import { isVersionNewer } from './version-compare';
 
 const POSTGRES_UNIQUE_VIOLATION = '23505';
 
@@ -18,6 +19,11 @@ const POSTGRES_UNIQUE_VIOLATION = '23505';
 const STUCK_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000;
 
 const FAILED_EVENTS_MAX_TAKE = 100;
+
+// Retention (#147): each purge tick only looks at this many (stream, entityId) groups with more
+// than one `processed` row, so a huge backlog of duplicates can't turn one purge tick into a
+// single unbounded DELETE — the scheduled task just takes more ticks instead.
+const PURGE_SUPERSEDED_GROUP_BATCH_SIZE = 200;
 
 export interface EnqueueInboxEventInput {
     stream: InboundStream;
@@ -121,19 +127,17 @@ export class IntegrationInboxService {
                 )
                 // Issue #96: a row backed off after a MissingDependencyError is still `pending`
                 // (never `processing`/`failed`) but must not be reclaimed before its scheduled
-                // retry time.
-                .andWhere(
-                    new Brackets(qb => {
-                        qb.where('event.nextRetryAt IS NULL').orWhere('event.nextRetryAt <= now()');
-                    }),
-                );
+                // retry time. eligibleAt (#147) already equals nextRetryAt once a row has backed
+                // off (see markFailed) and the enqueue time otherwise, so this is a single check.
+                .andWhere('event.eligibleAt <= now()');
             if (streams && streams.length > 0) {
                 qb.andWhere('event.stream IN (:...streams)', { streams });
             }
             // FIFO by the time a row became eligible, not by enqueue time: a backed-off retry
-            // queues behind rows that arrived before it came due, so retries can't starve them (#146).
+            // queues behind rows that arrived before it came due, so retries can't starve them
+            // (#146) — served by integration_inbox_event_claim (stream, status, eligible_at) (#147).
             const rows = await qb
-                .orderBy('COALESCE(event.next_retry_at, event.created_at)', 'ASC')
+                .orderBy('event.eligibleAt', 'ASC')
                 .addOrderBy('event.id', 'ASC')
                 .limit(limit)
                 .setLock('pessimistic_write')
@@ -168,6 +172,7 @@ export class IntegrationInboxService {
             );
             return;
         }
+        const nextRetryAt = new Date(Date.now() + computeInboxRetryBackoffMs(attempts, random));
         await repo.update(
             { id },
             {
@@ -175,7 +180,10 @@ export class IntegrationInboxService {
                 firstFailedAt,
                 lastError: error.message,
                 status: 'pending',
-                nextRetryAt: new Date(Date.now() + computeInboxRetryBackoffMs(attempts, random)),
+                nextRetryAt,
+                // Keeps eligibleAt (claimBatch's sole ordering/filter column, #147) equal to
+                // nextRetryAt for the duration of the backoff — see the entity's own comment.
+                eligibleAt: nextRetryAt,
             },
         );
     }
@@ -237,6 +245,54 @@ export class IntegrationInboxService {
             byStream.set(row.stream, entry);
         }
         return [...byStream.values()];
+    }
+
+    // Retention (#147): the only thing that still reads `processed` rows is
+    // IntegrationInboxProcessorService.isSupersededByNewerVersion, and it only ever needs the
+    // latest processed version per (stream, entityId) — every older processed duplicate for the
+    // same entity is dead weight that only makes claimBatch's table (and every index on it)
+    // bigger. Deletes everything except the newest-version row per group, one batch of groups at
+    // a time. Returns the number of rows deleted, so the caller can log/decide whether to keep
+    // looping within its own tick.
+    async purgeSupersededProcessedRows(): Promise<number> {
+        const repo = this.dataSource.getRepository(IntegrationInboxEvent);
+
+        const groups = await repo
+            .createQueryBuilder('event')
+            .select('event.stream', 'stream')
+            .addSelect('event.entity_id', 'entityId')
+            .where('event.status = :status', { status: 'processed' })
+            .groupBy('event.stream')
+            .addGroupBy('event.entity_id')
+            .having('COUNT(*) > 1')
+            .limit(PURGE_SUPERSEDED_GROUP_BATCH_SIZE)
+            .getRawMany<{ stream: InboundStream; entityId: string }>();
+
+        if (groups.length === 0) return 0;
+
+        let deleted = 0;
+        for (const group of groups) {
+            const rows = await repo.find({
+                select: { id: true, version: true },
+                where: {
+                    stream: group.stream,
+                    entityId: group.entityId,
+                    status: 'processed',
+                },
+            });
+            // isVersionNewer, not a SQL/lexicographic MAX(version) — version is not guaranteed
+            // fixed-width (see the entity's own column comment), same rule as
+            // IntegrationInboxProcessorService.isSupersededByNewerVersion.
+            let newest = rows[0];
+            for (const row of rows.slice(1)) {
+                if (isVersionNewer(row.version, newest.version)) newest = row;
+            }
+            const idsToDelete = rows.filter(row => row.id !== newest.id).map(row => row.id);
+            if (idsToDelete.length === 0) continue;
+            await repo.delete(idsToDelete);
+            deleted += idsToDelete.length;
+        }
+        return deleted;
     }
 
     private isUniqueViolation(err: unknown): boolean {

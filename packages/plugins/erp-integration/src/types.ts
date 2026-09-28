@@ -167,6 +167,10 @@ export interface ErpIntegrationPluginOptions {
     maxRetry?: number;
     outboxPollIntervalMs?: number;
     inboxPollIntervalMs?: number;
+    // How often IntegrationInboxService.purgeSupersededProcessedRows runs (#147). Defaults to
+    // INBOX_RETENTION_INTERVAL_DEFAULT — deliberately much less frequent than the poll lanes
+    // above, since it's a housekeeping sweep over `processed` rows, never on the claim path.
+    inboxRetentionIntervalMs?: number;
     // How often the batched Collection-filter recompute runs (see
     // collection-filters-recompute.scheduled-task.ts) — compensates for
     // setApplyAllFiltersOnProductUpdates(false), which KafkaConsumerBootstrapService disables so
@@ -299,6 +303,9 @@ export const INBOX_RETRY_BASE_MS = 30_000;
 export const INBOX_RETRY_MAX_MS = 30 * 60_000;
 export const INBOX_RETRY_JITTER_RATIO = 0.2;
 export const INBOX_RETRY_WALL_CLOCK_BUDGET_MS = 24 * 60 * 60 * 1000;
+// Once every 10 minutes — a housekeeping sweep, not latency-sensitive like the claim lanes above
+// (#147).
+export const INBOX_RETENTION_INTERVAL_DEFAULT = 10 * 60_000;
 // Bigger than the critical lane's batch for bulk throughput, but not jumped straight to
 // 200-500 — keeps the SELECT ... FOR UPDATE SKIP LOCKED transaction size reasonable (issue #93
 // decision). Tune based on real measurement if still insufficient.

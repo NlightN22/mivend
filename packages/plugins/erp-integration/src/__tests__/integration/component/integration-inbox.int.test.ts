@@ -178,7 +178,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 payload: {},
             });
             await dataSource.query(
-                `UPDATE integration_inbox_event SET created_at = now() - interval '${createdAgo}' WHERE id = $1`,
+                `UPDATE integration_inbox_event SET created_at = now() - interval '${createdAgo}', eligible_at = now() - interval '${createdAgo}' WHERE id = $1`,
                 [row.id],
             );
             return row.id;
@@ -188,7 +188,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             const retryId = await enqueueAt('pr-retry', '2 hours');
             const freshId = await enqueueAt('pr-fresh', '10 minutes');
             await dataSource.query(
-                "UPDATE integration_inbox_event SET attempts = 5, next_retry_at = now() - interval '1 minute' WHERE id = $1",
+                "UPDATE integration_inbox_event SET attempts = 5, next_retry_at = now() - interval '1 minute', eligible_at = now() - interval '1 minute' WHERE id = $1",
                 [retryId],
             );
 
@@ -201,7 +201,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             const retryId = await enqueueAt('pr-retry', '2 hours');
             await enqueueAt('pr-fresh', '10 minutes');
             await dataSource.query(
-                "UPDATE integration_inbox_event SET attempts = 5, next_retry_at = now() - interval '30 minutes' WHERE id = $1",
+                "UPDATE integration_inbox_event SET attempts = 5, next_retry_at = now() - interval '30 minutes', eligible_at = now() - interval '30 minutes' WHERE id = $1",
                 [retryId],
             );
 
@@ -537,6 +537,112 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         it('returns an empty array when there is no backlog at all', async () => {
             const backlog = await inboxService.getBacklogByStream();
             expect(backlog).toEqual([]);
+        });
+    });
+
+    // #147: only the latest processed version per (stream, entityId) is still read (the
+    // superseded-version check) — every older processed duplicate is safe to purge.
+    describe('purgeSupersededProcessedRows', () => {
+        async function enqueueProcessed(entityId: string, version: string): Promise<number> {
+            const row = await inboxService.enqueue({
+                stream: 'price',
+                entityId,
+                version,
+                sourceEventId: `evt-${entityId}-${version}`,
+                payload: {},
+            });
+            await inboxService.markProcessed(row.id);
+            return row.id;
+        }
+
+        it('deletes every processed row for an entity except the newest version', async () => {
+            await enqueueProcessed('pr-1', '1');
+            await enqueueProcessed('pr-1', '2');
+            const newest = await enqueueProcessed('pr-1', '3');
+
+            const deleted = await inboxService.purgeSupersededProcessedRows();
+
+            expect(deleted).toBe(2);
+            const remaining = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .find({ where: { stream: 'price', entityId: 'pr-1' } });
+            expect(remaining.map(r => r.id)).toEqual([newest]);
+        });
+
+        // Version is compared numerically (isVersionNewer), not lexicographically — "10" must
+        // beat "9" even though "10" < "9" as a string.
+        it('compares versions numerically, not lexicographically', async () => {
+            await enqueueProcessed('pr-numeric', '9');
+            const newest = await enqueueProcessed('pr-numeric', '10');
+
+            await inboxService.purgeSupersededProcessedRows();
+
+            const remaining = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .find({ where: { stream: 'price', entityId: 'pr-numeric' } });
+            expect(remaining.map(r => r.id)).toEqual([newest]);
+        });
+
+        it('never deletes a pending or processing row, only processed duplicates', async () => {
+            const processed = await enqueueProcessed('pr-mixed', '1');
+            const pending = await inboxService.enqueue({
+                stream: 'price',
+                entityId: 'pr-mixed',
+                version: '2',
+                sourceEventId: 'evt-pr-mixed-pending',
+                payload: {},
+            });
+
+            const deleted = await inboxService.purgeSupersededProcessedRows();
+
+            expect(deleted).toBe(0);
+            const remaining = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .find({ where: { stream: 'price', entityId: 'pr-mixed' } });
+            expect(remaining.map(r => r.id).sort()).toEqual([processed, pending.id].sort());
+        });
+
+        it('leaves a single processed row alone (no duplicate to purge)', async () => {
+            const only = await enqueueProcessed('pr-single', '1');
+
+            const deleted = await inboxService.purgeSupersededProcessedRows();
+
+            expect(deleted).toBe(0);
+            const remaining = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .find({ where: { stream: 'price', entityId: 'pr-single' } });
+            expect(remaining.map(r => r.id)).toEqual([only]);
+        });
+
+        it('keeps entities from different streams independent even sharing an entityId', async () => {
+            await enqueueProcessed('shared-id', '1');
+            const stockRow = await inboxService.enqueue({
+                stream: 'stock',
+                entityId: 'shared-id',
+                version: '1',
+                sourceEventId: 'evt-shared-stock',
+                payload: {},
+            });
+            await inboxService.markProcessed(stockRow.id);
+            const stockNewest = await inboxService.enqueue({
+                stream: 'stock',
+                entityId: 'shared-id',
+                version: '2',
+                sourceEventId: 'evt-shared-stock-2',
+                payload: {},
+            });
+            await inboxService.markProcessed(stockNewest.id);
+
+            await inboxService.purgeSupersededProcessedRows();
+
+            const priceRemaining = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .find({ where: { stream: 'price', entityId: 'shared-id' } });
+            const stockRemaining = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .find({ where: { stream: 'stock', entityId: 'shared-id' } });
+            expect(priceRemaining).toHaveLength(1);
+            expect(stockRemaining.map(r => r.id)).toEqual([stockNewest.id]);
         });
     });
 });

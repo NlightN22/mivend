@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
     createIntegrationInboxBulkTask,
     createIntegrationInboxCriticalTask,
+    createIntegrationInboxRetentionTask,
     createIntegrationInboxUserTask,
 } from '../../integration-inbox.scheduled-task';
 import {
@@ -191,5 +192,33 @@ describe('createIntegrationInboxBulkTask', () => {
         // The first call always runs; it alone pushes elapsed time to the budget, so the
         // post-processing budget check stops the loop before a second call.
         expect(processPendingBatch).toHaveBeenCalledTimes(1);
+    });
+});
+
+// #147: a separate lane, independent of the three claim lanes above — it only calls
+// purgeSupersededProcessedRows, never processPendingBatch.
+describe('createIntegrationInboxRetentionTask', () => {
+    it('skips on a branch instance', async () => {
+        const purgeSupersededProcessedRows = vi.fn();
+        const task = createIntegrationInboxRetentionTask(makeOptions('branch'));
+        const result = await task.options.execute({
+            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+        expect(result).toEqual({ skipped: true });
+        expect(purgeSupersededProcessedRows).not.toHaveBeenCalled();
+    });
+
+    it('purges superseded processed rows on a central instance', async () => {
+        const purgeSupersededProcessedRows = vi.fn().mockResolvedValue(3);
+        const task = createIntegrationInboxRetentionTask(makeOptions('central'));
+        const result = await task.options.execute({
+            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+        expect(purgeSupersededProcessedRows).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ deleted: 3 });
     });
 });

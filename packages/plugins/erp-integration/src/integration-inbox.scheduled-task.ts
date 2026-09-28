@@ -2,6 +2,7 @@ import { Logger, ScheduledTask } from '@vendure/core';
 import { cronEveryMs } from 'shared';
 
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
+import { IntegrationInboxService } from './integration-inbox.service';
 import {
     INBOX_BULK_BATCH_SIZE_DEFAULT,
     INBOX_BULK_STREAMS,
@@ -10,6 +11,7 @@ import {
     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
     INBOX_POLL_INTERVAL_DEFAULT,
+    INBOX_RETENTION_INTERVAL_DEFAULT,
     INBOX_USER_BATCH_SIZE_DEFAULT,
     INBOX_USER_STREAMS,
     loggerCtx,
@@ -143,6 +145,36 @@ export function createIntegrationInboxBulkTask(
                 );
             }
             return { processed: totalProcessed, failed: totalFailed };
+        },
+    });
+}
+
+// Retention (#147): a separate, low-frequency housekeeping lane, deliberately independent of the
+// three claim lanes above — it never touches `pending`/`processing` rows, only `processed` ones,
+// so it can never compete with or delay a claim. See
+// IntegrationInboxService.purgeSupersededProcessedRows for what "superseded" means here.
+export function createIntegrationInboxRetentionTask(
+    options: ErpIntegrationPluginOptions,
+): ScheduledTask {
+    const everyMs = options.inboxRetentionIntervalMs ?? INBOX_RETENTION_INTERVAL_DEFAULT;
+    return new ScheduledTask({
+        id: 'erp-integration-inbox-retention',
+        description:
+            'Purges superseded processed inbox rows, keeping only the latest version per (stream, entityId) (central hub only).',
+        schedule: cronEveryMs(everyMs),
+        execute: async ({ injector }) => {
+            if (options.instanceType !== 'central') return { skipped: true };
+
+            const deleted = await injector
+                .get(IntegrationInboxService)
+                .purgeSupersededProcessedRows();
+            if (deleted > 0) {
+                Logger.verbose(
+                    `Integration inbox retention sweep: purged ${deleted} superseded processed row(s)`,
+                    loggerCtx,
+                );
+            }
+            return { deleted };
         },
     });
 }
