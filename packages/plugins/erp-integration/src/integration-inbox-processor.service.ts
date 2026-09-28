@@ -149,12 +149,11 @@ export class IntegrationInboxProcessorService {
     }
 
     private async isSupersededByNewerVersion(row: IntegrationInboxEvent): Promise<boolean> {
-        // `version` is an arbitrary string (see the entity's column comment) — a SQL `>` on a
-        // varchar column is lexicographic, wrong for numeric strings of different lengths. Fetch
-        // the already-processed candidates for this entity and compare in JS via isVersionNewer
-        // (BigInt-safe, string fallback) instead.
+        // Compared in JS (isVersionNewer): SQL `>` on the varchar version is lexicographic.
+        // Only `version` is selected — never the jsonb payload of every historical row.
         const repo = this.dataSource.getRepository(IntegrationInboxEvent);
         const processedRows = await repo.find({
+            select: { version: true },
             where: { stream: row.stream, entityId: row.entityId, status: 'processed' },
         });
         return processedRows.some(processedRow =>
