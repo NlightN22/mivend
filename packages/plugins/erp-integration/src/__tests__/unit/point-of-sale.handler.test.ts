@@ -9,14 +9,16 @@ function makeHandler(
         .fn()
         .mockResolvedValue({ id: 'cp-local-1', branchId: 'branch-a' }),
     upsertFromStream = vi.fn().mockResolvedValue(undefined),
+    deactivate = vi.fn().mockResolvedValue(undefined),
 ): {
     handler: PointOfSaleStreamHandler;
     tradingPointService: {
         findCounterpartyRefByErpId: ReturnType<typeof vi.fn>;
         upsertFromStream: ReturnType<typeof vi.fn>;
+        deactivate: ReturnType<typeof vi.fn>;
     };
 } {
-    const tradingPointService = { findCounterpartyRefByErpId, upsertFromStream };
+    const tradingPointService = { findCounterpartyRefByErpId, upsertFromStream, deactivate };
     const handler = new PointOfSaleStreamHandler(tradingPointService as never);
     return { handler, tradingPointService };
 }
@@ -24,12 +26,13 @@ function makeHandler(
 describe('PointOfSaleStreamHandler', () => {
     const ctx = {} as RequestContext;
 
-    // A deletion tombstone never carries a name — same convention as organization/counterparty.
-    it('skips entirely when the payload has no name (deletion tombstone)', async () => {
+    // Audit HIGH: a bare `return` here previously left a deleted-in-ERP point permanently active.
+    it('deactivates an existing point on a deletion tombstone (no name), without a counterparty lookup', async () => {
         const { handler, tradingPointService } = makeHandler();
 
-        await handler.apply(ctx, 'pos-1', { isDeleted: true, counterpartyId: 'cp-erp-1' });
+        await handler.apply(ctx, 'pos-1', { isDeleted: true });
 
+        expect(tradingPointService.deactivate).toHaveBeenCalledWith(ctx, 'pos-1');
         expect(tradingPointService.findCounterpartyRefByErpId).not.toHaveBeenCalled();
         expect(tradingPointService.upsertFromStream).not.toHaveBeenCalled();
     });

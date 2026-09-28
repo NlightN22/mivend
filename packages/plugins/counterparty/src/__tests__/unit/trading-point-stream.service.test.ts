@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CustomerService, RequestContext, TransactionalConnection } from '@vendure/core';
+import { CustomerService, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { TradingPointService } from '../../trading-point.service';
 import { TradingPoint } from '../../entities/trading-point.entity';
 import { ContactPerson } from '../../entities/contact-person.entity';
@@ -95,10 +95,10 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
             expect(mockTpRepo.save).toHaveBeenCalled();
         });
 
-        // TradingPoint.address is a required column — never fabricate a row without one, same
-        // rule as organization/counterparty's null-name tombstone.
-        it('does not create a row when address is missing and none exists yet', async () => {
+        // address is required, never fabricated (audit LOW: deferred-create must warn, not verbose).
+        it('does not create a row when address is missing and none exists yet, and warns', async () => {
             mockTpRepo.findOne.mockResolvedValue(null);
+            const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => undefined);
 
             await service.upsertFromStream(mockCtx, 'pos-1', {
                 name: 'Kiosk A',
@@ -109,6 +109,11 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
 
             expect(mockTpRepo.create).not.toHaveBeenCalled();
             expect(mockTpRepo.save).not.toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(
+                expect.stringContaining('no address yet'),
+                expect.any(String),
+            );
+            warnSpy.mockRestore();
         });
 
         it('does not create a row for a deletion tombstone (no name) when none exists yet', async () => {

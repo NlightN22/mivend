@@ -295,11 +295,18 @@ export class TradingPointService {
         let record = await repo.findOne({ where: { erpId }, relations: ['contacts'] });
 
         if (!record) {
-            if (!fields.name || fields.address === undefined) {
+            if (!fields.name) {
                 Logger.verbose(
-                    `trading point ${erpId}: ${
-                        !fields.name ? 'no name (deletion tombstone)' : 'no address yet'
-                    }, no existing row — nothing to create`,
+                    `trading point ${erpId}: no name (deletion tombstone), no existing row — nothing to create`,
+                    loggerCtx,
+                );
+                return;
+            }
+            if (fields.address === undefined) {
+                // Not a silent skip: if the ERP never sends an event with an address for this
+                // erpId, this point never appears at all and nothing else surfaces that.
+                Logger.warn(
+                    `trading point ${erpId}: no address yet, no existing row — deferring create`,
                     loggerCtx,
                 );
                 return;

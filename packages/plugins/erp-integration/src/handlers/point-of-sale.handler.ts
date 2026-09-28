@@ -22,9 +22,12 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 
         if (!name) {
+            // A tombstone deactivates an already-known point but never looks up a counterparty
+            // (it likely has none) — deactivate() is a safe no-op when no row exists yet.
+            await this.tradingPointService.deactivate(ctx, entityId);
             Logger.verbose(
-                `point-of-sale ${entityId}: no name (deletion tombstone) — skipping, ` +
-                    'nothing to create/update without a name',
+                `point-of-sale ${entityId}: no name (deletion tombstone) — deactivated if an ` +
+                    'existing row matched, never created one',
                 loggerCtx,
             );
             return;
