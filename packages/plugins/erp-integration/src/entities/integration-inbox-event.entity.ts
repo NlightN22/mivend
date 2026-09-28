@@ -35,6 +35,8 @@ export type IntegrationInboxEventStatus = 'pending' | 'processing' | 'processed'
 @Entity('integration_inbox_event')
 @Index('integration_inbox_event_dedup', ['stream', 'sourceEventId'], { unique: true })
 @Index('integration_inbox_event_pending', ['status', 'createdAt'])
+// Per-row superseded-version check (processor); without it each check seq-scans the table (#146).
+@Index('integration_inbox_event_entity', ['stream', 'entityId', 'status'])
 export class IntegrationInboxEvent {
     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
     id!: number;
