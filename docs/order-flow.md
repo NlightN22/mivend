@@ -300,6 +300,61 @@ everything else. See `ProductRecordDto.multiplicity`'s Swagger description
 given to the ERP's integrators — that description is the source of truth for the ERP side, keep it
 in sync with this paragraph if either changes.
 
+### Order weight/volume and branch-conditional packaging (mivend#103)
+
+Decided architecture, not yet implemented. Two ERP-sourced facts drive this, both confirmed live
+against 1C (`torg_develop4`) by search-platform, not theoretical:
+
+- `ProductChanged.defaultSalesUnitId` (search-platform#143, contract `@nlightn22/event-contracts`
+  0.43.0+) — resolved server-side by 1C, always present, never a raw "unset" marker. Equal to the
+  product's base unit → no constraint. Different from the base unit → **1C's own semantics for
+  this field is "sellable only in this packaging, not by piece"** — confirmed with the 1C
+  developer directly (search-platform#144, closed as resolved-by-#143: there is no separate
+  "mandatory packaging" flag, it's the same field).
+- `UnitChanged` (still not consumed by mivend as of this writing) carries, per unit
+  (`owner_id=null` = shared classifier, `owner_id=<productId>` = product-owned packaging unit):
+  `ratio_to_base` (units-per-package, consistent across products), `weight_kg`/`volume_l` (for
+  the packaging unit as a whole, not per piece inside it).
+
+**Data model — single variant stays in base units, ERP data is informational, enforcement is
+branch-conditional:**
+
+1. `ProductVariant` stays exactly as today — one variant per product, priced and quantified in
+   base units (pieces). Do **not** switch the variant's SKU/price/quantity-unit to the packaging
+   unit, and do **not** introduce a second per-unit variant — the catalog is shared across
+   branches (not duplicated per branch, see `docs/sync.md`), so a global "this variant IS a box"
+   resolution can't represent "piece-sale allowed in branch A, packaging-only in branch B"
+   simultaneously.
+2. Add `unitRatioToBase`/`unitWeightKg`/`unitVolumeL` to `ProductVariant.customFields`, resolved
+   from `UnitChanged` via `defaultSalesUnitId` at import time (same handler pattern as
+   `product.handler.ts`). Purely informational — used only to compute order weight/volume:
+   `weightPerPiece = weightKg / ratioToBase`, summed across order lines (`Σ weightPerPiece ×
+quantity`), displayed on storefront checkout/order confirmation and the manager portal's order
+   detail. Never gates whether an order can be placed.
+3. Whether the packaging constraint is actually **enforced** is a per-branch business decision,
+   not an ERP fact applied uniformly — confirmed with the developer: the same SKU may be
+   piece-sellable in one branch (e.g. retail) and packaging-only in another (e.g. wholesale),
+   depending on the counterparty's branch. Model this as a new field on
+   `access-control`'s existing `BranchSettings` (`packages/plugins/access-control/src/entities/
+branch-settings.entity.ts`, issue #66's per-branch business-config pattern — same table
+   already holding `defaultPriceTypeId`/`defaultWarehouseId`), e.g. `allowPiecewiseSale: boolean`
+   (default `true`). Resolved the same way as the rest of `BranchSettings` — via
+   `BranchSettingsService.resolveEffective(ctx, branchId)`, with its existing global-default-branch
+   fallback.
+4. Enforcement itself extends the existing `MultiplicityOrderInterceptor`
+   (`packages/plugins/moq/src/multiplicity-order.interceptor.ts`) rather than adding a parallel
+   mechanism: when `defaultSalesUnitId` differs from the base unit AND the resolved
+   `BranchSettings.allowPiecewiseSale` is `false` for the order's branch, treat
+   `unitRatioToBase` as the effective required multiple (same "quantity % N === 0" check the
+   interceptor already does for `multiplicity`) — reuse, don't duplicate, the check/error shape
+   (`InvalidMultiplicityError`). When `allowPiecewiseSale` is `true` (or unset with no branch
+   settings configured), no packaging constraint applies regardless of what `defaultSalesUnitId`
+   says — piece-level sale is allowed.
+
+Not needed for this: per-branch catalog duplication, Vendure `ProductOption`/multi-variant unit
+selection, a shared-stock-across-variants strategy — all avoided by keeping a single variant in
+base units and treating packaging as an order-time constraint, not a catalog-time one.
+
 ### Permissions
 
 A `ConfirmOrder` permission (covers confirm + release — one staff action from the operator's
