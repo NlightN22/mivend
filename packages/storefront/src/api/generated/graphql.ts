@@ -2366,7 +2366,11 @@ export type OrderAddress = {
 
 export type OrderCustomFields = {
     branchId?: Maybe<Scalars['String']['output']>;
+    erpContractId?: Maybe<Scalars['String']['output']>;
     erpOrderId?: Maybe<Scalars['String']['output']>;
+    erpOrderStatus?: Maybe<Scalars['String']['output']>;
+    erpRegistrationDocumentNumber?: Maybe<Scalars['String']['output']>;
+    erpRegistrationStatus?: Maybe<Scalars['String']['output']>;
     erpStatus?: Maybe<Scalars['String']['output']>;
     erpStatusAt?: Maybe<Scalars['DateTime']['output']>;
     latestFulfillmentState?: Maybe<Scalars['String']['output']>;
@@ -2386,7 +2390,11 @@ export type OrderFilterParameter = {
     code?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
     currencyCode?: InputMaybe<StringOperators>;
+    erpContractId?: InputMaybe<StringOperators>;
     erpOrderId?: InputMaybe<StringOperators>;
+    erpOrderStatus?: InputMaybe<StringOperators>;
+    erpRegistrationDocumentNumber?: InputMaybe<StringOperators>;
+    erpRegistrationStatus?: InputMaybe<StringOperators>;
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
     id?: InputMaybe<IdOperators>;
@@ -2545,7 +2553,11 @@ export type OrderSortParameter = {
     /** A unique code for the Order */
     code?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
+    erpContractId?: InputMaybe<SortOrder>;
     erpOrderId?: InputMaybe<SortOrder>;
+    erpOrderStatus?: InputMaybe<SortOrder>;
+    erpRegistrationDocumentNumber?: InputMaybe<SortOrder>;
+    erpRegistrationStatus?: InputMaybe<SortOrder>;
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
@@ -2906,8 +2918,12 @@ export enum Permission {
     DeleteZone = 'DeleteZone',
     /** Manage role scope configuration (departmentId/branchId, max scope per resource) */
     ManageAccessControl = 'ManageAccessControl',
+    /** Decide who has an Administrator login at all — review ErpUser candidates, create an Administrator anchored on erpId, and manually activate/deactivate one (issue #119); distinct from ManageAccessControl, which is RBAC role/scope configuration once a login already exists */
+    ManageAdministratorLifecycle = 'ManageAdministratorLifecycle',
     /** Create/edit WorkflowDefinition chains (layer 5, /settings) */
     ManageApprovalWorkflows = 'ManageApprovalWorkflows',
+    /** Activate/deactivate a Counterparty's storefront portal login (Customer created from its phone/officialEmail) and view/deactivate its already-created portal sub-users (issue #120) — scoped via AccessScopeService.resolveCounterpartyScope, same own/department/all model as ReassignCounterpartyManager */
+    ManageCounterpartyPortalAccess = 'ManageCounterpartyPortalAccess',
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
     ManageCounterpartyTeam = 'ManageCounterpartyTeam',
     /** Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84) */
@@ -3237,6 +3253,9 @@ export type ProductVariantFilterParameter = {
     productId?: InputMaybe<IdOperators>;
     sku?: InputMaybe<StringOperators>;
     stockLevel?: InputMaybe<StringOperators>;
+    unitRatioToBase?: InputMaybe<NumberOperators>;
+    unitVolumeL?: InputMaybe<NumberOperators>;
+    unitWeightKg?: InputMaybe<NumberOperators>;
     updatedAt?: InputMaybe<DateOperators>;
     weight?: InputMaybe<NumberOperators>;
 };
@@ -3272,6 +3291,9 @@ export type ProductVariantSortParameter = {
     productId?: InputMaybe<SortOrder>;
     sku?: InputMaybe<SortOrder>;
     stockLevel?: InputMaybe<SortOrder>;
+    unitRatioToBase?: InputMaybe<SortOrder>;
+    unitVolumeL?: InputMaybe<SortOrder>;
+    unitWeightKg?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
     weight?: InputMaybe<SortOrder>;
 };
@@ -4060,7 +4082,11 @@ export type UpdateMultipleOrderItemsResult = {
 
 export type UpdateOrderCustomFieldsInput = {
     branchId?: InputMaybe<Scalars['String']['input']>;
+    erpContractId?: InputMaybe<Scalars['String']['input']>;
     erpOrderId?: InputMaybe<Scalars['String']['input']>;
+    erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
+    erpRegistrationDocumentNumber?: InputMaybe<Scalars['String']['input']>;
+    erpRegistrationStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
     latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;

@@ -531,6 +531,7 @@ export type Branch = {
 };
 
 export type BranchSettings = {
+    allowPiecewiseSale: Scalars['Boolean']['output'];
     branchId: Scalars['String']['output'];
     defaultPriceTypeId: Scalars['String']['output'];
     defaultWarehouseId: Scalars['String']['output'];
@@ -847,22 +848,22 @@ export type Counterparty = Node & {
     /** Free-text group/segment label from the ERP — display and filtering only. */
     erpGroupLabel: Maybe<Scalars['String']['output']>;
     erpId: Scalars['String']['output'];
-    /** Фактический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    /** Фактический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     factualAddress: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
     inn: Maybe<Scalars['String']['output']>;
     isActive: Scalars['Boolean']['output'];
-    /** Юридический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     legalAddress: Maybe<Scalars['String']['output']>;
     legalName: Scalars['String']['output'];
     /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
     linkedCustomerId: Maybe<Scalars['ID']['output']>;
-    /** Raw ERP manager id (1C) — fallback display when assignedManagerId hasn't resolved yet, see issue #133. */
+    /** Raw ERP manager id (the ERP) — fallback display when assignedManagerId hasn't resolved yet, see issue #133. */
     managerErpId: Maybe<Scalars['String']['output']>;
-    /** Служебный адрес электронной почты контрагента (1C) — the real login-eligible email, see issue #120. */
+    /** Служебный адрес электронной почты контрагента (the ERP) — the real login-eligible email, see issue #120. */
     officialEmail: Maybe<Scalars['String']['output']>;
     paymentDelayDays: Scalars['Int']['output'];
-    /** Телефон контрагента (1C) — required with officialEmail before #120's portal-access activation. */
+    /** Телефон контрагента (the ERP) — required with officialEmail before #120's portal-access activation. */
     phone: Maybe<Scalars['String']['output']>;
     /** Customers linked to this Counterparty via customFields.counterpartyId, active or deactivated — issue #120. */
     portalUsers: Array<Customer>;
@@ -887,22 +888,22 @@ export type CounterpartyFilterParameter = {
     /** Free-text group/segment label from the ERP — display and filtering only. */
     erpGroupLabel?: InputMaybe<StringOperators>;
     erpId?: InputMaybe<StringOperators>;
-    /** Фактический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    /** Фактический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     factualAddress?: InputMaybe<StringOperators>;
     id?: InputMaybe<IdOperators>;
     inn?: InputMaybe<StringOperators>;
     isActive?: InputMaybe<BooleanOperators>;
-    /** Юридический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     legalAddress?: InputMaybe<StringOperators>;
     legalName?: InputMaybe<StringOperators>;
     /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
     linkedCustomerId?: InputMaybe<IdOperators>;
-    /** Raw ERP manager id (1C) — fallback display when assignedManagerId hasn't resolved yet, see issue #133. */
+    /** Raw ERP manager id (the ERP) — fallback display when assignedManagerId hasn't resolved yet, see issue #133. */
     managerErpId?: InputMaybe<StringOperators>;
-    /** Служебный адрес электронной почты контрагента (1C) — the real login-eligible email, see issue #120. */
+    /** Служебный адрес электронной почты контрагента (the ERP) — the real login-eligible email, see issue #120. */
     officialEmail?: InputMaybe<StringOperators>;
     paymentDelayDays?: InputMaybe<NumberOperators>;
-    /** Телефон контрагента (1C) — required with officialEmail before #120's portal-access activation. */
+    /** Телефон контрагента (the ERP) — required with officialEmail before #120's portal-access activation. */
     phone?: InputMaybe<StringOperators>;
     priceType?: InputMaybe<StringOperators>;
     shortName?: InputMaybe<StringOperators>;
@@ -911,6 +912,17 @@ export type CounterpartyFilterParameter = {
 export type CounterpartyList = PaginatedList & {
     items: Array<Counterparty>;
     totalItems: Scalars['Int']['output'];
+};
+
+/** Narrowing half of CounterpartyListOptions, for mutations that act on every row a list filter matches (issue #136) */
+export type CounterpartyListFilter = {
+    branchId?: InputMaybe<Scalars['String']['input']>;
+    groupLabel?: InputMaybe<Scalars['String']['input']>;
+    managerErpId?: InputMaybe<Scalars['String']['input']>;
+    managerId?: InputMaybe<Scalars['ID']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+    status?: InputMaybe<Scalars['String']['input']>;
+    unassignedOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type CounterpartyListOptions = {
@@ -959,11 +971,11 @@ export type CounterpartySortParameter = {
     /** Free-text group/segment label from the ERP — display and filtering only. */
     erpGroupLabel?: InputMaybe<SortOrder>;
     erpId?: InputMaybe<SortOrder>;
-    /** Фактический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    /** Фактический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     factualAddress?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     inn?: InputMaybe<SortOrder>;
-    /** Юридический адрес контрагента (1C) — display/completeness only, see issue #120 Decision 1. */
+    /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     legalAddress?: InputMaybe<SortOrder>;
     legalName?: InputMaybe<SortOrder>;
     /** The linked Customer's id, if any (read-only; the write path is issue #120's activation mutation). */
@@ -3756,6 +3768,7 @@ export type Mutation = {
     /** Move a Collection to a different parent or index */
     moveCollection: Collection;
     reassignCounterpartyManager: Counterparty;
+    reassignCounterpartyManagerByFilter: Scalars['Int']['output'];
     /** Records a real Dispute/chargeback row for a payment — its own lifecycle, never folded into PaymentAttempt.paymentStatus. */
     recordPaymentDispute: Dispute;
     /** Records a real PaymentRefund row (the external-integration-rules skill: a refund is its own entity, never a negative payment record), modeled on Robokassa's RefundOperation API — providerRefundId mirrors Robokassa's OpKey. */
@@ -4481,6 +4494,12 @@ export type MutationReassignCounterpartyManagerArgs = {
     counterpartyId: Scalars['ID']['input'];
 };
 
+export type MutationReassignCounterpartyManagerByFilterArgs = {
+    administratorId: Scalars['ID']['input'];
+    expectedCount: Scalars['Int']['input'];
+    filter: CounterpartyListFilter;
+};
+
 export type MutationRecordPaymentDisputeArgs = {
     amount: Scalars['Int']['input'];
     paymentId: Scalars['ID']['input'];
@@ -4641,6 +4660,7 @@ export type MutationSetAdministratorActiveArgs = {
 };
 
 export type MutationSetBranchSettingsArgs = {
+    allowPiecewiseSale?: InputMaybe<Scalars['Boolean']['input']>;
     branchId: Scalars['String']['input'];
     defaultPriceTypeId: Scalars['String']['input'];
     defaultWarehouseId: Scalars['String']['input'];
@@ -6347,6 +6367,9 @@ export type ProductVariantFilterParameter = {
     stockLevel?: InputMaybe<StringOperators>;
     stockOnHand?: InputMaybe<NumberOperators>;
     trackInventory?: InputMaybe<StringOperators>;
+    unitRatioToBase?: InputMaybe<NumberOperators>;
+    unitVolumeL?: InputMaybe<NumberOperators>;
+    unitWeightKg?: InputMaybe<NumberOperators>;
     updatedAt?: InputMaybe<DateOperators>;
     useGlobalOutOfStockThreshold?: InputMaybe<BooleanOperators>;
     weight?: InputMaybe<NumberOperators>;
@@ -6392,6 +6415,9 @@ export type ProductVariantSortParameter = {
     stockAllocated?: InputMaybe<SortOrder>;
     stockLevel?: InputMaybe<SortOrder>;
     stockOnHand?: InputMaybe<SortOrder>;
+    unitRatioToBase?: InputMaybe<SortOrder>;
+    unitVolumeL?: InputMaybe<SortOrder>;
+    unitWeightKg?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
     weight?: InputMaybe<SortOrder>;
 };
@@ -6654,7 +6680,7 @@ export type Query = {
     openErpReconciliationIssues: ErpReconciliationIssueList;
     /** Open payment reconciliation issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76). */
     openPaymentReconciliationIssues: PaymentReconciliationIssueList;
-    /** Open reservation/1C drift issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76). */
+    /** Open reservation/ERP drift issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76). */
     openReservationReconciliationIssues: ReservationReconciliationIssueList;
     order: Maybe<Order>;
     /** Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet. */
