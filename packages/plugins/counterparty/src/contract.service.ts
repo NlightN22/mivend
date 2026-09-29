@@ -5,8 +5,7 @@ import { Contract } from './entities/contract.entity';
 import { loggerCtx } from './types';
 
 // Fields from the `contract` Kafka stream (ContractChanged, issue #105) — `undefined` means "not
-// sent, leave unchanged" on update; see upsertActiveState's own comment for the create-time
-// tombstone exception, mirroring CounterpartyService.upsertActiveState's convention.
+// sent, leave unchanged" on update, mirroring CounterpartyService.upsertActiveState.
 export interface ContractStreamFields {
     name: string | null;
     counterpartyId: string;
@@ -15,11 +14,13 @@ export interface ContractStreamFields {
     isActive: boolean;
     creditLimit?: string | null;
     currency?: string | null;
-    controlledIndividually?: boolean | null;
-    debtDaysLimit?: number | null;
+    // Always resolved by the caller (proto3 zero-value omission — absent means false/null, never
+    // "leave unchanged"), same treatment as isActive above.
+    controlledIndividually: boolean;
+    debtDaysLimit: number | null;
     contractKind: string;
     paymentKind?: string | null;
-    paymentDelayDays?: number | null;
+    paymentDelayDays: number | null;
     contractType: string;
     brandManufacturerId?: string | null;
 }
@@ -28,9 +29,8 @@ export interface ContractStreamFields {
 export class ContractService {
     constructor(private connection: TransactionalConnection) {}
 
-    // Mirrors CounterpartyService.upsertActiveState's shape — a tombstone (`fields.name: null`)
-    // never carries a name, so a brand-new erpId with no name is deferred, not created; an
-    // already-known row still gets its isActive/other fields updated.
+    // Mirrors CounterpartyService.upsertActiveState — a new erpId with no name is deferred, not
+    // created; an already-known row still gets updated.
     async upsertActiveState(
         ctx: RequestContext,
         erpId: string,
@@ -48,14 +48,10 @@ export class ContractService {
             entity.contractType = fields.contractType;
             if (fields.creditLimit !== undefined) entity.creditLimit = fields.creditLimit;
             if (fields.currency !== undefined) entity.currency = fields.currency;
-            if (fields.controlledIndividually !== undefined) {
-                entity.controlledIndividually = fields.controlledIndividually;
-            }
-            if (fields.debtDaysLimit !== undefined) entity.debtDaysLimit = fields.debtDaysLimit;
+            entity.controlledIndividually = fields.controlledIndividually;
+            entity.debtDaysLimit = fields.debtDaysLimit;
             if (fields.paymentKind !== undefined) entity.paymentKind = fields.paymentKind;
-            if (fields.paymentDelayDays !== undefined) {
-                entity.paymentDelayDays = fields.paymentDelayDays;
-            }
+            entity.paymentDelayDays = fields.paymentDelayDays;
             if (fields.brandManufacturerId !== undefined) {
                 entity.brandManufacturerId = fields.brandManufacturerId;
             }
@@ -75,10 +71,10 @@ export class ContractService {
                 contractType: fields.contractType,
                 creditLimit: fields.creditLimit ?? null,
                 currency: fields.currency ?? null,
-                controlledIndividually: fields.controlledIndividually ?? null,
-                debtDaysLimit: fields.debtDaysLimit ?? null,
+                controlledIndividually: fields.controlledIndividually,
+                debtDaysLimit: fields.debtDaysLimit,
                 paymentKind: fields.paymentKind ?? null,
-                paymentDelayDays: fields.paymentDelayDays ?? null,
+                paymentDelayDays: fields.paymentDelayDays,
                 brandManufacturerId: fields.brandManufacturerId ?? null,
             }),
         );
@@ -89,12 +85,13 @@ export class ContractService {
         return this.connection.getRepository(ctx, Contract).findOne({ where: { erpId } });
     }
 
-    // #50's credit-gate: every active contract for a counterparty, regardless of
-    // controlledIndividually — CreditLimitCheckService filters for the individually-controlled
-    // ones itself.
-    async findForCounterparty(ctx: RequestContext, counterpartyId: string): Promise<Contract[]> {
-        return this.connection
-            .getRepository(ctx, Contract)
-            .find({ where: { counterpartyId, isActive: true } });
+    // A tombstone never carries a counterpartyId either — deactivate by erpId only, never look up
+    // or overwrite other fields (same class of bug as the point-of-sale #100 tombstone fix).
+    async deactivateTombstone(ctx: RequestContext, erpId: string): Promise<void> {
+        const repo = this.connection.getRepository(ctx, Contract);
+        const entity = await repo.findOne({ where: { erpId } });
+        if (!entity) return;
+        entity.isActive = false;
+        await repo.save(entity);
     }
 }

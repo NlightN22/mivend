@@ -7,12 +7,16 @@ import { MissingDependencyError } from '../../types';
 function makeHandler(
     upsertActiveState = vi.fn().mockResolvedValue(undefined),
     findByErpId = vi.fn().mockResolvedValue({ id: 'local-cp-1' }),
+    deactivateTombstone = vi.fn().mockResolvedValue(undefined),
 ): {
     handler: ContractStreamHandler;
-    contractService: { upsertActiveState: ReturnType<typeof vi.fn> };
+    contractService: {
+        upsertActiveState: ReturnType<typeof vi.fn>;
+        deactivateTombstone: ReturnType<typeof vi.fn>;
+    };
     counterpartyService: { findByErpId: ReturnType<typeof vi.fn> };
 } {
-    const contractService = { upsertActiveState };
+    const contractService = { upsertActiveState, deactivateTombstone };
     const counterpartyService = { findByErpId };
     const handler = new ContractStreamHandler(
         contractService as never,
@@ -67,10 +71,11 @@ describe('ContractStreamHandler', () => {
         expect(contractService.upsertActiveState).not.toHaveBeenCalled();
     });
 
-    // A deletion tombstone never carries a name — the handler must still forward the update so
-    // an already-known contract can be deactivated (same convention as counterparty.handler.ts).
-    it('passes name:null through when the payload has no name (deletion tombstone)', async () => {
-        const { handler, contractService } = makeHandler();
+    // A tombstone never carries a name — must deactivate-only by erpId, never look up the
+    // counterparty or touch upsertActiveState (mivend.audit.common finding, same class of bug
+    // as the point-of-sale #100 tombstone fix).
+    it('deactivates by erpId only on a tombstone, without any counterparty lookup or field write', async () => {
+        const { handler, contractService, counterpartyService } = makeHandler();
 
         await handler.apply(ctx, 'contract-1', {
             isDeleted: true,
@@ -81,14 +86,12 @@ describe('ContractStreamHandler', () => {
             contractType: 'ТоварыИУслуги',
         });
 
-        expect(contractService.upsertActiveState).toHaveBeenCalledWith(
-            ctx,
-            'contract-1',
-            expect.objectContaining({ name: null, isActive: false }),
-        );
+        expect(contractService.deactivateTombstone).toHaveBeenCalledWith(ctx, 'contract-1');
+        expect(counterpartyService.findByErpId).not.toHaveBeenCalled();
+        expect(contractService.upsertActiveState).not.toHaveBeenCalled();
     });
 
-    it('passes controlledIndividually through when present, undefined when absent', async () => {
+    it('reads controlledIndividually as false, not undefined, when absent (proto3 zero-value omission)', async () => {
         const { handler, contractService } = makeHandler();
 
         await handler.apply(ctx, 'contract-1', {
@@ -120,7 +123,11 @@ describe('ContractStreamHandler', () => {
             contractType: 'ТоварыИУслуги',
         });
         const call = contractService.upsertActiveState.mock.calls[0][2];
-        expect(call.controlledIndividually).toBeUndefined();
+        // Absent must read as false (a real true→false transition from ERP never re-sends the
+        // key), never left undefined/"unchanged" — that would freeze a stale `true` forever.
+        expect(call.controlledIndividually).toBe(false);
+        expect(call.debtDaysLimit).toBeNull();
+        expect(call.paymentDelayDays).toBeNull();
         expect(call.creditLimit).toBeUndefined();
     });
 });

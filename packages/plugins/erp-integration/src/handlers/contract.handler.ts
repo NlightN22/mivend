@@ -7,19 +7,8 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationContractHandler';
 
-// Applies Integration Service's `contract` stream (ContractChanged, issue #105), verified live
-// against @nlightn22/event-contracts@0.42.0. Full current field-by-field accounting for this
-// message (envelope fields event_id/occurred_at/entity_id/version/updated_at are handled
-// generically by KafkaConsumerService, not listed here):
-//   - counterpartyId/organizationId/priceTypeId/contractKind/contractType — always-present raw
-//     passthrough/reference fields, consumed. counterpartyId is resolved to the local
-//     Counterparty.id here, never stored as a raw erpId — see resolveCounterpartyId below.
-//   - creditLimit/currency/controlledIndividually/debtDaysLimit/paymentKind/paymentDelayDays/
-//     brandManufacturerId — real optional-scalar fields (undefined = "the ERP didn't send this"),
-//     consumed. controlledIndividually is #50's credit-gate signal — never inferred from
-//     creditLimit's own presence (see #50/#105 issue history's explicit retraction of that
-//     inference).
-//   - name — consumed; also this stream's deletion-tombstone signal (see below).
+// Applies Integration Service's `contract` stream (ContractChanged, issue #105). Field-by-field
+// accounting: docs/ai/erp-streams-map.md's `contract` row.
 @Injectable()
 export class ContractStreamHandler implements InboundStreamHandler {
     constructor(
@@ -32,11 +21,26 @@ export class ContractStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
-        // A deletion tombstone never carries a name — same convention confirmed for counterparty/
-        // organization/department. `name: null` here still lets upsertActiveState update isActive
-        // on an existing row; it only refuses to fabricate a brand-new row with a blank name.
         const name = payload.name ? String(payload.name) : null;
+
+        // Tombstone: no name, no reliable counterpartyId — deactivate-only, no lookup or field
+        // write (docs/ai/erp-streams-map.md's `contract` field accounting).
+        if (!name) {
+            await this.contractService.deactivateTombstone(ctx, entityId);
+            Logger.verbose(
+                `contract ${entityId}: tombstone — deactivated if a row existed`,
+                loggerCtx,
+            );
+            return;
+        }
+
         const isActive = payload.isActive === true && payload.isDeleted !== true;
+        // Proto3 zero-value omission (docs/ai/erp-streams-map.md) — absent means false/null.
+        const controlledIndividually = payload.controlledIndividually === true;
+        const debtDaysLimit =
+            typeof payload.debtDaysLimit === 'number' ? payload.debtDaysLimit : null;
+        const paymentDelayDays =
+            typeof payload.paymentDelayDays === 'number' ? payload.paymentDelayDays : null;
 
         const counterpartyErpId = String(payload.counterpartyId ?? '');
         const counterparty = await this.counterpartyService.findByErpId(ctx, counterpartyErpId);
@@ -62,36 +66,18 @@ export class ContractStreamHandler implements InboundStreamHandler {
                     : undefined,
             currency:
                 'currency' in payload ? ((payload.currency as string | null) ?? null) : undefined,
-            controlledIndividually:
-                'controlledIndividually' in payload
-                    ? ((payload.controlledIndividually as boolean | null) ?? null)
-                    : undefined,
-            debtDaysLimit:
-                'debtDaysLimit' in payload
-                    ? ((payload.debtDaysLimit as number | null) ?? null)
-                    : undefined,
+            controlledIndividually,
+            debtDaysLimit,
             paymentKind:
                 'paymentKind' in payload
                     ? ((payload.paymentKind as string | null) ?? null)
                     : undefined,
-            paymentDelayDays:
-                'paymentDelayDays' in payload
-                    ? ((payload.paymentDelayDays as number | null) ?? null)
-                    : undefined,
+            paymentDelayDays,
             brandManufacturerId:
                 'brandManufacturerId' in payload
                     ? ((payload.brandManufacturerId as string | null) ?? null)
                     : undefined,
         });
-
-        if (!name) {
-            Logger.verbose(
-                `contract ${entityId}: no name (deletion tombstone) — updated active state ` +
-                    'only if a row already existed, never created one',
-                loggerCtx,
-            );
-            return;
-        }
         Logger.verbose(`Upserted contract erpId=${entityId}`, loggerCtx);
     }
 }

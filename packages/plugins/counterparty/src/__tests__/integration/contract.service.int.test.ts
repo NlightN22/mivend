@@ -76,6 +76,9 @@ const baseFields = {
     isActive: true,
     contractKind: 'СПокупателем',
     contractType: 'ТоварыИУслуги',
+    controlledIndividually: false,
+    debtDaysLimit: null,
+    paymentDelayDays: null,
 };
 
 describe('ContractService.upsertActiveState (real Postgres)', () => {
@@ -157,22 +160,32 @@ describe('ContractService.upsertActiveState (real Postgres)', () => {
     it('findByErpId returns null for an unknown erpId', async () => {
         expect(await service.findByErpId(ctx, 'nope')).toBeNull();
     });
+});
 
-    it('findForCounterparty returns only active contracts for that counterparty', async () => {
-        await service.upsertActiveState(ctx, 'erp-a', { ...baseFields, name: 'A', isActive: true });
-        await service.upsertActiveState(ctx, 'erp-b', {
+describe('ContractService.deactivateTombstone (real Postgres)', () => {
+    it('deactivates an existing row by erpId without touching its other fields', async () => {
+        await service.upsertActiveState(ctx, 'erp-contract-4', {
             ...baseFields,
-            name: 'B',
-            isActive: false,
-        });
-        await service.upsertActiveState(ctx, 'erp-c', {
-            ...baseFields,
-            counterpartyId: 'local-cp-other',
-            name: 'C',
-            isActive: true,
+            name: 'Real contract',
+            creditLimit: '5000',
         });
 
-        const rows = await service.findForCounterparty(ctx, 'local-cp-1');
-        expect(rows.map(r => r.erpId)).toEqual(['erp-a']);
+        await service.deactivateTombstone(ctx, 'erp-contract-4');
+
+        const row = await dataSource
+            .getRepository(TestContract)
+            .findOne({ where: { erpId: 'erp-contract-4' } });
+        expect(row?.isActive).toBe(false);
+        expect(row?.name).toBe('Real contract');
+        expect(row?.creditLimit).toBe('5000');
+    });
+
+    it('is a no-op for an erpId never seen before — never fabricates a row', async () => {
+        await service.deactivateTombstone(ctx, 'erp-contract-unseen-2');
+
+        const row = await dataSource
+            .getRepository(TestContract)
+            .findOne({ where: { erpId: 'erp-contract-unseen-2' } });
+        expect(row).toBeNull();
     });
 });

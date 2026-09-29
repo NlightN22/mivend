@@ -24,9 +24,8 @@ export class Contract extends VendureEntity {
     @Column({ type: 'varchar' })
     priceTypeId!: string;
 
-    // Kept as a string (like ContractChanged.credit_limit itself), not bigint — avoids the
-    // whole-currency-unit rounding convention Counterparty.creditLimit relies on, since this
-    // value is display/reference only until #50's controlledIndividually gate is wired up.
+    // String, not bigint like Counterparty.creditLimit — matches ContractChanged.credit_limit's
+    // own float-avoidance shape (docs/ai/erp-streams-map.md).
     @Column({ type: 'varchar', nullable: true })
     creditLimit!: string | null;
 
@@ -36,10 +35,8 @@ export class Contract extends VendureEntity {
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 
-    // #50's per-contract credit-gate signal (1C's own КонтролироватьПоДоговору) — when true, this
-    // contract's own creditLimit is enforced individually, on top of the counterparty's aggregate
-    // cap; when false, creditLimit here is reference/display-only. Never inferred from creditLimit
-    // being set (see #50/#105 issue history's explicit retraction of that inference).
+    // #50's per-contract credit-gate signal — never inferred from creditLimit being set (see
+    // docs/ai/erp-streams-map.md's "Per-contract credit limits" section).
     @Column({ type: 'boolean', nullable: true })
     controlledIndividually!: boolean | null;
 
