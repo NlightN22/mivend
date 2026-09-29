@@ -14,6 +14,7 @@ import {
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
 import { fetchCreditForCounterparty, type CustomerCredit } from '../../api/customers';
 import { fetchOrderReservations, type OrderReservation } from '../../api/reservation';
+import { useOrderPackaging } from '../../composables/useOrderPackaging';
 import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
@@ -44,6 +45,13 @@ const managerName = computed(() => {
 });
 
 const editable = computed(() => !!order.value && !NON_EDITABLE_ORDER_STATES.includes(order.value.state));
+
+const packagingLabel = computed(() => {
+    if (!order.value) return null;
+    const { totalWeightKg, totalVolumeL } = useOrderPackaging(order.value.lines);
+    if (totalWeightKg === 0 && totalVolumeL === 0) return null;
+    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeL.toFixed(1)} L`;
+});
 
 function money(amount: number): string {
     if (!order.value) return '';
@@ -131,6 +139,7 @@ watch(() => route.params.code, load);
                     <div class="order-detail__totals">
                         <span>Subtotal: {{ money(order.subTotalWithTax) }}</span>
                         <span>Shipping: {{ money(order.shippingWithTax) }}</span>
+                        <span v-if="packagingLabel">Weight / volume: {{ packagingLabel }}</span>
                         <strong>Total: {{ money(order.totalWithTax) }}</strong>
                     </div>
                 </MvPanel>

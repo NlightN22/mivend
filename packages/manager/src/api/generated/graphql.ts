@@ -6318,6 +6318,9 @@ export type ProductVariantCustomFields = {
     organizationId: Maybe<Scalars['Int']['output']>;
     organizationPriority: Maybe<Scalars['Int']['output']>;
     organizationSourceEntityId: Maybe<Scalars['String']['output']>;
+    unitRatioToBase: Maybe<Scalars['Float']['output']>;
+    unitVolumeL: Maybe<Scalars['Float']['output']>;
+    unitWeightKg: Maybe<Scalars['Float']['output']>;
     weight: Maybe<Scalars['Float']['output']>;
 };
 
@@ -10358,7 +10361,16 @@ export type OrderDetailQuery = {
                 quantity: number;
                 unitPriceWithTax: any;
                 linePriceWithTax: any;
-                productVariant: { id: string; name: string; sku: string };
+                productVariant: {
+                    id: string;
+                    name: string;
+                    sku: string;
+                    customFields: {
+                        unitRatioToBase: number | null;
+                        unitWeightKg: number | null;
+                        unitVolumeL: number | null;
+                    } | null;
+                };
                 customFields: {
                     manualUnitPrice: number | null;
                     manualPriceReason: string | null;
@@ -12984,6 +12996,11 @@ export const OrderDetailDocument = new TypedDocumentString(`
           id
           name
           sku
+          customFields {
+            unitRatioToBase
+            unitWeightKg
+            unitVolumeL
+          }
         }
         customFields {
           manualUnitPrice

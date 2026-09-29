@@ -9,8 +9,11 @@ import {
 type RawOrderDetail = OrderDetailQuery['visibleOrders']['items'][number];
 type RawOrderDetailLine = RawOrderDetail['lines'][number];
 
-export type OrderDetailLine = Omit<RawOrderDetailLine, 'customFields'> & {
+export type OrderDetailLine = Omit<RawOrderDetailLine, 'customFields' | 'productVariant'> & {
     customFields: NonNullable<RawOrderDetailLine['customFields']>;
+    productVariant: Omit<RawOrderDetailLine['productVariant'], 'customFields'> & {
+        customFields: NonNullable<RawOrderDetailLine['productVariant']['customFields']>;
+    };
 };
 export type OrderDetail = Omit<RawOrderDetail, 'customFields' | 'lines'> & {
     customFields: NonNullable<RawOrderDetail['customFields']>;
@@ -28,6 +31,14 @@ function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
         lines: order.lines.map(line => ({
             ...line,
             customFields: line.customFields ?? { manualUnitPrice: null, manualPriceReason: null },
+            productVariant: {
+                ...line.productVariant,
+                customFields: line.productVariant.customFields ?? {
+                    unitRatioToBase: null,
+                    unitWeightKg: null,
+                    unitVolumeL: null,
+                },
+            },
         })),
     };
 }

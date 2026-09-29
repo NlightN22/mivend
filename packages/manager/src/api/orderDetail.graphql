@@ -22,6 +22,11 @@ query OrderDetail($code: String!) {
                     id
                     name
                     sku
+                    customFields {
+                        unitRatioToBase
+                        unitWeightKg
+                        unitVolumeL
+                    }
                 }
                 customFields {
                     manualUnitPrice
