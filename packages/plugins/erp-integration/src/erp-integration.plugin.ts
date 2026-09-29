@@ -58,6 +58,9 @@ import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
 import { ContractStreamHandler } from './handlers/contract.handler';
+import { UnitStreamHandler } from './handlers/unit.handler';
+import { UnitRecord } from './entities/unit-record.entity';
+import { UnitLookupService } from './unit-lookup.service';
 import { TaxCategoryAutoCreateService } from './tax-category-auto-create.service';
 import { TaxZoneService } from './tax-zone.service';
 import { KafkaProducerService } from './kafka-producer.service';
@@ -116,6 +119,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ProductCharacteristic,
         ProductManufacturerCode,
         ErpReconciliationIssue,
+        UnitRecord,
     ],
     controllers: [KafkaStatusController],
     providers: [
@@ -143,6 +147,8 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         VatRateStreamHandler,
         PointOfSaleStreamHandler,
         ContractStreamHandler,
+        UnitStreamHandler,
+        UnitLookupService,
         TaxCategoryAutoCreateService,
         TaxZoneService,
         KafkaProducerService,

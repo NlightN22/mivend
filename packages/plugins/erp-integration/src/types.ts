@@ -23,6 +23,15 @@ declare module '@vendure/core' {
         // The StorageLocationChanged entityId that currently owns organizationId/
         // organizationPriority — see vendure-config.ts's own doc comment on this field.
         organizationSourceEntityId?: string | null;
+        // Issue #103: resolved from UnitChanged via ProductChanged.defaultSalesUnitId — see
+        // ProductStreamHandler and docs/order-flow.md's mivend#103 section. Purely informational
+        // when read alone (order weight/volume display is a later, storefront-side task); the
+        // moq plugin's MultiplicityOrderInterceptor is the only consumer that turns this into an
+        // enforced constraint, and only when BranchSettings.allowPiecewiseSale is false for the
+        // order's branch. Null when defaultSalesUnitId is unset (sold in base/piece unit).
+        unitRatioToBase?: number | null;
+        unitWeightKg?: number | null;
+        unitVolumeL?: number | null;
     }
 
     interface CustomStockLevelFields {
@@ -150,7 +159,13 @@ export type InboundStream =
     // brandManufacturerId are real optional fields. Not order-critical, bulk lane. See
     // ContractStreamHandler and docs/ai/erp-streams-map.md's `contract` row / "Per-contract
     // credit limits" section for #50's downstream credit-gate model.
-    | 'contract';
+    | 'contract'
+    // Issue #103: the ERP's packaging/sales-unit reference feed (UnitChanged), keyed by the
+    // unit's own entity id — resolved against by ProductStreamHandler via
+    // ProductChanged.defaultSalesUnitId. Not product-keyed itself (a shared classifier unit has
+    // ownerId=null), so a `unit` row arriving before any product references it is not a missing-
+    // dependency race. See UnitStreamHandler and docs/order-flow.md's mivend#103 section.
+    | 'unit';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -241,6 +256,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'vat-rate': true,
     'point-of-sale': true,
     contract: true,
+    unit: true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

@@ -20,6 +20,7 @@ import {
     StockChangedSchema,
     StockOrganizationChangedSchema,
     StorageLocationChangedSchema,
+    UnitChangedSchema,
     UserChangedSchema,
     VatRateChangedSchema,
     WarehouseChangedSchema,
@@ -94,6 +95,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     'vat-rate': VatRateChangedSchema,
     'point-of-sale': PointOfSaleChangedSchema,
     contract: ContractChangedSchema,
+    unit: UnitChangedSchema,
 };
 
 @Injectable()

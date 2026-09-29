@@ -403,6 +403,31 @@ export const config: VendureConfig = {
                 public: false,
                 label: [{ languageCode: LanguageCode.en, value: 'Organization assignment source' }],
             },
+            {
+                // Issue #103: resolved from UnitChanged.ratioToBase via
+                // ProductChanged.defaultSalesUnitId — see ProductStreamHandler. Backend-owned
+                // (ERP-sourced), so readonly: true (backend-plugin-rules skill's customFields
+                // gotcha) — never hand-edited from the Dashboard.
+                name: 'unitRatioToBase',
+                type: 'float',
+                nullable: true,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Sales unit ratio to base' }],
+            },
+            {
+                name: 'unitWeightKg',
+                type: 'float',
+                nullable: true,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Sales unit weight (kg)' }],
+            },
+            {
+                name: 'unitVolumeL',
+                type: 'float',
+                nullable: true,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Sales unit volume (L)' }],
+            },
         ],
         StockLocation: [
             {
@@ -760,6 +785,12 @@ export const config: VendureConfig = {
                     contract:
                         process.env.INTEGRATION_KAFKA_TOPIC_CONTRACT ??
                         'company.customers.events.v1.contract-changed',
+                    // Issue #103: the ERP's packaging/sales-unit reference feed (UnitChanged) —
+                    // company.catalog domain, same as category/product/price/stock above. See
+                    // UnitStreamHandler and docs/order-flow.md's mivend#103 section.
+                    unit:
+                        process.env.INTEGRATION_KAFKA_TOPIC_UNIT ??
+                        'company.catalog.events.v1.unit-changed',
                 },
             },
             schemaRegistry: {
