@@ -48,6 +48,7 @@ function makeOptions(instanceType: 'central' | 'branch'): ErpIntegrationPluginOp
                 'vat-rate': 'vr2',
                 'point-of-sale': 'pos2',
                 contract: 'contract2',
+                'discount-rule': 'dr2',
             },
         },
         schemaRegistry: { url: 'http://x' },

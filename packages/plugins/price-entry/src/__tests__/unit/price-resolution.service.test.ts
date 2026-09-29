@@ -70,6 +70,7 @@ describe('PriceResolutionService', () => {
         getTiers: ReturnType<typeof vi.fn>;
     };
     let promoDiscountRuleService: { getBestPromoPercent: ReturnType<typeof vi.fn> };
+    let counterpartyDiscountRuleService: { getBestPercent: ReturnType<typeof vi.fn> };
     let customerService: { findOneByUserId: ReturnType<typeof vi.fn> };
     let counterpartyService: { getForCustomer: ReturnType<typeof vi.fn> };
     let branchSettingsService: { resolveEffective: ReturnType<typeof vi.fn> };
@@ -93,6 +94,7 @@ describe('PriceResolutionService', () => {
             getTiers: vi.fn(async () => []),
         };
         promoDiscountRuleService = { getBestPromoPercent: vi.fn(async () => null) };
+        counterpartyDiscountRuleService = { getBestPercent: vi.fn(async () => null) };
         customerService = { findOneByUserId: vi.fn(async () => null) };
         counterpartyService = { getForCustomer: vi.fn(async () => null) };
         // Default: no BranchSettings configured anywhere (genuine empty-bootstrap) — tests that
@@ -106,6 +108,7 @@ describe('PriceResolutionService', () => {
             counterpartyService as unknown as import('@mivend/plugin-counterparty').CounterpartyService,
             branchSettingsService as unknown as import('@mivend/plugin-access-control').BranchSettingsService,
             promoDiscountRuleService as unknown as import('../../promo-discount-rule.service').PromoDiscountRuleService,
+            counterpartyDiscountRuleService as unknown as import('../../counterparty-discount-rule.service').CounterpartyDiscountRuleService,
         );
     });
 
@@ -540,6 +543,76 @@ describe('PriceResolutionService', () => {
             const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
 
             expect(result.customerPrice).toBe(900);
+        });
+    });
+
+    describe('counterparty/contract-scoped ERP discount rules (issue #108)', () => {
+        it('never evaluates a counterparty rule for catalog display (no orderContext)', async () => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-1' } },
+                customFields: { weight: 0 },
+            };
+
+            await service.resolve(mockCtx, 'v1');
+
+            expect(counterpartyDiscountRuleService.getBestPercent).not.toHaveBeenCalled();
+        });
+
+        it('max-wins: a counterparty-rule percent higher than the facet/promo percents wins', async () => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-1' } },
+                customFields: { weight: 0 },
+            };
+            pricesByVariantId.v1 = 1000;
+            discountRuleService.getBestPercent.mockResolvedValue(10);
+            promoDiscountRuleService.getBestPromoPercent.mockResolvedValue(20);
+            counterpartyDiscountRuleService.getBestPercent.mockResolvedValue(35);
+
+            const order = { lines: [] } as unknown as Order;
+            const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            expect(result.customerPrice).toBe(650); // 1000 * (1 - 35/100)
+        });
+
+        it('max-wins: does not stack with the facet/promo percents — the facet percent still wins when higher', async () => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-1' } },
+                customFields: { weight: 0 },
+            };
+            pricesByVariantId.v1 = 1000;
+            discountRuleService.getBestPercent.mockResolvedValue(40);
+            promoDiscountRuleService.getBestPromoPercent.mockResolvedValue(null);
+            counterpartyDiscountRuleService.getBestPercent.mockResolvedValue(15);
+
+            const order = { lines: [] } as unknown as Order;
+            const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            expect(result.customerPrice).toBe(600); // 1000 * (1 - 40/100), never 40+15
+        });
+
+        it('falls back to null (no discount) when no source qualifies', async () => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-1' } },
+                customFields: { weight: 0 },
+            };
+            pricesByVariantId.v1 = 1000;
+            discountRuleService.getBestPercent.mockResolvedValue(null);
+            promoDiscountRuleService.getBestPromoPercent.mockResolvedValue(null);
+            counterpartyDiscountRuleService.getBestPercent.mockResolvedValue(null);
+
+            const order = { lines: [] } as unknown as Order;
+            const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            expect(result.customerPrice).toBe(1000);
+            expect(result.compareAtPrice).toBeNull();
         });
     });
 });

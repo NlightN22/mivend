@@ -25,6 +25,7 @@ import { DiscountRegistryResolver } from './discount-registry.resolver';
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService } from './discount-rule.service';
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
+import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
 import { PriceResolutionService } from './price-resolution.service';
 import { TierRebalanceService } from './tier-rebalance.service';
 import { PriceAdjustmentGateService } from './price-adjustment-gate.service';
@@ -290,6 +291,7 @@ const adminApiSchema = gql`
         PriceEntryService,
         DiscountRuleService,
         PromoDiscountRuleService,
+        CounterpartyDiscountRuleService,
         PriceResolutionService,
         TierRebalanceService,
         PriceAdjustmentGateService,
@@ -301,6 +303,7 @@ const adminApiSchema = gql`
         PriceEntryService,
         DiscountRuleService,
         PromoDiscountRuleService,
+        CounterpartyDiscountRuleService,
         PriceResolutionService,
     ],
     configuration: (config: RuntimeVendureConfig) => {

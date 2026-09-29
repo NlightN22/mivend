@@ -16,6 +16,12 @@ declare module '@vendure/core' {
         manualUnitPrice?: number | null;
         manualPriceReason?: string | null;
     }
+    interface CustomOrderFields {
+        // Owned by @mivend/plugin-erp-order (declaration merging) — CounterpartyDiscountRuleService
+        // reads this to match "contract" recipientType rules without taking a package dependency
+        // on erp-order, same precedent as plugin-reservation's own branchId re-declaration.
+        erpContractId?: string | null;
+    }
 }
 
 // The floor-price threshold is stored as an ordinary ProductVariantPriceEntry, keyed by this

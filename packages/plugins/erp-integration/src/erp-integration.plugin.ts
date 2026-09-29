@@ -55,6 +55,7 @@ import { UserStreamHandler } from './handlers/user.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
 import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
+import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
 import { ContractStreamHandler } from './handlers/contract.handler';
@@ -144,6 +145,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         OrderRegistrationResultHandler,
         OrderChangedStreamHandler,
         PromoRuleStreamHandler,
+        DiscountRuleStreamHandler,
         VatRateStreamHandler,
         PointOfSaleStreamHandler,
         ContractStreamHandler,

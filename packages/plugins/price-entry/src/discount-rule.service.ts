@@ -104,9 +104,13 @@ export class DiscountRuleService {
         if (priceTypeCode) {
             return repo.find({ where: { priceTypeCode }, order: { validTo: 'DESC' } });
         }
+        // Issue #108: counterparty/contract-scoped rules (recipientType set) carry no
+        // triggerProductErpId either — excluded here the same way promo rules already are, same
+        // reasoning (this listing only shows facet/priceType-threshold rules).
         return repo
             .createQueryBuilder('dr')
             .where('dr.triggerProductErpId IS NULL')
+            .andWhere('dr.recipientType IS NULL')
             .orderBy('dr.validTo', 'DESC')
             .take(take)
             .getMany();

@@ -12,6 +12,9 @@ export type {
 export type { DiscountRuleOperationKind } from './src/discount-rule.entity';
 export { PromoDiscountRuleService } from './src/promo-discount-rule.service';
 export type { PromoDiscountRuleInput } from './src/promo-discount-rule.service';
+export { CounterpartyDiscountRuleService } from './src/counterparty-discount-rule.service';
+export type { CounterpartyDiscountRuleInput } from './src/counterparty-discount-rule.service';
+export type { DiscountRuleRecipientType, DiscountRuleCondition } from './src/discount-rule.entity';
 export { PriceResolutionService } from './src/price-resolution.service';
 export type { ResolvedPrice, TierProgressVM } from './src/price-resolution.service';
 export { PriceAdjustmentGateService } from './src/price-adjustment-gate.service';

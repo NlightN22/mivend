@@ -13,6 +13,7 @@ import { BranchSettingsService } from '@mivend/plugin-access-control';
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService, DiscountTierVM, VariantFacetValue } from './discount-rule.service';
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
+import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
 import { getProductErpId, buildProductErpQuantities } from './promo-product-lookup';
 import './types';
 
@@ -63,6 +64,7 @@ export class PriceResolutionService {
         private counterpartyService: CounterpartyService,
         private branchSettingsService: BranchSettingsService,
         private promoDiscountRuleService: PromoDiscountRuleService,
+        private counterpartyDiscountRuleService: CounterpartyDiscountRuleService,
     ) {}
 
     async resolve(
@@ -159,23 +161,41 @@ export class PriceResolutionService {
         // the facet/priceType-threshold percent above and only apply with real order context —
         // no order line quantities means no promo can ever qualify (catalog display never
         // triggers a promo, same as the tier ladder's own order-context requirement elsewhere in
-        // this file).
+        // this file). Issue #108's counterparty/contract-scoped rules share the same order-context
+        // requirement and the same per-order product-erpId quantity map, computed once here.
+        const productErpQuantities = orderContext
+            ? await buildProductErpQuantities(
+                  this.connection,
+                  ctx,
+                  variantId,
+                  orderContext.order,
+                  orderContext.quantity,
+              )
+            : null;
         const promoPercent = orderContext
             ? await this.promoDiscountRuleService.getBestPromoPercent(
                   ctx,
                   await getProductErpId(this.connection, ctx, variantId),
                   new Date(),
-                  await buildProductErpQuantities(
-                      this.connection,
-                      ctx,
-                      variantId,
-                      orderContext.order,
-                      orderContext.quantity,
-                  ),
+                  productErpQuantities!,
+              )
+            : null;
+        const counterpartyRulePercent = orderContext
+            ? await this.counterpartyDiscountRuleService.getBestPercent(
+                  ctx,
+                  orderContext.order,
+                  counterparty,
+                  await getProductErpId(this.connection, ctx, variantId),
+                  productErpQuantities!,
+                  orderContext.order.totalWithTax,
+                  new Date(),
               )
             : null;
 
-        const bestPercent = [percent, promoPercent]
+        // Issue #108 (locked project-owner decision): max-wins across all three sources, never
+        // additive — same pattern already used between the facet/tier percent and #107's promo
+        // percent above.
+        const bestPercent = [percent, promoPercent, counterpartyRulePercent]
             .filter((p): p is number => p !== null)
             .reduce((max, p) => Math.max(max, p), -Infinity);
 

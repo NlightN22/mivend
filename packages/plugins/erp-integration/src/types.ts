@@ -165,7 +165,13 @@ export type InboundStream =
     // ProductChanged.defaultSalesUnitId. Not product-keyed itself (a shared classifier unit has
     // ownerId=null), so a `unit` row arriving before any product references it is not a missing-
     // dependency race. See UnitStreamHandler and docs/order-flow.md's mivend#103 section.
-    | 'unit';
+    | 'unit'
+    // Issue #108: the ERP's own per-counterparty/contract, optionally per-product automatic
+    // discount engine (DiscountRuleChanged), company.customers.events.v1. Feeds the same
+    // @mivend/plugin-price-entry DiscountRule entity as the existing facet/priceType-threshold and
+    // #107 promo rules — see DiscountRuleStreamHandler and DiscountRule's own doc comment for the
+    // three-shape invariant.
+    | 'discount-rule';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -257,6 +263,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'point-of-sale': true,
     contract: true,
     unit: true,
+    'discount-rule': true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

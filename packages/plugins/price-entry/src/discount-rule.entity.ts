@@ -21,6 +21,13 @@ export type DiscountRuleOperationKind =
     | 'gift-one-from-list'
     | 'gift-all-from-list';
 
+// Issue #108: the ERP's `DiscountRuleChanged` (company.customers.events.v1) feeds this same
+// entity as a third, mutually-exclusive trigger shape — never combined with the two above on one
+// row: recipientType/recipientErpId set, facetCode/facetValueCode/priceTypeCode/
+// triggerProductErpId/giftProductErpId/operationKind null. See CounterpartyDiscountRuleService.
+export type DiscountRuleRecipientType = 'counterparty' | 'contract';
+export type DiscountRuleCondition = 'byQuantity' | 'byDocumentAmount';
+
 @Entity()
 @Index(['erpId'], { unique: true })
 export class DiscountRule extends VendureEntity {
@@ -81,4 +88,49 @@ export class DiscountRule extends VendureEntity {
     // threshold rule.
     @Column({ type: 'varchar', nullable: true })
     operationKind!: DiscountRuleOperationKind | null;
+
+    // Issue #108 — see this class's own doc comment above for the three-trigger-shape invariant.
+    // "counterparty" or "contract" — mirrors the event's own raw string (closed 2-value set),
+    // never a proto enum. Null for the other two trigger shapes.
+    @Column({ type: 'varchar', nullable: true })
+    recipientType!: DiscountRuleRecipientType | null;
+
+    // Raw ERP id of the counterparty or contract (per recipientType) this rule targets — never
+    // resolved to a local entity id, same "keep the raw ERP id" convention as
+    // triggerProductErpId. Null for the other two trigger shapes.
+    @Column({ type: 'varchar', nullable: true })
+    recipientErpId!: string | null;
+
+    // ERP product id (Product.customFields.externalid) this rule is scoped to. Null means "applies
+    // to all nomenclature for this recipient" (the event's own documented null semantics) — never
+    // confused with triggerProductErpId (issue #107's unrelated promo-rule trigger).
+    @Column({ type: 'varchar', nullable: true })
+    productErpId!: string | null;
+
+    // "byQuantity" or "byDocumentAmount" — see CounterpartyDiscountRuleService.getBestPercent for
+    // how each is evaluated against order context.
+    @Column({ type: 'varchar', nullable: true })
+    condition!: DiscountRuleCondition | null;
+
+    @Column({ type: 'float', nullable: true })
+    conditionValue!: number | null;
+
+    // Captured from the event but deliberately not enforced yet — see issue #108's own comment on
+    // financial guardrails being a separate, later scope. Null for the other two trigger shapes.
+    @Column({ type: 'float', nullable: true })
+    limitAmount!: number | null;
+
+    // The ERP event's own `version` (plain string, see IntegrationInboxEvent's own column
+    // comment in plugin-erp-integration) — used by CounterpartyDiscountRuleService to decide which
+    // of two conflicting rules is newer, independent of Kafka delivery/receipt order. Null for the
+    // other two trigger shapes.
+    @Column({ type: 'varchar', nullable: true })
+    sourceVersion!: string | null;
+
+    // Conflict-prevention flag (issue #108): a superseded counterparty/contract-scoped rule is
+    // deactivated, never deleted (kept for audit/reconciliation with #101), and excluded from
+    // getBestPercent. The other two trigger shapes never set this false — their own validFrom/
+    // validTo window is the only activity gate they use.
+    @Column({ type: 'boolean', default: true })
+    active!: boolean;
 }

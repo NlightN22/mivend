@@ -32,6 +32,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             'vat-rate': 'vr2',
             'point-of-sale': 'pos2',
             contract: 'contract2',
+            'discount-rule': 'dr2',
         },
     },
     schemaRegistry: { url: 'http://registry.test' },

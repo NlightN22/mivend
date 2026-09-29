@@ -791,6 +791,12 @@ export const config: VendureConfig = {
                     unit:
                         process.env.INTEGRATION_KAFKA_TOPIC_UNIT ??
                         'company.catalog.events.v1.unit-changed',
+                    // Issue #108: the ERP's own per-counterparty/contract automatic discount
+                    // engine, same company.customers domain as department/counterparty/user/
+                    // promo-rule/point-of-sale/contract above. See DiscountRuleStreamHandler.
+                    'discount-rule':
+                        process.env.INTEGRATION_KAFKA_TOPIC_DISCOUNT_RULE ??
+                        'company.customers.events.v1.discount-rule-changed',
                 },
             },
             schemaRegistry: {
