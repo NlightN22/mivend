@@ -2,10 +2,18 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
+import { useOrderPackaging } from '../../composables/useOrderPackaging';
 
 const router = useRouter();
 
 const cartStore = useCartStore();
+
+const packaging = computed(() => useOrderPackaging(cartStore.lines));
+const packagingLabel = computed(() => {
+    const { totalWeightKg, totalVolumeL } = packaging.value;
+    if (totalWeightKg === 0 && totalVolumeL === 0) return null;
+    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeL.toFixed(1)} L`;
+});
 
 function formatRub(kopecks: number): string {
     return new Intl.NumberFormat('ru-RU').format(kopecks / 100) + ' ₽';
@@ -64,6 +72,10 @@ const lineCount = computed(() => cartStore.lines.length);
         <div class="cart-summary__line">
           <span>Expected reserve</span>
           <strong>after ERP</strong>
+        </div>
+        <div v-if="packagingLabel" class="cart-summary__line">
+          <span>Weight / volume</span>
+          <strong>{{ packagingLabel }}</strong>
         </div>
       </div>
 

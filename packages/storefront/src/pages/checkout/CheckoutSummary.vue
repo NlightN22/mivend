@@ -3,12 +3,20 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore } from '../../stores/checkout';
+import { useOrderPackaging } from '../../composables/useOrderPackaging';
 
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
 const router = useRouter();
 const promoCode = ref('');
 const submitting = ref(false);
+
+const packaging = computed(() => useOrderPackaging(cartStore.lines));
+const packagingLabel = computed(() => {
+    const { totalWeightKg, totalVolumeL } = packaging.value;
+    if (totalWeightKg === 0 && totalVolumeL === 0) return null;
+    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeL.toFixed(1)} L`;
+});
 
 const lineCount = computed(() => cartStore.lines.length);
 const totalQty = computed(() => cartStore.itemCount);
@@ -66,6 +74,10 @@ async function handlePrimary(): Promise<void> {
             <div class="checkout-summary__line">
                 <span>Customer discount</span>
                 <strong class="checkout-summary__discount">— 0 ₽</strong>
+            </div>
+            <div v-if="packagingLabel" class="checkout-summary__line">
+                <span>Weight / volume</span>
+                <strong>{{ packagingLabel }}</strong>
             </div>
 
             <div class="checkout-summary__total">

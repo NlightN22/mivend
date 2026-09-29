@@ -28,6 +28,9 @@ query ActiveOrder {
                 stockLevel
                 customFields {
                     weight
+                    unitRatioToBase
+                    unitWeightKg
+                    unitVolumeL
                 }
                 product {
                     id

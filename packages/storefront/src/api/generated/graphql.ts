@@ -3214,6 +3214,9 @@ export type ProductVariant = Node & {
 export type ProductVariantCustomFields = {
     multiplicity?: Maybe<Scalars['Int']['output']>;
     organizationId?: Maybe<Scalars['Int']['output']>;
+    unitRatioToBase?: Maybe<Scalars['Float']['output']>;
+    unitVolumeL?: Maybe<Scalars['Float']['output']>;
+    unitWeightKg?: Maybe<Scalars['Float']['output']>;
     weight?: Maybe<Scalars['Float']['output']>;
 };
 
@@ -4796,7 +4799,12 @@ export type ActiveOrderQuery = {
                 price: any;
                 currencyCode: CurrencyCode;
                 stockLevel: string;
-                customFields?: { weight?: number | null } | null;
+                customFields?: {
+                    weight?: number | null;
+                    unitRatioToBase?: number | null;
+                    unitWeightKg?: number | null;
+                    unitVolumeL?: number | null;
+                } | null;
                 product: {
                     id: string;
                     name: string;
@@ -5755,6 +5763,9 @@ export const ActiveOrderDocument = new TypedDocumentString(`
         stockLevel
         customFields {
           weight
+          unitRatioToBase
+          unitWeightKg
+          unitVolumeL
         }
         product {
           id
