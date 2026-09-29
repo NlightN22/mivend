@@ -28,6 +28,7 @@ import {
     mapProductCharacteristics,
 } from '../product-characteristics-mapper';
 import { MissingDependencyError } from '../types';
+import { UnitLookupService } from '../unit-lookup.service';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationProductHandler';
@@ -67,6 +68,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         private readonly manufacturerService: ManufacturerService,
         private readonly productAncillaryDataService: ProductAncillaryDataService,
         private readonly taxCategoryAutoCreateService: TaxCategoryAutoCreateService,
+        private readonly unitLookupService: UnitLookupService,
     ) {}
 
     private taxCategoriesCache?: {
@@ -133,6 +135,15 @@ export class ProductStreamHandler implements InboundStreamHandler {
               )
             : undefined;
 
+        // Issue #103: resolved from UnitChanged (via UnitLookupService) by
+        // ProductChanged.defaultSalesUnitId. Unset defaultSalesUnitId means "sold in base/piece
+        // unit" (no packaging fields, no constraint) — not a missing-dependency case. A SET
+        // defaultSalesUnitId whose UnitRecord hasn't arrived yet IS a missing-dependency case
+        // (unit-changed may arrive before or after product-changed for the same product) —
+        // resolveUnitFields throws MissingDependencyError for that, routing through the inbox's
+        // existing retry/backoff path instead of silently dropping the packaging data.
+        const unitFields = await this.resolveUnitFields(ctx, entityId, payload);
+
         const characteristicRows = mapProductCharacteristics(payload);
         const manufacturerCodeRows = extractManufacturerCodes(payload);
         const barcodes = extractBarcodes(payload);
@@ -178,6 +189,11 @@ export class ProductStreamHandler implements InboundStreamHandler {
                         enabled: isActive,
                         ...(taxCategoryId ? { taxCategoryId } : {}),
                         ...(facetValueIds ? { facetValueIds } : {}),
+                        customFields: {
+                            unitRatioToBase: unitFields?.unitRatioToBase ?? null,
+                            unitWeightKg: unitFields?.unitWeightKg ?? null,
+                            unitVolumeL: unitFields?.unitVolumeL ?? null,
+                        },
                     },
                 ]);
             } else {
@@ -188,6 +204,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                     name,
                     taxCategoryId,
                     categoryFacetValueId,
+                    unitFields,
                 );
             }
             Logger.verbose(`Updated product externalId=${entityId}`, loggerCtx);
@@ -205,6 +222,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 name,
                 taxCategoryId,
                 categoryFacetValueId,
+                unitFields,
             );
             Logger.verbose(`Created product externalId=${entityId}`, loggerCtx);
         }
@@ -428,6 +446,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         name: string,
         taxCategoryId: string | undefined,
         categoryFacetValueId: ID | undefined,
+        unitFields: ResolvedUnitFields | null,
     ): Promise<string> {
         const [variant] = await this.productVariantService.create(ctx, [
             {
@@ -437,8 +456,54 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 trackInventory: 'TRUE' as never,
                 ...(taxCategoryId ? { taxCategoryId } : {}),
                 ...(categoryFacetValueId ? { facetValueIds: [categoryFacetValueId] } : {}),
+                customFields: {
+                    unitRatioToBase: unitFields?.unitRatioToBase ?? null,
+                    unitWeightKg: unitFields?.unitWeightKg ?? null,
+                    unitVolumeL: unitFields?.unitVolumeL ?? null,
+                },
             },
         ]);
         return String(variant.id);
     }
+
+    // Issue #103: resolves ProductChanged.defaultSalesUnitId against the local UnitRecord cache
+    // (fed by the `unit` stream, see UnitStreamHandler). Returns null when defaultSalesUnitId is
+    // absent (sold in base/piece unit — no packaging fields, no constraint downstream). Throws
+    // MissingDependencyError when defaultSalesUnitId IS set but the referenced unit hasn't synced
+    // yet — a real cross-entity race (unit-changed may arrive before or after product-changed),
+    // not a data error, so this routes through the inbox's existing retry/backoff instead of
+    // silently dropping the packaging data (external-integration-rules skill's cross-entity
+    // dependency rule).
+    private async resolveUnitFields(
+        ctx: RequestContext,
+        entityId: string,
+        payload: Record<string, unknown>,
+    ): Promise<ResolvedUnitFields | null> {
+        const defaultSalesUnitId =
+            typeof payload.defaultSalesUnitId === 'string' && payload.defaultSalesUnitId !== ''
+                ? payload.defaultSalesUnitId
+                : undefined;
+        if (!defaultSalesUnitId) {
+            return null;
+        }
+
+        const unit = await this.unitLookupService.findByEntityId(ctx, defaultSalesUnitId);
+        if (!unit) {
+            throw new MissingDependencyError(
+                `product ${entityId}: defaultSalesUnitId '${defaultSalesUnitId}' has no UnitRecord yet — retrying`,
+            );
+        }
+
+        return {
+            unitRatioToBase: unit.ratioToBase,
+            unitWeightKg: unit.weightKg,
+            unitVolumeL: unit.volumeL,
+        };
+    }
+}
+
+interface ResolvedUnitFields {
+    unitRatioToBase: number;
+    unitWeightKg: number | null;
+    unitVolumeL: number | null;
 }

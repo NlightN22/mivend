@@ -73,6 +73,10 @@ function makeTaxCategoryAutoCreateService(): {
     };
 }
 
+function makeUnitLookupService(): { findByEntityId: ReturnType<typeof vi.fn> } {
+    return { findByEntityId: vi.fn().mockResolvedValue(null) };
+}
+
 function makeProductAncillaryDataService(): {
     replaceBarcodes: ReturnType<typeof vi.fn>;
     replaceCharacteristics: ReturnType<typeof vi.fn>;
@@ -104,6 +108,7 @@ function makeHandler(overrides?: {
     manufacturerService?: { upsert: ReturnType<typeof vi.fn> };
     productAncillaryDataService?: ReturnType<typeof makeProductAncillaryDataService>;
     taxCategoryAutoCreateService?: ReturnType<typeof makeTaxCategoryAutoCreateService>;
+    unitLookupService?: ReturnType<typeof makeUnitLookupService>;
 }): {
     handler: ProductStreamHandler;
     productService: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
@@ -118,6 +123,7 @@ function makeHandler(overrides?: {
     manufacturerService: { upsert: ReturnType<typeof vi.fn> };
     productAncillaryDataService: ReturnType<typeof makeProductAncillaryDataService>;
     taxCategoryAutoCreateService: ReturnType<typeof makeTaxCategoryAutoCreateService>;
+    unitLookupService: ReturnType<typeof makeUnitLookupService>;
 } {
     const connection = overrides?.connection ?? makeConnection(undefined);
     const productService = overrides?.productService ?? {
@@ -144,6 +150,7 @@ function makeHandler(overrides?: {
         overrides?.productAncillaryDataService ?? makeProductAncillaryDataService();
     const taxCategoryAutoCreateService =
         overrides?.taxCategoryAutoCreateService ?? makeTaxCategoryAutoCreateService();
+    const unitLookupService = overrides?.unitLookupService ?? makeUnitLookupService();
 
     const handler = new ProductStreamHandler(
         connection as never,
@@ -157,6 +164,7 @@ function makeHandler(overrides?: {
         manufacturerService as never,
         productAncillaryDataService as never,
         taxCategoryAutoCreateService as never,
+        unitLookupService as never,
     );
     return {
         handler,
@@ -167,6 +175,7 @@ function makeHandler(overrides?: {
         manufacturerService,
         productAncillaryDataService,
         taxCategoryAutoCreateService,
+        unitLookupService,
     };
 }
 
@@ -234,7 +243,12 @@ describe('ProductStreamHandler', () => {
             expect.objectContaining({ id: 'existing-product-id', enabled: true }),
         );
         expect(productVariantService.update).toHaveBeenCalledWith(ctx, [
-            { id: 'variant-1', enabled: true, taxCategoryId: 'tax-default' },
+            {
+                id: 'variant-1',
+                enabled: true,
+                taxCategoryId: 'tax-default',
+                customFields: { unitRatioToBase: null, unitWeightKg: null, unitVolumeL: null },
+            },
         ]);
     });
 
@@ -669,6 +683,108 @@ describe('ProductStreamHandler', () => {
 
             expect(facetValueService.findByFacetId).toHaveBeenCalledTimes(2);
             expect(productCategoryFlagService.report).not.toHaveBeenCalled();
+        });
+    });
+
+    // Issue #103: unitRatioToBase/unitWeightKg/unitVolumeL resolution from
+    // ProductChanged.defaultSalesUnitId via UnitLookupService.
+    describe('unit fields (issue #103)', () => {
+        it('leaves unit fields null when defaultSalesUnitId is unset (base/piece unit)', async () => {
+            const { handler, productVariantService, unitLookupService } = makeHandler();
+
+            await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' });
+
+            expect(unitLookupService.findByEntityId).not.toHaveBeenCalled();
+            expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
+                expect.objectContaining({
+                    customFields: {
+                        unitRatioToBase: null,
+                        unitWeightKg: null,
+                        unitVolumeL: null,
+                    },
+                }),
+            ]);
+        });
+
+        it('populates unit fields from the resolved UnitRecord when defaultSalesUnitId is set', async () => {
+            const unitLookupService = {
+                findByEntityId: vi.fn().mockResolvedValue({
+                    ratioToBase: 12,
+                    weightKg: 5.5,
+                    volumeL: 3.2,
+                }),
+            };
+            const { handler, productVariantService } = makeHandler({ unitLookupService });
+
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget',
+                defaultSalesUnitId: 'unit-box',
+            });
+
+            expect(unitLookupService.findByEntityId).toHaveBeenCalledWith(ctx, 'unit-box');
+            expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
+                expect.objectContaining({
+                    customFields: {
+                        unitRatioToBase: 12,
+                        unitWeightKg: 5.5,
+                        unitVolumeL: 3.2,
+                    },
+                }),
+            ]);
+        });
+
+        it('throws MissingDependencyError (retryable) when defaultSalesUnitId is set but not yet synced', async () => {
+            const unitLookupService = { findByEntityId: vi.fn().mockResolvedValue(null) };
+            const { handler } = makeHandler({ unitLookupService });
+
+            await expect(
+                handler.apply(ctx, 'p-1', {
+                    sku: 'SKU-1',
+                    name: 'Widget',
+                    defaultSalesUnitId: 'unit-not-yet-synced',
+                }),
+            ).rejects.toThrow(MissingDependencyError);
+        });
+
+        it('re-resolves unit fields on update, same as create', async () => {
+            const connection = makeConnection('existing-product-1');
+            const unitLookupService = {
+                findByEntityId: vi.fn().mockResolvedValue({
+                    ratioToBase: 6,
+                    weightKg: null,
+                    volumeL: null,
+                }),
+            };
+            const productVariantService = {
+                getVariantsByProductId: vi
+                    .fn()
+                    .mockResolvedValue({ items: [{ id: 'variant-1', facetValues: [] }] }),
+                create: vi.fn(),
+                update: vi.fn(),
+                findOne: vi.fn().mockResolvedValue({ facetValues: [] }),
+            };
+            const { handler } = makeHandler({
+                connection,
+                productVariantService,
+                unitLookupService,
+            });
+
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget',
+                defaultSalesUnitId: 'unit-box',
+            });
+
+            expect(productVariantService.update).toHaveBeenCalledWith(ctx, [
+                expect.objectContaining({
+                    customFields: {
+                        unitRatioToBase: 6,
+                        unitWeightKg: null,
+                        unitVolumeL: null,
+                    },
+                }),
+            ]);
         });
     });
 });
