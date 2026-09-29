@@ -202,6 +202,7 @@ export class AccessControlResolver {
             visiblePriceTypeIds?: string[];
             defaultWarehouseId: string;
             visibleWarehouseIds?: string[];
+            allowPiecewiseSale?: boolean;
         },
     ): Promise<BranchSettings> {
         return this.branchSettingsService.upsert(ctx, {
@@ -210,6 +211,7 @@ export class AccessControlResolver {
             visiblePriceTypeIds: args.visiblePriceTypeIds ?? null,
             defaultWarehouseId: args.defaultWarehouseId,
             visibleWarehouseIds: args.visibleWarehouseIds ?? null,
+            allowPiecewiseSale: args.allowPiecewiseSale ?? true,
         });
     }
 

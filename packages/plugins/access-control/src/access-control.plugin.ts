@@ -60,6 +60,7 @@ const adminApiSchema = gql`
         visiblePriceTypeIds: [String!]
         defaultWarehouseId: String!
         visibleWarehouseIds: [String!]
+        allowPiecewiseSale: Boolean!
     }
 
     type TeamMember {
@@ -214,6 +215,7 @@ const adminApiSchema = gql`
             visiblePriceTypeIds: [String!]
             defaultWarehouseId: String!
             visibleWarehouseIds: [String!]
+            allowPiecewiseSale: Boolean
         ): BranchSettings!
         createBranch(name: String!): Branch!
         createAdministratorFromErpUser(erpId: String!): Administrator!

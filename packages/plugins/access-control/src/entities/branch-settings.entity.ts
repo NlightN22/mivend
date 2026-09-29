@@ -29,4 +29,11 @@ export class BranchSettings extends VendureEntity {
 
     @Column({ type: 'simple-json', nullable: true })
     visibleWarehouseIds?: string[] | null;
+
+    // Issue #103: per-branch packaging-constraint toggle — the same SKU may be piece-sellable in
+    // one branch and packaging-only in another (docs/order-flow.md's mivend#103 section). Consumed
+    // by @mivend/plugin-moq's MultiplicityOrderInterceptor via
+    // BranchSettingsService.resolveEffective, never a source of RBAC scope.
+    @Column({ type: 'boolean', default: true })
+    allowPiecewiseSale!: boolean;
 }
