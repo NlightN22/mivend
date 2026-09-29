@@ -4,6 +4,7 @@ import { Logger } from '@vendure/core';
 import { DataSource } from 'typeorm';
 import {
     CategoryChangedSchema,
+    ContractChangedSchema,
     CounterpartyChangedSchema,
     CounterpartyCreditBalanceChangedSchema,
     DepartmentChangedSchema,
@@ -92,6 +93,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     'promo-rule': PromoRuleChangedSchema,
     'vat-rate': VatRateChangedSchema,
     'point-of-sale': PointOfSaleChangedSchema,
+    contract: ContractChangedSchema,
 };
 
 @Injectable()

@@ -3,6 +3,7 @@ import { RequestContext, RequestContextService } from '@vendure/core';
 import { DataSource } from 'typeorm';
 
 import { CategoryStreamHandler } from './handlers/category.handler';
+import { ContractStreamHandler } from './handlers/contract.handler';
 import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
 import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-credit-balance.handler';
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
@@ -55,6 +56,7 @@ export class IntegrationInboxProcessorService {
         promoRuleHandler: PromoRuleStreamHandler,
         vatRateHandler: VatRateStreamHandler,
         pointOfSaleHandler: PointOfSaleStreamHandler,
+        contractHandler: ContractStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -75,6 +77,7 @@ export class IntegrationInboxProcessorService {
             'promo-rule': promoRuleHandler,
             'vat-rate': vatRateHandler,
             'point-of-sale': pointOfSaleHandler,
+            contract: contractHandler,
             // Quantity dimension deliberately deferred to issue #72 (ATP/reservation-drift
             // source-of-truth); organization_id here is not authoritative — StorageLocationChanged
             // above is the sole source for ProductVariant.customFields.organizationId, so this

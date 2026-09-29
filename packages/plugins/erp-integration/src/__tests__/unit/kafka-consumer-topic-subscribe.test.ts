@@ -64,6 +64,7 @@ function makeOptions(): ErpIntegrationPluginOptions {
                 'promo-rule': 'pr2',
                 'vat-rate': 'vr2',
                 'point-of-sale': 'pos2',
+                contract: 'contract2',
             },
         },
         schemaRegistry: { url: 'http://x' },
@@ -83,7 +84,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(19);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(20);
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
 
@@ -111,7 +112,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
 
         await consumerPromise;
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(19);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(20);
         // run() must still be reached even though one subscribe() rejected.
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });

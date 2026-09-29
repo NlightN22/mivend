@@ -16,6 +16,9 @@ import { Counterparty } from './entities/counterparty.entity';
 import { ContactPerson } from './entities/contact-person.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 import { CounterpartyTeamMember } from './entities/counterparty-team-member.entity';
+import { Contract } from './entities/contract.entity';
+import { ContractService } from './contract.service';
+import { CreditLimitCheckService } from './credit-limit-check.service';
 import {
     CustomerCounterpartyResolver,
     CounterpartyResolver,
@@ -400,7 +403,7 @@ const adminResolvers = [
         ApprovalWorkflowPlugin,
         VersioningPlugin,
     ],
-    entities: [Counterparty, TradingPoint, ContactPerson, CounterpartyTeamMember],
+    entities: [Counterparty, TradingPoint, ContactPerson, CounterpartyTeamMember, Contract],
     shopApiExtensions: {
         schema: shopApiSchema,
         resolvers: shopResolvers,
@@ -420,8 +423,10 @@ const adminResolvers = [
         CounterpartyManagerAssignmentService,
         AdministratorLinkedListener,
         CounterpartyPortalAccessService,
+        ContractService,
+        CreditLimitCheckService,
     ],
-    exports: [CounterpartyService, TradingPointService],
+    exports: [CounterpartyService, TradingPointService, ContractService, CreditLimitCheckService],
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.Customer = [
             ...(config.customFields.Customer ?? []),

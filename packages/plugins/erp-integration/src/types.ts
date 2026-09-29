@@ -142,7 +142,15 @@ export type InboundStream =
     // ContactPerson.name is non-nullable — see PointOfSaleStreamHandler). contactName/
     // workingHours stay REST/portal-only, same as before this stream existed. See
     // PointOfSaleStreamHandler and docs/ai/erp-streams-map.md's `point-of-sale` row.
-    | 'point-of-sale';
+    | 'point-of-sale'
+    // Issue #105: the ERP's "Договор" (contract) — feeds @mivend/plugin-counterparty's Contract
+    // entity, keyed by counterparty_id. Verified live against @nlightn22/event-contracts@0.42.0:
+    // counterpartyId/organizationId/priceTypeId/contractKind/contractType always present;
+    // creditLimit/currency/controlledIndividually/debtDaysLimit/paymentKind/paymentDelayDays/
+    // brandManufacturerId are real optional fields. Not order-critical, bulk lane. See
+    // ContractStreamHandler and docs/ai/erp-streams-map.md's `contract` row / "Per-contract
+    // credit limits" section for #50's downstream credit-gate model.
+    | 'contract';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -232,6 +240,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'promo-rule': true,
     'vat-rate': true,
     'point-of-sale': true,
+    contract: true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

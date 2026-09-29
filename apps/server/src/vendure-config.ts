@@ -753,6 +753,13 @@ export const config: VendureConfig = {
                     'point-of-sale':
                         process.env.INTEGRATION_KAFKA_TOPIC_POINT_OF_SALE ??
                         'company.customers.events.v1.point-of-sale-changed',
+                    // Issue #105: the ERP's "Договор" (contract) — feeds Contract in
+                    // @mivend/plugin-counterparty, same company.customers domain as
+                    // department/counterparty/user/promo-rule/point-of-sale above. See
+                    // ContractStreamHandler.
+                    contract:
+                        process.env.INTEGRATION_KAFKA_TOPIC_CONTRACT ??
+                        'company.customers.events.v1.contract-changed',
                 },
             },
             schemaRegistry: {
