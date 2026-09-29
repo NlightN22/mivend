@@ -26,6 +26,7 @@ function makeOptions(
                 stock: 's',
                 'storage-location': 'sl',
                 'stock-organization': 'so',
+                unit: 'unit',
                 'order-registration-result': 'orr',
                 'order-changed': 'oc',
                 department: 'dept',
