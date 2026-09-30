@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RequestContext, TransactionalConnection, ProductVariantService } from '@vendure/core';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { UnitRecord } from '../entities/unit-record.entity';
 import { loggerCtx } from '../types';
@@ -9,10 +9,7 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 // accounting: docs/ai/erp-streams-map.md's `unit` row.
 @Injectable()
 export class UnitStreamHandler implements InboundStreamHandler {
-    constructor(
-        private readonly connection: TransactionalConnection,
-        private readonly productVariantService: ProductVariantService,
-    ) {}
+    constructor(private readonly connection: TransactionalConnection) {}
 
     async apply(
         ctx: RequestContext,
@@ -67,38 +64,45 @@ export class UnitStreamHandler implements InboundStreamHandler {
             loggerCtx,
         );
 
-        await this.refreshVariants(ctx, entityId, ratioToBase, weightKg, volumeL);
+        await this.refreshVariants(entityId, ratioToBase, weightKg, volumeL);
     }
 
+    // Audit finding (mivend#103, MEDIUM): defaultSalesUnitId=<the shared base unit> can match
+    // nearly every variant in the catalog — a plain ProductVariantService.update over all of them
+    // per UnitChanged would be a multi-thousand-row fan-out with a full event/search-index cost
+    // per row, inside one inbox-row transaction. A direct, values-changed-only UPDATE (no service
+    // call, no events — these are readonly ERP-derived fields) keeps this to the rows that
+    // actually moved, and makes a repeated identical UnitChanged a no-op (0 rows).
     private async refreshVariants(
-        ctx: RequestContext,
         defaultSalesUnitId: string,
         unitRatioToBase: number,
         unitWeightKg: number | null,
         unitVolumeL: number | null,
     ): Promise<void> {
-        const rows = await this.connection.rawConnection
+        const result = await this.connection.rawConnection
             .createQueryBuilder()
-            .select('v.id', 'id')
-            .from('product_variant', 'v')
-            .where('v."customFieldsDefaultsalesunitid" = :defaultSalesUnitId', {
-                defaultSalesUnitId,
+            .update('product_variant')
+            .set({
+                customFieldsUnitratiotobase: unitRatioToBase,
+                customFieldsUnitweightkg: unitWeightKg,
+                customFieldsUnitvolumel: unitVolumeL,
             })
-            .getRawMany<{ id: string }>();
-        if (rows.length === 0) {
-            return;
-        }
+            .where('"customFieldsDefaultsalesunitid" = :defaultSalesUnitId', { defaultSalesUnitId })
+            .andWhere('"deletedAt" IS NULL')
+            .andWhere(
+                '("customFieldsUnitratiotobase" IS DISTINCT FROM :unitRatioToBase OR ' +
+                    '"customFieldsUnitweightkg" IS DISTINCT FROM :unitWeightKg OR ' +
+                    '"customFieldsUnitvolumel" IS DISTINCT FROM :unitVolumeL)',
+                { unitRatioToBase, unitWeightKg, unitVolumeL },
+            )
+            .execute();
 
-        await this.productVariantService.update(
-            ctx,
-            rows.map(row => ({
-                id: row.id,
-                customFields: { unitRatioToBase, unitWeightKg, unitVolumeL },
-            })),
-        );
-        Logger.verbose(
-            `Refreshed ${rows.length} variant(s) for defaultSalesUnitId=${defaultSalesUnitId}`,
-            loggerCtx,
-        );
+        const affected = result.affected ?? 0;
+        if (affected > 0) {
+            Logger.verbose(
+                `Refreshed ${affected} variant(s) for defaultSalesUnitId=${defaultSalesUnitId}`,
+                loggerCtx,
+            );
+        }
     }
 }
