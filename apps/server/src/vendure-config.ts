@@ -428,6 +428,16 @@ export const config: VendureConfig = {
                 readonly: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Sales unit volume (L)' }],
             },
+            {
+                // Join key so UnitStreamHandler can refresh this variant when UnitChanged
+                // arrives after the product (audit finding, mivend#103).
+                name: 'defaultSalesUnitId',
+                type: 'string',
+                nullable: true,
+                readonly: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Default sales unit (ERP id)' }],
+            },
         ],
         StockLocation: [
             {

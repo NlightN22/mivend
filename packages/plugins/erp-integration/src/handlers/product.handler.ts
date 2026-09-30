@@ -135,13 +135,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
               )
             : undefined;
 
-        // Issue #103: resolved from UnitChanged (via UnitLookupService) by
-        // ProductChanged.defaultSalesUnitId. Unset defaultSalesUnitId means "sold in base/piece
-        // unit" (no packaging fields, no constraint) — not a missing-dependency case. A SET
-        // defaultSalesUnitId whose UnitRecord hasn't arrived yet IS a missing-dependency case
-        // (unit-changed may arrive before or after product-changed for the same product) —
-        // resolveUnitFields throws MissingDependencyError for that, routing through the inbox's
-        // existing retry/backoff path instead of silently dropping the packaging data.
+        // Issue #103: packaging/weight/volume fields, keyed off defaultSalesUnitId — see
+        // resolveUnitFields and docs/ai/erp-streams-map.md's `unit` row.
         const unitFields = await this.resolveUnitFields(ctx, entityId, payload);
 
         const characteristicRows = mapProductCharacteristics(payload);
@@ -190,6 +185,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                         ...(taxCategoryId ? { taxCategoryId } : {}),
                         ...(facetValueIds ? { facetValueIds } : {}),
                         customFields: {
+                            defaultSalesUnitId: unitFields?.defaultSalesUnitId ?? null,
                             unitRatioToBase: unitFields?.unitRatioToBase ?? null,
                             unitWeightKg: unitFields?.unitWeightKg ?? null,
                             unitVolumeL: unitFields?.unitVolumeL ?? null,
@@ -457,6 +453,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 ...(taxCategoryId ? { taxCategoryId } : {}),
                 ...(categoryFacetValueId ? { facetValueIds: [categoryFacetValueId] } : {}),
                 customFields: {
+                    defaultSalesUnitId: unitFields?.defaultSalesUnitId ?? null,
                     unitRatioToBase: unitFields?.unitRatioToBase ?? null,
                     unitWeightKg: unitFields?.unitWeightKg ?? null,
                     unitVolumeL: unitFields?.unitVolumeL ?? null,
@@ -466,14 +463,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return String(variant.id);
     }
 
-    // Issue #103: resolves ProductChanged.defaultSalesUnitId against the local UnitRecord cache
-    // (fed by the `unit` stream, see UnitStreamHandler). Returns null when defaultSalesUnitId is
-    // absent (sold in base/piece unit — no packaging fields, no constraint downstream). Throws
-    // MissingDependencyError when defaultSalesUnitId IS set but the referenced unit hasn't synced
-    // yet — a real cross-entity race (unit-changed may arrive before or after product-changed),
-    // not a data error, so this routes through the inbox's existing retry/backoff instead of
-    // silently dropping the packaging data (external-integration-rules skill's cross-entity
-    // dependency rule).
+    // Null when defaultSalesUnitId is absent (base/piece unit). Throws MissingDependencyError
+    // when it's set but not yet synced — see docs/ai/erp-streams-map.md's `unit` row.
     private async resolveUnitFields(
         ctx: RequestContext,
         entityId: string,
@@ -495,6 +486,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         }
 
         return {
+            defaultSalesUnitId,
             unitRatioToBase: unit.ratioToBase,
             unitWeightKg: unit.weightKg,
             unitVolumeL: unit.volumeL,
@@ -503,6 +495,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
 }
 
 interface ResolvedUnitFields {
+    defaultSalesUnitId: string;
     unitRatioToBase: number;
     unitWeightKg: number | null;
     unitVolumeL: number | null;

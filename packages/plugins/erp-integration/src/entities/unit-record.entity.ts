@@ -2,12 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Local cache of Integration Service's `unit` stream (UnitChanged, issue #103). Persisted
-// independently of Product/ProductVariant so a `unit-changed` event can arrive before OR after
-// the `product` event referencing it via ProductChanged.defaultSalesUnitId — ProductStreamHandler
-// resolves against this table by `entityId` (the unit's own ERP id, matching
-// ProductChanged.defaultSalesUnitId directly) and throws MissingDependencyError to retry when the
-// row isn't here yet, rather than assuming stream arrival order.
+// Local cache of Integration Service's `unit` stream (UnitChanged) — see
+// docs/ai/erp-streams-map.md's `unit` row for the out-of-order-arrival design.
 @Entity()
 export class UnitRecord extends VendureEntity {
     constructor(input?: DeepPartial<UnitRecord>) {

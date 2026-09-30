@@ -247,7 +247,12 @@ describe('ProductStreamHandler', () => {
                 id: 'variant-1',
                 enabled: true,
                 taxCategoryId: 'tax-default',
-                customFields: { unitRatioToBase: null, unitWeightKg: null, unitVolumeL: null },
+                customFields: {
+                    defaultSalesUnitId: null,
+                    unitRatioToBase: null,
+                    unitWeightKg: null,
+                    unitVolumeL: null,
+                },
             },
         ]);
     });
@@ -698,6 +703,7 @@ describe('ProductStreamHandler', () => {
             expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
                 expect.objectContaining({
                     customFields: {
+                        defaultSalesUnitId: null,
                         unitRatioToBase: null,
                         unitWeightKg: null,
                         unitVolumeL: null,
@@ -726,6 +732,7 @@ describe('ProductStreamHandler', () => {
             expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
                 expect.objectContaining({
                     customFields: {
+                        defaultSalesUnitId: 'unit-box',
                         unitRatioToBase: 12,
                         unitWeightKg: 5.5,
                         unitVolumeL: 3.2,
@@ -779,6 +786,7 @@ describe('ProductStreamHandler', () => {
             expect(productVariantService.update).toHaveBeenCalledWith(ctx, [
                 expect.objectContaining({
                     customFields: {
+                        defaultSalesUnitId: 'unit-box',
                         unitRatioToBase: 6,
                         unitWeightKg: null,
                         unitVolumeL: null,
