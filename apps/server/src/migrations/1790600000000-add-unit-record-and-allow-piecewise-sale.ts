@@ -23,6 +23,10 @@ export class AddUnitRecordAndAllowPiecewiseSale1790600000000 implements Migratio
             undefined,
         );
         await queryRunner.query(
+            `ALTER TABLE "product_variant" ADD "customFieldsDefaultsalesunitid" character varying(255)`,
+            undefined,
+        );
+        await queryRunner.query(
             `ALTER TABLE "branch_settings" ADD "allowPiecewiseSale" boolean NOT NULL DEFAULT true`,
             undefined,
         );
@@ -31,6 +35,10 @@ export class AddUnitRecordAndAllowPiecewiseSale1790600000000 implements Migratio
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
             `ALTER TABLE "branch_settings" DROP COLUMN "allowPiecewiseSale"`,
+            undefined,
+        );
+        await queryRunner.query(
+            `ALTER TABLE "product_variant" DROP COLUMN "customFieldsDefaultsalesunitid"`,
             undefined,
         );
         await queryRunner.query(
