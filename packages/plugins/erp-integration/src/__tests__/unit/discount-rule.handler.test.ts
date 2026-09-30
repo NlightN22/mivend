@@ -65,11 +65,38 @@ describe('DiscountRuleStreamHandler', () => {
         expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
     });
 
-    it('skips when recipientId/version/conditionValue/percent/effective window is missing', async () => {
+    it('skips when recipientId/version/conditionValue/percent/effectiveFrom is missing', async () => {
         const counterpartyDiscountRuleService = { upsertCounterpartyRule: vi.fn() };
         const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
 
         await handler.apply(ctx, 'dr-1', basePayload({ recipientId: '' }));
+
+        expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
+    });
+
+    // effective_to is a real proto3 `optional Timestamp` — absence means no expiry, never
+    // required (unlike promo-rule.handler.ts's own non-optional effective_to).
+    it('maps an absent effectiveTo to validTo: null (no expiry) rather than skipping', async () => {
+        const counterpartyDiscountRuleService = {
+            upsertCounterpartyRule: vi.fn().mockResolvedValue({}),
+        };
+        const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
+        const { effectiveTo, ...payload } = basePayload();
+        void effectiveTo;
+
+        await handler.apply(ctx, 'dr-1', payload);
+
+        expect(counterpartyDiscountRuleService.upsertCounterpartyRule).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ validTo: null }),
+        );
+    });
+
+    it('skips when effectiveTo is present but unparseable (malformed, not "no expiry")', async () => {
+        const counterpartyDiscountRuleService = { upsertCounterpartyRule: vi.fn() };
+        const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
+
+        await handler.apply(ctx, 'dr-1', basePayload({ effectiveTo: 'not-a-date' }));
 
         expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
     });

@@ -19,7 +19,9 @@ export interface CounterpartyDiscountRuleInput {
     percent: number;
     limitAmount: number | null;
     validFrom: Date;
-    validTo: Date;
+    // Real optional presence (proto3 `optional Timestamp`) — null means no expiry, never
+    // defaulted to a required Date the way the other two trigger shapes' own contracts allow.
+    validTo: Date | null;
     sourceVersion: string;
 }
 
@@ -168,7 +170,8 @@ export class CounterpartyDiscountRuleService {
             .getRepository(ctx, DiscountRule)
             .createQueryBuilder('dr')
             .where('dr.active = true')
-            .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
+            .andWhere('dr.validFrom <= :now', { now })
+            .andWhere('(dr.validTo IS NULL OR dr.validTo >= :now)', { now })
             .andWhere(
                 recipients
                     .map(
@@ -189,12 +192,19 @@ export class CounterpartyDiscountRuleService {
         const totalQuantity = [...quantityByProductErpId.values()].reduce((a, b) => a + b, 0);
 
         const matching = rules.filter(rule => {
+            // Safe default until limitAmount is actually enforced as a cap on the discounted
+            // amount (tracked as a follow-up, mivend#152) — never apply an uncapped full percent
+            // for a rule the ERP declared a limit for, rather than silently exceed it.
+            if (rule.limitAmount !== null) return false;
             if (rule.productErpId !== null && rule.productErpId !== productErpId) return false;
             if (rule.condition === 'byQuantity') {
                 const qty = rule.productErpId !== null ? productQuantity : totalQuantity;
                 return qty >= (rule.conditionValue ?? 0);
             }
-            return documentAmount >= (rule.conditionValue ?? 0);
+            // documentAmount arrives in kopecks (Vendure's own minor-unit convention); the ERP's
+            // conditionValue is rubles, same as every other ERP money field (see
+            // price.handler.ts's own value*100 conversion) — never compared raw.
+            return documentAmount >= Math.round((rule.conditionValue ?? 0) * 100);
         });
 
         if (matching.length === 0) return null;

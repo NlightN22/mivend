@@ -73,12 +73,14 @@ export class DiscountRuleService {
         }
         const saved = await repo.save(record);
         if (!isPortalOrigin(saved.erpId) && !isPromoRuleOrigin(saved)) {
-            // DiscountRuleInput.priceTypeCode is a required string — this branch only ever sees
-            // a facet/priceType-threshold rule (isPromoRuleOrigin already excluded above), so
-            // saved.priceTypeCode is guaranteed non-null here despite the column's nullable type.
+            // DiscountRuleInput never sets validTo to null — this branch only ever sees a
+            // facet/priceType-threshold rule (isPromoRuleOrigin/recipientType both excluded
+            // above), so priceTypeCode/validTo are guaranteed non-null here despite the entity
+            // column's nullable type (issue #108 needs null only for its own trigger shape).
             await this.discountRegistryService.upsertFromRule(ctx, {
                 ...saved,
                 priceTypeCode: saved.priceTypeCode as string,
+                validTo: saved.validTo as Date,
             });
         }
         return saved;
@@ -147,7 +149,13 @@ export class DiscountRuleService {
         if (nonPortalErpIds.length > 0) {
             const saved = await repo.find({ where: { erpId: In(nonPortalErpIds) } });
             for (const rule of saved) {
-                await this.discountRegistryService.upsertFromRule(ctx, rule);
+                // bulkUpsert only ever writes facet/priceType-threshold rows (DiscountRuleInput
+                // has no recipientType field) — validTo is guaranteed non-null here, same
+                // reasoning as upsert() above.
+                await this.discountRegistryService.upsertFromRule(ctx, {
+                    ...rule,
+                    validTo: rule.validTo as Date,
+                });
             }
         }
 

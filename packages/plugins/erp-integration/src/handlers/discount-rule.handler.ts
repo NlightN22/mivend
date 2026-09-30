@@ -15,44 +15,12 @@ const loggerCtx = 'IntegrationDiscountRuleHandler';
 const VALID_RECIPIENT_TYPES: readonly DiscountRuleRecipientType[] = ['counterparty', 'contract'];
 const VALID_CONDITIONS: readonly DiscountRuleCondition[] = ['byQuantity', 'byDocumentAmount'];
 
-// Applies Integration Service's `discount-rule` stream (DiscountRuleChanged, entityId = the ERP's
-// own discount rule id) — feeds @mivend/plugin-price-entry's DiscountRule via
-// CounterpartyDiscountRuleService.upsertCounterpartyRule, the same entity the existing
-// facet/priceType-threshold and #107 promo rules use (project-owner decision, issue #108: one
-// entity, two write channels — not a separate rule system).
-//
-// Full field list (@nlightn22/event-contracts@0.43.0, DiscountRuleChanged) and each field's
-// outcome — see the external-integration-rules skill's mandatory checklist:
-//   event_id        — not consumed (inbox already dedupes by its own (stream, entityId, version)).
-//   occurred_at      — not consumed (updatedAt/VendureEntity already tracks local upsert time).
-//   entity_id        — consumed (handler `entityId` param = DiscountRule.erpId).
-//   version          — consumed twice: IntegrationInboxProcessorService's own out-of-order guard
-//                      upstream of this handler (per-erpId ordering), AND read again here into
-//                      DiscountRule.sourceVersion — CounterpartyDiscountRuleService's own
-//                      cross-entity conflict resolution needs it to compare two *different*
-//                      erpIds targeting the same recipient+product scope, which the upstream
-//                      per-erpId guard cannot do.
-//   updated_at       — not consumed (same reasoning as promo-rule.handler.ts).
-//   product_id       — consumed -> DiscountRule.productErpId (null = applies to all nomenclature
-//                      for this recipient, per the field's own proto comment).
-//   recipient_type   — consumed -> DiscountRule.recipientType, validated against the closed
-//                      2-value set; an unrecognized value is rejected, not silently coerced.
-//   recipient_id     — consumed -> DiscountRule.recipientErpId.
-//   condition        — consumed -> DiscountRule.condition, validated against the closed 2-value
-//                      set confirmed live (see this file's own comment above).
-//   condition_value  — consumed -> DiscountRule.conditionValue.
-//   percent          — consumed -> DiscountRule.percent.
-//   limit_amount     — consumed -> DiscountRule.limitAmount (captured, not yet enforced in price
-//                      computation — see issue #108's test plan "Deliberate omissions").
-//   effective_from   — consumed -> DiscountRule.validFrom.
-//   effective_to     — consumed -> DiscountRule.validTo (real optional; absence treated as
-//                      "no expiry" is NOT assumed here — see the missing-field guard below,
-//                      matching promo-rule.handler.ts's own conservative treatment of a required
-//                      window).
-//   is_active        — consumed; `payload.isActive === true` only (see types.ts's own doc comment
-//                      on why an absent key must never default to active).
-//   is_deleted       — consumed (always false per the field's own proto comment; read anyway for
-//                      envelope consistency with every other handler).
+// Applies Integration Service's `discount-rule` stream (DiscountRuleChanged) — feeds
+// @mivend/plugin-price-entry's DiscountRule via CounterpartyDiscountRuleService, the same entity
+// facet/priceType and #107 promo rules use. Full field accounting, the write-time conflict policy,
+// and a known reconciliation gap (this contract's is_active can never signal a real cancellation)
+// are documented in docs/ai/erp-streams-map.md's "Discount rules" section — read that before
+// changing this handler, not just this file.
 @Injectable()
 export class DiscountRuleStreamHandler implements InboundStreamHandler {
     constructor(
@@ -94,18 +62,23 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
         const percent = Number(payload.percent ?? NaN);
         const version = String(payload.version ?? '');
         const effectiveFrom = parseTimestamp(payload.effectiveFrom);
-        const effectiveTo = parseTimestamp(payload.effectiveTo);
+        // Real optional presence (proto3 `optional Timestamp`) — absence means no expiry, never
+        // required the way promo-rule.handler.ts's own effective_to is (a different, non-optional
+        // field on that contract). A present-but-unparseable value is still malformed, not "no
+        // expiry" — skipped the same as any other bad field below.
+        const effectiveToPresent = payload.effectiveTo != null;
+        const effectiveTo = effectiveToPresent ? parseTimestamp(payload.effectiveTo) : null;
         if (
             !recipientErpId ||
             !version ||
             !Number.isFinite(conditionValue) ||
             !Number.isFinite(percent) ||
             !effectiveFrom ||
-            !effectiveTo
+            (effectiveToPresent && !effectiveTo)
         ) {
             Logger.warn(
-                `discount-rule ${entityId}: missing recipientId/version/conditionValue/percent/` +
-                    `effectiveFrom/effectiveTo, skipping`,
+                `discount-rule ${entityId}: missing/invalid recipientId/version/conditionValue/` +
+                    `percent/effectiveFrom/effectiveTo, skipping`,
                 loggerCtx,
             );
             return;

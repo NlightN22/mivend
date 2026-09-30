@@ -53,8 +53,11 @@ export class DiscountRule extends VendureEntity {
     @Column({ type: 'timestamp' })
     validFrom!: Date;
 
-    @Column({ type: 'timestamp' })
-    validTo!: Date;
+    // Nullable only for the counterparty/contract-scoped shape (issue #108) — its
+    // effective_to is a real proto3 `optional Timestamp`, absent meaning no expiry, unlike the
+    // other two shapes' own contracts, where this field is always present.
+    @Column({ type: 'timestamp', nullable: true })
+    validTo!: Date | null;
 
     @Column({ type: 'float', nullable: true })
     minWeightKg!: number | null;

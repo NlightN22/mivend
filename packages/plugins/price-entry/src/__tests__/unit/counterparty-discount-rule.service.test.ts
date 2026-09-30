@@ -50,6 +50,7 @@ function activeRule(overrides: Partial<Record<string, unknown>> = {}): Record<st
         condition: 'byQuantity',
         conditionValue: 5,
         percent: 10,
+        limitAmount: null,
         active: true,
         sourceVersion: '3',
         validFrom: new Date('2026-07-01T00:00:00.000Z'),
@@ -182,6 +183,25 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
     });
 
     describe('getBestPercent', () => {
+        it('includes a no-expiry (validTo IS NULL) clause in the validity window query', async () => {
+            mockQb.getMany.mockResolvedValue([]);
+
+            await service.getBestPercent(
+                mockCtx,
+                fakeOrder(),
+                { erpId: 'cp-erp-1' } as never,
+                'prod-1',
+                new Map(),
+                0,
+                now,
+            );
+
+            expect(mockQb.andWhere).toHaveBeenCalledWith(
+                '(dr.validTo IS NULL OR dr.validTo >= :now)',
+                { now },
+            );
+        });
+
         it('returns null with no order context (catalog display, never triggers a counterparty rule)', async () => {
             const result = await service.getBestPercent(
                 mockCtx,
@@ -276,12 +296,12 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
             expect(result).toBe(8);
         });
 
-        it("byDocumentAmount: compares the order total, regardless of the rule's product scope", async () => {
+        it("byDocumentAmount: compares the order total (kopecks) against conditionValue converted from rubles, regardless of the rule's product scope", async () => {
             mockQb.getMany.mockResolvedValue([
                 activeRule({
                     productErpId: 'prod-1',
                     condition: 'byDocumentAmount',
-                    conditionValue: 50000,
+                    conditionValue: 500, // rubles
                     percent: 12,
                 }),
             ]);
@@ -291,10 +311,48 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
                 { erpId: 'cp-erp-1' } as never,
                 'prod-1',
                 new Map([['prod-1', 1]]),
-                50000,
+                50000, // kopecks — exactly 500 rubles
                 now,
             );
             expect(result).toBe(12);
+        });
+
+        it('byDocumentAmount: does not qualify just below the converted threshold', async () => {
+            mockQb.getMany.mockResolvedValue([
+                activeRule({ condition: 'byDocumentAmount', conditionValue: 500, percent: 12 }),
+            ]);
+            const result = await service.getBestPercent(
+                mockCtx,
+                fakeOrder(),
+                { erpId: 'cp-erp-1' } as never,
+                'prod-1',
+                new Map([['prod-1', 1]]),
+                49999, // one kopeck short of 500 rubles
+                now,
+            );
+            expect(result).toBeNull();
+        });
+
+        it('never applies a rule that has a limitAmount set (safe default — cap not yet enforced)', async () => {
+            mockQb.getMany.mockResolvedValue([
+                activeRule({
+                    productErpId: null,
+                    condition: 'byQuantity',
+                    conditionValue: 1,
+                    percent: 50,
+                    limitAmount: 10000,
+                }),
+            ]);
+            const result = await service.getBestPercent(
+                mockCtx,
+                fakeOrder(),
+                { erpId: 'cp-erp-1' } as never,
+                'prod-1',
+                new Map([['prod-1', 5]]),
+                0,
+                now,
+            );
+            expect(result).toBeNull();
         });
 
         it('a rule scoped to a different product never matches the priced product', async () => {
