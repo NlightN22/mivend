@@ -12,6 +12,7 @@
     },
     "dependencies": {
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-counterparty": "workspace:*",
         "@nestjs/common": "^11.0.0",
         "@vendure/core": "^3.7.3"
     },

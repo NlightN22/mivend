@@ -10,31 +10,21 @@ import {
     WillAdjustOrderLineInput,
 } from '@vendure/core';
 import { BranchSettingsService } from '@mivend/plugin-access-control';
+import { TradingPointService } from '@mivend/plugin-counterparty';
 
-// Server-side pack-size (MOQ) enforcement — see docs/order-flow.md "Pack-size / MOQ".
-// Covers addItemToOrder/adjustOrderLine/removeItemFromOrder (shop API) and the OrderService
-// methods the admin draft-order flow calls, via Vendure's own OrderInterceptor extension point
-// (its docs use exactly this "min/max order quantity via a ProductVariant custom field"
-// use-case as the canonical example) — no per-mutation-site plumbing needed.
-//
-// Issue #103: also enforces branch-conditional packaging — when a variant's unitRatioToBase is
-// set (a non-base default sales unit, resolved by erp-integration's ProductStreamHandler) AND
-// BranchSettings.allowPiecewiseSale is false for the order's branch, unitRatioToBase becomes the
-// effective required multiple instead of the plain `multiplicity` field, reusing the exact same
-// "quantity % effective === 0" check/error shape — never a parallel mechanism. When
-// allowPiecewiseSale is true (or no BranchSettings row resolves at all — see
-// BranchSettingsService.resolveEffective's own global-default-branch fallback), no packaging
-// constraint applies regardless of unitRatioToBase, and plain `multiplicity` enforcement is
-// unchanged.
+// Server-side pack-size (MOQ) + branch-conditional packaging enforcement — see
+// docs/order-flow.md's "Pack-size / MOQ" and mivend#103 sections.
 export class MultiplicityOrderInterceptor implements OrderInterceptor {
     private entityHydrator!: EntityHydrator;
     private translatorService!: TranslatorService;
     private branchSettingsService!: BranchSettingsService;
+    private tradingPointService!: TradingPointService;
 
     init(injector: Injector): void {
         this.entityHydrator = injector.get(EntityHydrator);
         this.translatorService = injector.get(TranslatorService);
         this.branchSettingsService = injector.get(BranchSettingsService);
+        this.tradingPointService = injector.get(TradingPointService);
     }
 
     async willAddItemToOrder(
@@ -67,7 +57,7 @@ export class MultiplicityOrderInterceptor implements OrderInterceptor {
 
         const unitRatioToBase = variant.customFields?.unitRatioToBase ?? null;
         if (unitRatioToBase && unitRatioToBase > 1) {
-            const branchId = order.customFields?.branchId ?? null;
+            const branchId = await this.resolveBranchId(ctx, order);
             const branchSettings = await this.branchSettingsService.resolveEffective(ctx, branchId);
             if (branchSettings && branchSettings.allowPiecewiseSale === false) {
                 effective = unitRatioToBase;
@@ -80,6 +70,21 @@ export class MultiplicityOrderInterceptor implements OrderInterceptor {
 
         const variantName = await this.getTranslatedVariantName(ctx, variant);
         return `"${variantName}" must be ordered in multiples of ${effective}`;
+    }
+
+    // order.customFields.branchId is unset until placement (audit finding) — mirror
+    // ErpOrderService.onOrderPlaced's own resolution instead: preferred TradingPoint's branch.
+    private async resolveBranchId(ctx: RequestContext, order: Order): Promise<string | null> {
+        if (order.customerId) {
+            const tradingPoint = await this.tradingPointService.getPreferredForCustomer(
+                ctx,
+                order.customerId,
+            );
+            if (tradingPoint?.servicingBranchId) {
+                return tradingPoint.servicingBranchId;
+            }
+        }
+        return order.customFields?.branchId ?? null;
     }
 
     private async getTranslatedVariantName(

@@ -5,18 +5,15 @@ import {
     VendurePlugin,
 } from '@vendure/core';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 
 import { MultiplicityOrderInterceptor } from './multiplicity-order.interceptor';
 import './types';
 
-// Pack-size / MOQ enforcement — see docs/order-flow.md "Pack-size / MOQ". Deliberately its own
-// small plugin (modularity first, AGENTS.md) rather than folded into catalog/erp-import — the
-// only responsibility here is the multiplicity custom field and its OrderInterceptor.
-// Issue #103: also branch-conditional packaging enforcement, reusing this same interceptor and
-// custom field mechanism (docs/order-flow.md's mivend#103 section) — imports AccessControlPlugin
-// for BranchSettingsService.resolveEffective.
+// Pack-size / MOQ + branch-conditional packaging enforcement — see docs/order-flow.md's
+// "Pack-size / MOQ" and mivend#103 sections. Deliberately its own small plugin (AGENTS.md).
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin],
+    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.ProductVariant = [
             ...(config.customFields.ProductVariant ?? []),

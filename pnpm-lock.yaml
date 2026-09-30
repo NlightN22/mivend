@@ -770,6 +770,9 @@ importers:
             '@mivend/plugin-access-control':
                 specifier: workspace:*
                 version: link:../access-control
+            '@mivend/plugin-counterparty':
+                specifier: workspace:*
+                version: link:../counterparty
             '@nestjs/common':
                 specifier: ^11.0.0
                 version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
