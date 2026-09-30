@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { ProductVariant, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { UnitRecord } from '../entities/unit-record.entity';
 import { loggerCtx } from '../types';
@@ -64,22 +64,21 @@ export class UnitStreamHandler implements InboundStreamHandler {
             loggerCtx,
         );
 
-        await this.refreshVariants(entityId, ratioToBase, weightKg, volumeL);
+        await this.refreshVariants(ctx, entityId, ratioToBase, weightKg, volumeL);
     }
 
-    // Audit finding (mivend#103, MEDIUM): defaultSalesUnitId=<the shared base unit> can match
-    // nearly every variant in the catalog — a plain ProductVariantService.update over all of them
-    // per UnitChanged would be a multi-thousand-row fan-out with a full event/search-index cost
-    // per row, inside one inbox-row transaction. A direct, values-changed-only UPDATE (no service
-    // call, no events — these are readonly ERP-derived fields) keeps this to the rows that
-    // actually moved, and makes a repeated identical UnitChanged a no-op (0 rows).
+    // Bounded, values-changed-only UPDATE (see docs/ai/erp-streams-map.md's `unit` row) — via the
+    // ctx-scoped repository, not rawConnection, so it stays inside the inbox row's transaction
+    // (audit finding: rawConnection would commit independently of a later failure in apply()).
     private async refreshVariants(
+        ctx: RequestContext,
         defaultSalesUnitId: string,
         unitRatioToBase: number,
         unitWeightKg: number | null,
         unitVolumeL: number | null,
     ): Promise<void> {
-        const result = await this.connection.rawConnection
+        const result = await this.connection
+            .getRepository(ctx, ProductVariant)
             .createQueryBuilder()
             .update('product_variant')
             .set({

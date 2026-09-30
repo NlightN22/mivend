@@ -7,14 +7,12 @@ function makeConnection(
     existing: Record<string, unknown> | null,
     affected = 0,
 ): {
-    connection: {
-        getRepository: ReturnType<typeof vi.fn>;
-        rawConnection: { createQueryBuilder: ReturnType<typeof vi.fn> };
-    };
+    connection: { getRepository: ReturnType<typeof vi.fn> };
     repo: {
         findOne: ReturnType<typeof vi.fn>;
         create: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
+        createQueryBuilder: ReturnType<typeof vi.fn>;
     };
     updateQueryBuilder: {
         update: ReturnType<typeof vi.fn>;
@@ -24,11 +22,6 @@ function makeConnection(
         execute: ReturnType<typeof vi.fn>;
     };
 } {
-    const repo = {
-        findOne: vi.fn().mockResolvedValue(existing),
-        create: vi.fn((x: unknown) => x),
-        save: vi.fn(async (x: unknown) => x),
-    };
     const updateQueryBuilder = {
         update: vi.fn().mockReturnThis(),
         set: vi.fn().mockReturnThis(),
@@ -36,11 +29,16 @@ function makeConnection(
         andWhere: vi.fn().mockReturnThis(),
         execute: vi.fn().mockResolvedValue({ affected }),
     };
+    // getRepository(ctx, UnitRecord) and getRepository(ctx, ProductVariant) both resolve to this
+    // same mock — fine here since the handler only ever calls one or the other per code path.
+    const repo = {
+        findOne: vi.fn().mockResolvedValue(existing),
+        create: vi.fn((x: unknown) => x),
+        save: vi.fn(async (x: unknown) => x),
+        createQueryBuilder: vi.fn().mockReturnValue(updateQueryBuilder),
+    };
     return {
-        connection: {
-            getRepository: vi.fn().mockReturnValue(repo),
-            rawConnection: { createQueryBuilder: vi.fn().mockReturnValue(updateQueryBuilder) },
-        },
+        connection: { getRepository: vi.fn().mockReturnValue(repo) },
         repo,
         updateQueryBuilder,
     };
