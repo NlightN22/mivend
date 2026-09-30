@@ -192,18 +192,14 @@ export class CounterpartyDiscountRuleService {
         const totalQuantity = [...quantityByProductErpId.values()].reduce((a, b) => a + b, 0);
 
         const matching = rules.filter(rule => {
-            // Safe default until limitAmount is actually enforced as a cap on the discounted
-            // amount (tracked as a follow-up, mivend#152) — never apply an uncapped full percent
-            // for a rule the ERP declared a limit for, rather than silently exceed it.
+            // Safe default until limitAmount enforcement exists (mivend#152) — never apply uncapped.
             if (rule.limitAmount !== null) return false;
             if (rule.productErpId !== null && rule.productErpId !== productErpId) return false;
             if (rule.condition === 'byQuantity') {
                 const qty = rule.productErpId !== null ? productQuantity : totalQuantity;
                 return qty >= (rule.conditionValue ?? 0);
             }
-            // documentAmount arrives in kopecks (Vendure's own minor-unit convention); the ERP's
-            // conditionValue is rubles, same as every other ERP money field (see
-            // price.handler.ts's own value*100 conversion) — never compared raw.
+            // documentAmount is kopecks; conditionValue is rubles (price.handler.ts's own convention).
             return documentAmount >= Math.round((rule.conditionValue ?? 0) * 100);
         });
 

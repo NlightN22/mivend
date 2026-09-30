@@ -180,10 +180,7 @@ export class PriceResolutionService {
                   productErpQuantities!,
               )
             : null;
-        // orderContext.order.totalWithTax is the order's already-committed lines (this priced
-        // line's own contribution isn't in it yet, and it's post- any already-applied discount) —
-        // accepted as "close enough" for a byDocumentAmount threshold check, same approximation
-        // the tier ladder's own aggregates make elsewhere in this file.
+        // totalWithTax excludes this priced line's own contribution — accepted approximation, same as the tier ladder's aggregates.
         const counterpartyRulePercent = orderContext
             ? await this.counterpartyDiscountRuleService.getBestPercent(
                   ctx,

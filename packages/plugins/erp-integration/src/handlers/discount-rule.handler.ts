@@ -15,12 +15,8 @@ const loggerCtx = 'IntegrationDiscountRuleHandler';
 const VALID_RECIPIENT_TYPES: readonly DiscountRuleRecipientType[] = ['counterparty', 'contract'];
 const VALID_CONDITIONS: readonly DiscountRuleCondition[] = ['byQuantity', 'byDocumentAmount'];
 
-// Applies Integration Service's `discount-rule` stream (DiscountRuleChanged) — feeds
-// @mivend/plugin-price-entry's DiscountRule via CounterpartyDiscountRuleService, the same entity
-// facet/priceType and #107 promo rules use. Full field accounting, the write-time conflict policy,
-// and a known reconciliation gap (this contract's is_active can never signal a real cancellation)
-// are documented in docs/ai/erp-streams-map.md's "Discount rules" section — read that before
-// changing this handler, not just this file.
+// Applies the `discount-rule` stream into @mivend/plugin-price-entry's DiscountRule — full field
+// accounting, conflict policy, and a known reconciliation gap: docs/ai/erp-streams-map.md.
 @Injectable()
 export class DiscountRuleStreamHandler implements InboundStreamHandler {
     constructor(
@@ -62,10 +58,8 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
         const percent = Number(payload.percent ?? NaN);
         const version = String(payload.version ?? '');
         const effectiveFrom = parseTimestamp(payload.effectiveFrom);
-        // Real optional presence (proto3 `optional Timestamp`) — absence means no expiry, never
-        // required the way promo-rule.handler.ts's own effective_to is (a different, non-optional
-        // field on that contract). A present-but-unparseable value is still malformed, not "no
-        // expiry" — skipped the same as any other bad field below.
+        // Real optional presence — absence means no expiry (docs/ai/erp-streams-map.md), a
+        // present-but-unparseable value is still malformed and skipped below.
         const effectiveToPresent = payload.effectiveTo != null;
         const effectiveTo = effectiveToPresent ? parseTimestamp(payload.effectiveTo) : null;
         if (

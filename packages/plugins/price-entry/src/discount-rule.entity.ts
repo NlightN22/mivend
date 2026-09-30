@@ -53,9 +53,7 @@ export class DiscountRule extends VendureEntity {
     @Column({ type: 'timestamp' })
     validFrom!: Date;
 
-    // Nullable only for the counterparty/contract-scoped shape (issue #108) — its
-    // effective_to is a real proto3 `optional Timestamp`, absent meaning no expiry, unlike the
-    // other two shapes' own contracts, where this field is always present.
+    // Nullable only for the counterparty/contract shape (null = no expiry) — see #108 in docs/ai/erp-streams-map.md.
     @Column({ type: 'timestamp', nullable: true })
     validTo!: Date | null;
 
