@@ -7,7 +7,9 @@ dist/
 *.tsbuildinfo
 tasks/
 .tests/
-docs/ai/
+# docs/ai/ itself is tracked (project-context docs that code comments link to must exist in the
+# repo) — only the dated historical snapshot archive stays local/ephemeral.
+docs/ai/.backup/
 
 # Environment files — commit only .example variants
 .env
