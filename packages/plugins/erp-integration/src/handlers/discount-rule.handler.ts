@@ -16,7 +16,7 @@ const VALID_RECIPIENT_TYPES: readonly DiscountRuleRecipientType[] = ['counterpar
 const VALID_CONDITIONS: readonly DiscountRuleCondition[] = ['byQuantity', 'byDocumentAmount'];
 
 // Applies the `discount-rule` stream into @mivend/plugin-price-entry's DiscountRule — full field
-// accounting, conflict policy, and a known reconciliation gap: docs/ai/erp-streams-map.md.
+// accounting and conflict policy: docs/ai/erp-streams-map.md.
 @Injectable()
 export class DiscountRuleStreamHandler implements InboundStreamHandler {
     constructor(

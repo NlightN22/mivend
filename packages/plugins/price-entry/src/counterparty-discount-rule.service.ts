@@ -202,7 +202,7 @@ export class CounterpartyDiscountRuleService {
         const totalQuantity = [...quantityByProductErpId.values()].reduce((a, b) => a + b, 0);
 
         const matching = rules.filter(rule => {
-            // Safe default until limitAmount enforcement exists (mivend#152) — never apply uncapped.
+            // Safe default until limitAmount enforcement exists (mivend#154) — never apply uncapped.
             if (rule.limitAmount !== null) return false;
             if (rule.productErpId !== null && rule.productErpId !== productErpId) return false;
             if (rule.condition === 'byQuantity') {
