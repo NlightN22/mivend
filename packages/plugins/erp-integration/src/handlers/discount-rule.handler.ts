@@ -28,10 +28,14 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
-        // Tombstone (search-platform#145): cancellation in 1C now arrives as a genuine
-        // EntityDeleteDto-driven is_deleted=true for the same entityId — deactivate, never skip.
+        // Tombstone (search-platform#145) — deactivate, never skip. version is stored too: see
+        // docs/ai/erp-streams-map.md's "Discount rules" section for the reactivation-race reasoning.
         if (payload.isDeleted === true) {
-            await this.counterpartyDiscountRuleService.deactivateTombstone(ctx, entityId);
+            await this.counterpartyDiscountRuleService.deactivateTombstone(
+                ctx,
+                entityId,
+                String(payload.version ?? ''),
+            );
             Logger.verbose(
                 `discount-rule ${entityId}: tombstone — deactivated if a row existed`,
                 loggerCtx,

@@ -171,7 +171,7 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
 
         it('updates an existing row matched by erpId (repeat delivery of the same rule)', async () => {
             mockQb.getMany.mockResolvedValue([]);
-            const existing = ruleInput({ percent: 5 });
+            const existing = ruleInput({ percent: 5, active: true });
             mockRepo.findOne.mockResolvedValue(existing);
             mockRepo.save.mockResolvedValue(existing);
 
@@ -183,24 +183,68 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
     });
 
     describe('deactivateTombstone', () => {
-        it('deactivates an existing rule by erpId, touching no other field', async () => {
-            const existing = ruleInput({ active: true, percent: 42 });
+        it('deactivates an existing rule by erpId and stores the tombstone version, touching no other field', async () => {
+            const existing = ruleInput({ active: true, percent: 42, sourceVersion: '5' });
             mockRepo.findOne.mockResolvedValue(existing);
             mockRepo.save.mockResolvedValue(existing);
 
-            await service.deactivateTombstone(mockCtx, 'dr-1');
+            await service.deactivateTombstone(mockCtx, 'dr-1', '9');
 
             expect(existing.active).toBe(false);
             expect(existing.percent).toBe(42);
+            expect(existing.sourceVersion).toBe('9');
             expect(mockRepo.save).toHaveBeenCalledWith(existing);
+        });
+
+        it('keeps the existing sourceVersion when the tombstone carries no version', async () => {
+            const existing = ruleInput({ active: true, sourceVersion: '5' });
+            mockRepo.findOne.mockResolvedValue(existing);
+            mockRepo.save.mockResolvedValue(existing);
+
+            await service.deactivateTombstone(mockCtx, 'dr-1', '');
+
+            expect(existing.sourceVersion).toBe('5');
         });
 
         it('is a no-op when no rule exists for the erpId', async () => {
             mockRepo.findOne.mockResolvedValue(null);
 
-            await service.deactivateTombstone(mockCtx, 'dr-unknown');
+            await service.deactivateTombstone(mockCtx, 'dr-unknown', '1');
 
             expect(mockRepo.save).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('upsertCounterpartyRule — reactivation guard after a tombstone', () => {
+        it('does not reactivate a deactivated row when the incoming version is not strictly newer', async () => {
+            mockQb.getMany.mockResolvedValue([]); // no cross-erpId conflicts
+            const deactivated = ruleInput({ active: false, sourceVersion: '9', percent: 10 });
+            mockRepo.findOne.mockResolvedValue(deactivated);
+
+            const result = await service.upsertCounterpartyRule(
+                mockCtx,
+                ruleInput({ sourceVersion: '9', percent: 99 }) as never,
+            );
+
+            expect(result).toBe(deactivated);
+            expect(deactivated.active).toBe(false);
+            expect(deactivated.percent).toBe(10); // untouched
+            expect(mockRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('reactivates a deactivated row when the incoming version is strictly newer', async () => {
+            mockQb.getMany.mockResolvedValue([]);
+            const deactivated = ruleInput({ active: false, sourceVersion: '9', percent: 10 });
+            mockRepo.findOne.mockResolvedValue(deactivated);
+            mockRepo.save.mockImplementation(async (r: unknown) => r);
+
+            const result = await service.upsertCounterpartyRule(
+                mockCtx,
+                ruleInput({ sourceVersion: '12', percent: 99 }) as never,
+            );
+
+            expect((result as { active: boolean }).active).toBe(true);
+            expect((result as { percent: number }).percent).toBe(99);
         });
     });
 

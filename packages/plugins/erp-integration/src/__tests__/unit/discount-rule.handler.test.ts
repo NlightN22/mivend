@@ -52,6 +52,7 @@ describe('DiscountRuleStreamHandler', () => {
         expect(counterpartyDiscountRuleService.deactivateTombstone).toHaveBeenCalledWith(
             ctx,
             'dr-1',
+            '5',
         );
         expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
     });
@@ -68,6 +69,7 @@ describe('DiscountRuleStreamHandler', () => {
         expect(counterpartyDiscountRuleService.deactivateTombstone).toHaveBeenCalledWith(
             ctx,
             'dr-1',
+            '',
         );
     });
 

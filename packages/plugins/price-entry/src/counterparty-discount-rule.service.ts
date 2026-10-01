@@ -94,6 +94,19 @@ export class CounterpartyDiscountRuleService {
         }
 
         let record = await repo.findOne({ where: { erpId: input.erpId } });
+        // Never reactivate a deactivated row at a non-newer version — docs/ai/erp-streams-map.md.
+        if (
+            record &&
+            !record.active &&
+            !isVersionNewer(input.sourceVersion, record.sourceVersion ?? '')
+        ) {
+            Logger.warn(
+                `discount-rule ${input.erpId}: update at version=${input.sourceVersion} does not ` +
+                    `beat the deactivated row's own version=${record.sourceVersion} — not reactivating`,
+                loggerCtx,
+            );
+            return record;
+        }
         const values: Partial<DiscountRule> = {
             erpId: input.erpId,
             priceTypeCode: null,
@@ -127,11 +140,14 @@ export class CounterpartyDiscountRuleService {
 
     // Tombstone (is_deleted=true) — deactivate by erpId only, never touch other fields, same
     // convention ContractService.deactivateTombstone/PointOfSaleService use for their own streams.
-    async deactivateTombstone(ctx: RequestContext, erpId: string): Promise<void> {
+    // Cancellation always wins regardless of version; stores it for upsertCounterpartyRule's own
+    // reactivation guard above — see docs/ai/erp-streams-map.md.
+    async deactivateTombstone(ctx: RequestContext, erpId: string, version: string): Promise<void> {
         const repo = this.connection.getRepository(ctx, DiscountRule);
         const entity = await repo.findOne({ where: { erpId } });
         if (!entity) return;
         entity.active = false;
+        if (version) entity.sourceVersion = version;
         await repo.save(entity);
     }
 

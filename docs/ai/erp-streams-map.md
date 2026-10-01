@@ -196,12 +196,23 @@ same shape as `contract.handler.ts`'s own tombstone-first check) and calls
 idempotent on redelivery). `is_deleted` really is otherwise hardcoded `false` for every non-tombstone
 event on this stream — that part of the original contract comment was accurate.
 
-**Not yet verified (LOW, mivend.audit.common second pass on 0b92748)**: whether the tombstone
-event's own `version` is guaranteed newer than the original active rule's `version`. If not
-guaranteed, `IntegrationInboxProcessorService`'s per-erpId out-of-order guard could in principle
-let a late-redelivered _old_ active event reactivate a rule after its real tombstone was already
-applied. Needs a one-time check against a real tombstone in staging-integration; if confirmed
-monotonic, remove this paragraph and note it as a non-issue instead.
+**Confirmed NOT monotonic (sp.issue.145, checked `register-streams.bsl` directly) — mitigated in
+mivend's own code, not just on the wire**: `ПодготовитьКонтекст` calls `ТекущаяДата()` once per
+sync pass and reuses that single timestamp-string as `version` for every DTO/tombstone generated
+in that pass — if an update and its cancellation for the same `entityId` land in one sync pass
+(e.g. after a backlog catch-up), both get an **identical** `version`. Worse, search-platform's own
+Ingestion API dedupes inbound requests on `(sourceSystem, entityType, entityId, version)` with
+`onConflictDoNothing`, so at equal versions one of the two can be silently dropped before ever
+reaching Kafka — not fixable from mivend's side at all. **mivend's own mitigation** (not relying on
+version strictly increasing): `CounterpartyDiscountRuleService.upsertCounterpartyRule` refuses to
+reactivate a deactivated row (tombstone or conflict-superseded) unless the incoming event's
+`version` is _strictly_ newer than the row's own stored `sourceVersion`; `deactivateTombstone`
+stores the tombstone's own version (not just `active=false`) so this guard has something real to
+compare against. A genuinely older/equal-version update is logged and otherwise ignored, never
+silently reactivates. This is specific to the discount-rule table's own write path — it does not
+fix the underlying version scheme (shared across every register-based stream: discount-rules,
+retro-bonus, stock, price, …) or the Ingestion API's own dedup-drop risk, both tracked as
+search-platform's own follow-up (their side, not filed as a mivend issue).
 
 **Deferred, low-priority (re-filed as mivend#154, not tracked inside a closed issue anymore)**:
 `limitAmount` is captured but currently makes a rule excluded from matching entirely (safe
