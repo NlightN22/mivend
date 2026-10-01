@@ -64,8 +64,24 @@ export class CounterpartyDiscountRuleService {
     ): Promise<DiscountRule> {
         const repo = this.connection.getRepository(ctx, DiscountRule);
 
+        // Decide everything first, mutate nothing until every decision is made — docs/ai/erp-streams-map.md.
+        let record = await repo.findOne({ where: { erpId: input.erpId } });
+        if (
+            record &&
+            !record.active &&
+            !isVersionNewer(input.sourceVersion, record.sourceVersion ?? '')
+        ) {
+            Logger.warn(
+                `discount-rule ${input.erpId}: update at version=${input.sourceVersion} does not ` +
+                    `beat the deactivated row's own version=${record.sourceVersion} — not reactivating`,
+                loggerCtx,
+            );
+            return record;
+        }
+
         const conflicts = await this.findActiveConflicts(ctx, input);
         let active = true;
+        const toSupersede: DiscountRule[] = [];
         for (const conflict of conflicts) {
             if (isPortalOrigin(conflict.erpId)) {
                 Logger.warn(
@@ -85,6 +101,10 @@ export class CounterpartyDiscountRuleService {
                 );
                 return conflict;
             }
+            toSupersede.push(conflict);
+        }
+
+        for (const conflict of toSupersede) {
             conflict.active = false;
             await repo.save(conflict);
             Logger.verbose(
@@ -93,20 +113,6 @@ export class CounterpartyDiscountRuleService {
             );
         }
 
-        let record = await repo.findOne({ where: { erpId: input.erpId } });
-        // Never reactivate a deactivated row at a non-newer version — docs/ai/erp-streams-map.md.
-        if (
-            record &&
-            !record.active &&
-            !isVersionNewer(input.sourceVersion, record.sourceVersion ?? '')
-        ) {
-            Logger.warn(
-                `discount-rule ${input.erpId}: update at version=${input.sourceVersion} does not ` +
-                    `beat the deactivated row's own version=${record.sourceVersion} — not reactivating`,
-                loggerCtx,
-            );
-            return record;
-        }
         const values: Partial<DiscountRule> = {
             erpId: input.erpId,
             priceTypeCode: null,

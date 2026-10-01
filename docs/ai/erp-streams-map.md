@@ -211,8 +211,20 @@ stores the tombstone's own version (not just `active=false`) so this guard has s
 compare against. A genuinely older/equal-version update is logged and otherwise ignored, never
 silently reactivates. This is specific to the discount-rule table's own write path — it does not
 fix the underlying version scheme (shared across every register-based stream: discount-rules,
-retro-bonus, stock, price, …) or the Ingestion API's own dedup-drop risk, both tracked as
-search-platform's own follow-up (their side, not filed as a mivend issue).
+retro-bonus, stock, price, …) or the Ingestion API's own dedup-drop risk: if the _cancellation
+itself_ loses the dedup race, mivend never receives it at all, and no mivend-side guard can fix
+that. Tracked as mivend#154 (own-side residual risk) — upstream fix (version scheme/dedup policy)
+is search-platform's own follow-up to search-platform#145, not yet confirmed back with an issue
+number.
+
+**Fixed ordering bug in the mitigation itself (mivend.audit.common, review of 9549a8d)**:
+`upsertCounterpartyRule` originally ran the reactivation guard _after_ the cross-erpId
+conflict-supersede loop, and that loop mutated/saved conflicting rows as it went — a stale
+reactivation attempt (or a stale comparison against a _second_ conflict) could abort the write via
+an early `return` after an _earlier_ conflict had already been deactivated and saved, silently
+losing an unrelated active rule. Fixed by deciding every outcome first (fetch the record, check
+the reactivation guard, evaluate every conflict into a to-supersede list) and only mutating/saving
+after no decision aborts the write.
 
 **Deferred, low-priority (re-filed as mivend#154, not tracked inside a closed issue anymore)**:
 `limitAmount` is captured but currently makes a rule excluded from matching entirely (safe

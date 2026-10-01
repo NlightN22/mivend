@@ -141,6 +141,21 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
             expect(mockRepo.create).not.toHaveBeenCalled();
         });
 
+        it('ERP-vs-ERP, two conflicts: a stale comparison against either one leaves BOTH untouched, not just the blocking one', async () => {
+            const olderConflict = activeRule({ erpId: 'dr-older', sourceVersion: '3' });
+            const blockingConflict = activeRule({ erpId: 'dr-blocking', sourceVersion: '8' });
+            mockQb.getMany.mockResolvedValue([olderConflict, blockingConflict]);
+            const input = ruleInput({ sourceVersion: '5' }); // newer than older, not newer than blocking
+
+            await service.upsertCounterpartyRule(mockCtx, input as never);
+
+            // decide-then-mutate: olderConflict must not have been superseded just because it
+            // was iterated before the blocking one aborted the whole write.
+            expect(olderConflict.active).toBe(true);
+            expect(blockingConflict.active).toBe(true);
+            expect(mockRepo.save).not.toHaveBeenCalled();
+        });
+
         it('ERP-vs-portal: never auto-overwrites a portal-origin conflict — writes itself inactive instead', async () => {
             const portalConflict = activeRule({ erpId: 'portal-req-42' });
             mockQb.getMany.mockResolvedValue([portalConflict]);
@@ -229,6 +244,21 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
             expect(result).toBe(deactivated);
             expect(deactivated.active).toBe(false);
             expect(deactivated.percent).toBe(10); // untouched
+            expect(mockRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('a stale reactivation attempt never even looks at conflicting rows — an active sibling in the same scope stays untouched', async () => {
+            const deactivated = ruleInput({ erpId: 'dr-x', active: false, sourceVersion: '9' });
+            mockRepo.findOne.mockResolvedValue(deactivated);
+
+            await service.upsertCounterpartyRule(
+                mockCtx,
+                ruleInput({ erpId: 'dr-x', sourceVersion: '9' }) as never,
+            );
+
+            // findActiveConflicts (the other active rule, Y) is only reached after the
+            // reactivation guard — mivend.audit.common's finding on 9549a8d's ordering bug.
+            expect(mockRepo.createQueryBuilder).not.toHaveBeenCalled();
             expect(mockRepo.save).not.toHaveBeenCalled();
         });
 
