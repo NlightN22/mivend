@@ -25,13 +25,50 @@ function basePayload(overrides: Record<string, unknown> = {}): Record<string, un
 }
 
 describe('DiscountRuleStreamHandler', () => {
-    it('skips an inactive/deleted rule without writing', async () => {
-        const counterpartyDiscountRuleService = { upsertCounterpartyRule: vi.fn() };
+    it('skips an inactive (not deleted) rule without writing', async () => {
+        const counterpartyDiscountRuleService = {
+            upsertCounterpartyRule: vi.fn(),
+            deactivateTombstone: vi.fn(),
+        };
         const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
 
         await handler.apply(ctx, 'dr-1', basePayload({ isActive: false }));
 
         expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
+        expect(counterpartyDiscountRuleService.deactivateTombstone).not.toHaveBeenCalled();
+    });
+
+    // search-platform#145: a genuine cancellation now arrives as is_deleted=true for the same
+    // entityId — must deactivate the existing rule, not silently no-op.
+    it('deactivates the existing rule as a tombstone when isDeleted=true, regardless of other fields', async () => {
+        const counterpartyDiscountRuleService = {
+            upsertCounterpartyRule: vi.fn(),
+            deactivateTombstone: vi.fn().mockResolvedValue(undefined),
+        };
+        const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
+
+        await handler.apply(ctx, 'dr-1', basePayload({ isDeleted: true, isActive: true }));
+
+        expect(counterpartyDiscountRuleService.deactivateTombstone).toHaveBeenCalledWith(
+            ctx,
+            'dr-1',
+        );
+        expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
+    });
+
+    it('treats isDeleted=true as a tombstone even when other fields are missing/malformed', async () => {
+        const counterpartyDiscountRuleService = {
+            upsertCounterpartyRule: vi.fn(),
+            deactivateTombstone: vi.fn().mockResolvedValue(undefined),
+        };
+        const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
+
+        await handler.apply(ctx, 'dr-1', { entityId: 'dr-1', isDeleted: true });
+
+        expect(counterpartyDiscountRuleService.deactivateTombstone).toHaveBeenCalledWith(
+            ctx,
+            'dr-1',
+        );
     });
 
     // Integration Service encodes isActive as a plain (non-optional) proto3 bool — absent means

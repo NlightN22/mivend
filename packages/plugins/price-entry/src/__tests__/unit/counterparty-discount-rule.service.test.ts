@@ -182,6 +182,28 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
         });
     });
 
+    describe('deactivateTombstone', () => {
+        it('deactivates an existing rule by erpId, touching no other field', async () => {
+            const existing = ruleInput({ active: true, percent: 42 });
+            mockRepo.findOne.mockResolvedValue(existing);
+            mockRepo.save.mockResolvedValue(existing);
+
+            await service.deactivateTombstone(mockCtx, 'dr-1');
+
+            expect(existing.active).toBe(false);
+            expect(existing.percent).toBe(42);
+            expect(mockRepo.save).toHaveBeenCalledWith(existing);
+        });
+
+        it('is a no-op when no rule exists for the erpId', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+
+            await service.deactivateTombstone(mockCtx, 'dr-unknown');
+
+            expect(mockRepo.save).not.toHaveBeenCalled();
+        });
+    });
+
     describe('getBestPercent', () => {
         it('includes a no-expiry (validTo IS NULL) clause in the validity window query', async () => {
             mockQb.getMany.mockResolvedValue([]);

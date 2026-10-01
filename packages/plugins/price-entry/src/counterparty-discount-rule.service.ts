@@ -125,6 +125,16 @@ export class CounterpartyDiscountRuleService {
         return repo.save(record);
     }
 
+    // Tombstone (is_deleted=true) — deactivate by erpId only, never touch other fields, same
+    // convention ContractService.deactivateTombstone/PointOfSaleService use for their own streams.
+    async deactivateTombstone(ctx: RequestContext, erpId: string): Promise<void> {
+        const repo = this.connection.getRepository(ctx, DiscountRule);
+        const entity = await repo.findOne({ where: { erpId } });
+        if (!entity) return;
+        entity.active = false;
+        await repo.save(entity);
+    }
+
     private async findActiveConflicts(
         ctx: RequestContext,
         input: CounterpartyDiscountRuleInput,
