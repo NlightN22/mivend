@@ -1,6 +1,16 @@
 # Project Context
 
-Updated: 2026-10-02 07:55
+Updated: 2026-10-02 15:00
+
+## Recent changes (2026-10-02 — granted-discount stream #101, in progress)
+
+**Issue #101 shipped (not yet audited/closed — still OPEN).** Shipment-time confirmed discount
+facts consumed as a new, read-only `GrantedDiscount` entity (`plugin-price-entry`) from Integration
+Service's `granted-discount` stream (`company.customers.events.v1`). `orderEntityId` kept as a
+plain ERP id, not a mivend `Order` relation — a shipment line can reference an order mivend never
+received. New production migration `1790743000000-add-granted-discount-table.ts`. Single commit
+so far (7704613); this session only refreshed context, didn't touch this work — next session
+should check whether `mivend.audit.common` has reviewed it yet before assuming it's done.
 
 ## Recent changes (2026-09-29→10-02 — discount-rule stream #108/#152/#153/#154, docs/ai tracked)
 
@@ -74,10 +84,16 @@ Full narrative before 2026-09-29: `docs/ai/.backup/PROJECT_CONTEXT-2026-09-29-pr
 inbox throughput, #147 migration tooling introduced, #141 ERP tax auto-provisioning, payment/
 shipping plugin-ownership pattern). Chains back to
 `docs/ai/.backup/PROJECT_CONTEXT-2026-09-22-locale-dashboard-tax-design-full.md` and earlier.
-Durable facts still true: #100/#104/#105/#108/#109/#110/#115/#116/#119/#121/#126/#128/#129/#131/
-#140/#141/#144/#145/#147/#148/#149/#152/#153 all shipped/closed; #117 (Position entity) still
+Durable facts still true: #100/#103/#104/#105/#108/#109/#110/#115/#116/#119/#121/#126/#128/#129/
+#131/#140/#141/#144/#145/#147/#148/#149/#152/#153 all shipped/closed; #117 (Position entity) still
 blocked; #130 (Administrator-lifecycle E2E) designed, not implemented; #50/#143/#44 open with
-deferred parts tracked (#150/#151).
+deferred parts tracked (#150/#151). **#103** (order weight/volume + branch-conditional packaging,
+`unit-changed` stream): `ProductVariant.customFields.unitRatioToBase`/`unitWeightKg`/`unitVolumeL`/
+`defaultSalesUnitId`, `BranchSettings.allowPiecewiseSale`, `MultiplicityOrderInterceptor` resolves
+branch via the customer's preferred `TradingPoint` (never `order.customFields.branchId` pre-
+placement — real audit bug, fixed). `UnitStreamHandler` refresh is a single bounded
+values-changed-only UPDATE inside the inbox transaction, not a `ProductVariantService.update`
+fan-out (a shared base unit can match nearly every variant in the catalog).
 
 ## Project purpose
 
@@ -158,6 +174,8 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 ## Planned next work
 
+0. **Issue #101** (granted-discount, just shipped) — needs `mivend.audit.common` review, then
+   `finish-task` (push + close) once clean. Check first before assuming done.
 1. **Issue #154** (low-priority, open) — discount-rule follow-ups: `limitAmount` enforcement
    (real cap, not just safe-exclude), conflict-scope simplification, unreachable ERP-vs-portal
    branch, upstream version-collision/dedup risk (needs a search-platform-side issue number once
@@ -206,7 +224,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 `make dev` · `make dev-staging-integration` · `make dev-branch` · `make up` (never recreates
 running containers; `make up-rebuild` does — interrupts every contour) · `make seed-all` ·
-`make lint` · `make test` (59 files / 502 tests as of 2026-10-02) · `make test-int` (never run
+`make lint` · `make test` (180 files / 1413 tests as of 2026-10-02) · `make test-int` (never run
 vitest directly) · `pnpm build:plugins` (mandatory alongside lint/test for any
 `packages/plugins/**` change) · `make preview-build`/`preview-up`/`preview-down`. `make dev-reset
 FORCE=1` wipes the **shared** Postgres volume for every contour — never run without checking
