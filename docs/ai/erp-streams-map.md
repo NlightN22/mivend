@@ -247,6 +247,19 @@ pattern already established for reservation confirmation (`order-registration-re
 `order-changed`'s `reservedQuantity` vs. an eventual shipment-time fact). Both streams needed;
 they can legitimately diverge if the order changes between placement and shipment.
 
+**`granted-discount` field accounting (#101)**: `entity_id`→`erpId` (Recorder+LineNumber, per shipment
+line); `source_document_id`/`source_counterparty_id`/`product_id`/`discount_rule_recipient_id`/
+`discount_amount` (raw ERP currency units, not kopecks) consumed, a malformed required field skips the
+event; `order_entity_id`/`discount_document_id`/`condition` (opaque 1C enum text) optional → nullable.
+`order_entity_id` is a plain ERP id, NOT a hard Order link and never a missing-dependency retry — a
+shipment line may reference an order mivend never had. Not consumed: `event_id`/`occurred_at`/
+`updated_at` (envelope). No UI yet (#155 manager, #156 storefront).
+
+**Known gap, tracked**: the contract says a fact is never re-sent (`is_deleted` always false), so an
+unposted/corrected shipment leaves a stale `GrantedDiscount` row (same class as #152 before
+search-platform#145). Open question for search-platform: is a correction/tombstone sent on
+repost/unpost? Resolve before the facts are shown in the UI.
+
 ### `point-of-sale` field accounting (issue #100)
 
 Verified against `@nlightn22/event-contracts@0.42.0` (search-platform#121, current at
