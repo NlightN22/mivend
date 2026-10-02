@@ -47,6 +47,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             'point-of-sale': 'pos2',
             contract: 'contract2',
             'discount-rule': 'dr2',
+            'granted-discount': 'gd2',
         },
     },
     schemaRegistry: { url: 'http://localhost:8081' },

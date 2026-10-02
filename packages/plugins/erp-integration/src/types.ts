@@ -171,7 +171,10 @@ export type InboundStream =
     // @mivend/plugin-price-entry DiscountRule entity as the existing facet/priceType-threshold and
     // #107 promo rules — see DiscountRuleStreamHandler and DiscountRule's own doc comment for the
     // three-shape invariant.
-    | 'discount-rule';
+    | 'discount-rule'
+    // Issue #101: shipment-time confirmed discount fact (GrantedDiscountChanged),
+    // company.customers.events.v1. See GrantedDiscountStreamHandler.
+    | 'granted-discount';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -264,6 +267,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     contract: true,
     unit: true,
     'discount-rule': true,
+    'granted-discount': true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

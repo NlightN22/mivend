@@ -72,6 +72,7 @@ function makeProcessor(apply: ReturnType<typeof vi.fn>): IntegrationInboxProcess
         stubHandler as never,
         stubHandler as never,
         stubHandler as never,
+        stubHandler as never,
     );
 }
 

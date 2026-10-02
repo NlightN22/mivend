@@ -807,6 +807,10 @@ export const config: VendureConfig = {
                     'discount-rule':
                         process.env.INTEGRATION_KAFKA_TOPIC_DISCOUNT_RULE ??
                         'company.customers.events.v1.discount-rule-changed',
+                    // Issue #101: shipment-time confirmed discount facts. See GrantedDiscountStreamHandler.
+                    'granted-discount':
+                        process.env.INTEGRATION_KAFKA_TOPIC_GRANTED_DISCOUNT ??
+                        'company.customers.events.v1.granted-discount-changed',
                 },
             },
             schemaRegistry: {

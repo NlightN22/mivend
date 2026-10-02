@@ -9,6 +9,7 @@ import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
 import { DepartmentStreamHandler } from './handlers/department.handler';
 import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
+import { GrantedDiscountStreamHandler } from './handlers/granted-discount.handler';
 import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
@@ -61,6 +62,7 @@ export class IntegrationInboxProcessorService {
         contractHandler: ContractStreamHandler,
         unitHandler: UnitStreamHandler,
         discountRuleHandler: DiscountRuleStreamHandler,
+        grantedDiscountHandler: GrantedDiscountStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -84,6 +86,7 @@ export class IntegrationInboxProcessorService {
             contract: contractHandler,
             unit: unitHandler,
             'discount-rule': discountRuleHandler,
+            'granted-discount': grantedDiscountHandler,
             // Quantity dimension deliberately deferred to issue #72 (ATP/reservation-drift
             // source-of-truth); organization_id here is not authoritative — StorageLocationChanged
             // above is the sole source for ProductVariant.customFields.organizationId, so this

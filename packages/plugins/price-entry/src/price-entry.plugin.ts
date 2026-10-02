@@ -13,6 +13,7 @@ import { ProductVariantPriceEntry } from './price-entry.entity';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountGrant } from './discount-grant.entity';
 import { DiscountRegistryEntry } from './discount-registry-entry.entity';
+import { GrantedDiscount } from './granted-discount.entity';
 import {
     DiscountRuleAdminResolver,
     OrderLineDiscountResolver,
@@ -32,6 +33,7 @@ import { PriceAdjustmentGateService } from './price-adjustment-gate.service';
 import { PriceAdjustmentService } from './price-adjustment.service';
 import { DiscountGrantService } from './discount-grant.service';
 import { DiscountRegistryService } from './discount-registry.service';
+import { GrantedDiscountService } from './granted-discount.service';
 
 const shopApiSchema = gql`
     type DiscountTier {
@@ -272,7 +274,13 @@ const adminApiSchema = gql`
 
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin, ApprovalWorkflowPlugin, CounterpartyPlugin],
-    entities: [ProductVariantPriceEntry, DiscountRule, DiscountGrant, DiscountRegistryEntry],
+    entities: [
+        ProductVariantPriceEntry,
+        DiscountRule,
+        DiscountGrant,
+        DiscountRegistryEntry,
+        GrantedDiscount,
+    ],
     shopApiExtensions: {
         schema: shopApiSchema,
         resolvers: [ProductVariantPriceResolver, OrderLineDiscountResolver],
@@ -298,12 +306,14 @@ const adminApiSchema = gql`
         PriceAdjustmentService,
         DiscountGrantService,
         DiscountRegistryService,
+        GrantedDiscountService,
     ],
     exports: [
         PriceEntryService,
         DiscountRuleService,
         PromoDiscountRuleService,
         CounterpartyDiscountRuleService,
+        GrantedDiscountService,
         PriceResolutionService,
     ],
     configuration: (config: RuntimeVendureConfig) => {

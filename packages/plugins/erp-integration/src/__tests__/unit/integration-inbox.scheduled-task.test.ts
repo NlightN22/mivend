@@ -49,6 +49,7 @@ function makeOptions(instanceType: 'central' | 'branch'): ErpIntegrationPluginOp
                 'point-of-sale': 'pos2',
                 contract: 'contract2',
                 'discount-rule': 'dr2',
+                'granted-discount': 'gd2',
             },
         },
         schemaRegistry: { url: 'http://x' },
