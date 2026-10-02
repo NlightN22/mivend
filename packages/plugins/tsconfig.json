@@ -10,6 +10,7 @@
         { "path": "./erp-order" },
         { "path": "./popular-products" },
         { "path": "./price-entry" },
+        { "path": "./retro-bonus" },
         { "path": "./counterparty" },
         { "path": "./documents" },
         { "path": "./deferred-payment" },

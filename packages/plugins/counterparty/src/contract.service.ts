@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ID } from '@vendure/common/lib/shared-types';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { Contract } from './entities/contract.entity';
@@ -83,6 +84,14 @@ export class ContractService {
 
     async findByErpId(ctx: RequestContext, erpId: string): Promise<Contract | null> {
         return this.connection.getRepository(ctx, Contract).findOne({ where: { erpId } });
+    }
+
+    // Issue #102: resolves a Contract by its mivend internal id — used to look up its own erpId
+    // from a GraphQL ID input arg, same role CounterpartyService.findOneVisible plays for
+    // Counterparty. No visibility filter — a Contract's visibility already follows its parent
+    // Counterparty's own scope at the caller.
+    async findById(ctx: RequestContext, id: ID): Promise<Contract | null> {
+        return this.connection.getRepository(ctx, Contract).findOne({ where: { id } });
     }
 
     // A tombstone never carries a counterpartyId either — deactivate by erpId only, never look up

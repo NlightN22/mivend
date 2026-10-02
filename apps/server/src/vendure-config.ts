@@ -24,6 +24,7 @@ import { DashboardPlugin } from '@vendure/dashboard/plugin';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
+import { RetroBonusPlugin } from '@mivend/plugin-retro-bonus';
 import { ErpImportPlugin } from '@mivend/plugin-erp-import';
 import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { searchPlugins } from '@mivend/plugin-search';
@@ -622,6 +623,9 @@ export const config: VendureConfig = {
         VersioningPlugin,
         CounterpartyPlugin,
         PriceEntryPlugin,
+        // Issue #102: Admin-API-only, runs on every instance like PriceEntryPlugin/CounterpartyPlugin
+        // — only erp-integration's handler (central-only) ever writes to it.
+        RetroBonusPlugin,
         DocumentsPlugin,
         DeferredPaymentPlugin,
         OnlinePaymentPlugin,
@@ -811,6 +815,11 @@ export const config: VendureConfig = {
                     'granted-discount':
                         process.env.INTEGRATION_KAFKA_TOPIC_GRANTED_DISCOUNT ??
                         'company.customers.events.v1.granted-discount-changed',
+                    // Issue #102: the ERP's retro-bonus terms log, same company.customers domain
+                    // as discount-rule/granted-discount above. See RetroBonusRuleStreamHandler.
+                    'retro-bonus-rule':
+                        process.env.INTEGRATION_KAFKA_TOPIC_RETRO_BONUS_RULE ??
+                        'company.customers.events.v1.retro-bonus-rule-changed',
                 },
             },
             schemaRegistry: {

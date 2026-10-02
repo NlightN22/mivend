@@ -7,13 +7,8 @@
     },
     "include": ["src/**/*", "index.ts"],
     "references": [
-        { "path": "../../shared" },
-        { "path": "../erp-order" },
-        { "path": "../customer-pricing" },
-        { "path": "../price-entry" },
-        { "path": "../retro-bonus" },
         { "path": "../access-control" },
         { "path": "../counterparty" },
-        { "path": "../notification" }
+        { "path": "../../shared" }
     ]
 }

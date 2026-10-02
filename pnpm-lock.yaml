@@ -112,6 +112,9 @@ importers:
             '@mivend/plugin-reservation':
                 specifier: workspace:*
                 version: link:../../packages/plugins/reservation
+            '@mivend/plugin-retro-bonus':
+                specifier: workspace:*
+                version: link:../../packages/plugins/retro-bonus
             '@mivend/plugin-saved-views':
                 specifier: workspace:*
                 version: link:../../packages/plugins/saved-views
@@ -681,6 +684,9 @@ importers:
             '@mivend/plugin-reservation':
                 specifier: workspace:*
                 version: link:../reservation
+            '@mivend/plugin-retro-bonus':
+                specifier: workspace:*
+                version: link:../retro-bonus
             '@nestjs/swagger':
                 specifier: ^11.0.0
                 version: 11.4.5(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(reflect-metadata@0.2.2)
@@ -952,6 +958,46 @@ importers:
             '@mivend/plugin-notification':
                 specifier: workspace:*
                 version: link:../notification
+            graphql-tag:
+                specifier: ^2.12.6
+                version: 2.12.7(graphql@16.14.2)
+            shared:
+                specifier: workspace:*
+                version: link:../../shared
+        devDependencies:
+            '@nestjs/common':
+                specifier: ^11.0.0
+                version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
+            '@nestjs/graphql':
+                specifier: ^13.0.0
+                version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
+            '@vendure/common':
+                specifier: ^3.7.3
+                version: 3.7.3
+            '@vendure/core':
+                specifier: ^3.7.3
+                version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+            graphql:
+                specifier: ^16.0.0
+                version: 16.14.2
+            typeorm:
+                specifier: ^0.3.0
+                version: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
+            typescript:
+                specifier: ^5.4.0
+                version: 5.9.3
+            vitest:
+                specifier: ^4.1.9
+                version: 4.1.9(@types/node@20.19.43)(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3))(vite@8.1.0(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+
+    packages/plugins/retro-bonus:
+        dependencies:
+            '@mivend/plugin-access-control':
+                specifier: workspace:*
+                version: link:../access-control
+            '@mivend/plugin-counterparty':
+                specifier: workspace:*
+                version: link:../counterparty
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)
@@ -19125,7 +19171,7 @@ snapshots:
             intl-messageformat: 10.7.18
             mime-types: 3.0.2
             ms: 2.1.3
-            nanoid: 3.3.15
+            nanoid: 3.3.19
             picocolors: 1.1.1
             reflect-metadata: 0.2.2
             rxjs: 7.8.2

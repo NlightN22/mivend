@@ -2,6 +2,7 @@ import { PluginCommonModule, RuntimeVendureConfig, Type, VendurePlugin } from '@
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
+import { RetroBonusPlugin } from '@mivend/plugin-retro-bonus';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
@@ -57,6 +58,7 @@ import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
 import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
 import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
 import { GrantedDiscountStreamHandler } from './handlers/granted-discount.handler';
+import { RetroBonusRuleStreamHandler } from './handlers/retro-bonus-rule.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
 import { ContractStreamHandler } from './handlers/contract.handler';
@@ -103,6 +105,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ErpOrderPlugin,
         CustomerPricingPlugin,
         PriceEntryPlugin,
+        RetroBonusPlugin,
         AccessControlPlugin,
         CounterpartyPlugin,
         DocumentsPlugin,
@@ -148,6 +151,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         PromoRuleStreamHandler,
         DiscountRuleStreamHandler,
         GrantedDiscountStreamHandler,
+        RetroBonusRuleStreamHandler,
         VatRateStreamHandler,
         PointOfSaleStreamHandler,
         ContractStreamHandler,

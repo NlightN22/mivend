@@ -23,6 +23,7 @@
         "@mivend/plugin-notification": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
+        "@mivend/plugin-retro-bonus": "workspace:*",
         "@nestjs/swagger": "^11.0.0",
         "@nlightn22/event-contracts": "^0.43.0",
         "graphql-tag": "^2.12.6",

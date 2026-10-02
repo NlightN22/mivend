@@ -33,6 +33,7 @@
         "@mivend/plugin-popular-products": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
+        "@mivend/plugin-retro-bonus": "workspace:*",
         "@mivend/plugin-saved-views": "workspace:*",
         "@mivend/plugin-search": "workspace:*",
         "@mivend/plugin-session-management": "workspace:*",

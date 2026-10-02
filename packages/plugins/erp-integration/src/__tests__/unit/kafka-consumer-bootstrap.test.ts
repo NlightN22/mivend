@@ -39,6 +39,7 @@ function makeOptions(
                 contract: 'contract2',
                 'discount-rule': 'dr2',
                 'granted-discount': 'gd2',
+                'retro-bonus-rule': 'rbr2',
             },
         },
         schemaRegistry: { url: 'http://x' },
