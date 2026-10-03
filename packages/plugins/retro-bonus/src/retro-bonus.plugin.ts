@@ -63,6 +63,11 @@ const adminApiSchema = gql`
         totalItems: Int!
     }
 
+    input GrantedRetroBonusListOptions {
+        take: Int
+        skip: Int
+    }
+
     extend type Query {
         grantedRetroBonuses(
             counterpartyId: ID!
