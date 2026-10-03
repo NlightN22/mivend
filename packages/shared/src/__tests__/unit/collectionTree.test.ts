@@ -62,26 +62,47 @@ describe('findCategoryPath / buildCategoryPanel', () => {
         expect(findCategoryPath(tree, 'nope')).toEqual([]);
     });
 
-    it('lists top-level categories as children when nothing is selected', () => {
+    it('lists top-level categories as the level when nothing is selected', () => {
         const panel = buildCategoryPanel(tree);
         expect(panel.current).toBeUndefined();
-        expect(panel.siblings).toEqual([]);
-        expect(panel.children.map(c => c.id)).toEqual(['2', '6']);
+        expect(panel.ancestors).toEqual([]);
+        expect(panel.level.map(c => c.id)).toEqual(['2', '6']);
+        expect(panel.levelIsChildren).toBe(false);
     });
 
-    it('returns siblings including current, and direct children', () => {
+    it('shows only children (not siblings) when current has children', () => {
         const panel = buildCategoryPanel(tree, 's3');
         expect(panel.current?.id).toBe('3');
-        expect(panel.siblings.map(c => c.id)).toEqual(['3', '4']);
-        expect(panel.children.map(c => c.id)).toEqual(['5']);
+        expect(panel.ancestors.map(c => c.id)).toEqual(['2']);
+        expect(panel.level.map(c => c.id)).toEqual(['5']);
+        expect(panel.levelIsChildren).toBe(true);
     });
 
-    it('uses top-level categories as siblings for a top-level current', () => {
-        expect(buildCategoryPanel(tree, 's2').siblings.map(c => c.id)).toEqual(['2', '6']);
+    it('shows siblings including current for a leaf', () => {
+        const panel = buildCategoryPanel(tree, 's4');
+        expect(panel.ancestors.map(c => c.id)).toEqual(['2']);
+        expect(panel.level.map(c => c.id)).toEqual(['3', '4']);
+        expect(panel.levelIsChildren).toBe(false);
+    });
+
+    it('keeps only the 2 nearest ancestors, outermost first', () => {
+        const deep = buildCategoryTree([
+            col('2', []),
+            col('3', ['2']),
+            col('4', ['2', '3']),
+            col('5', ['2', '3', '4']),
+        ]);
+        expect(buildCategoryPanel(deep, 's5').ancestors.map(c => c.id)).toEqual(['3', '4']);
+    });
+
+    it('uses top-level categories as the level for a top-level leaf', () => {
+        const panel = buildCategoryPanel(tree, 's6');
+        expect(panel.ancestors).toEqual([]);
+        expect(panel.level.map(c => c.id)).toEqual(['2', '6']);
     });
 
     it('falls back to the top-level list for an unknown slug', () => {
-        expect(buildCategoryPanel(tree, 'nope').children.map(c => c.id)).toEqual(['2', '6']);
+        expect(buildCategoryPanel(tree, 'nope').level.map(c => c.id)).toEqual(['2', '6']);
     });
 });
 

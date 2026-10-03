@@ -17,22 +17,35 @@ const meta: Meta<typeof MvCategoryNav> = {
 export default meta;
 type Story = StoryObj<typeof MvCategoryNav>;
 
-export const WithSiblingsAndChildren: Story = {
+const many = (n: number): ReturnType<typeof item>[] =>
+    Array.from({ length: n }, (_, i) => item(`c${i}`, `Category ${i + 1}`));
+
+export const ChildrenWithBackRows: Story = {
     args: {
         panel: {
             current: item('oils', 'Engine oils'),
-            siblings: [
-                item('belts', 'Belts'),
-                item('oils', 'Engine oils'),
-                item('filters', 'Filters'),
-            ],
-            children: [item('mineral', 'Mineral oils'), item('synthetic', 'Synthetic oils')],
+            ancestors: [item('parts', 'Parts'), item('engine', 'Engine')],
+            level: [item('mineral', 'Mineral oils'), item('synthetic', 'Synthetic oils')],
+            levelIsChildren: true,
         },
     },
 };
 
-export const TopLevelList: Story = {
+export const LeafWithSiblings: Story = {
     args: {
-        panel: { siblings: [], children: [item('engine', 'Engine'), item('brakes', 'Brakes')] },
+        panel: {
+            current: item('belts', 'Belts'),
+            ancestors: [item('engine', 'Engine')],
+            level: [
+                item('oils', 'Engine oils'),
+                item('belts', 'Belts'),
+                item('filters', 'Filters'),
+            ],
+            levelIsChildren: false,
+        },
     },
+};
+
+export const TopLevelCappedWithMore: Story = {
+    args: { panel: { ancestors: [], level: many(12), levelIsChildren: false } },
 };

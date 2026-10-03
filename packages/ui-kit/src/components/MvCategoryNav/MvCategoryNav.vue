@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
+import { IconChevronLeft } from '@tabler/icons-vue';
+
 export interface CategoryNavItem {
     id: string;
     name: string;
@@ -7,21 +10,52 @@ export interface CategoryNavItem {
 
 export interface CategoryNavPanel {
     current?: CategoryNavItem;
-    siblings: CategoryNavItem[];
-    children: CategoryNavItem[];
+    ancestors: CategoryNavItem[];
+    level: CategoryNavItem[];
+    levelIsChildren: boolean;
 }
 
-defineProps<{ panel: CategoryNavPanel }>();
+const MAX_ROWS = 7;
+
+const props = defineProps<{ panel: CategoryNavPanel }>();
 
 const emit = defineEmits<{ navigate: [slug: string] }>();
+
+const expanded = ref(false);
+watch(() => props.panel, () => (expanded.value = false));
+
+const canExpand = computed(() => props.panel.level.length > MAX_ROWS);
+const visibleLevel = computed(() => {
+    const { level, current, levelIsChildren } = props.panel;
+    if (expanded.value) return level;
+    const keepId = levelIsChildren ? undefined : current?.id;
+    return level.filter((item, i) => i < MAX_ROWS || item.id === keepId);
+});
 </script>
 
 <template>
     <nav class="mv-category-nav" aria-label="Categories">
-        <template v-if="panel.current">
-            <template v-for="item in panel.siblings" :key="item.id">
+        <button
+            v-for="item in panel.ancestors"
+            :key="item.id"
+            type="button"
+            class="mv-category-nav__item mv-category-nav__back"
+            @click="emit('navigate', item.slug)"
+        >
+            <IconChevronLeft :size="14" />
+            {{ item.name }}
+        </button>
+        <span
+            v-if="panel.current && panel.levelIsChildren"
+            class="mv-category-nav__item mv-category-nav__item--current"
+            aria-current="page"
+        >
+            {{ panel.current.name }}
+        </span>
+        <div :class="{ 'mv-category-nav__children': panel.levelIsChildren }">
+            <template v-for="item in visibleLevel" :key="item.id">
                 <span
-                    v-if="item.id === panel.current.id"
+                    v-if="!panel.levelIsChildren && item.id === panel.current?.id"
                     class="mv-category-nav__item mv-category-nav__item--current"
                     aria-current="page"
                 >
@@ -30,30 +64,16 @@ const emit = defineEmits<{ navigate: [slug: string] }>();
                 <button v-else type="button" class="mv-category-nav__item" @click="emit('navigate', item.slug)">
                     {{ item.name }}
                 </button>
-                <div v-if="item.id === panel.current.id && panel.children.length > 0" class="mv-category-nav__children">
-                    <button
-                        v-for="child in panel.children"
-                        :key="child.id"
-                        type="button"
-                        class="mv-category-nav__item"
-                        @click="emit('navigate', child.slug)"
-                    >
-                        {{ child.name }}
-                    </button>
-                </div>
             </template>
-        </template>
-        <template v-else>
             <button
-                v-for="child in panel.children"
-                :key="child.id"
+                v-if="canExpand"
                 type="button"
-                class="mv-category-nav__item"
-                @click="emit('navigate', child.slug)"
+                class="mv-category-nav__item mv-category-nav__more"
+                @click="expanded = !expanded"
             >
-                {{ child.name }}
+                {{ expanded ? 'Less' : 'More' }}
             </button>
-        </template>
+        </div>
     </nav>
 </template>
 
@@ -88,6 +108,17 @@ const emit = defineEmits<{ navigate: [slug: string] }>();
     color: #008a64;
     font-weight: 900;
     cursor: default;
+}
+
+.mv-category-nav__back {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mv-category-nav__more {
+    color: #008a64;
+    font-weight: 700;
 }
 
 .mv-category-nav__children {

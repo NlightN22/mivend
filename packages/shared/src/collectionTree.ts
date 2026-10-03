@@ -83,12 +83,16 @@ export interface CategoryCrumb {
     slug: string;
 }
 
+export const MAX_PANEL_ANCESTORS = 2;
+
 export interface CategoryPanelData {
     current?: CategoryCrumb;
-    // Same-level categories including `current`; empty when nothing is selected.
-    siblings: CategoryCrumb[];
-    // Direct children of `current`, or the top-level categories when nothing is selected.
-    children: CategoryCrumb[];
+    // Up to the 2 nearest ancestors, outermost first.
+    ancestors: CategoryCrumb[];
+    // `current`'s children when it has any, otherwise its siblings including `current`;
+    // the top-level list when nothing is selected.
+    level: CategoryCrumb[];
+    levelIsChildren: boolean;
 }
 
 const toCrumb = (n: CollectionNode): CategoryCrumb => ({ id: n.id, name: n.name, slug: n.slug });
@@ -99,13 +103,15 @@ export function buildCategoryPanel(
 ): CategoryPanelData {
     const path = currentSlug ? findCategoryPath(tree, currentSlug) : [];
     const current = path[path.length - 1];
-    if (!current) return { siblings: [], children: tree.map(toCrumb) };
+    if (!current) return { ancestors: [], level: tree.map(toCrumb), levelIsChildren: false };
 
     const parent = path[path.length - 2];
+    const hasChildren = current.children.length > 0;
     return {
         current: toCrumb(current),
-        siblings: (parent ? parent.children : tree).map(toCrumb),
-        children: current.children.map(toCrumb),
+        ancestors: path.slice(-1 - MAX_PANEL_ANCESTORS, -1).map(toCrumb),
+        level: (hasChildren ? current.children : parent ? parent.children : tree).map(toCrumb),
+        levelIsChildren: hasChildren,
     };
 }
 
