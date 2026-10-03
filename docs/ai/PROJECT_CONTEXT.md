@@ -1,6 +1,26 @@
 # Project Context
 
-Updated: 2026-10-03 17:10
+Updated: 2026-10-03 20:30
+
+## Recent changes (2026-10-03 — #158 category hierarchy from CategoryChanged.parent_id, implemented)
+
+Kafka-fed categories now build the Collection tree (was flat under root). Design record:
+`docs/category-hierarchy.md` (read it before touching category code). Missing parent => private
+placeholder Collection (no `MissingDependencyError`/retry); changed parent => `CollectionService.move`;
+filter = `containsAny` over own + descendant FacetValues (Vendure `inheritFilters` ANDs, unusable);
+children hidden with a deleted/unsynced parent (user decision) via internal `Collection.feedHidden`
+custom field (migration `1791000000004`, initialised from `isPrivate`). Periodic
+`category-tree-recompute` task (hourly, central+Kafka) refreshes subtree filters and propagates hidden
+state; REST import recomputes after a batch with categories. Shared pure logic in
+`packages/shared/src/categoryCollectionFilter.ts`, Vendure part `recomputeCategoryTree.ts`.
+**Gotchas**: `CollectionService.update` without `translations` + native id INSERTs a new row (null
+`position` error) — always pass translations; `runScheduledTask` triggers are lost if the staging
+worker has not logged "Worker is ready" yet (ts-node-dev hang after shared/dist rebuild — restart via
+`make dev-staging-integration`); check contract version with `pnpm view`, not `npm view` (false 401).
+**Staging**: backfilled via search-platform bulk resync (518 events); 426 nested, 5 placeholders = categories
+deleted in the ERP that still have live children (hidden with them). **Open**: storefront/manager still load
+`collections(take:100)` flat, so only 1 of 26 top-level categories shows on real trees — handed to #59
+(mega-menu concept: left top-level list, right level-2 groups with level-3 links and "more").
 
 ## Recent changes (2026-10-03 — #117 Position entity + Administrator.positionId, shipped/audited/closed)
 
