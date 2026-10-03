@@ -16,8 +16,10 @@ const props = withDefaults(
         // Siblings/current/children of the selected category — one more section
         // in this widget (MvCategoryNav). Omit to not render it.
         categoryPanel?: CategoryNavPanel;
+        categoryMoreLabel?: string;
+        categoryLessLabel?: string;
     }>(),
-    { hiddenFacetCodes: () => ['category'] },
+    { hiddenFacetCodes: () => ['category'], categoryMoreLabel: undefined, categoryLessLabel: undefined },
 );
 
 const emit = defineEmits<{
@@ -64,7 +66,11 @@ function onMaxInput(e: Event): void {
     <aside class="catalog-facets">
         <div v-if="categoryPanel" class="catalog-facets__block">
             <h2 class="catalog-facets__block-title">Category</h2>
-            <MvCategoryNav :panel="categoryPanel" @navigate="emit('navigateCategory', $event)" />
+            <MvCategoryNav
+                :panel="categoryPanel"
+                :more-label="categoryMoreLabel"
+                :less-label="categoryLessLabel"
+                @navigate="emit('navigateCategory', $event)" />
         </div>
 
         <!-- Availability -->

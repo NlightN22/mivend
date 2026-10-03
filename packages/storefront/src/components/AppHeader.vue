@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { MvNotificationBell, MvNotificationPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
@@ -10,6 +11,7 @@ import { useNotificationsStore } from '../stores/notifications';
 
 const router = useRouter();
 const route = useRoute();
+const { t } = useI18n();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
@@ -209,6 +211,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 :collections="catalogStore.collections"
                 :open="catalogOpen"
                 :loading="catalogStore.loading"
+                :more-label="t('catalogNav.more')"
+                :less-label="t('catalogNav.less')"
+                :loading-label="t('catalogNav.loading')"
+                :empty-label="t('catalogNav.empty')"
                 @close="closeCatalog"
             />
         </header>

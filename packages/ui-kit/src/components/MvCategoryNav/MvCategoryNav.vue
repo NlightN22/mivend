@@ -17,7 +17,10 @@ export interface CategoryNavPanel {
 
 const MAX_ROWS = 7;
 
-const props = defineProps<{ panel: CategoryNavPanel }>();
+const props = withDefaults(
+    defineProps<{ panel: CategoryNavPanel; moreLabel?: string; lessLabel?: string }>(),
+    { moreLabel: 'More', lessLabel: 'Less' },
+);
 
 const emit = defineEmits<{ navigate: [slug: string] }>();
 
@@ -71,7 +74,7 @@ const visibleLevel = computed(() => {
                 class="mv-category-nav__item mv-category-nav__more"
                 @click="expanded = !expanded"
             >
-                {{ expanded ? 'Less' : 'More' }}
+                {{ expanded ? lessLabel : moreLabel }}
             </button>
         </div>
     </nav>
@@ -93,19 +96,19 @@ const visibleLevel = computed(() => {
     text-align: left;
     font-size: 13px;
     font-family: inherit;
-    color: #44534d;
+    color: var(--app-nav-text);
     cursor: pointer;
     transition: color 0.12s, background 0.12s;
 }
 
 .mv-category-nav__item:hover {
-    color: #008a64;
-    background: #f3f7f5;
+    color: var(--app-nav-accent);
+    background: var(--app-nav-hover-bg);
 }
 
 .mv-category-nav__item--current {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
     font-weight: 900;
     cursor: default;
 }
@@ -117,7 +120,7 @@ const visibleLevel = computed(() => {
 }
 
 .mv-category-nav__more {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-weight: 700;
 }
 
@@ -126,6 +129,6 @@ const visibleLevel = computed(() => {
     gap: 2px;
     margin-left: 14px;
     padding-left: 8px;
-    border-left: 1px solid #edf2ef;
+    border-left: 1px solid var(--app-nav-border);
 }
 </style>

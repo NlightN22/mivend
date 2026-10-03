@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { toast, MvProductGallery, MvProductMainCards } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
@@ -20,6 +21,7 @@ type Product = NonNullable<ProductDetailQuery['product']>;
 type RelatedProduct = RelatedProductsQuery['products']['items'][number];
 
 const route = useRoute();
+const { t } = useI18n();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
@@ -47,8 +49,8 @@ const breadcrumbItems = computed(() => {
   const deepest = [...collections].sort((a, b) => b.breadcrumbs.length - a.breadcrumbs.length)[0];
   const trail = deepest ? filterVisibleCrumbs(deepest.breadcrumbs, catalogStore.collections).map(c => ({ label: c.name, to: `/catalog?collection=${c.slug}` })) : [];
   return [
-    { label: 'Главная', to: '/' },
-    { label: 'Каталог', to: '/catalog' },
+    { label: t('catalogNav.home'), to: '/' },
+    { label: t('nav.catalog'), to: '/catalog' },
     ...trail,
     { label: product.value?.name ?? '' },
   ];

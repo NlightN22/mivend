@@ -1,29 +1,28 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { IconCategory } from '@tabler/icons-vue';
+import MvCatalogDropdownGroup, { type CollectionNode } from './MvCatalogDropdownGroup.vue';
 
-export interface CollectionNode {
-    id: string;
-    name: string;
-    slug: string;
-    iconUrl?: string | null;
-    children: CollectionNode[];
-}
+export type { CollectionNode };
 
-const GROUP_PREVIEW_LIMIT = 6;
-
-const props = defineProps<{
-    collections: CollectionNode[];
-    open: boolean;
-    loading?: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        collections: CollectionNode[];
+        open: boolean;
+        loading?: boolean;
+        moreLabel?: string;
+        lessLabel?: string;
+        loadingLabel?: string;
+        emptyLabel?: string;
+    }>(),
+    { moreLabel: 'More', lessLabel: 'Less', loadingLabel: 'Loading categories…', emptyLabel: 'No categories available' },
+);
 
 const emit = defineEmits<{
     close: [];
 }>();
 
 const hoveredId = ref<string | null>(null);
-const expandedGroups = reactive(new Set<string>());
 
 const activeCollection = computed(
     () => props.collections.find(c => c.id === hoveredId.value) ?? props.collections[0] ?? null,
@@ -33,14 +32,6 @@ function categoryLink(slug: string): { path: string; query: { collection: string
     return { path: '/catalog', query: { collection: slug } };
 }
 
-function visibleItems(group: CollectionNode): CollectionNode[] {
-    return expandedGroups.has(group.id) ? group.children : group.children.slice(0, GROUP_PREVIEW_LIMIT);
-}
-
-function toggleGroup(id: string): void {
-    if (expandedGroups.has(id)) expandedGroups.delete(id);
-    else expandedGroups.add(id);
-}
 </script>
 
 <template>
@@ -77,37 +68,19 @@ function toggleGroup(id: string): void {
                         </RouterLink>
                     </div>
                     <div v-if="activeCollection.children.length > 0" class="mv-catalog-dropdown__grid">
-                        <div v-for="group in activeCollection.children" :key="group.id" class="mv-catalog-dropdown__group">
-                            <RouterLink
-                                class="mv-catalog-dropdown__group-title"
-                                :to="categoryLink(group.slug)"
-                                @click="emit('close')"
-                            >
-                                {{ group.name }}
-                            </RouterLink>
-                            <RouterLink
-                                v-for="item in visibleItems(group)"
-                                :key="item.id"
-                                class="mv-catalog-dropdown__sub"
-                                :to="categoryLink(item.slug)"
-                                @click="emit('close')"
-                            >
-                                {{ item.name }}
-                            </RouterLink>
-                            <button
-                                v-if="group.children.length > GROUP_PREVIEW_LIMIT"
-                                type="button"
-                                class="mv-catalog-dropdown__more"
-                                @click="toggleGroup(group.id)"
-                            >
-                                {{ expandedGroups.has(group.id) ? 'Less' : 'More' }}
-                            </button>
-                        </div>
+                        <MvCatalogDropdownGroup
+                            v-for="group in activeCollection.children"
+                            :key="group.id"
+                            :group="group"
+                            :more-label="moreLabel"
+                            :less-label="lessLabel"
+                            @close="emit('close')"
+                        />
                     </div>
                 </div>
 
                 <div v-else class="mv-catalog-dropdown__content mv-catalog-dropdown__content--empty">
-                    {{ loading ? 'Loading categories…' : 'No categories available' }}
+                    {{ loading ? loadingLabel : emptyLabel }}
                 </div>
             </div>
         </div>
@@ -121,8 +94,8 @@ function toggleGroup(id: string): void {
     right: 0;
     top: 100%;
     background: rgba(255, 255, 255, 0.98);
-    border-top: 1px solid #edf2ef;
-    border-bottom: 1px solid #dde7e2;
+    border-top: 1px solid var(--app-nav-border);
+    border-bottom: 1px solid var(--app-nav-border-strong);
     box-shadow: 0 26px 60px rgba(20, 35, 31, 0.16);
     backdrop-filter: blur(18px);
     z-index: 10;
@@ -141,7 +114,7 @@ function toggleGroup(id: string): void {
 }
 
 .mv-catalog-dropdown__left {
-    border-right: 1px solid #edf2ef;
+    border-right: 1px solid var(--app-nav-border);
     padding-right: 16px;
 }
 
@@ -151,7 +124,7 @@ function toggleGroup(id: string): void {
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.07em;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .mv-catalog-dropdown__cat-list {
@@ -172,19 +145,19 @@ function toggleGroup(id: string): void {
     text-align: left;
     font-size: 15px;
     font-weight: 700;
-    color: #26342f;
+    color: var(--app-nav-text-body);
     cursor: pointer;
     font-family: inherit;
     transition: background 0.12s, color 0.12s;
 }
 
 .mv-catalog-dropdown__cat:hover {
-    background: #f3f7f5;
+    background: var(--app-nav-hover-bg);
 }
 
 .mv-catalog-dropdown__cat--active {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .mv-catalog-dropdown__content {
@@ -194,7 +167,7 @@ function toggleGroup(id: string): void {
 .mv-catalog-dropdown__content--empty {
     display: flex;
     align-items: center;
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
     font-size: 15px;
 }
 
@@ -203,7 +176,7 @@ function toggleGroup(id: string): void {
 }
 
 .mv-catalog-dropdown__title:hover {
-    color: #008a64;
+    color: var(--app-nav-accent);
 }
 
 .mv-catalog-dropdown__title {
@@ -212,7 +185,7 @@ function toggleGroup(id: string): void {
     font-size: 28px;
     font-weight: 900;
     letter-spacing: -0.04em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .mv-catalog-dropdown__grid {
@@ -222,67 +195,12 @@ function toggleGroup(id: string): void {
     align-items: start;
 }
 
-.mv-catalog-dropdown__group {
-    display: grid;
-    gap: 2px;
-}
-
-.mv-catalog-dropdown__group-title {
-    display: block;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 850;
-    color: #14231f;
-    text-decoration: none;
-}
-
-.mv-catalog-dropdown__group-title:hover {
-    color: #008a64;
-    background: #f3f7f5;
-}
-
-.mv-catalog-dropdown__more {
-    justify-self: start;
-    min-height: 32px;
-    padding: 0 10px;
-    border: none;
-    background: transparent;
-    font-size: 13px;
-    font-weight: 700;
-    color: #00a878;
-    cursor: pointer;
-    font-family: inherit;
-}
-
 .mv-catalog-dropdown__icon {
     flex: none;
     width: 28px;
     height: 28px;
     object-fit: contain;
-    color: #62736c;
-}
-
-.mv-catalog-dropdown__sub {
-    display: flex;
-    align-items: center;
-    min-height: 32px;
-    padding: 0 10px;
-    border: none;
-    background: transparent;
-    text-decoration: none;
-    text-align: left;
-    font-size: 14px;
-    color: #62736c;
-    cursor: pointer;
-    font-family: inherit;
-    border-radius: 8px;
-    transition: color 0.12s, background 0.12s;
-}
-
-.mv-catalog-dropdown__sub:hover {
-    color: #008a64;
-    background: #f3f7f5;
+    color: var(--app-nav-text-muted);
 }
 
 .catalog-drop-enter-active,

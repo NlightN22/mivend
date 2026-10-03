@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { useCatalogStore } from '../../stores/catalog';
 import { useProductList, type FilterState } from '../../composables/useProductList';
@@ -16,6 +17,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const authStore = useAuthStore();
 const catalogStore = useCatalogStore();
 
@@ -91,10 +93,10 @@ const categoryPath = computed(() =>
     selectedCategorySlug.value ? findCategoryPath(catalogStore.collections, selectedCategorySlug.value) : [],
 );
 
-// Always at least [{ label: 'Каталог' }] so this block keeps a stable height.
+// Always at least [{ label: t('nav.catalog') }] so this block keeps a stable height.
 const breadcrumbItems = computed(() => {
     const path = categoryPath.value;
-    if (path.length === 0) return [{ label: 'Каталог' }];
+    if (path.length === 0) return [{ label: t('nav.catalog') }];
     return [
         { label: 'Каталог', to: '/catalog' },
         ...path.slice(0, -1).map(n => ({ label: n.name, to: `/catalog?collection=${n.slug}` })),
@@ -150,6 +152,8 @@ onMounted(() => {
                 :price-min="filters.priceMin"
                 :price-max="filters.priceMax"
                 :category-panel="searchQuery ? undefined : categoryPanel"
+                :category-more-label="t('catalogNav.more')"
+                :category-less-label="t('catalogNav.less')"
                 @update:in-stock-only="filters = { ...filters, inStock: $event }"
                 @toggle-facet-value="toggleFacetValue"
                 @update:price-min="filters = { ...filters, priceMin: $event }"

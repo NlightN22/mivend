@@ -51,6 +51,13 @@ export default {
         orders: 'Заказы',
         account: 'Кабинет',
     },
+    catalogNav: {
+        home: 'Главная',
+        more: 'Ещё',
+        less: 'Свернуть',
+        loading: 'Загрузка категорий…',
+        empty: 'Нет доступных категорий',
+    },
     common: {
         loading: 'Загрузка...',
         error: 'Произошла ошибка',
