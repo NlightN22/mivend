@@ -20,7 +20,10 @@ function basePayload(overrides: Record<string, unknown> = {}): Record<string, un
 }
 
 function createHandler() {
-    const service = { upsert: vi.fn().mockResolvedValue(undefined) };
+    const service = {
+        upsert: vi.fn().mockResolvedValue(undefined),
+        remove: vi.fn().mockResolvedValue(undefined),
+    };
     return { handler: new GrantedRetroBonusStreamHandler(service as never), service };
 }
 
@@ -79,5 +82,19 @@ describe('GrantedRetroBonusStreamHandler', () => {
         const { handler, service } = createHandler();
         await handler.apply(ctx, 'grb-1', basePayload(overrides));
         expect(service.upsert).not.toHaveBeenCalled();
+    });
+
+    it('removes the row on a tombstone without validating the emptied fields', async () => {
+        const { handler, service } = createHandler();
+        await handler.apply(ctx, 'grb-1', { version: '9', isDeleted: true, sourceDocumentId: '' });
+        expect(service.remove).toHaveBeenCalledWith(ctx, 'grb-1');
+        expect(service.upsert).not.toHaveBeenCalled();
+    });
+
+    it('upserts again when isDeleted=false follows (line came back after repost)', async () => {
+        const { handler, service } = createHandler();
+        await handler.apply(ctx, 'grb-1', basePayload({ isDeleted: false, version: '10' }));
+        expect(service.upsert).toHaveBeenCalledOnce();
+        expect(service.remove).not.toHaveBeenCalled();
     });
 });

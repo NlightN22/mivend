@@ -74,4 +74,26 @@ describe('GrantedDiscountStreamHandler', () => {
             expect(service.upsert).not.toHaveBeenCalled();
         },
     );
+
+    it('removes the row on a tombstone without validating the emptied fields', async () => {
+        const service = { upsert: vi.fn(), remove: vi.fn().mockResolvedValue(undefined) };
+        await new GrantedDiscountStreamHandler(service as never).apply(ctx, 'gd-1', {
+            version: '9',
+            isDeleted: true,
+            sourceDocumentId: '',
+        });
+        expect(service.remove).toHaveBeenCalledWith(ctx, 'gd-1');
+        expect(service.upsert).not.toHaveBeenCalled();
+    });
+
+    it('upserts again for isDeleted=false at a newer version (line re-posted)', async () => {
+        const service = { upsert: vi.fn().mockResolvedValue(undefined), remove: vi.fn() };
+        await new GrantedDiscountStreamHandler(service as never).apply(
+            ctx,
+            'gd-1',
+            basePayload({ isDeleted: false, version: '10' }),
+        );
+        expect(service.upsert).toHaveBeenCalledOnce();
+        expect(service.remove).not.toHaveBeenCalled();
+    });
 });

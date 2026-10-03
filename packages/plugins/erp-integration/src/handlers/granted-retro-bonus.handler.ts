@@ -9,7 +9,7 @@ const loggerCtx = 'IntegrationGrantedRetroBonusHandler';
 const optionalString = (value: unknown): string | null => (value != null ? String(value) : null);
 
 // Applies `granted-retro-bonus` (issue #106) into an append-only GrantedRetroBonus feed — the
-// stream never signals removal (isDeleted is envelope-only), so there is no tombstone branch.
+// is_deleted=true is a 1C unposting tombstone (all other fields empty), removing the row.
 @Injectable()
 export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
     constructor(private readonly grantedRetroBonusService: GrantedRetroBonusService) {}
@@ -19,6 +19,10 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
+        if (payload.isDeleted === true) {
+            await this.grantedRetroBonusService.remove(ctx, entityId);
+            return;
+        }
         const version = String(payload.version ?? '');
         const sourceDocumentErpId = String(payload.sourceDocumentId ?? '');
         const sourceCounterpartyErpId = String(payload.sourceCounterpartyId ?? '');

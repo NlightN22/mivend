@@ -48,6 +48,11 @@ export class GrantedRetroBonusService {
         await repo.save(existing ? Object.assign(existing, input) : repo.create(input));
     }
 
+    // A 1C unposting tombstone — a later higher-version event re-creates the row via upsert.
+    async remove(ctx: RequestContext, erpId: string): Promise<void> {
+        await this.connection.getRepository(ctx, GrantedRetroBonus).delete({ erpId });
+    }
+
     findForRecipient(
         ctx: RequestContext,
         recipientCounterpartyErpId: string,

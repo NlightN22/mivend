@@ -2,7 +2,7 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Issue #106: append-only feed of retro bonuses the ERP actually credited. operationKind is
+// Issue #106: feed (rows removed on a 1C unposting tombstone) of retro bonuses the ERP actually credited. operationKind is
 // opaque display text — a polymorphic 1C classifier with no fixed value set, never mapped.
 @Entity()
 @Index(['erpId'], { unique: true })

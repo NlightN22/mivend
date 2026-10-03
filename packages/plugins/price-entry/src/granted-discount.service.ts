@@ -20,6 +20,11 @@ export interface GrantedDiscountInput {
 export class GrantedDiscountService {
     constructor(private connection: TransactionalConnection) {}
 
+    // A 1C unposting tombstone — a later higher-version event re-creates the row via upsert.
+    async remove(ctx: RequestContext, erpId: string): Promise<void> {
+        await this.connection.getRepository(ctx, GrantedDiscount).delete({ erpId });
+    }
+
     // Out-of-order protection is the inbox's own version guard, so this is a plain upsert by erpId.
     async upsert(ctx: RequestContext, input: GrantedDiscountInput): Promise<void> {
         const repo = this.connection.getRepository(ctx, GrantedDiscount);

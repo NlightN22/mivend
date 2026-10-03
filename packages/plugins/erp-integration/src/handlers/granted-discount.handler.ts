@@ -7,8 +7,7 @@ import type { InboundStreamHandler } from './inbound-stream-handler';
 const loggerCtx = 'IntegrationGrantedDiscountHandler';
 
 // Applies the `granted-discount` stream (issue #101) into plugin-price-entry's GrantedDiscount —
-// full field accounting: docs/ai/erp-streams-map.md. is_deleted is always false for this stream,
-// so no deletion branch.
+// full field accounting: docs/ai/erp-streams-map.md. is_deleted=true is a 1C unposting tombstone.
 @Injectable()
 export class GrantedDiscountStreamHandler implements InboundStreamHandler {
     constructor(private readonly grantedDiscountService: GrantedDiscountService) {}
@@ -18,6 +17,11 @@ export class GrantedDiscountStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
+        if (payload.isDeleted === true) {
+            await this.grantedDiscountService.remove(ctx, entityId);
+            Logger.verbose(`Removed granted discount erpId=${entityId}`, loggerCtx);
+            return;
+        }
         const sourceDocumentId = String(payload.sourceDocumentId ?? '');
         const counterpartyErpId = String(payload.sourceCounterpartyId ?? '');
         const productErpId = String(payload.productId ?? '');
