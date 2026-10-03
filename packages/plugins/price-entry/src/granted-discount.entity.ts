@@ -47,4 +47,9 @@ export class GrantedDiscount extends VendureEntity {
 
     @Column({ type: 'varchar' })
     sourceVersion!: string;
+
+    // Set by a 1C unposting tombstone; the row keeps the tombstone's version so a same-version
+    // delayed upsert cannot resurrect it.
+    @Column({ type: 'boolean', default: false })
+    isDeleted!: boolean;
 }

@@ -9,7 +9,7 @@ const loggerCtx = 'IntegrationGrantedRetroBonusHandler';
 const optionalString = (value: unknown): string | null => (value != null ? String(value) : null);
 
 // Applies `granted-retro-bonus` (issue #106) into an append-only GrantedRetroBonus feed — the
-// is_deleted=true is a 1C unposting tombstone (all other fields empty), removing the row.
+// is_deleted=true is a 1C unposting tombstone (all other fields empty), soft-deleting the row.
 @Injectable()
 export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
     constructor(private readonly grantedRetroBonusService: GrantedRetroBonusService) {}
@@ -20,7 +20,11 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
         payload: Record<string, unknown>,
     ): Promise<void> {
         if (payload.isDeleted === true) {
-            await this.grantedRetroBonusService.remove(ctx, entityId);
+            await this.grantedRetroBonusService.remove(
+                ctx,
+                entityId,
+                String(payload.version ?? ''),
+            );
             return;
         }
         const version = String(payload.version ?? '');
@@ -28,9 +32,10 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
         const sourceCounterpartyErpId = String(payload.sourceCounterpartyId ?? '');
         const recipientCounterpartyErpId = String(payload.recipientCounterpartyId ?? '');
         const productErpId = String(payload.productId ?? '');
-        const percent = Number(payload.percent ?? NaN);
-        const quantity = Number(payload.quantity ?? NaN);
-        const amount = Number(payload.amount ?? NaN);
+        // Plain proto3 doubles: a legitimate 0 is omitted from the payload, so absent means 0.
+        const percent = Number(payload.percent ?? 0);
+        const quantity = Number(payload.quantity ?? 0);
+        const amount = Number(payload.amount ?? 0);
         if (
             !entityId ||
             !version ||

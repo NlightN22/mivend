@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { GrantedDiscount } from './granted-discount.entity';
+import { isVersionNewer } from './granted-version-compare';
 
 export interface GrantedDiscountInput {
     erpId: string;
@@ -20,15 +21,23 @@ export interface GrantedDiscountInput {
 export class GrantedDiscountService {
     constructor(private connection: TransactionalConnection) {}
 
-    // A 1C unposting tombstone — a later higher-version event re-creates the row via upsert.
-    async remove(ctx: RequestContext, erpId: string): Promise<void> {
-        await this.connection.getRepository(ctx, GrantedDiscount).delete({ erpId });
+    // A tombstone wins a version tie (update + cancel can share one 1C timestamp).
+    async remove(ctx: RequestContext, erpId: string, version: string): Promise<void> {
+        const repo = this.connection.getRepository(ctx, GrantedDiscount);
+        const existing = await repo.findOne({ where: { erpId } });
+        if (!existing || isVersionNewer(existing.sourceVersion, version)) return;
+        await repo.save(Object.assign(existing, { isDeleted: true, sourceVersion: version }));
     }
 
-    // Out-of-order protection is the inbox's own version guard, so this is a plain upsert by erpId.
+    // Out-of-order protection against live rows is the inbox's own version guard; a deleted row is
+    // only revived by a strictly newer version.
     async upsert(ctx: RequestContext, input: GrantedDiscountInput): Promise<void> {
         const repo = this.connection.getRepository(ctx, GrantedDiscount);
         const existing = await repo.findOne({ where: { erpId: input.erpId } });
-        await repo.save(existing ? Object.assign(existing, input) : new GrantedDiscount(input));
+        if (existing?.isDeleted && !isVersionNewer(input.sourceVersion, existing.sourceVersion)) {
+            return;
+        }
+        const values = { ...input, isDeleted: false };
+        await repo.save(existing ? Object.assign(existing, values) : new GrantedDiscount(values));
     }
 }

@@ -39,3 +39,30 @@ describe('GrantedDiscountService.upsert', () => {
         );
     });
 });
+
+describe('GrantedDiscountService tombstones', () => {
+    it('soft-deletes at an equal version and keeps it removed against a same-version upsert', async () => {
+        const row = { erpId: 'gd-1', sourceVersion: '2', isDeleted: false };
+        const { repo, service } = setup(row);
+        await service.remove(ctx, 'gd-1', '2');
+        expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ isDeleted: true }));
+
+        repo.save.mockClear();
+        await service.upsert(ctx, { ...input, sourceVersion: '2' });
+        expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('revives a deleted row only on a strictly newer version', async () => {
+        const { repo, service } = setup({ erpId: 'gd-1', sourceVersion: '2', isDeleted: true });
+        await service.upsert(ctx, { ...input, sourceVersion: '3' });
+        expect(repo.save).toHaveBeenCalledWith(
+            expect.objectContaining({ isDeleted: false, sourceVersion: '3' }),
+        );
+    });
+
+    it('ignores a tombstone older than the stored version', async () => {
+        const { repo, service } = setup({ sourceVersion: '5', isDeleted: false });
+        await service.remove(ctx, 'gd-1', '4');
+        expect(repo.save).not.toHaveBeenCalled();
+    });
+});

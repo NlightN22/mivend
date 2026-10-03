@@ -73,8 +73,38 @@ describe('GrantedRetroBonusService', () => {
         expect(build).toHaveBeenCalledWith(
             expect.anything(),
             { take: 10 },
-            expect.objectContaining({ where: { recipientCounterpartyErpId: 'cp-2' } }),
+            expect.objectContaining({
+                where: { recipientCounterpartyErpId: 'cp-2', isDeleted: false },
+            }),
         );
         expect(result.totalItems).toBe(1);
+    });
+
+    describe('tombstones', () => {
+        it('soft-deletes at a newer or equal version, keeping the tombstone version', async () => {
+            const row = { erpId: 'grb-1', sourceVersion: '5', isDeleted: false };
+            const { service, repo } = createService(row);
+            await service.remove(ctx, 'grb-1', '5');
+            expect(repo.save).toHaveBeenCalledWith(
+                expect.objectContaining({ isDeleted: true, sourceVersion: '5' }),
+            );
+        });
+
+        it('ignores a tombstone older than the stored version', async () => {
+            const { service, repo } = createService({ sourceVersion: '6' });
+            await service.remove(ctx, 'grb-1', '5');
+            expect(repo.save).not.toHaveBeenCalled();
+        });
+
+        it('keeps the row removed against a same-version delayed upsert, revives on newer', async () => {
+            const row = { erpId: 'grb-1', sourceVersion: '5', isDeleted: true };
+            const { service, repo } = createService(row);
+            await service.upsert(ctx, input({ sourceVersion: '5' }));
+            expect(repo.save).not.toHaveBeenCalled();
+            await service.upsert(ctx, input({ sourceVersion: '6' }));
+            expect(repo.save).toHaveBeenCalledWith(
+                expect.objectContaining({ isDeleted: false, sourceVersion: '6' }),
+            );
+        });
     });
 });

@@ -76,7 +76,6 @@ describe('GrantedRetroBonusStreamHandler', () => {
         ['sourceDocumentId', { sourceDocumentId: undefined }],
         ['recipientCounterpartyId', { recipientCounterpartyId: '' }],
         ['productId', { productId: undefined }],
-        ['percent', { percent: undefined }],
         ['amount', { amount: 'abc' }],
     ])('skips when %s is missing/invalid', async (_n, overrides) => {
         const { handler, service } = createHandler();
@@ -87,7 +86,7 @@ describe('GrantedRetroBonusStreamHandler', () => {
     it('removes the row on a tombstone without validating the emptied fields', async () => {
         const { handler, service } = createHandler();
         await handler.apply(ctx, 'grb-1', { version: '9', isDeleted: true, sourceDocumentId: '' });
-        expect(service.remove).toHaveBeenCalledWith(ctx, 'grb-1');
+        expect(service.remove).toHaveBeenCalledWith(ctx, 'grb-1', '9');
         expect(service.upsert).not.toHaveBeenCalled();
     });
 
@@ -96,5 +95,18 @@ describe('GrantedRetroBonusStreamHandler', () => {
         await handler.apply(ctx, 'grb-1', basePayload({ isDeleted: false, version: '10' }));
         expect(service.upsert).toHaveBeenCalledOnce();
         expect(service.remove).not.toHaveBeenCalled();
+    });
+
+    it('treats absent percent/quantity/amount as a legitimate 0 (proto3 omission)', async () => {
+        const { handler, service } = createHandler();
+        const rest = basePayload();
+        delete rest.percent;
+        delete rest.quantity;
+        delete rest.amount;
+        await handler.apply(ctx, 'grb-1', rest);
+        expect(service.upsert).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ percent: 0, quantity: 0, amount: 0 }),
+        );
     });
 });

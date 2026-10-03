@@ -18,7 +18,7 @@ export class GrantedDiscountStreamHandler implements InboundStreamHandler {
         payload: Record<string, unknown>,
     ): Promise<void> {
         if (payload.isDeleted === true) {
-            await this.grantedDiscountService.remove(ctx, entityId);
+            await this.grantedDiscountService.remove(ctx, entityId, String(payload.version ?? ''));
             Logger.verbose(`Removed granted discount erpId=${entityId}`, loggerCtx);
             return;
         }

@@ -82,7 +82,7 @@ describe('GrantedDiscountStreamHandler', () => {
             isDeleted: true,
             sourceDocumentId: '',
         });
-        expect(service.remove).toHaveBeenCalledWith(ctx, 'gd-1');
+        expect(service.remove).toHaveBeenCalledWith(ctx, 'gd-1', '9');
         expect(service.upsert).not.toHaveBeenCalled();
     });
 
