@@ -3,6 +3,12 @@ import gql from 'graphql-tag';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 
+import { GrantedRetroBonus } from './granted-retro-bonus.entity';
+import {
+    GrantedRetroBonusFieldResolver,
+    GrantedRetroBonusResolver,
+} from './granted-retro-bonus.resolver';
+import { GrantedRetroBonusService } from './granted-retro-bonus.service';
 import { RetroBonusRule } from './retro-bonus-rule.entity';
 import {
     RetroBonusRuleAccrualKindResolver,
@@ -32,7 +38,36 @@ const adminApiSchema = gql`
         validTo: DateTime
     }
 
+    type GrantedRetroBonus implements Node {
+        id: ID!
+        createdAt: DateTime!
+        updatedAt: DateTime!
+        erpId: String!
+        sourceDocumentErpId: String!
+        sourceCounterpartyErpId: String!
+        recipientCounterpartyErpId: String!
+        productErpId: String!
+        discountDocumentErpId: String
+        "Opaque ERP classifier text — no fixed value set, never mapped."
+        operationKind: String
+        accrualKind: String
+        accrualKindLabel: String
+        percent: Float!
+        quantity: Float!
+        amount: Float!
+        orderErpId: String
+    }
+
+    type GrantedRetroBonusList implements PaginatedList {
+        items: [GrantedRetroBonus!]!
+        totalItems: Int!
+    }
+
     extend type Query {
+        grantedRetroBonuses(
+            counterpartyId: ID!
+            options: GrantedRetroBonusListOptions
+        ): GrantedRetroBonusList!
         retroBonusRules(counterpartyId: ID!, contractId: ID): [RetroBonusRule!]!
     }
 `;
@@ -41,13 +76,18 @@ const adminApiSchema = gql`
 // display only, never applied to order pricing. See RetroBonusRule's own doc comment.
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
-    entities: [RetroBonusRule],
+    entities: [RetroBonusRule, GrantedRetroBonus],
     adminApiExtensions: {
         schema: adminApiSchema,
-        resolvers: [RetroBonusRuleResolver, RetroBonusRuleAccrualKindResolver],
+        resolvers: [
+            RetroBonusRuleResolver,
+            RetroBonusRuleAccrualKindResolver,
+            GrantedRetroBonusResolver,
+            GrantedRetroBonusFieldResolver,
+        ],
     },
-    providers: [RetroBonusRuleService],
-    exports: [RetroBonusRuleService],
+    providers: [RetroBonusRuleService, GrantedRetroBonusService],
+    exports: [RetroBonusRuleService, GrantedRetroBonusService],
     compatibility: '>0.0.0',
 })
 export class RetroBonusPlugin {}

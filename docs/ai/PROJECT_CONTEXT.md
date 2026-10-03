@@ -2,6 +2,15 @@
 
 Updated: 2026-10-03 09:40
 
+## Recent changes (2026-10-03 — #106 granted-retro-bonus stream implemented)
+
+`GrantedRetroBonus` (append-only, manager-portal-only) added to `@mivend/plugin-retro-bonus`, fed by
+`granted-retro-bonus` (`GrantedRetroBonusChanged`). Keyed to the recipient counterparty (not the
+source); `operationKind` is opaque display text, `accrualKind` raw + `accrualKindLabel`. Admin query
+`grantedRetroBonuses(counterpartyId, options)` is a real paginated `GrantedRetroBonusList`.
+Migration `add_granted_retro_bonus_table`. Not yet done: manager-portal UI tab (backend only);
+live GraphQL schema boot check of the auto-generated `GrantedRetroBonusListOptions` not run.
+
 ## Recent changes (2026-10-03 — retro-bonus-rule stream #102, shipped/audited/closed)
 
 **Issue #102 closed.** New read-only, manager-portal-only `@mivend/plugin-retro-bonus` plugin:
@@ -209,9 +218,6 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 ## Planned next work
 
-0. **Issue #106** (`GrantedRetroBonusChanged` — the granted-instance pairing for #102's
-   `RetroBonusRule`, same new `retro-bonus` plugin) — contract fully resolved
-   (`@nlightn22/event-contracts@0.43.0`), not yet implemented.
 1. **Issue #154** (low-priority, open) — discount-rule follow-ups: `limitAmount` enforcement
    (real cap, not just safe-exclude), conflict-scope simplification, unreachable ERP-vs-portal
    branch, upstream version-collision/dedup risk (needs a search-platform-side issue number once

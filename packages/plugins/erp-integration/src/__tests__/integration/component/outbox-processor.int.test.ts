@@ -49,6 +49,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             'discount-rule': 'dr2',
             'granted-discount': 'gd2',
             'retro-bonus-rule': 'rbr2',
+            'granted-retro-bonus': 'grb2',
         },
     },
     schemaRegistry: { url: 'http://localhost:8081' },

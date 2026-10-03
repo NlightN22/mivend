@@ -4,23 +4,15 @@ import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import { CounterpartyService, ContractService } from '@mivend/plugin-counterparty';
 
-import { RetroBonusAccrualKind, RetroBonusRule } from './retro-bonus-rule.entity';
+import { accrualKindLabel } from './accrual-kind-label';
+import { RetroBonusRule } from './retro-bonus-rule.entity';
 import { RetroBonusRuleService } from './retro-bonus-rule.service';
-
-// Closed 4-value set (search-platform#126) — display-only, never stored (see
-// RetroBonusRule.accrualKind's own doc comment).
-const ACCRUAL_KIND_LABEL: Record<RetroBonusAccrualKind, string> = {
-    ПоЗакупкам: 'By purchases',
-    ПоПоступлениюДС: 'By cash receipt',
-    ПоПоступлениюДССБК: 'By cash receipt (SBK)',
-    ПоПродажам: 'By sales',
-};
 
 @Resolver('RetroBonusRule')
 export class RetroBonusRuleAccrualKindResolver {
     @ResolveField()
     accrualKindLabel(@Parent() rule: RetroBonusRule): string {
-        return ACCRUAL_KIND_LABEL[rule.accrualKind] ?? rule.accrualKind;
+        return accrualKindLabel(rule.accrualKind);
     }
 }
 

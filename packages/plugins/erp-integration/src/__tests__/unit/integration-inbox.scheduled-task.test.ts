@@ -51,6 +51,7 @@ function makeOptions(instanceType: 'central' | 'branch'): ErpIntegrationPluginOp
                 'discount-rule': 'dr2',
                 'granted-discount': 'gd2',
                 'retro-bonus-rule': 'rbr2',
+                'granted-retro-bonus': 'grb2',
             },
         },
         schemaRegistry: { url: 'http://x' },

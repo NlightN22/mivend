@@ -14,6 +14,7 @@ import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
 import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
+import { GrantedRetroBonusStreamHandler } from './handlers/granted-retro-bonus.handler';
 import { RetroBonusRuleStreamHandler } from './handlers/retro-bonus-rule.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
 import { OrganizationStreamHandler } from './handlers/organization.handler';
@@ -65,6 +66,7 @@ export class IntegrationInboxProcessorService {
         discountRuleHandler: DiscountRuleStreamHandler,
         grantedDiscountHandler: GrantedDiscountStreamHandler,
         retroBonusRuleHandler: RetroBonusRuleStreamHandler,
+        grantedRetroBonusHandler: GrantedRetroBonusStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -90,6 +92,7 @@ export class IntegrationInboxProcessorService {
             'discount-rule': discountRuleHandler,
             'granted-discount': grantedDiscountHandler,
             'retro-bonus-rule': retroBonusRuleHandler,
+            'granted-retro-bonus': grantedRetroBonusHandler,
             // Quantity dimension deliberately deferred to issue #72 (ATP/reservation-drift
             // source-of-truth); organization_id here is not authoritative — StorageLocationChanged
             // above is the sole source for ProductVariant.customFields.organizationId, so this

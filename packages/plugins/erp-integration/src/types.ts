@@ -178,7 +178,10 @@ export type InboundStream =
     // Issue #102: the ERP's retro-bonus terms log (RetroBonusRuleChanged), company.customers.
     // events.v1. Read-only, manager-portal-only — see @mivend/plugin-retro-bonus's own doc
     // comments and RetroBonusRuleStreamHandler.
-    | 'retro-bonus-rule';
+    | 'retro-bonus-rule'
+    // Issue #106: credited-bonus facts (GrantedRetroBonusChanged), see
+    // GrantedRetroBonusStreamHandler.
+    | 'granted-retro-bonus';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -273,6 +276,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'discount-rule': true,
     'granted-discount': true,
     'retro-bonus-rule': true,
+    'granted-retro-bonus': true,
 } satisfies Record<InboundStream, true>;
 const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

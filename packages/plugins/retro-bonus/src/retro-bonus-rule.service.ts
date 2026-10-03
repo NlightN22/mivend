@@ -3,6 +3,7 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { RetroBonusAccrualKind, RetroBonusRule } from './retro-bonus-rule.entity';
 import { loggerCtx } from './types';
+import { isVersionNewer } from './version-compare';
 
 export interface RetroBonusRuleUpsertInput {
     erpId: string;
@@ -21,24 +22,6 @@ export interface RetroBonusRuleUpsertInput {
     validFrom: Date;
     validTo: Date | null;
     sourceVersion: string;
-}
-
-// Mirrors plugin-price-entry's counterparty-discount-rule.service.ts — not imported since domain
-// plugins never depend on each other, same convention as that file's own comment.
-function isVersionNewer(candidate: string, than: string): boolean {
-    const a = tryParseBigInt(candidate);
-    const b = tryParseBigInt(than);
-    if (a !== undefined && b !== undefined) return a > b;
-    return candidate > than;
-}
-
-function tryParseBigInt(value: string): bigint | undefined {
-    if (!/^\d+$/.test(value)) return undefined;
-    try {
-        return BigInt(value);
-    } catch {
-        return undefined;
-    }
 }
 
 // Issue #102: upsert-only, no deactivation/conflict logic — multiple rules can legitimately
