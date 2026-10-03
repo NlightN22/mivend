@@ -255,10 +255,12 @@ event; `order_entity_id`/`discount_document_id`/`condition` (opaque 1C enum text
 shipment line may reference an order mivend never had. Not consumed: `event_id`/`occurred_at`/
 `updated_at` (envelope). No UI yet (#155 manager, #156 storefront).
 
-**Known gap, tracked**: the contract says a fact is never re-sent (`is_deleted` always false), so an
-unposted/corrected shipment leaves a stale `GrantedDiscount` row (same class as #152 before
-search-platform#145). Open question for search-platform: is a correction/tombstone sent on
-repost/unpost? Resolve before the facts are shown in the UI.
+**Known gap, confirmed upstream (search-platform#147)**: unposting a shipment sends nothing (no upsert,
+no tombstone — an emptied register set never enters the DTO arrays), so the `GrantedDiscount` row stays
+stale. A repost re-upserts lines with the same `LineNumber`, but lines whose number disappeared are never
+tombstoned. Upstream also leaks the exchange-plan registration for the unposted recorder (possibly the
+same root cause as search-platform#136). Fix and semantics are up to search-platform; do not show these
+facts in the UI (#155/#156) until a tombstone arrives, then add an `is_deleted` branch here.
 
 ### `point-of-sale` field accounting (issue #100)
 
