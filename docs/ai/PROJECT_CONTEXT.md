@@ -1,6 +1,27 @@
 # Project Context
 
-Updated: 2026-10-03 16:05
+Updated: 2026-10-03 17:10
+
+## Recent changes (2026-10-03 — #117 Position entity + Administrator.positionId, shipped/audited/closed)
+
+`Position` (ERP master data, `erpId` unique, `name`, `parentErpId`, `isActive`) in `plugin-access-control`,
+fed by the `position` inbound stream (`PositionChanged`, `...customers.events.v1.position-changed`,
+`PositionStreamHandler`; nameless tombstone only flips `isActive`, never creates). `Administrator.
+customFields.position` (free text) replaced by `positionId` = `Position.erpId`, written from
+`UserChanged.position_id` (search-platform confirmed: same Ref_Key as `PositionChanged.entity_id`; absent =
+unchanged, null = clear). **Soft link**: no dependency error if the Position hasn't arrived; name is resolved
+on read (`PositionService.findNamesByErpIds`) — `teamDirectory` exposes `positionId` + resolved `position`.
+Migrations `1791000000002` (table) + `...03` (drops old free-text column, no data migration). **REST contract
+change**: erp-import `EmployeeRecord.position` -> `positionErpId` (old field ignored); new erp-import `position`
+record type; seed fixtures have positions, seed `run` bumped to `v6` (exchangeId dedup skips unchanged runs).
+Commits 2a9a45b/7348a08/167a592, audited clean (`mivend.audit.common`). `role` of `UserChanged` still not consumed.
+**Staging-integration**: topic ACL fine, 199 positions (110 active) via search-platform bulk resync (they added
+`position` to `resync:bulk` RELAY_STATE_TYPES); 1C has 226, gap is upstream materialization. Staging
+`teamDirectory` positions stay empty: its only Administrator has no `erpId` (stand property, not a bug).
+**Dev-stack gotcha**: ts-node-dev children can hang forever in `waitForFile` (busy-wait for a compile reply
+that never comes, seen under load ~10 right after many plugin edits). Fix: free load (kill stale puppeteer
+chromes older than 1 day) and restart via `make dev` / `make dev-staging-integration`; never raw kill.
+Replay API for a stream needs explicit entityIds (take them from `integration_inbox_event` payloads).
 
 ## Recent changes (2026-10-03 — #106 granted-retro-bonus stream, shipped/audited/closed)
 
@@ -137,7 +158,7 @@ inbox throughput, #147 migration tooling introduced, #141 ERP tax auto-provision
 shipping plugin-ownership pattern). Chains back to
 `docs/ai/.backup/PROJECT_CONTEXT-2026-09-22-locale-dashboard-tax-design-full.md` and earlier.
 Durable facts still true: #100/#103/#104/#105/#108/#109/#110/#115/#116/#119/#121/#126/#128/#129/
-#131/#140/#141/#144/#145/#147/#148/#149/#152/#153/#101/#102 all shipped/closed; #117 (Position entity) still
+#131/#140/#141/#144/#145/#147/#148/#149/#152/#153/#101/#102 all shipped/closed; #117 (Position entity, now shipped) was still
 blocked; #130 (Administrator-lifecycle E2E) designed, not implemented; #50/#143/#44 open with
 deferred parts tracked (#150/#151). **#103** (order weight/volume + branch-conditional packaging,
 `unit-changed` stream): `ProductVariant.customFields.unitRatioToBase`/`unitWeightKg`/`unitVolumeL`/
@@ -251,7 +272,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
    project-owner UX decision, not an agent guess). **#151** — ask search-platform whether the ERP
    exposes a per-contract balance register (needed before #50's contract-level check can resolve
    past `'undetermined'`).
-8. **#117** (Position entity) — still blocked, `UserChanged.role`/`position_id` deferred on it.
+8. ~~#117~~ done (see Recent changes); `UserChanged.role` (#109) still deferred.
 9. `branchId`/`departmentId` access-control cleanup track (#123/#124/#125) — still design-only.
 
 ## Known problems and limitations
