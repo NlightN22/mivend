@@ -5,6 +5,8 @@ import {
     collectFacetValueIds,
     parseFacetValueIds,
     planCategoryFilterUpdates,
+    planCategoryVisibilityUpdates,
+    resolveCategoryIsPrivate,
 } from '../../categoryCollectionFilter';
 
 const fvByCode = new Map([
@@ -72,5 +74,69 @@ describe('collectFacetValueIds / filter helpers', () => {
                 { code: 'facet-value-filter', args: [{ name: 'facetValueIds', value: '{' }] },
             ]),
         ).toEqual([]);
+    });
+});
+
+const vis = (
+    id: string,
+    parentId: string | null,
+    feedHidden: boolean,
+    isPrivate: boolean,
+    visibilityOverride: string | null = null,
+) => ({ id, parentId, slug: `cat-${id}`, feedHidden, visibilityOverride, isPrivate });
+
+describe('planCategoryVisibilityUpdates', () => {
+    it('hides every descendant of a hidden category', () => {
+        const nodes = [
+            vis('a', null, true, true),
+            vis('b', 'a', false, false),
+            vis('c', 'b', false, false),
+        ];
+        expect(planCategoryVisibilityUpdates(nodes)).toEqual([
+            { id: 'b', isPrivate: true },
+            { id: 'c', isPrivate: true },
+        ]);
+    });
+
+    it('unhides descendants when the parent is revived, but keeps feed-hidden ones hidden', () => {
+        const nodes = [
+            vis('a', null, false, false),
+            vis('b', 'a', false, true),
+            vis('c', 'a', true, true),
+            vis('d', 'b', false, true),
+        ];
+        expect(planCategoryVisibilityUpdates(nodes)).toEqual([
+            { id: 'b', isPrivate: false },
+            { id: 'd', isPrivate: false },
+        ]);
+    });
+
+    it('a manual override beats the ancestors, and its own children follow its state', () => {
+        const nodes = [
+            vis('a', null, true, true),
+            vis('b', 'a', false, true, 'visible'),
+            vis('c', 'b', false, true),
+        ];
+        expect(planCategoryVisibilityUpdates(nodes)).toEqual([
+            { id: 'b', isPrivate: false },
+            { id: 'c', isPrivate: false },
+        ]);
+    });
+
+    it('makes no writes when everything is already consistent, and survives a cycle', () => {
+        expect(planCategoryVisibilityUpdates([vis('a', null, false, false)])).toEqual([]);
+        expect(() =>
+            planCategoryVisibilityUpdates([
+                vis('a', 'b', false, false),
+                vis('b', 'a', false, false),
+            ]),
+        ).not.toThrow();
+    });
+
+    it('resolveCategoryIsPrivate: override first, then feed, then parent', () => {
+        expect(resolveCategoryIsPrivate(false, 'hidden', false)).toBe(true);
+        expect(resolveCategoryIsPrivate(true, 'visible', true)).toBe(false);
+        expect(resolveCategoryIsPrivate(false, null, true)).toBe(true);
+        expect(resolveCategoryIsPrivate(false, null, false)).toBe(false);
     });
 });

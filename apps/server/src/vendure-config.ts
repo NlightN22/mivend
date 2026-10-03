@@ -468,6 +468,15 @@ export const config: VendureConfig = {
         ],
         Collection: [
             {
+                // What the ERP feed alone says (hidden/deleted/placeholder), so a revived parent can
+                // unhide its children without losing which of them the feed hides itself.
+                name: 'feedHidden',
+                type: 'boolean',
+                defaultValue: false,
+                nullable: false,
+                internal: true,
+            },
+            {
                 // Issue #90: manual visibility decision that must survive the next Kafka
                 // isActive/isDeleted recompute (CategoryStreamHandler.ensureCollection reads
                 // this before applying the feed). Null = no override, feed drives isPrivate as

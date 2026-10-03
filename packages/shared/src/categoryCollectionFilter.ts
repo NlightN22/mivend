@@ -13,6 +13,20 @@ export interface CategoryCollectionNode {
     filterFacetValueIds: string[];
 }
 
+export interface CategoryVisibilityNode {
+    id: string;
+    parentId: string | null;
+    slug: string;
+    feedHidden: boolean;
+    visibilityOverride: string | null;
+    isPrivate: boolean;
+}
+
+export interface CategoryVisibilityUpdate {
+    id: string;
+    isPrivate: boolean;
+}
+
 export interface CategoryFilterUpdate {
     id: string;
     facetValueIds: string[];
@@ -114,4 +128,51 @@ export function planCategoryFilterUpdates(
         }
     }
     return result;
+}
+
+// A manual override wins over everything; otherwise a category is hidden when the feed hides it
+// or any ancestor is hidden, so children vanish together with a deleted/not-yet-synced parent.
+export function resolveCategoryIsPrivate(
+    feedHidden: boolean,
+    visibilityOverride: string | null | undefined,
+    parentIsPrivate: boolean,
+): boolean {
+    if (visibilityOverride === 'hidden') return true;
+    if (visibilityOverride === 'visible') return false;
+    return feedHidden || parentIsPrivate;
+}
+
+export function planCategoryVisibilityUpdates(
+    nodes: CategoryVisibilityNode[],
+): CategoryVisibilityUpdate[] {
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    const resolved = new Map<string, boolean>();
+
+    const effective = (node: CategoryVisibilityNode, path: Set<string>): boolean => {
+        const cached = resolved.get(node.id);
+        if (cached !== undefined) return cached;
+        const parent = node.parentId === null ? undefined : byId.get(node.parentId);
+        const isCategoryParent =
+            parent !== undefined &&
+            categoryErpIdFromSlug(parent.slug) !== undefined &&
+            !path.has(parent.id);
+        const parentIsPrivate = isCategoryParent
+            ? effective(parent, new Set(path).add(node.id))
+            : false;
+        const value = resolveCategoryIsPrivate(
+            node.feedHidden,
+            node.visibilityOverride,
+            parentIsPrivate,
+        );
+        resolved.set(node.id, value);
+        return value;
+    };
+
+    const updates: CategoryVisibilityUpdate[] = [];
+    for (const node of nodes) {
+        if (categoryErpIdFromSlug(node.slug) === undefined) continue;
+        const wanted = effective(node, new Set([node.id]));
+        if (wanted !== node.isPrivate) updates.push({ id: node.id, isPrivate: wanted });
+    }
+    return updates;
 }

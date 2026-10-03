@@ -6,29 +6,29 @@ import {
     ScheduledTask,
     TransactionalConnection,
 } from '@vendure/core';
-import { cronEveryMs, recomputeCategoryFilters } from 'shared';
+import { cronEveryMs, recomputeCategoryTree } from 'shared';
 
-import { CATEGORY_FILTERS_RECOMPUTE_INTERVAL_DEFAULT, KAFKA_ENABLED_DEFAULT } from './types';
+import { CATEGORY_TREE_RECOMPUTE_INTERVAL_DEFAULT, KAFKA_ENABLED_DEFAULT } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
-// Category filters are per-event for the category itself only; subtree changes (a descendant
-// added, moved or finally named) reach ancestors through this low-frequency sweep.
-export function createCategoryFiltersRecomputeTask(
+// Per-event writes cover the category itself only; subtree filters and hidden state flowing
+// down to descendants reach the rest of the tree through this low-frequency sweep.
+export function createCategoryTreeRecomputeTask(
     options: ErpIntegrationPluginOptions,
 ): ScheduledTask {
     const everyMs =
-        options.categoryFiltersRecomputeIntervalMs ?? CATEGORY_FILTERS_RECOMPUTE_INTERVAL_DEFAULT;
+        options.categoryTreeRecomputeIntervalMs ?? CATEGORY_TREE_RECOMPUTE_INTERVAL_DEFAULT;
     return new ScheduledTask({
-        id: 'erp-integration-category-filters-recompute',
+        id: 'erp-integration-category-tree-recompute',
         description:
-            'Recomputes each category Collection filter as "any FacetValue in its subtree" (central hub only); writes only changed Collections.',
+            'Recomputes category Collection subtree filters and propagated hidden state (central hub only); writes only changed Collections.',
         schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
             if (!(options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return { skipped: true };
 
             const ctx = await injector.get(RequestContextService).create({ apiType: 'admin' });
-            const updated = await recomputeCategoryFilters(ctx, {
+            const updated = await recomputeCategoryTree(ctx, {
                 connection: injector.get(TransactionalConnection),
                 collectionService: injector.get(CollectionService),
                 facetService: injector.get(FacetService),

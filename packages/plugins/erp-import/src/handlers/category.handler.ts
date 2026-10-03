@@ -13,7 +13,7 @@ import {
     CATEGORY_FACET_CODE,
     buildCategoryFacetFilter,
     categorySlug,
-    recomputeCategoryFilters,
+    recomputeCategoryTree,
 } from 'shared';
 import type { CategoryRecord } from '../types';
 
@@ -36,7 +36,7 @@ export class CategoryHandler {
 
     // Called once after a batch containing categories, so parents list their whole subtree.
     async recomputeFilters(ctx: RequestContext): Promise<void> {
-        await recomputeCategoryFilters(ctx, {
+        await recomputeCategoryTree(ctx, {
             connection: this.connection,
             collectionService: this.collectionService,
             facetService: this.facetService,

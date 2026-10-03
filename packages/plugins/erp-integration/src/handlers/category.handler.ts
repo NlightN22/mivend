@@ -4,6 +4,7 @@ import {
     buildCategoryFacetFilter,
     categorySlug,
     collectFacetValueIds,
+    resolveCategoryIsPrivate,
 } from 'shared';
 import type { ID } from '@vendure/common/lib/shared-types';
 import {
@@ -25,7 +26,7 @@ interface CollectionInput {
     entityId: string;
     name: string | null;
     facetValueId: string;
-    isPrivate: boolean;
+    feedHidden: boolean;
     parentErpId: string | undefined;
     reparent: boolean;
     facetValueIdByCode: ReadonlyMap<string, string>;
@@ -87,26 +88,12 @@ export class CategoryStreamHandler implements InboundStreamHandler {
             entityId,
             name,
             facetValueId: String(facetValue.id),
-            isPrivate,
+            feedHidden: isPrivate,
             // A tombstone carries no hierarchy; it must not move the category to the top level.
             parentErpId: isDeleted ? undefined : parentErpId,
             reparent: !isDeleted,
             facetValueIdByCode,
         });
-    }
-
-    // A non-null visibilityOverride (issue #90) is a manual decision that must survive the next
-    // feed recompute — it wins over isActive/isDeleted on every update, never on the create path
-    // (a category seen for the first time has no override to read yet, so the feed applies
-    // unchanged, matching the acceptance criteria's no-regression requirement).
-    private resolveIsPrivate(
-        feedIsPrivate: boolean,
-        existing: { customFields?: { visibilityOverride?: string | null } } | undefined,
-    ): boolean {
-        const override = existing?.customFields?.visibilityOverride;
-        if (override === 'hidden') return true;
-        if (override === 'visible') return false;
-        return feedIsPrivate;
     }
 
     private async ensureCategoryFacet(ctx: RequestContext): Promise<Facet> {
@@ -151,7 +138,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
     }
 
     private async ensureCollection(ctx: RequestContext, input: CollectionInput): Promise<void> {
-        const { entityId, name, facetValueId, isPrivate, parentErpId, reparent } = input;
+        const { entityId, name, facetValueId, feedHidden, parentErpId, reparent } = input;
         const slug = categorySlug(entityId);
         const existing = await this.collectionService.findOneBySlug(ctx, slug);
         if (!existing && !name) {
@@ -161,14 +148,24 @@ export class CategoryStreamHandler implements InboundStreamHandler {
             );
             return;
         }
-        const resolvedIsPrivate = this.resolveIsPrivate(isPrivate, existing as never);
         const resolvedName = name ?? existing!.name;
         const translations = [
             { languageCode: LanguageCode.en, name: resolvedName, slug, description: '' },
         ];
-        const parentId = parentErpId
+        const parent = parentErpId
             ? await this.ensureParentCollection(ctx, parentErpId)
             : undefined;
+        const parentId = parent?.id;
+        // The manual override (issue #90) wins over the feed and over a hidden parent; a first-seen
+        // category has none to read yet.
+        const override = (existing as { customFields?: { visibilityOverride?: string | null } })
+            ?.customFields?.visibilityOverride;
+        const resolvedIsPrivate = resolveCategoryIsPrivate(
+            feedHidden,
+            override,
+            parent?.isPrivate ?? false,
+        );
+        const customFields = { feedHidden };
 
         if (!existing) {
             await this.collectionService.create(ctx, {
@@ -176,6 +173,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
                 isPrivate: resolvedIsPrivate,
                 translations,
                 filters: buildCategoryFacetFilter([facetValueId]),
+                customFields,
             });
             return;
         }
@@ -191,6 +189,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
             isPrivate: resolvedIsPrivate,
             translations,
             filters: buildCategoryFacetFilter(facetValueIds),
+            customFields,
         });
         if (reparent) await this.moveIfParentChanged(ctx, existing, parentId);
     }
@@ -216,17 +215,21 @@ export class CategoryStreamHandler implements InboundStreamHandler {
 
     // A child can arrive before its parent: park it under a private placeholder that the
     // parent's own event later fills in, instead of waiting or flattening under the root.
-    private async ensureParentCollection(ctx: RequestContext, parentErpId: string): Promise<ID> {
+    private async ensureParentCollection(
+        ctx: RequestContext,
+        parentErpId: string,
+    ): Promise<{ id: ID; isPrivate: boolean }> {
         const slug = categorySlug(parentErpId);
         const found = await this.collectionService.findOneBySlug(ctx, slug);
-        if (found) return found.id;
+        if (found) return { id: found.id, isPrivate: found.isPrivate };
         const created = await this.collectionService.create(ctx, {
             isPrivate: true,
+            customFields: { feedHidden: true },
             translations: [
                 { languageCode: LanguageCode.en, name: parentErpId, slug, description: '' },
             ],
             filters: [],
         });
-        return created.id;
+        return { id: created.id, isPrivate: true };
     }
 }

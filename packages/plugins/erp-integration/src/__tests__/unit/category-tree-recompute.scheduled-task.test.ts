@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RequestContextService } from '@vendure/core';
 
-import { createCategoryFiltersRecomputeTask } from '../../category-filters-recompute.scheduled-task';
+import { createCategoryTreeRecomputeTask } from '../../category-tree-recompute.scheduled-task';
 import type { ErpIntegrationPluginOptions } from '../../types';
 
 const recompute = vi.hoisted(() => vi.fn());
 vi.mock('shared', async importOriginal => ({
     ...(await importOriginal<typeof import('shared')>()),
-    recomputeCategoryFilters: recompute,
+    recomputeCategoryTree: recompute,
 }));
 
 const injector = {
@@ -16,11 +16,11 @@ const injector = {
 };
 
 function run(options: Partial<ErpIntegrationPluginOptions>): Promise<unknown> {
-    const task = createCategoryFiltersRecomputeTask(options as ErpIntegrationPluginOptions);
+    const task = createCategoryTreeRecomputeTask(options as ErpIntegrationPluginOptions);
     return task.options.execute({ injector, scheduledContext: {}, params: {} } as never);
 }
 
-describe('createCategoryFiltersRecomputeTask', () => {
+describe('createCategoryTreeRecomputeTask', () => {
     beforeEach(() => recompute.mockReset().mockResolvedValue(3));
 
     it('recomputes on a central hub with Kafka enabled', async () => {

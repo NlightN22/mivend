@@ -4,7 +4,15 @@ import type { RequestContext } from '@vendure/core';
 import { CategoryStreamHandler } from '../../handlers/category.handler';
 
 interface Setup {
-    collections?: Record<string, { id: string; name?: string }>;
+    collections?: Record<
+        string,
+        {
+            id: string;
+            name?: string;
+            isPrivate?: boolean;
+            customFields?: { visibilityOverride?: string | null };
+        }
+    >;
     facetValues?: Array<{ id: string; code: string }>;
     descendants?: Array<{ slug: string }>;
     breadcrumbs?: Array<{ id: string }>;
@@ -168,5 +176,57 @@ describe('CategoryStreamHandler hierarchy', () => {
             { name: 'facetValueIds', value: JSON.stringify(['fv-c1', 'fv-c2', 'fv-p1']) },
             { name: 'containsAny', value: 'true' },
         ]);
+    });
+
+    it('creates a child hidden when its parent is hidden, even though the feed says active', async () => {
+        const { handler, collectionService } = build({
+            collections: { 'cat-p1': { id: 'col-p1', isPrivate: true } },
+        });
+        await handler.apply(ctx, 'c1', { ...active, parentId: 'p1' });
+        expect(collectionService.create).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ isPrivate: true, customFields: { feedHidden: false } }),
+        );
+    });
+
+    it('a manual visible override beats a hidden parent', async () => {
+        const { handler, collectionService } = build({
+            collections: {
+                'cat-p1': { id: 'col-p1', isPrivate: true },
+                'cat-c1': { id: 'col-1', customFields: { visibilityOverride: 'visible' } },
+            },
+            breadcrumbs: [{ id: 'root' }, { id: 'col-p1' }, { id: 'col-1' }],
+        });
+        await handler.apply(ctx, 'c1', { ...active, parentId: 'p1' });
+        expect(collectionService.update).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ id: 'col-1', isPrivate: false }),
+        );
+    });
+
+    it('records the feed state separately from the effective visibility', async () => {
+        const { handler, collectionService } = build({
+            collections: { 'cat-p1': { id: 'col-p1', isPrivate: true } },
+        });
+        await handler.apply(ctx, 'c1', { name: 'Child', isActive: false, parentId: 'p1' });
+        expect(collectionService.create).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ customFields: { feedHidden: true } }),
+        );
+    });
+
+    it('creates the placeholder parent flagged as feed-hidden', async () => {
+        const { handler, collectionService } = build({});
+        await handler.apply(ctx, 'c1', { ...active, parentId: 'p1' });
+        expect(collectionService.create).toHaveBeenNthCalledWith(
+            1,
+            ctx,
+            expect.objectContaining({ customFields: { feedHidden: true } }),
+        );
+        expect(collectionService.create).toHaveBeenNthCalledWith(
+            2,
+            ctx,
+            expect.objectContaining({ isPrivate: true }),
+        );
     });
 });

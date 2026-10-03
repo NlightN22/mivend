@@ -14,20 +14,26 @@ import {
     buildCategoryFacetFilter,
     parseFacetValueIds,
     planCategoryFilterUpdates,
+    planCategoryVisibilityUpdates,
 } from './categoryCollectionFilter';
 
-export interface CategoryFilterRecomputeDeps {
+export interface CategoryTreeRecomputeDeps {
     connection: TransactionalConnection;
     collectionService: CollectionService;
     facetService: FacetService;
     facetValueService: FacetValueService;
 }
 
-// Rewrites each category Collection's filter to "any FacetValue in its subtree"; writes only
-// where the id set changed. Returns the number of Collections updated.
-export async function recomputeCategoryFilters(
+interface CategoryCustomFields {
+    feedHidden?: boolean;
+    visibilityOverride?: string | null;
+}
+
+// Rewrites each category Collection's filter to "any FacetValue in its subtree" and propagates
+// hidden state down the tree; writes only what changed. Returns the number of writes.
+export async function recomputeCategoryTree(
     ctx: RequestContext,
-    deps: CategoryFilterRecomputeDeps,
+    deps: CategoryTreeRecomputeDeps,
 ): Promise<number> {
     const facet = await deps.facetService.findByCode(ctx, CATEGORY_FACET_CODE, LanguageCode.en);
     if (!facet) return 0;
@@ -37,6 +43,8 @@ export async function recomputeCategoryFilters(
     const collections = await deps.connection
         .getRepository(ctx, Collection)
         .find({ relations: ['translations'] });
+    const customFields = (c: Collection): CategoryCustomFields =>
+        (c.customFields ?? {}) as CategoryCustomFields;
     const nodes: CategoryCollectionNode[] = collections.map(c => ({
         id: String(c.id),
         parentId: c.parentId == null ? null : String(c.parentId),
@@ -44,12 +52,26 @@ export async function recomputeCategoryFilters(
         filterFacetValueIds: parseFacetValueIds(c.filters ?? []),
     }));
 
-    const updates = planCategoryFilterUpdates(nodes, facetValueIdByCode);
-    for (const update of updates) {
+    const filterUpdates = planCategoryFilterUpdates(nodes, facetValueIdByCode);
+    for (const update of filterUpdates) {
         await deps.collectionService.update(ctx, {
             id: update.id,
             filters: buildCategoryFacetFilter(update.facetValueIds),
         });
     }
-    return updates.length;
+
+    const visibilityUpdates = planCategoryVisibilityUpdates(
+        collections.map(c => ({
+            id: String(c.id),
+            parentId: c.parentId == null ? null : String(c.parentId),
+            slug: c.translations[0]?.slug ?? '',
+            feedHidden: customFields(c).feedHidden === true,
+            visibilityOverride: customFields(c).visibilityOverride ?? null,
+            isPrivate: c.isPrivate,
+        })),
+    );
+    for (const update of visibilityUpdates) {
+        await deps.collectionService.update(ctx, { id: update.id, isPrivate: update.isPrivate });
+    }
+    return filterUpdates.length + visibilityUpdates.length;
 }

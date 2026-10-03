@@ -34,5 +34,6 @@ export {
     buildCategoryFacetFilter,
     categorySlug,
     collectFacetValueIds,
+    resolveCategoryIsPrivate,
 } from './categoryCollectionFilter';
-export { recomputeCategoryFilters } from './recomputeCategoryFilters';
+export { recomputeCategoryTree } from './recomputeCategoryTree';
