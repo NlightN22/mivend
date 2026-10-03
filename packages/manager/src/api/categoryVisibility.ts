@@ -1,4 +1,5 @@
 import { adminApi } from './client';
+import { fetchAllCollections } from '../../../shared/src/collectionTree';
 import {
     CategoryVisibilityCollectionsDocument,
     SetCategoryVisibilityOverrideDocument,
@@ -10,8 +11,42 @@ export type CategoryVisibilityCollection = CategoryCollectionFieldsFragment;
 export async function fetchCategoryVisibilityCollections(): Promise<
     CategoryVisibilityCollection[]
 > {
-    const result = await adminApi(CategoryVisibilityCollectionsDocument);
-    return result.collections.items;
+    return fetchAllCollections(async (skip, take) => {
+        const result = await adminApi(CategoryVisibilityCollectionsDocument, { skip, take });
+        return result.collections;
+    });
+}
+
+export type HiddenReason = 'Manual override' | 'Hidden ancestor' | 'Own feed' | '';
+
+export interface CategoryVisibilityInfo {
+    depth: number;
+    parentName: string;
+    hiddenReason: HiddenReason;
+}
+
+// `feedHidden` is internal (not readable via the API), so "own feed" is inferred: hidden with
+// a visible (or absent) parent. Depth 1 = top level; the root Collection is breadcrumbs[0].
+export function describeCategoryVisibility(
+    collections: CategoryVisibilityCollection[],
+): Map<string, CategoryVisibilityInfo> {
+    const byId = new Map(collections.map(c => [c.id, c]));
+    const info = new Map<string, CategoryVisibilityInfo>();
+    for (const c of collections) {
+        const crumbs = c.breadcrumbs ?? [];
+        const parentCrumb = crumbs.length > 2 ? crumbs[crumbs.length - 2] : null;
+        const parent = parentCrumb ? byId.get(parentCrumb.id) : undefined;
+        const override = c.customFields?.visibilityOverride;
+        let hiddenReason: HiddenReason = '';
+        if (override) hiddenReason = 'Manual override';
+        else if (c.isPrivate) hiddenReason = parent?.isPrivate ? 'Hidden ancestor' : 'Own feed';
+        info.set(c.id, {
+            depth: Math.max(crumbs.length - 1, 1),
+            parentName: parentCrumb?.name ?? '',
+            hiddenReason,
+        });
+    }
+    return info;
 }
 
 // visibilityOverride: null clears the override (back to Auto/feed-driven — the next Kafka

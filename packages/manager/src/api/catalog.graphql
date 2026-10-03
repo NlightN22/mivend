@@ -15,8 +15,8 @@ query CatalogFacets($term: String) {
     }
 }
 
-query CategoryTree {
-    collections(options: { take: 100 }) {
+query CategoryTree($skip: Int!, $take: Int!) {
+    collections(options: { skip: $skip, take: $take }) {
         items {
             id
             name
@@ -26,12 +26,8 @@ query CategoryTree {
                 name
                 slug
             }
-            children {
-                id
-                name
-                slug
-            }
         }
+        totalItems
     }
 }
 

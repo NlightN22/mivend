@@ -108,7 +108,7 @@ export type AdministratorCustomFields = {
     branchId: Maybe<Scalars['String']['output']>;
     departmentId: Maybe<Scalars['String']['output']>;
     erpId: Maybe<Scalars['String']['output']>;
-    position: Maybe<Scalars['String']['output']>;
+    positionId: Maybe<Scalars['String']['output']>;
     sourceAdministratorId: Maybe<Scalars['String']['output']>;
 };
 
@@ -124,7 +124,7 @@ export type AdministratorFilterParameter = {
     id?: InputMaybe<IdOperators>;
     isActive?: InputMaybe<BooleanOperators>;
     lastName?: InputMaybe<StringOperators>;
-    position?: InputMaybe<StringOperators>;
+    positionId?: InputMaybe<StringOperators>;
     sourceAdministratorId?: InputMaybe<StringOperators>;
     updatedAt?: InputMaybe<DateOperators>;
 };
@@ -172,7 +172,7 @@ export type AdministratorSortParameter = {
     firstName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     lastName?: InputMaybe<SortOrder>;
-    position?: InputMaybe<SortOrder>;
+    positionId?: InputMaybe<SortOrder>;
     sourceAdministratorId?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
 };
@@ -2737,6 +2737,84 @@ export type GlobalSettings = {
 export type GlobalSettingsCustomFields = {
     defaultBranchId: Maybe<Scalars['String']['output']>;
     organizationSplitEnabled: Maybe<Scalars['Boolean']['output']>;
+};
+
+export type GrantedRetroBonus = Node & {
+    accrualKind: Maybe<Scalars['String']['output']>;
+    accrualKindLabel: Maybe<Scalars['String']['output']>;
+    amount: Scalars['Float']['output'];
+    createdAt: Scalars['DateTime']['output'];
+    discountDocumentErpId: Maybe<Scalars['String']['output']>;
+    erpId: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    /** Opaque ERP classifier text — no fixed value set, never mapped. */
+    operationKind: Maybe<Scalars['String']['output']>;
+    orderErpId: Maybe<Scalars['String']['output']>;
+    percent: Scalars['Float']['output'];
+    productErpId: Scalars['String']['output'];
+    quantity: Scalars['Float']['output'];
+    recipientCounterpartyErpId: Scalars['String']['output'];
+    sourceCounterpartyErpId: Scalars['String']['output'];
+    sourceDocumentErpId: Scalars['String']['output'];
+    updatedAt: Scalars['DateTime']['output'];
+};
+
+export type GrantedRetroBonusFilterParameter = {
+    _and?: InputMaybe<Array<GrantedRetroBonusFilterParameter>>;
+    _or?: InputMaybe<Array<GrantedRetroBonusFilterParameter>>;
+    accrualKind?: InputMaybe<StringOperators>;
+    accrualKindLabel?: InputMaybe<StringOperators>;
+    amount?: InputMaybe<NumberOperators>;
+    createdAt?: InputMaybe<DateOperators>;
+    discountDocumentErpId?: InputMaybe<StringOperators>;
+    erpId?: InputMaybe<StringOperators>;
+    id?: InputMaybe<IdOperators>;
+    /** Opaque ERP classifier text — no fixed value set, never mapped. */
+    operationKind?: InputMaybe<StringOperators>;
+    orderErpId?: InputMaybe<StringOperators>;
+    percent?: InputMaybe<NumberOperators>;
+    productErpId?: InputMaybe<StringOperators>;
+    quantity?: InputMaybe<NumberOperators>;
+    recipientCounterpartyErpId?: InputMaybe<StringOperators>;
+    sourceCounterpartyErpId?: InputMaybe<StringOperators>;
+    sourceDocumentErpId?: InputMaybe<StringOperators>;
+    updatedAt?: InputMaybe<DateOperators>;
+};
+
+export type GrantedRetroBonusList = PaginatedList & {
+    items: Array<GrantedRetroBonus>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type GrantedRetroBonusListOptions = {
+    /** Allows the results to be filtered */
+    filter?: InputMaybe<GrantedRetroBonusFilterParameter>;
+    /** Specifies whether multiple top-level "filter" fields should be combined with a logical AND or OR operation. Defaults to AND. */
+    filterOperator?: InputMaybe<LogicalOperator>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    /** Specifies which properties to sort the results by */
+    sort?: InputMaybe<GrantedRetroBonusSortParameter>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type GrantedRetroBonusSortParameter = {
+    accrualKind?: InputMaybe<SortOrder>;
+    accrualKindLabel?: InputMaybe<SortOrder>;
+    amount?: InputMaybe<SortOrder>;
+    createdAt?: InputMaybe<SortOrder>;
+    discountDocumentErpId?: InputMaybe<SortOrder>;
+    erpId?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    /** Opaque ERP classifier text — no fixed value set, never mapped. */
+    operationKind?: InputMaybe<SortOrder>;
+    orderErpId?: InputMaybe<SortOrder>;
+    percent?: InputMaybe<SortOrder>;
+    productErpId?: InputMaybe<SortOrder>;
+    quantity?: InputMaybe<SortOrder>;
+    recipientCounterpartyErpId?: InputMaybe<SortOrder>;
+    sourceCounterpartyErpId?: InputMaybe<SortOrder>;
+    sourceDocumentErpId?: InputMaybe<SortOrder>;
+    updatedAt?: InputMaybe<SortOrder>;
 };
 
 /** Returned when attempting to set the Customer on a guest checkout when the configured GuestCheckoutStrategy does not allow it. */
@@ -6334,6 +6412,7 @@ export type ProductVariantStockMovementsArgs = {
 };
 
 export type ProductVariantCustomFields = {
+    defaultSalesUnitId: Maybe<Scalars['String']['output']>;
     multiplicity: Maybe<Scalars['Int']['output']>;
     organizationId: Maybe<Scalars['Int']['output']>;
     organizationPriority: Maybe<Scalars['Int']['output']>;
@@ -6349,6 +6428,7 @@ export type ProductVariantFilterParameter = {
     _or?: InputMaybe<Array<ProductVariantFilterParameter>>;
     createdAt?: InputMaybe<DateOperators>;
     currencyCode?: InputMaybe<StringOperators>;
+    defaultSalesUnitId?: InputMaybe<StringOperators>;
     enabled?: InputMaybe<BooleanOperators>;
     facetValueId?: InputMaybe<IdOperators>;
     id?: InputMaybe<IdOperators>;
@@ -6401,6 +6481,7 @@ export type ProductVariantPrice = {
 
 export type ProductVariantSortParameter = {
     createdAt?: InputMaybe<SortOrder>;
+    defaultSalesUnitId?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     multiplicity?: InputMaybe<SortOrder>;
     name?: InputMaybe<SortOrder>;
@@ -6656,6 +6737,7 @@ export type Query = {
     /** Get multiple key-value pairs (each automatically scoped) */
     getSettingsStoreValues: Maybe<Scalars['JSON']['output']>;
     globalSettings: GlobalSettings;
+    grantedRetroBonuses: GrantedRetroBonusList;
     highUsageCounterparties: Array<Counterparty>;
     /** Live count of not-yet-fully-processed IntegrationInboxEvent rows per stream (pending/processing/failed) — a different number from Kafka lag: these rows were already consumed and committed, this is Postgres-side processing backlog. */
     integrationInboxBacklog: Array<IntegrationInboxBacklogByStream>;
@@ -6728,6 +6810,7 @@ export type Query = {
     /** Non-blocking VAT-code review flags raised while importing products, newest first (issue #79). */
     recentProductTaxCodeFlags: ProductTaxCodeFlagList;
     reservationExtensionLimit: Maybe<ReservationExtensionLimit>;
+    retroBonusRules: Array<RetroBonusRule>;
     role: Maybe<Role>;
     roleAccessScopeConfig: Maybe<Scalars['String']['output']>;
     roleAccessScopeProvisioningStatus: Array<RoleAccessScopeProvisioningStatusItem>;
@@ -6957,6 +7040,11 @@ export type QueryGetSettingsStoreValuesArgs = {
     keys: Array<Scalars['String']['input']>;
 };
 
+export type QueryGrantedRetroBonusesArgs = {
+    counterpartyId: Scalars['ID']['input'];
+    options?: InputMaybe<GrantedRetroBonusListOptions>;
+};
+
 export type QueryHighUsageCounterpartiesArgs = {
     limit: Scalars['Int']['input'];
 };
@@ -7131,6 +7219,11 @@ export type QueryRecentProductTaxCodeFlagsArgs = {
 
 export type QueryReservationExtensionLimitArgs = {
     roleCode: Scalars['String']['input'];
+};
+
+export type QueryRetroBonusRulesArgs = {
+    contractId?: InputMaybe<Scalars['ID']['input']>;
+    counterpartyId: Scalars['ID']['input'];
 };
 
 export type QueryRoleArgs = {
@@ -7470,6 +7563,27 @@ export type ReservationReconciliationIssueList = {
 export type ResetAdministratorPasswordResult = {
     reason: Maybe<Scalars['String']['output']>;
     success: Scalars['Boolean']['output'];
+};
+
+export type RetroBonusRule = {
+    accrualDayNumber: Scalars['Int']['output'];
+    accrualKind: Scalars['String']['output'];
+    /** Translated display label for accrualKind's closed 4-value set — never the raw value. */
+    accrualKindLabel: Scalars['String']['output'];
+    accrualPeriod: Maybe<Scalars['String']['output']>;
+    conditionAmount: Maybe<Scalars['Float']['output']>;
+    conditionQuantity: Maybe<Scalars['Float']['output']>;
+    counterpartyErpId: Scalars['String']['output'];
+    erpId: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    isInstant: Scalars['Boolean']['output'];
+    limitAmount: Maybe<Scalars['Float']['output']>;
+    percent: Scalars['Float']['output'];
+    priceTypeErpId: Maybe<Scalars['String']['output']>;
+    productErpId: Scalars['String']['output'];
+    recipientContractErpId: Maybe<Scalars['String']['output']>;
+    validFrom: Scalars['DateTime']['output'];
+    validTo: Maybe<Scalars['DateTime']['output']>;
 };
 
 export type Return = Node &
@@ -8266,6 +8380,7 @@ export type TeamDirectoryMember = {
     id: Scalars['ID']['output'];
     lastName: Maybe<Scalars['String']['output']>;
     position: Maybe<Scalars['String']['output']>;
+    positionId: Maybe<Scalars['String']['output']>;
     roleCodes: Array<Scalars['String']['output']>;
 };
 
@@ -9259,16 +9374,19 @@ export type CatalogFacetsQuery = {
     };
 };
 
-export type CategoryTreeQueryVariables = Exact<{ [key: string]: never }>;
+export type CategoryTreeQueryVariables = Exact<{
+    skip: Scalars['Int']['input'];
+    take: Scalars['Int']['input'];
+}>;
 
 export type CategoryTreeQuery = {
     collections: {
+        totalItems: number;
         items: Array<{
             id: string;
             name: string;
             slug: string;
             breadcrumbs: Array<{ id: string; name: string; slug: string }>;
-            children: Array<{ id: string; name: string; slug: string }> | null;
         }>;
     };
 };
@@ -9317,10 +9435,14 @@ export type CategoryCollectionFieldsFragment = {
     name: string;
     slug: string;
     isPrivate: boolean;
+    breadcrumbs: Array<{ id: string; name: string }>;
     customFields: { visibilityOverride: string | null } | null;
 };
 
-export type CategoryVisibilityCollectionsQueryVariables = Exact<{ [key: string]: never }>;
+export type CategoryVisibilityCollectionsQueryVariables = Exact<{
+    skip: Scalars['Int']['input'];
+    take: Scalars['Int']['input'];
+}>;
 
 export type CategoryVisibilityCollectionsQuery = {
     collections: {
@@ -9330,6 +9452,7 @@ export type CategoryVisibilityCollectionsQuery = {
             name: string;
             slug: string;
             isPrivate: boolean;
+            breadcrumbs: Array<{ id: string; name: string }>;
             customFields: { visibilityOverride: string | null } | null;
         }>;
     };
@@ -9347,6 +9470,7 @@ export type SetCategoryVisibilityOverrideMutation = {
         name: string;
         slug: string;
         isPrivate: boolean;
+        breadcrumbs: Array<{ id: string; name: string }>;
         customFields: { visibilityOverride: string | null } | null;
     };
 };
@@ -11145,6 +11269,10 @@ export const CategoryCollectionFieldsFragmentDoc = new TypedDocumentString(
   name
   slug
   isPrivate
+  breadcrumbs {
+    id
+    name
+  }
   customFields {
     visibilityOverride
   }
@@ -11732,8 +11860,8 @@ export const CatalogFacetsDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<CatalogFacetsQuery, CatalogFacetsQueryVariables>;
 export const CategoryTreeDocument = new TypedDocumentString(`
-    query CategoryTree {
-  collections(options: {take: 100}) {
+    query CategoryTree($skip: Int!, $take: Int!) {
+  collections(options: {skip: $skip, take: $take}) {
     items {
       id
       name
@@ -11743,12 +11871,8 @@ export const CategoryTreeDocument = new TypedDocumentString(`
         name
         slug
       }
-      children {
-        id
-        name
-        slug
-      }
     }
+    totalItems
   }
 }
     `) as unknown as TypedDocumentString<CategoryTreeQuery, CategoryTreeQueryVariables>;
@@ -11799,8 +11923,10 @@ export const CatalogPriceEntriesForVariantsDocument = new TypedDocumentString(`
     CatalogPriceEntriesForVariantsQueryVariables
 >;
 export const CategoryVisibilityCollectionsDocument = new TypedDocumentString(`
-    query CategoryVisibilityCollections {
-  collections(options: {filter: {slug: {contains: "cat-"}}, take: 999}) {
+    query CategoryVisibilityCollections($skip: Int!, $take: Int!) {
+  collections(
+    options: {filter: {slug: {contains: "cat-"}}, skip: $skip, take: $take}
+  ) {
     items {
       ...CategoryCollectionFields
     }
@@ -11812,6 +11938,10 @@ export const CategoryVisibilityCollectionsDocument = new TypedDocumentString(`
   name
   slug
   isPrivate
+  breadcrumbs {
+    id
+    name
+  }
   customFields {
     visibilityOverride
   }
@@ -11832,6 +11962,10 @@ export const SetCategoryVisibilityOverrideDocument = new TypedDocumentString(`
   name
   slug
   isPrivate
+  breadcrumbs {
+    id
+    name
+  }
   customFields {
     visibilityOverride
   }

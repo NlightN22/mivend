@@ -6,7 +6,11 @@ import {
     buildFacetGroups,
     type FacetGroup,
 } from '../../../shared/src/catalogFacets';
-import { buildCategoryTree, type CollectionNode } from '../../../shared/src/collectionTree';
+import {
+    buildCategoryTree,
+    fetchAllCollections,
+    type CollectionNode,
+} from '../../../shared/src/collectionTree';
 import {
     CatalogFacetsDocument,
     CatalogPageDocument,
@@ -48,14 +52,14 @@ export async function fetchCatalogFacets(term: string): Promise<FacetGroup[]> {
     return buildFacetGroups(result.search.facetValues);
 }
 
-// Top-level categories + their direct children, for the catalog category dropdown (drill-down
-// browsing by structure, as an alternative to the flat facet checkboxes) — same Collection tree
-// storefront's mega-menu uses, via the shared buildCategoryTree shaping logic.
+// Full Collection tree for the catalog category dropdown, built by the same shared helper the
+// storefront mega-menu uses.
 export async function fetchCategoryTree(): Promise<CollectionNode[]> {
-    const result = await adminApi(CategoryTreeDocument);
-    return buildCategoryTree(
-        result.collections.items.map(item => ({ ...item, children: item.children ?? [] })),
-    );
+    const items = await fetchAllCollections(async (skip, take) => {
+        const result = await adminApi(CategoryTreeDocument, { skip, take });
+        return result.collections;
+    });
+    return buildCategoryTree(items);
 }
 
 export interface CatalogListItem {

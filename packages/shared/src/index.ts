@@ -19,6 +19,13 @@ export {
 
 export {
     buildCategoryTree,
+    buildCategoryPanel,
+    findCategoryPath,
+    filterVisibleCrumbs,
+    fetchAllCollections,
+    COLLECTIONS_PAGE_SIZE,
+    type CategoryCrumb,
+    type CategoryPanelData,
     resolveCategoryFacetValueId,
     type CollectionNode,
     type RawCollection,

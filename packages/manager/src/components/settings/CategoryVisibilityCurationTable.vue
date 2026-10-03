@@ -9,7 +9,10 @@ import {
     type SelectOption,
     type StatusBadgeVariant,
 } from '@mivend/ui-kit';
-import type { CategoryVisibilityCollection } from '../../api/categoryVisibility';
+import {
+    describeCategoryVisibility,
+    type CategoryVisibilityCollection,
+} from '../../api/categoryVisibility';
 
 // See manager-table-standard skill. `name` is the identifying/required column, backed by a
 // client-side toolbar search (same exemption reasoning as WarehouseCurationTable.vue — a bounded
@@ -42,6 +45,8 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: { type: 'text', placeholder: 'Name contains…' },
         mobile: { primary: true },
     },
+    { field: 'depth', header: 'Level', width: 90, filterConfig: { type: 'none' }, mobile: { hidden: true } },
+    { field: 'parentName', header: 'Parent', width: 200, filterConfig: { type: 'none' }, mobile: { hidden: true } },
     { field: 'slug', header: 'Slug', width: 140, filterConfig: { type: 'none' }, mobile: { hidden: true } },
     {
         field: 'isPrivate',
@@ -49,6 +54,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         width: 160,
         filterConfig: { type: 'none' },
     },
+    { field: 'hiddenReason', header: 'Hidden reason', width: 160, filterConfig: { type: 'none' }, mobile: { hidden: true } },
     { field: 'visibilityOverride', header: 'Override', width: 200, filterConfig: { type: 'none' } },
 ];
 
@@ -79,10 +85,14 @@ interface CategoryVisibilityRow {
     id: string;
     name: string;
     slug: string;
+    depth: number;
+    parentName: string;
+    hiddenReason: string;
     isPrivate: boolean;
     isPrivateVariant: StatusBadgeVariant;
     visibilityOverride: string;
 }
+const visibilityInfo = computed(() => describeCategoryVisibility(props.collections));
 const rows = computed<CategoryVisibilityRow[]>(() =>
     props.collections
         .filter(c =>
@@ -92,6 +102,9 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
             id: c.id,
             name: c.name,
             slug: c.slug,
+            depth: visibilityInfo.value.get(c.id)?.depth ?? 1,
+            parentName: visibilityInfo.value.get(c.id)?.parentName || '—',
+            hiddenReason: visibilityInfo.value.get(c.id)?.hiddenReason || '—',
             isPrivate: c.isPrivate,
             isPrivateVariant: c.isPrivate ? 'neutral' : 'success',
             visibilityOverride: c.customFields?.visibilityOverride ?? '',

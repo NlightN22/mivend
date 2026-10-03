@@ -6,6 +6,7 @@ import { CatalogCollectionsDocument } from '../api/generated/graphql';
 // compiled package output breaks a Vite production build.
 import {
     buildCategoryTree,
+    fetchAllCollections,
     type CollectionNode,
     type RawCollection,
 } from '../../../shared/src/collectionTree';
@@ -14,22 +15,21 @@ export type CollectionItem = CollectionNode;
 
 export const useCatalogStore = defineStore('catalog', () => {
     const collections = ref<CollectionItem[]>([]);
-    // The flat list backing `collections` — kept so any consumer can build other shapes
-    // (e.g. the catalog sidebar's ancestors/children panel) without a second network call.
-    const rawCollections = ref<RawCollection[]>([]);
     const loading = ref(false);
 
     async function loadCollections(): Promise<void> {
-        if (rawCollections.value.length > 0) return;
+        if (collections.value.length > 0 || loading.value) return;
         loading.value = true;
         try {
-            const result = await shopApi(CatalogCollectionsDocument);
-            rawCollections.value = result.collections.items as RawCollection[];
-            collections.value = buildCategoryTree(rawCollections.value);
+            const items = await fetchAllCollections<RawCollection>(async (skip, take) => {
+                const result = await shopApi(CatalogCollectionsDocument, { skip, take });
+                return result.collections;
+            });
+            collections.value = buildCategoryTree(items);
         } finally {
             loading.value = false;
         }
     }
 
-    return { collections, rawCollections, loading, loadCollections };
+    return { collections, loading, loadCollections };
 });

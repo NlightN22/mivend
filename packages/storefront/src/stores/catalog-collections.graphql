@@ -1,19 +1,18 @@
-query CatalogCollections {
-    collections(options: { take: 100 }) {
+query CatalogCollections($skip: Int!, $take: Int!) {
+    collections(options: { skip: $skip, take: $take }) {
         items {
             id
             name
             slug
+            featuredAsset {
+                preview
+            }
             breadcrumbs {
                 id
                 name
                 slug
             }
-            children {
-                id
-                name
-                slug
-            }
         }
+        totalItems
     }
 }

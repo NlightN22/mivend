@@ -5003,16 +5003,20 @@ export type RemoveCartLineInBatchMutation = {
         | { __typename: 'OrderModificationError'; errorCode: ErrorCode; message: string };
 };
 
-export type CatalogCollectionsQueryVariables = Exact<{ [key: string]: never }>;
+export type CatalogCollectionsQueryVariables = Exact<{
+    skip: Scalars['Int']['input'];
+    take: Scalars['Int']['input'];
+}>;
 
 export type CatalogCollectionsQuery = {
     collections: {
+        totalItems: number;
         items: Array<{
             id: string;
             name: string;
             slug: string;
+            featuredAsset?: { preview: string } | null;
             breadcrumbs: Array<{ id: string; name: string; slug: string }>;
-            children?: Array<{ id: string; name: string; slug: string }> | null;
         }>;
     };
 };
@@ -5998,23 +6002,22 @@ export const RemoveCartLineInBatchDocument = new TypedDocumentString(`
     RemoveCartLineInBatchMutationVariables
 >;
 export const CatalogCollectionsDocument = new TypedDocumentString(`
-    query CatalogCollections {
-  collections(options: {take: 100}) {
+    query CatalogCollections($skip: Int!, $take: Int!) {
+  collections(options: {skip: $skip, take: $take}) {
     items {
       id
       name
       slug
+      featuredAsset {
+        preview
+      }
       breadcrumbs {
         id
         name
         slug
       }
-      children {
-        id
-        name
-        slug
-      }
     }
+    totalItems
   }
 }
     `) as unknown as TypedDocumentString<CatalogCollectionsQuery, CatalogCollectionsQueryVariables>;

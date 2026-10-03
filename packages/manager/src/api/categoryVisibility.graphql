@@ -3,16 +3,17 @@ fragment CategoryCollectionFields on Collection {
     name
     slug
     isPrivate
+    breadcrumbs {
+        id
+        name
+    }
     customFields {
         visibilityOverride
     }
 }
 
-# take: 999, no cursor — known limitation (mivend.audit.90 MEDIUM), not a final decision: if the
-# category count ever exceeds this, the extras silently don't appear in the table. Revisit with
-# real server-side pagination if/when that becomes a real risk.
-query CategoryVisibilityCollections {
-    collections(options: { filter: { slug: { contains: "cat-" } }, take: 999 }) {
+query CategoryVisibilityCollections($skip: Int!, $take: Int!) {
+    collections(options: { filter: { slug: { contains: "cat-" } }, skip: $skip, take: $take }) {
         items {
             ...CategoryCollectionFields
         }
