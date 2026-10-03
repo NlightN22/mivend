@@ -41,9 +41,8 @@ function tryParseBigInt(value: string): bigint | undefined {
     }
 }
 
-// Issue #102: upsert-only, no deactivation/conflict/supersede logic — a terms log where multiple
-// rules can legitimately coexist for the same product/counterparty. Only a version guard against
-// out-of-order Kafka redelivery.
+// Issue #102: upsert-only, no deactivation/conflict logic — multiple rules can legitimately
+// coexist for the same product/counterparty; only a version guard against Kafka redelivery.
 @Injectable()
 export class RetroBonusRuleService {
     constructor(private connection: TransactionalConnection) {}

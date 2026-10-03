@@ -86,10 +86,8 @@ export class ContractService {
         return this.connection.getRepository(ctx, Contract).findOne({ where: { erpId } });
     }
 
-    // Issue #102: resolves a Contract by its mivend internal id — used to look up its own erpId
-    // from a GraphQL ID input arg, same role CounterpartyService.findOneVisible plays for
-    // Counterparty. No visibility filter — a Contract's visibility already follows its parent
-    // Counterparty's own scope at the caller.
+    // Issue #102: resolves a Contract by its mivend internal id for a GraphQL ID input arg.
+    // No visibility filter — callers must constrain results by an already-visible Counterparty.
     async findById(ctx: RequestContext, id: ID): Promise<Contract | null> {
         return this.connection.getRepository(ctx, Contract).findOne({ where: { id } });
     }

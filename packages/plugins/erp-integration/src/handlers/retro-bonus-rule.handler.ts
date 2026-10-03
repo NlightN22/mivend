@@ -15,10 +15,8 @@ const VALID_ACCRUAL_KINDS: readonly RetroBonusAccrualKind[] = [
     'ПоПродажам',
 ];
 
-// Applies the `retro-bonus-rule` stream into @mivend/plugin-retro-bonus's RetroBonusRule — a
-// pure upsert, no tombstone branch. Issue #102: this stream never sends a real tombstone,
-// effectiveFrom/effectiveTo are the full activity signal (confirmed against the ERP's own
-// source and live data, see issue #102's body) — unlike every other handler in this plugin.
+// Applies `retro-bonus-rule` into RetroBonusRule — pure upsert, no tombstone branch (unlike
+// every other handler in this plugin): this stream never sends one, see issue #102.
 @Injectable()
 export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
     constructor(private readonly retroBonusRuleService: RetroBonusRuleService) {}

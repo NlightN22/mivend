@@ -12,9 +12,14 @@ export class AddRetroBonusRuleTable1790949195345 implements MigrationInterface {
             `CREATE UNIQUE INDEX "IDX_2f65c6e26664a8be84c98cf4a8" ON "retro_bonus_rule" ("erpId") `,
             undefined,
         );
+        await queryRunner.query(
+            `CREATE INDEX "IDX_c5c2309430f860c56ad2121088" ON "retro_bonus_rule" ("counterpartyErpId", "recipientContractErpId") `,
+            undefined,
+        );
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`DROP INDEX "public"."IDX_c5c2309430f860c56ad2121088"`, undefined);
         await queryRunner.query(`DROP INDEX "public"."IDX_2f65c6e26664a8be84c98cf4a8"`, undefined);
         await queryRunner.query(`DROP TABLE "retro_bonus_rule"`, undefined);
     }
