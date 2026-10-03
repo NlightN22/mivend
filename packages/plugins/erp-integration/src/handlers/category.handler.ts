@@ -1,5 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+    CATEGORY_FACET_CODE,
+    buildCategoryFacetFilter,
+    categorySlug,
+    collectFacetValueIds,
+} from 'shared';
+import type { ID } from '@vendure/common/lib/shared-types';
+import {
+    Collection,
     CollectionService,
     Facet,
     FacetService,
@@ -12,7 +20,16 @@ import {
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationCategoryHandler';
-const CATEGORY_FACET_CODE = 'category';
+
+interface CollectionInput {
+    entityId: string;
+    name: string | null;
+    facetValueId: string;
+    isPrivate: boolean;
+    parentErpId: string | undefined;
+    reparent: boolean;
+    facetValueIdByCode: ReadonlyMap<string, string>;
+}
 
 // Mirrors erp-import's own CategoryHandler (facet value + collection per category, keyed by
 // erpId/entityId as the facet value code) — same target shape, arriving over Kafka instead of
@@ -41,9 +58,15 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         const isActive = payload.isActive === true;
         const isDeleted = payload.isDeleted === true;
         const isPrivate = !isActive || isDeleted;
+        let parentErpId = payload.parentId ? String(payload.parentId) : undefined;
+        if (parentErpId === entityId) {
+            Logger.warn(`category ${entityId}: parent_id points to itself, ignoring`, loggerCtx);
+            parentErpId = undefined;
+        }
 
         const facet = await this.ensureCategoryFacet(ctx);
-        const existingFacetValue = await this.findFacetValue(ctx, facet, entityId);
+        const facetValues = await this.facetValueService.findByFacetId(ctx, facet.id);
+        const existingFacetValue = facetValues.find(v => v.code === entityId);
         if (!existingFacetValue && !name) {
             Logger.warn(
                 `category ${entityId}: missing name and no existing facet value, skipping`,
@@ -58,7 +81,18 @@ export class CategoryStreamHandler implements InboundStreamHandler {
             name,
             existingFacetValue,
         );
-        await this.ensureCollection(ctx, entityId, name, String(facetValue.id), isPrivate);
+        const facetValueIdByCode = new Map(facetValues.map(v => [v.code, String(v.id)]));
+        facetValueIdByCode.set(entityId, String(facetValue.id));
+        await this.ensureCollection(ctx, {
+            entityId,
+            name,
+            facetValueId: String(facetValue.id),
+            isPrivate,
+            // A tombstone carries no hierarchy; it must not move the category to the top level.
+            parentErpId: isDeleted ? undefined : parentErpId,
+            reparent: !isDeleted,
+            facetValueIdByCode,
+        });
     }
 
     // A non-null visibilityOverride (issue #90) is a manual decision that must survive the next
@@ -89,15 +123,6 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         });
     }
 
-    private async findFacetValue(
-        ctx: RequestContext,
-        facet: { id: string | number },
-        entityId: string,
-    ): Promise<FacetValue | undefined> {
-        const all = await this.facetValueService.findByFacetId(ctx, facet.id);
-        return all.find(v => v.code === entityId);
-    }
-
     // `name: null` only updates an already-found facet value's isActive-adjacent state via the
     // caller's later isPrivate write on the Collection — the facet value's own name translation
     // is left untouched rather than blanked. Creating a brand-new facet value still requires a
@@ -125,14 +150,9 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         });
     }
 
-    private async ensureCollection(
-        ctx: RequestContext,
-        entityId: string,
-        name: string | null,
-        facetValueId: string,
-        isPrivate: boolean,
-    ): Promise<void> {
-        const slug = `cat-${entityId}`;
+    private async ensureCollection(ctx: RequestContext, input: CollectionInput): Promise<void> {
+        const { entityId, name, facetValueId, isPrivate, parentErpId, reparent } = input;
+        const slug = categorySlug(entityId);
         const existing = await this.collectionService.findOneBySlug(ctx, slug);
         if (!existing && !name) {
             Logger.warn(
@@ -143,32 +163,70 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         }
         const resolvedIsPrivate = this.resolveIsPrivate(isPrivate, existing as never);
         const resolvedName = name ?? existing!.name;
-        const filters = [
-            {
-                code: 'facet-value-filter',
-                arguments: [
-                    { name: 'facetValueIds', value: JSON.stringify([facetValueId]) },
-                    { name: 'containsAny', value: 'false' },
-                ],
-            },
+        const translations = [
+            { languageCode: LanguageCode.en, name: resolvedName, slug, description: '' },
         ];
-        if (existing) {
-            await this.collectionService.update(ctx, {
-                id: existing.id,
+        const parentId = parentErpId
+            ? await this.ensureParentCollection(ctx, parentErpId)
+            : undefined;
+
+        if (!existing) {
+            await this.collectionService.create(ctx, {
+                parentId,
                 isPrivate: resolvedIsPrivate,
-                translations: [
-                    { languageCode: LanguageCode.en, name: resolvedName, slug, description: '' },
-                ],
-                filters,
+                translations,
+                filters: buildCategoryFacetFilter([facetValueId]),
             });
             return;
         }
-        await this.collectionService.create(ctx, {
+
+        const descendants = await this.collectionService.getDescendants(ctx, existing.id);
+        const facetValueIds = collectFacetValueIds(
+            facetValueId,
+            descendants.map(d => d.slug),
+            input.facetValueIdByCode,
+        );
+        await this.collectionService.update(ctx, {
+            id: existing.id,
             isPrivate: resolvedIsPrivate,
-            translations: [
-                { languageCode: LanguageCode.en, name: resolvedName, slug, description: '' },
-            ],
-            filters,
+            translations,
+            filters: buildCategoryFacetFilter(facetValueIds),
         });
+        if (reparent) await this.moveIfParentChanged(ctx, existing, parentId);
+    }
+
+    // `desiredParentId` undefined means top level (child of the root Collection).
+    private async moveIfParentChanged(
+        ctx: RequestContext,
+        existing: Collection,
+        desiredParentId: ID | undefined,
+    ): Promise<void> {
+        const breadcrumbs = await this.collectionService.getBreadcrumbs(ctx, existing);
+        const currentParentId = breadcrumbs[breadcrumbs.length - 2]?.id;
+        const targetParentId = desiredParentId ?? breadcrumbs[0]?.id;
+        if (targetParentId === undefined || String(currentParentId) === String(targetParentId)) {
+            return;
+        }
+        await this.collectionService.move(ctx, {
+            collectionId: existing.id,
+            parentId: targetParentId,
+            index: 0,
+        });
+    }
+
+    // A child can arrive before its parent: park it under a private placeholder that the
+    // parent's own event later fills in, instead of waiting or flattening under the root.
+    private async ensureParentCollection(ctx: RequestContext, parentErpId: string): Promise<ID> {
+        const slug = categorySlug(parentErpId);
+        const found = await this.collectionService.findOneBySlug(ctx, slug);
+        if (found) return found.id;
+        const created = await this.collectionService.create(ctx, {
+            isPrivate: true,
+            translations: [
+                { languageCode: LanguageCode.en, name: parentErpId, slug, description: '' },
+            ],
+            filters: [],
+        });
+        return created.id;
     }
 }

@@ -36,6 +36,7 @@ import {
     createIntegrationInboxRetentionTask,
     createIntegrationInboxUserTask,
 } from './integration-inbox.scheduled-task';
+import { createCategoryFiltersRecomputeTask } from './category-filters-recompute.scheduled-task';
 import { createCollectionFiltersRecomputeTask } from './collection-filters-recompute.scheduled-task';
 import { IntegrationInboxEventResolver } from './integration-inbox-event.resolver';
 import { KafkaConsumerService } from './kafka-consumer.service';
@@ -200,6 +201,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
                 createIntegrationInboxRetentionTask(ErpIntegrationPlugin.options),
                 createIntegrationOutboxTask(ErpIntegrationPlugin.options),
                 createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
+                createCategoryFiltersRecomputeTask(ErpIntegrationPlugin.options),
                 createReconciliationTask(ErpIntegrationPlugin.options),
                 createKafkaLagPollTask(ErpIntegrationPlugin.options),
             ];

@@ -79,6 +79,10 @@ export class ErpImportService {
             }
         }
 
+        if (body.records.some(record => record.type === 'category')) {
+            await this.categoryHandler.recomputeFilters(ctx);
+        }
+
         await this.importRunService.complete(run, processed, errors);
         const updated = await this.importRunService.findByExchangeId(body.exchangeId);
         return this.importRunService.toResult(updated!);

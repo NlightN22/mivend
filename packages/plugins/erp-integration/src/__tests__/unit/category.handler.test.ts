@@ -20,8 +20,11 @@ function createServices(
     };
     const collectionService = {
         findOneBySlug: vi.fn().mockResolvedValue(existingCollection),
-        create: vi.fn(),
+        create: vi.fn().mockResolvedValue({ id: 'col-new' }),
         update: vi.fn(),
+        move: vi.fn(),
+        getDescendants: vi.fn().mockResolvedValue([]),
+        getBreadcrumbs: vi.fn().mockResolvedValue([{ id: 'root' }, { id: 'col-1' }]),
     };
     return { facetService, facetValueService, collectionService };
 }

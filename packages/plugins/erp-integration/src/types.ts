@@ -228,6 +228,7 @@ export interface ErpIntegrationPluginOptions {
     // event (a real incident: tens of thousands of individual jobs, one per product, each
     // recomputing every Collection).
     collectionFiltersRecomputeIntervalMs?: number;
+    categoryFiltersRecomputeIntervalMs?: number;
     // Issue #84: Integration Service's reconciliation summary API base URL (e.g.
     // https://is.komponent-m.ru) and its X-Api-Key. Reused for both the daily ScheduledTask and
     // the manual-trigger mutation — never hardcoded, never logged. Optional (like
@@ -382,6 +383,7 @@ export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 60_000;
 // decision). Tune based on real measurement if still insufficient.
 export const INBOX_BULK_BATCH_SIZE_DEFAULT = 100;
 export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
+export const CATEGORY_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 3_600_000;
 // Once daily — no sub-day freshness requirement raised for this (issue #84).
 export const RECONCILIATION_INTERVAL_DEFAULT = 24 * 60 * 60 * 1000;
 export const RECONCILIATION_API_URL_DEFAULT = 'https://is.komponent-m.ru';

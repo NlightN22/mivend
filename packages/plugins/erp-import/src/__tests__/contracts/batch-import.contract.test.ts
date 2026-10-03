@@ -73,7 +73,10 @@ function buildService(): ErpImportService {
             finishedAt: null,
         })),
     };
-    const handlers = HANDLER_METHOD_BY_INDEX.map(method => ({ [method]: vi.fn(async () => {}) }));
+    const handlers = HANDLER_METHOD_BY_INDEX.map(method => ({
+        [method]: vi.fn(async () => {}),
+        recomputeFilters: vi.fn(async () => {}),
+    }));
     return new (ErpImportService as unknown as new (
         importRunService: unknown,
         ...handlers: unknown[]

@@ -9,10 +9,15 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
+import {
+    CATEGORY_FACET_CODE,
+    buildCategoryFacetFilter,
+    categorySlug,
+    recomputeCategoryFilters,
+} from 'shared';
 import type { CategoryRecord } from '../types';
 
 const loggerCtx = 'CategoryHandler';
-const CATEGORY_FACET_CODE = 'category';
 
 @Injectable()
 export class CategoryHandler {
@@ -27,6 +32,16 @@ export class CategoryHandler {
         const facet = await this.ensureCategoryFacet(ctx);
         const facetValue = await this.ensureFacetValue(ctx, facet, record);
         await this.ensureCollection(ctx, record, String(facetValue.id));
+    }
+
+    // Called once after a batch containing categories, so parents list their whole subtree.
+    async recomputeFilters(ctx: RequestContext): Promise<void> {
+        await recomputeCategoryFilters(ctx, {
+            connection: this.connection,
+            collectionService: this.collectionService,
+            facetService: this.facetService,
+            facetValueService: this.facetValueService,
+        });
     }
 
     private async ensureCategoryFacet(ctx: RequestContext): Promise<Facet> {
@@ -70,18 +85,10 @@ export class CategoryHandler {
         record: CategoryRecord,
         facetValueId: string,
     ): Promise<void> {
-        const slug = `cat-${record.erpId}`;
+        const slug = categorySlug(record.erpId);
         const existing = await this.collectionService.findOneBySlug(ctx, slug);
 
-        const filters = [
-            {
-                code: 'facet-value-filter',
-                arguments: [
-                    { name: 'facetValueIds', value: JSON.stringify([facetValueId]) },
-                    { name: 'containsAny', value: 'false' },
-                ],
-            },
-        ];
+        const filters = buildCategoryFacetFilter([facetValueId]);
 
         if (existing) {
             await this.collectionService.update(ctx, {
@@ -114,7 +121,7 @@ export class CategoryHandler {
         ctx: RequestContext,
         erpId: string,
     ): Promise<string | undefined> {
-        const col = await this.collectionService.findOneBySlug(ctx, `cat-${erpId}`);
+        const col = await this.collectionService.findOneBySlug(ctx, categorySlug(erpId));
         return col ? String(col.id) : undefined;
     }
 }

@@ -29,3 +29,10 @@ export {
 export { generateDocumentCode } from './documentCode';
 
 export { cronEveryMs } from './scheduled-task-cron';
+export {
+    CATEGORY_FACET_CODE,
+    buildCategoryFacetFilter,
+    categorySlug,
+    collectFacetValueIds,
+} from './categoryCollectionFilter';
+export { recomputeCategoryFilters } from './recomputeCategoryFilters';
