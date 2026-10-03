@@ -44,6 +44,19 @@ export async function recomputeCategoryTree(
     const collections = await deps.connection
         .getRepository(ctx, Collection)
         .find({ relations: ['translations'] });
+    // Vendure's update inserts a new row instead of updating without `translations` and a native id.
+    const nativeIdByString = new Map(collections.map(c => [String(c.id), c.id]));
+    const translationsById = new Map(
+        collections.map(c => [
+            String(c.id),
+            c.translations.map(t => ({
+                languageCode: t.languageCode,
+                name: t.name,
+                slug: t.slug,
+                description: t.description,
+            })),
+        ]),
+    );
     const customFields = (c: Collection): CategoryCustomFields =>
         (c.customFields ?? {}) as CategoryCustomFields;
     const nodes: CategoryCollectionNode[] = collections.map(c => ({
@@ -56,7 +69,8 @@ export async function recomputeCategoryTree(
     const filterUpdates = planCategoryFilterUpdates(nodes, facetValueIdByCode);
     for (const update of filterUpdates) {
         await deps.collectionService.update(ctx, {
-            id: update.id,
+            id: nativeIdByString.get(update.id)!,
+            translations: translationsById.get(update.id),
             filters: buildCategoryFacetFilter(update.facetValueIds),
         });
     }
@@ -78,7 +92,11 @@ export async function recomputeCategoryTree(
         })),
     );
     for (const update of visibilityUpdates) {
-        await deps.collectionService.update(ctx, { id: update.id, isPrivate: update.isPrivate });
+        await deps.collectionService.update(ctx, {
+            id: nativeIdByString.get(update.id)!,
+            translations: translationsById.get(update.id),
+            isPrivate: update.isPrivate,
+        });
     }
     return filterUpdates.length + visibilityUpdates.length;
 }
