@@ -185,7 +185,6 @@ function toggleGroup(id: string): void {
 .mv-catalog-dropdown__cat--active {
     background: #e2f8ef;
     color: #008a64;
-    font-weight: 900;
 }
 
 .mv-catalog-dropdown__content {
