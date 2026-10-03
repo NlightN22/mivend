@@ -1,22 +1,33 @@
 # Project Context
 
-Updated: 2026-10-03 09:40
+Updated: 2026-10-03 16:05
 
-## Recent changes (2026-10-03 — #106 granted-retro-bonus stream implemented)
+## Recent changes (2026-10-03 — #106 granted-retro-bonus stream, shipped/audited/closed)
 
-`GrantedRetroBonus` (append-only, manager-portal-only) added to `@mivend/plugin-retro-bonus`, fed by
-`granted-retro-bonus` (`GrantedRetroBonusChanged`). Keyed to the recipient counterparty (not the
-source); `operationKind` is opaque display text, `accrualKind` raw + `accrualKindLabel`. Admin query
-`grantedRetroBonuses(counterpartyId, options)` is a real paginated `GrantedRetroBonusList`.
-Migration `add_granted_retro_bonus_table`. Not yet done: manager-portal UI tab (backend only);
-live GraphQL schema boot check of the auto-generated `GrantedRetroBonusListOptions` not run.
+**Issue #106 closed** (pushed, `560477f..bd259e0`). `GrantedRetroBonus` (manager-portal-only) in
+`@mivend/plugin-retro-bonus`, fed by `granted-retro-bonus` (`GrantedRetroBonusChanged`). Keyed to the
+recipient counterparty (not the source); `operationKind` is opaque display text, `accrualKind` raw +
+`accrualKindLabel`. Admin query `grantedRetroBonuses(counterpartyId, options{take,skip})` returns a
+paginated `GrantedRetroBonusList` — **`GrantedRetroBonusListOptions` must be declared explicitly in
+the schema**: Vendure does not auto-generate it for a hand-declared PaginatedList (server failed to
+boot until fixed; unit tests/build cannot catch this, only a live boot).
+**Tombstones (search-platform#147, applies to `granted-retro-bonus` AND `granted-discount`)**:
+`is_deleted=true` soft-deletes (`isDeleted`, tombstone version kept); a tombstone wins an equal
+version, only a strictly newer version revives the row; versionless tombstone = warn+skip. Absent
+`percent/quantity/amount` are proto3-omitted zeros (read as 0). Known edge: tombstone before any row
+is a no-op (docs/ai/erp-streams-map.md). Future `GrantedDiscount` read queries must filter
+`isDeleted=false`. Migrations: `add_granted_retro_bonus_table`, `add_granted_discount_is_deleted`.
+`@nlightn22/event-contracts` pinned `^0.43.1`. **Not done**: manager-portal UI tab (needs its own
+issue — not part of #106's Scope; #102 also shipped backend-only).
+Ops: shared working tree + two contours (local :3000, staging-integration :3010) means any
+uncommitted edit by a parallel session (e.g. #117) respawns both `ts-node-dev` stacks mid-edit and can
+cause 500s/slow staging boot — not a cache/duplicate-process problem (#157).
 
 ## Recent changes (2026-10-03 — retro-bonus-rule stream #102, shipped/audited/closed)
 
 **Issue #102 closed.** New read-only, manager-portal-only `@mivend/plugin-retro-bonus` plugin:
 `RetroBonusRule` entity fed by the ERP's `RetroBonusRuleChanged` stream
-(`company.customers.events.v1`), paired conceptually with #106's not-yet-implemented
-`GrantedRetroBonus`. **Critically unlike `DiscountRule`**: pure upsert-only, no deactivation/
+(`company.customers.events.v1`), paired with #106's `GrantedRetroBonus`. **Critically unlike `DiscountRule`**: pure upsert-only, no deactivation/
 conflict/supersede logic at all — confirmed by search-platform (code of
 `Document.УстановкаПараметровНачисленияРетроБонусов.ObjectModule.bsl`, not just data) that this
 stream never sends a real tombstone; both natural expiry and early cancellation ("Закрыть
