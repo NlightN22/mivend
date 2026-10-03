@@ -15,6 +15,7 @@ const GROUP_PREVIEW_LIMIT = 6;
 const props = defineProps<{
     collections: CollectionNode[];
     open: boolean;
+    loading?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -106,7 +107,7 @@ function toggleGroup(id: string): void {
                 </div>
 
                 <div v-else class="mv-catalog-dropdown__content mv-catalog-dropdown__content--empty">
-                    No categories available
+                    {{ loading ? 'Loading categories…' : 'No categories available' }}
                 </div>
             </div>
         </div>

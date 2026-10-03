@@ -19,12 +19,13 @@ export const COLLECTIONS_PAGE_SIZE = 100;
 export async function fetchAllCollections<T>(
     fetchPage: (skip: number, take: number) => Promise<{ items: T[]; totalItems: number }>,
 ): Promise<T[]> {
-    const all: T[] = [];
-    for (;;) {
-        const page = await fetchPage(all.length, COLLECTIONS_PAGE_SIZE);
-        all.push(...page.items);
-        if (page.items.length === 0 || all.length >= page.totalItems) return all;
-    }
+    const first = await fetchPage(0, COLLECTIONS_PAGE_SIZE);
+    if (first.items.length === 0 || first.items.length >= first.totalItems) return first.items;
+    const skips: number[] = [];
+    for (let skip = first.items.length; skip < first.totalItems; skip += COLLECTIONS_PAGE_SIZE)
+        skips.push(skip);
+    const rest = await Promise.all(skips.map(skip => fetchPage(skip, COLLECTIONS_PAGE_SIZE)));
+    return [...first.items, ...rest.flatMap(page => page.items)];
 }
 
 // `breadcrumbs` is root..self including the invisible root. A node attaches to its nearest

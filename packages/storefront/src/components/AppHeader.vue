@@ -85,7 +85,10 @@ function onKeydown(e: KeyboardEvent): void {
 
 watch(() => route.fullPath, () => closeMobileNav());
 
-onMounted(() => document.addEventListener('keydown', onKeydown));
+onMounted(() => {
+    document.addEventListener('keydown', onKeydown);
+    catalogStore.loadCollections();
+});
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 </script>
 
@@ -205,6 +208,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
             <MvCatalogDropdown
                 :collections="catalogStore.collections"
                 :open="catalogOpen"
+                :loading="catalogStore.loading"
                 @close="closeCatalog"
             />
         </header>
@@ -268,7 +272,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     margin: 0 auto;
     padding: 12px 28px 8px;
     display: grid;
-    grid-template-columns: 160px 144px minmax(360px, 1fr) auto auto;
+    grid-template-columns: 160px 144px minmax(360px, 1fr) auto auto auto;
     gap: 12px;
     align-items: center;
 }
