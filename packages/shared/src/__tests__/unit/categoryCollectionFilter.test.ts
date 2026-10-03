@@ -123,6 +123,36 @@ describe('planCategoryVisibilityUpdates', () => {
         ]);
     });
 
+    it('hides an overridden empty leaf and its subtree, and clearing the override restores them', () => {
+        const hidden = [
+            vis('a', null, false, false),
+            vis('b', 'a', false, false, 'hidden'),
+            vis('c', 'b', false, false),
+        ];
+        expect(planCategoryVisibilityUpdates(hidden)).toEqual([
+            { id: 'b', isPrivate: true },
+            { id: 'c', isPrivate: true },
+        ]);
+        const cleared = [
+            vis('a', null, false, false),
+            vis('b', 'a', false, true),
+            vis('c', 'b', false, true),
+        ];
+        expect(planCategoryVisibilityUpdates(cleared)).toEqual([
+            { id: 'b', isPrivate: false },
+            { id: 'c', isPrivate: false },
+        ]);
+    });
+
+    it('a hidden override on a child does not hide its visible-override grandchild', () => {
+        const nodes = [
+            vis('a', null, false, false),
+            vis('b', 'a', false, true, 'hidden'),
+            vis('c', 'b', false, false, 'visible'),
+        ];
+        expect(planCategoryVisibilityUpdates(nodes)).toEqual([]);
+    });
+
     it('makes no writes when everything is already consistent, and survives a cycle', () => {
         expect(planCategoryVisibilityUpdates([vis('a', null, false, false)])).toEqual([]);
         expect(() =>

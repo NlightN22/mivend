@@ -133,4 +133,20 @@ describe('filterVisibleCrumbs', () => {
         const crumbs = col('4', ['2', '3']).breadcrumbs;
         expect(filterVisibleCrumbs(crumbs, tree).map(c => c.id)).toEqual(['2', '4']);
     });
+
+    it('keeps a visible-override child under a hidden ancestor reachable, with no dead crumb', () => {
+        const items = [col('2', []), col('5', ['2', '3', '4'])];
+        const tree = buildCategoryTree(items);
+        expect(tree.map(n => n.id)).toEqual(['2']);
+        expect(tree[0].children.map(n => n.id)).toEqual(['5']);
+        expect(filterVisibleCrumbs(items[1].breadcrumbs, tree).map(c => c.id)).toEqual(['2', '5']);
+        expect(findCategoryPath(tree, 's5').map(n => n.id)).toEqual(['2', '5']);
+    });
+
+    it('returns no crumbs for a product whose whole branch is hidden, and keeps empty leaves', () => {
+        expect(filterVisibleCrumbs(col('4', ['2', '3']).breadcrumbs, [])).toEqual([]);
+        const tree = buildCategoryTree([col('2', []), col('3', ['2'])]);
+        expect(tree[0].children[0].children).toEqual([]);
+        expect(buildCategoryPanel(tree, 's3').level.map(c => c.id)).toEqual(['3']);
+    });
 });

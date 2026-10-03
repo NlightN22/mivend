@@ -38,8 +38,10 @@ export function describeCategoryVisibility(
         const parent = parentCrumb ? byId.get(parentCrumb.id) : undefined;
         const override = c.customFields?.visibilityOverride;
         let hiddenReason: HiddenReason = '';
-        if (override) hiddenReason = 'Manual override';
-        else if (c.isPrivate) hiddenReason = parent?.isPrivate ? 'Hidden ancestor' : 'Own feed';
+        if (c.isPrivate) {
+            if (override === 'hidden') hiddenReason = 'Manual override';
+            else hiddenReason = parent?.isPrivate ? 'Hidden ancestor' : 'Own feed';
+        }
         info.set(c.id, {
             depth: Math.max(crumbs.length - 1, 1),
             parentName: parentCrumb?.name ?? '',
@@ -49,12 +51,9 @@ export function describeCategoryVisibility(
     return info;
 }
 
-// visibilityOverride: null clears the override (back to Auto/feed-driven — the next Kafka
-// category event recomputes isPrivate from the feed, but nothing changes it immediately here),
-// 'hidden'/'visible' forces it AND applies isPrivate right away (mirrors
-// CategoryStreamHandler.resolveIsPrivate so setting an override doesn't wait for the next feed
-// event to take visible effect). See Collection.customFields.visibilityOverride in
-// apps/server/vendure-config.ts (issue #90).
+// null clears the override. The server recomputes the category tree after any override change
+// (CategoryOverrideRecomputeListener), so descendants and a cleared override resolve there;
+// isPrivate is also sent for 'hidden'/'visible' so the returned row is already correct (#90).
 export async function setCategoryVisibilityOverride(
     id: string,
     visibilityOverride: string | null,

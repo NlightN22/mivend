@@ -26,7 +26,7 @@ describe('describeCategoryVisibility', () => {
         expect(info.get('3')).toMatchObject({ depth: 2, parentName: 'n2' });
     });
 
-    it('tells own feed from a hidden ancestor and a manual override', () => {
+    it('tells own feed from a hidden ancestor', () => {
         const info = describeCategoryVisibility([
             col('2', [], true),
             col('3', ['2'], true),
@@ -35,7 +35,28 @@ describe('describeCategoryVisibility', () => {
         ]);
         expect(info.get('2')?.hiddenReason).toBe('Own feed');
         expect(info.get('3')?.hiddenReason).toBe('Hidden ancestor');
-        expect(info.get('4')?.hiddenReason).toBe('Manual override');
+        expect(info.get('4')?.hiddenReason).toBe('');
         expect(info.get('5')?.hiddenReason).toBe('');
+    });
+
+    it('names the override only while it hides; a visible override or cleared state shows nothing', () => {
+        const info = describeCategoryVisibility([
+            col('2', [], true, 'hidden'),
+            col('3', ['2'], true, 'visible'),
+            col('4', ['2'], false, 'visible'),
+            col('5', ['2'], true, 'hidden'),
+        ]);
+        expect(info.get('2')?.hiddenReason).toBe('Manual override');
+        expect(info.get('3')?.hiddenReason).toBe('Hidden ancestor');
+        expect(info.get('4')?.hiddenReason).toBe('');
+        expect(info.get('5')?.hiddenReason).toBe('Manual override');
+    });
+
+    it('reports a hidden empty leaf under a hidden override parent as a hidden ancestor', () => {
+        const info = describeCategoryVisibility([
+            col('2', [], true, 'hidden'),
+            col('3', ['2'], true),
+        ]);
+        expect(info.get('3')?.hiddenReason).toBe('Hidden ancestor');
     });
 });

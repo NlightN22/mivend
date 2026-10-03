@@ -73,6 +73,7 @@ import { TaxZoneService } from './tax-zone.service';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
+import { CategoryOverrideRecomputeListener } from './category-override-recompute.listener';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, isEmailOnlyWorker } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 import { adminApiExtensions } from './api/admin.schema';
@@ -167,6 +168,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,
+        CategoryOverrideRecomputeListener,
         ProductTaxCodeFlagService,
         ProductCategoryFlagService,
         ManufacturerService,
