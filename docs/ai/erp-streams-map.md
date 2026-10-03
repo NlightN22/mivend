@@ -289,6 +289,13 @@ implementation time — re-check before trusting this if it's been a while):
 - `contactName`/`workingHours`: not fields on this message at all — stay REST/portal-only, same as
   before this stream existed.
 
+### Granted-fact tombstones (`granted-discount`, `granted-retro-bonus`)
+
+`is_deleted=true` soft-deletes the row (`isDeleted`, tombstone version kept); only a strictly newer
+version revives it. Known narrow edge: a tombstone arriving before any row exists is a no-op, so a
+same-version upsert arriving later still creates the row. Future read queries over `GrantedDiscount`
+(no read path yet) must filter `isDeleted = false`.
+
 ### Retro bonuses — manager-portal only, decision deferred for storefront
 
 Explicit project-owner decision: retro bonus terms/facts (`retro-bonus-rule`/

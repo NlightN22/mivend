@@ -109,4 +109,10 @@ describe('GrantedRetroBonusStreamHandler', () => {
             expect.objectContaining({ percent: 0, quantity: 0, amount: 0 }),
         );
     });
+
+    it('skips a tombstone that carries no version instead of acting on it', async () => {
+        const { handler, service } = createHandler();
+        await handler.apply(ctx, 'grb-1', { isDeleted: true });
+        expect(service.remove).not.toHaveBeenCalled();
+    });
 });

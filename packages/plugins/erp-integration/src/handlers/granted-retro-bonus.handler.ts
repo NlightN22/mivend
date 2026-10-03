@@ -20,11 +20,15 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
         payload: Record<string, unknown>,
     ): Promise<void> {
         if (payload.isDeleted === true) {
-            await this.grantedRetroBonusService.remove(
-                ctx,
-                entityId,
-                String(payload.version ?? ''),
-            );
+            const tombstoneVersion = String(payload.version ?? '');
+            if (!tombstoneVersion) {
+                Logger.warn(
+                    `granted-retro-bonus ${entityId}: tombstone without version, skipping`,
+                    loggerCtx,
+                );
+                return;
+            }
+            await this.grantedRetroBonusService.remove(ctx, entityId, tombstoneVersion);
             return;
         }
         const version = String(payload.version ?? '');

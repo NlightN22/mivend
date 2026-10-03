@@ -96,4 +96,11 @@ describe('GrantedDiscountStreamHandler', () => {
         expect(service.upsert).toHaveBeenCalledOnce();
         expect(service.remove).not.toHaveBeenCalled();
     });
+
+    it('skips a tombstone that carries no version instead of acting on it', async () => {
+        const service = { upsert: vi.fn(), remove: vi.fn() };
+        const handler = new GrantedDiscountStreamHandler(service as never);
+        await handler.apply(ctx, 'gd-1', { isDeleted: true });
+        expect(service.remove).not.toHaveBeenCalled();
+    });
 });
