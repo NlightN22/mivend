@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+    Asset,
+    AssetService,
     CollectionService,
+    ConfigService,
     Facet,
     FacetService,
     FacetValue,
@@ -15,6 +18,7 @@ import {
     categorySlug,
     recomputeCategoryTree,
 } from 'shared';
+import path from 'path';
 import type { CategoryRecord } from '../types';
 
 const loggerCtx = 'CategoryHandler';
@@ -26,12 +30,39 @@ export class CategoryHandler {
         private readonly facetService: FacetService,
         private readonly facetValueService: FacetValueService,
         private readonly collectionService: CollectionService,
+        private readonly assetService: AssetService,
+        private readonly configService: ConfigService,
     ) {}
 
     async upsert(ctx: RequestContext, record: CategoryRecord): Promise<void> {
         const facet = await this.ensureCategoryFacet(ctx);
         const facetValue = await this.ensureFacetValue(ctx, facet, record);
         await this.ensureCollection(ctx, record, String(facetValue.id));
+        if (record.iconFile) await this.ensureIcon(ctx, record);
+    }
+
+    private async ensureIcon(ctx: RequestContext, record: CategoryRecord): Promise<void> {
+        const fileName = record.iconFile as string;
+        if (fileName !== path.basename(fileName)) {
+            throw new Error(`iconFile must be a plain file name, got "${fileName}"`);
+        }
+        const collection = await this.collectionService.findOneBySlug(
+            ctx,
+            categorySlug(record.erpId),
+            ['featuredAsset'],
+        );
+        if (!collection || collection.featuredAsset) return;
+
+        const { assetImportStrategy } = this.configService.importExportOptions;
+        const stream = await assetImportStrategy.getStreamFromPath(fileName);
+        const asset = await this.assetService.createFromFileStream(stream, fileName, ctx);
+        if (!(asset instanceof Asset))
+            throw new Error(`Icon "${fileName}" was rejected: ${asset.message}`);
+        await this.collectionService.update(ctx, {
+            id: collection.id,
+            featuredAssetId: asset.id,
+            assetIds: [asset.id],
+        });
     }
 
     // Called once after a batch containing categories, so parents list their whole subtree.

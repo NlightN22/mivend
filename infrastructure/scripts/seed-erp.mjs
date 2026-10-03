@@ -361,7 +361,8 @@ async function main() {
     // silent no-op (real incident: v3 data reseeded 0 new PriceType rows until this bump).
     // v5 (2026-09-05, user request): added branch-east to the `branches` fixture.
     // v6 (#117): employees now carry positionErpId, with a new `positions` fixture.
-    const run = 'v6';
+    // v7 (#59): category icons (iconFile) in the categories fixture.
+    const run = 'v7';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');

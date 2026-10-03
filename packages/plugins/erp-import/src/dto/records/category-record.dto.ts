@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Mirrors CategoryRecord in ../../types.ts.
 export class CategoryRecordDto {
@@ -14,4 +14,12 @@ export class CategoryRecordDto {
         description: 'erpId of the parent category, or null for a top-level category.',
     })
     parentErpId!: string | null;
+
+    @ApiPropertyOptional({
+        nullable: true,
+        type: String,
+        description:
+            'File name of the category icon inside the configured import assets directory.',
+    })
+    iconFile?: string | null;
 }

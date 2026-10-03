@@ -97,6 +97,7 @@ export interface CategoryRecord {
     erpId: string;
     name: string;
     parentErpId: string | null;
+    iconFile?: string | null;
 }
 
 export interface DiscountRuleRecord {

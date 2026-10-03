@@ -146,6 +146,9 @@ export const config: VendureConfig = {
         adminApiPath: 'admin-api',
         shopApiPath: 'shop-api',
     },
+    importExportOptions: {
+        importAssetsDir: path.join(__dirname, '../../../infrastructure/fixtures/category-icons'),
+    },
     authOptions: {
         tokenMethod: ['bearer', 'cookie'],
         superadminCredentials: {

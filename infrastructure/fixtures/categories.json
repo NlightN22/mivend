@@ -1,5 +1,5 @@
 [
-    { "erpId": "cat-engine", "name": "Engine", "parentErpId": null },
+    { "erpId": "cat-engine", "iconFile": "engine.svg", "name": "Engine", "parentErpId": null },
     { "erpId": "cat-engine-belts", "name": "Belts and Tensioners", "parentErpId": "cat-engine" },
     { "erpId": "cat-engine-filters", "name": "Filters", "parentErpId": "cat-engine" },
     { "erpId": "cat-engine-cooling", "name": "Cooling System", "parentErpId": "cat-engine" },
@@ -19,7 +19,12 @@
         "name": "Synthetic Oils",
         "parentErpId": "cat-engine-oils"
     },
-    { "erpId": "cat-suspension", "name": "Suspension and Steering", "parentErpId": null },
+    {
+        "erpId": "cat-suspension",
+        "iconFile": "suspension.svg",
+        "name": "Suspension and Steering",
+        "parentErpId": null
+    },
     {
         "erpId": "cat-suspension-ball",
         "name": "Ball Joints and Tie Rods",
@@ -35,14 +40,19 @@
         "name": "Shock Absorbers and Springs",
         "parentErpId": "cat-suspension"
     },
-    { "erpId": "cat-brakes", "name": "Brakes", "parentErpId": null },
+    { "erpId": "cat-brakes", "iconFile": "brakes.svg", "name": "Brakes", "parentErpId": null },
     { "erpId": "cat-brakes-pads", "name": "Brake Pads", "parentErpId": "cat-brakes" },
     { "erpId": "cat-brakes-discs", "name": "Brake Discs", "parentErpId": "cat-brakes" },
     { "erpId": "cat-brakes-hoses", "name": "Brake Hoses", "parentErpId": "cat-brakes" },
-    { "erpId": "cat-electrical", "name": "Electrical", "parentErpId": null },
+    {
+        "erpId": "cat-electrical",
+        "iconFile": "electrical.svg",
+        "name": "Electrical",
+        "parentErpId": null
+    },
     { "erpId": "cat-electrical-batteries", "name": "Batteries", "parentErpId": "cat-electrical" },
     { "erpId": "cat-electrical-sensors", "name": "Sensors", "parentErpId": "cat-electrical" },
-    { "erpId": "cat-body", "name": "Body Parts", "parentErpId": null },
+    { "erpId": "cat-body", "iconFile": "body.svg", "name": "Body Parts", "parentErpId": null },
     { "erpId": "cat-body-wipers", "name": "Wipers", "parentErpId": "cat-body" },
     { "erpId": "cat-body-lights", "name": "Lights", "parentErpId": "cat-body" }
 ]
