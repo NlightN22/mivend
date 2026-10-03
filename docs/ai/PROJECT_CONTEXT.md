@@ -1,16 +1,46 @@
 # Project Context
 
-Updated: 2026-10-02 15:00
+Updated: 2026-10-03 09:40
 
-## Recent changes (2026-10-02 — granted-discount stream #101, in progress)
+## Recent changes (2026-10-03 — retro-bonus-rule stream #102, shipped/audited/closed)
 
-**Issue #101 shipped (not yet audited/closed — still OPEN).** Shipment-time confirmed discount
-facts consumed as a new, read-only `GrantedDiscount` entity (`plugin-price-entry`) from Integration
-Service's `granted-discount` stream (`company.customers.events.v1`). `orderEntityId` kept as a
-plain ERP id, not a mivend `Order` relation — a shipment line can reference an order mivend never
-received. New production migration `1790743000000-add-granted-discount-table.ts`. Single commit
-so far (7704613); this session only refreshed context, didn't touch this work — next session
-should check whether `mivend.audit.common` has reviewed it yet before assuming it's done.
+**Issue #102 closed.** New read-only, manager-portal-only `@mivend/plugin-retro-bonus` plugin:
+`RetroBonusRule` entity fed by the ERP's `RetroBonusRuleChanged` stream
+(`company.customers.events.v1`), paired conceptually with #106's not-yet-implemented
+`GrantedRetroBonus`. **Critically unlike `DiscountRule`**: pure upsert-only, no deactivation/
+conflict/supersede logic at all — confirmed by search-platform (code of
+`Document.УстановкаПараметровНачисленияРетроБонусов.ObjectModule.bsl`, not just data) that this
+stream never sends a real tombstone; both natural expiry and early cancellation ("Закрыть
+досрочно") are carried as an ordinary re-send with `effectiveTo` already shortened — the register
+row is rewritten on repost, unlike `discount-rule`'s separate cancellation _document_ which
+creates a new row instead of editing the existing one (why that stream needed `is_deleted`
+handling and this one doesn't). Only a version guard against out-of-order Kafka redelivery.
+`accrualKind` stored raw (closed 4-value 1C enum, search-platform#126), translated only at the
+GraphQL layer (`accrualKindLabel`), never stored translated. Admin query
+`retroBonusRules(counterpartyId, contractId?)`, reuses `Permission.ReadCustomer` +
+`CustomPermission.ReadCounterparty.Permission` (no new Permission). New migration (table +
+`(counterpartyErpId, recipientContractErpId)` index, folded into one migration before push).
+Commits df4c43b (implementation) + f79f2ec (3 LOW audit fixes: missing index, inaccurate
+`ContractService.findById` comment, 3 over-cap comments). `mivend.audit.common` signed off clean
+on the second pass. Pushed, issue closed with summary comment.
+
+**Known accepted gap, deliberately not fixed**: an unused retro-bonus rule marked for deletion in
+1C via the _standard_ soft-delete flag (not "Закрыть досрочно") is a plain `Записать()`, never
+rewrites the register — the stream never learns about it, `validTo` stays stale until natural
+expiry. Narrow scenario (unused rule + that specific deletion path), no search-platform issue
+filed for it (their own call, AGENTS.md "no excess code"). If this surfaces as a real complaint
+later, re-open via search-platform, don't speculatively build around it first.
+
+## Recent changes (2026-10-02/03 — granted-discount stream #101, shipped/audited/closed)
+
+Shipment-time confirmed discount facts consumed as a new, read-only `GrantedDiscount` entity
+(`plugin-price-entry`) from Integration Service's `granted-discount` stream
+(`company.customers.events.v1`). `orderEntityId` kept as a plain ERP id, not a mivend `Order`
+relation — a shipment line can reference an order mivend never received. Production migration
+`1790945855613-add-granted-discount-table.ts` (regenerated once via the scratch-DB procedure).
+Upstream gap recorded: `search-platform#147` tracks stale `GrantedDiscount` facts (no
+re-send/correction signal once sent) — documented in `docs/ai/erp-streams-map.md`, not fixed
+mivend-side. Audited and closed.
 
 ## Recent changes (2026-09-29→10-02 — discount-rule stream #108/#152/#153/#154, docs/ai tracked)
 
@@ -85,7 +115,7 @@ inbox throughput, #147 migration tooling introduced, #141 ERP tax auto-provision
 shipping plugin-ownership pattern). Chains back to
 `docs/ai/.backup/PROJECT_CONTEXT-2026-09-22-locale-dashboard-tax-design-full.md` and earlier.
 Durable facts still true: #100/#103/#104/#105/#108/#109/#110/#115/#116/#119/#121/#126/#128/#129/
-#131/#140/#141/#144/#145/#147/#148/#149/#152/#153 all shipped/closed; #117 (Position entity) still
+#131/#140/#141/#144/#145/#147/#148/#149/#152/#153/#101/#102 all shipped/closed; #117 (Position entity) still
 blocked; #130 (Administrator-lifecycle E2E) designed, not implemented; #50/#143/#44 open with
 deferred parts tracked (#150/#151). **#103** (order weight/volume + branch-conditional packaging,
 `unit-changed` stream): `ProductVariant.customFields.unitRatioToBase`/`unitWeightKg`/`unitVolumeL`/
@@ -132,7 +162,9 @@ PaymentMethod bootstrap, groundwork for #143) · `pickup-shipping` (`pickup` Shi
 bootstrap) · `popular-products` · `versioning` · `access-control` (Branch/Department/Warehouse/
 Administrator lifecycle) · `approval-workflow` · `reservation` · `moq` · `session-management` ·
 `erp-integration` (Kafka consumer central-only; `freight-delivery` ShippingMethod bootstrap +
-`pricesIncludeTax`/tax auto-provisioning run on every instance).
+`pricesIncludeTax`/tax auto-provisioning run on every instance) · `retro-bonus` (#102,
+`RetroBonusRule` — manager-portal-only read-only, upsert-only, runs on every instance like
+`price-entry`/`counterparty`; only erp-integration's handler, central-only, writes to it).
 
 ## Database and data model
 
@@ -143,7 +175,10 @@ contour's own env file). Current migrations: `1790567453660-baseline.ts` (full s
 #147), `1790571151248-add-claim-pending-index.ts` (#148), the #103 unit-record/
 allow-piecewise-sale migration, `1790741701469-add-discount-rule-counterparty-scope.ts` (#108),
 `1790742446239-add-contract-table.ts` (#153, closed a pre-existing gap — `Contract` had no
-migration since #105 shipped). **Generating a new migration**: scratch Postgres DB, apply every
+migration since #105 shipped), `1790945855613-add-granted-discount-table.ts` (#101),
+`1790949195345-add-retro-bonus-rule-table.ts` (#102, table + its own counterparty-scope index —
+an index added post-audit was folded into this same migration rather than a second one, since it
+wasn't pushed yet). **Generating a new migration**: scratch Postgres DB, apply every
 existing migration (`NODE_ENV=production pnpm migration:run` against it), `migration:generate`,
 manually trim the diff to only the table(s) actually in scope (other plugins' unmigrated drift can
 surface in the same diff — do not fold unrelated tables into one migration), re-run generate to
@@ -174,8 +209,9 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 ## Planned next work
 
-0. **Issue #101** (granted-discount, just shipped) — needs `mivend.audit.common` review, then
-   `finish-task` (push + close) once clean. Check first before assuming done.
+0. **Issue #106** (`GrantedRetroBonusChanged` — the granted-instance pairing for #102's
+   `RetroBonusRule`, same new `retro-bonus` plugin) — contract fully resolved
+   (`@nlightn22/event-contracts@0.43.0`), not yet implemented.
 1. **Issue #154** (low-priority, open) — discount-rule follow-ups: `limitAmount` enforcement
    (real cap, not just safe-exclude), conflict-scope simplification, unreachable ERP-vs-portal
    branch, upstream version-collision/dedup risk (needs a search-platform-side issue number once
@@ -224,7 +260,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 `make dev` · `make dev-staging-integration` · `make dev-branch` · `make up` (never recreates
 running containers; `make up-rebuild` does — interrupts every contour) · `make seed-all` ·
-`make lint` · `make test` (180 files / 1413 tests as of 2026-10-02) · `make test-int` (never run
+`make lint` · `make test` (182 files / 1439 tests as of 2026-10-03) · `make test-int` (never run
 vitest directly) · `pnpm build:plugins` (mandatory alongside lint/test for any
 `packages/plugins/**` change) · `make preview-build`/`preview-up`/`preview-down`. `make dev-reset
 FORCE=1` wipes the **shared** Postgres volume for every contour — never run without checking
@@ -250,6 +286,15 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
   `is_deleted`/`isDeleted` first, before any other field parsing, same shape as
   `contract.handler.ts`/`discount-rule.handler.ts`. Deactivate by erpId only, never look up or
   overwrite other fields on a tombstone.
+- **Not every stream has a tombstone — verify per-stream before assuming one exists.**
+  `retro-bonus-rule` (#102) has none: confirmed against the ERP document's own source that both
+  natural expiry and early cancellation rewrite the same register row (`effectiveTo` shortened),
+  never a separate cancellation document the way `discount-rule`'s does. A handler with no
+  `isDeleted`/`isActive` branch is correct there, not an oversight — don't "fix" it to match the
+  other handlers' shape without re-checking the specific stream's own cancellation mechanism.
+- **A still-unpushed migration can be edited/regenerated in place** instead of adding a second
+  migration for the same table — done for #102's post-audit index. Once pushed, treat migrations
+  as append-only as usual.
 - **An ERP stream's own `version` is not always strictly monotonic across causally-related events
   for the same entity** (confirmed for discount-rule's update+cancel pair, same root cause likely
   applies to every other register-based stream: retro-bonus, stock, price, …) — a service-level
