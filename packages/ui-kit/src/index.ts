@@ -99,6 +99,11 @@ export { default as MvCard } from './components/MvCard/MvCard.vue';
 export { default as MvBreadcrumbs } from './components/MvBreadcrumbs/MvBreadcrumbs.vue';
 export { default as MvIconButton } from './components/MvIconButton/MvIconButton.vue';
 export type { IconButtonVariant } from './components/MvIconButton/MvIconButton.vue';
+export { default as MvCategoryNav } from './components/MvCategoryNav/MvCategoryNav.vue';
+export type {
+    CategoryNavPanel,
+    CategoryNavItem,
+} from './components/MvCategoryNav/MvCategoryNav.vue';
 export { default as MvCatalogDropdown } from './components/MvCatalogDropdown/MvCatalogDropdown.vue';
 export type { CollectionNode } from './components/MvCatalogDropdown/MvCatalogDropdown.vue';
 

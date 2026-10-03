@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
+import { IconCategory } from '@tabler/icons-vue';
 
 export interface CollectionNode {
     id: string;
     name: string;
     slug: string;
+    iconUrl?: string | null;
     children: CollectionNode[];
 }
+
+const GROUP_PREVIEW_LIMIT = 6;
 
 const props = defineProps<{
     collections: CollectionNode[];
@@ -15,23 +19,26 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     close: [];
-    navigate: [slug: string];
 }>();
 
-const activeId = ref<string | null>(null);
+const hoveredId = ref<string | null>(null);
+const expandedGroups = reactive(new Set<string>());
 
-function activeCollection(): CollectionNode | null {
-    const id = activeId.value ?? props.collections[0]?.id ?? null;
-    return props.collections.find(c => c.id === id) ?? props.collections[0] ?? null;
+const activeCollection = computed(
+    () => props.collections.find(c => c.id === hoveredId.value) ?? props.collections[0] ?? null,
+);
+
+function categoryLink(slug: string): { path: string; query: { collection: string } } {
+    return { path: '/catalog', query: { collection: slug } };
 }
 
-function setActive(id: string): void {
-    activeId.value = id;
+function visibleItems(group: CollectionNode): CollectionNode[] {
+    return expandedGroups.has(group.id) ? group.children : group.children.slice(0, GROUP_PREVIEW_LIMIT);
 }
 
-function navigate(slug: string): void {
-    emit('navigate', slug);
-    emit('close');
+function toggleGroup(id: string): void {
+    if (expandedGroups.has(id)) expandedGroups.delete(id);
+    else expandedGroups.add(id);
 }
 </script>
 
@@ -42,38 +49,59 @@ function navigate(slug: string): void {
                 <aside class="mv-catalog-dropdown__left">
                     <p class="mv-catalog-dropdown__label">Catalogue</p>
                     <nav class="mv-catalog-dropdown__cat-list">
-                        <button
+                        <RouterLink
                             v-for="col in collections"
                             :key="col.id"
-                            :class="['mv-catalog-dropdown__cat', { 'mv-catalog-dropdown__cat--active': (activeId ?? collections[0]?.id) === col.id }]"
-                            type="button"
-                            @mouseenter="setActive(col.id)"
-                            @click="navigate(col.slug)"
+                            :to="categoryLink(col.slug)"
+                            :class="['mv-catalog-dropdown__cat', { 'mv-catalog-dropdown__cat--active': activeCollection?.id === col.id }]"
+                            @mouseenter="hoveredId = col.id"
+                            @focus="hoveredId = col.id"
+                            @click="emit('close')"
                         >
-                            {{ col.name }}
-                        </button>
+                            <img v-if="col.iconUrl" class="mv-catalog-dropdown__icon" :src="col.iconUrl" alt="" />
+                            <IconCategory v-else class="mv-catalog-dropdown__icon" :size="26" :stroke-width="1.6" />
+                            <span>{{ col.name }}</span>
+                        </RouterLink>
                     </nav>
                 </aside>
 
-                <div v-if="activeCollection()" class="mv-catalog-dropdown__content">
+                <div v-if="activeCollection" class="mv-catalog-dropdown__content">
                     <div class="mv-catalog-dropdown__head">
-                        <h2 class="mv-catalog-dropdown__title">{{ activeCollection()!.name }}</h2>
-                    </div>
-                    <div v-if="activeCollection()!.children.length > 0" class="mv-catalog-dropdown__grid">
-                        <button
-                            v-for="child in activeCollection()!.children"
-                            :key="child.id"
-                            class="mv-catalog-dropdown__sub"
-                            type="button"
-                            @click="navigate(child.slug)"
+                        <RouterLink
+                            class="mv-catalog-dropdown__title"
+                            :to="categoryLink(activeCollection.slug)"
+                            @click="emit('close')"
                         >
-                            {{ child.name }}
-                        </button>
+                            {{ activeCollection.name }}
+                        </RouterLink>
                     </div>
-                    <div v-else class="mv-catalog-dropdown__empty">
-                        <button class="mv-catalog-dropdown__sub mv-catalog-dropdown__sub--browse" type="button" @click="navigate(activeCollection()!.slug)">
-                            Browse all →
-                        </button>
+                    <div v-if="activeCollection.children.length > 0" class="mv-catalog-dropdown__grid">
+                        <div v-for="group in activeCollection.children" :key="group.id" class="mv-catalog-dropdown__group">
+                            <RouterLink
+                                class="mv-catalog-dropdown__group-title"
+                                :to="categoryLink(group.slug)"
+                                @click="emit('close')"
+                            >
+                                {{ group.name }}
+                            </RouterLink>
+                            <RouterLink
+                                v-for="item in visibleItems(group)"
+                                :key="item.id"
+                                class="mv-catalog-dropdown__sub"
+                                :to="categoryLink(item.slug)"
+                                @click="emit('close')"
+                            >
+                                {{ item.name }}
+                            </RouterLink>
+                            <button
+                                v-if="group.children.length > GROUP_PREVIEW_LIMIT"
+                                type="button"
+                                class="mv-catalog-dropdown__more"
+                                @click="toggleGroup(group.id)"
+                            >
+                                {{ expandedGroups.has(group.id) ? 'Less' : 'More' }}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -97,6 +125,8 @@ function navigate(slug: string): void {
     box-shadow: 0 26px 60px rgba(20, 35, 31, 0.16);
     backdrop-filter: blur(18px);
     z-index: 10;
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
 }
 
 .mv-catalog-dropdown__inner {
@@ -129,11 +159,15 @@ function navigate(slug: string): void {
 }
 
 .mv-catalog-dropdown__cat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     min-height: 42px;
     padding: 0 14px;
     border-radius: 12px;
     border: none;
     background: transparent;
+    text-decoration: none;
     text-align: left;
     font-size: 15px;
     font-weight: 700;
@@ -168,8 +202,13 @@ function navigate(slug: string): void {
     margin-bottom: 20px;
 }
 
+.mv-catalog-dropdown__title:hover {
+    color: #008a64;
+}
+
 .mv-catalog-dropdown__title {
-    margin: 0;
+    display: inline-block;
+    text-decoration: none;
     font-size: 28px;
     font-weight: 900;
     letter-spacing: -0.04em;
@@ -179,14 +218,59 @@ function navigate(slug: string): void {
 .mv-catalog-dropdown__grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(180px, 1fr));
-    gap: 10px 32px;
+    gap: 22px 32px;
+    align-items: start;
 }
 
-.mv-catalog-dropdown__sub {
-    min-height: 36px;
+.mv-catalog-dropdown__group {
+    display: grid;
+    gap: 2px;
+}
+
+.mv-catalog-dropdown__group-title {
+    display: block;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 850;
+    color: #14231f;
+    text-decoration: none;
+}
+
+.mv-catalog-dropdown__group-title:hover {
+    color: #008a64;
+    background: #f3f7f5;
+}
+
+.mv-catalog-dropdown__more {
+    justify-self: start;
+    min-height: 32px;
     padding: 0 10px;
     border: none;
     background: transparent;
+    font-size: 13px;
+    font-weight: 700;
+    color: #00a878;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.mv-catalog-dropdown__icon {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    color: #62736c;
+}
+
+.mv-catalog-dropdown__sub {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 10px;
+    border: none;
+    background: transparent;
+    text-decoration: none;
     text-align: left;
     font-size: 14px;
     color: #62736c;
@@ -201,11 +285,6 @@ function navigate(slug: string): void {
     background: #f3f7f5;
 }
 
-.mv-catalog-dropdown__sub--browse {
-    font-weight: 850;
-    color: #00a878;
-}
-
 .catalog-drop-enter-active,
 .catalog-drop-leave-active {
     transition: opacity 0.15s ease, transform 0.15s ease;
@@ -215,6 +294,12 @@ function navigate(slug: string): void {
 .catalog-drop-leave-to {
     opacity: 0;
     transform: translateY(-8px);
+}
+
+@media (max-width: 1180px) {
+    .mv-catalog-dropdown {
+        display: none;
+    }
 }
 
 @media (max-width: 960px) {

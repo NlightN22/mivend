@@ -8,7 +8,11 @@ import { MvCatalogFacets, MvBreadcrumbs } from '@mivend/ui-kit';
 import ProductListView from '../../components/ProductListView.vue';
 // Imports the TS source directly — see the comment in useProductList.ts for why 'shared''s
 // compiled package output breaks a Vite production build.
-import { resolveCategoryFacetValueId, buildCategoryPanel } from '../../../../shared/src/collectionTree';
+import {
+    resolveCategoryFacetValueId,
+    buildCategoryPanel,
+    findCategoryPath,
+} from '../../../../shared/src/collectionTree';
 
 const route = useRoute();
 const router = useRouter();
@@ -80,17 +84,21 @@ const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds))
 const selectedCategorySlug = computed(() => (route.query.collection as string) || undefined);
 
 const categoryPanel = computed(() =>
-    buildCategoryPanel(catalogStore.rawCollections, selectedCategorySlug.value),
+    buildCategoryPanel(catalogStore.collections, selectedCategorySlug.value),
 );
 
-// Always at least [{ label: 'Каталог' }] — even with nothing selected — so this block stays
-// mounted with a stable height instead of appearing/disappearing as the category changes.
+const categoryPath = computed(() =>
+    selectedCategorySlug.value ? findCategoryPath(catalogStore.collections, selectedCategorySlug.value) : [],
+);
+
+// Always at least [{ label: 'Каталог' }] so this block keeps a stable height.
 const breadcrumbItems = computed(() => {
-    if (!categoryPanel.value.current) return [{ label: 'Каталог' }];
+    const path = categoryPath.value;
+    if (path.length === 0) return [{ label: 'Каталог' }];
     return [
         { label: 'Каталог', to: '/catalog' },
-        ...categoryPanel.value.ancestors.map(a => ({ label: a.name, to: `/catalog?collection=${a.slug}` })),
-        { label: categoryPanel.value.current.name },
+        ...path.slice(0, -1).map(n => ({ label: n.name, to: `/catalog?collection=${n.slug}` })),
+        { label: path[path.length - 1].name },
     ];
 });
 

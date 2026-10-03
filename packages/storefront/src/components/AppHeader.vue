@@ -79,16 +79,6 @@ function closeAll(): void {
     closeMobileNav();
 }
 
-function onMobileCatalogClick(): void {
-    closeMobileNav();
-    toggleCatalog();
-}
-
-function navigateToCollection(slug: string): void {
-    router.push({ path: '/catalog', query: { collection: slug } });
-    closeCatalog();
-}
-
 function onKeydown(e: KeyboardEvent): void {
     if (e.key === 'Escape') closeAll();
 }
@@ -160,10 +150,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                             </span>
                             <span>Favourites</span>
                         </RouterLink>
-                        <button type="button" class="app-header__nav-btn app-header__nav-btn--mobile-only" @click="onMobileCatalogClick">
-                            <span>☰</span>
-                            <span>Catalogue</span>
-                        </button>
                     </template>
 
                     <template v-else>
@@ -220,7 +206,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 :collections="catalogStore.collections"
                 :open="catalogOpen"
                 @close="closeCatalog"
-                @navigate="navigateToCollection"
             />
         </header>
 
@@ -400,7 +385,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 .app-header__nav-link:hover { background: #f4faf7; color: #008a64; }
 .app-header__nav-icon { font-size: 18px; line-height: 1; }
 
-.app-header__nav-btn--mobile-only { display: none; }
 
 .app-header__hamburger {
     display: none;
@@ -562,7 +546,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     .app-header__nav--open { transform: translateX(0); }
 
     /* AccountSidebar already lists Account/Orders/Favourites on these pages — no need to
-       duplicate them in the mobile off-canvas nav too, only the mobile-only Catalogue entry. */
+       duplicate them in the mobile off-canvas nav too. */
     .app-header__nav--in-zone .app-header__nav-btn--zone-dup { display: none; }
 
     .app-header__nav-btn {
@@ -578,7 +562,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         text-align: left;
     }
 
-    .app-header__nav-btn--mobile-only { display: flex; }
 
     .app-header__delivery {
         justify-content: flex-start;

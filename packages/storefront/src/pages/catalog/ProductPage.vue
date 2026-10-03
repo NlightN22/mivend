@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router';
 import { toast, MvProductGallery, MvProductMainCards } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
+import { useCatalogStore } from '../../stores/catalog';
+import { filterVisibleCrumbs } from '../../../../shared/src/collectionTree';
 import { discountAddToCartHint } from '../../utils/discountMessages';
 import { shopApi } from '../../api/client';
 import {
@@ -20,6 +22,7 @@ type RelatedProduct = RelatedProductsQuery['products']['items'][number];
 const route = useRoute();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
+const catalogStore = useCatalogStore();
 
 const product = ref<Product | null>(null);
 const related = ref<RelatedProduct[]>([]);
@@ -42,7 +45,7 @@ const category = computed(() => product.value?.facetValues.find(fv => fv.facet.c
 const breadcrumbItems = computed(() => {
   const collections = product.value?.collections ?? [];
   const deepest = [...collections].sort((a, b) => b.breadcrumbs.length - a.breadcrumbs.length)[0];
-  const trail = deepest ? deepest.breadcrumbs.slice(1).map(c => ({ label: c.name, to: `/catalog?collection=${c.slug}` })) : [];
+  const trail = deepest ? filterVisibleCrumbs(deepest.breadcrumbs, catalogStore.collections).map(c => ({ label: c.name, to: `/catalog?collection=${c.slug}` })) : [];
   return [
     { label: 'Главная', to: '/' },
     { label: 'Каталог', to: '/catalog' },
@@ -75,7 +78,10 @@ async function fetchData(slug: string) {
 }
 
 watch(() => route.params.slug, (slug) => { if (slug) fetchData(slug as string); });
-onMounted(() => { fetchData(route.params.slug as string); });
+onMounted(() => {
+  fetchData(route.params.slug as string);
+  catalogStore.loadCollections();
+});
 </script>
 
 <template>
