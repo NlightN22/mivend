@@ -49,6 +49,7 @@ import { StockStreamHandler } from './handlers/stock.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { OrganizationStreamHandler } from './handlers/organization.handler';
 import { DepartmentStreamHandler } from './handlers/department.handler';
+import { PositionStreamHandler } from './handlers/position.handler';
 import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
 import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-credit-balance.handler';
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
@@ -143,6 +144,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         WarehouseStreamHandler,
         OrganizationStreamHandler,
         DepartmentStreamHandler,
+        PositionStreamHandler,
         CounterpartyStreamHandler,
         CounterpartyCreditBalanceStreamHandler,
         StorageLocationStreamHandler,

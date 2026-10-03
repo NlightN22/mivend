@@ -21,6 +21,8 @@ import { Branch } from './entities/branch.entity';
 import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
+import { Position } from './entities/position.entity';
+import { PositionService } from './position.service';
 import { ErpUser } from './entities/erp-user.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
 import { RoleProvisioningService } from './role-provisioning.service';
@@ -229,6 +231,7 @@ const adminApiSchema = gql`
     entities: [
         RoleAccessScope,
         Department,
+        Position,
         Branch,
         Warehouse,
         BranchSettings,
@@ -239,6 +242,7 @@ const adminApiSchema = gql`
         AccessScopeService,
         RoleScopeConfigService,
         DepartmentService,
+        PositionService,
         BranchService,
         WarehouseService,
         BranchSettingsService,
@@ -254,6 +258,7 @@ const adminApiSchema = gql`
         AccessScopeService,
         RoleScopeConfigService,
         DepartmentService,
+        PositionService,
         BranchService,
         WarehouseService,
         BranchSettingsService,

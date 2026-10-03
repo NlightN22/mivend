@@ -41,6 +41,7 @@ function makeOptions(
                 'granted-discount': 'gd2',
                 'retro-bonus-rule': 'rbr2',
                 'granted-retro-bonus': 'grb2',
+                position: 'pos3',
             },
         },
         schemaRegistry: { url: 'http://x' },

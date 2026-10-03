@@ -113,6 +113,8 @@ export type InboundStream =
     // Department entity in @mivend/plugin-access-control. Different domain than the 10 streams
     // above (company.customers, not company.catalog/orders) — see DepartmentStreamHandler.
     | 'department'
+    // Job-position master data (company.customers) — feeds Position in @mivend/plugin-access-control.
+    | 'position'
     // The ERP's "Контрагент" (counterparty) — feeds @mivend/plugin-counterparty's Counterparty entity.
     // Same company.customers domain as department above. Issue #104: partial-create of name/
     // isActive/inn/erpGroupLabel/departmentId (verified live against
@@ -265,6 +267,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'order-registration-result': true,
     'order-changed': true,
     department: true,
+    position: true,
     counterparty: true,
     'counterparty-credit-balance': true,
     user: true,

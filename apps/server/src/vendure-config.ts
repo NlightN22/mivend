@@ -820,6 +820,9 @@ export const config: VendureConfig = {
                     'retro-bonus-rule':
                         process.env.INTEGRATION_KAFKA_TOPIC_RETRO_BONUS_RULE ??
                         'company.customers.events.v1.retro-bonus-rule-changed',
+                    position:
+                        process.env.INTEGRATION_KAFKA_TOPIC_POSITION ??
+                        'company.customers.events.v1.position-changed',
                     'granted-retro-bonus':
                         process.env.INTEGRATION_KAFKA_TOPIC_GRANTED_RETRO_BONUS ??
                         'company.customers.events.v1.granted-retro-bonus-changed',

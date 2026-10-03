@@ -8,6 +8,7 @@ import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
 import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-credit-balance.handler';
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
 import { DepartmentStreamHandler } from './handlers/department.handler';
+import { PositionStreamHandler } from './handlers/position.handler';
 import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
 import { GrantedDiscountStreamHandler } from './handlers/granted-discount.handler';
 import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
@@ -52,6 +53,7 @@ export class IntegrationInboxProcessorService {
         warehouseHandler: WarehouseStreamHandler,
         organizationHandler: OrganizationStreamHandler,
         departmentHandler: DepartmentStreamHandler,
+        positionHandler: PositionStreamHandler,
         counterpartyHandler: CounterpartyStreamHandler,
         counterpartyCreditBalanceHandler: CounterpartyCreditBalanceStreamHandler,
         storageLocationHandler: StorageLocationStreamHandler,
@@ -76,6 +78,7 @@ export class IntegrationInboxProcessorService {
             organization: organizationHandler,
             warehouse: warehouseHandler,
             department: departmentHandler,
+            position: positionHandler,
             counterparty: counterpartyHandler,
             'counterparty-credit-balance': counterpartyCreditBalanceHandler,
             'price-type': priceTypeHandler,
