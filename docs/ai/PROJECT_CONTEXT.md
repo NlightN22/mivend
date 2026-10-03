@@ -47,9 +47,11 @@ Shipment-time confirmed discount facts consumed as a new, read-only `GrantedDisc
 (`company.customers.events.v1`). `orderEntityId` kept as a plain ERP id, not a mivend `Order`
 relation — a shipment line can reference an order mivend never received. Production migration
 `1790945855613-add-granted-discount-table.ts` (regenerated once via the scratch-DB procedure).
-Upstream gap recorded: `search-platform#147` tracks stale `GrantedDiscount` facts (no
-re-send/correction signal once sent) — documented in `docs/ai/erp-streams-map.md`, not fixed
-mivend-side. Audited and closed.
+Upstream gap `search-platform#147` (unposted shipment sent nothing) is now fixed upstream: an
+unposted recorder arrives as `is_deleted=true`; handled in 6e2649a (row deleted by `entity_id`,
+unpushed at time of writing, owned by the #106 session). UI follow-ups: #155 (manager), #156 (storefront,
+blocked on a customer-visibility decision) — their "#147 blocker" comments are now obsolete once 6e2649a
+ships. Units: `discountAmount` is raw ERP rubles, not kopecks. Audited and closed.
 
 ## Recent changes (2026-09-29→10-02 — discount-rule stream #108/#152/#153/#154, docs/ai tracked)
 
