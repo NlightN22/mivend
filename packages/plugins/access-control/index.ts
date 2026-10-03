@@ -9,6 +9,7 @@ export { DepartmentService } from './src/department.service';
 export type { DepartmentRecordInput } from './src/department.service';
 export { Position } from './src/entities/position.entity';
 export { PositionService } from './src/position.service';
+export type { PositionRecordInput } from './src/position.service';
 export { Branch } from './src/entities/branch.entity';
 export { BranchService } from './src/branch.service';
 export type { BranchRecordInput } from './src/branch.service';

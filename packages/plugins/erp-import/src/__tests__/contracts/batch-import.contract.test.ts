@@ -49,6 +49,7 @@ const HANDLER_METHOD_BY_INDEX = [
     'upsert', // department
     'upsert', // branch
     'upsert', // employee
+    'upsert', // position
 ] as const;
 
 function buildService(): ErpImportService {
@@ -80,7 +81,7 @@ function buildService(): ErpImportService {
 }
 
 describe('ERP import batch contract: TYPE_TO_SCHEMA <-> ErpImportService agreement', () => {
-    it('has exactly the 15 record types this codebase currently documents (guards against an accidental add/remove going unnoticed)', () => {
+    it('has exactly the 16 record types this codebase currently documents (guards against an accidental add/remove going unnoticed)', () => {
         expect(Object.keys(TYPE_TO_SCHEMA).sort()).toEqual(
             [
                 'product',
@@ -98,6 +99,7 @@ describe('ERP import batch contract: TYPE_TO_SCHEMA <-> ErpImportService agreeme
                 'department',
                 'branch',
                 'employee',
+                'position',
             ].sort(),
         );
     });

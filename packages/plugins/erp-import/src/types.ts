@@ -1,6 +1,7 @@
 import type { DocumentRecord, OrganizationRequisitesRecord } from '@mivend/plugin-documents';
 import type {
     DepartmentRecordInput,
+    PositionRecordInput,
     BranchRecordInput,
     EmployeeRecordInput,
 } from '@mivend/plugin-access-control';
@@ -126,6 +127,7 @@ export type ImportRecord =
     | { type: 'document'; data: DocumentRecord }
     | { type: 'organizationRequisites'; data: OrganizationRequisitesRecord }
     | { type: 'department'; data: DepartmentRecordInput }
+    | { type: 'position'; data: PositionRecordInput }
     | { type: 'branch'; data: BranchRecordInput }
     | { type: 'employee'; data: EmployeeRecordInput };
 

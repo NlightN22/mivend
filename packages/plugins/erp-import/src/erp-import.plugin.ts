@@ -23,6 +23,7 @@ import { DiscountRuleHandler } from './handlers/discount-rule.handler';
 import { DocumentHandler } from './handlers/document.handler';
 import { OrganizationRequisitesHandler } from './handlers/organization-requisites.handler';
 import { DepartmentHandler } from './handlers/department.handler';
+import { PositionHandler } from './handlers/position.handler';
 import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 
@@ -54,6 +55,7 @@ import { EmployeeHandler } from './handlers/employee.handler';
         DocumentHandler,
         OrganizationRequisitesHandler,
         DepartmentHandler,
+        PositionHandler,
         BranchHandler,
         EmployeeHandler,
     ],

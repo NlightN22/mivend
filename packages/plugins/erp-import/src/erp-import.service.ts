@@ -13,6 +13,7 @@ import { DiscountRuleHandler } from './handlers/discount-rule.handler';
 import { DocumentHandler } from './handlers/document.handler';
 import { OrganizationRequisitesHandler } from './handlers/organization-requisites.handler';
 import { DepartmentHandler } from './handlers/department.handler';
+import { PositionHandler } from './handlers/position.handler';
 import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 import { ImportRunService } from './import-run.service';
@@ -40,6 +41,7 @@ export class ErpImportService {
         private readonly departmentHandler: DepartmentHandler,
         private readonly branchHandler: BranchHandler,
         private readonly employeeHandler: EmployeeHandler,
+        private readonly positionHandler: PositionHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -122,6 +124,9 @@ export class ErpImportService {
                 break;
             case 'department':
                 await this.departmentHandler.upsert(ctx, record.data);
+                break;
+            case 'position':
+                await this.positionHandler.upsert(ctx, record.data);
                 break;
             case 'branch':
                 await this.branchHandler.upsert(ctx, record.data);

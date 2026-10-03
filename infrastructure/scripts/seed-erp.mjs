@@ -360,7 +360,8 @@ async function main() {
     // already seeded at v3, since the exchangeId dedup above made a bare `make seed` at v3 a
     // silent no-op (real incident: v3 data reseeded 0 new PriceType rows until this bump).
     // v5 (2026-09-05, user request): added branch-east to the `branches` fixture.
-    const run = 'v5';
+    // v6 (#117): employees now carry positionErpId, with a new `positions` fixture.
+    const run = 'v6';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
@@ -927,11 +928,24 @@ async function main() {
         for (const e of branchResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
+    const positions = [
+        { erpId: 'pos-operator', name: 'Sales operator', isActive: true },
+        { erpId: 'pos-manager', name: 'Sales manager', isActive: true },
+        { erpId: 'pos-head', name: 'Head of sales', isActive: true },
+        { erpId: 'pos-director', name: 'General director', isActive: true },
+    ];
+    console.log(`Sending ${positions.length} positions...`);
+    const positionResult = await postBatch(`seed-positions-${run}`, positions.map(data => ({ type: 'position', data })));
+    console.log(`  → status=${positionResult.status} processed=${positionResult.processed} failed=${positionResult.failed}`);
+    if (positionResult.errors?.length > 0) {
+        for (const e of positionResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
     const employees = [
-        { erpId: 'emp-001', email: 'ivan.operator@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'operator' },
-        { erpId: 'emp-002', email: 'petr.manager@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'manager' },
-        { erpId: 'emp-003', email: 'olga.depthead@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'department-head' },
-        { erpId: 'emp-004', email: 'nikolai.director@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'general-director' },
+        { erpId: 'emp-001', email: 'ivan.operator@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'operator', positionErpId: 'pos-operator' },
+        { erpId: 'emp-002', email: 'petr.manager@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'manager', positionErpId: 'pos-manager' },
+        { erpId: 'emp-003', email: 'olga.depthead@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'department-head', positionErpId: 'pos-head' },
+        { erpId: 'emp-004', email: 'nikolai.director@mivend.dev', departmentErpId: 'dept-sales', branchErpId: 'branch-central', roleCode: 'general-director', positionErpId: 'pos-director' },
     ];
     console.log(`Sending ${employees.length} employees...`);
     const employeeResult = await postBatch(`seed-employees-${run}`, employees.map(data => ({ type: 'employee', data })));
