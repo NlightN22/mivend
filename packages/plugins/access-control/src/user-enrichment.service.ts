@@ -20,6 +20,7 @@ export interface UserEnrichmentInput {
     // UserStreamHandler's own comment.
     email?: string | null;
     departmentId?: string | null;
+    positionId?: string | null;
     // Issue #119: only meaningful once an Administrator is linked (AdministratorActivationService
     // no-ops otherwise) — never used to decide whether to create/keep an ErpUser row.
     fullName?: string | null;
@@ -127,6 +128,9 @@ export class UserEnrichmentService {
         }
         if (input.departmentId !== undefined) {
             admin.customFields = { ...admin.customFields, departmentId: input.departmentId };
+        }
+        if (input.positionId !== undefined) {
+            admin.customFields = { ...admin.customFields, positionId: input.positionId };
         }
         const saved = await repo.save(admin);
         if (input.isActive !== undefined) {

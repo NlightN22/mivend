@@ -9,6 +9,7 @@ import { BranchService } from '../../branch.service';
 import { BranchSettingsService } from '../../branch-settings.service';
 import { CreditTermLimitService } from '../../credit-term-limit.service';
 import { DepartmentService } from '../../department.service';
+import { PositionService } from '../../position.service';
 import { ErpUserService } from '../../erp-user.service';
 import { RoleScopeConfigService } from '../../role-scope-config.service';
 import { WarehouseService } from '../../warehouse.service';
@@ -41,6 +42,7 @@ describe('AccessControlResolver.teamMembers', () => {
         const resolver = new AccessControlResolver(
             {} as RoleScopeConfigService,
             {} as DepartmentService,
+            {} as PositionService,
             {} as BranchService,
             {} as WarehouseService,
             {} as BranchSettingsService,
@@ -71,6 +73,7 @@ describe('AccessControlResolver.teamMembers', () => {
 
 describe('AccessControlResolver.teamDirectory', () => {
     let administratorService: { findAll: ReturnType<typeof vi.fn> };
+    let positionService: { findNamesByErpIds: ReturnType<typeof vi.fn> };
     let accessScopeService: {
         getOwnDepartmentId: ReturnType<typeof vi.fn>;
         resolveTeamVisibilityScope: ReturnType<typeof vi.fn>;
@@ -80,6 +83,7 @@ describe('AccessControlResolver.teamDirectory', () => {
 
     beforeEach(() => {
         administratorService = { findAll: vi.fn() };
+        positionService = { findNamesByErpIds: vi.fn().mockResolvedValue(new Map()) };
         accessScopeService = {
             getOwnDepartmentId: vi.fn(),
             resolveTeamVisibilityScope: vi.fn(),
@@ -87,6 +91,7 @@ describe('AccessControlResolver.teamDirectory', () => {
         resolver = new AccessControlResolver(
             {} as RoleScopeConfigService,
             {} as DepartmentService,
+            positionService as unknown as PositionService,
             {} as BranchService,
             {} as WarehouseService,
             {} as BranchSettingsService,
@@ -119,6 +124,7 @@ describe('AccessControlResolver.teamDirectory', () => {
                 roleCodes: ['department-head'],
                 departmentId: 'dept-sales',
                 branchId: null,
+                positionId: null,
                 position: null,
             },
         ]);
@@ -157,15 +163,18 @@ describe('AccessControlResolver.teamDirectory', () => {
                 mockAdministrator('4', 'Ivan', 'Operator', {
                     departmentId: 'dept-sales',
                     branchId: 'branch-central',
-                    position: 'Sales operator',
+                    positionId: 'pos-1',
                 }),
             ],
         });
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'own' });
 
+        positionService.findNamesByErpIds.mockResolvedValue(new Map([['pos-1', 'Sales operator']]));
+
         const [member] = await resolver.teamDirectory(ctx);
         expect(member.branchId).toBe('branch-central');
+        expect(member.positionId).toBe('pos-1');
         expect(member.position).toBe('Sales operator');
     });
 });
@@ -176,6 +185,7 @@ describe('AccessControlResolver.portalUsers', () => {
         const resolver = new AccessControlResolver(
             {} as RoleScopeConfigService,
             {} as DepartmentService,
+            {} as PositionService,
             {} as BranchService,
             {} as WarehouseService,
             {} as BranchSettingsService,
@@ -208,6 +218,7 @@ describe('AccessControlResolver.resetAdministratorPassword', () => {
         const resolver = new AccessControlResolver(
             {} as RoleScopeConfigService,
             {} as DepartmentService,
+            {} as PositionService,
             {} as BranchService,
             {} as WarehouseService,
             {} as BranchSettingsService,
@@ -233,6 +244,7 @@ describe('AccessControlResolver.resetAdministratorPassword', () => {
         const resolver = new AccessControlResolver(
             {} as RoleScopeConfigService,
             {} as DepartmentService,
+            {} as PositionService,
             {} as BranchService,
             {} as WarehouseService,
             {} as BranchSettingsService,

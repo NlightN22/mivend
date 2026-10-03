@@ -76,6 +76,20 @@ describe('UserEnrichmentService', () => {
             );
         });
 
+        it('writes positionId, clears it on explicit null, and leaves it untouched when undefined', async () => {
+            const admin = { id: 'admin-1', customFields: { erpId: 'user-1', positionId: 'pos-1' } };
+            repo.findOne.mockResolvedValue(admin);
+
+            await service.linkAndEnrich(ctx, { erpId: 'user-1', positionId: 'pos-2' });
+            expect(admin.customFields.positionId).toBe('pos-2');
+
+            await service.linkAndEnrich(ctx, { erpId: 'user-1' });
+            expect(admin.customFields.positionId).toBe('pos-2');
+
+            await service.linkAndEnrich(ctx, { erpId: 'user-1', positionId: null });
+            expect(admin.customFields.positionId).toBeNull();
+        });
+
         // Never creates an Administrator — account provisioning stays manual. Issue #119:
         // surfaced as an ErpUser candidate instead.
         it('returns null, does not save, and upserts an unlinked ErpUser when no Administrator matches by email', async () => {

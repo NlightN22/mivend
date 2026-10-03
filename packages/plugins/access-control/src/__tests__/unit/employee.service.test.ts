@@ -110,7 +110,7 @@ describe('EmployeeService', () => {
                 customFields: {
                     departmentId: 'dept-sales',
                     branchId: 'branch-row-5',
-                    position: null,
+                    positionId: null,
                 },
             }),
         );
@@ -128,7 +128,7 @@ describe('EmployeeService', () => {
         expect(administratorService.update).toHaveBeenCalledWith(
             systemCtx,
             expect.objectContaining({
-                customFields: { departmentId: 'dept-sales', branchId: null, position: null },
+                customFields: { departmentId: 'dept-sales', branchId: null, positionId: null },
             }),
         );
     });
@@ -144,7 +144,7 @@ describe('EmployeeService', () => {
         expect(administratorService.update).toHaveBeenCalledWith(
             systemCtx,
             expect.objectContaining({
-                customFields: { departmentId: 'dept-sales', branchId: null, position: null },
+                customFields: { departmentId: 'dept-sales', branchId: null, positionId: null },
             }),
         );
     });

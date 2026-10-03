@@ -80,6 +80,7 @@ const adminApiSchema = gql`
         roleCodes: [String!]!
         departmentId: String
         branchId: String
+        positionId: String
         position: String
     }
 
@@ -306,13 +307,13 @@ const adminApiSchema = gql`
                 label: [{ languageCode: LanguageCode.en, value: 'Branch ID' }],
             },
             {
-                // Set by EmployeeService from the ERP org-structure import, same record as
-                // departmentId/branchId above.
-                name: 'position',
+                // Position.erpId — set by UserEnrichmentService (UserChanged.position_id) or
+                // EmployeeService; the display name is resolved from Position, never stored.
+                name: 'positionId',
                 type: 'string' as const,
                 nullable: true,
                 readonly: true,
-                label: [{ languageCode: LanguageCode.en, value: 'Job position' }],
+                label: [{ languageCode: LanguageCode.en, value: 'Position ID' }],
             },
             {
                 // Owned by @mivend/plugin-sync (registered here since this is where

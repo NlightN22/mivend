@@ -14,9 +14,8 @@ const loggerCtx = 'IntegrationUserHandler';
 // candidate row's display name; isActive/isDeleted drive automatic deactivate/reactivate of an
 // already-linked Administrator (UserEnrichmentService delegates to
 // AdministratorActivationService.syncFromErp) — never used to create/keep an ErpUser row.
-// role/positionId are deliberately still deferred (mivend #117's Position-entity design isn't
-// finalized yet, even though search-platform's own PositionChanged stream/position_id field are
-// already live).
+// positionId is the Position.erpId (same Ref_Key as PositionChanged.entity_id), issue #117; `role`
+// is deliberately still not consumed.
 @Injectable()
 export class UserStreamHandler implements InboundStreamHandler {
     constructor(private readonly userEnrichmentService: UserEnrichmentService) {}
@@ -33,6 +32,8 @@ export class UserStreamHandler implements InboundStreamHandler {
             'departmentId' in payload
                 ? ((payload.departmentId as string | null) ?? null)
                 : undefined;
+        const positionId =
+            'positionId' in payload ? ((payload.positionId as string | null) ?? null) : undefined;
         const fullName =
             'fullName' in payload ? ((payload.fullName as string | null) ?? null) : undefined;
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
@@ -43,6 +44,7 @@ export class UserStreamHandler implements InboundStreamHandler {
             erpId: entityId,
             email,
             departmentId,
+            positionId,
             fullName,
             isActive,
         });

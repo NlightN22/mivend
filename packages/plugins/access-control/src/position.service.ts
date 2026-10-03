@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { In } from 'typeorm';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { Position } from './entities/position.entity';
@@ -37,5 +38,13 @@ export class PositionService {
         position.isActive = isActive;
         await repo.save(position);
         return true;
+    }
+
+    async findNamesByErpIds(ctx: RequestContext, erpIds: string[]): Promise<Map<string, string>> {
+        if (erpIds.length === 0) return new Map();
+        const rows = await this.connection
+            .getRepository(ctx, Position)
+            .find({ where: { erpId: In(erpIds) } });
+        return new Map(rows.map(p => [p.erpId, p.name]));
     }
 }

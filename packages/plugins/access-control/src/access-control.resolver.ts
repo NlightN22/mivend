@@ -27,6 +27,7 @@ import { ErpUser } from './entities/erp-user.entity';
 import { Warehouse } from './entities/warehouse.entity';
 import { ErpUserService } from './erp-user.service';
 import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.service';
+import { PositionService } from './position.service';
 import { WarehouseService } from './warehouse.service';
 
 interface TeamMember {
@@ -44,6 +45,7 @@ interface TeamDirectoryMember {
     roleCodes: string[];
     departmentId: string | null;
     branchId: string | null;
+    positionId: string | null;
     position: string | null;
 }
 
@@ -52,6 +54,7 @@ export class AccessControlResolver {
     constructor(
         private roleScopeConfigService: RoleScopeConfigService,
         private departmentService: DepartmentService,
+        private positionService: PositionService,
         private branchService: BranchService,
         private warehouseService: WarehouseService,
         private branchSettingsService: BranchSettingsService,
@@ -101,12 +104,20 @@ export class AccessControlResolver {
             this.accessScopeService.getOwnDepartmentId(ctx),
             this.accessScopeService.resolveTeamVisibilityScope(ctx),
         ]);
+        const positionNames = await this.positionService.findNamesByErpIds(
+            ctx,
+            result.items.flatMap(a => {
+                const id = (a.customFields as { positionId?: string | null } | undefined)
+                    ?.positionId;
+                return id ? [id] : [];
+            }),
+        );
         return result.items.map(a => {
             const customFields = a.customFields as
                 | {
                       departmentId?: string | null;
                       branchId?: string | null;
-                      position?: string | null;
+                      positionId?: string | null;
                   }
                 | undefined;
             const departmentId = customFields?.departmentId ?? null;
@@ -119,7 +130,8 @@ export class AccessControlResolver {
                 roleCodes: a.user?.roles?.map(r => r.code) ?? [],
                 departmentId,
                 branchId: customFields?.branchId ?? null,
-                position: customFields?.position ?? null,
+                positionId: customFields?.positionId ?? null,
+                position: positionNames.get(customFields?.positionId ?? '') ?? null,
             };
         });
     }

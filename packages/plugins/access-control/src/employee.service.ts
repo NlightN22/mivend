@@ -29,7 +29,8 @@ export interface EmployeeRecordInput {
     // consumer — AccessScopeService, BranchSettingsService, Warehouse.branchId — expects).
     branchErpId?: string | null;
     roleCode?: string | null;
-    position?: string | null;
+    // Position.erpId, stored as-is (name resolved from the Position entity on read).
+    positionErpId?: string | null;
 }
 
 // Binds ERP org-structure data (department/branch/role) onto an existing Administrator,
@@ -66,7 +67,7 @@ export class EmployeeService {
             customFields: {
                 departmentId: record.departmentErpId,
                 branchId,
-                position: record.position ?? null,
+                positionId: record.positionErpId ?? null,
             },
         };
 
