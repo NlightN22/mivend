@@ -12,6 +12,7 @@ import {
     CATEGORY_FACET_CODE,
     CategoryCollectionNode,
     buildCategoryFacetFilter,
+    categoryErpIdFromSlug,
     parseFacetValueIds,
     planCategoryFilterUpdates,
     planCategoryVisibilityUpdates,
@@ -60,12 +61,18 @@ export async function recomputeCategoryTree(
         });
     }
 
+    // A category with no FacetValue of its own is a placeholder and always hidden.
+    const isPlaceholder = (slug: string): boolean => {
+        const code = categoryErpIdFromSlug(slug);
+        return code !== undefined && !facetValueIdByCode.has(code);
+    };
     const visibilityUpdates = planCategoryVisibilityUpdates(
         collections.map(c => ({
             id: String(c.id),
             parentId: c.parentId == null ? null : String(c.parentId),
             slug: c.translations[0]?.slug ?? '',
-            feedHidden: customFields(c).feedHidden === true,
+            feedHidden:
+                customFields(c).feedHidden === true || isPlaceholder(c.translations[0]?.slug ?? ''),
             visibilityOverride: customFields(c).visibilityOverride ?? null,
             isPrivate: c.isPrivate,
         })),
