@@ -2,6 +2,17 @@
 
 Updated: 2026-10-04 07:30
 
+## Recent changes (2026-10-04 — #160 ExternalSearchPlugin, unblocked part shipped/audited)
+
+- `SEARCH_BACKEND=external`: `totalItems` = search-service `total` (hits not synced into our DB are
+  skipped, so pages can be short; ~88% of index hits unsynced on staging). One batched, channel-scoped
+  `ProductLookupService.findByExternalIds` keeps search-service ranking order; excludes soft-deleted
+  products always and disabled ones on shop only.
+- Admin-api `search` + no-op `pendingSearchIndexUpdates`/`runPendingSearchIndexUpdates`/`reindex`
+  (no local index). Commits 42e43a0, 1f595d5.
+- **Still pending (blocked on search-platform#153)**: category browse, filters, facets, ERP-ID <->
+  Collection/FacetValue mapping. #160 stays open until then (or is split).
+
 ## Recent changes (2026-10-04 — #59 category tree UI in both portals, shipped/audited/closed)
 
 - Tree: one paginated all-collections query (`fetchAllCollections`, parallel after page 1) + recursive
