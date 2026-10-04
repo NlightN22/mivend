@@ -134,11 +134,6 @@ const adminApiSchema = gql`
     ],
     exports: [ReservationService, ReservationWriteOffSyncService, StockLevelService],
     shopApiExtensions: {
-        schema: gql`
-            extend type ProductVariant {
-                stockLevel: String!
-            }
-        `,
         resolvers: [ProductVariantStockResolver],
     },
     adminApiExtensions: {
