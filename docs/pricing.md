@@ -15,13 +15,11 @@ charged on an order.
 | `DiscountRule`             | `plugin-price-entry`      | Facet + time-window percentage discount on top of the base price |
 | `Counterparty`             | `plugin-counterparty`     | Legal entity; carries the `priceType` string from the ERP        |
 
-**Updated (issue #70, 2026-09-05):** the storefront now DOES show a price to a guest or to
-any customer whose own price can't be resolved — the branch's default `PriceType`
-(`BranchSettings.defaultPriceTypeId`, see #66) is shown as a fallback, with only
-general/all-counterparty discounts applied (never a customer-specific one). This is a
-deliberate reversal of this doc's earlier "no public retail price at all" stance — the
-user judged this acceptable (2026-09-05) since the fallback is always a real, branch-
-configured `PriceType` (e.g. `RETAIL`), not an arbitrary/raw index price.
+**Fallback price (issue #70):** a guest, or a customer whose own price can't be resolved, gets the
+branch's default `PriceType` (`BranchSettings.defaultPriceTypeId`, see #66) with only
+general/all-counterparty discounts applied — never a customer-specific one and never a raw index
+price. This replaces the earlier "no price resolved at all" stance; what the storefront _displays_
+to a guest is decided separately below.
 
 **Guest display (decided 2026-10-04):** the API still resolves the branch-default price and stock
 tier for a guest (`customerPrice`, `stockLevel`), but the storefront UI does NOT show them to a
@@ -148,8 +146,7 @@ is registered as `orderOptions.orderItemPriceCalculationStrategy` in
 `adjustOrderLine`, and address changes (see Vendure's `OrderItemPriceCalculationStrategy`
 docs for the exact list). It calls `PriceResolutionService.resolve()` and uses
 `customerPrice` as the line's unit price, falling back to `productVariant.listPrice`
-only when the customer has no resolvable price (guest, or no `PriceEntry` for their
-price type).
+only when neither the customer's own price nor the branch-default fallback resolves.
 
 Uses Vendure's `init(injector)` pattern (a plain class instantiated with `new` in
 `vendure-config.ts`, not a NestJS-managed provider) to pull `PriceResolutionService`
