@@ -350,3 +350,8 @@ Healthy `make dev-staging-integration` restart (after `pnpm build:plugins`): `/h
 about 25–40 s. Several minutes with the server pinned at ~90% CPU before it listens means a
 boot-time hook is doing O(n²) work (the manufacturer facet backfill did, fixed 2026-10-04);
 a concurrent restart by another session also kills the first one (`make: Killed`).
+
+**Orphaned ts-node-dev child spinning at ~90% CPU, port never listening**: a hot-reload during
+`pnpm build:plugins` can leave the child stuck in ts-node-dev's own `waitForFile` busy-wait
+(its compile process died mid-respawn). Confirm with a stack sample (`kill -USR1 <pid>`, then
+Debugger.pause over `127.0.0.1:9229`), then `kill -9` that child only — the watcher respawns it.
