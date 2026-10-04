@@ -1,6 +1,6 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 
-import { ExternalSearchResolver } from './external-search.resolver';
+import { ExternalAdminSearchResolver, ExternalSearchResolver } from './external-search.resolver';
 import { ExternalSearchService } from './external-search.service';
 import { ProductLookupService } from './product-lookup.service';
 import { SearchServiceClient } from './search-service.client';
@@ -12,6 +12,9 @@ import { SearchServiceClient } from './search-service.client';
     imports: [PluginCommonModule],
     shopApiExtensions: {
         resolvers: [ExternalSearchResolver],
+    },
+    adminApiExtensions: {
+        resolvers: [ExternalAdminSearchResolver],
     },
     providers: [SearchServiceClient, ProductLookupService, ExternalSearchService],
     compatibility: '>0.0.0',

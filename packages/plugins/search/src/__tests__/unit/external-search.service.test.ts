@@ -44,11 +44,13 @@ function makeProduct(id = 1): Product {
 }
 
 function makeLookup(product: Product | null): {
-    findByExternalId: ReturnType<typeof vi.fn>;
+    findByExternalIds: ReturnType<typeof vi.fn>;
     pickDefaultVariant: ReturnType<typeof vi.fn>;
 } {
     return {
-        findByExternalId: vi.fn().mockResolvedValue(product),
+        findByExternalIds: vi
+            .fn()
+            .mockResolvedValue(new Map(product ? [['ext-001', product]] : [])),
         pickDefaultVariant: vi.fn().mockImplementation((p: Product) => p.variants[0]),
     };
 }
@@ -68,7 +70,44 @@ describe('ExternalSearchService.search', () => {
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
 
         expect(result.items).toEqual([]);
-        expect(result.totalItems).toBe(0);
+        expect(result.totalItems).toBe(1);
+    });
+
+    it('uses search-service total and keeps its ranking order with one batched lookup', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({
+                items: [
+                    makeItem({ partOrProductId: 'ext-b', score: 2 }),
+                    makeItem({ partOrProductId: 'ext-missing', score: 1.8 }),
+                    makeItem({ partOrProductId: 'ext-a', score: 1 }),
+                ],
+                total: 500,
+            }),
+        };
+        const lookup = {
+            findByExternalIds: vi.fn().mockResolvedValue(
+                new Map([
+                    ['ext-a', makeProduct(1)],
+                    ['ext-b', makeProduct(2)],
+                ]),
+            ),
+            pickDefaultVariant: vi.fn().mockImplementation((p: Product) => p.variants[0]),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            lookup as unknown as ProductLookupService,
+        );
+
+        const result = await service.search(ctx, { term: 'oil' } as SearchInput);
+
+        expect(lookup.findByExternalIds).toHaveBeenCalledTimes(1);
+        expect(lookup.findByExternalIds).toHaveBeenCalledWith(ctx, [
+            'ext-b',
+            'ext-missing',
+            'ext-a',
+        ]);
+        expect(result.items.map(i => i.productId)).toEqual(['2', '1']);
+        expect(result.totalItems).toBe(500);
     });
 
     it('maps a matched item to a SearchResult using the product single/default variant', async () => {
@@ -105,7 +144,7 @@ describe('ExternalSearchService.search', () => {
             resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
         };
         const lookup = {
-            findByExternalId: vi.fn().mockResolvedValue(makeProduct()),
+            findByExternalIds: vi.fn().mockResolvedValue(new Map([['ext-001', makeProduct()]])),
             pickDefaultVariant: vi.fn().mockReturnValue(undefined),
         };
         const service = new ExternalSearchService(
@@ -129,7 +168,7 @@ describe('ExternalSearchService.search', () => {
         const result = await service.search(ctx, { term: 'no-match-xyz' } as SearchInput);
 
         expect(result).toEqual({ items: [], totalItems: 0, facetValues: [], collections: [] });
-        expect(lookup.findByExternalId).not.toHaveBeenCalled();
+        expect(lookup.findByExternalIds).toHaveBeenCalledWith(ctx, []);
     });
 
     // Audit finding, mivend.audit.70 (round 3, CRITICAL): a prior fix made this path throw,

@@ -1,5 +1,5 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { Ctx, RequestContext } from '@vendure/core';
+import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
 import type { SearchInput } from '@vendure/common/lib/generated-types';
 
 import { ExternalSearchResponse, ExternalSearchService } from './external-search.service';
@@ -13,6 +13,20 @@ export class ExternalSearchResolver {
     constructor(private externalSearchService: ExternalSearchService) {}
 
     @Query()
+    async search(
+        @Ctx() ctx: RequestContext,
+        @Args('input') input: SearchInput,
+    ): Promise<ExternalSearchResponse> {
+        return this.externalSearchService.search(ctx, input);
+    }
+}
+
+@Resolver()
+export class ExternalAdminSearchResolver {
+    constructor(private externalSearchService: ExternalSearchService) {}
+
+    @Query()
+    @Allow(Permission.ReadCatalog, Permission.ReadProduct)
     async search(
         @Ctx() ctx: RequestContext,
         @Args('input') input: SearchInput,

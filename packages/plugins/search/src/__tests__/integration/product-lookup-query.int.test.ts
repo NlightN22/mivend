@@ -7,7 +7,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-// Audit finding, mivend.audit.70: ProductLookupService.findByExternalId's query
+// Audit finding, mivend.audit.70: ProductLookupService.findByExternalIds query
 // (product-lookup.service.ts) was entirely unverified against a real repository/DB — every unit
 // test mocks ProductLookupService or fetch. This test does not bootstrap the real Vendure
 // Product entity (this plugin has no @vendure/testing component-test infra, and faithfully

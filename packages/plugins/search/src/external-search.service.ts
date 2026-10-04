@@ -63,28 +63,31 @@ export class ExternalSearchService {
 
         const response = await this.client.resolveQuery(request);
 
+        const products = await this.productLookup.findByExternalIds(
+            ctx,
+            response.items.map(item => item.partOrProductId),
+        );
         const items: ExternalSearchResult[] = [];
         for (const item of response.items) {
-            const result = await this.toSearchResult(ctx, item);
+            const result = this.toSearchResult(ctx, item, products.get(item.partOrProductId));
             if (result) items.push(result);
         }
 
         return {
             items,
-            // Only matched-and-mapped items are counted — a `total` reported by search-service
-            // for products not yet synced into this instance would be misleading (see the
-            // ID-mapping skip-unmatched rule in issue #69).
-            totalItems: items.length,
+            // search-service's total, so pagination works; hits not synced into this instance
+            // are skipped from `items`, which can leave a page shorter than `take`.
+            totalItems: response.total,
             facetValues: [],
             collections: [],
         };
     }
 
-    private async toSearchResult(
+    private toSearchResult(
         ctx: RequestContext,
         item: ResolveQueryResponseItem,
-    ): Promise<ExternalSearchResult | null> {
-        const product = await this.productLookup.findByExternalId(ctx, item.partOrProductId);
+        product: Product | undefined,
+    ): ExternalSearchResult | null {
         if (!product) return null;
 
         const variant = this.productLookup.pickDefaultVariant(product);

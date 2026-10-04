@@ -11,35 +11,32 @@ import { Product, RequestContext, TransactionalConnection } from '@vendure/core'
 export class ProductLookupService {
     constructor(private connection: TransactionalConnection) {}
 
-    async findByExternalId(ctx: RequestContext, externalId: string): Promise<Product | null> {
-        const repo = this.connection.getRepository(ctx, Product);
-        // Scoped by ctx.channelId (audit finding, mivend.audit.70): Vendure's own
-        // ElasticsearchPlugin/core SearchResolver always filters by channel, so the external
-        // backend must match that contract even though this deployment currently runs a single
-        // channel — never assume "only one channel exists today" stays true.
-        return (
-            repo
-                .createQueryBuilder('product')
-                .leftJoinAndSelect('product.translations', 'translations')
-                .leftJoinAndSelect('product.featuredAsset', 'featuredAsset')
-                .leftJoinAndSelect('product.variants', 'variants')
-                .leftJoinAndSelect('variants.translations', 'variantTranslations')
-                .leftJoinAndSelect('variants.featuredAsset', 'variantFeaturedAsset')
-                .innerJoin('product.channels', 'channel', 'channel.id = :channelId', {
-                    channelId: ctx.channelId,
-                })
-                // Dot-path entity property, not the raw physical column name (audit finding,
-                // mivend.audit.70) — TypeORM's QueryBuilder resolves `alias.customFields.propName`
-                // to the actual embedded column itself; this is Vendure core's own documented
-                // pattern for querying custom fields via QueryBuilder (see
-                // @vendure/core's ActiveOrderStrategy JSDoc example:
-                // `.where('order.customFields.orderToken = :orderToken', ...)`), unlike
-                // erp-integration's raw `rawConnection.createQueryBuilder()` usage elsewhere, which
-                // operates below TypeORM's entity-metadata layer and does need the literal column
-                // name — the two are different APIs, not two valid spellings of the same thing.
-                .where('product.customFields.externalId = :externalId', { externalId })
-                .getOne()
-        );
+    async findByExternalIds(
+        ctx: RequestContext,
+        externalIds: string[],
+    ): Promise<Map<string, Product>> {
+        const found = new Map<string, Product>();
+        if (externalIds.length === 0) return found;
+
+        const products = await this.connection
+            .getRepository(ctx, Product)
+            .createQueryBuilder('product')
+            .leftJoinAndSelect('product.translations', 'translations')
+            .leftJoinAndSelect('product.featuredAsset', 'featuredAsset')
+            .leftJoinAndSelect('product.variants', 'variants')
+            .leftJoinAndSelect('variants.translations', 'variantTranslations')
+            .leftJoinAndSelect('variants.featuredAsset', 'variantFeaturedAsset')
+            .innerJoin('product.channels', 'channel', 'channel.id = :channelId', {
+                channelId: ctx.channelId,
+            })
+            .where('product.customFields.externalId IN (:...externalIds)', { externalIds })
+            .getMany();
+
+        for (const product of products) {
+            const externalId = (product.customFields as { externalId?: string | null }).externalId;
+            if (externalId) found.set(externalId, product);
+        }
+        return found;
     }
 
     // Picks the product's sellable default variant for a search result — the single-variant-
