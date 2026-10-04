@@ -1,6 +1,34 @@
 # Project Context
 
-Updated: 2026-10-04 13:10
+Updated: 2026-10-04 15:00
+
+## Recent changes (2026-10-04 — #164 category browse/filters/facets on ExternalSearchPlugin, closed/audited)
+
+- Category = Collection slug `cat-<ErpId>` → `categoryId` (no `Collection.customFields.externalId`;
+  the `category` FacetValue exists only for the Collection filter and is hidden in the UI).
+- Manufacturer = Facet `manufacturer`, FacetValue `code` = ERP manufacturer id, mirrored from
+  `Manufacturer` by `ManufacturerFacetService` (erp-integration; backfilled at server boot, server
+  process only). Not assigned to variants: search-service answers membership and counts. Filter clicks →
+  `filters.manufacturer`; facet counts map back to FacetValues, unknown ones skipped.
+- A requested filter that resolves to nothing (bad slug, unknown/unsupported FacetValue) =
+  `unsatisfiable` → empty result, never the unfiltered set. One category only (first wins, warns).
+- Sort: `relevance` and `name` ASC only; price/name-desc fall back to relevance (#165 to hide in UI).
+- Bare request (no term/category/filter: home page, `/catalog`) is answered from mivend's own DB
+  (`ProductLookupService.browse`, one paginated id query, ordered by id or name, no facets). Its
+  in-stock filter uses `andProductInStock` in plugin-reservation (SQL twin of
+  `getAvailableToPromiseBatch`, drift-guarded by `in-stock-filter.int.test.ts`); a branch without
+  stock locations gets an empty list. Home/catalog verified: 45042 products, in-stock 17840.
+- Shop schema under `SEARCH_BACKEND=external` adds `SearchInput.inStock/priceRangeWithTax`
+  (accepted; price range ignored) — the storefront sends them on every catalog request.
+- UI: ui-kit `MvFacetGroup` (icon or letter avatar, 7 rows, searchable "show all") inside
+  `MvCatalogFacets` for both portals; storefront sends `collectionSlug`. docs/frontend.md "Catalog
+  filters". No filter sidebar on phones by design.
+- Storefront generated types come from codegen against the :3010 (external) schema; ES-only types are
+  gone (nothing used them). Regenerate against the local contour if they are needed again.
+- Open: #165 (hide unsupported sort/price controls), #166 (characteristics filter), manufacturer icons
+  have no data source (letters shown), staging has two manufacturers both named "собственные нужды".
+- Restart lesson: `main.ts` on :3010 does not hot-reload linked plugin `dist`; use
+  `make dev-staging-integration` (it kills the old contour itself) and wait for `/health` 200.
 
 ## Recent changes (2026-10-04 — #70 guest price, branch stock tiers, currency; closed/audited)
 
@@ -38,8 +66,7 @@ Updated: 2026-10-04 13:10
   products always and disabled ones on shop only.
 - Admin-api `search` + no-op `pendingSearchIndexUpdates`/`runPendingSearchIndexUpdates`/`reindex`
   (no local index). Commits 42e43a0, 1f595d5.
-- **Still pending (blocked on search-platform#153)**: category browse, filters, facets, ERP-ID <->
-  Collection/FacetValue mapping. Tracked in #164.
+- Category browse, filters and facets: done in #164 (see the top section).
 
 ## Recent changes (2026-10-04 — #59 category tree UI in both portals, shipped/audited/closed)
 
