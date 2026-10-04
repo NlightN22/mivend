@@ -14,6 +14,8 @@ const props = withDefaults(
         // separate mega-menu/URL slug, so it hides that group here; manager has no such
         // navigation and passes an empty array to show every facet group as checkboxes.
         hiddenFacetCodes?: string[];
+        // False when the active search backend cannot filter by price.
+        showPrice?: boolean;
         // Siblings/current/children of the selected category — one more section
         // in this widget (MvCategoryNav). Omit to not render it.
         categoryPanel?: CategoryNavPanel;
@@ -25,6 +27,7 @@ const props = withDefaults(
     }>(),
     {
         hiddenFacetCodes: () => ['category'],
+        showPrice: true,
         categoryMoreLabel: undefined,
         categoryLessLabel: undefined,
         facetShowAllLabel: undefined,
@@ -98,7 +101,7 @@ function onMaxInput(e: Event): void {
         </div>
 
         <!-- Price range -->
-        <div class="catalog-facets__block">
+        <div v-if="showPrice" class="catalog-facets__block">
             <h2 class="catalog-facets__block-title">Price</h2>
             <div class="catalog-facets__price-row">
                 <div class="catalog-facets__price-field">

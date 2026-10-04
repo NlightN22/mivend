@@ -14,6 +14,7 @@ const props = defineProps<{
     hasMore: boolean;
     viewMode: ViewMode;
     sortKey: string;
+    sortOptions: { value: string; label: string }[];
     title?: string;
     showPrices: boolean;
     gridColumns?: number;
@@ -74,9 +75,9 @@ function handleToggleFavorite(p: ProductItem): void {
                     :value="sortKey"
                     @change="emit('update:sortKey', ($event.target as HTMLSelectElement).value)"
                 >
-                    <option value="stock">In stock first</option>
-                    <option value="price-asc">Lowest price first</option>
-                    <option value="brand">By brand</option>
+                    <option v-for="option in sortOptions" :key="option.value" :value="option.value">
+                        {{ option.label }}
+                    </option>
                 </select>
                 <div class="plv-toolbar__view">
                     <button

@@ -42,7 +42,7 @@ const activeCollectionSlug = computed(() =>
     searchQuery.value ? undefined : ((route.query.collection as string) || undefined),
 );
 
-const { items, facetGroups, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode, sortKey, load, loadMore } =
+const { items, facetGroups, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, priceRangeSupported, load, loadMore } =
     useProductList({ pageSize: 24, query: searchQuery, filters, collectionSlug: activeCollectionSlug });
 
 // Sync filter state → URL (replace so back button works correctly)
@@ -154,6 +154,7 @@ onMounted(() => {
                 :selected-facet-values="selectedFacetValues"
                 :price-min="filters.priceMin"
                 :price-max="filters.priceMax"
+                :show-price="priceRangeSupported"
                 :category-panel="searchQuery ? undefined : categoryPanel"
                 :category-more-label="t('catalogNav.more')"
                 :category-less-label="t('catalogNav.less')"
@@ -176,6 +177,7 @@ onMounted(() => {
                 :has-more="hasMore"
                 :view-mode="viewMode"
                 :sort-key="sortKey"
+                :sort-options="sortOptions"
                 :title="searchQuery ? `Search: &quot;${searchQuery}&quot;` : 'Product catalog'"
                 :show-prices="authStore.isLoggedIn"
                 @update:view-mode="setViewMode($event)"

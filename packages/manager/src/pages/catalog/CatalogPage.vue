@@ -135,6 +135,7 @@ void loadAll();
                 :selected-facet-values="selectedFacetValues"
                 :price-min="filters.priceMin"
                 :price-max="filters.priceMax"
+                :show-price="false"
                 :category-panel="categories.panel.value"
                 category-more-label="More"
                 category-less-label="Less"

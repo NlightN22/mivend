@@ -1,5 +1,7 @@
 import { ref, watch, type Ref } from 'vue';
 import { shopApi } from '../api/client';
+import { buildSort, type SortOption } from './search-sort';
+import { useSearchCapabilities } from './useSearchCapabilities';
 import {
     CatalogFacetsDocument,
     CatalogProductsDocument,
@@ -116,6 +118,8 @@ export function useProductList(options: UseProductListOptions = {}): {
     viewMode: Ref<ViewMode>;
     setViewMode: (mode: ViewMode) => void;
     sortKey: Ref<string>;
+    sortOptions: Ref<SortOption[]>;
+    priceRangeSupported: Ref<boolean>;
     loadMore: () => Promise<void>;
     load: () => Promise<void>;
 } {
@@ -128,13 +132,18 @@ export function useProductList(options: UseProductListOptions = {}): {
     const loadingMore = ref(false);
     const hasMore = ref(true);
     const { viewMode, setViewMode } = useViewMode();
-    const sortKey = ref('stock');
+    const sortKey = ref('relevance');
+    const {
+        sortOptions,
+        priceRange: priceRangeSupported,
+        ready: capabilitiesReady,
+    } = useSearchCapabilities();
     let currentSkip = 0;
 
     function buildPriceRange(): { min: number; max: number } | undefined {
         const priceMin = filters?.value.priceMin;
         const priceMax = filters?.value.priceMax;
-        if (priceMin == null && priceMax == null) return undefined;
+        if (!priceRangeSupported.value || (priceMin == null && priceMax == null)) return undefined;
         return {
             min: priceMin != null ? Math.round(priceMin * 100) : 0,
             max: priceMax != null ? Math.round(priceMax * 100) : 999_999_999,
@@ -152,6 +161,7 @@ export function useProductList(options: UseProductListOptions = {}): {
             facetValueFilters: buildFacetValueFilters(facetValueIds, facetGroups.value),
             inStock: filters?.value.inStock ? true : undefined,
             priceRangeWithTax: buildPriceRange(),
+            sort: buildSort(sortKey.value),
         });
     }
 
@@ -170,6 +180,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     async function load(): Promise<void> {
         const seq = ++loadSeq;
         loading.value = true;
+        await capabilitiesReady;
         let productsResult: CatalogProductsQuery;
         let facetsResult: CatalogFacetsQuery | null;
         try {
@@ -228,6 +239,8 @@ export function useProductList(options: UseProductListOptions = {}): {
         viewMode,
         setViewMode,
         sortKey,
+        sortOptions,
+        priceRangeSupported,
         loadMore,
         load,
     };

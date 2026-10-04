@@ -6,6 +6,7 @@ query CatalogProducts(
     $facetValueFilters: [FacetValueFilterInput!]
     $inStock: Boolean
     $priceRangeWithTax: PriceRangeInput
+    $sort: SearchResultSortParameter
 ) {
     search(
         input: {
@@ -17,6 +18,7 @@ query CatalogProducts(
             facetValueFilters: $facetValueFilters
             inStock: $inStock
             priceRangeWithTax: $priceRangeWithTax
+            sort: $sort
         }
     ) {
         totalItems
@@ -84,5 +86,12 @@ query CatalogFacets($term: String, $collectionSlug: String, $inStock: Boolean, $
             }
             count
         }
+    }
+}
+
+query SearchCapabilities {
+    searchCapabilities {
+        sortKeys
+        priceRange
     }
 }

@@ -7,7 +7,7 @@ import ProductListView from '../../components/ProductListView.vue';
 import ProductScrollRow from '../../components/ProductScrollRow.vue';
 
 const authStore = useAuthStore();
-const { items, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode, sortKey, load, loadMore } = useProductList({ pageSize: 24 });
+const { items, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, load, loadMore } = useProductList({ pageSize: 24 });
 
 const newArrivals = useWidgetProducts('new-arrivals');
 const sales = useWidgetProducts('sales');
@@ -55,6 +55,7 @@ onMounted(() => {
                 :has-more="hasMore"
                 :view-mode="viewMode"
                 :sort-key="sortKey"
+                :sort-options="sortOptions"
                 :show-prices="authStore.isLoggedIn"
                 :grid-columns="5"
                 @update:view-mode="setViewMode($event)"

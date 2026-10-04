@@ -3431,6 +3431,7 @@ export type Query = {
     products: ProductList;
     /** Search Products based on the criteria set by the `SearchInput` */
     search: SearchResponse;
+    searchCapabilities: SearchCapabilities;
     tradingPoint?: Maybe<TradingPoint>;
 };
 
@@ -3629,6 +3630,11 @@ export type Role = Node & {
 export type RoleList = PaginatedList & {
     items: Array<Role>;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchCapabilities = {
+    priceRange: Scalars['Boolean']['output'];
+    sortKeys: Array<Scalars['String']['output']>;
 };
 
 export type SearchInput = {
@@ -4268,6 +4274,7 @@ export type CatalogProductsQueryVariables = Exact<{
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput> | FacetValueFilterInput>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
+    sort?: InputMaybe<SearchResultSortParameter>;
 }>;
 
 export type CatalogProductsQuery = {
@@ -4322,6 +4329,12 @@ export type CatalogFacetsQuery = {
             };
         }>;
     };
+};
+
+export type SearchCapabilitiesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SearchCapabilitiesQuery = {
+    searchCapabilities: { sortKeys: Array<string>; priceRange: boolean };
 };
 
 export type ProductWidgetFieldsFragment = {
@@ -5201,9 +5214,9 @@ export const EndAllSessionsDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<EndAllSessionsMutation, EndAllSessionsMutationVariables>;
 export const CatalogProductsDocument = new TypedDocumentString(`
-    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $collectionSlug: String, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $collectionSlug: String, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput, $sort: SearchResultSortParameter) {
   search(
-    input: {term: $term, take: $take, skip: $skip, groupByProduct: true, collectionSlug: $collectionSlug, facetValueFilters: $facetValueFilters, inStock: $inStock, priceRangeWithTax: $priceRangeWithTax}
+    input: {term: $term, take: $take, skip: $skip, groupByProduct: true, collectionSlug: $collectionSlug, facetValueFilters: $facetValueFilters, inStock: $inStock, priceRangeWithTax: $priceRangeWithTax, sort: $sort}
   ) {
     totalItems
     items {
@@ -5266,6 +5279,14 @@ export const CatalogFacetsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<CatalogFacetsQuery, CatalogFacetsQueryVariables>;
+export const SearchCapabilitiesDocument = new TypedDocumentString(`
+    query SearchCapabilities {
+  searchCapabilities {
+    sortKeys
+    priceRange
+  }
+}
+    `) as unknown as TypedDocumentString<SearchCapabilitiesQuery, SearchCapabilitiesQueryVariables>;
 export const NewArrivalsDocument = new TypedDocumentString(`
     query NewArrivals($since: DateTime!) {
   products(
