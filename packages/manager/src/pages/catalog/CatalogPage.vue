@@ -1,85 +1,48 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { MvPanel, MvPagination, MvCatalogFacets, MvProductRow, MvCatalogDropdown } from '@mivend/ui-kit';
-import {
-    DEFAULT_CATALOG_FILTERS,
-    fetchCatalogFacets,
-    fetchCatalogPage,
-    fetchCategoryTree,
-    fetchStockForVariants,
-    fetchPriceEntriesForVariants,
-    type CatalogFilters,
-    type CatalogListItem,
-} from '../../api/catalog';
+import { useRoute, useRouter } from 'vue-router';
+import { MvPanel, MvPagination, MvCatalogFacets, MvProductRow, MvCatalogDropdown, MvBreadcrumbs } from '@mivend/ui-kit';
+import { DEFAULT_CATALOG_FILTERS, fetchCatalogFacets, type CatalogFilters } from '../../api/catalog';
 import { fetchPriceTypeCodes } from '../../api/discounts';
-import { FLOOR_PRICE_TYPE_CODE } from '../../constants/pricing';
-import type { FacetGroup, CollectionNode } from 'shared';
-// Imports the TS source directly — see the comment in api/catalog.ts for why 'shared''s
-// compiled package output breaks a Vite production build.
-import { resolveCategoryFacetValueId } from '../../../../shared/src/collectionTree';
+import type { FacetGroup } from 'shared';
+import { parseCatalogQuery, buildCatalogQuery } from '../../composables/catalogQuery';
+import { useCatalogRows } from '../../composables/useCatalogRows';
+import { useCatalogCategories } from '../../composables/useCatalogCategories';
 import CatalogRowExtras from '../../components/catalog/CatalogRowExtras.vue';
 
-const filters = reactive<CatalogFilters>({ ...DEFAULT_CATALOG_FILTERS });
-const page = ref(1);
+const route = useRoute();
+const router = useRouter();
+const initial = parseCatalogQuery(route.query);
+const filters = reactive<CatalogFilters>({
+    ...DEFAULT_CATALOG_FILTERS,
+    facetValueIds: initial.facetValueIds,
+    inStock: initial.inStock,
+    priceMin: initial.priceMin,
+    priceMax: initial.priceMax,
+});
+const page = ref(initial.page);
+const collection = computed(() => parseCatalogQuery(route.query).collection);
 const pageSize = 20;
 
-const items = ref<CatalogListItem[]>([]);
-const totalItems = ref(0);
 const facetGroups = ref<FacetGroup[]>([]);
 const priceTypeCodes = ref<string[]>([]);
-const stock = ref<Map<string, number>>(new Map());
-// First price type is shown directly on each MvProductRow ("base" price); any further ones
-// (rare — currently only WHOLESALE is seeded) are manager-only extras, same as floor price.
-const basePrices = ref<Map<string, number>>(new Map());
-const extraPriceColumns = ref<{ priceTypeCode: string; label: string; prices: Map<string, number> }[]>(
-    [],
-);
-const floorPrices = ref<Map<string, number> | null>(null);
-const loading = ref(true);
+const ready = ref(false);
 
 const selectedFacetValues = computed(() => new Set(filters.facetValueIds));
-
-// Category dropdown (drill-down browsing by structure) — an alternative to the flat facet
-// checkboxes above, same MvCatalogDropdown storefront uses for its mega-menu.
-const categoryTree = ref<CollectionNode[]>([]);
+const categories = useCatalogCategories(collection, computed(() => route.query));
 const categoryDropdownOpen = ref(false);
+const { items, totalItems, stock, basePrices, extraPriceColumns, floorPrices, loading, loadPage } = useCatalogRows(
+    filters, page, collection, facetGroups, priceTypeCodes,
+);
 
 async function toggleCategoryDropdown(): Promise<void> {
-    if (!categoryDropdownOpen.value && categoryTree.value.length === 0) {
-        categoryTree.value = await fetchCategoryTree();
-    }
+    if (!categoryDropdownOpen.value) await categories.loadTree();
     categoryDropdownOpen.value = !categoryDropdownOpen.value;
 }
 
-function navigateToCategory(slug: string): void {
-    const valueId = resolveCategoryFacetValueId(slug, facetGroups.value);
-    if (valueId) filters.facetValueIds = [valueId];
+function navigateToCategory(slug: string | undefined): void {
+    categories.navigate(slug);
     categoryDropdownOpen.value = false;
-}
-
-async function loadPricesAndStock(rows: CatalogListItem[]): Promise<void> {
-    const variantIds = rows.map(r => r.productVariantId);
-    const [stockMap, floorMap, ...priceMaps] = await Promise.all([
-        fetchStockForVariants(variantIds),
-        fetchPriceEntriesForVariants(variantIds, FLOOR_PRICE_TYPE_CODE),
-        ...priceTypeCodes.value.map(code => fetchPriceEntriesForVariants(variantIds, code)),
-    ]);
-    stock.value = stockMap;
-    floorPrices.value = floorMap;
-    const [baseCode, ...restCodes] = priceTypeCodes.value;
-    basePrices.value = baseCode ? priceMaps[0] ?? new Map() : new Map();
-    extraPriceColumns.value = restCodes.map((code, i) => ({
-        priceTypeCode: code,
-        label: `${code[0]}${code.slice(1).toLowerCase()}`,
-        prices: priceMaps[i + 1] ?? new Map(),
-    }));
-}
-
-async function loadPage(): Promise<void> {
-    const result = await fetchCatalogPage(filters, facetGroups.value, page.value, pageSize);
-    items.value = result.items;
-    totalItems.value = result.totalItems;
-    await loadPricesAndStock(result.items);
 }
 
 function resetFilters(): void {
@@ -94,35 +57,59 @@ function toggleFacetValue(id: string): void {
     filters.facetValueIds = [...next];
 }
 
-watch(page, () => loadPage());
-watch(filters, async () => {
+// Filter edits restart paging; the URL (collection / browser history) restores both together.
+watch(() => [filters.facetValueIds.join(','), filters.inStock, filters.priceMin, filters.priceMax], () => {
     page.value = 1;
-    facetGroups.value = await fetchCatalogFacets(filters.search);
-    await loadPage();
+});
+// Back/forward and category navigation: the URL is the source of truth.
+watch(() => route.query, query => {
+    const state = parseCatalogQuery(query);
+    if (state.facetValueIds.join(',') !== filters.facetValueIds.join(',')) filters.facetValueIds = state.facetValueIds;
+    if (state.inStock !== filters.inStock) filters.inStock = state.inStock;
+    if (state.priceMin !== filters.priceMin) filters.priceMin = state.priceMin;
+    if (state.priceMax !== filters.priceMax) filters.priceMax = state.priceMax;
+    if (state.page !== page.value) page.value = state.page;
 });
 
+watch(
+    () => [
+        filters.facetValueIds.join(','), filters.inStock, filters.priceMin, filters.priceMax, page.value, collection.value,
+    ],
+    () => {
+        const state = parseCatalogQuery(route.query);
+        void router.replace({
+            query: buildCatalogQuery(route.query, {
+                collection: state.collection,
+                facetValueIds: filters.facetValueIds,
+                inStock: filters.inStock,
+                priceMin: filters.priceMin,
+                priceMax: filters.priceMax,
+                page: page.value,
+            }),
+        });
+        if (ready.value) void loadPage();
+    },
+);
+
 async function loadAll(): Promise<void> {
-    loading.value = true;
-    try {
-        [facetGroups.value, priceTypeCodes.value] = await Promise.all([
-            fetchCatalogFacets(''),
-            fetchPriceTypeCodes(),
-        ]);
-        await loadPage();
-    } finally {
-        loading.value = false;
-    }
+    [facetGroups.value, priceTypeCodes.value] = await Promise.all([
+        fetchCatalogFacets(''),
+        fetchPriceTypeCodes(),
+        categories.loadTree(),
+    ]);
+    ready.value = true;
+    await loadPage();
 }
 
-loadAll();
+void loadAll();
 </script>
 
 <template>
     <div class="catalog-page">
         <div class="catalog-page__header">
-            <div class="catalog-page__breadcrumb">Workspace / Catalog</div>
+            <MvBreadcrumbs class="catalog-page__breadcrumb" :items="categories.breadcrumbs.value" />
             <div class="catalog-page__header-row">
-                <h1 class="catalog-page__title">Catalog</h1>
+                <h1 class="catalog-page__title">{{ categories.heading.value }}</h1>
                 <button
                     :class="['catalog-page__category-btn', { 'catalog-page__category-btn--open': categoryDropdownOpen }]"
                     type="button"
@@ -133,7 +120,7 @@ loadAll();
             </div>
 
             <MvCatalogDropdown
-                :collections="categoryTree"
+                :collections="categories.tree.value"
                 :open="categoryDropdownOpen"
                 @close="categoryDropdownOpen = false"
                 @navigate="navigateToCategory"
@@ -148,11 +135,14 @@ loadAll();
                 :selected-facet-values="selectedFacetValues"
                 :price-min="filters.priceMin"
                 :price-max="filters.priceMax"
-                :hidden-facet-codes="[]"
+                :category-panel="categories.panel.value"
+                category-more-label="More"
+                category-less-label="Less"
                 @update:in-stock-only="filters.inStock = $event"
                 @toggle-facet-value="toggleFacetValue"
                 @update:price-min="filters.priceMin = $event"
                 @update:price-max="filters.priceMax = $event"
+                @navigate-category="navigateToCategory"
                 @reset="resetFilters"
             />
 
@@ -247,8 +237,6 @@ loadAll();
 }
 
 .catalog-page__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
-    font-size: 13px;
     margin-bottom: 6px;
 }
 
