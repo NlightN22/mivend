@@ -1,18 +1,34 @@
 # Project Context
 
-Updated: 2026-10-04 07:30
+Updated: 2026-10-04 13:10
 
-## Recent changes (2026-10-04 — #70 guest price + branch-scoped stock tiers)
+## Recent changes (2026-10-04 — #70 guest price, branch stock tiers, currency; closed/audited)
 
-- Prices: API resolves a guest's default price (branch default `PriceType`, general discounts only); the
-  storefront UI hides price and stock tier from guests ("Log in to see prices"). See docs/pricing.md.
-- Stock: `SearchResult.stockLevel` = tier of the viewer's branch ATP (none ≤0, low 1–4, medium 5–19,
-  high 20+; thresholds in GlobalSettings `stockTierLowMax`/`stockTierMediumMax`). Branch = counterparty's,
-  else default branch. `inStock` filter sends the branch's warehouse ERP ids (`filters.warehouseIds`,
-  search-platform#158). Warehouses assigned to branches manually on staging (5 of 34); #163 = hierarchy.
-- Known gap: UI renders three stock states (out/low/ok), docs promise four tiers — pending decision.
-- Fixed/being fixed: `stock.handler.ts` overwrote stockOnHand with a stale value when writing
-  erpAvailableQuantity, so staging ATP was understated; staging stock replay in progress.
+- Prices: API resolves a guest's default price (branch default `PriceType`, general discounts only);
+  the storefront UI hides price AND stock tier from guests ("Log in to see prices"). docs/pricing.md.
+- Default branch/price type bootstrapped by `plugin-access-control` options (#161, closed):
+  `BOOTSTRAP_BRANCH_NAMES` (first = `GlobalSettings.defaultBranchId` if empty), `DEFAULT_PRICE_TYPE_CODE`
+  (looked up via `CustomerPricingService`), `BranchSettings.defaultWarehouseId` nullable. Branch is
+  mivend's own entity (never from ERP), bootstrap-by-name is its source of truth.
+- Stock tiers (docs/order-flow.md): `SearchResult.stockLevel` and the overridden Shop API
+  `ProductVariant.stockLevel` = tier of the viewer's branch ATP (none ≤0, low 1–4, medium 5–19, high
+  20+; thresholds `stockTierLowMax`/`stockTierMediumMax` in GlobalSettings, migration 1791000000006).
+  Branch = counterparty's, else default branch (guest, admin-api contexts too). `inStock` input sends
+  the branch warehouse ERP ids as `filters.warehouseIds` (search-platform#158, live). Resolver-only
+  override: never `extend type ProductVariant { stockLevel }` (crashes bootstrap). Four tiers in the UI
+  via one ui-kit mapper (`StockVariant`, `stockVariantFromLevel`, labels В наличии/Достаточно/Мало/Нет).
+- Stock bug fixed (f46a2e7): `stock.handler.ts` saved a stale StockLevel and reset stockOnHand to 0;
+  staging replayed by resetting the latest processed `stock` inbox row per entity to `pending`.
+- Default channel currency bootstrapped to RUB (`DEFAULT_CURRENCY_CODE`, config is source of truth).
+- Staging-integration data set by hand: 5 warehouses assigned to branches (Abakan: ids 18, 15;
+  Krasnoyarsk: 8, 14, 30; service/defect warehouses stay unassigned). Test customer
+  `test@komponent-m.ru` (counterparty 21560, retail price type; password in the session scratchpad,
+  not in the repo; KEEP it). Counterparty `officialEmail` comes from 1C kind "Служебный адрес
+  электронной почты контрагента" only.
+- Open follow-ups: #167 (stock for warehouses that only arrived as tombstones retries forever; fix in
+  stock.handler.ts, body has the plan), #162 (favorites IDs only + gate stock by login), #163
+  (warehouse hierarchy, other session), search-platform#159 (stop exporting deleted warehouses).
+  Known limits: `inStock` filter (ERP stock) can disagree briefly with `stockLevel` (mivend ATP).
 
 ## Recent changes (2026-10-04 — #160 ExternalSearchPlugin, unblocked part shipped/audited)
 
