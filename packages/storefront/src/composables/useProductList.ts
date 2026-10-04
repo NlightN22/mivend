@@ -64,6 +64,7 @@ interface UseProductListOptions {
     pageSize?: number;
     query?: Ref<string>;
     filters?: Ref<FilterState>;
+    collectionSlug?: Ref<string | undefined>;
 }
 
 type EsSearchItem = CatalogProductsQuery['search']['items'][number];
@@ -118,7 +119,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     loadMore: () => Promise<void>;
     load: () => Promise<void>;
 } {
-    const { pageSize = 24, query, filters } = options;
+    const { pageSize = 24, query, filters, collectionSlug } = options;
 
     const items = ref<ProductItem[]>([]);
     const facetGroups = ref<FacetGroup[]>([]);
@@ -147,6 +148,7 @@ export function useProductList(options: UseProductListOptions = {}): {
             term,
             take: pageSize,
             skip,
+            collectionSlug: collectionSlug?.value,
             facetValueFilters: buildFacetValueFilters(facetValueIds, facetGroups.value),
             inStock: filters?.value.inStock ? true : undefined,
             priceRangeWithTax: buildPriceRange(),
@@ -157,6 +159,7 @@ export function useProductList(options: UseProductListOptions = {}): {
         const term = query?.value || undefined;
         return shopApi(CatalogFacetsDocument, {
             term,
+            collectionSlug: collectionSlug?.value,
             inStock: filters?.value.inStock ? true : undefined,
             priceRangeWithTax: buildPriceRange(),
         });
@@ -211,6 +214,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     }
 
     if (query) watch(query, load);
+    if (collectionSlug) watch(collectionSlug, load);
     if (filters) watch(filters, load, { deep: true });
     watch(sortKey, load);
 

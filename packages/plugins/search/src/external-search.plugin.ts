@@ -1,8 +1,11 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 
+import { externalSearchSchema } from './external-search.schema';
+import { ExternalSearchResultStockResolver } from './search-result-stock.resolver';
 import { ExternalAdminSearchResolver, ExternalSearchResolver } from './external-search.resolver';
 import { ExternalSearchService } from './external-search.service';
 import { ProductLookupService } from './product-lookup.service';
+import { SearchFilterResolver } from './search-filter-resolver.service';
 import { SearchServiceClient } from './search-service.client';
 
 // Registered only when SEARCH_BACKEND=external (issue #69) — supplies the shop-api `search`
@@ -11,12 +14,18 @@ import { SearchServiceClient } from './search-service.client';
 @VendurePlugin({
     imports: [PluginCommonModule],
     shopApiExtensions: {
-        resolvers: [ExternalSearchResolver],
+        schema: externalSearchSchema,
+        resolvers: [ExternalSearchResolver, ExternalSearchResultStockResolver],
     },
     adminApiExtensions: {
         resolvers: [ExternalAdminSearchResolver],
     },
-    providers: [SearchServiceClient, ProductLookupService, ExternalSearchService],
+    providers: [
+        SearchServiceClient,
+        ProductLookupService,
+        SearchFilterResolver,
+        ExternalSearchService,
+    ],
     compatibility: '>0.0.0',
 })
 export class ExternalSearchPlugin {}

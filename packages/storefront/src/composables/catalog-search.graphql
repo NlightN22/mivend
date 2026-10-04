@@ -2,6 +2,7 @@ query CatalogProducts(
     $term: String
     $take: Int!
     $skip: Int!
+    $collectionSlug: String
     $facetValueFilters: [FacetValueFilterInput!]
     $inStock: Boolean
     $priceRangeWithTax: PriceRangeInput
@@ -12,6 +13,7 @@ query CatalogProducts(
             take: $take
             skip: $skip
             groupByProduct: true
+            collectionSlug: $collectionSlug
             facetValueFilters: $facetValueFilters
             inStock: $inStock
             priceRangeWithTax: $priceRangeWithTax
@@ -58,13 +60,14 @@ query CatalogProducts(
     }
 }
 
-query CatalogFacets($term: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+query CatalogFacets($term: String, $collectionSlug: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
     search(
         input: {
             term: $term
             take: 0
             skip: 0
             groupByProduct: true
+            collectionSlug: $collectionSlug
             inStock: $inStock
             priceRangeWithTax: $priceRangeWithTax
         }

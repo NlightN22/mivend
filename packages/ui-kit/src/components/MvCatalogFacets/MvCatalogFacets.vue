@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import MvFacetGroup from '../MvFacetGroup/MvFacetGroup.vue';
 import MvCategoryNav, { type CategoryNavPanel } from '../MvCategoryNav/MvCategoryNav.vue';
 
 const props = withDefaults(
     defineProps<{
-        facetGroups: { code: string; name: string; values: { id: string; name: string; count: number }[] }[];
+        facetGroups: { code: string; name: string; values: { id: string; name: string; count: number; iconUrl?: string | null }[] }[];
         inStockOnly: boolean;
         selectedFacetValues: Set<string>;
         priceMin: number | null;
@@ -18,8 +19,18 @@ const props = withDefaults(
         categoryPanel?: CategoryNavPanel;
         categoryMoreLabel?: string;
         categoryLessLabel?: string;
+        facetShowAllLabel?: string;
+        facetCollapseLabel?: string;
+        facetSearchPlaceholder?: string;
     }>(),
-    { hiddenFacetCodes: () => ['category'], categoryMoreLabel: undefined, categoryLessLabel: undefined },
+    {
+        hiddenFacetCodes: () => ['category'],
+        categoryMoreLabel: undefined,
+        categoryLessLabel: undefined,
+        facetShowAllLabel: undefined,
+        facetCollapseLabel: undefined,
+        facetSearchPlaceholder: undefined,
+    },
 );
 
 const emit = defineEmits<{
@@ -121,19 +132,14 @@ function onMaxInput(e: Event): void {
             :key="group.code"
             class="catalog-facets__block"
         >
-            <h2 class="catalog-facets__block-title">{{ group.name }}</h2>
-            <label
-                v-for="val in group.values"
-                :key="val.id"
-                class="catalog-facets__check"
-            >
-                <input
-                    type="checkbox"
-                    :checked="selectedFacetValues.has(val.id)"
-                    @change="emit('toggleFacetValue', val.id)"
-                />
-                <span>{{ val.name }} <span class="catalog-facets__count">({{ val.count }})</span></span>
-            </label>
+            <MvFacetGroup
+                :title="group.name"
+                :values="group.values"
+                :selected="selectedFacetValues"
+                :show-all-label="facetShowAllLabel"
+                :collapse-label="facetCollapseLabel"
+                :search-placeholder="facetSearchPlaceholder"
+                @toggle="emit('toggleFacetValue', $event)" />
         </div>
 
         <div class="catalog-facets__block">

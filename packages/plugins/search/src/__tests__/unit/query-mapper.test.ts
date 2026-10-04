@@ -3,57 +3,60 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@vendure/core', () => ({ Logger: { warn: vi.fn(), error: vi.fn() } }));
 
 import { Logger } from '@vendure/core';
-import { mapSearchInputToResolveQueryRequest } from '../../query-mapper';
+import { hasBrowseCriteria, mapSearchInputToResolveQueryRequest } from '../../query-mapper';
 
-// Issue #69, test-design coverage area 1: SearchInput.term/take/skip -> search-service's
-// query/limit/offset request shape.
+const none = { manufacturer: [] as string[] };
+
 describe('mapSearchInputToResolveQueryRequest', () => {
-    it('maps term/take/skip to query/limit/offset', () => {
-        const request = mapSearchInputToResolveQueryRequest({
-            term: 'brake pad',
-            take: 10,
-            skip: 20,
+    it('maps term/take/skip to query/limit/offset with relevance sort', () => {
+        expect(
+            mapSearchInputToResolveQueryRequest({ term: 'pad', take: 10, skip: 20 }, none),
+        ).toEqual({
+            query: 'pad',
+            sort: 'relevance',
+            limit: 10,
+            offset: 20,
         });
-        expect(request).toEqual({ query: 'brake pad', limit: 10, offset: 20 });
     });
 
-    it('maps a missing term to an empty query string, and missing take/skip to undefined', () => {
-        const request = mapSearchInputToResolveQueryRequest({});
-        expect(request).toEqual({ query: '', limit: undefined, offset: undefined });
+    it('passes resolved category and manufacturer filters', () => {
+        const request = mapSearchInputToResolveQueryRequest(
+            {},
+            { categoryId: 'cat-1', manufacturer: ['m-1', 'm-2'] },
+        );
+        expect(request).toMatchObject({
+            query: '',
+            categoryId: 'cat-1',
+            filters: { manufacturer: ['m-1', 'm-2'] },
+        });
     });
 
-    // Audit finding, mivend.audit.70 (round 3): search-service has no collection/facet/sort
-    // support. A prior fix made this throw, which turned every real facet-filter click under
-    // SEARCH_BACKEND=external into a hard shop-api failure (a production availability
-    // regression) — the resolution is to degrade instead: drop the field, still run the
-    // free-text query, and log a warning so operators/monitoring can see it happened.
-    it.each([
-        ['collectionId', { collectionId: 'coll-1' }],
-        ['collectionIds', { collectionIds: ['coll-1'] }],
-        ['collectionSlug', { collectionSlug: 'brakes' }],
-        ['collectionSlugs', { collectionSlugs: ['brakes'] }],
-        ['facetValueFilters', { facetValueFilters: [{ and: 'fv-1' }] }],
-        ['facetValueIds', { facetValueIds: ['fv-1'] }],
-        ['groupByProduct', { groupByProduct: true }],
-        ['sort', { sort: { name: 'ASC' } }],
-    ])(
-        'drops an unsupported filter (%s) and still runs the free-text query, without throwing',
-        (_label, extra) => {
-            const request = mapSearchInputToResolveQueryRequest({
-                term: 'brake pad',
-                ...extra,
-            } as never);
+    it('maps name ASC sort to name', () => {
+        expect(mapSearchInputToResolveQueryRequest({ sort: { name: 'ASC' } }, none).sort).toBe(
+            'name',
+        );
+    });
 
-            expect(request).toEqual({ query: 'brake pad', limit: undefined, offset: undefined });
+    it.each([{ price: 'ASC' }, { name: 'DESC' }])(
+        'degrades unsupported sort %o to relevance with a warning',
+        sort => {
+            vi.mocked(Logger.warn).mockClear();
+            const request = mapSearchInputToResolveQueryRequest({ sort } as never, none);
+            expect(request.sort).toBe('relevance');
+            expect(Logger.warn).toHaveBeenCalled();
         },
     );
+});
 
-    it('logs a warning (visible to operators) whenever an unsupported filter is dropped', () => {
-        vi.mocked(Logger.warn).mockClear();
-        mapSearchInputToResolveQueryRequest({ term: 'x', collectionId: 'coll-1' });
-        expect(Logger.warn).toHaveBeenCalledWith(
-            expect.stringMatching(/does not support/),
-            'SearchPlugin',
-        );
+describe('hasBrowseCriteria', () => {
+    it('is false for an empty query without filters', () => {
+        expect(hasBrowseCriteria({ query: '' })).toBe(false);
+    });
+    it.each([
+        [{ query: 'x' }],
+        [{ query: '', categoryId: 'c' }],
+        [{ query: '', filters: { manufacturer: ['m'] } }],
+    ])('is true for %o', request => {
+        expect(hasBrowseCriteria(request)).toBe(true);
     });
 });

@@ -40,6 +40,7 @@ export {
     CATEGORY_FACET_CODE,
     buildCategoryFacetFilter,
     categorySlug,
+    categoryErpIdFromSlug,
     collectFacetValueIds,
     resolveCategoryIsPrivate,
 } from './categoryCollectionFilter';

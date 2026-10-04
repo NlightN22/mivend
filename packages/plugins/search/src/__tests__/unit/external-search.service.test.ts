@@ -55,6 +55,9 @@ function makeLookup(product: Product | null): {
     };
 }
 
+const noFilters = { resolve: vi.fn().mockResolvedValue({ manufacturer: [] }) };
+const noDb = {};
+
 // Issue #69, test-design coverage areas 2 and 3.
 describe('ExternalSearchService.search', () => {
     it('skips a search-service item with no matching Product.customFields.externalId, without erroring', async () => {
@@ -65,6 +68,8 @@ describe('ExternalSearchService.search', () => {
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -81,6 +86,8 @@ describe('ExternalSearchService.search', () => {
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
         );
 
         await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -113,6 +120,8 @@ describe('ExternalSearchService.search', () => {
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -135,6 +144,8 @@ describe('ExternalSearchService.search', () => {
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -167,6 +178,8 @@ describe('ExternalSearchService.search', () => {
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -180,6 +193,8 @@ describe('ExternalSearchService.search', () => {
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
         );
 
         const result = await service.search(ctx, { term: 'no-match-xyz' } as SearchInput);
@@ -199,6 +214,8 @@ describe('ExternalSearchService.search', () => {
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
         );
 
         const result = await service.search(ctx, {
@@ -216,11 +233,59 @@ describe('ExternalSearchService.search', () => {
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
             lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
         );
 
         const result = await service.search(ctx, {} as SearchInput);
 
         expect(result).toEqual({ items: [], totalItems: 0, facetValues: [], collections: [] });
+        expect(client.resolveQuery).not.toHaveBeenCalled();
+    });
+
+    it('browses by category with an empty query and returns mapped manufacturer facets', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({
+                items: [makeItem()],
+                total: 410,
+                facets: { manufacturer: [{ value: 'mfr-1', count: 3 }] },
+            }),
+        };
+        const filters = {
+            resolve: vi.fn().mockResolvedValue({ categoryId: 'cat-erp', manufacturer: [] }),
+        };
+        const facetValue = { id: 7, code: 'mfr-1' };
+        const getMany = vi.fn().mockResolvedValue([facetValue]);
+        const qb: Record<string, unknown> = {};
+        for (const m of ['leftJoinAndSelect', 'where', 'andWhere']) qb[m] = () => qb;
+        qb.getMany = getMany;
+        const db = { getRepository: () => ({ createQueryBuilder: () => qb }) };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            filters as never,
+            db as never,
+        );
+
+        const result = await service.search(ctx, { collectionSlug: 'cat-erp' } as SearchInput);
+
+        expect(client.resolveQuery).toHaveBeenCalledWith(
+            expect.objectContaining({ query: '', categoryId: 'cat-erp' }),
+        );
+        expect(result.totalItems).toBe(410);
+        expect(result.facetValues).toEqual([{ facetValue, count: 3 }]);
+    });
+
+    it('returns empty without calling search-service when there is no query and no filter', async () => {
+        const client = { resolveQuery: vi.fn() };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(null) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+        );
+        const result = await service.search(ctx, {} as SearchInput);
+        expect(result.items).toEqual([]);
         expect(client.resolveQuery).not.toHaveBeenCalled();
     });
 });

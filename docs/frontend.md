@@ -94,6 +94,20 @@ src/pages/orders/orders.operations.graphql
 
 Codegen picks them up via glob and generates typed composables into `src/api/generated/`.
 
+## Catalog filters
+
+- One filter sidebar for both portals: `MvCatalogFacets` in ui-kit, with one `MvFacetGroup` per facet
+  (checkbox rows with an optional icon, first 7 rows, "Show all" expands to a searchable list). Never
+  build a portal-local filter block; add the variant to ui-kit.
+- Manufacturer is a `manufacturer` Facet whose FacetValue `code` is the ERP manufacturer id
+  (`ManufacturerFacetService`). With `SEARCH_BACKEND=external` its counts come from search-service and
+  clicks are mapped back to ERP ids in the search plugin. The icon is optional (`iconUrl`); without one a
+  letter avatar is shown.
+- Category navigation is `MvCategoryNav` + `collectionSlug`, not a facet (the `category` facet is hidden).
+- Price and in-stock inputs are accepted by the external backend but not applied: prices are per-customer
+  and resolved in mivend, and search-service returns sellable offers only.
+- Mobile: no filter sidebar is shown on phones, only search. This is deliberate; do not revisit per page.
+
 ## Page priority
 
 1. Login + auth guard

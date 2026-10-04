@@ -17,9 +17,14 @@ export interface ResolveQueryResponseItem {
     score: number;
 }
 
+export interface ResolveQueryFacets {
+    manufacturer: Array<{ value: string; count: number }>;
+}
+
 export interface ResolveQueryResponse {
     items: ResolveQueryResponseItem[];
     total: number;
+    facets?: ResolveQueryFacets;
 }
 
 // A hung search-service must not hold a shop-api `search` request open indefinitely (audit

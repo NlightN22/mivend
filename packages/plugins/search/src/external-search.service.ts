@@ -1,8 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { Product, ProductVariant, RequestContext, Translation } from '@vendure/core';
+import {
+    Product,
+    ProductVariant,
+    RequestContext,
+    TransactionalConnection,
+    Translation,
+} from '@vendure/core';
 import type { SearchInput } from '@vendure/common/lib/generated-types';
 
-import { mapSearchInputToResolveQueryRequest } from './query-mapper';
+import { mapFacetsToFacetValues, ExternalFacetValueResult } from './facet-mapper';
+import { hasBrowseCriteria, mapSearchInputToResolveQueryRequest } from './query-mapper';
+import { SearchFilterResolver } from './search-filter-resolver.service';
 import { ProductLookupService } from './product-lookup.service';
 import { ResolveQueryResponseItem, SearchServiceClient } from './search-service.client';
 
@@ -34,25 +42,20 @@ export interface ExternalSearchResult {
 export interface ExternalSearchResponse {
     items: ExternalSearchResult[];
     totalItems: number;
-    facetValues: never[];
+    facetValues: ExternalFacetValueResult[];
     collections: never[];
 }
 
-// Backend for SEARCH_BACKEND=external (issue #69): resolves the shop-api `search` query against
-// search-service instead of Elasticsearch. facetValues/collections have no search-service
-// equivalent and are always returned empty (see the storefront facet-sidebar note in the issue).
-// Incoming collection/facet-value/sort filters are also unsupported (search-service is
-// free-text discovery only) — mapSearchInputToResolveQueryRequest drops them and logs loudly
-// (Logger.warn) rather than either silently ignoring them or hard-failing the request (audit
-// finding, mivend.audit.70: a hard throw here broke every real storefront facet-filter click
-// under SEARCH_BACKEND=external, which is worse than the original silent-drop gap it replaced).
-// Category/faceted-filter storefront pages still need their own follow-up design against this
-// backend — not covered by issue #69's scope, this is a stopgap that keeps `search` available.
+// Backend for SEARCH_BACKEND=external (issue #69, #164): resolves the shop-api `search` query
+// against search-service. Only the manufacturer facet is mapped; collections stay empty (the
+// category tree comes from the Collection query).
 @Injectable()
 export class ExternalSearchService {
     constructor(
         private client: SearchServiceClient,
         private productLookup: ProductLookupService,
+        private filterResolver: SearchFilterResolver,
+        private connection: TransactionalConnection,
     ) {}
 
     async search(
@@ -60,8 +63,9 @@ export class ExternalSearchService {
         input: SearchInput,
         includeDisabled = false,
     ): Promise<ExternalSearchResponse> {
-        const request = mapSearchInputToResolveQueryRequest(input);
-        if (!request.query) {
+        const resolved = await this.filterResolver.resolve(ctx, input);
+        const request = mapSearchInputToResolveQueryRequest(input, resolved);
+        if (!hasBrowseCriteria(request)) {
             return { items: [], totalItems: 0, facetValues: [], collections: [] };
         }
 
@@ -83,7 +87,7 @@ export class ExternalSearchService {
             // search-service's total, so pagination works; hits not synced into this instance
             // are skipped from `items`, which can leave a page shorter than `take`.
             totalItems: response.total,
-            facetValues: [],
+            facetValues: await mapFacetsToFacetValues(this.connection, ctx, response.facets),
             collections: [],
         };
     }

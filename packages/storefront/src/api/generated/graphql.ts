@@ -4287,6 +4287,7 @@ export type CatalogProductsQueryVariables = Exact<{
     term?: InputMaybe<Scalars['String']['input']>;
     take: Scalars['Int']['input'];
     skip: Scalars['Int']['input'];
+    collectionSlug?: InputMaybe<Scalars['String']['input']>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput> | FacetValueFilterInput>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
@@ -4327,6 +4328,7 @@ export type CatalogProductsQuery = {
 
 export type CatalogFacetsQueryVariables = Exact<{
     term?: InputMaybe<Scalars['String']['input']>;
+    collectionSlug?: InputMaybe<Scalars['String']['input']>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
 }>;
@@ -5200,9 +5202,9 @@ export const EndAllSessionsDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<EndAllSessionsMutation, EndAllSessionsMutationVariables>;
 export const CatalogProductsDocument = new TypedDocumentString(`
-    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+    query CatalogProducts($term: String, $take: Int!, $skip: Int!, $collectionSlug: String, $facetValueFilters: [FacetValueFilterInput!], $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
   search(
-    input: {term: $term, take: $take, skip: $skip, groupByProduct: true, facetValueFilters: $facetValueFilters, inStock: $inStock, priceRangeWithTax: $priceRangeWithTax}
+    input: {term: $term, take: $take, skip: $skip, groupByProduct: true, collectionSlug: $collectionSlug, facetValueFilters: $facetValueFilters, inStock: $inStock, priceRangeWithTax: $priceRangeWithTax}
   ) {
     totalItems
     items {
@@ -5246,9 +5248,9 @@ export const CatalogProductsDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<CatalogProductsQuery, CatalogProductsQueryVariables>;
 export const CatalogFacetsDocument = new TypedDocumentString(`
-    query CatalogFacets($term: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+    query CatalogFacets($term: String, $collectionSlug: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
   search(
-    input: {term: $term, take: 0, skip: 0, groupByProduct: true, inStock: $inStock, priceRangeWithTax: $priceRangeWithTax}
+    input: {term: $term, take: 0, skip: 0, groupByProduct: true, collectionSlug: $collectionSlug, inStock: $inStock, priceRangeWithTax: $priceRangeWithTax}
   ) {
     facetValues {
       facetValue {

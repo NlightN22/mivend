@@ -38,9 +38,12 @@ const pendingCategorySlug = ref<string | undefined>(
     (route.query.collection as string) || undefined,
 );
 const filters = ref<FilterState>(parseFiltersFromQuery());
+const activeCollectionSlug = computed(() =>
+    searchQuery.value ? undefined : ((route.query.collection as string) || undefined),
+);
 
 const { items, facetGroups, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode, sortKey, load, loadMore } =
-    useProductList({ pageSize: 24, query: searchQuery, filters });
+    useProductList({ pageSize: 24, query: searchQuery, filters, collectionSlug: activeCollectionSlug });
 
 // Sync filter state → URL (replace so back button works correctly)
 let syncingFromUrl = false;
@@ -154,6 +157,9 @@ onMounted(() => {
                 :category-panel="searchQuery ? undefined : categoryPanel"
                 :category-more-label="t('catalogNav.more')"
                 :category-less-label="t('catalogNav.less')"
+                :facet-show-all-label="t('catalogNav.showAll')"
+                :facet-collapse-label="t('catalogNav.less')"
+                :facet-search-placeholder="t('catalogNav.search')"
                 @update:in-stock-only="filters = { ...filters, inStock: $event }"
                 @toggle-facet-value="toggleFacetValue"
                 @update:price-min="filters = { ...filters, priceMin: $event }"
