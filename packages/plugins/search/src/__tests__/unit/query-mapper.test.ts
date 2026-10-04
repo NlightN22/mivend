@@ -15,6 +15,7 @@ describe('mapSearchInputToResolveQueryRequest', () => {
         ).toEqual({
             query: 'pad',
             sort: 'relevance',
+            availableOnly: false,
             limit: 10,
             offset: 20,
         });
@@ -51,9 +52,9 @@ describe('mapSearchInputToResolveQueryRequest', () => {
         expect(request.filters).toEqual({ warehouseIds: [] });
     });
 
-    it('without inStock neither availableOnly nor warehouseIds is sent', () => {
+    it('without inStock availableOnly is explicitly false (search-service defaults to true) and no warehouseIds are sent', () => {
         const request = mapSearchInputToResolveQueryRequest({ term: 'oil' }, none);
-        expect(request).not.toHaveProperty('availableOnly');
+        expect(request.availableOnly).toBe(false);
         expect(request).not.toHaveProperty('filters');
     });
 

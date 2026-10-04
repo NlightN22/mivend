@@ -55,7 +55,7 @@ export function mapSearchInputToResolveQueryRequest(
         query: input.term ?? '',
         ...(resolved.categoryId ? { categoryId: resolved.categoryId } : {}),
         ...(Object.keys(filters).length > 0 ? { filters } : {}),
-        ...(input.inStock ? { availableOnly: true } : {}),
+        availableOnly: Boolean(input.inStock),
         sort: mapSort(input),
         limit: input.take ?? undefined,
         offset: input.skip ?? undefined,
