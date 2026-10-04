@@ -1,7 +1,7 @@
-query FavoriteProducts($slugs: [String!]!, $take: Int!) {
-    products(options: { take: $take, filter: { slug: { in: $slugs } } }) {
+query FavoriteProducts($ids: [String!]!, $take: Int!) {
+    products(options: { take: $take, filter: { id: { in: $ids } } }) {
         items {
-            slug
+            id
             variants {
                 id
                 sku

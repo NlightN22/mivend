@@ -4,11 +4,11 @@ Updated: 2026-10-04 15:45
 
 ## Recent changes (2026-10-04 — #162 favorites IDs only, shipped; brand gap filed as #168)
 
-- `stores/favorites.ts` keeps only `variantId`/`productSlug`/`addedAt` (`mv_favorites`; legacy fields
-  are dropped on load). `useFavoriteProducts` resolves `customerPrice` + stock tier live per viewer
-  via `products(filter slug in)`, batched by 100 slugs (Vendure `take` cap), with an error state.
-  After a successful load, favorites the API no longer returns are pruned so the header badge
-  matches the page; a failed load never prunes. Verified in the browser on :5183 with the test customer.
+- `stores/favorites.ts` keeps only `variantId`/`productId`/`addedAt` (`mv_favorites`; legacy entries
+  without `productId` are dropped on load). `useFavoriteProducts` resolves `customerPrice` + stock tier live per viewer
+  via `products(filter id in)`, batched by 100 slugs (Vendure `take` cap), with an error state.
+  Favorites the API does not return (deleted/disabled/renamed) are never auto-pruned (data loss);
+  they stay in the store and the badge, and "Clear unavailable" removes them. Verified in the browser on :5183 with the test customer.
 - Contour startup: `ManufacturerFacetService` backfill loaded all FacetValues once per manufacturer
   (O(n²), 1498 rows) and delayed listen for minutes; now loaded once. Healthy restart is ~25-40 s
   (docs/environments.md). A ts-node-dev child stuck in `waitForFile` can spin at ~90% CPU after a

@@ -14,7 +14,7 @@ export interface FavoriteVariantView {
     stockVariant: StockVariant;
 }
 
-const SLUG_BATCH = 100;
+const ID_BATCH = 100;
 
 export function useFavoriteProducts(): {
     views: Ref<FavoriteVariantView[]>;
@@ -29,7 +29,7 @@ export function useFavoriteProducts(): {
 
     async function load(): Promise<void> {
         const ids = store.items.map(i => i.variantId);
-        const slugs = [...new Set(store.items.map(i => i.productSlug))];
+        const productIds = [...new Set(store.items.map(i => i.productId))];
         const seq = ++requestSeq;
         if (ids.length === 0) {
             views.value = [];
@@ -38,12 +38,13 @@ export function useFavoriteProducts(): {
         loading.value = true;
         error.value = false;
         try {
-            const batches = Array.from({ length: Math.ceil(slugs.length / SLUG_BATCH) }, (_, i) =>
-                slugs.slice(i * SLUG_BATCH, (i + 1) * SLUG_BATCH),
+            const batches = Array.from(
+                { length: Math.ceil(productIds.length / ID_BATCH) },
+                (_, i) => productIds.slice(i * ID_BATCH, (i + 1) * ID_BATCH),
             );
             const results = await Promise.all(
                 batches.map(batch =>
-                    shopApi(FavoriteProductsDocument, { slugs: batch, take: batch.length }),
+                    shopApi(FavoriteProductsDocument, { ids: batch, take: batch.length }),
                 ),
             );
             if (seq !== requestSeq) return;
@@ -52,7 +53,6 @@ export function useFavoriteProducts(): {
                     .flatMap(r => r.products.items)
                     .flatMap(p => p.variants.map(v => [v.id, { p, v }] as const)),
             );
-            ids.filter(id => !byVariantId.has(id)).forEach(id => store.remove(id));
             views.value = ids.flatMap(id => {
                 const found = byVariantId.get(id);
                 if (!found) return [];

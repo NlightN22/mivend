@@ -84,7 +84,7 @@ function getBrand(p: ProductItem): string {
                         :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                         @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1)"
                         @update-cart-qty="onUpdateQty"
-                        @toggle-favorite="() => favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.slug)"
+                        @toggle-favorite="() => favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.id)"
                         @view-analogs="() => {}"
                     />
                 </div>

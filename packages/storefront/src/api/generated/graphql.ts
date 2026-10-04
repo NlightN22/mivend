@@ -4528,14 +4528,14 @@ export type MyDocumentsQuery = {
 };
 
 export type FavoriteProductsQueryVariables = Exact<{
-    slugs: Array<Scalars['String']['input']> | Scalars['String']['input'];
+    ids: Array<Scalars['String']['input']> | Scalars['String']['input'];
     take: Scalars['Int']['input'];
 }>;
 
 export type FavoriteProductsQuery = {
     products: {
         items: Array<{
-            slug: string;
+            id: string;
             variants: Array<{
                 id: string;
                 sku: string;
@@ -5498,10 +5498,10 @@ export const MyDocumentsDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<MyDocumentsQuery, MyDocumentsQueryVariables>;
 export const FavoriteProductsDocument = new TypedDocumentString(`
-    query FavoriteProducts($slugs: [String!]!, $take: Int!) {
-  products(options: {take: $take, filter: {slug: {in: $slugs}}}) {
+    query FavoriteProducts($ids: [String!]!, $take: Int!) {
+  products(options: {take: $take, filter: {id: {in: $ids}}}) {
     items {
-      slug
+      id
       variants {
         id
         sku

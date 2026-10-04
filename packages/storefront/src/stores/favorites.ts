@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 
 export interface FavoriteItem {
     variantId: string;
-    productSlug: string;
+    productId: string;
     addedAt: number;
 }
 
@@ -13,12 +13,10 @@ function load(): FavoriteItem[] {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return [];
-        const parsed = JSON.parse(raw) as FavoriteItem[];
-        return parsed.map(({ variantId, productSlug, addedAt }) => ({
-            variantId,
-            productSlug,
-            addedAt,
-        }));
+        const parsed = JSON.parse(raw) as Array<Partial<FavoriteItem>>;
+        return parsed.flatMap(({ variantId, productId, addedAt }) =>
+            variantId && productId ? [{ variantId, productId, addedAt: addedAt ?? 0 }] : [],
+        );
     } catch {
         return [];
     }
@@ -37,12 +35,12 @@ export const useFavoritesStore = defineStore('favorites', () => {
         return items.value.some(i => i.variantId === variantId);
     }
 
-    function toggle(variantId: string, productSlug: string): void {
+    function toggle(variantId: string, productId: string): void {
         const idx = items.value.findIndex(i => i.variantId === variantId);
         if (idx !== -1) {
             items.value.splice(idx, 1);
         } else {
-            items.value.push({ variantId, productSlug, addedAt: Date.now() });
+            items.value.push({ variantId, productId, addedAt: Date.now() });
         }
         save(items.value);
     }

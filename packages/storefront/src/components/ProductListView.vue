@@ -55,7 +55,7 @@ function stockProps(stockLevel: string): { stockVariant?: StockVariant } {
 
 
 function handleToggleFavorite(p: ProductItem): void {
-    favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.slug);
+    favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.id);
 }
 
 </script>
