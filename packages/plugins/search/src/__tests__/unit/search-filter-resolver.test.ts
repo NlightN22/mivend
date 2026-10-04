@@ -12,7 +12,10 @@ import { SearchFilterResolver } from '../../search-filter-resolver.service';
 
 const ctx = {} as RequestContext;
 
-function makeResolver(data: { collections?: unknown[]; facetValues?: unknown[] }) {
+function makeResolver(
+    data: { collections?: unknown[]; facetValues?: unknown[] },
+    warehouseIds: string[] = [],
+) {
     const qbFor = (rows: unknown[]) => {
         const qb: Record<string, unknown> = {};
         for (const m of ['leftJoinAndSelect', 'whereInIds']) qb[m] = () => qb;
@@ -29,7 +32,8 @@ function makeResolver(data: { collections?: unknown[]; facetValues?: unknown[] }
                 ),
         }),
     };
-    return new SearchFilterResolver(connection as never);
+    const stockLevelService = { getViewerWarehouseErpIds: vi.fn(async () => warehouseIds) };
+    return new SearchFilterResolver(connection as never, stockLevelService as never);
 }
 
 describe('SearchFilterResolver', () => {
@@ -60,5 +64,15 @@ describe('SearchFilterResolver', () => {
         const collections = [{ translations: [{ slug: 'cat-zzz' }] }];
         const r = await makeResolver({ collections }).resolve(ctx, { collectionId: '5' });
         expect(r.categoryId).toBe('zzz');
+    });
+
+    it('resolves the viewer branch warehouse ids only when the inStock filter is on', async () => {
+        const resolver = makeResolver({}, ['wh-1', 'wh-2']);
+        expect((await resolver.resolve(ctx, {})).warehouseIds).toBeUndefined();
+        expect((await resolver.resolve(ctx, { inStock: false })).warehouseIds).toBeUndefined();
+        expect((await resolver.resolve(ctx, { inStock: true })).warehouseIds).toEqual([
+            'wh-1',
+            'wh-2',
+        ]);
     });
 });

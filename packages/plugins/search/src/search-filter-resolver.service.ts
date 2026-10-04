@@ -6,10 +6,11 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
-import type { SearchInput } from '@vendure/common/lib/generated-types';
+import type { ID } from '@vendure/common/lib/shared-types';
+import { StockLevelService } from '@mivend/plugin-reservation';
 import { categoryErpIdFromSlug } from 'shared';
 
-import { loggerCtx } from './types';
+import { loggerCtx, ShopSearchInput } from './types';
 
 const MANUFACTURER_FACET_CODE = 'manufacturer';
 const CATEGORY_FACET_CODE = 'category';
@@ -17,15 +18,19 @@ const CATEGORY_FACET_CODE = 'category';
 export interface ResolvedSearchFilters {
     categoryId?: string;
     manufacturer: string[];
+    warehouseIds?: string[];
 }
 
 // Translates Vendure ids/slugs in SearchInput into the ERP ids search-service filters on.
 // Unknown or unsupported values are dropped with a warning, never failed.
 @Injectable()
 export class SearchFilterResolver {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private stockLevelService: StockLevelService,
+    ) {}
 
-    async resolve(ctx: RequestContext, input: SearchInput): Promise<ResolvedSearchFilters> {
+    async resolve(ctx: RequestContext, input: ShopSearchInput): Promise<ResolvedSearchFilters> {
         const categoryIds = await this.categoryIdsFromCollections(ctx, input);
         const manufacturer: string[] = [];
 
@@ -49,12 +54,18 @@ export class SearchFilterResolver {
         if (categoryIds.length > 1) {
             Logger.warn('search-service supports one category; using the first', loggerCtx);
         }
-        return { categoryId: categoryIds[0], manufacturer: [...new Set(manufacturer)] };
+        return {
+            categoryId: categoryIds[0],
+            manufacturer: [...new Set(manufacturer)],
+            ...(input.inStock
+                ? { warehouseIds: await this.stockLevelService.getViewerWarehouseErpIds(ctx) }
+                : {}),
+        };
     }
 
     private async categoryIdsFromCollections(
         ctx: RequestContext,
-        input: SearchInput,
+        input: ShopSearchInput,
     ): Promise<string[]> {
         const slugs = [input.collectionSlug, ...(input.collectionSlugs ?? [])];
         const ids = [input.collectionId, ...(input.collectionIds ?? [])].filter(Boolean);
@@ -75,7 +86,7 @@ export class SearchFilterResolver {
         return result;
     }
 
-    private async loadFacetValues(ctx: RequestContext, ids: string[]): Promise<FacetValue[]> {
+    private async loadFacetValues(ctx: RequestContext, ids: ID[]): Promise<FacetValue[]> {
         if (ids.length === 0) return [];
         return this.connection
             .getRepository(ctx, FacetValue)

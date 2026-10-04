@@ -96,7 +96,7 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
                     minAmount: tier.minAmount ?? null,
                 })),
                 currencyCode: item.currencyCode,
-                stockLevel: item.inStock ? 'IN_STOCK' : 'OUT_OF_STOCK',
+                stockLevel: item.stockLevel,
             },
         ],
         facetValues: item.facetValueIds.flatMap(id => {

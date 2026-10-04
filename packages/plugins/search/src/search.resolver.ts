@@ -32,4 +32,12 @@ export class SearchResultResolver {
     ): Promise<DiscountTierVM[]> {
         return this.searchService.getTiers(ctx, result.productVariantId);
     }
+
+    @ResolveField()
+    async stockLevel(
+        @Ctx() ctx: RequestContext,
+        @Parent() result: { productVariantId: string },
+    ): Promise<string> {
+        return this.searchService.getStockLevel(ctx, result.productVariantId);
+    }
 }

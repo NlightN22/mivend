@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
+import { In } from 'typeorm';
 import {
     RequestContext,
     StockLevel,
@@ -56,35 +57,54 @@ export class ReservationAvailabilityService {
         productVariantId: ID,
         branchId?: string | null,
     ): Promise<number> {
+        const byVariant = await this.getAvailableToPromiseBatch(ctx, [productVariantId], branchId);
+        return byVariant.get(String(productVariantId)) ?? 0;
+    }
+
+    // Same ATP formula as above for many variants at once (one query per table, not per
+    // variant) — what a catalog page needs. Variants with no StockLevel row map to 0.
+    async getAvailableToPromiseBatch(
+        ctx: RequestContext,
+        productVariantIds: ID[],
+        branchId?: string | null,
+    ): Promise<Map<string, number>> {
+        const variantIds = productVariantIds.map(String);
+        const totals = new Map<string, number>(variantIds.map(id => [id, 0]));
+        if (variantIds.length === 0) return totals;
+
         const stockLocationIds = await this.resolveStockLocationIds(ctx, branchId);
         const stockLevels = await this.connection.getRepository(ctx, StockLevel).find({
-            where: stockLocationIds.map(stockLocationId => ({
-                productVariantId,
-                stockLocationId,
-            })),
+            where: {
+                productVariantId: In(variantIds),
+                stockLocationId: In(stockLocationIds),
+            },
         });
-        const reservedByLocation = await this.sumActiveReservationsByLocation(
-            ctx,
-            productVariantId,
-            stockLocationIds,
-        );
+        const reserved = await this.connection.getRepository(ctx, Reservation).find({
+            where: {
+                productVariantId: In(variantIds),
+                stockLocationId: In(stockLocationIds),
+                status: 'active' as const,
+            },
+        });
+        const reservedByKey = new Map<string, number>();
+        for (const row of reserved) {
+            const key = `${row.productVariantId}:${row.stockLocationId}`;
+            reservedByKey.set(key, (reservedByKey.get(key) ?? 0) + row.quantity);
+        }
 
-        let total = 0;
         for (const level of stockLevels) {
-            const locationId = String(level.stockLocationId);
+            const variantId = String(level.productVariantId);
             const localFree =
                 level.stockOnHand -
                 level.stockAllocated -
-                (reservedByLocation.get(locationId) ?? 0);
+                (reservedByKey.get(`${variantId}:${level.stockLocationId}`) ?? 0);
             const erpCap = level.customFields?.erpAvailableQuantity;
             const capped = erpCap != null ? Math.min(localFree, erpCap) : localFree;
-            // Floored at 0 (mivend.audit.72 LOW) — a malformed/negative erpAvailableQuantity from
-            // ERP (not expected under normal operation, but stock.handler.ts doesn't validate the
-            // incoming value) must not turn into a negative contribution once summed across
-            // locations, which would silently understate ATP for the whole branch.
-            total += Math.max(0, capped);
+            // Floored at 0 (mivend.audit.72 LOW): a malformed negative erpAvailableQuantity must
+            // not understate the branch's ATP once summed across locations.
+            totals.set(variantId, (totals.get(variantId) ?? 0) + Math.max(0, capped));
         }
-        return total;
+        return totals;
     }
 
     async getReservedQuantity(

@@ -21,6 +21,8 @@ import { ReservationExtensionLimit } from './entities/reservation-extension-limi
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
 import { ReservationAvailabilityService } from './reservation-availability.service';
+import { DEFAULT_STOCK_TIER_LOW_MAX, DEFAULT_STOCK_TIER_MEDIUM_MAX } from './stock-tier';
+import { StockLevelService } from './stock-level.service';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
 import { ReservationExpiryService } from './reservation-expiry.service';
 import { createReservationExpiryTask } from './reservation-expiry.scheduled-task';
@@ -122,13 +124,14 @@ const adminApiSchema = gql`
         ReservationWriteOffSyncService,
         ReservationExpiryService,
         ReservationAvailabilityService,
+        StockLevelService,
         ReservationExtensionLimitService,
         {
             provide: RESERVATION_PLUGIN_OPTIONS,
             useFactory: (): ReservationPluginOptions => ReservationPlugin.options,
         },
     ],
-    exports: [ReservationService, ReservationWriteOffSyncService],
+    exports: [ReservationService, ReservationWriteOffSyncService, StockLevelService],
     adminApiExtensions: {
         schema: adminApiSchema,
         resolvers: [ReservationResolver],
@@ -165,6 +168,29 @@ const adminApiSchema = gql`
                         languageCode: LanguageCode.en,
                         value: 'NOT_REQUIRED | AWAITING_CONFIRMATION | RESERVED | EXPIRED | RELEASED | FAILED — see docs/order-flow.md.',
                     },
+                ],
+            },
+        ];
+        config.customFields.GlobalSettings = [
+            ...(config.customFields.GlobalSettings ?? []),
+            {
+                name: 'stockTierLowMax',
+                type: 'int' as const,
+                nullable: true,
+                public: false,
+                defaultValue: DEFAULT_STOCK_TIER_LOW_MAX,
+                label: [
+                    { languageCode: LanguageCode.en, value: 'Stock tier: "low" up to (units)' },
+                ],
+            },
+            {
+                name: 'stockTierMediumMax',
+                type: 'int' as const,
+                nullable: true,
+                public: false,
+                defaultValue: DEFAULT_STOCK_TIER_MEDIUM_MAX,
+                label: [
+                    { languageCode: LanguageCode.en, value: 'Stock tier: "medium" up to (units)' },
                 ],
             },
         ];

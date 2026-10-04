@@ -1,13 +1,12 @@
 import { Logger } from '@vendure/core';
-import type { SearchInput } from '@vendure/common/lib/generated-types';
 
 import type { ResolvedSearchFilters } from './search-filter-resolver.service';
-import { loggerCtx } from './types';
+import { loggerCtx, ShopSearchInput } from './types';
 
 export interface ResolveQueryRequest {
     query: string;
     categoryId?: string;
-    filters?: { manufacturer: string[] };
+    filters?: { manufacturer?: string[]; warehouseIds?: string[] };
     sort?: 'relevance' | 'name';
     limit?: number;
     offset?: number;
@@ -15,12 +14,12 @@ export interface ResolveQueryRequest {
 }
 
 export function hasBrowseCriteria(request: ResolveQueryRequest): boolean {
-    return Boolean(request.query || request.categoryId || request.filters?.manufacturer.length);
+    return Boolean(request.query || request.categoryId || request.filters?.manufacturer?.length);
 }
 
 // search-service has no price sort (prices are per-customer, resolved in mivend) and no
 // descending name sort; those degrade to relevance with a warning.
-function mapSort(input: SearchInput): 'relevance' | 'name' {
+function mapSort(input: ShopSearchInput): 'relevance' | 'name' {
     if (input.sort?.name === 'ASC') return 'name';
     if (input.sort && Object.keys(input.sort).length > 0) {
         Logger.warn('unsupported search sort ignored, using relevance', loggerCtx);
@@ -29,15 +28,18 @@ function mapSort(input: SearchInput): 'relevance' | 'name' {
 }
 
 export function mapSearchInputToResolveQueryRequest(
-    input: SearchInput,
+    input: ShopSearchInput,
     resolved: ResolvedSearchFilters,
 ): ResolveQueryRequest {
+    const filters = {
+        ...(resolved.manufacturer.length > 0 ? { manufacturer: resolved.manufacturer } : {}),
+        ...(resolved.warehouseIds ? { warehouseIds: resolved.warehouseIds } : {}),
+    };
     return {
         query: input.term ?? '',
         ...(resolved.categoryId ? { categoryId: resolved.categoryId } : {}),
-        ...(resolved.manufacturer.length > 0
-            ? { filters: { manufacturer: resolved.manufacturer } }
-            : {}),
+        ...(Object.keys(filters).length > 0 ? { filters } : {}),
+        ...(input.inStock ? { availableOnly: true } : {}),
         sort: mapSort(input),
         limit: input.take ?? undefined,
         offset: input.skip ?? undefined,

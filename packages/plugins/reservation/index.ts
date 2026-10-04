@@ -24,3 +24,5 @@ export type { ReservationStatus } from './src/entities/reservation.entity';
 export { ReservationExtensionLimit } from './src/entities/reservation-extension-limit.entity';
 export type { ReservationPluginOptions } from './src/types';
 export { DEFAULT_RESERVATION_DAYS } from './src/types';
+export { StockLevelService } from './src/stock-level.service';
+export type { StockTier } from './src/stock-tier';

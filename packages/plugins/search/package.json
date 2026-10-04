@@ -13,7 +13,9 @@
     "dependencies": {
         "@mivend/plugin-cross-reference": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
+        "@mivend/plugin-reservation": "workspace:*",
         "@vendure/elasticsearch-plugin": "^3.5.7",
+        "dataloader": "2.2.3",
         "graphql-tag": "^2.12.6"
     },
     "devDependencies": {

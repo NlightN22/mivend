@@ -8,6 +8,7 @@ import {
 import { ElasticsearchPlugin } from '@vendure/elasticsearch-plugin';
 import { CrossReferenceService } from '@mivend/plugin-cross-reference';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
+import { ReservationPlugin } from '@mivend/plugin-reservation';
 import gql from 'graphql-tag';
 
 import { ExternalSearchPlugin } from './external-search.plugin';
@@ -20,6 +21,7 @@ const shopApiSchema = gql`
         customerPrice: Int
         compareAtPrice: Int
         discountTiers: [DiscountTier!]!
+        stockLevel: String!
     }
 `;
 
@@ -103,7 +105,7 @@ function buildElasticsearchPlugin(): Type<unknown> {
 }
 
 @VendurePlugin({
-    imports: [PluginCommonModule, PriceEntryPlugin],
+    imports: [PluginCommonModule, PriceEntryPlugin, ReservationPlugin],
     shopApiExtensions: {
         schema: shopApiSchema,
         resolvers: [SearchResultResolver],

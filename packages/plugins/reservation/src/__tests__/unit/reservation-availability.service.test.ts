@@ -43,16 +43,35 @@ describe('ReservationAvailabilityService', () => {
         const reservations = options.reservations ?? [];
         const stockLocations = options.stockLocations ?? [];
 
+        type Where = { stockLocationId: { value: string[] } | string; productVariantId?: unknown };
+        const locationIds = (where: Where | Where[]): Set<string> =>
+            new Set(
+                Array.isArray(where)
+                    ? where.map(w => String(w.stockLocationId))
+                    : (where.stockLocationId as { value: string[] }).value,
+            );
+        // Rows in these fixtures belong to whichever single variant the query asks for.
+        const variantOf = (where: Where | Where[]): string => {
+            const v = (Array.isArray(where) ? where[0] : where)?.productVariantId as
+                | { value: string[] }
+                | string
+                | undefined;
+            return typeof v === 'object' ? v.value[0] : (v ?? 'variant-1');
+        };
         const reservationRepo = {
-            find: vi.fn(async ({ where }: { where: Array<{ stockLocationId: string }> }) => {
-                const ids = new Set(where.map(w => w.stockLocationId));
-                return reservations.filter(r => ids.has(r.stockLocationId));
+            find: vi.fn(async ({ where }: { where: Where | Where[] }) => {
+                const ids = locationIds(where);
+                return reservations
+                    .filter(r => ids.has(r.stockLocationId))
+                    .map(r => ({ ...r, productVariantId: variantOf(where) }));
             }),
         };
         const stockLevelRepo = {
-            find: vi.fn(async ({ where }: { where: Array<{ stockLocationId: string }> }) => {
-                const ids = new Set(where.map(w => w.stockLocationId));
-                return stockLevels.filter(s => ids.has(s.stockLocationId));
+            find: vi.fn(async ({ where }: { where: Where | Where[] }) => {
+                const ids = locationIds(where);
+                return stockLevels
+                    .filter(s => ids.has(s.stockLocationId))
+                    .map(s => ({ ...s, productVariantId: variantOf(where) }));
             }),
         };
         const stockLocationRepo = {
@@ -304,5 +323,14 @@ describe('ReservationAvailabilityService', () => {
         // loc-1 capped at 2 (not 10), loc-2 uncapped at 10 -> 2 + 10 = 12. A naive
         // sum-then-cap (min(20, 2)) would have wrongly produced 2 for the whole branch.
         expect(available).toBe(12);
+    });
+
+    it('batch: returns 0 for a variant with no stock rows and an empty map for no variants', async () => {
+        const service = createService({
+            stockLevels: [{ stockLocationId: 'location-1', stockOnHand: 4, stockAllocated: 0 }],
+        });
+        expect((await service.getAvailableToPromiseBatch(ctx, [])).size).toBe(0);
+        const result = await service.getAvailableToPromiseBatch(ctx, ['variant-1']);
+        expect(result.get('variant-1')).toBe(4);
     });
 });

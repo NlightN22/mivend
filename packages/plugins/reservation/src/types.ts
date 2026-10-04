@@ -7,6 +7,10 @@ declare module '@vendure/core' {
         // erp-order, see docs/access-control.md's branch-scope axis.
         branchId?: string | null;
     }
+    interface CustomGlobalSettingsFields {
+        stockTierLowMax?: number | null;
+        stockTierMediumMax?: number | null;
+    }
     interface CustomPaymentMethodFields {
         paymentClassification?: string | null;
         reservationTtlDays?: number | null;

@@ -1,7 +1,7 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
+import { ReservationPlugin } from '@mivend/plugin-reservation';
 
 import { externalSearchSchema } from './external-search.schema';
-import { ExternalSearchResultStockResolver } from './search-result-stock.resolver';
 import { ExternalAdminSearchResolver, ExternalSearchResolver } from './external-search.resolver';
 import { ExternalSearchService } from './external-search.service';
 import { ProductLookupService } from './product-lookup.service';
@@ -12,10 +12,10 @@ import { SearchServiceClient } from './search-service.client';
 // query against search-service, replacing the seam ElasticsearchPlugin fills for the internal
 // backend. Never registered alongside ElasticsearchPlugin. See search.plugin.ts.
 @VendurePlugin({
-    imports: [PluginCommonModule],
+    imports: [PluginCommonModule, ReservationPlugin],
     shopApiExtensions: {
         schema: externalSearchSchema,
-        resolvers: [ExternalSearchResolver, ExternalSearchResultStockResolver],
+        resolvers: [ExternalSearchResolver],
     },
     adminApiExtensions: {
         resolvers: [ExternalAdminSearchResolver],

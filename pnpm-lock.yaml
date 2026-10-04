@@ -1075,9 +1075,15 @@ importers:
             '@mivend/plugin-price-entry':
                 specifier: workspace:*
                 version: link:../price-entry
+            '@mivend/plugin-reservation':
+                specifier: workspace:*
+                version: link:../reservation
             '@vendure/elasticsearch-plugin':
                 specifier: ^3.5.7
                 version: 3.5.7(supports-color@8.1.1)
+            dataloader:
+                specifier: 2.2.3
+                version: 2.2.3
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)

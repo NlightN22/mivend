@@ -3690,7 +3690,7 @@ export type SearchResult = {
     discountTiers: Array<DiscountTier>;
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
-    inStock?: Maybe<Scalars['Boolean']['output']>;
+    stockLevel: Scalars['String']['output'];
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset?: Maybe<SearchResultAsset>;
@@ -4303,7 +4303,7 @@ export type CatalogProductsQuery = {
             slug: string;
             sku: string;
             currencyCode: CurrencyCode;
-            inStock?: boolean | null;
+            stockLevel: string;
             facetValueIds: Array<string>;
             customerPrice?: number | null;
             compareAtPrice?: number | null;
@@ -5222,7 +5222,7 @@ export const CatalogProductsDocument = new TypedDocumentString(`
         }
       }
       currencyCode
-      inStock
+      stockLevel
       facetValueIds
       customerPrice
       compareAtPrice

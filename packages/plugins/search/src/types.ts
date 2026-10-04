@@ -1,3 +1,4 @@
+import type { SearchInput } from '@vendure/common/lib/generated-types';
 import { Logger } from '@vendure/core';
 
 export const loggerCtx = 'SearchPlugin';
@@ -22,3 +23,6 @@ export function getSearchBackend(): SearchBackend {
     }
     return SEARCH_BACKEND_DEFAULT;
 }
+
+// ElasticsearchPlugin adds `inStock` to SearchInput; the external backend's schema does the same.
+export type ShopSearchInput = SearchInput & { inStock?: boolean | null };

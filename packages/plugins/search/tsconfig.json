@@ -6,5 +6,9 @@
         "rootDir": "."
     },
     "include": ["src/**/*", "index.ts"],
-    "references": [{ "path": "../cross-reference" }, { "path": "../price-entry" }]
+    "references": [
+        { "path": "../cross-reference" },
+        { "path": "../price-entry" },
+        { "path": "../reservation" }
+    ]
 }

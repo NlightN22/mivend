@@ -35,7 +35,7 @@ query CatalogProducts(
                 }
             }
             currencyCode
-            inStock
+            stockLevel
             facetValueIds
             customerPrice
             compareAtPrice

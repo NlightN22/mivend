@@ -31,10 +31,35 @@ describe('mapSearchInputToResolveQueryRequest', () => {
         });
     });
 
-    it('maps name ASC sort to name', () => {
-        expect(mapSearchInputToResolveQueryRequest({ sort: { name: 'ASC' } }, none).sort).toBe(
-            'name',
+    it('inStock narrows availability to the viewer branch warehouses', () => {
+        const request = mapSearchInputToResolveQueryRequest(
+            { term: 'oil', inStock: true },
+            { manufacturer: [], warehouseIds: ['wh-1'] },
         );
+        expect(request).toMatchObject({
+            availableOnly: true,
+            filters: { warehouseIds: ['wh-1'] },
+        });
+    });
+
+    it('an empty warehouse list is still sent (no visible stock means no results, not all)', () => {
+        const request = mapSearchInputToResolveQueryRequest(
+            { term: 'oil', inStock: true },
+            { manufacturer: [], warehouseIds: [] },
+        );
+        expect(request.filters).toEqual({ warehouseIds: [] });
+    });
+
+    it('without inStock neither availableOnly nor warehouseIds is sent', () => {
+        const request = mapSearchInputToResolveQueryRequest({ term: 'oil' }, none);
+        expect(request).not.toHaveProperty('availableOnly');
+        expect(request).not.toHaveProperty('filters');
+    });
+
+    it('maps name ASC sort to name', () => {
+        expect(
+            mapSearchInputToResolveQueryRequest({ sort: { name: 'ASC' } } as never, none).sort,
+        ).toBe('name');
     });
 
     it.each([{ price: 'ASC' }, { name: 'DESC' }])(
