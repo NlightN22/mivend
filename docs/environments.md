@@ -343,3 +343,10 @@ every contour, including staging-integration, still serves them via the raw Vite
 today; nothing has actually deployed the new images to a real contour yet, only run manually via
 `make preview-*` on this box. See `docs/frontend-load-benchmarks.md` for real baseline numbers
 comparing the prod container against the dev server.
+
+## Contour startup timing (reference)
+
+Healthy `make dev-staging-integration` restart (after `pnpm build:plugins`): `/health` 200 in
+about 25–40 s. Several minutes with the server pinned at ~90% CPU before it listens means a
+boot-time hook is doing O(n²) work (the manufacturer facet backfill did, fixed 2026-10-04);
+a concurrent restart by another session also kills the first one (`make: Killed`).

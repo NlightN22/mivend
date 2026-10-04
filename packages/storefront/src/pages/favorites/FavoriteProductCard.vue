@@ -7,6 +7,8 @@ export interface FavoriteProduct {
     name: string;
     note: string;
     price: string;
+    unitPrice: number | undefined;
+    currency: string;
     stockLabel: string;
     stockVariant: StockVariant;
     qty: number;

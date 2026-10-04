@@ -40,6 +40,8 @@ function toCard(item: FavoriteVariantView): FavoriteProduct {
         name: item.name,
         note: '',
         price: priceStr,
+        unitPrice: item.price,
+        currency: item.currency,
         stockLabel,
         stockVariant,
         qty: getQty(item.variantId),
