@@ -165,6 +165,10 @@ branch, else `GlobalSettings.defaultBranchId`; the API resolves guests against t
 `docs/pricing.md`, "Guest display"). Tiers: none = ATP ≤ 0, low = 1–4, medium = 5–19, high = 20+. Thresholds are
 computed on mivend's side (not in search-service) and stored in the database, not in code.
 
+**Inbound stock for deleted warehouses:** a `stock` event whose warehouse is unknown is retried (the warehouse event may not be
+consumed yet), unless the latest inbox event for that warehouse is a processed deletion tombstone — then the fact is ignored,
+because the warehouse never existed here (`warehouse-tombstone.query.ts`, #167).
+
 **Known limits of the tiers:** the `inStock` filter uses search-service's availability (ERP stock for
 the viewer's branch warehouses) while `stockLevel` uses mivend's ATP (minus our own unconfirmed
 reservations), so right after a reservation an item can pass the filter and show "out". Admin-API

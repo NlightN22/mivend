@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
 import { StockStreamHandler } from '../../handlers/stock.handler';
+import { isWarehouseTombstoned } from '../../handlers/warehouse-tombstone.query';
 import { MissingDependencyError } from '../../types';
+
+vi.mock('../../handlers/warehouse-tombstone.query', () => ({ isWarehouseTombstoned: vi.fn() }));
 
 function createConnection(
     rows: Array<Record<string, unknown> | undefined>,
@@ -22,8 +25,6 @@ function createConnection(
                     from: vi.fn().mockReturnThis(),
                     innerJoin: vi.fn().mockReturnThis(),
                     where: vi.fn().mockReturnThis(),
-                    andWhere: vi.fn().mockReturnThis(),
-                    limit: vi.fn().mockReturnThis(),
                     getRawOne: vi.fn().mockResolvedValue(row),
                 };
             },
@@ -34,6 +35,7 @@ function createConnection(
 
 describe('StockStreamHandler', () => {
     const ctx = {} as RequestContext;
+    beforeEach(() => vi.mocked(isWarehouseTombstoned).mockResolvedValue(false));
 
     it('skips when productId/warehouseId is missing', async () => {
         const warehouseService = { findByErpId: vi.fn() };
@@ -78,10 +80,11 @@ describe('StockStreamHandler', () => {
     });
 
     it('ignores stock for a warehouse that only arrived as a processed deletion tombstone', async () => {
+        vi.mocked(isWarehouseTombstoned).mockResolvedValue(true);
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue(null) };
         const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
         const handler = new StockStreamHandler(
-            createConnection([{ id: '1' }]) as never,
+            createConnection([]) as never,
             warehouseService as never,
             stockLevelService as never,
         );
@@ -99,7 +102,7 @@ describe('StockStreamHandler', () => {
     it('still retries stock for a warehouse with no event at all', async () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue(null) };
         const handler = new StockStreamHandler(
-            createConnection([undefined]) as never,
+            createConnection([]) as never,
             warehouseService as never,
             {} as never,
         );
@@ -155,7 +158,7 @@ describe('StockStreamHandler', () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
         const handler = new StockStreamHandler(
-            createConnection([undefined]) as never,
+            createConnection([]) as never,
             warehouseService as never,
             stockLevelService as never,
         );
