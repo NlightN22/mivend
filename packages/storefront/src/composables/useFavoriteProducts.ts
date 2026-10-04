@@ -52,6 +52,7 @@ export function useFavoriteProducts(): {
                     .flatMap(r => r.products.items)
                     .flatMap(p => p.variants.map(v => [v.id, { p, v }] as const)),
             );
+            ids.filter(id => !byVariantId.has(id)).forEach(id => store.remove(id));
             views.value = ids.flatMap(id => {
                 const found = byVariantId.get(id);
                 if (!found) return [];
