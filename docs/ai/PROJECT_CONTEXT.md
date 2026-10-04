@@ -1,6 +1,6 @@
 # Project Context
 
-Updated: 2026-10-04 15:00
+Updated: 2026-10-04 15:45
 
 ## Recent changes (2026-10-04 — #164 category browse/filters/facets on ExternalSearchPlugin, closed/audited)
 
@@ -53,8 +53,11 @@ Updated: 2026-10-04 15:00
   `test@komponent-m.ru` (counterparty 21560, retail price type; password in the session scratchpad,
   not in the repo; KEEP it). Counterparty `officialEmail` comes from 1C kind "Служебный адрес
   электронной почты контрагента" only.
-- Open follow-ups: #167 (stock for warehouses that only arrived as tombstones retries forever; fix in
-  stock.handler.ts, body has the plan), #162 (favorites IDs only + gate stock by login), #163
+- #167 (closed, audited, 4fe0e1a + 4651c5f): `stock.handler.ts` ignores a stock fact for an unknown warehouse
+  when the LATEST inbox `warehouse` event for it is a processed tombstone (`warehouse-tombstone.query.ts`,
+  real-Postgres test); otherwise still retries (ordering race). Staging: 12833 failed stock rows reset
+  to pending, all processed, none failed. Doc: order-flow.md.
+- Open follow-ups: #162 (favorites IDs only + gate stock by login), #163
   (warehouse hierarchy, other session), search-platform#159 (stop exporting deleted warehouses).
   Known limits: `inStock` filter (ERP stock) can disagree briefly with `stockLevel` (mivend ATP).
 
