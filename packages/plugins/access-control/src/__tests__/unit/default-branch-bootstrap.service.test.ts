@@ -37,24 +37,28 @@ describe('DefaultBranchBootstrapService', () => {
         branchRepo = {
             findOne: vi.fn().mockResolvedValue(null),
             create: vi.fn((x: unknown) => x),
-            save: vi.fn(async (x: object) => ({ id: 7, ...x })),
+            save: vi.fn().mockImplementation(async (x: object) => ({
+                id: branchRepo.save.mock.calls.length + 6,
+                ...x,
+            })),
         };
         settingsRepo = {
             findOne: vi.fn().mockResolvedValue(null),
             create: vi.fn((x: unknown) => x),
-            save: vi.fn(async (x: unknown) => x),
+            save: vi.fn().mockImplementation(async (x: unknown) => x),
         };
         query = vi.fn().mockResolvedValue([{ id: 3 }]);
         updateSettings = vi.fn();
         getGlobalDefaultBranchId = vi.fn().mockResolvedValue(null);
     });
 
-    it('creates the branch, sets it as default and creates its settings with the price type', async () => {
+    it('creates every branch, sets the first as default and creates its settings with the price type', async () => {
         await build({
-            centralBranchName: 'Central',
+            branchNames: ['Branch A', 'Branch B'],
             defaultPriceTypeCode: 'RETAIL',
         }).onApplicationBootstrap();
-        expect(branchRepo.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'Central' }));
+        expect(branchRepo.save).toHaveBeenCalledTimes(2);
+        expect(branchRepo.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'Branch B' }));
         expect(updateSettings).toHaveBeenCalledWith(expect.anything(), {
             customFields: { defaultBranchId: '7' },
         });
@@ -71,17 +75,16 @@ describe('DefaultBranchBootstrapService', () => {
         getGlobalDefaultBranchId.mockResolvedValue('42');
         settingsRepo.findOne.mockResolvedValue({ branchId: '42' });
         await build({
-            centralBranchName: 'Central',
+            branchNames: ['Branch A', 'Branch B'],
             defaultPriceTypeCode: 'RETAIL',
         }).onApplicationBootstrap();
-        expect(branchRepo.save).not.toHaveBeenCalled();
         expect(updateSettings).not.toHaveBeenCalled();
         expect(settingsRepo.save).not.toHaveBeenCalled();
     });
 
     it('reuses an already-bootstrapped branch on re-run (idempotent)', async () => {
         branchRepo.findOne.mockResolvedValue({ id: 7 });
-        await build({ centralBranchName: 'Central' }).onApplicationBootstrap();
+        await build({ branchNames: ['Branch A', 'Branch B'] }).onApplicationBootstrap();
         expect(branchRepo.save).not.toHaveBeenCalled();
         expect(updateSettings).toHaveBeenCalledTimes(1);
     });
@@ -89,23 +92,23 @@ describe('DefaultBranchBootstrapService', () => {
     it('leaves the price unset when the configured price type does not exist', async () => {
         query.mockResolvedValue([]);
         await build({
-            centralBranchName: 'Central',
+            branchNames: ['Branch A', 'Branch B'],
             defaultPriceTypeCode: 'MISSING',
         }).onApplicationBootstrap();
         expect(settingsRepo.save).not.toHaveBeenCalled();
     });
 
-    it('does nothing without centralBranchName or on the worker process', async () => {
+    it('does nothing without branchNames or on the worker process', async () => {
         await build({}).onApplicationBootstrap();
         isWorker = true;
-        await build({ centralBranchName: 'Central' }).onApplicationBootstrap();
+        await build({ branchNames: ['Branch A', 'Branch B'] }).onApplicationBootstrap();
         expect(getGlobalDefaultBranchId).not.toHaveBeenCalled();
     });
 
     it('swallows a bootstrap failure instead of crashing startup', async () => {
         getGlobalDefaultBranchId.mockRejectedValue(new Error('db down'));
         await expect(
-            build({ centralBranchName: 'Central' }).onApplicationBootstrap(),
+            build({ branchNames: ['Branch A', 'Branch B'] }).onApplicationBootstrap(),
         ).resolves.toBeUndefined();
     });
 });

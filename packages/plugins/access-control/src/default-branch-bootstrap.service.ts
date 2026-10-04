@@ -12,7 +12,7 @@ import { Branch } from './entities/branch.entity';
 import { BranchSettings } from './entities/branch-settings.entity';
 import { ACCESS_CONTROL_PLUGIN_OPTIONS, AccessControlPluginOptions, loggerCtx } from './types';
 
-const BOOTSTRAP_ERP_ID = 'mivend-bootstrap:central';
+const BOOTSTRAP_ERP_ID_PREFIX = 'mivend-bootstrap:';
 
 // Issue #160: contours fed only by real Kafka data are never seeded, so the guest price fallback
 // (#70) needs the default branch and its price type to exist without manual admin setup.
@@ -27,11 +27,13 @@ export class DefaultBranchBootstrapService implements OnApplicationBootstrap {
     ) {}
 
     async onApplicationBootstrap(): Promise<void> {
-        if (this.processContext.isWorker || !this.options.centralBranchName) return;
+        const names = this.options.branchNames ?? [];
+        if (this.processContext.isWorker || names.length === 0) return;
         try {
             const ctx = RequestContext.empty();
-            const branchId = await this.ensureDefaultBranch(ctx, this.options.centralBranchName);
-            await this.ensureBranchSettings(ctx, branchId);
+            const branchIds = await this.ensureBranches(ctx, names);
+            const defaultBranchId = await this.ensureDefaultBranch(ctx, branchIds[0]);
+            await this.ensureBranchSettings(ctx, defaultBranchId);
         } catch (err) {
             Logger.error(
                 `Default branch bootstrap failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -40,20 +42,27 @@ export class DefaultBranchBootstrapService implements OnApplicationBootstrap {
         }
     }
 
-    private async ensureDefaultBranch(ctx: RequestContext, name: string): Promise<string> {
+    private async ensureBranches(ctx: RequestContext, names: string[]): Promise<string[]> {
+        const repo = this.connection.getRepository(ctx, Branch);
+        const ids: string[] = [];
+        for (const name of names) {
+            const erpId = `${BOOTSTRAP_ERP_ID_PREFIX}${name}`;
+            const branch =
+                (await repo.findOne({ where: { erpId } })) ??
+                (await repo.save(repo.create({ erpId, name })));
+            ids.push(String(branch.id));
+        }
+        return ids;
+    }
+
+    private async ensureDefaultBranch(ctx: RequestContext, firstBranchId: string): Promise<string> {
         const existing = await this.branchSettingsService.getGlobalDefaultBranchId(ctx);
         if (existing) return existing;
-
-        const repo = this.connection.getRepository(ctx, Branch);
-        const branch =
-            (await repo.findOne({ where: { erpId: BOOTSTRAP_ERP_ID } })) ??
-            (await repo.save(repo.create({ erpId: BOOTSTRAP_ERP_ID, name })));
-        const branchId = String(branch.id);
         await this.globalSettingsService.updateSettings(ctx, {
-            customFields: { defaultBranchId: branchId },
+            customFields: { defaultBranchId: firstBranchId },
         });
-        Logger.info(`Set default branch to "${name}" (id=${branchId})`, loggerCtx);
-        return branchId;
+        Logger.info(`Set default branch id=${firstBranchId}`, loggerCtx);
+        return firstBranchId;
     }
 
     private async ensureBranchSettings(ctx: RequestContext, branchId: string): Promise<void> {

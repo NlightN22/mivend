@@ -14,6 +14,6 @@ export const loggerCtx = 'AccessControlPlugin';
 export const ACCESS_CONTROL_PLUGIN_OPTIONS = Symbol('ACCESS_CONTROL_PLUGIN_OPTIONS');
 
 export interface AccessControlPluginOptions {
-    centralBranchName?: string;
+    branchNames?: string[];
     defaultPriceTypeCode?: string;
 }
