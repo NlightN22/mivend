@@ -117,11 +117,13 @@ export class StockStreamHandler implements InboundStreamHandler {
             );
         }
         if (current.customFields?.erpAvailableQuantity !== Math.round(availableQuantity)) {
-            current.customFields = {
-                ...current.customFields,
-                erpAvailableQuantity: Math.round(availableQuantity),
-            };
-            await this.connection.getRepository(ctx, StockLevel).save(current);
+            // Targeted update: saving `current` would write its stale stockOnHand back over the delta above.
+            await this.connection
+                .getRepository(ctx, StockLevel)
+                .update(
+                    { id: current.id },
+                    { customFields: { erpAvailableQuantity: Math.round(availableQuantity) } },
+                );
         }
         Logger.verbose(
             `Updated stock productId=${productId} warehouseId=${warehouseId} qty=${stockOnHand} ` +

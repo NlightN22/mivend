@@ -9,7 +9,7 @@ function createConnection(
     stockLevelSave = vi.fn(),
 ): {
     rawConnection: { createQueryBuilder: () => unknown };
-    getRepository: () => { save: typeof stockLevelSave };
+    getRepository: () => { update: typeof stockLevelSave };
 } {
     let call = 0;
     return {
@@ -26,7 +26,7 @@ function createConnection(
                 };
             },
         },
-        getRepository: () => ({ save: stockLevelSave }),
+        getRepository: () => ({ update: stockLevelSave }),
     };
 }
 
@@ -202,10 +202,8 @@ describe('StockStreamHandler', () => {
         });
 
         expect(stockLevelSave).toHaveBeenCalledWith(
-            expect.objectContaining({
-                id: 'level-1',
-                customFields: expect.objectContaining({ erpAvailableQuantity: 10 }),
-            }),
+            { id: 'level-1' },
+            { customFields: { erpAvailableQuantity: 10 } },
         );
     });
 
@@ -263,10 +261,8 @@ describe('StockStreamHandler', () => {
         });
 
         expect(stockLevelSave).toHaveBeenCalledWith(
-            expect.objectContaining({
-                id: 'level-1',
-                customFields: expect.objectContaining({ erpAvailableQuantity: 0 }),
-            }),
+            { id: 'level-1' },
+            { customFields: { erpAvailableQuantity: 0 } },
         );
     });
 
@@ -315,5 +311,58 @@ describe('StockStreamHandler', () => {
         });
 
         expect(stockLevelService.updateStockOnHandForLocation).not.toHaveBeenCalled();
+    });
+
+    describe('stockOnHand and erpAvailableQuantity are both preserved (issue #70 follow-up, #157)', () => {
+        // Stateful fake of one StockLevel row: update() touches only the given columns, like SQL.
+        function setup(initial: { stockOnHand: number; erp?: number }) {
+            const row = { id: 'level-1', stockOnHand: initial.stockOnHand, erp: initial.erp };
+            const stockLevelService = {
+                getStockLevel: vi.fn().mockImplementation(async () => ({
+                    id: row.id,
+                    stockOnHand: row.stockOnHand,
+                    customFields: { erpAvailableQuantity: row.erp },
+                })),
+                updateStockOnHandForLocation: vi
+                    .fn()
+                    .mockImplementation(async (...a: unknown[]) => {
+                        row.stockOnHand += a[3] as number;
+                    }),
+            };
+            const update = vi
+                .fn()
+                .mockImplementation(async (_w: unknown, v: Record<string, never>) => {
+                    row.erp = (
+                        v.customFields as { erpAvailableQuantity: number }
+                    ).erpAvailableQuantity;
+                });
+            const run = (payload: Record<string, unknown>) =>
+                new StockStreamHandler(
+                    createConnection([{ id: 'loc-1' }, { id: 'variant-1' }], update) as never,
+                    { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) } as never,
+                    stockLevelService as never,
+                ).apply(ctx, 'stock-1', { productId: 'p', warehouseId: 'w', ...payload });
+            return { row, run, update };
+        }
+
+        it('first event with quantity > 0 and a changed availableQuantity keeps both values', async () => {
+            const { row, run } = setup({ stockOnHand: 0 });
+            await run({ quantity: 2, availableQuantity: 2 });
+            expect(row).toMatchObject({ stockOnHand: 2, erp: 2 });
+        });
+
+        it('re-delivery of the same event is idempotent', async () => {
+            const { row, run, update } = setup({ stockOnHand: 0 });
+            await run({ quantity: 2, availableQuantity: 2 });
+            await run({ quantity: 2, availableQuantity: 2 });
+            expect(row).toMatchObject({ stockOnHand: 2, erp: 2 });
+            expect(update).toHaveBeenCalledTimes(1);
+        });
+
+        it('an availableQuantity-only change leaves stockOnHand untouched', async () => {
+            const { row, run } = setup({ stockOnHand: 5, erp: 5 });
+            await run({ quantity: 5, availableQuantity: 3 });
+            expect(row).toMatchObject({ stockOnHand: 5, erp: 3 });
+        });
     });
 });
