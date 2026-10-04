@@ -4,11 +4,11 @@ import {
     buildCategoryFacetFilter,
     categorySlug,
     collectFacetValueIds,
+    ensureParentCategoryCollection,
+    moveCategoryIfParentChanged,
     resolveCategoryIsPrivate,
 } from 'shared';
-import type { ID } from '@vendure/common/lib/shared-types';
 import {
-    Collection,
     CollectionService,
     Facet,
     FacetService,
@@ -32,9 +32,9 @@ interface CollectionInput {
     facetValueIdByCode: ReadonlyMap<string, string>;
 }
 
-// CategoryChanged fields: name, parent_id, is_active, is_deleted are consumed;
-// event_id/occurred_at/updated_at/version are envelope-only (version drives the inbox guard).
-// See docs/category-hierarchy.md for the design.
+// CategoryChanged: entity_id (FacetValue code, Collection slug), name, parent_id, is_active and
+// is_deleted are consumed; version drives the inbox guard; event_id/occurred_at/updated_at are
+// envelope-only. Design: docs/category-hierarchy.md; status row: docs/ai/erp-streams-map.md.
 @Injectable()
 export class CategoryStreamHandler implements InboundStreamHandler {
     constructor(
@@ -48,11 +48,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<void> {
-        // A deletion tombstone (isDeleted:true) never carries a name — confirmed against real
-        // staging-integration payloads (mivend.issue.84.88 follow-up). `name: null` still lets
-        // an already-known category be hidden (isPrivate) below; only creating a brand-new
-        // facet value/Collection still requires a real name (see ensureFacetValue/
-        // ensureCollection — neither fabricates one).
+        // A deletion tombstone carries no name; it still hides a known category, but never creates one.
         const name = payload.name ? String(payload.name) : null;
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
         // bool zero-value omission).
@@ -110,10 +106,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         });
     }
 
-    // `name: null` only updates an already-found facet value's isActive-adjacent state via the
-    // caller's later isPrivate write on the Collection — the facet value's own name translation
-    // is left untouched rather than blanked. Creating a brand-new facet value still requires a
-    // real name; the caller (apply) already guarantees that when `existing` is undefined.
+    // A null name leaves an existing facet value's name untouched; apply() guarantees a name on create.
     private async ensureFacetValue(
         ctx: RequestContext,
         facet: Facet,
@@ -153,7 +146,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
             { languageCode: LanguageCode.en, name: resolvedName, slug, description: '' },
         ];
         const parent = parentErpId
-            ? await this.ensureParentCollection(ctx, parentErpId)
+            ? await ensureParentCategoryCollection(ctx, this.collectionService, parentErpId)
             : undefined;
         const parentId = parent?.id;
         // The manual override (issue #90) wins over the feed and over a hidden parent; a first-seen
@@ -191,45 +184,8 @@ export class CategoryStreamHandler implements InboundStreamHandler {
             filters: buildCategoryFacetFilter(facetValueIds),
             customFields,
         });
-        if (reparent) await this.moveIfParentChanged(ctx, existing, parentId);
-    }
-
-    // `desiredParentId` undefined means top level (child of the root Collection).
-    private async moveIfParentChanged(
-        ctx: RequestContext,
-        existing: Collection,
-        desiredParentId: ID | undefined,
-    ): Promise<void> {
-        const breadcrumbs = await this.collectionService.getBreadcrumbs(ctx, existing);
-        const currentParentId = breadcrumbs[breadcrumbs.length - 2]?.id;
-        const targetParentId = desiredParentId ?? breadcrumbs[0]?.id;
-        if (targetParentId === undefined || String(currentParentId) === String(targetParentId)) {
-            return;
+        if (reparent) {
+            await moveCategoryIfParentChanged(ctx, this.collectionService, existing, parentId);
         }
-        await this.collectionService.move(ctx, {
-            collectionId: existing.id,
-            parentId: targetParentId,
-            index: 0,
-        });
-    }
-
-    // A child can arrive before its parent: park it under a private placeholder that the
-    // parent's own event later fills in, instead of waiting or flattening under the root.
-    private async ensureParentCollection(
-        ctx: RequestContext,
-        parentErpId: string,
-    ): Promise<{ id: ID; isPrivate: boolean }> {
-        const slug = categorySlug(parentErpId);
-        const found = await this.collectionService.findOneBySlug(ctx, slug);
-        if (found) return { id: found.id, isPrivate: found.isPrivate };
-        const created = await this.collectionService.create(ctx, {
-            isPrivate: true,
-            customFields: { feedHidden: true },
-            translations: [
-                { languageCode: LanguageCode.en, name: parentErpId, slug, description: '' },
-            ],
-            filters: [],
-        });
-        return { id: created.id, isPrivate: true };
     }
 }

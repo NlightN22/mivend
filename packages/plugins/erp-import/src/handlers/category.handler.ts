@@ -16,6 +16,8 @@ import {
     CATEGORY_FACET_CODE,
     buildCategoryFacetFilter,
     categorySlug,
+    ensureParentCategoryCollection,
+    moveCategoryIfParentChanged,
     recomputeCategoryTree,
 } from 'shared';
 import path from 'path';
@@ -120,39 +122,35 @@ export class CategoryHandler {
         const existing = await this.collectionService.findOneBySlug(ctx, slug);
 
         const filters = buildCategoryFacetFilter([facetValueId]);
+        let parentErpId = record.parentErpId ?? undefined;
+        if (parentErpId === record.erpId) {
+            Logger.warn(
+                `category ${record.erpId}: parentErpId points to itself, ignoring`,
+                loggerCtx,
+            );
+            parentErpId = undefined;
+        }
+        const parent = parentErpId
+            ? await ensureParentCategoryCollection(ctx, this.collectionService, parentErpId)
+            : undefined;
+        const translations = [
+            { languageCode: LanguageCode.en, name: record.name, slug, description: '' },
+        ];
 
         if (existing) {
-            await this.collectionService.update(ctx, {
-                id: existing.id,
-                translations: [
-                    { languageCode: LanguageCode.en, name: record.name, slug, description: '' },
-                ],
-                filters,
-            });
+            await this.collectionService.update(ctx, { id: existing.id, translations, filters });
+            await moveCategoryIfParentChanged(ctx, this.collectionService, existing, parent?.id);
             Logger.verbose(`Updated collection erpId=${record.erpId}`, loggerCtx);
             return;
         }
 
-        const parentId = record.parentErpId
-            ? await this.findCollectionIdByErpId(ctx, record.parentErpId)
-            : undefined;
-
         await this.collectionService.create(ctx, {
-            parentId: parentId ?? undefined,
+            parentId: parent?.id,
             isPrivate: false,
-            translations: [
-                { languageCode: LanguageCode.en, name: record.name, slug, description: '' },
-            ],
+            translations,
             filters,
+            customFields: { feedHidden: false },
         });
         Logger.verbose(`Created collection erpId=${record.erpId}`, loggerCtx);
-    }
-
-    private async findCollectionIdByErpId(
-        ctx: RequestContext,
-        erpId: string,
-    ): Promise<string | undefined> {
-        const col = await this.collectionService.findOneBySlug(ctx, categorySlug(erpId));
-        return col ? String(col.id) : undefined;
     }
 }

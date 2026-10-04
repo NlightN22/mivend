@@ -44,3 +44,7 @@ export {
     resolveCategoryIsPrivate,
 } from './categoryCollectionFilter';
 export { recomputeCategoryTree } from './recomputeCategoryTree';
+export {
+    ensureParentCategoryCollection,
+    moveCategoryIfParentChanged,
+} from './categoryParentCollection';

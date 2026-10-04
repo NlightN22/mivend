@@ -21,6 +21,8 @@ Stream status lives in `ai/erp-streams-map.md`; this file is the design record.
 - Rejected: failing with `MissingDependencyError` and retrying. Kafka gives no ordering across entity
   keys, and bulk resync or replay would turn a hierarchy into a retry storm. Also rejected: placing the
   child under the root as a fallback, which would freeze a wrong tree.
+- The Kafka handler and the REST import handler share one parent implementation
+  (`packages/shared/src/categoryParentCollection.ts`): placeholder on a missing parent, `move` on change.
 - A changed `parent_id` moves the Collection (`CollectionService.move`). A tombstone never moves it.
 - Cycles in the parent chain are not detected on write; Vendure refuses to move a Collection into its
   own descendant, and the inbox retries and dead-letters that event.

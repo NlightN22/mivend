@@ -6,9 +6,9 @@ export class AddCollectionFeedHidden1791000000004 implements MigrationInterface 
             `ALTER TABLE "collection" ADD "customFieldsFeedhidden" boolean NOT NULL DEFAULT false`,
             undefined,
         );
-        // Before this column, isPrivate was driven by the feed alone (plus manual overrides).
+        // Without a manual override, isPrivate was driven by the feed alone.
         await queryRunner.query(
-            `UPDATE "collection" SET "customFieldsFeedhidden" = "isPrivate"`,
+            `UPDATE "collection" SET "customFieldsFeedhidden" = "isPrivate" WHERE "customFieldsVisibilityoverride" IS NULL`,
             undefined,
         );
     }
