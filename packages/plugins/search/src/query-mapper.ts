@@ -22,7 +22,9 @@ export function hasBrowseCriteria(request: ResolveQueryRequest): boolean {
         request.query ||
         request.categoryId ||
         request.filters?.manufacturer?.length ||
-        request.filters?.priceRange,
+        request.filters?.priceRange ||
+        request.sort === 'priceAsc' ||
+        request.sort === 'priceDesc',
     );
 }
 

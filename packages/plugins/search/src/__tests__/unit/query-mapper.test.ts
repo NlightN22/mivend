@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasBrowseCriteria, mapSearchInputToResolveQueryRequest } from '../../query-mapper';
+import {
+    hasBrowseCriteria,
+    mapSearchInputToResolveQueryRequest,
+    type ResolveQueryRequest,
+} from '../../query-mapper';
 
 const none = { manufacturer: [] as string[], unsatisfiable: false };
 
@@ -72,14 +76,17 @@ describe('mapSearchInputToResolveQueryRequest', () => {
 });
 
 describe('hasBrowseCriteria', () => {
-    it('is false for an empty query without filters', () => {
+    it('is false for an empty query without filters, even with a name sort', () => {
         expect(hasBrowseCriteria({ query: '' })).toBe(false);
+        expect(hasBrowseCriteria({ query: '', sort: 'nameDesc' })).toBe(false);
     });
-    it.each([
+    it.each<[ResolveQueryRequest]>([
         [{ query: 'x' }],
         [{ query: '', categoryId: 'c' }],
         [{ query: '', filters: { manufacturer: ['m'] } }],
         [{ query: '', filters: { priceRange: { min: 1 } } }],
+        [{ query: '', sort: 'priceAsc' }],
+        [{ query: '', sort: 'priceDesc' }],
     ])('is true for %o', request => {
         expect(hasBrowseCriteria(request)).toBe(true);
     });
