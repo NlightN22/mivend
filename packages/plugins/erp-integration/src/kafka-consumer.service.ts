@@ -260,48 +260,41 @@ export class KafkaConsumerService implements OnModuleDestroy {
         }, delay);
     }
 
-    // Never throws — an undecodable message must not crash the consumer or block partition
-    // progress for other messages. Logged and skipped (offset still commits): a genuinely
-    // malformed payload can't be retried into validity, unlike a downstream-processing failure
-    // (which goes through the inbox's own retry/dead-letter path instead) — same shape as
-    // search-service's own consumer.
+    // A decode failure is logged and skipped (it cannot be retried into validity); an enqueue
+    // failure rethrows so kafkajs does not commit the offset and the message is redelivered.
     private async handleMessage(
         stream: InboundStream,
         { message }: EachMessagePayload,
     ): Promise<void> {
         if (!message.value) return;
+        let record: Record<string, unknown>;
         try {
             const schema = SCHEMA_BY_STREAM[stream];
             const decoded = fromBinary(schema, new Uint8Array(message.value));
-            const record = toJson(schema, decoded) as Record<string, unknown>;
-
-            const entityId = String(record.entityId ?? '');
-            const version = String(record.version ?? '');
-            const sourceEventId = String(record.eventId ?? message.key?.toString() ?? '');
-
-            if (!entityId || !sourceEventId) {
-                Logger.error(
-                    `Dropping ${stream} message with missing entityId/eventId (offset=${message.offset})`,
-                    loggerCtx,
-                );
-                return;
-            }
-
-            await this.inbox.enqueue({
-                stream,
-                entityId,
-                version,
-                sourceEventId,
-                payload: record,
-            });
+            record = toJson(schema, decoded) as Record<string, unknown>;
         } catch (err) {
             Logger.error(
-                `Failed to decode/enqueue ${stream} message (offset=${message.offset}): ${
+                `Failed to decode ${stream} message (offset=${message.offset}): ${
                     err instanceof Error ? err.message : String(err)
                 }`,
                 loggerCtx,
             );
+            return;
         }
+
+        const entityId = String(record.entityId ?? '');
+        const version = String(record.version ?? '');
+        const sourceEventId = String(record.eventId ?? message.key?.toString() ?? '');
+
+        if (!entityId || !sourceEventId) {
+            Logger.error(
+                `Dropping ${stream} message with missing entityId/eventId (offset=${message.offset})`,
+                loggerCtx,
+            );
+            return;
+        }
+
+        await this.inbox.enqueue({ stream, entityId, version, sourceEventId, payload: record });
     }
 
     private async connectWithBackoff(): Promise<void> {
