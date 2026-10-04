@@ -57,6 +57,7 @@ import { CounterpartyDashboardPlugin } from './counterparty-dashboard.plugin';
 import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
+const defaultPriceTypeCode = process.env.DEFAULT_PRICE_TYPE_CODE ?? 'RETAIL';
 const integrationKafkaEnabled = process.env.INTEGRATION_KAFKA_ENABLED === 'true';
 // Issue #68 contour model: the legacy direct-REST ERP intake and the real Kafka/Integration
 // Service path are mutually exclusive per contour — set explicitly per env file (true for
@@ -628,8 +629,8 @@ export const config: VendureConfig = {
         // AccessControlPlugin's own bootstrap-time self-provisioning — see
         // src/dashboard/role-provisioning/index.ts.
         RoleProvisioningDashboardPlugin,
-        CustomerPricingPlugin.init({ defaultPriceTypeCode: 'RETAIL' }),
-        AccessControlPlugin,
+        CustomerPricingPlugin.init({ defaultPriceTypeCode }),
+        AccessControlPlugin.init({ centralBranchName: 'Central', defaultPriceTypeCode }),
         SessionManagementPlugin.init({}),
         ApprovalWorkflowPlugin,
         VersioningPlugin,

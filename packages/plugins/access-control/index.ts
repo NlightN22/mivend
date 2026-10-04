@@ -26,4 +26,4 @@ export { CreditTermLimitService } from './src/credit-term-limit.service';
 export { BranchSettings } from './src/entities/branch-settings.entity';
 export { BranchSettingsService } from './src/branch-settings.service';
 export type { BranchSettingsInput } from './src/branch-settings.service';
-export type { AccessScope, AccessScopeKind } from './src/types';
+export type { AccessControlPluginOptions, AccessScope, AccessScopeKind } from './src/types';

@@ -24,8 +24,8 @@ export class BranchSettings extends VendureEntity {
     @Column({ type: 'simple-json', nullable: true })
     visiblePriceTypeIds?: string[] | null;
 
-    @Column({ type: 'varchar' })
-    defaultWarehouseId!: string;
+    @Column({ type: 'varchar', nullable: true })
+    defaultWarehouseId?: string | null;
 
     @Column({ type: 'simple-json', nullable: true })
     visibleWarehouseIds?: string[] | null;

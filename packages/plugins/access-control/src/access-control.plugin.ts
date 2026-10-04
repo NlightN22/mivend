@@ -11,6 +11,7 @@ import { AccessScopeService } from './access-scope.service';
 import { AdministratorActivationService } from './administrator-activation.service';
 import { AdministratorProvisioningService } from './administrator-provisioning.service';
 import { BranchService } from './branch.service';
+import { DefaultBranchBootstrapService } from './default-branch-bootstrap.service';
 import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
@@ -27,6 +28,7 @@ import { ErpUser } from './entities/erp-user.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
 import { RoleProvisioningService } from './role-provisioning.service';
 import { RoleScopeConfigService } from './role-scope-config.service';
+import { ACCESS_CONTROL_PLUGIN_OPTIONS, AccessControlPluginOptions } from './types';
 import { Warehouse } from './entities/warehouse.entity';
 import { WarehouseService } from './warehouse.service';
 
@@ -60,7 +62,7 @@ const adminApiSchema = gql`
         branchId: String!
         defaultPriceTypeId: String!
         visiblePriceTypeIds: [String!]
-        defaultWarehouseId: String!
+        defaultWarehouseId: String
         visibleWarehouseIds: [String!]
         allowPiecewiseSale: Boolean!
     }
@@ -254,6 +256,11 @@ const adminApiSchema = gql`
         AdministratorActivationService,
         AdministratorProvisioningService,
         RoleProvisioningService,
+        DefaultBranchBootstrapService,
+        {
+            provide: ACCESS_CONTROL_PLUGIN_OPTIONS,
+            useFactory: (): AccessControlPluginOptions => AccessControlPlugin.options,
+        },
     ],
     exports: [
         AccessScopeService,
@@ -362,4 +369,11 @@ const adminApiSchema = gql`
     },
     compatibility: '>0.0.0',
 })
-export class AccessControlPlugin {}
+export class AccessControlPlugin {
+    static options: AccessControlPluginOptions = {};
+
+    static init(options: AccessControlPluginOptions): typeof AccessControlPlugin {
+        this.options = options;
+        return this;
+    }
+}
