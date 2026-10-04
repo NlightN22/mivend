@@ -104,13 +104,19 @@ Codegen picks them up via glob and generates typed composables into `src/api/gen
   clicks are mapped back to ERP ids in the search plugin. The icon is optional (`iconUrl`); without one a
   letter avatar is shown.
 - Category navigation is `MvCategoryNav` + `collectionSlug`, not a facet (the `category` facet is hidden).
-- `priceRangeWithTax` is accepted by the external backend but not applied: prices are per-customer and
-  resolved in mivend. `inStock` IS applied: it narrows search-service to the viewer's branch warehouses
+- Sort and price filter use Vendure's `SearchInput.sort {name, price}` and `priceRangeWithTax` (minor
+  units) on both backends. The shop query `searchCapabilities { sortKeys priceRange }` says what the
+  active backend honours; the storefront shows only those sort options and hides the price block
+  otherwise. External: search-service sorts/filters by ONE fixed indexed price type, not the customer's
+  own tier, so the order can differ from displayed customer prices (per-type indexes: search-platform#161).
+  Internal (Elasticsearch): name sort only, its index has no mivend prices. Manager catalog hides the price
+  block (its price/in-stock filters are inert). `inStock` IS applied: it narrows search-service to the viewer's branch warehouses
   (`filters.warehouseIds`), and the list shows `SearchResult.stockLevel` (see docs/order-flow.md).
 - A request with no query, category or filter (home page, catalog root) is answered from mivend's own
   DB, not search-service: one paginated id query, no facets, ordered by id (so newest-imported products
   do not come first) or by name. search-service
-  rejects such a request and has nothing to rank. The in-stock filter on the bare catalog is applied in
+  rejects such a request and has nothing to rank (price sort and a price range are the exceptions, they go
+  to search-service). The in-stock filter on the bare catalog is applied in
   that same query (SQL in plugin-reservation's `in-stock-filter.ts`, kept in sync with
   `ReservationAvailabilityService`): only products with an enabled variant whose branch ATP is above 0 in the viewer's warehouses; a viewer with no warehouses gets nothing.
   A branch with no resolvable stock locations likewise gets an empty in-stock list (no fallback to the default stock location, unlike `getAvailableToPromiseBatch`).
