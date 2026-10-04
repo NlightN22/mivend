@@ -17,6 +17,9 @@ import type { ErpIntegrationPluginOptions } from './types';
 // follows from the same recompute the feed uses, so it takes effect now, not at the next sweep.
 @Injectable()
 export class CategoryOverrideRecomputeListener implements OnApplicationBootstrap {
+    private running: Promise<void> | null = null;
+    private rerun = false;
+
     constructor(
         private readonly eventBus: EventBus,
         private readonly requestContextService: RequestContextService,
@@ -45,12 +48,26 @@ export class CategoryOverrideRecomputeListener implements OnApplicationBootstrap
             | undefined;
         if (input?.customFields?.visibilityOverride === undefined) return;
 
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
-        await recomputeCategoryTree(ctx, {
-            connection: this.connection,
-            collectionService: this.collectionService,
-            facetService: this.facetService,
-            facetValueService: this.facetValueService,
+        if (this.running) {
+            this.rerun = true;
+            return this.running;
+        }
+        this.running = this.recomputeUntilSettled().finally(() => {
+            this.running = null;
         });
+        return this.running;
+    }
+
+    private async recomputeUntilSettled(): Promise<void> {
+        do {
+            this.rerun = false;
+            const ctx = await this.requestContextService.create({ apiType: 'admin' });
+            await recomputeCategoryTree(ctx, {
+                connection: this.connection,
+                collectionService: this.collectionService,
+                facetService: this.facetService,
+                facetValueService: this.facetValueService,
+            });
+        } while (this.rerun);
     }
 }

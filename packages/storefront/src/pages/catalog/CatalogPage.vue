@@ -98,7 +98,7 @@ const breadcrumbItems = computed(() => {
     const path = categoryPath.value;
     if (path.length === 0) return [{ label: t('nav.catalog') }];
     return [
-        { label: 'Каталог', to: '/catalog' },
+        { label: t('nav.catalog'), to: '/catalog' },
         ...path.slice(0, -1).map(n => ({ label: n.name, to: `/catalog?collection=${n.slug}` })),
         { label: path[path.length - 1].name },
     ];
