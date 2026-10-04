@@ -13,6 +13,7 @@ import { AdministratorActivationService } from './administrator-activation.servi
 import { AdministratorProvisioningService } from './administrator-provisioning.service';
 import { BranchService } from './branch.service';
 import { DefaultBranchBootstrapService } from './default-branch-bootstrap.service';
+import { DefaultChannelCurrencyBootstrapService } from './default-channel-currency-bootstrap.service';
 import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
@@ -258,6 +259,7 @@ const adminApiSchema = gql`
         AdministratorProvisioningService,
         RoleProvisioningService,
         DefaultBranchBootstrapService,
+        DefaultChannelCurrencyBootstrapService,
         {
             provide: ACCESS_CONTROL_PLUGIN_OPTIONS,
             useFactory: (): AccessControlPluginOptions => AccessControlPlugin.options,

@@ -16,4 +16,5 @@ export const ACCESS_CONTROL_PLUGIN_OPTIONS = Symbol('ACCESS_CONTROL_PLUGIN_OPTIO
 export interface AccessControlPluginOptions {
     branchNames?: string[];
     defaultPriceTypeCode?: string;
+    defaultCurrencyCode?: string;
 }

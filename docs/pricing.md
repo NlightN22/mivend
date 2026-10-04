@@ -35,6 +35,7 @@ type by code. Idempotent, never overrides admin-set values. If the price type ha
 there is no default until the next restart (the lookup is retried on every bootstrap).
 Branch is mivend's own entity (see docs/access-control.md), never sent by the ERP over Kafka, so
 bootstrap-by-name is the source of truth for branches on Kafka-only contours.
+The default channel currency is set from `DEFAULT_CURRENCY_CODE` (default `RUB`) by the same plugin; Vendure creates it as USD and `ChannelService.update` re-currencies its variant prices.
 
 ---
 

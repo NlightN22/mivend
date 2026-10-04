@@ -58,6 +58,7 @@ import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.p
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const defaultPriceTypeCode = process.env.DEFAULT_PRICE_TYPE_CODE ?? 'RETAIL';
+const defaultCurrencyCode = process.env.DEFAULT_CURRENCY_CODE ?? 'RUB';
 const branchNames = (process.env.BOOTSTRAP_BRANCH_NAMES ?? 'Main')
     .split(',')
     .map(name => name.trim())
@@ -634,7 +635,7 @@ export const config: VendureConfig = {
         // src/dashboard/role-provisioning/index.ts.
         RoleProvisioningDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode }),
-        AccessControlPlugin.init({ branchNames, defaultPriceTypeCode }),
+        AccessControlPlugin.init({ branchNames, defaultPriceTypeCode, defaultCurrencyCode }),
         SessionManagementPlugin.init({}),
         ApprovalWorkflowPlugin,
         VersioningPlugin,
