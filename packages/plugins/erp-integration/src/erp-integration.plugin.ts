@@ -66,6 +66,7 @@ import { RetroBonusRuleStreamHandler } from './handlers/retro-bonus-rule.handler
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
 import { ContractStreamHandler } from './handlers/contract.handler';
+import { ManufacturerStreamHandler } from './handlers/manufacturer.handler';
 import { UnitStreamHandler } from './handlers/unit.handler';
 import { UnitRecord } from './entities/unit-record.entity';
 import { UnitLookupService } from './unit-lookup.service';
@@ -163,6 +164,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         PointOfSaleStreamHandler,
         ContractStreamHandler,
         UnitStreamHandler,
+        ManufacturerStreamHandler,
         UnitLookupService,
         TaxCategoryAutoCreateService,
         TaxZoneService,

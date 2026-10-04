@@ -53,6 +53,7 @@ function makeOptions(
                 'storage-location': 'sl',
                 'stock-organization': 'so',
                 unit: 'unit',
+                manufacturer: 'manufacturer',
                 'order-registration-result': 'orr',
                 'order-changed': 'oc',
                 department: 'dept',

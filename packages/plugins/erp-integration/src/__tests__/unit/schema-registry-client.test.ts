@@ -22,6 +22,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             'storage-location': 't-storage-location',
             'stock-organization': 't-stock-organization',
             unit: 't-unit',
+            manufacturer: 't-manufacturer',
             'order-registration-result': 't-order-registration-result',
             'order-changed': 'oc',
             department: 't-department',

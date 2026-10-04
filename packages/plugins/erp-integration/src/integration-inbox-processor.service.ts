@@ -24,6 +24,7 @@ import { PriceTypeStreamHandler } from './handlers/price-type.handler';
 import { ProductStreamHandler } from './handlers/product.handler';
 import { StockStreamHandler } from './handlers/stock.handler';
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
+import { ManufacturerStreamHandler } from './handlers/manufacturer.handler';
 import { UnitStreamHandler } from './handlers/unit.handler';
 import { UserStreamHandler } from './handlers/user.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
@@ -65,6 +66,7 @@ export class IntegrationInboxProcessorService {
         pointOfSaleHandler: PointOfSaleStreamHandler,
         contractHandler: ContractStreamHandler,
         unitHandler: UnitStreamHandler,
+        manufacturerHandler: ManufacturerStreamHandler,
         discountRuleHandler: DiscountRuleStreamHandler,
         grantedDiscountHandler: GrantedDiscountStreamHandler,
         retroBonusRuleHandler: RetroBonusRuleStreamHandler,
@@ -92,6 +94,7 @@ export class IntegrationInboxProcessorService {
             'point-of-sale': pointOfSaleHandler,
             contract: contractHandler,
             unit: unitHandler,
+            manufacturer: manufacturerHandler,
             'discount-rule': discountRuleHandler,
             'granted-discount': grantedDiscountHandler,
             'retro-bonus-rule': retroBonusRuleHandler,

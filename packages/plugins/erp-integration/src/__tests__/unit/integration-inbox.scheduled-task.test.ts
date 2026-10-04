@@ -38,6 +38,7 @@ function makeOptions(instanceType: 'central' | 'branch'): ErpIntegrationPluginOp
                 'storage-location': 'sl',
                 'stock-organization': 'so',
                 unit: 'unit',
+                manufacturer: 'manufacturer',
                 'order-registration-result': 'orr',
                 'order-changed': 'oc',
                 department: 'dept',

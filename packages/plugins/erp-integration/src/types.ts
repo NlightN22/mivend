@@ -168,6 +168,8 @@ export type InboundStream =
     // ownerId=null), so a `unit` row arriving before any product references it is not a missing-
     // dependency race. See UnitStreamHandler and docs/order-flow.md's mivend#103 section.
     | 'unit'
+    // Issue #164: the ERP's manufacturer reference directory; the only reliable source of names.
+    | 'manufacturer'
     // Issue #108: the ERP's own per-counterparty/contract, optionally per-product automatic
     // discount engine (DiscountRuleChanged), company.customers.events.v1. Feeds the same
     // @mivend/plugin-price-entry DiscountRule entity as the existing facet/priceType-threshold and
@@ -277,6 +279,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'point-of-sale': true,
     contract: true,
     unit: true,
+    manufacturer: true,
     'discount-rule': true,
     'granted-discount': true,
     'retro-bonus-rule': true,
