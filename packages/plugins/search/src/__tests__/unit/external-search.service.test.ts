@@ -229,22 +229,6 @@ describe('ExternalSearchService.search', () => {
         expect(client.resolveQuery).toHaveBeenCalledWith(expect.objectContaining({ query: 'oil' }));
     });
 
-    it('returns an empty response without calling search-service when the term is empty', async () => {
-        const client = { resolveQuery: vi.fn() };
-        const lookup = makeLookup(null);
-        const service = new ExternalSearchService(
-            client as unknown as SearchServiceClient,
-            lookup as unknown as ProductLookupService,
-            noFilters as never,
-            noDb as never,
-        );
-
-        const result = await service.search(ctx, {} as SearchInput);
-
-        expect(result).toEqual({ items: [], totalItems: 0, facetValues: [], collections: [] });
-        expect(client.resolveQuery).not.toHaveBeenCalled();
-    });
-
     it('browses by category with an empty query and returns mapped manufacturer facets', async () => {
         const client = {
             resolveQuery: vi.fn().mockResolvedValue({
@@ -278,17 +262,67 @@ describe('ExternalSearchService.search', () => {
         expect(result.facetValues).toEqual([{ facetValue, count: 3 }]);
     });
 
-    it('returns empty without calling search-service when there is no query and no filter', async () => {
+    it('lists the catalog from the local DB when there is no query, category or filter', async () => {
         const client = { resolveQuery: vi.fn() };
+        const lookup = {
+            ...makeLookup(null),
+            browse: vi.fn().mockResolvedValue({ products: [makeProduct()], total: 1588 }),
+        };
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,
-            makeLookup(null) as unknown as ProductLookupService,
+            lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
         );
-        const result = await service.search(ctx, {} as SearchInput);
-        expect(result.items).toEqual([]);
+        const result = await service.search(ctx, { take: 24, skip: 48 } as SearchInput);
         expect(client.resolveQuery).not.toHaveBeenCalled();
+        expect(lookup.browse).toHaveBeenCalledWith(
+            ctx,
+            { skip: 48, take: 24, sortByName: null },
+            false,
+        );
+        expect(result.totalItems).toBe(1588);
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0].productName).toBe('Motor Oil');
+    });
+
+    it('passes a name sort through to the local listing', async () => {
+        const lookup = {
+            ...makeLookup(null),
+            browse: vi.fn().mockResolvedValue({ products: [], total: 0 }),
+        };
+        const service = new ExternalSearchService(
+            { resolveQuery: vi.fn() } as unknown as SearchServiceClient,
+            lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+        );
+        await service.search(ctx, { sort: { name: 'DESC' } } as SearchInput);
+        expect(lookup.browse).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ sortByName: 'DESC' }),
+            false,
+        );
+    });
+
+    it('returns empty for the bare catalog when the in-stock filter is on, rather than ignoring it', async () => {
+        const lookup = { ...makeLookup(null), browse: vi.fn() };
+        const filters = {
+            resolve: vi.fn().mockResolvedValue({
+                manufacturer: [],
+                warehouseIds: ['wh-1'],
+                unsatisfiable: false,
+            }),
+        };
+        const service = new ExternalSearchService(
+            { resolveQuery: vi.fn() } as unknown as SearchServiceClient,
+            lookup as unknown as ProductLookupService,
+            filters as never,
+            noDb as never,
+        );
+        const result = await service.search(ctx, { inStock: true } as SearchInput);
+        expect(result.items).toEqual([]);
+        expect(lookup.browse).not.toHaveBeenCalled();
     });
 
     it('returns an empty result without calling search-service when a requested filter is unsatisfiable', async () => {

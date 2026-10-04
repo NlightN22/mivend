@@ -107,6 +107,10 @@ Codegen picks them up via glob and generates typed composables into `src/api/gen
 - `priceRangeWithTax` is accepted by the external backend but not applied: prices are per-customer and
   resolved in mivend. `inStock` IS applied: it narrows search-service to the viewer's branch warehouses
   (`filters.warehouseIds`), and the list shows `SearchResult.stockLevel` (see docs/order-flow.md).
+- A request with no query, category or filter (home page, catalog root) is answered from mivend's own
+  DB, not search-service: one paginated id query, no facets, ordered by id or by name. search-service
+  rejects such a request and has nothing to rank. The in-stock filter on the bare catalog returns
+  nothing until search-service can filter by warehouse alone.
 - Mobile: no filter sidebar is shown on phones, only search. This is deliberate; do not revisit per page.
 
 ## Page priority

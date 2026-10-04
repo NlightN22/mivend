@@ -12,7 +12,7 @@ import { mapFacetsToFacetValues, ExternalFacetValueResult } from './facet-mapper
 import { hasBrowseCriteria, mapSearchInputToResolveQueryRequest } from './query-mapper';
 import { SearchFilterResolver } from './search-filter-resolver.service';
 import { ProductLookupService } from './product-lookup.service';
-import { ResolveQueryResponseItem, SearchServiceClient } from './search-service.client';
+import { SearchServiceClient } from './search-service.client';
 
 interface SearchResultAssetVM {
     id: string;
@@ -65,8 +65,11 @@ export class ExternalSearchService {
     ): Promise<ExternalSearchResponse> {
         const resolved = await this.filterResolver.resolve(ctx, input);
         const request = mapSearchInputToResolveQueryRequest(input, resolved);
-        if (resolved.unsatisfiable || !hasBrowseCriteria(request)) {
-            return { items: [], totalItems: 0, facetValues: [], collections: [] };
+        const empty = { items: [], totalItems: 0, facetValues: [], collections: [] };
+        if (resolved.unsatisfiable) return empty;
+        if (!hasBrowseCriteria(request)) {
+            if (resolved.warehouseIds) return empty;
+            return this.browseLocally(ctx, input, includeDisabled);
         }
 
         const response = await this.client.resolveQuery(request);
@@ -78,7 +81,12 @@ export class ExternalSearchService {
         );
         const items: ExternalSearchResult[] = [];
         for (const item of response.items) {
-            const result = this.toSearchResult(ctx, item, products.get(item.partOrProductId));
+            const result = this.toSearchResult(
+                ctx,
+                item.canonicalName,
+                item.score,
+                products.get(item.partOrProductId),
+            );
             if (result) items.push(result);
         }
 
@@ -92,9 +100,34 @@ export class ExternalSearchService {
         };
     }
 
+    // No query/category/filter: search-service has nothing to rank, so list straight from our DB.
+    private async browseLocally(
+        ctx: RequestContext,
+        input: SearchInput,
+        includeDisabled: boolean,
+    ): Promise<ExternalSearchResponse> {
+        const { products, total } = await this.productLookup.browse(
+            ctx,
+            {
+                skip: input.skip ?? 0,
+                take: input.take ?? 24,
+                sortByName: input.sort?.name ?? null,
+            },
+            includeDisabled,
+        );
+        const items: ExternalSearchResult[] = [];
+        for (const product of products) {
+            const name = translationOf(product, ctx.languageCode)?.name ?? '';
+            const result = this.toSearchResult(ctx, name, 0, product);
+            if (result) items.push(result);
+        }
+        return { items, totalItems: total, facetValues: [], collections: [] };
+    }
+
     private toSearchResult(
         ctx: RequestContext,
-        item: ResolveQueryResponseItem,
+        canonicalName: string,
+        score: number,
         product: Product | undefined,
     ): ExternalSearchResult | null {
         if (!product) return null;
@@ -106,20 +139,19 @@ export class ExternalSearchService {
             sku: variant.sku,
             slug: translationOf(product, ctx.languageCode)?.slug ?? '',
             productId: String(product.id),
-            productName: translationOf(product, ctx.languageCode)?.name ?? item.canonicalName,
+            productName: translationOf(product, ctx.languageCode)?.name ?? canonicalName,
             productAsset: toAssetVM(product.featuredAsset),
             productVariantId: String(variant.id),
-            productVariantName:
-                translationOf(variant, ctx.languageCode)?.name ?? item.canonicalName,
+            productVariantName: translationOf(variant, ctx.languageCode)?.name ?? canonicalName,
             productVariantAsset: toAssetVM(variant.featuredAsset),
             price: { value: 0 },
             priceWithTax: { value: 0 },
             currencyCode: ctx.channel.defaultCurrencyCode,
-            description: item.canonicalName ?? '',
+            description: canonicalName,
             facetIds: [],
             facetValueIds: [],
             collectionIds: [],
-            score: item.score,
+            score,
         };
     }
 }

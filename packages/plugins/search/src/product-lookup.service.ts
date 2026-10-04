@@ -42,6 +42,59 @@ export class ProductLookupService {
         return found;
     }
 
+    // Local catalog page for requests with no query/category/filter, which search-service rejects:
+    // one paginated id query (count included), then one load of just that page.
+    async browse(
+        ctx: RequestContext,
+        options: { skip: number; take: number; sortByName: 'ASC' | 'DESC' | null },
+        includeDisabled = false,
+    ): Promise<{ products: Product[]; total: number }> {
+        const repo = this.connection.getRepository(ctx, Product);
+        const pageQuery = repo
+            .createQueryBuilder('product')
+            .select('product.id', 'id')
+            .innerJoin('product.channels', 'channel', 'channel.id = :channelId', {
+                channelId: ctx.channelId,
+            })
+            .where('product.deletedAt IS NULL')
+            .andWhere(
+                'EXISTS (SELECT 1 FROM product_variant v WHERE v."productId" = product.id AND v."deletedAt" IS NULL AND v.enabled = true)',
+            );
+        if (!includeDisabled) pageQuery.andWhere('product.enabled = true');
+        if (options.sortByName) {
+            pageQuery
+                .innerJoin('product.translations', 'sortT', 'sortT.languageCode = :lang', {
+                    lang: ctx.languageCode,
+                })
+                .orderBy('sortT.name', options.sortByName);
+        } else {
+            pageQuery.orderBy('product.id', 'ASC');
+        }
+        const total = await pageQuery.getCount();
+        const rows = await pageQuery
+            .addOrderBy('product.id', 'ASC')
+            .offset(options.skip)
+            .limit(options.take)
+            .getRawMany<{ id: string }>();
+        const ids = rows.map(r => r.id);
+        if (ids.length === 0) return { products: [], total };
+
+        const loaded = await repo
+            .createQueryBuilder('product')
+            .leftJoinAndSelect('product.translations', 'translations')
+            .leftJoinAndSelect('product.featuredAsset', 'featuredAsset')
+            .leftJoinAndSelect('product.variants', 'variants')
+            .leftJoinAndSelect('variants.translations', 'variantTranslations')
+            .leftJoinAndSelect('variants.featuredAsset', 'variantFeaturedAsset')
+            .whereInIds(ids)
+            .getMany();
+        const byId = new Map(loaded.map(p => [String(p.id), p]));
+        return {
+            products: ids.flatMap(id => byId.get(String(id)) ?? []),
+            total,
+        };
+    }
+
     // Picks the product's sellable default variant for a search result — the single-variant-
     // per-product assumption also used by erp-integration's price/price-type handlers, but
     // excluding a disabled variant entirely rather than falling back to it (audit finding,
