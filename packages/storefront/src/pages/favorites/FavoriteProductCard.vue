@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { StockVariant } from '@mivend/ui-kit';
 export interface FavoriteProduct {
     id: string;
     brand: string;
@@ -7,7 +8,7 @@ export interface FavoriteProduct {
     note: string;
     price: string;
     stockLabel: string;
-    stockVariant: 'ok' | 'low' | 'none';
+    stockVariant: StockVariant;
     qty: number;
     emoji: string;
 }
@@ -44,12 +45,13 @@ const emit = defineEmits<{
           class="fav-card__stock"
           :class="{
             'fav-card__stock--low': props.product.stockVariant === 'low',
-            'fav-card__stock--none': props.product.stockVariant === 'none',
+            'fav-card__stock--medium': props.product.stockVariant === 'medium',
+            'fav-card__stock--out': props.product.stockVariant === 'out',
           }"
         >{{ props.product.stockLabel }}</div>
       </div>
 
-      <div v-if="props.product.stockVariant !== 'none'" class="fav-card__actions">
+      <div v-if="props.product.stockVariant !== 'out'" class="fav-card__actions">
         <div class="fav-card__qty">
           <button @click="emit('qtyChange', props.product.id, -1)">−</button>
           <span>{{ props.product.qty }}</span>
@@ -165,7 +167,12 @@ const emit = defineEmits<{
   color: #e87800;
 }
 
-.fav-card__stock--none {
+.fav-card__stock--medium {
+  background: #f1f6d8;
+  color: #6f8a00;
+}
+
+.fav-card__stock--out {
   background: #eef4f1;
   color: #5f6e68;
 }

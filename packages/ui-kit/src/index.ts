@@ -94,6 +94,12 @@ export { default as MvProductGallery } from './components/MvProductGallery/MvPro
 export { default as MvProductMainCards } from './components/MvProductMainCards/MvProductMainCards.vue';
 
 export { default as MvStockBadge } from './components/MvStockBadge/MvStockBadge.vue';
+export {
+    STOCK_VARIANT_LABELS,
+    type StockVariant,
+    stockVariantFromLevel,
+    stockVariantFromQuantity,
+} from './components/MvStockBadge/stock-variant';
 export { default as MvQtyStepper } from './components/MvQtyStepper/MvQtyStepper.vue';
 export { default as MvCard } from './components/MvCard/MvCard.vue';
 export { default as MvBreadcrumbs } from './components/MvBreadcrumbs/MvBreadcrumbs.vue';

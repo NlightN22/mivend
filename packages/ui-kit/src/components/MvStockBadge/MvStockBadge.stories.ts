@@ -6,7 +6,7 @@ const meta: Meta<typeof MvStockBadge> = {
     component: MvStockBadge,
     tags: ['autodocs'],
     argTypes: {
-        variant: { control: 'select', options: ['ok', 'low', 'out'] },
+        variant: { control: 'select', options: ['high', 'medium', 'low', 'out'] },
         label: { control: 'text' },
         quantity: { control: 'number' },
     },
@@ -20,7 +20,8 @@ export const ByVariant: Story = {
         components: { MvStockBadge },
         template: `
       <div style="display: flex; gap: 10px;">
-        <MvStockBadge variant="ok" />
+        <MvStockBadge variant="high" />
+        <MvStockBadge variant="medium" />
         <MvStockBadge variant="low" />
         <MvStockBadge variant="out" />
       </div>
@@ -34,6 +35,7 @@ export const ByQuantity: Story = {
         template: `
       <div style="display: flex; gap: 10px;">
         <MvStockBadge :quantity="42" />
+        <MvStockBadge :quantity="12" />
         <MvStockBadge :quantity="4" />
         <MvStockBadge :quantity="0" />
       </div>
@@ -44,6 +46,6 @@ export const ByQuantity: Story = {
 export const CustomLabel: Story = {
     render: () => ({
         components: { MvStockBadge },
-        template: '<MvStockBadge variant="ok" label="Ships in 2 days" />',
+        template: '<MvStockBadge variant="high" label="Ships in 2 days" />',
     }),
 };

@@ -38,7 +38,7 @@ export const Default: Story = {
                                 name: 'Brake pad set',
                                 price: 220000,
                                 currencyCode: 'RUB',
-                                stockLevel: 'IN_STOCK',
+                                stockLevel: 'HIGH_STOCK',
                                 customFields: { weight: 1.2 },
                                 product: {
                                     id: 'prod-1',

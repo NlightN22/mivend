@@ -13,7 +13,7 @@ const meta: Meta<typeof MvProductCard> = {
         compareAtPrice: 289000,
         customerPrice: 219000,
         currency: 'RUB',
-        stockVariant: 'ok',
+        stockVariant: 'high',
         stockQuantity: 42,
         slug: 'brake-pad-set-front-axle',
         showPrices: true,

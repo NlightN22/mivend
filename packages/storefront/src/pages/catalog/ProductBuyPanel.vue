@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 
 interface Props {
@@ -36,18 +37,11 @@ const availableCredit = computed(() => {
 const formatRub = (n: number) =>
   new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(n);
 
-const stockVariant = computed((): 'ok' | 'low' | 'out' => {
-  if (!props.stockLevel || props.stockLevel === 'OUT_OF_STOCK') return 'out';
-  if (props.stockLevel === 'LOW_STOCK') return 'low';
-  return 'ok';
-});
+const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
 
-const stockLabel = computed(() => {
-  if (props.stock !== undefined) return `${props.stock} pcs.`;
-  if (stockVariant.value === 'out') return 'Out of stock';
-  if (stockVariant.value === 'low') return 'Low stock';
-  return 'In stock';
-});
+const stockLabel = computed(() =>
+  props.stock !== undefined ? `${props.stock} pcs.` : undefined,
+);
 </script>
 
 <template>

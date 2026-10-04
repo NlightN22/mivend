@@ -14,7 +14,7 @@ const emit = defineEmits<{
     :name="props.product.name"
     :sku="props.product.sku"
     :brand="props.product.brand"
-    :stock-variant="props.product.stockVariant === 'ok' ? 'ok' : props.product.stockVariant === 'low' ? 'low' : 'out'"
+    :stock-variant="props.product.stockVariant"
     :show-prices="true"
     :is-favorited="true"
     @add-to-cart="(qty: number) => emit('addToCart', props.product.id, qty)"

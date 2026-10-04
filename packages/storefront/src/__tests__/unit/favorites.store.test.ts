@@ -28,7 +28,7 @@ const makeItem = (variantId = 'v1'): FavoriteItem => ({
     brand: 'Brand',
     price: 100,
     currency: 'RUB',
-    stockVariant: 'ok',
+    stockVariant: 'high',
     addedAt: 0,
 });
 

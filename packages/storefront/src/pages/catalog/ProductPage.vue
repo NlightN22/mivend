@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { toast, MvProductGallery, MvProductMainCards } from '@mivend/ui-kit';
+import { toast, MvProductGallery, MvProductMainCards, stockVariantFromLevel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
 import { useCatalogStore } from '../../stores/catalog';
@@ -55,12 +55,7 @@ const breadcrumbItems = computed(() => {
     { label: product.value?.name ?? '' },
   ];
 });
-const stockVariantLabel = computed((): 'ok' | 'low' | 'out' => {
-  const sl = variant.value?.stockLevel ?? '';
-  if (!sl || sl === 'OUT_OF_STOCK') return 'out';
-  if (sl === 'LOW_STOCK') return 'low';
-  return 'ok';
-});
+const stockVariantLabel = computed(() => stockVariantFromLevel(variant.value?.stockLevel));
 
 async function fetchData(slug: string) {
   loading.value = true;

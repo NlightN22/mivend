@@ -24,6 +24,7 @@
         "vitest": "^4.1.9"
     },
     "dependencies": {
+        "dataloader": "2.2.3",
         "graphql-tag": "^2.12.6",
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",

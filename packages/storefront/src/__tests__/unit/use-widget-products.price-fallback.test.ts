@@ -24,7 +24,7 @@ function makeItem(customerPrice: number | null): ProductItem {
                 compareAtPrice: null,
                 discountTiers: [],
                 currencyCode: 'RUB',
-                stockLevel: 'IN_STOCK',
+                stockLevel: 'HIGH_STOCK',
             },
         ],
     };

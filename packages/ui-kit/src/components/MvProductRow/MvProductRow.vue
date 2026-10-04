@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
+import { type StockVariant, stockVariantFromQuantity } from '../MvStockBadge/stock-variant';
 import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
@@ -24,7 +25,7 @@ interface Props {
   discountTitle?: string;
   currency?: string;
   stock?: number;
-  stockVariant?: 'ok' | 'low' | 'out';
+  stockVariant?: StockVariant;
   multiplicity?: number;
   slug?: string;
   showPrices?: boolean;
@@ -69,14 +70,9 @@ const emit = defineEmits<{
   'view-analogs': [];
 }>();
 
-const effectiveStockVariant = computed((): 'ok' | 'low' | 'out' => {
-  if (props.stock !== undefined) {
-    if (props.stock === 0) return 'out';
-    if (props.stock < 10) return 'low';
-    return 'ok';
-  }
-  return props.stockVariant ?? 'out';
-});
+const effectiveStockVariant = computed((): StockVariant =>
+  props.stock !== undefined ? stockVariantFromQuantity(props.stock) : (props.stockVariant ?? 'out'),
+);
 
 const canOrder = computed(() => effectiveStockVariant.value !== 'out');
 

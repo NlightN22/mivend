@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
+import type { StockVariant } from '../MvStockBadge/stock-variant';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 
 interface FacetValue { name: string; facet: { code: string }; }
@@ -16,7 +17,7 @@ interface Props {
   description: string;
   brand: string;
   category: string;
-  stockVariantLabel: 'ok' | 'low' | 'out';
+  stockVariantLabel: StockVariant;
   related: RelatedProduct[];
   // Whether the caller can see a price for related/analog products at all — storefront passes
   // authStore.isLoggedIn, manager passes its own catalog-price-read permission check. Kept as a

@@ -14,7 +14,7 @@ const meta: Meta<typeof MvProductRow> = {
         oldPrice: 289000,
         currency: 'RUB',
         stock: 42,
-        stockVariant: 'ok',
+        stockVariant: 'high',
         multiplicity: 1,
         slug: 'brake-pad-set-front-axle',
         showPrices: true,

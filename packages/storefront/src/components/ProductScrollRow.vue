@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { ref, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useFavoritesStore } from '../stores/favorites';
@@ -43,12 +44,6 @@ function getBrand(p: ProductItem): string {
     return p.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '';
 }
 
-function stockVariantFor(sl: string): 'ok' | 'low' | 'out' {
-    if (sl === 'OUT_OF_STOCK') return 'out';
-    if (sl === 'LOW_STOCK') return 'low';
-    return 'ok';
-}
-
 function buildFavoriteItem(p: ProductItem): FavoriteItem {
     const variant = p.variants[0];
     return {
@@ -59,7 +54,7 @@ function buildFavoriteItem(p: ProductItem): FavoriteItem {
         brand: getBrand(p),
         price: variant && variant.price != null ? variant.price / 100 : undefined,
         currency: variant?.currencyCode ?? 'RUB',
-        stockVariant: variant ? stockVariantFor(variant.stockLevel ?? '') : undefined,
+        stockVariant: variant ? stockVariantFromLevel(variant.stockLevel) : undefined,
         addedAt: 0,
     };
 }
@@ -98,7 +93,7 @@ function buildFavoriteItem(p: ProductItem): FavoriteItem {
                         :slug="p.slug"
                         :show-prices="authStore.isLoggedIn"
                         :variant-id="p.variants[0]?.id"
-                        :stock-variant="authStore.isLoggedIn ? stockVariantFor(p.variants[0]?.stockLevel ?? '') : undefined"
+                        :stock-variant="authStore.isLoggedIn ? stockVariantFromLevel(p.variants[0]?.stockLevel) : undefined"
                         :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
                         :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                         :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"

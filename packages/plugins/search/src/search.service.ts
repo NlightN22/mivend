@@ -3,8 +3,6 @@ import { RequestContext } from '@vendure/core';
 import { StockLevelService, StockTier } from '@mivend/plugin-reservation';
 import { DiscountTierVM, PriceResolutionService, ResolvedPrice } from '@mivend/plugin-price-entry';
 
-import { stockTierLoader } from './stock-tier-loader';
-
 @Injectable()
 export class SearchService {
     constructor(
@@ -21,6 +19,6 @@ export class SearchService {
     }
 
     async getStockLevel(ctx: RequestContext, variantId: string): Promise<StockTier> {
-        return stockTierLoader(ctx, this.stockLevelService).load(variantId);
+        return this.stockLevelService.getTier(ctx, variantId);
     }
 }

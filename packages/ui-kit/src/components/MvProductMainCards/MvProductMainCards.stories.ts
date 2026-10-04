@@ -6,7 +6,7 @@ const RELATED = [
         id: 'product-2',
         name: 'Brake pad set — rear axle',
         slug: 'brake-pad-set-rear-axle',
-        variants: [{ price: 219000, currencyCode: 'RUB', stockLevel: 'IN_STOCK' }],
+        variants: [{ price: 219000, currencyCode: 'RUB', stockLevel: 'HIGH_STOCK' }],
         facetValues: [{ name: 'brand-1', facet: { code: 'brand' } }],
     },
     {
@@ -28,7 +28,7 @@ const meta: Meta<typeof MvProductMainCards> = {
         description: 'Ceramic brake pad set for front axle, fits multiple vehicle models.',
         brand: 'brand-1',
         category: 'Brake system',
-        stockVariantLabel: 'ok',
+        stockVariantLabel: 'high',
         related: RELATED,
         showRelatedPrices: true,
         showAddToCartButton: true,

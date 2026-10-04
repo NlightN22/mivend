@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import type { StockVariant } from '@mivend/ui-kit';
 
 export interface FavoriteItem {
     variantId: string;
@@ -9,7 +10,7 @@ export interface FavoriteItem {
     brand: string;
     price: number | undefined;
     currency: string;
-    stockVariant: 'ok' | 'low' | 'out' | undefined;
+    stockVariant: StockVariant | 'ok' | undefined;
     addedAt: number;
 }
 

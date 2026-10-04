@@ -22,6 +22,7 @@ import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { DEFAULT_STOCK_TIER_LOW_MAX, DEFAULT_STOCK_TIER_MEDIUM_MAX } from './stock-tier';
+import { ProductVariantStockResolver } from './product-variant-stock.resolver';
 import { StockLevelService } from './stock-level.service';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
 import { ReservationExpiryService } from './reservation-expiry.service';
@@ -132,6 +133,14 @@ const adminApiSchema = gql`
         },
     ],
     exports: [ReservationService, ReservationWriteOffSyncService, StockLevelService],
+    shopApiExtensions: {
+        schema: gql`
+            extend type ProductVariant {
+                stockLevel: String!
+            }
+        `,
+        resolvers: [ProductVariantStockResolver],
+    },
     adminApiExtensions: {
         schema: adminApiSchema,
         resolvers: [ReservationResolver],

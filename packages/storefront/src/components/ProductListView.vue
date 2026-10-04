@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { type StockVariant, stockVariantFromLevel } from '@mivend/ui-kit';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useFavoritesStore } from '../stores/favorites';
@@ -47,15 +48,9 @@ function getBrand(p: ProductItem): string {
     return p.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '';
 }
 
-function stockVariantFor(stockLevel: string): 'ok' | 'low' | 'out' {
-    if (stockLevel === 'OUT_OF_STOCK') return 'out';
-    if (stockLevel === 'LOW_STOCK') return 'low';
-    return 'ok';
-}
-
-function stockProps(stockLevel: string): { stockVariant?: 'ok' | 'low' | 'out' } {
+function stockProps(stockLevel: string): { stockVariant?: StockVariant } {
     if (!authStore.isLoggedIn) return {};
-    return { stockVariant: stockVariantFor(stockLevel) };
+    return { stockVariant: stockVariantFromLevel(stockLevel) };
 }
 
 
@@ -69,7 +64,7 @@ function buildFavoriteItem(p: ProductItem): FavoriteItem {
         brand: getBrand(p),
         price: variant && variant.price != null ? variant.price / 100 : undefined,
         currency: variant?.currencyCode ?? 'RUB',
-        stockVariant: variant ? stockVariantFor(variant.stockLevel ?? '') : undefined,
+        stockVariant: variant ? stockVariantFromLevel(variant.stockLevel) : undefined,
         addedAt: 0,
     };
 }

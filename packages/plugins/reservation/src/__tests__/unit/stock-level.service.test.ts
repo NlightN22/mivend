@@ -106,4 +106,19 @@ describe('StockLevelService', () => {
         const { service, ctx } = build({ defaultBranchId: null });
         expect(await service.getViewerWarehouseErpIds(ctx)).toEqual([]);
     });
+
+    it('getTier batches the lookups of one request into a single ATP query', async () => {
+        const { service, batch, ctx } = build({
+            defaultBranchId: 'branch-a',
+            atp: { v1: 0, v2: 7 },
+        });
+        const tiers = await Promise.all([
+            service.getTier(ctx, 'v1'),
+            service.getTier(ctx, 'v2'),
+            service.getTier(ctx, 'v1'),
+        ]);
+        expect(tiers).toEqual(['OUT_OF_STOCK', 'MEDIUM_STOCK', 'OUT_OF_STOCK']);
+        expect(batch).toHaveBeenCalledTimes(1);
+        expect(batch).toHaveBeenCalledWith(ctx, ['v1', 'v2'], 'branch-a');
+    });
 });

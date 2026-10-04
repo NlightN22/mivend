@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
+import DataLoader from 'dataloader';
 import { CustomerService, GlobalSettingsService, RequestContext } from '@vendure/core';
 import { BranchSettingsService, WarehouseService } from '@mivend/plugin-access-control';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
@@ -16,6 +17,8 @@ import {
 // stock tiers"): never a total across branches, never exact numbers.
 @Injectable()
 export class StockLevelService {
+    private loaders = new WeakMap<RequestContext, DataLoader<string, StockTier>>();
+
     constructor(
         private availabilityService: ReservationAvailabilityService,
         private branchSettingsService: BranchSettingsService,
@@ -24,6 +27,19 @@ export class StockLevelService {
         private customerService: CustomerService,
         private counterpartyService: CounterpartyService,
     ) {}
+
+    // Batches the per-item field resolvers of one request into a single ATP query.
+    getTier(ctx: RequestContext, variantId: ID): Promise<StockTier> {
+        let loader = this.loaders.get(ctx);
+        if (!loader) {
+            loader = new DataLoader(async ids => {
+                const tiers = await this.getTiers(ctx, [...ids]);
+                return ids.map(id => tiers.get(id) ?? 'OUT_OF_STOCK');
+            });
+            this.loaders.set(ctx, loader);
+        }
+        return loader.load(String(variantId));
+    }
 
     async getTiers(ctx: RequestContext, variantIds: ID[]): Promise<Map<string, StockTier>> {
         const branchId = await this.getViewerBranchId(ctx);

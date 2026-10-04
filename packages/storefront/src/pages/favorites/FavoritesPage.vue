@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { STOCK_VARIANT_LABELS, type StockVariant } from '@mivend/ui-kit';
 import { ref, computed } from 'vue';
 import { useViewMode } from '../../composables/useViewMode';
 import AccountSidebar from '../account/AccountSidebar.vue';
@@ -28,11 +29,9 @@ function toCard(item: FavoriteItem): FavoriteProduct {
     const priceStr = item.price != null
         ? new Intl.NumberFormat('ru-RU').format(item.price) + ' ' + (item.currency === 'RUB' ? '₽' : item.currency)
         : '—';
-    const sv = item.stockVariant;
-    const stockVariant: 'ok' | 'low' | 'none' =
-        sv === 'ok' ? 'ok' : sv === 'low' ? 'low' : 'none';
-    const stockLabel =
-        sv === 'ok' ? 'In stock' : sv === 'low' ? 'Low stock' : 'None';
+    const stockVariant: StockVariant =
+        item.stockVariant === 'ok' ? 'high' : (item.stockVariant ?? 'out');
+    const stockLabel = STOCK_VARIANT_LABELS[stockVariant];
     return {
         id: item.variantId,
         brand: item.brand,
@@ -58,13 +57,13 @@ const filteredCards = computed<FavoriteProduct[]>(() => {
         );
     }
     if (activeChip.value === 'available') {
-        items = items.filter(p => p.stockVariant !== 'none');
+        items = items.filter(p => p.stockVariant !== 'out');
     }
     return items;
 });
 
 const availableCount = computed(() =>
-    filteredCards.value.filter(p => p.stockVariant !== 'none').length
+    filteredCards.value.filter(p => p.stockVariant !== 'out').length
 );
 
 function handleRemove(id: string): void {
@@ -77,7 +76,7 @@ function handleQtyChange(id: string, delta: number): void {
 
 async function handleAddAll(): Promise<void> {
     for (const card of filteredCards.value) {
-        if (card.stockVariant !== 'none') {
+        if (card.stockVariant !== 'out') {
             await cartStore.addItem(card.id, card.qty);
         }
     }

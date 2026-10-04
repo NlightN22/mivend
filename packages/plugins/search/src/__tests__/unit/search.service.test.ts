@@ -22,21 +22,16 @@ function makeStockLevelService(): StockLevelService {
 
 describe('SearchService', () => {
     describe('getStockLevel', () => {
-        it('batches the field resolvers of one request into a single ATP lookup', async () => {
-            const stock = makeStockLevelService();
+        it('delegates to StockLevelService.getTier', async () => {
+            const stock = {
+                getTier: vi.fn(async () => 'LOW_STOCK'),
+            } as unknown as StockLevelService;
             const service = new SearchService(
                 makePriceResolutionService({ customerPrice: 1, compareAtPrice: null }),
                 stock,
             );
-            const ctx = {} as RequestContext;
-            const levels = await Promise.all([
-                service.getStockLevel(ctx, 'v1'),
-                service.getStockLevel(ctx, 'v2'),
-                service.getStockLevel(ctx, 'v1'),
-            ]);
-            expect(levels).toEqual(['LOW_STOCK', 'LOW_STOCK', 'LOW_STOCK']);
-            expect(stock.getTiers).toHaveBeenCalledTimes(1);
-            expect(stock.getTiers).toHaveBeenCalledWith(ctx, ['v1', 'v2']);
+            expect(await service.getStockLevel(mockCtx, 'v1')).toBe('LOW_STOCK');
+            expect(stock.getTier).toHaveBeenCalledWith(mockCtx, 'v1');
         });
     });
 

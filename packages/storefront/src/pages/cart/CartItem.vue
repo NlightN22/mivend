@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { MvTooltip } from '@mivend/ui-kit';
+import { MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
 import { useCartStore, type CartLine } from '../../stores/cart';
 import { formatTierValue } from '../../utils/discount';
 import { discountLineReason, discountTierReachedReason } from '../../utils/discountMessages';
@@ -43,12 +43,7 @@ const discountReason = computed(() => {
     return discountLineReason(brand.value, discountPercent.value);
 });
 
-const stockVariant = computed((): 'ok' | 'low' | 'out' => {
-    const sl = props.line.productVariant.stockLevel;
-    if (!sl || sl === 'OUT_OF_STOCK') return 'out';
-    if (sl === 'LOW_STOCK') return 'low';
-    return 'ok';
-});
+const stockVariant = computed(() => stockVariantFromLevel(props.line.productVariant.stockLevel));
 
 async function onQtyChange(newQty: number): Promise<void> {
     if (newQty === 0) {

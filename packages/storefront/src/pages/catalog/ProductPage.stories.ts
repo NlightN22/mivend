@@ -31,7 +31,7 @@ function mockProduct(): void {
                     customerPrice: 230000,
                     compareAtPrice: 280000,
                     currencyCode: 'RUB',
-                    stockLevel: 'IN_STOCK',
+                    stockLevel: 'HIGH_STOCK',
                 },
             ],
             facetValues: [
@@ -47,7 +47,7 @@ function mockProduct(): void {
                     id: 'prod-2',
                     name: 'Oil filter',
                     slug: 'oil-filter',
-                    variants: [{ price: 90000, currencyCode: 'RUB', stockLevel: 'IN_STOCK' }],
+                    variants: [{ price: 90000, currencyCode: 'RUB', stockLevel: 'HIGH_STOCK' }],
                     facetValues: [{ name: 'Filters', facet: { code: 'category' } }],
                 },
             ],

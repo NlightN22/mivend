@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
+import type { StockVariant } from '../MvStockBadge/stock-variant';
 import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
@@ -16,7 +17,7 @@ interface Props {
   discountTiers?: DiscountTier[];
   discountTitle?: string;
   currency?: string;
-  stockVariant?: 'ok' | 'low' | 'out';
+  stockVariant?: StockVariant;
   stockQuantity?: number;
   slug: string;
   showPrices?: boolean;
