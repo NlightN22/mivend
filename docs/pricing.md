@@ -28,6 +28,8 @@ The default branch and its `BranchSettings` are bootstrapped by `plugin-access-c
 `GlobalSettings.defaultBranchId` if empty) and `DEFAULT_PRICE_TYPE_CODE` picks the default price
 type by code. Idempotent, never overrides admin-set values. If the price type has not synced yet
 there is no default until the next restart (the lookup is retried on every bootstrap).
+Branch is mivend's own entity (see docs/access-control.md), never sent by the ERP over Kafka, so
+bootstrap-by-name is the source of truth for branches on Kafka-only contours.
 
 ---
 
