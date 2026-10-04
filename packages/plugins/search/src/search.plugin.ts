@@ -12,11 +12,21 @@ import { ReservationPlugin } from '@mivend/plugin-reservation';
 import gql from 'graphql-tag';
 
 import { ExternalSearchPlugin } from './external-search.plugin';
+import { SearchCapabilitiesResolver } from './search-capabilities';
 import { SearchResultResolver } from './search.resolver';
 import { SearchService } from './search.service';
 import { getSearchBackend } from './types';
 
 const shopApiSchema = gql`
+    type SearchCapabilities {
+        sortKeys: [String!]!
+        priceRange: Boolean!
+    }
+
+    extend type Query {
+        searchCapabilities: SearchCapabilities!
+    }
+
     extend type SearchResult {
         customerPrice: Int
         compareAtPrice: Int
@@ -108,7 +118,7 @@ function buildElasticsearchPlugin(): Type<unknown> {
     imports: [PluginCommonModule, PriceEntryPlugin, ReservationPlugin],
     shopApiExtensions: {
         schema: shopApiSchema,
-        resolvers: [SearchResultResolver],
+        resolvers: [SearchResultResolver, SearchCapabilitiesResolver],
     },
     providers: [SearchService],
     configuration: (config: RuntimeVendureConfig) => {
