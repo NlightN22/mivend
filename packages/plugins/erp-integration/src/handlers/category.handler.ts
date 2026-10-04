@@ -32,9 +32,9 @@ interface CollectionInput {
     facetValueIdByCode: ReadonlyMap<string, string>;
 }
 
-// Mirrors erp-import's own CategoryHandler (facet value + collection per category, keyed by
-// erpId/entityId as the facet value code) — same target shape, arriving over Kafka instead of
-// the REST batch endpoint.
+// CategoryChanged fields: name, parent_id, is_active, is_deleted are consumed;
+// event_id/occurred_at/updated_at/version are envelope-only (version drives the inbox guard).
+// See docs/category-hierarchy.md for the design.
 @Injectable()
 export class CategoryStreamHandler implements InboundStreamHandler {
     constructor(
