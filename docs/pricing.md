@@ -286,3 +286,9 @@ Vendure has a native Promotions engine (`has-facet-values-condition` +
 but operates on `OrderLine.quantity` (piece count), not weight/amount — not reused here,
 since the custom-strategy approach above already covers both metrics without it, but
 worth knowing it exists.
+
+## Currency
+
+The default Channel's currency is set by config (`DEFAULT_CURRENCY_CODE`, default `RUB`) and
+reapplied at every boot by `DefaultChannelCurrencyBootstrapService` (single available currency).
+Config is the source of truth: a currency changed in the admin UI is reverted on restart.
