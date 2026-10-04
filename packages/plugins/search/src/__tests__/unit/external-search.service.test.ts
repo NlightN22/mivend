@@ -240,7 +240,7 @@ describe('ExternalSearchService.search', () => {
         const filters = {
             resolve: vi.fn().mockResolvedValue({ categoryId: 'cat-erp', manufacturer: [] }),
         };
-        const facetValue = { id: 7, code: 'mfr-1' };
+        const facetValue = { id: 7, code: 'mfr-1', translations: [{ name: 'Acme' }] };
         const getMany = vi.fn().mockResolvedValue([facetValue]);
         const qb: Record<string, unknown> = {};
         for (const m of ['leftJoinAndSelect', 'where', 'andWhere']) qb[m] = () => qb;

@@ -9,7 +9,7 @@ export interface ExternalFacetValueResult {
 }
 
 // Maps search-service's manufacturer facet back to mivend FacetValues by code; values mivend
-// has not synced yet are skipped.
+// has not synced yet, or that still carry only their ERP id as a name, are skipped.
 export async function mapFacetsToFacetValues(
     connection: TransactionalConnection,
     ctx: RequestContext,
@@ -32,8 +32,14 @@ export async function mapFacetsToFacetValues(
     const result: ExternalFacetValueResult[] = [];
     for (const { value, count } of manufacturers) {
         const facetValue = byCode.get(value);
-        if (facetValue) result.push({ facetValue, count });
+        if (facetValue && hasRealName(facetValue)) result.push({ facetValue, count });
+        else if (facetValue)
+            Logger.verbose(`manufacturer facet ${value} has no name yet, skipped`, loggerCtx);
         else Logger.verbose(`manufacturer facet ${value} unknown to mivend, skipped`, loggerCtx);
     }
     return result;
+}
+
+function hasRealName(facetValue: FacetValue): boolean {
+    return facetValue.translations.some(t => t.name !== '' && t.name !== facetValue.code);
 }
