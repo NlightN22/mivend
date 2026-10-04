@@ -14,13 +14,17 @@ export interface FavoriteVariantView {
     stockVariant: StockVariant;
 }
 
+const SLUG_BATCH = 100;
+
 export function useFavoriteProducts(): {
     views: Ref<FavoriteVariantView[]>;
     loading: Ref<boolean>;
+    error: Ref<boolean>;
 } {
     const store = useFavoritesStore();
     const views = ref<FavoriteVariantView[]>([]);
     const loading = ref(false);
+    const error = ref(false);
     let requestSeq = 0;
 
     async function load(): Promise<void> {
@@ -32,11 +36,21 @@ export function useFavoriteProducts(): {
             return;
         }
         loading.value = true;
+        error.value = false;
         try {
-            const result = await shopApi(FavoriteProductsDocument, { slugs, take: slugs.length });
+            const batches = Array.from({ length: Math.ceil(slugs.length / SLUG_BATCH) }, (_, i) =>
+                slugs.slice(i * SLUG_BATCH, (i + 1) * SLUG_BATCH),
+            );
+            const results = await Promise.all(
+                batches.map(batch =>
+                    shopApi(FavoriteProductsDocument, { slugs: batch, take: batch.length }),
+                ),
+            );
             if (seq !== requestSeq) return;
             const byVariantId = new Map(
-                result.products.items.flatMap(p => p.variants.map(v => [v.id, { p, v }] as const)),
+                results
+                    .flatMap(r => r.products.items)
+                    .flatMap(p => p.variants.map(v => [v.id, { p, v }] as const)),
             );
             views.value = ids.flatMap(id => {
                 const found = byVariantId.get(id);
@@ -56,7 +70,7 @@ export function useFavoriteProducts(): {
             });
         } catch (e) {
             console.error('[useFavoriteProducts]', e);
-            if (seq === requestSeq) views.value = [];
+            if (seq === requestSeq) error.value = true;
         } finally {
             if (seq === requestSeq) loading.value = false;
         }
@@ -64,5 +78,5 @@ export function useFavoriteProducts(): {
 
     watch(() => store.items.map(i => i.variantId).join(','), load, { immediate: true });
 
-    return { views, loading };
+    return { views, loading, error };
 }

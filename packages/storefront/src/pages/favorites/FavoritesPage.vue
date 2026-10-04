@@ -13,7 +13,7 @@ import { useCartStore } from '../../stores/cart';
 
 const favoritesStore = useFavoritesStore();
 const cartStore = useCartStore();
-const { views } = useFavoriteProducts();
+const { views, error } = useFavoriteProducts();
 
 const search = ref('');
 const sort = ref('available');
@@ -109,6 +109,10 @@ function handleClearUnavailable(): void {
 
       <div v-if="favoritesStore.items.length === 0" class="favorites-page__empty">
         <p>No favorites yet. Click the heart icon on any product to save it here.</p>
+      </div>
+
+      <div v-else-if="error" class="favorites-page__empty">
+        <p>Failed to load favorites. Please try again later.</p>
       </div>
 
       <div v-else class="favorites-page__main">
