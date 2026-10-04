@@ -4514,6 +4514,28 @@ export type MyDocumentsQuery = {
     };
 };
 
+export type FavoriteProductsQueryVariables = Exact<{
+    slugs: Array<Scalars['String']['input']> | Scalars['String']['input'];
+    take: Scalars['Int']['input'];
+}>;
+
+export type FavoriteProductsQuery = {
+    products: {
+        items: Array<{
+            slug: string;
+            variants: Array<{
+                id: string;
+                sku: string;
+                name: string;
+                customerPrice?: number | null;
+                currencyCode: CurrencyCode;
+                stockLevel: string;
+            }>;
+            facetValues: Array<{ name: string; facet: { code: string } }>;
+        }>;
+    };
+};
+
 export type MyAdvanceBalanceQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MyAdvanceBalanceQuery = {
@@ -5454,6 +5476,29 @@ export const MyDocumentsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<MyDocumentsQuery, MyDocumentsQueryVariables>;
+export const FavoriteProductsDocument = new TypedDocumentString(`
+    query FavoriteProducts($slugs: [String!]!, $take: Int!) {
+  products(options: {take: $take, filter: {slug: {in: $slugs}}}) {
+    items {
+      slug
+      variants {
+        id
+        sku
+        name
+        customerPrice
+        currencyCode
+        stockLevel
+      }
+      facetValues {
+        name
+        facet {
+          code
+        }
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<FavoriteProductsQuery, FavoriteProductsQueryVariables>;
 export const MyAdvanceBalanceDocument = new TypedDocumentString(`
     query MyAdvanceBalance {
   myAdvanceBalance {

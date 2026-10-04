@@ -7,11 +7,13 @@ import FavoritesToolbar from './FavoritesToolbar.vue';
 import FavoriteProductCard from './FavoriteProductCard.vue';
 import FavoriteProductRow from './FavoriteProductRow.vue';
 import type { FavoriteProduct } from './FavoriteProductCard.vue';
-import { useFavoritesStore, type FavoriteItem } from '../../stores/favorites';
+import { useFavoritesStore } from '../../stores/favorites';
+import { useFavoriteProducts, type FavoriteVariantView } from '../../composables/useFavoriteProducts';
 import { useCartStore } from '../../stores/cart';
 
 const favoritesStore = useFavoritesStore();
 const cartStore = useCartStore();
+const { views } = useFavoriteProducts();
 
 const search = ref('');
 const sort = ref('available');
@@ -25,12 +27,11 @@ function getQty(variantId: string): number {
     return localQty.value[variantId] ?? 1;
 }
 
-function toCard(item: FavoriteItem): FavoriteProduct {
+function toCard(item: FavoriteVariantView): FavoriteProduct {
     const priceStr = item.price != null
         ? new Intl.NumberFormat('ru-RU').format(item.price) + ' ' + (item.currency === 'RUB' ? '₽' : item.currency)
         : '—';
-    const stockVariant: StockVariant =
-        item.stockVariant === 'ok' ? 'high' : (item.stockVariant ?? 'out');
+    const stockVariant: StockVariant = item.stockVariant;
     const stockLabel = STOCK_VARIANT_LABELS[stockVariant];
     return {
         id: item.variantId,
@@ -47,7 +48,7 @@ function toCard(item: FavoriteItem): FavoriteProduct {
 }
 
 const filteredCards = computed<FavoriteProduct[]>(() => {
-    let items = favoritesStore.items.map(toCard);
+    let items = views.value.map(toCard);
     if (search.value.trim()) {
         const q = search.value.toLowerCase();
         items = items.filter(p =>
@@ -83,10 +84,10 @@ async function handleAddAll(): Promise<void> {
 }
 
 function handleClearUnavailable(): void {
-    const outIds = favoritesStore.items
-        .filter(i => i.stockVariant === 'out' || i.stockVariant == null)
-        .map(i => i.variantId);
-    outIds.forEach(id => favoritesStore.remove(id));
+    const unavailableIds = favoritesStore.items
+        .map(i => i.variantId)
+        .filter(id => (views.value.find(v => v.variantId === id)?.stockVariant ?? 'out') === 'out');
+    unavailableIds.forEach(id => favoritesStore.remove(id));
 }
 </script>
 

@@ -1,16 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { StockVariant } from '@mivend/ui-kit';
 
 export interface FavoriteItem {
     variantId: string;
     productSlug: string;
-    name: string;
-    sku: string;
-    brand: string;
-    price: number | undefined;
-    currency: string;
-    stockVariant: StockVariant | 'ok' | undefined;
     addedAt: number;
 }
 
@@ -19,7 +12,13 @@ const STORAGE_KEY = 'mv_favorites';
 function load(): FavoriteItem[] {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? (JSON.parse(raw) as FavoriteItem[]) : [];
+        if (!raw) return [];
+        const parsed = JSON.parse(raw) as FavoriteItem[];
+        return parsed.map(({ variantId, productSlug, addedAt }) => ({
+            variantId,
+            productSlug,
+            addedAt,
+        }));
     } catch {
         return [];
     }
@@ -38,12 +37,12 @@ export const useFavoritesStore = defineStore('favorites', () => {
         return items.value.some(i => i.variantId === variantId);
     }
 
-    function toggle(item: FavoriteItem): void {
-        const idx = items.value.findIndex(i => i.variantId === item.variantId);
+    function toggle(variantId: string, productSlug: string): void {
+        const idx = items.value.findIndex(i => i.variantId === variantId);
         if (idx !== -1) {
             items.value.splice(idx, 1);
         } else {
-            items.value.push({ ...item, addedAt: Date.now() });
+            items.value.push({ variantId, productSlug, addedAt: Date.now() });
         }
         save(items.value);
     }

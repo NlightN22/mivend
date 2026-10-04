@@ -4,7 +4,6 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useFavoritesStore } from '../stores/favorites';
 import { useCartActions } from '../composables/useCartActions';
-import type { FavoriteItem } from '../stores/favorites';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 
 const props = defineProps<{
@@ -54,23 +53,8 @@ function stockProps(stockLevel: string): { stockVariant?: StockVariant } {
 }
 
 
-function buildFavoriteItem(p: ProductItem): FavoriteItem {
-    const variant = p.variants[0];
-    return {
-        variantId: variant?.id ?? p.id,
-        productSlug: p.slug,
-        name: p.name,
-        sku: variant?.sku ?? '',
-        brand: getBrand(p),
-        price: variant && variant.price != null ? variant.price / 100 : undefined,
-        currency: variant?.currencyCode ?? 'RUB',
-        stockVariant: variant ? stockVariantFromLevel(variant.stockLevel) : undefined,
-        addedAt: 0,
-    };
-}
-
 function handleToggleFavorite(p: ProductItem): void {
-    favoritesStore.toggle(buildFavoriteItem(p));
+    favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.slug);
 }
 
 </script>

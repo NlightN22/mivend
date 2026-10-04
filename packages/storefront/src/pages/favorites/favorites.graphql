@@ -1,0 +1,21 @@
+query FavoriteProducts($slugs: [String!]!, $take: Int!) {
+    products(options: { take: $take, filter: { slug: { in: $slugs } } }) {
+        items {
+            slug
+            variants {
+                id
+                sku
+                name
+                customerPrice
+                currencyCode
+                stockLevel
+            }
+            facetValues {
+                name
+                facet {
+                    code
+                }
+            }
+        }
+    }
+}
