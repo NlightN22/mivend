@@ -79,9 +79,12 @@ beforeAll(async () => {
 
     // Each service only ever asks for its own entity's repo — a small per-entity connection shim
     // per service keeps this simple without needing to replicate a real DI container.
-    manufacturerService = new ManufacturerService({
-        getRepository: () => dataSource.getRepository(TestManufacturer),
-    } as unknown as TransactionalConnection);
+    manufacturerService = new ManufacturerService(
+        {
+            getRepository: () => dataSource.getRepository(TestManufacturer),
+        } as unknown as TransactionalConnection,
+        { ensureValue: async () => undefined } as never,
+    );
 });
 
 afterEach(async () => {

@@ -1,6 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { LanguageCode } from '@vendure/common/lib/generated-types';
-import { Facet, FacetService, FacetValueService, RequestContext } from '@vendure/core';
+import {
+    Facet,
+    FacetService,
+    FacetValueService,
+    Logger,
+    ProcessContext,
+    RequestContext,
+    RequestContextService,
+    TransactionalConnection,
+} from '@vendure/core';
+
+import { Manufacturer } from './entities/manufacturer.entity';
+import { loggerCtx } from './types';
 
 export const MANUFACTURER_FACET_CODE = 'manufacturer';
 
@@ -8,11 +20,26 @@ export const MANUFACTURER_FACET_CODE = 'manufacturer';
 // can render it through the standard SearchResponse.facetValues. Not assigned to variants:
 // membership is answered by the external search backend, not by Vendure's own index.
 @Injectable()
-export class ManufacturerFacetService {
+export class ManufacturerFacetService implements OnApplicationBootstrap {
     constructor(
         private facetService: FacetService,
         private facetValueService: FacetValueService,
+        private connection: TransactionalConnection,
+        private requestContextService: RequestContextService,
+        private processContext: ProcessContext,
     ) {}
+
+    // Heals manufacturers that predate the facet; server process only, so the worker cannot race it.
+    async onApplicationBootstrap(): Promise<void> {
+        if (!this.processContext.isServer) return;
+        try {
+            const ctx = await this.requestContextService.create({ apiType: 'admin' });
+            const manufacturers = await this.connection.getRepository(ctx, Manufacturer).find();
+            for (const m of manufacturers) await this.ensureValue(ctx, m.externalId, m.name);
+        } catch (err) {
+            Logger.error(`manufacturer facet backfill failed: ${String(err)}`, loggerCtx);
+        }
+    }
 
     async ensureValue(ctx: RequestContext, externalId: string, name: string | null): Promise<void> {
         const facet = await this.ensureFacet(ctx);
