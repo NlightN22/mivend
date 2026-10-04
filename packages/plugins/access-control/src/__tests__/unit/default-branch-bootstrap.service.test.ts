@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import type { GlobalSettingsService, ProcessContext, TransactionalConnection } from '@vendure/core';
 
 import { BranchSettingsService } from '../../branch-settings.service';
@@ -8,7 +9,7 @@ import type { AccessControlPluginOptions } from '../../types';
 describe('DefaultBranchBootstrapService', () => {
     let branchRepo: Record<string, ReturnType<typeof vi.fn>>;
     let settingsRepo: Record<string, ReturnType<typeof vi.fn>>;
-    let query: ReturnType<typeof vi.fn>;
+    let findPriceTypeByCode: ReturnType<typeof vi.fn>;
     let updateSettings: ReturnType<typeof vi.fn>;
     let getGlobalDefaultBranchId: ReturnType<typeof vi.fn>;
     let isWorker: boolean;
@@ -17,7 +18,6 @@ describe('DefaultBranchBootstrapService', () => {
         const connection = {
             getRepository: (_ctx: unknown, entity: { name: string }) =>
                 entity.name === 'Branch' ? branchRepo : settingsRepo,
-            rawConnection: { query },
         };
         return new DefaultBranchBootstrapService(
             connection as unknown as TransactionalConnection,
@@ -28,6 +28,7 @@ describe('DefaultBranchBootstrapService', () => {
                     return isWorker;
                 },
             } as unknown as ProcessContext,
+            { findPriceTypeByCode } as unknown as CustomerPricingService,
             options,
         );
     }
@@ -47,7 +48,7 @@ describe('DefaultBranchBootstrapService', () => {
             create: vi.fn((x: unknown) => x),
             save: vi.fn().mockImplementation(async (x: unknown) => x),
         };
-        query = vi.fn().mockResolvedValue([{ id: 3 }]);
+        findPriceTypeByCode = vi.fn().mockResolvedValue({ id: 3 });
         updateSettings = vi.fn();
         getGlobalDefaultBranchId = vi.fn().mockResolvedValue(null);
     });
@@ -90,7 +91,7 @@ describe('DefaultBranchBootstrapService', () => {
     });
 
     it('leaves the price unset when the configured price type does not exist', async () => {
-        query.mockResolvedValue([]);
+        findPriceTypeByCode.mockResolvedValue(null);
         await build({
             branchNames: ['Branch A', 'Branch B'],
             defaultPriceTypeCode: 'MISSING',

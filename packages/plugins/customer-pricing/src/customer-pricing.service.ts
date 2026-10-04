@@ -28,6 +28,10 @@ export class CustomerPricingService {
         });
     }
 
+    async findPriceTypeByCode(ctx: RequestContext, code: string): Promise<PriceType | null> {
+        return this.connection.getRepository(ctx, PriceType).findOne({ where: { code } });
+    }
+
     async upsertPriceType(ctx: RequestContext, code: string, name: string): Promise<PriceType> {
         const repo = this.connection.getRepository(ctx, PriceType);
         let record = await repo.findOne({ where: { code } });

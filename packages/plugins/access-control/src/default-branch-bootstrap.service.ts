@@ -1,4 +1,5 @@
 import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import {
     GlobalSettingsService,
     Logger,
@@ -23,6 +24,7 @@ export class DefaultBranchBootstrapService implements OnApplicationBootstrap {
         private globalSettingsService: GlobalSettingsService,
         private branchSettingsService: BranchSettingsService,
         private processContext: ProcessContext,
+        private customerPricingService: CustomerPricingService,
         @Inject(ACCESS_CONTROL_PLUGIN_OPTIONS) private options: AccessControlPluginOptions,
     ) {}
 
@@ -71,12 +73,8 @@ export class DefaultBranchBootstrapService implements OnApplicationBootstrap {
         const repo = this.connection.getRepository(ctx, BranchSettings);
         if (await repo.findOne({ where: { branchId } })) return;
 
-        // Raw SQL: price_type belongs to customer-pricing, which this plugin deliberately does not import.
-        const rows: { id: number | string }[] = await this.connection.rawConnection.query(
-            `SELECT id FROM price_type WHERE code = $1 LIMIT 1`,
-            [code],
-        );
-        if (!rows[0]) {
+        const priceType = await this.customerPricingService.findPriceTypeByCode(ctx, code);
+        if (!priceType) {
             Logger.warn(
                 `Default price type "${code}" not found, no default price set; restart after price types sync`,
                 loggerCtx,
@@ -86,7 +84,7 @@ export class DefaultBranchBootstrapService implements OnApplicationBootstrap {
         await repo.save(
             repo.create({
                 branchId,
-                defaultPriceTypeId: String(rows[0].id),
+                defaultPriceTypeId: String(priceType.id),
                 defaultWarehouseId: null,
             }),
         );

@@ -316,6 +316,9 @@ importers:
 
     packages/plugins/access-control:
         dependencies:
+            '@mivend/plugin-customer-pricing':
+                specifier: workspace:*
+                version: link:../customer-pricing
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)
@@ -15175,10 +15178,10 @@ packages:
                 integrity: sha512-YbGqHZ5/eW4SnkPNR44mKVc6ZKQoRs/Rux1sxC6rdwXb4qpbOSYfDr9DsTHolOTGmIKgM9j141mZbBeg05R1pw==,
             }
 
-    vue-component-type-helpers@3.3.11:
+    vue-component-type-helpers@3.3.12:
         resolution:
             {
-                integrity: sha512-LwcxzeliO9fkQcpJG0PoX8X5kmAhKmH9wkpDLxNabwzkQ9Zeib2YVHwFV4pcWmMLfXVfjr/dSV+DaJ3cIPgSNA==,
+                integrity: sha512-HwCqmgTfLFskQc4P5TRnbduCMyPat2Ezu0elLWOGn0dD/6BKHP15B5bxce6aDi+E4kblPtru8amIBQzu0Di3qQ==,
             }
 
     vue-component-type-helpers@3.3.5:
@@ -18274,7 +18277,7 @@ snapshots:
             ts-dedent: 2.3.0
             type-fest: 2.19.0
             vue: 3.5.39(typescript@5.9.3)
-            vue-component-type-helpers: 3.3.11
+            vue-component-type-helpers: 3.3.12
 
     '@stryker-mutator/api@9.6.1':
         dependencies:
@@ -24868,7 +24871,7 @@ snapshots:
 
     vue-component-type-helpers@2.2.12: {}
 
-    vue-component-type-helpers@3.3.11: {}
+    vue-component-type-helpers@3.3.12: {}
 
     vue-component-type-helpers@3.3.5: {}
 

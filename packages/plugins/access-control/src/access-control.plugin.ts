@@ -4,6 +4,7 @@ import {
     RuntimeVendureConfig,
     VendurePlugin,
 } from '@vendure/core';
+import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import gql from 'graphql-tag';
 
 import { AccessControlResolver, AdministratorStatusResolver } from './access-control.resolver';
@@ -230,7 +231,7 @@ const adminApiSchema = gql`
 `;
 
 @VendurePlugin({
-    imports: [PluginCommonModule],
+    imports: [PluginCommonModule, CustomerPricingPlugin],
     entities: [
         RoleAccessScope,
         Department,

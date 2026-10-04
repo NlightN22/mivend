@@ -14,6 +14,7 @@
         "@vendure/core": "^3.7.3"
     },
     "dependencies": {
+        "@mivend/plugin-customer-pricing": "workspace:*",
         "graphql-tag": "^2.12.6"
     },
     "devDependencies": {
