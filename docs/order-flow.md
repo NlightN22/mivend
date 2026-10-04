@@ -158,6 +158,12 @@ own `stockAllocated` without an explicit conversion rule between them.
 **ATP formula (decided)**: `ATP = stockOnHand - stockAllocated - activeReservations`. No
 `safetyStock` term — confirmed not needed for this business.
 
+**Customer-facing stock tiers (decided)**: the storefront shows a tier computed from the ATP of
+the viewer's branch warehouses only (`includedInBranchAtp` warehouses of the counterparty's
+branch, else `GlobalSettings.defaultBranchId`; guests use the default branch) — never a total
+across branches. Tiers: none = ATP ≤ 0, low = 1–4, medium = 5–19, high = 20+. Thresholds are
+computed on mivend's side (not in search-service) and stored in the database, not in code.
+
 ### Single reservation service, two triggers
 
 One transactional method, e.g. `ReservationService.reserveOrder()`, handles the actual
