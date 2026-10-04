@@ -77,7 +77,7 @@ const stockLabel = computed(() => {
       <div class="buy-panel__price-note">Price includes customer terms and VAT.</div>
 
       <div class="buy-panel__info">
-        <div class="buy-panel__info-row">
+        <div v-if="showPrices" class="buy-panel__info-row">
           <span>Stock</span>
           <MvStockBadge v-if="stockQuantity !== undefined" :quantity="stockQuantity" />
           <MvStockBadge v-else :variant="stockVariant" :label="stockLabel" />
