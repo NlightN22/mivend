@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { Manufacturer } from './entities/manufacturer.entity';
+import { ManufacturerFacetService } from './manufacturer-facet.service';
 
 // Finds-or-creates a Manufacturer by its the ERP directory GUID (issue #116). Name is backfilled
 // opportunistically whenever a real one is available (from the 'Производитель' attribute
@@ -10,7 +11,10 @@ import { Manufacturer } from './entities/manufacturer.entity';
 // doesn't mean "no longer has a name."
 @Injectable()
 export class ManufacturerService {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private facetService: ManufacturerFacetService,
+    ) {}
 
     async upsert(
         ctx: RequestContext,
@@ -19,13 +23,14 @@ export class ManufacturerService {
     ): Promise<Manufacturer> {
         const repo = this.connection.getRepository(ctx, Manufacturer);
         const existing = await repo.findOne({ where: { externalId } });
-        if (existing) {
-            if (name && existing.name !== name) {
-                existing.name = name;
-                return repo.save(existing);
-            }
-            return existing;
+        let manufacturer = existing;
+        if (!manufacturer) {
+            manufacturer = await repo.save(repo.create({ externalId, name: name ?? null }));
+        } else if (name && manufacturer.name !== name) {
+            manufacturer.name = name;
+            manufacturer = await repo.save(manufacturer);
         }
-        return repo.save(repo.create({ externalId, name: name ?? null }));
+        await this.facetService.ensureValue(ctx, externalId, manufacturer.name);
+        return manufacturer;
     }
 }
