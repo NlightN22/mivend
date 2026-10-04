@@ -73,6 +73,23 @@ describe('ExternalSearchService.search', () => {
         expect(result.totalItems).toBe(1);
     });
 
+    it('passes includeDisabled through to the lookup (shop excludes disabled, admin includes)', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+        };
+        const lookup = makeLookup(makeProduct());
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            lookup as unknown as ProductLookupService,
+        );
+
+        await service.search(ctx, { term: 'oil' } as SearchInput);
+        await service.search(ctx, { term: 'oil' } as SearchInput, true);
+
+        expect(lookup.findByExternalIds).toHaveBeenNthCalledWith(1, ctx, ['ext-001'], false);
+        expect(lookup.findByExternalIds).toHaveBeenNthCalledWith(2, ctx, ['ext-001'], true);
+    });
+
     it('uses search-service total and keeps its ranking order with one batched lookup', async () => {
         const client = {
             resolveQuery: vi.fn().mockResolvedValue({
@@ -101,11 +118,11 @@ describe('ExternalSearchService.search', () => {
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
 
         expect(lookup.findByExternalIds).toHaveBeenCalledTimes(1);
-        expect(lookup.findByExternalIds).toHaveBeenCalledWith(ctx, [
-            'ext-b',
-            'ext-missing',
-            'ext-a',
-        ]);
+        expect(lookup.findByExternalIds).toHaveBeenCalledWith(
+            ctx,
+            ['ext-b', 'ext-missing', 'ext-a'],
+            false,
+        );
         expect(result.items.map(i => i.productId)).toEqual(['2', '1']);
         expect(result.totalItems).toBe(500);
     });
@@ -168,7 +185,7 @@ describe('ExternalSearchService.search', () => {
         const result = await service.search(ctx, { term: 'no-match-xyz' } as SearchInput);
 
         expect(result).toEqual({ items: [], totalItems: 0, facetValues: [], collections: [] });
-        expect(lookup.findByExternalIds).toHaveBeenCalledWith(ctx, []);
+        expect(lookup.findByExternalIds).toHaveBeenCalledWith(ctx, [], false);
     });
 
     // Audit finding, mivend.audit.70 (round 3, CRITICAL): a prior fix made this path throw,

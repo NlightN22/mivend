@@ -14,11 +14,12 @@ export class ProductLookupService {
     async findByExternalIds(
         ctx: RequestContext,
         externalIds: string[],
+        includeDisabled = false,
     ): Promise<Map<string, Product>> {
         const found = new Map<string, Product>();
         if (externalIds.length === 0) return found;
 
-        const products = await this.connection
+        const query = this.connection
             .getRepository(ctx, Product)
             .createQueryBuilder('product')
             .leftJoinAndSelect('product.translations', 'translations')
@@ -30,7 +31,9 @@ export class ProductLookupService {
                 channelId: ctx.channelId,
             })
             .where('product.customFields.externalId IN (:...externalIds)', { externalIds })
-            .getMany();
+            .andWhere('product.deletedAt IS NULL');
+        if (!includeDisabled) query.andWhere('product.enabled = true');
+        const products = await query.getMany();
 
         for (const product of products) {
             const externalId = (product.customFields as { externalId?: string | null }).externalId;

@@ -55,7 +55,11 @@ export class ExternalSearchService {
         private productLookup: ProductLookupService,
     ) {}
 
-    async search(ctx: RequestContext, input: SearchInput): Promise<ExternalSearchResponse> {
+    async search(
+        ctx: RequestContext,
+        input: SearchInput,
+        includeDisabled = false,
+    ): Promise<ExternalSearchResponse> {
         const request = mapSearchInputToResolveQueryRequest(input);
         if (!request.query) {
             return { items: [], totalItems: 0, facetValues: [], collections: [] };
@@ -66,6 +70,7 @@ export class ExternalSearchService {
         const products = await this.productLookup.findByExternalIds(
             ctx,
             response.items.map(item => item.partOrProductId),
+            includeDisabled,
         );
         const items: ExternalSearchResult[] = [];
         for (const item of response.items) {
