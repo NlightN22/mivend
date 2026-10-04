@@ -26,7 +26,8 @@ configured `PriceType` (e.g. `RETAIL`), not an arbitrary/raw index price.
 The default branch and its `BranchSettings` are bootstrapped by `plugin-access-control` (issue
 #161): `BOOTSTRAP_BRANCH_NAMES` lists branches to create (the first becomes
 `GlobalSettings.defaultBranchId` if empty) and `DEFAULT_PRICE_TYPE_CODE` picks the default price
-type by code. Idempotent, never overrides admin-set values, no price type found means no default.
+type by code. Idempotent, never overrides admin-set values. If the price type has not synced yet
+there is no default until the next restart (the lookup is retried on every bootstrap).
 
 ---
 

@@ -14,7 +14,7 @@ import { ACCESS_CONTROL_PLUGIN_OPTIONS, AccessControlPluginOptions, loggerCtx } 
 
 const BOOTSTRAP_ERP_ID_PREFIX = 'mivend-bootstrap:';
 
-// Issue #160: contours fed only by real Kafka data are never seeded, so the guest price fallback
+// Issue #161: contours fed only by real Kafka data are never seeded, so the guest price fallback
 // (#70) needs the default branch and its price type to exist without manual admin setup.
 @Injectable()
 export class DefaultBranchBootstrapService implements OnApplicationBootstrap {
@@ -71,12 +71,16 @@ export class DefaultBranchBootstrapService implements OnApplicationBootstrap {
         const repo = this.connection.getRepository(ctx, BranchSettings);
         if (await repo.findOne({ where: { branchId } })) return;
 
+        // Raw SQL: price_type belongs to customer-pricing, which this plugin deliberately does not import.
         const rows: { id: number | string }[] = await this.connection.rawConnection.query(
             `SELECT id FROM price_type WHERE code = $1 LIMIT 1`,
             [code],
         );
         if (!rows[0]) {
-            Logger.warn(`Default price type "${code}" not found, no default price set`, loggerCtx);
+            Logger.warn(
+                `Default price type "${code}" not found, no default price set; restart after price types sync`,
+                loggerCtx,
+            );
             return;
         }
         await repo.save(
