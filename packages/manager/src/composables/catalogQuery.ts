@@ -1,5 +1,4 @@
 import type { LocationQuery, LocationQueryRaw } from 'vue-router';
-import { resolveCategoryFacetValueId } from '../../../shared/src/collectionTree';
 
 export interface CatalogUrlState {
     collection: string | undefined;
@@ -41,16 +40,4 @@ export function buildCatalogQuery(base: LocationQuery, state: CatalogUrlState): 
         priceMax: state.priceMax === null ? undefined : String(state.priceMax),
         page: state.page > 1 ? String(state.page) : undefined,
     };
-}
-
-// The selected collection narrows the search through its same-coded 'category' facet value.
-export function withCategoryFacet(
-    facetValueIds: string[],
-    collection: string | undefined,
-    facetGroups: Parameters<typeof resolveCategoryFacetValueId>[1],
-): string[] {
-    const categoryId = collection
-        ? resolveCategoryFacetValueId(collection, facetGroups)
-        : undefined;
-    return categoryId ? [...facetValueIds, categoryId] : facetValueIds;
 }

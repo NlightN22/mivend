@@ -8,7 +8,6 @@ import {
     type CatalogListItem,
 } from '../api/catalog';
 import { FLOOR_PRICE_TYPE_CODE } from '../constants/pricing';
-import { withCategoryFacet } from './catalogQuery';
 import type { FacetGroup } from 'shared';
 
 const PAGE_SIZE = 20;
@@ -66,15 +65,13 @@ export function useCatalogRows(
     }
 
     async function fetchRows(): Promise<CatalogRows> {
-        const effective = {
-            ...filters,
-            facetValueIds: withCategoryFacet(
-                filters.facetValueIds,
-                collection.value,
-                facetGroups.value,
-            ),
-        };
-        const result = await fetchCatalogPage(effective, facetGroups.value, page.value, PAGE_SIZE);
+        const result = await fetchCatalogPage(
+            filters,
+            facetGroups.value,
+            page.value,
+            PAGE_SIZE,
+            collection.value,
+        );
         return { page: result, prices: await fetchPricesAndStock(result.items) };
     }
 

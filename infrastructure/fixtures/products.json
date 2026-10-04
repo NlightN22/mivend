@@ -8,7 +8,7 @@
         "description": "Full synthetic motor oil for gasoline and diesel engines",
         "price": 2490,
         "stockOnHand": 85,
-        "categoryCode": "cat-engine-oils",
+        "categoryCode": "cat-engine-oils-synthetic",
         "brandCode": "castrol",
         "onSale": true
     },
@@ -21,7 +21,7 @@
         "description": "Semi-synthetic motor oil for mixed fleet",
         "price": 1890,
         "stockOnHand": 124,
-        "categoryCode": "cat-engine-oils",
+        "categoryCode": "cat-engine-oils-semi-synthetic",
         "brandCode": "lukoil",
         "weight": 4
     },
@@ -108,7 +108,7 @@
         "description": "Ultra-low viscosity full synthetic oil for modern engines",
         "price": 3290,
         "stockOnHand": 54,
-        "categoryCode": "cat-engine-oils",
+        "categoryCode": "cat-engine-oils-synthetic",
         "brandCode": "castrol",
         "onSale": true
     },
@@ -121,7 +121,7 @@
         "description": "Full synthetic motor oil, 1-litre top-up pack",
         "price": 790,
         "stockOnHand": 200,
-        "categoryCode": "cat-engine-oils",
+        "categoryCode": "cat-engine-oils-synthetic",
         "brandCode": "lukoil",
         "weight": 1
     },
@@ -221,7 +221,7 @@
         "description": "Full synthetic motor oil, 1-litre pack",
         "price": 690,
         "stockOnHand": 310,
-        "categoryCode": "cat-engine-oils",
+        "categoryCode": "cat-engine-oils-synthetic",
         "brandCode": "castrol"
     },
     {
@@ -233,7 +233,7 @@
         "description": "Mineral motor oil for older engines",
         "price": 1490,
         "stockOnHand": 76,
-        "categoryCode": "cat-engine-oils",
+        "categoryCode": "cat-engine-oils-mineral",
         "brandCode": "lukoil",
         "onSale": true,
         "weight": 5

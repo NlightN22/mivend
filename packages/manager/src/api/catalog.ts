@@ -82,9 +82,11 @@ export async function fetchCatalogPage(
     facetGroups: FacetGroup[],
     page: number,
     pageSize: number,
+    collectionSlug?: string,
 ): Promise<CatalogPageResult> {
     const result = await adminApi(CatalogPageDocument, {
         term: filters.search || undefined,
+        collectionSlug,
         facetValueFilters: buildFacetValueFilters(filters.facetValueIds, facetGroups),
         skip: (page - 1) * pageSize,
         take: pageSize,

@@ -21,6 +21,7 @@ query CategoryTree($skip: Int!, $take: Int!) {
             id
             name
             slug
+            isPrivate
             breadcrumbs {
                 id
                 name
@@ -33,6 +34,7 @@ query CategoryTree($skip: Int!, $take: Int!) {
 
 query CatalogPage(
     $term: String
+    $collectionSlug: String
     $facetValueFilters: [FacetValueFilterInput!]
     $skip: Int
     $take: Int
@@ -40,6 +42,7 @@ query CatalogPage(
     search(
         input: {
             term: $term
+            collectionSlug: $collectionSlug
             facetValueFilters: $facetValueFilters
             groupByProduct: true
             skip: $skip

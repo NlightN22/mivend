@@ -9386,6 +9386,7 @@ export type CategoryTreeQuery = {
             id: string;
             name: string;
             slug: string;
+            isPrivate: boolean;
             breadcrumbs: Array<{ id: string; name: string; slug: string }>;
         }>;
     };
@@ -9393,6 +9394,7 @@ export type CategoryTreeQuery = {
 
 export type CatalogPageQueryVariables = Exact<{
     term?: InputMaybe<Scalars['String']['input']>;
+    collectionSlug?: InputMaybe<Scalars['String']['input']>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput> | FacetValueFilterInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -11866,6 +11868,7 @@ export const CategoryTreeDocument = new TypedDocumentString(`
       id
       name
       slug
+      isPrivate
       breadcrumbs {
         id
         name
@@ -11877,9 +11880,9 @@ export const CategoryTreeDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<CategoryTreeQuery, CategoryTreeQueryVariables>;
 export const CatalogPageDocument = new TypedDocumentString(`
-    query CatalogPage($term: String, $facetValueFilters: [FacetValueFilterInput!], $skip: Int, $take: Int) {
+    query CatalogPage($term: String, $collectionSlug: String, $facetValueFilters: [FacetValueFilterInput!], $skip: Int, $take: Int) {
   search(
-    input: {term: $term, facetValueFilters: $facetValueFilters, groupByProduct: true, skip: $skip, take: $take}
+    input: {term: $term, collectionSlug: $collectionSlug, facetValueFilters: $facetValueFilters, groupByProduct: true, skip: $skip, take: $take}
   ) {
     totalItems
     items {

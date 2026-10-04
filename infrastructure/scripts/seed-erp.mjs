@@ -362,7 +362,8 @@ async function main() {
     // v5 (2026-09-05, user request): added branch-east to the `branches` fixture.
     // v6 (#117): employees now carry positionErpId, with a new `positions` fixture.
     // v7 (#59): category icons (iconFile) in the categories fixture.
-    const run = 'v7';
+    // v8 (#59): level-3 oil categories now hold products.
+    const run = 'v8';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
@@ -917,9 +918,8 @@ async function main() {
         // Second branch (user request, 2026-09-05) so branch-scoped UI/flows (Settings >
         // Branches select, warehouse curation, BranchSettings per branch) have more than one
         // real row to exercise locally — see ensureBranchSettingsSeeded below for its own
-        // BranchSettings row, and infrastructure/scripts/seed-warehouses-via-inbox.mjs for its
-        // warehouses (Warehouse is Kafka-fed only, no erp-import record type for it — see that
-        // script's own header for why a live broker isn't needed to seed it anyway).
+        // BranchSettings row. Warehouses come from the erp-import `warehouse` record type
+        // (see packages/e2e/fixtures/seed.ts for the binding the e2e order flow needs).
         { erpId: 'branch-east', name: 'East branch' },
     ];
     console.log(`Sending ${branches.length} branches...`);
