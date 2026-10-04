@@ -1,8 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-vi.mock('@vendure/core', () => ({ Logger: { warn: vi.fn(), error: vi.fn() } }));
-
-import { Logger } from '@vendure/core';
 import { hasBrowseCriteria, mapSearchInputToResolveQueryRequest } from '../../query-mapper';
 
 const none = { manufacturer: [] as string[], unsatisfiable: false };
@@ -56,21 +53,22 @@ describe('mapSearchInputToResolveQueryRequest', () => {
         expect(request).not.toHaveProperty('filters');
     });
 
-    it('maps name ASC sort to name', () => {
-        expect(
-            mapSearchInputToResolveQueryRequest({ sort: { name: 'ASC' } } as never, none).sort,
-        ).toBe('name');
+    it.each([
+        [{ name: 'ASC' }, 'name'],
+        [{ name: 'DESC' }, 'nameDesc'],
+        [{ price: 'ASC' }, 'priceAsc'],
+        [{ price: 'DESC' }, 'priceDesc'],
+    ])('maps sort %o to %s', (sort, expected) => {
+        expect(mapSearchInputToResolveQueryRequest({ sort } as never, none).sort).toBe(expected);
     });
 
-    it.each([{ price: 'ASC' }, { name: 'DESC' }])(
-        'degrades unsupported sort %o to relevance with a warning',
-        sort => {
-            vi.mocked(Logger.warn).mockClear();
-            const request = mapSearchInputToResolveQueryRequest({ sort } as never, none);
-            expect(request.sort).toBe('relevance');
-            expect(Logger.warn).toHaveBeenCalled();
-        },
-    );
+    it('converts the minor-unit price range to major units', () => {
+        const request = mapSearchInputToResolveQueryRequest(
+            { term: 'x', priceRangeWithTax: { min: 10050, max: 999_999_999 } },
+            none,
+        );
+        expect(request.filters).toEqual({ priceRange: { min: 100.5, max: 9_999_999.99 } });
+    });
 });
 
 describe('hasBrowseCriteria', () => {
@@ -81,6 +79,7 @@ describe('hasBrowseCriteria', () => {
         [{ query: 'x' }],
         [{ query: '', categoryId: 'c' }],
         [{ query: '', filters: { manufacturer: ['m'] } }],
+        [{ query: '', filters: { priceRange: { min: 1 } } }],
     ])('is true for %o', request => {
         expect(hasBrowseCriteria(request)).toBe(true);
     });

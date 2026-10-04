@@ -305,6 +305,33 @@ describe('ExternalSearchService.search', () => {
         );
     });
 
+    it('sends a price range with no query to search-service instead of the local listing', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+        };
+        const lookup = {
+            ...makeLookup(makeProduct()),
+            browse: vi.fn(),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            lookup as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+        );
+        await service.search(ctx, {
+            priceRangeWithTax: { min: 1000, max: 5000 },
+            sort: { price: 'DESC' },
+        } as SearchInput);
+        expect(lookup.browse).not.toHaveBeenCalled();
+        expect(client.resolveQuery).toHaveBeenCalledWith(
+            expect.objectContaining({
+                sort: 'priceDesc',
+                filters: { priceRange: { min: 10, max: 50 } },
+            }),
+        );
+    });
+
     it('passes the viewer warehouse ids to the local listing when the in-stock filter is on', async () => {
         const client = { resolveQuery: vi.fn() };
         const lookup = {

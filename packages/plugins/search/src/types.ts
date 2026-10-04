@@ -25,4 +25,7 @@ export function getSearchBackend(): SearchBackend {
 }
 
 // ElasticsearchPlugin adds `inStock` to SearchInput; the external backend's schema does the same.
-export type ShopSearchInput = SearchInput & { inStock?: boolean | null };
+export type ShopSearchInput = SearchInput & {
+    inStock?: boolean | null;
+    priceRangeWithTax?: { min: number; max: number } | null;
+};

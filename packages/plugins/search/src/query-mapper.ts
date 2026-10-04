@@ -1,37 +1,51 @@
-import { Logger } from '@vendure/core';
-
 import type { ResolvedSearchFilters } from './search-filter-resolver.service';
-import { loggerCtx, ShopSearchInput } from './types';
+import type { ShopSearchInput } from './types';
+
+export type SearchServiceSort = 'relevance' | 'name' | 'nameDesc' | 'priceAsc' | 'priceDesc';
 
 export interface ResolveQueryRequest {
     query: string;
     categoryId?: string;
-    filters?: { manufacturer?: string[]; warehouseIds?: string[] };
-    sort?: 'relevance' | 'name';
+    filters?: {
+        manufacturer?: string[];
+        warehouseIds?: string[];
+        priceRange?: { min?: number; max?: number };
+    };
+    sort?: SearchServiceSort;
     limit?: number;
     offset?: number;
     availableOnly?: boolean;
 }
 
 export function hasBrowseCriteria(request: ResolveQueryRequest): boolean {
-    return Boolean(request.query || request.categoryId || request.filters?.manufacturer?.length);
+    return Boolean(
+        request.query ||
+        request.categoryId ||
+        request.filters?.manufacturer?.length ||
+        request.filters?.priceRange,
+    );
 }
 
-// search-service has no price sort (prices are per-customer, resolved in mivend) and no
-// descending name sort; those degrade to relevance with a warning.
-function mapSort(input: ShopSearchInput): 'relevance' | 'name' {
-    if (input.sort?.name === 'ASC') return 'name';
-    if (input.sort && Object.keys(input.sort).length > 0) {
-        Logger.warn('unsupported search sort ignored, using relevance', loggerCtx);
-    }
+function mapSort(input: ShopSearchInput): SearchServiceSort {
+    if (input.sort?.price) return input.sort.price === 'DESC' ? 'priceDesc' : 'priceAsc';
+    if (input.sort?.name) return input.sort.name === 'DESC' ? 'nameDesc' : 'name';
     return 'relevance';
+}
+
+// The storefront sends minor units (Int); search-service indexes the price in major units.
+function mapPriceRange(input: ShopSearchInput): { min?: number; max?: number } | undefined {
+    const range = input.priceRangeWithTax;
+    if (!range) return undefined;
+    return { min: range.min / 100, max: range.max / 100 };
 }
 
 export function mapSearchInputToResolveQueryRequest(
     input: ShopSearchInput,
     resolved: ResolvedSearchFilters,
 ): ResolveQueryRequest {
+    const priceRange = mapPriceRange(input);
     const filters = {
+        ...(priceRange ? { priceRange } : {}),
         ...(resolved.manufacturer.length > 0 ? { manufacturer: resolved.manufacturer } : {}),
         ...(resolved.warehouseIds ? { warehouseIds: resolved.warehouseIds } : {}),
     };
