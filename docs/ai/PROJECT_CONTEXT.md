@@ -2,6 +2,20 @@
 
 Updated: 2026-10-04 15:45
 
+## Recent changes (2026-10-04 — #162 favorites IDs only, shipped; brand gap filed as #168)
+
+- `stores/favorites.ts` keeps only `variantId`/`productSlug`/`addedAt` (`mv_favorites`; legacy fields
+  are dropped on load). `useFavoriteProducts` resolves `customerPrice` + stock tier live per viewer
+  via `products(filter slug in)`, batched by 100 slugs (Vendure `take` cap), with an error state.
+  After a successful load, favorites the API no longer returns are pruned so the header badge
+  matches the page; a failed load never prunes. Verified in the browser on :5183 with the test customer.
+- Contour startup: `ManufacturerFacetService` backfill loaded all FacetValues once per manufacturer
+  (O(n²), 1498 rows) and delayed listen for minutes; now loaded once. Healthy restart is ~25-40 s
+  (docs/environments.md). A ts-node-dev child stuck in `waitForFile` can spin at ~90% CPU after a
+  hot-reload during `build:plugins`; kill -9 that child only.
+- Open: #168 — brand is empty everywhere (storefront reads a `brand` facet nobody assigns; the real
+  `Product.manufacturerId` is not exposed by the Shop API).
+
 ## Recent changes (2026-10-04 — #164 category browse/filters/facets on ExternalSearchPlugin, closed/audited)
 
 - Category = Collection slug `cat-<ErpId>` → `categoryId` (no `Collection.customFields.externalId`;
