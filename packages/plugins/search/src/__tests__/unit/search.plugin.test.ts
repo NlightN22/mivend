@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 describe('search.plugin searchPlugins backend switch', () => {
     const ORIGINAL_BACKEND = process.env.SEARCH_BACKEND;
     const ORIGINAL_URL = process.env.SEARCH_SERVICE_URL;
+    const ORIGINAL_KEY = process.env.SEARCH_SERVICE_API_KEY;
 
     beforeEach(() => {
         vi.resetModules();
@@ -15,6 +16,7 @@ describe('search.plugin searchPlugins backend switch', () => {
     afterEach(() => {
         process.env.SEARCH_BACKEND = ORIGINAL_BACKEND;
         process.env.SEARCH_SERVICE_URL = ORIGINAL_URL;
+        process.env.SEARCH_SERVICE_API_KEY = ORIGINAL_KEY;
     });
 
     // vi.resetModules() forces a full reimport of the plugin's dependency graph (Vendure core,
@@ -44,6 +46,7 @@ describe('search.plugin searchPlugins backend switch', () => {
     it('registers ExternalSearchPlugin (and not ElasticsearchPlugin) when SEARCH_BACKEND=external', async () => {
         process.env.SEARCH_BACKEND = 'external';
         process.env.SEARCH_SERVICE_URL = 'http://search-service.test';
+        process.env.SEARCH_SERVICE_API_KEY = 'test-key';
         const { searchPlugins, SearchPlugin } = await import('../../search.plugin');
         const { ExternalSearchPlugin } = await import('../../external-search.plugin');
 
@@ -55,5 +58,13 @@ describe('search.plugin searchPlugins backend switch', () => {
         delete process.env.SEARCH_SERVICE_URL;
 
         await expect(import('../../search.plugin')).rejects.toThrow(/SEARCH_SERVICE_URL/);
+    }, 20000);
+
+    it('throws at module load when SEARCH_BACKEND=external but SEARCH_SERVICE_API_KEY is missing', async () => {
+        process.env.SEARCH_BACKEND = 'external';
+        process.env.SEARCH_SERVICE_URL = 'http://search-service.test';
+        delete process.env.SEARCH_SERVICE_API_KEY;
+
+        await expect(import('../../search.plugin')).rejects.toThrow(/SEARCH_SERVICE_API_KEY/);
     }, 20000);
 });

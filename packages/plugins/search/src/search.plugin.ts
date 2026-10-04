@@ -133,11 +133,13 @@ export class SearchPlugin {}
 function buildSearchPlugins(): Array<Type<unknown>> {
     const backend = getSearchBackend();
     if (backend === 'external') {
-        if (!process.env.SEARCH_SERVICE_URL) {
-            throw new Error(
-                'SEARCH_BACKEND=external requires SEARCH_SERVICE_URL to be set (see ' +
-                    'docs/environments.md) — refusing to start with no search-service target.',
-            );
+        for (const name of ['SEARCH_SERVICE_URL', 'SEARCH_SERVICE_API_KEY']) {
+            if (!process.env[name]) {
+                throw new Error(
+                    `SEARCH_BACKEND=external requires ${name} to be set (see ` +
+                        'docs/environments.md) — refusing to start without it.',
+                );
+            }
         }
         return [SearchPlugin, ExternalSearchPlugin];
     }

@@ -6,14 +6,17 @@ import { SearchServiceClient } from '../../search-service.client';
 // real network in automated tests (external-integration-rules skill).
 describe('SearchServiceClient.resolveQuery', () => {
     const ORIGINAL_URL = process.env.SEARCH_SERVICE_URL;
+    const ORIGINAL_KEY = process.env.SEARCH_SERVICE_API_KEY;
 
     beforeEach(() => {
         process.env.SEARCH_SERVICE_URL = 'http://search-service.test';
+        process.env.SEARCH_SERVICE_API_KEY = 'test-key';
     });
 
     afterEach(() => {
         vi.unstubAllGlobals();
         process.env.SEARCH_SERVICE_URL = ORIGINAL_URL;
+        process.env.SEARCH_SERVICE_API_KEY = ORIGINAL_KEY;
     });
 
     it('posts to /resolve-query and returns the parsed response', async () => {
@@ -29,8 +32,30 @@ describe('SearchServiceClient.resolveQuery', () => {
         expect(result).toEqual({ items: [], total: 0 });
         expect(fetchMock).toHaveBeenCalledWith(
             'http://search-service.test/resolve-query',
-            expect.objectContaining({ method: 'POST' }),
+            expect.objectContaining({
+                method: 'POST',
+                headers: expect.objectContaining({ 'X-Api-Key': 'test-key' }),
+            }),
         );
+    });
+
+    it('throws when SEARCH_SERVICE_API_KEY is not set, without calling fetch', async () => {
+        delete process.env.SEARCH_SERVICE_API_KEY;
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+
+        const client = new SearchServiceClient();
+        await expect(client.resolveQuery({ query: 'x' })).rejects.toThrow(/SEARCH_SERVICE_API_KEY/);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a rejected API key (401) as an error with its status', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue({ ok: false, status: 401, text: async () => 'invalid key' }),
+        );
+        const client = new SearchServiceClient();
+        await expect(client.resolveQuery({ query: 'x' })).rejects.toThrow(/401/);
     });
 
     it('throws (does not swallow) a non-ok response', async () => {
