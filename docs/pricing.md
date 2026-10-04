@@ -23,6 +23,13 @@ deliberate reversal of this doc's earlier "no public retail price at all" stance
 user judged this acceptable (2026-09-05) since the fallback is always a real, branch-
 configured `PriceType` (e.g. `RETAIL`), not an arbitrary/raw index price.
 
+**Guest display (decided 2026-10-04):** the API still resolves the branch-default price and stock
+tier for a guest (`customerPrice`, `stockLevel`), but the storefront UI does NOT show them to a
+guest: product cards say "Log in to see prices" and hide the stock tier. The default price is the
+branch's retail `PriceType`, so exposing it through the API is accepted, not a leak to close.
+Showing guest prices in the UI later is a pure frontend change (the `isLoggedIn` conditions in
+`ProductListView.vue`/`ProductScrollRow.vue`/`MvProductCard`).
+
 The default branch and its `BranchSettings` are bootstrapped by `plugin-access-control` (issue
 #161): `BOOTSTRAP_BRANCH_NAMES` lists branches to create (the first becomes
 `GlobalSettings.defaultBranchId` if empty) and `DEFAULT_PRICE_TYPE_CODE` picks the default price
