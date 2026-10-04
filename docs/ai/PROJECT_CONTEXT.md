@@ -1,6 +1,25 @@
 # Project Context
 
-Updated: 2026-10-03 20:30
+Updated: 2026-10-04 07:30
+
+## Recent changes (2026-10-04 — #59 category tree UI in both portals, shipped/audited/closed)
+
+- Tree: one paginated all-collections query (`fetchAllCollections`, parallel after page 1) + recursive
+  `buildCategoryTree` in `packages/shared/src/collectionTree.ts` (node attaches to nearest visible
+  ancestor; `buildCategoryPanel` = <=2 ancestors + one level of children-or-siblings;
+  `filterVisibleCrumbs` drops ancestors the Shop API cannot return). Never use a flat `take:100`.
+- Storefront: mega-menu (`MvCatalogDropdown`+`Group`, 3 levels, icons from `Collection.featuredAsset`
+  seeded via erp-import `iconFile`, More after 6, hidden on mobile), `MvCategoryNav` inside
+  `MvCatalogFacets` (drill-down, 7 rows + More), breadcrumbs+heading on catalog, real crumbs on ProductPage.
+  Colors are `--app-nav-*` tokens; labels via props + `t()`.
+- Manager catalog uses the same `MvCategoryNav` (flat category facet hidden), filters by admin-search
+  `collectionSlug`; hidden categories shown with a Hidden marker; visibility page shows level/parent/reason.
+- Manual `visibilityOverride` change recomputes the subtree at once (`category-override-recompute.listener.ts`,
+  central only, coalesced); clearing restores state.
+- erp-import has a `warehouse` record type; local seed `seed-erp.mjs` run is `v9` (bump on fixture change or
+  dedup skips it). `make e2e E2E_ARGS="--project=... path"` runs subsets (single worker, ~24 min per group).
+- Open: #159 (34 storefront e2e specs fail after the global-setup fix: invoices, documents, spend
+  discounts, stepper, trading points; manager projects not yet run). Staging products/facets blocked by #69.
 
 ## Recent changes (2026-10-03 — #158 category hierarchy from CategoryChanged.parent_id, implemented)
 
@@ -43,132 +62,13 @@ that never comes, seen under load ~10 right after many plugin edits). Fix: free 
 chromes older than 1 day) and restart via `make dev` / `make dev-staging-integration`; never raw kill.
 Replay API for a stream needs explicit entityIds (take them from `integration_inbox_event` payloads).
 
-## Recent changes (2026-10-03 — #106 granted-retro-bonus stream, shipped/audited/closed)
+## Kafka reference streams #101/#102/#106/#108 (compressed, shipped/audited/closed)
 
-**Issue #106 closed** (pushed, `560477f..bd259e0`). `GrantedRetroBonus` (manager-portal-only) in
-`@mivend/plugin-retro-bonus`, fed by `granted-retro-bonus` (`GrantedRetroBonusChanged`). Keyed to the
-recipient counterparty (not the source); `operationKind` is opaque display text, `accrualKind` raw +
-`accrualKindLabel`. Admin query `grantedRetroBonuses(counterpartyId, options{take,skip})` returns a
-paginated `GrantedRetroBonusList` — **`GrantedRetroBonusListOptions` must be declared explicitly in
-the schema**: Vendure does not auto-generate it for a hand-declared PaginatedList (server failed to
-boot until fixed; unit tests/build cannot catch this, only a live boot).
-**Tombstones (search-platform#147, applies to `granted-retro-bonus` AND `granted-discount`)**:
-`is_deleted=true` soft-deletes (`isDeleted`, tombstone version kept); a tombstone wins an equal
-version, only a strictly newer version revives the row; versionless tombstone = warn+skip. Absent
-`percent/quantity/amount` are proto3-omitted zeros (read as 0). Known edge: tombstone before any row
-is a no-op (docs/ai/erp-streams-map.md). Future `GrantedDiscount` read queries must filter
-`isDeleted=false`. Migrations: `add_granted_retro_bonus_table`, `add_granted_discount_is_deleted`.
-`@nlightn22/event-contracts` pinned `^0.43.1`. **Not done**: manager-portal UI tab (needs its own
-issue — not part of #106's Scope; #102 also shipped backend-only).
-Ops: shared working tree + two contours (local :3000, staging-integration :3010) means any
-uncommitted edit by a parallel session (e.g. #117) respawns both `ts-node-dev` stacks mid-edit and can
-cause 500s/slow staging boot — not a cache/duplicate-process problem (#157).
-
-## Recent changes (2026-10-03 — retro-bonus-rule stream #102, shipped/audited/closed)
-
-**Issue #102 closed.** New read-only, manager-portal-only `@mivend/plugin-retro-bonus` plugin:
-`RetroBonusRule` entity fed by the ERP's `RetroBonusRuleChanged` stream
-(`company.customers.events.v1`), paired with #106's `GrantedRetroBonus`. **Critically unlike `DiscountRule`**: pure upsert-only, no deactivation/
-conflict/supersede logic at all — confirmed by search-platform (code of
-`Document.УстановкаПараметровНачисленияРетроБонусов.ObjectModule.bsl`, not just data) that this
-stream never sends a real tombstone; both natural expiry and early cancellation ("Закрыть
-досрочно") are carried as an ordinary re-send with `effectiveTo` already shortened — the register
-row is rewritten on repost, unlike `discount-rule`'s separate cancellation _document_ which
-creates a new row instead of editing the existing one (why that stream needed `is_deleted`
-handling and this one doesn't). Only a version guard against out-of-order Kafka redelivery.
-`accrualKind` stored raw (closed 4-value 1C enum, search-platform#126), translated only at the
-GraphQL layer (`accrualKindLabel`), never stored translated. Admin query
-`retroBonusRules(counterpartyId, contractId?)`, reuses `Permission.ReadCustomer` +
-`CustomPermission.ReadCounterparty.Permission` (no new Permission). New migration (table +
-`(counterpartyErpId, recipientContractErpId)` index, folded into one migration before push).
-Commits df4c43b (implementation) + f79f2ec (3 LOW audit fixes: missing index, inaccurate
-`ContractService.findById` comment, 3 over-cap comments). `mivend.audit.common` signed off clean
-on the second pass. Pushed, issue closed with summary comment.
-
-**Known accepted gap, deliberately not fixed**: an unused retro-bonus rule marked for deletion in
-1C via the _standard_ soft-delete flag (not "Закрыть досрочно") is a plain `Записать()`, never
-rewrites the register — the stream never learns about it, `validTo` stays stale until natural
-expiry. Narrow scenario (unused rule + that specific deletion path), no search-platform issue
-filed for it (their own call, AGENTS.md "no excess code"). If this surfaces as a real complaint
-later, re-open via search-platform, don't speculatively build around it first.
-
-## Recent changes (2026-10-02/03 — granted-discount stream #101, shipped/audited/closed)
-
-Shipment-time confirmed discount facts consumed as a new, read-only `GrantedDiscount` entity
-(`plugin-price-entry`) from Integration Service's `granted-discount` stream
-(`company.customers.events.v1`). `orderEntityId` kept as a plain ERP id, not a mivend `Order`
-relation — a shipment line can reference an order mivend never received. Production migration
-`1790945855613-add-granted-discount-table.ts` (regenerated once via the scratch-DB procedure).
-Upstream gap `search-platform#147` (unposted shipment sent nothing) is now fixed upstream: an
-unposted recorder arrives as `is_deleted=true`; handled in 6e2649a (row deleted by `entity_id`,
-unpushed at time of writing, owned by the #106 session). UI follow-ups: #155 (manager), #156 (storefront,
-blocked on a customer-visibility decision) — their "#147 blocker" comments are now obsolete once 6e2649a
-ships. Units: `discountAmount` is raw ERP rubles, not kopecks. Audited and closed.
-
-## Recent changes (2026-09-29→10-02 — discount-rule stream #108/#152/#153/#154, docs/ai tracked)
-
-**Issue #108 shipped, audited, closed.** Counterparty/contract-scoped ERP discount rules
-(`DiscountRuleChanged`, company.customers.events.v1) consumed as a **third, mutually-exclusive
-trigger shape** on the existing `DiscountRule` entity (`plugin-price-entry`), alongside the
-facet/priceType-tier shape and #107's promo-rule shape — one entity, two write channels (ERP +
-portal), per the resolved architecture. New columns: `recipientType`/`recipientErpId`/
-`productErpId`/`condition`(`byQuantity`|`byDocumentAmount`)/`conditionValue`/`limitAmount`/
-`sourceVersion`/`active`; `validTo` made nullable for this shape only (real optional
-`effective_to` — absent means no expiry). `CounterpartyDiscountRuleService` owns write-time
-conflict-prevention (never two active rows on the same scope) and `getBestPercent` (byQuantity/
-byDocumentAmount matching). `PriceResolutionService` folds this in as a third max-wins source
-(never additive) alongside facet/tier and promo. New inbound Kafka stream `discount-rule` in
-`erp-integration` (bulk lane), new production migration `1790741701469`.
-
-**mivend.audit.common review (4 rounds) found and fixed real bugs, in order**:
-
-1. `effective_to` wrongly treated as required (handler dropped every open-ended rule) — fixed,
-   `validTo: Date | null`.
-2. Unit bug: `byDocumentAmount` compared kopecks (`order.totalWithTax`) against raw ERP rubles
-   (`conditionValue`) unconverted — threshold fired ~100x too early. Fixed: convert at the
-   comparison site (`Math.round(conditionValue * 100)`), same convention `price.handler.ts` uses.
-3. Missing production migration for the new columns (caught before push).
-4. **Real reconciliation gap, confirmed live by search-platform**: cancelling a rule in the ERP used to
-   send **nothing at all** on the wire (`СформироватьDTOСкидки` filtered the percent=0 cancel row
-   out silently) — fixed upstream by search-platform (**search-platform#145**): cancellation now
-   arrives as a genuine `DiscountRuleChanged` with `is_deleted=true` for the same `entityId`.
-   mivend's handler was still treating `is_deleted=true` as a no-op skip — fixed:
-   `CounterpartyDiscountRuleService.deactivateTombstone(ctx, erpId, version)` (erpId-only,
-   tombstone-first in the handler, same pattern as `contract.handler.ts`).
-5. **Version-collision risk, confirmed by search-platform (`register-streams.bsl`)**: the ERP's
-   `version` is generated once per sync pass and reused for every DTO/tombstone in that pass — an
-   update and its cancel for the same `entityId` can land with an **identical** version;
-   search-platform's own Ingestion API also dedupes on `(sourceSystem, entityType, entityId,
-version)` with `onConflictDoNothing`, silently dropping one side before it ever reaches Kafka
-   (upstream, not fixable from mivend — tracked as **mivend#154**). mivend-side mitigation:
-   `upsertCounterpartyRule` never reactivates a deactivated row (tombstone or
-   conflict-superseded) at a non-strictly-newer version; `deactivateTombstone` stores the
-   tombstone's own version so this guard has something to compare against.
-6. **Ordering bug in the mitigation itself**: the reactivation guard originally ran _after_ the
-   cross-erpId conflict-supersede loop, and that loop mutated/saved rows as it iterated — a stale
-   comparison could abort via early `return` after an unrelated active rule had already been
-   deactivated and saved. Fixed: **decide every outcome first (fetch record, check reactivation
-   guard, evaluate every conflict into a to-supersede list), mutate/save only after nothing
-   aborts the write.** This decide-then-mutate shape is the pattern to follow for any future
-   multi-row conditional write in this codebase.
-
-**Also this pass**: `docs/ai/` (except `.backup/`) is now **tracked in git** — several handlers'
-own comments point to `docs/ai/erp-streams-map.md` for full field accounting (AGENTS.md's 1-2
-line comment cap), and it was entirely gitignored before, so a fresh clone/CI had a broken
-reference. Checked against AGENTS.md's privacy rules before tracking (public repo) — nothing
-sensitive found. **Issue #153** (unrelated gap found mid-work): `Contract` entity (#105) had zero
-production migrations at all — fixed with its own migration, `1790742446239`.
-
-**Issue #152 closed** (cancellation-reconciliation gap resolved, item 4 above). **Issue #154
-open** (low-priority, re-filed so it isn't buried in a closed issue): `limitAmount` not enforced
-(rules with it set are safely excluded from matching, not capped — a real visible gap, not
-polish), conflict-scope simplification (null `productErpId` vs. product-specific not treated as
-overlapping), ERP-vs-portal conflict branch has no reachable trigger today, plus the upstream
-version-collision/dedup risk (item 5 above, no mivend fix possible).
-
-**All commits**: c97c5a4, 56ea4a1, 97d07ee (#108) → 0b92748, 8ad4243 (#152 tombstone) → 3cc9ac2
-(#153) → 9549a8d, 7919bfb (version-collision guard + its own ordering fix) → 4e609c0 (docs/ai
-tracked). 502 unit tests, `make lint` 0 errors, final audit round: no objections.
+Discount-rule (#108/#152-154), granted-discount (#101), retro-bonus-rule (#102) and
+granted-retro-bonus (#106) streams are consumed by `erp-integration` into `price-entry`; all follow
+the inbox/outbox + resilience patterns in `docs/testing-patterns.md` and the
+`external-integration-rules` skill. Full per-stream detail (handlers, migrations, gotchas):
+`docs/ai/.backup/PROJECT_CONTEXT-2026-10-04-streams-101-102-106-108-full.md`.
 
 ## History (compressed)
 
