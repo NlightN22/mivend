@@ -3,6 +3,7 @@ import { LanguageCode } from '@vendure/common/lib/generated-types';
 import {
     Facet,
     FacetService,
+    FacetValue,
     FacetValueService,
     Logger,
     ProcessContext,
@@ -35,7 +36,10 @@ export class ManufacturerFacetService implements OnApplicationBootstrap {
         try {
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
             const manufacturers = await this.connection.getRepository(ctx, Manufacturer).find();
-            for (const m of manufacturers) await this.ensureValue(ctx, m.externalId, m.name);
+            const facet = await this.ensureFacet(ctx);
+            const values = await this.facetValueService.findByFacetId(ctx, facet.id);
+            for (const m of manufacturers)
+                await this.syncValue(ctx, facet, values, m.externalId, m.name);
         } catch (err) {
             Logger.error(`manufacturer facet backfill failed: ${String(err)}`, loggerCtx);
         }
@@ -44,6 +48,16 @@ export class ManufacturerFacetService implements OnApplicationBootstrap {
     async ensureValue(ctx: RequestContext, externalId: string, name: string | null): Promise<void> {
         const facet = await this.ensureFacet(ctx);
         const values = await this.facetValueService.findByFacetId(ctx, facet.id);
+        await this.syncValue(ctx, facet, values, externalId, name);
+    }
+
+    private async syncValue(
+        ctx: RequestContext,
+        facet: Facet,
+        values: FacetValue[],
+        externalId: string,
+        name: string | null,
+    ): Promise<void> {
         const existing = values.find(v => v.code === externalId);
         if (!existing) {
             await this.facetValueService.create(ctx, facet as never, {

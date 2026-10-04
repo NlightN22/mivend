@@ -50,7 +50,7 @@ Updated: 2026-10-04 15:45
 - Default channel currency bootstrapped to RUB (`DEFAULT_CURRENCY_CODE`, config is source of truth).
 - Staging-integration data set by hand: 5 warehouses assigned to branches (Abakan: ids 18, 15;
   Krasnoyarsk: 8, 14, 30; service/defect warehouses stay unassigned). Test customer
-  `test@komponent-m.ru` (counterparty 21560, retail price type; password in the session scratchpad,
+  `test@komponent-m.ru` (counterparty 21560, retail price type; login/password in the gitignored `apps/server/.env.central.staging-integration` as `STAGING_TEST_CUSTOMER_EMAIL`/`STAGING_TEST_CUSTOMER_PASSWORD` (reset in the contour DB on 2026-10-04),
   not in the repo; KEEP it). Counterparty `officialEmail` comes from 1C kind "Служебный адрес
   электронной почты контрагента" only.
 - #167 (closed, audited, 4fe0e1a + 4651c5f): `stock.handler.ts` ignores a stock fact for an unknown warehouse

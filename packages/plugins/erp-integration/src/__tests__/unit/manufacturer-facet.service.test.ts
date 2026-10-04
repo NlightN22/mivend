@@ -16,7 +16,11 @@ vi.mock('@vendure/core', () => ({
 
 const ctx = {} as RequestContext;
 
-function setup(values: Array<{ id: number; code: string; name: string }>, isServer = true) {
+function setup(
+    values: Array<{ id: number; code: string; name: string }>,
+    isServer = true,
+    manufacturers = [{ externalId: 'm-1', name: 'A' }],
+) {
     const facet = { id: 1 };
     const facetService = { findByCode: vi.fn().mockResolvedValue(facet), create: vi.fn() };
     const facetValueService = {
@@ -24,7 +28,6 @@ function setup(values: Array<{ id: number; code: string; name: string }>, isServ
         create: vi.fn().mockResolvedValue(undefined),
         update: vi.fn().mockResolvedValue(undefined),
     };
-    const manufacturers = [{ externalId: 'm-1', name: 'A' }];
     const connection = { getRepository: () => ({ find: async () => manufacturers }) };
     const service = new ManufacturerFacetService(
         facetService as never,
@@ -64,5 +67,14 @@ describe('ManufacturerFacetService', () => {
         const worker = setup([], false);
         await worker.service.onApplicationBootstrap();
         expect(worker.facetValueService.create).not.toHaveBeenCalled();
+    });
+
+    it('backfill loads the existing values once, not once per manufacturer', async () => {
+        const manufacturers = [1, 2, 3].map(i => ({ externalId: `m-${i}`, name: `N${i}` }));
+        const existing = [{ id: 1, code: 'm-1', name: 'N1' }];
+        const { service, facetValueService } = setup(existing, true, manufacturers);
+        await service.onApplicationBootstrap();
+        expect(facetValueService.findByFacetId).toHaveBeenCalledTimes(1);
+        expect(facetValueService.create).toHaveBeenCalledTimes(2);
     });
 });
