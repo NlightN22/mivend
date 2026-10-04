@@ -65,7 +65,7 @@ export class ExternalSearchService {
     ): Promise<ExternalSearchResponse> {
         const resolved = await this.filterResolver.resolve(ctx, input);
         const request = mapSearchInputToResolveQueryRequest(input, resolved);
-        if (!hasBrowseCriteria(request)) {
+        if (resolved.unsatisfiable || !hasBrowseCriteria(request)) {
             return { items: [], totalItems: 0, facetValues: [], collections: [] };
         }
 

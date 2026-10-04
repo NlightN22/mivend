@@ -5,7 +5,7 @@ vi.mock('@vendure/core', () => ({ Logger: { warn: vi.fn(), error: vi.fn() } }));
 import { Logger } from '@vendure/core';
 import { hasBrowseCriteria, mapSearchInputToResolveQueryRequest } from '../../query-mapper';
 
-const none = { manufacturer: [] as string[] };
+const none = { manufacturer: [] as string[], unsatisfiable: false };
 
 describe('mapSearchInputToResolveQueryRequest', () => {
     it('maps term/take/skip to query/limit/offset with relevance sort', () => {
@@ -22,7 +22,7 @@ describe('mapSearchInputToResolveQueryRequest', () => {
     it('passes resolved category and manufacturer filters', () => {
         const request = mapSearchInputToResolveQueryRequest(
             {},
-            { categoryId: 'cat-1', manufacturer: ['m-1', 'm-2'] },
+            { categoryId: 'cat-1', manufacturer: ['m-1', 'm-2'], unsatisfiable: false },
         );
         expect(request).toMatchObject({
             query: '',
@@ -34,7 +34,7 @@ describe('mapSearchInputToResolveQueryRequest', () => {
     it('inStock narrows availability to the viewer branch warehouses', () => {
         const request = mapSearchInputToResolveQueryRequest(
             { term: 'oil', inStock: true },
-            { manufacturer: [], warehouseIds: ['wh-1'] },
+            { manufacturer: [], warehouseIds: ['wh-1'], unsatisfiable: false },
         );
         expect(request).toMatchObject({
             availableOnly: true,
@@ -45,7 +45,7 @@ describe('mapSearchInputToResolveQueryRequest', () => {
     it('an empty warehouse list is still sent (no visible stock means no results, not all)', () => {
         const request = mapSearchInputToResolveQueryRequest(
             { term: 'oil', inStock: true },
-            { manufacturer: [], warehouseIds: [] },
+            { manufacturer: [], warehouseIds: [], unsatisfiable: false },
         );
         expect(request.filters).toEqual({ warehouseIds: [] });
     });

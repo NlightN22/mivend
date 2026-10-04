@@ -19,10 +19,12 @@ export interface ResolvedSearchFilters {
     categoryId?: string;
     manufacturer: string[];
     warehouseIds?: string[];
+    unsatisfiable: boolean;
 }
 
 // Translates Vendure ids/slugs in SearchInput into the ERP ids search-service filters on.
-// Unknown or unsupported values are dropped with a warning, never failed.
+// A requested filter that resolves to nothing makes the search unsatisfiable (empty result),
+// never an unfiltered one.
 @Injectable()
 export class SearchFilterResolver {
     constructor(
@@ -31,7 +33,9 @@ export class SearchFilterResolver {
     ) {}
 
     async resolve(ctx: RequestContext, input: ShopSearchInput): Promise<ResolvedSearchFilters> {
-        const categoryIds = await this.categoryIdsFromCollections(ctx, input);
+        const fromCollections = await this.categoryIdsFromCollections(ctx, input);
+        const categoryIds = fromCollections.ids;
+        let unsatisfiable = fromCollections.unresolved;
         const manufacturer: string[] = [];
 
         const facetValueIds = [
@@ -41,14 +45,15 @@ export class SearchFilterResolver {
                 ...(f.or ?? []),
             ]),
         ];
-        for (const value of await this.loadFacetValues(ctx, facetValueIds)) {
+        const loaded = await this.loadFacetValues(ctx, facetValueIds);
+        if (loaded.length < new Set(facetValueIds.map(String)).size) unsatisfiable = true;
+        for (const value of loaded) {
             if (value.facet.code === MANUFACTURER_FACET_CODE) manufacturer.push(value.code);
             else if (value.facet.code === CATEGORY_FACET_CODE) categoryIds.push(value.code);
-            else
-                Logger.warn(
-                    `ignoring unsupported facet value filter (${value.facet.code})`,
-                    loggerCtx,
-                );
+            else {
+                unsatisfiable = true;
+                Logger.warn(`unsupported facet filter (${value.facet.code})`, loggerCtx);
+            }
         }
 
         if (categoryIds.length > 1) {
@@ -57,6 +62,7 @@ export class SearchFilterResolver {
         return {
             categoryId: categoryIds[0],
             manufacturer: [...new Set(manufacturer)],
+            unsatisfiable,
             ...(input.inStock
                 ? { warehouseIds: await this.stockLevelService.getViewerWarehouseErpIds(ctx) }
                 : {}),
@@ -66,7 +72,8 @@ export class SearchFilterResolver {
     private async categoryIdsFromCollections(
         ctx: RequestContext,
         input: ShopSearchInput,
-    ): Promise<string[]> {
+    ): Promise<{ ids: string[]; unresolved: boolean }> {
+        let unresolved = false;
         const slugs = [input.collectionSlug, ...(input.collectionSlugs ?? [])];
         const ids = [input.collectionId, ...(input.collectionIds ?? [])].filter(Boolean);
         if (ids.length > 0) {
@@ -76,14 +83,16 @@ export class SearchFilterResolver {
                 .leftJoinAndSelect('collection.translations', 't')
                 .whereInIds(ids)
                 .getMany();
+            if (collections.length < new Set(ids.map(String)).size) unresolved = true;
             slugs.push(...collections.flatMap(c => c.translations.map(t => t.slug)));
         }
         const result: string[] = [];
-        for (const slug of slugs) {
-            const erpId = slug ? categoryErpIdFromSlug(slug) : undefined;
-            if (erpId && !result.includes(erpId)) result.push(erpId);
+        for (const slug of slugs.filter(Boolean)) {
+            const erpId = categoryErpIdFromSlug(slug as string);
+            if (!erpId) unresolved = true;
+            else if (!result.includes(erpId)) result.push(erpId);
         }
-        return result;
+        return { ids: result, unresolved };
     }
 
     private async loadFacetValues(ctx: RequestContext, ids: ID[]): Promise<FacetValue[]> {

@@ -39,25 +39,44 @@ function makeResolver(
 describe('SearchFilterResolver', () => {
     it('derives the category id from a collection slug', async () => {
         const r = await makeResolver({}).resolve(ctx, { collectionSlug: 'cat-abc' });
-        expect(r).toEqual({ categoryId: 'abc', manufacturer: [] });
+        expect(r).toMatchObject({ categoryId: 'abc', manufacturer: [], unsatisfiable: false });
     });
 
-    it('ignores a non-category slug', async () => {
+    it('marks a slug that is not a category as unsatisfiable instead of dropping it', async () => {
         const r = await makeResolver({}).resolve(ctx, { collectionSlug: 'other' });
-        expect(r.categoryId).toBeUndefined();
+        expect(r).toMatchObject({ categoryId: undefined, unsatisfiable: true });
     });
 
-    it('maps manufacturer facet values (ids and and/or filters) to ERP codes and drops others', async () => {
+    it('marks a collection id that does not exist as unsatisfiable', async () => {
+        const r = await makeResolver({ collections: [] }).resolve(ctx, { collectionId: '9' });
+        expect(r.unsatisfiable).toBe(true);
+    });
+
+    it('marks an unknown facet value id as unsatisfiable', async () => {
+        const facetValues = [{ code: 'm-1', facet: { code: 'manufacturer' } }];
+        const r = await makeResolver({ facetValues }).resolve(ctx, {
+            facetValueFilters: [{ or: ['1', '2'] }],
+        });
+        expect(r).toMatchObject({ manufacturer: ['m-1'], unsatisfiable: true });
+    });
+
+    it('marks an unsupported facet (characteristics) as unsatisfiable', async () => {
+        const facetValues = [{ code: 'x', facet: { code: 'color' } }];
+        const r = await makeResolver({ facetValues }).resolve(ctx, { facetValueIds: ['1'] });
+        expect(r.unsatisfiable).toBe(true);
+    });
+
+    it('maps manufacturer facet values (ids and and/or filters) to ERP codes', async () => {
         const facetValues = [
             { code: 'm-1', facet: { code: 'manufacturer' } },
             { code: 'm-2', facet: { code: 'manufacturer' } },
-            { code: 'x', facet: { code: 'color' } },
+            { code: 'm-3', facet: { code: 'manufacturer' } },
         ];
         const r = await makeResolver({ facetValues }).resolve(ctx, {
             facetValueIds: ['1'],
             facetValueFilters: [{ or: ['2', '3'] }],
         });
-        expect(r.manufacturer).toEqual(['m-1', 'm-2']);
+        expect(r).toMatchObject({ manufacturer: ['m-1', 'm-2', 'm-3'], unsatisfiable: false });
     });
 
     it('resolves a collection id via its translated slug', async () => {

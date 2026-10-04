@@ -55,7 +55,9 @@ function makeLookup(product: Product | null): {
     };
 }
 
-const noFilters = { resolve: vi.fn().mockResolvedValue({ manufacturer: [] }) };
+const noFilters = {
+    resolve: vi.fn().mockResolvedValue({ manufacturer: [], unsatisfiable: false }),
+};
 const noDb = {};
 
 // Issue #69, test-design coverage areas 2 and 3.
@@ -286,6 +288,25 @@ describe('ExternalSearchService.search', () => {
         );
         const result = await service.search(ctx, {} as SearchInput);
         expect(result.items).toEqual([]);
+        expect(client.resolveQuery).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty result without calling search-service when a requested filter is unsatisfiable', async () => {
+        const client = { resolveQuery: vi.fn() };
+        const filters = {
+            resolve: vi.fn().mockResolvedValue({ manufacturer: [], unsatisfiable: true }),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(null) as unknown as ProductLookupService,
+            filters as never,
+            noDb as never,
+        );
+        const result = await service.search(ctx, {
+            term: 'oil',
+            collectionSlug: 'bogus',
+        } as SearchInput);
+        expect(result).toMatchObject({ items: [], totalItems: 0 });
         expect(client.resolveQuery).not.toHaveBeenCalled();
     });
 });
