@@ -321,8 +321,9 @@ preview-down:
 
 # ── E2E tests ──────────────────────────────────────────────────────────────────
 
+# Subset: make e2e E2E_ARGS="--project=storefront manager/catalog"
 e2e test-e2e:
-	pnpm --filter @mivend/e2e test
+	pnpm --filter @mivend/e2e test $(E2E_ARGS)
 
 # Minimal critical-route subset (login, order creation) — see docs/testing-strategy.md's
 # "E2E strategy". Requires the same `make dev` + `make seed` stack as `make e2e`.
