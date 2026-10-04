@@ -2,6 +2,18 @@
 
 Updated: 2026-10-04 07:30
 
+## Recent changes (2026-10-04 — #70 guest price + branch-scoped stock tiers)
+
+- Prices: API resolves a guest's default price (branch default `PriceType`, general discounts only); the
+  storefront UI hides price and stock tier from guests ("Log in to see prices"). See docs/pricing.md.
+- Stock: `SearchResult.stockLevel` = tier of the viewer's branch ATP (none ≤0, low 1–4, medium 5–19,
+  high 20+; thresholds in GlobalSettings `stockTierLowMax`/`stockTierMediumMax`). Branch = counterparty's,
+  else default branch. `inStock` filter sends the branch's warehouse ERP ids (`filters.warehouseIds`,
+  search-platform#158). Warehouses assigned to branches manually on staging (5 of 34); #163 = hierarchy.
+- Known gap: UI renders three stock states (out/low/ok), docs promise four tiers — pending decision.
+- Fixed/being fixed: `stock.handler.ts` overwrote stockOnHand with a stale value when writing
+  erpAvailableQuantity, so staging ATP was understated; staging stock replay in progress.
+
 ## Recent changes (2026-10-04 — #160 ExternalSearchPlugin, unblocked part shipped/audited)
 
 - `SEARCH_BACKEND=external`: `totalItems` = search-service `total` (hits not synced into our DB are

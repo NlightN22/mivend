@@ -165,6 +165,11 @@ branch, else `GlobalSettings.defaultBranchId`; the API resolves guests against t
 `docs/pricing.md`, "Guest display"). Tiers: none = ATP ≤ 0, low = 1–4, medium = 5–19, high = 20+. Thresholds are
 computed on mivend's side (not in search-service) and stored in the database, not in code.
 
+**UI status of the tiers (as of 2026-10-04, differs from the decision above):** the backend emits four
+tiers (`OUT_OF_STOCK`/`LOW_STOCK`/`MEDIUM_STOCK`/`HIGH_STOCK`), but `MvStockBadge` and the storefront
+mappers only know three states (out / low / ok), so medium and high both render as "In stock".
+Showing four distinct states is pending (needs labels/colors).
+
 ### Single reservation service, two triggers
 
 One transactional method, e.g. `ReservationService.reserveOrder()`, handles the actual

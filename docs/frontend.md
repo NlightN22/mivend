@@ -104,8 +104,9 @@ Codegen picks them up via glob and generates typed composables into `src/api/gen
   clicks are mapped back to ERP ids in the search plugin. The icon is optional (`iconUrl`); without one a
   letter avatar is shown.
 - Category navigation is `MvCategoryNav` + `collectionSlug`, not a facet (the `category` facet is hidden).
-- Price and in-stock inputs are accepted by the external backend but not applied: prices are per-customer
-  and resolved in mivend, and search-service returns sellable offers only.
+- `priceRangeWithTax` is accepted by the external backend but not applied: prices are per-customer and
+  resolved in mivend. `inStock` IS applied: it narrows search-service to the viewer's branch warehouses
+  (`filters.warehouseIds`), and the list shows `SearchResult.stockLevel` (see docs/order-flow.md).
 - Mobile: no filter sidebar is shown on phones, only search. This is deliberate; do not revisit per page.
 
 ## Page priority
