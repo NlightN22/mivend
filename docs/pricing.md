@@ -23,6 +23,11 @@ deliberate reversal of this doc's earlier "no public retail price at all" stance
 user judged this acceptable (2026-09-05) since the fallback is always a real, branch-
 configured `PriceType` (e.g. `RETAIL`), not an arbitrary/raw index price.
 
+The default branch and its `BranchSettings` are bootstrapped by `plugin-access-control` (issue
+#161): `BOOTSTRAP_BRANCH_NAMES` lists branches to create (the first becomes
+`GlobalSettings.defaultBranchId` if empty) and `DEFAULT_PRICE_TYPE_CODE` picks the default price
+type by code. Idempotent, never overrides admin-set values, no price type found means no default.
+
 ---
 
 ## How a customer gets a price type
