@@ -68,8 +68,8 @@ export class ExternalSearchService {
         const empty = { items: [], totalItems: 0, facetValues: [], collections: [] };
         if (resolved.unsatisfiable) return empty;
         if (!hasBrowseCriteria(request)) {
-            if (resolved.warehouseIds) return empty;
-            return this.browseLocally(ctx, input, includeDisabled);
+            if (resolved.warehouseIds?.length === 0) return empty;
+            return this.browseLocally(ctx, input, includeDisabled, resolved.warehouseIds);
         }
 
         const response = await this.client.resolveQuery(request);
@@ -105,6 +105,7 @@ export class ExternalSearchService {
         ctx: RequestContext,
         input: SearchInput,
         includeDisabled: boolean,
+        inStockWarehouseErpIds?: string[],
     ): Promise<ExternalSearchResponse> {
         const { products, total } = await this.productLookup.browse(
             ctx,
@@ -112,6 +113,7 @@ export class ExternalSearchService {
                 skip: input.skip ?? 0,
                 take: input.take ?? 24,
                 sortByName: input.sort?.name ?? null,
+                inStockWarehouseErpIds,
             },
             includeDisabled,
         );

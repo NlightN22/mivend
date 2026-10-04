@@ -305,12 +305,47 @@ describe('ExternalSearchService.search', () => {
         );
     });
 
-    it('returns empty for the bare catalog when the in-stock filter is on, rather than ignoring it', async () => {
+    it('passes the viewer warehouse ids to the local listing when the in-stock filter is on', async () => {
+        const client = { resolveQuery: vi.fn() };
+        const lookup = {
+            ...makeLookup(null),
+            browse: vi.fn().mockResolvedValue({ products: [makeProduct()], total: 7 }),
+        };
+        const filters = {
+            resolve: vi.fn().mockResolvedValue({
+                manufacturer: [],
+                warehouseIds: ['wh-1', 'wh-2'],
+                unsatisfiable: false,
+            }),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            lookup as unknown as ProductLookupService,
+            filters as never,
+            noDb as never,
+        );
+        const result = await service.search(ctx, {
+            inStock: true,
+            skip: 24,
+            take: 12,
+            sort: { name: 'ASC' },
+        } as SearchInput);
+        expect(client.resolveQuery).not.toHaveBeenCalled();
+        expect(lookup.browse).toHaveBeenCalledWith(
+            ctx,
+            { skip: 24, take: 12, sortByName: 'ASC', inStockWarehouseErpIds: ['wh-1', 'wh-2'] },
+            false,
+        );
+        expect(result.totalItems).toBe(7);
+        expect(result.items).toHaveLength(1);
+    });
+
+    it('returns empty for the bare in-stock catalog when the viewer has no warehouses', async () => {
         const lookup = { ...makeLookup(null), browse: vi.fn() };
         const filters = {
             resolve: vi.fn().mockResolvedValue({
                 manufacturer: [],
-                warehouseIds: ['wh-1'],
+                warehouseIds: [],
                 unsatisfiable: false,
             }),
         };
@@ -322,6 +357,7 @@ describe('ExternalSearchService.search', () => {
         );
         const result = await service.search(ctx, { inStock: true } as SearchInput);
         expect(result.items).toEqual([]);
+        expect(result.totalItems).toBe(0);
         expect(lookup.browse).not.toHaveBeenCalled();
     });
 
