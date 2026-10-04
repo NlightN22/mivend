@@ -14,3 +14,4 @@ export { DepartmentRecordDto } from './department-record.dto';
 export { PositionRecordDto } from './position-record.dto';
 export { BranchRecordDto } from './branch-record.dto';
 export { EmployeeRecordDto } from './employee-record.dto';
+export { WarehouseRecordDto } from './warehouse-record.dto';

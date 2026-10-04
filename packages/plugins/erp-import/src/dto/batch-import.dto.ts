@@ -16,6 +16,7 @@ import {
     PositionRecordDto,
     BranchRecordDto,
     EmployeeRecordDto,
+    WarehouseRecordDto,
 } from './records';
 
 const RECORD_TYPE_DTOS = [
@@ -35,6 +36,7 @@ const RECORD_TYPE_DTOS = [
     PositionRecordDto,
     BranchRecordDto,
     EmployeeRecordDto,
+    WarehouseRecordDto,
 ] as const;
 
 // `type` -> which of RECORD_TYPE_DTOS is the shape of `data`. Keep in sync with the ImportRecord
@@ -58,6 +60,7 @@ export const TYPE_TO_SCHEMA: Record<string, (typeof RECORD_TYPE_DTOS)[number]> =
     position: PositionRecordDto,
     branch: BranchRecordDto,
     employee: EmployeeRecordDto,
+    warehouse: WarehouseRecordDto,
 };
 
 @ApiExtraModels(...RECORD_TYPE_DTOS)

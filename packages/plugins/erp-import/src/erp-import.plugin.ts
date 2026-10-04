@@ -26,6 +26,7 @@ import { DepartmentHandler } from './handlers/department.handler';
 import { PositionHandler } from './handlers/position.handler';
 import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
+import { WarehouseHandler } from './handlers/warehouse.handler';
 
 @VendurePlugin({
     imports: [
@@ -58,6 +59,7 @@ import { EmployeeHandler } from './handlers/employee.handler';
         PositionHandler,
         BranchHandler,
         EmployeeHandler,
+        WarehouseHandler,
     ],
     compatibility: '>0.0.0',
 })

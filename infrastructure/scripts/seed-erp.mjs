@@ -363,7 +363,8 @@ async function main() {
     // v6 (#117): employees now carry positionErpId, with a new `positions` fixture.
     // v7 (#59): category icons (iconFile) in the categories fixture.
     // v8 (#59): level-3 oil categories now hold products.
-    const run = 'v8';
+    // v9: warehouse record binding the default stock location to branch-central.
+    const run = 'v9';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
@@ -927,6 +928,16 @@ async function main() {
     console.log(`  → status=${branchResult.status} processed=${branchResult.processed} failed=${branchResult.failed}`);
     if (branchResult.errors?.length > 0) {
         for (const e of branchResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    const warehouses = [
+        { erpId: 'wh-central', name: 'Central warehouse', branchErpId: 'branch-central', isActive: true, stockLocationName: 'Default Stock Location' },
+    ];
+    console.log(`Sending ${warehouses.length} warehouses...`);
+    const warehouseResult = await postBatch(`seed-warehouses-${run}`, warehouses.map(data => ({ type: 'warehouse', data })));
+    console.log(`  → status=${warehouseResult.status} processed=${warehouseResult.processed} failed=${warehouseResult.failed}`);
+    if (warehouseResult.errors?.length > 0) {
+        for (const e of warehouseResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
     const positions = [

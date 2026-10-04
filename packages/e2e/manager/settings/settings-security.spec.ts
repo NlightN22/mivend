@@ -74,7 +74,9 @@ async function restoreOperatorAuthFile(): Promise<void> {
 }
 
 test.describe('Session management API (admin-api)', () => {
-    test('a second concurrent login shows up in mySessions and can be ended from the first (positive)', async (_fixtures, testInfo) => {
+    test('a second concurrent login shows up in mySessions and can be ended from the first (positive)', async ({
+        browserName: _browserName,
+    }, testInfo) => {
         // Runs once is enough — this hits the admin-api directly, independent of which
         // seeded role project executes it. Skip in every project but one to avoid 5x
         // redundant runs against the same operator account.
@@ -101,7 +103,9 @@ test.describe('Session management API (admin-api)', () => {
         expect(await isSessionAlive(cookieA)).toBe(true);
     });
 
-    test("endAllSessions ends every session for the admin, including the caller's own (positive)", async (_fixtures, testInfo) => {
+    test("endAllSessions ends every session for the admin, including the caller's own (positive)", async ({
+        browserName: _browserName,
+    }, testInfo) => {
         test.skip(testInfo.project.name !== 'manager-operator', 'API-level test, runs once');
 
         const cookieA = await loginViaApi();
@@ -119,7 +123,9 @@ test.describe('Session management API (admin-api)', () => {
         await restoreOperatorAuthFile();
     });
 
-    test('endSession with a session id that does not belong to the caller is a no-op (negative)', async (_fixtures, testInfo) => {
+    test('endSession with a session id that does not belong to the caller is a no-op (negative)', async ({
+        browserName: _browserName,
+    }, testInfo) => {
         test.skip(testInfo.project.name !== 'manager-operator', 'API-level test, runs once');
 
         const cookieA = await loginViaApi();

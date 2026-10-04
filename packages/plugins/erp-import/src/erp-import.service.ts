@@ -16,6 +16,7 @@ import { DepartmentHandler } from './handlers/department.handler';
 import { PositionHandler } from './handlers/position.handler';
 import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
+import { WarehouseHandler } from './handlers/warehouse.handler';
 import { ImportRunService } from './import-run.service';
 import type { ImportRun } from './entities/import-run.entity';
 import type { BatchImportBody, ImportRecord, ImportRunResult } from './types';
@@ -42,6 +43,7 @@ export class ErpImportService {
         private readonly branchHandler: BranchHandler,
         private readonly employeeHandler: EmployeeHandler,
         private readonly positionHandler: PositionHandler,
+        private readonly warehouseHandler: WarehouseHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -137,6 +139,9 @@ export class ErpImportService {
                 break;
             case 'employee':
                 await this.employeeHandler.upsert(ctx, record.data);
+                break;
+            case 'warehouse':
+                await this.warehouseHandler.upsert(ctx, record.data);
                 break;
             default:
                 // No global ValidationPipe/class-validator is wired in this project, so an

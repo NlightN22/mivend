@@ -3,8 +3,13 @@ import type {
     DepartmentRecordInput,
     PositionRecordInput,
     BranchRecordInput,
+    WarehouseRecordInput,
     EmployeeRecordInput,
 } from '@mivend/plugin-access-control';
+
+export interface WarehouseRecord extends WarehouseRecordInput {
+    stockLocationName?: string;
+}
 
 export interface ProductRecord {
     externalId: string;
@@ -130,7 +135,8 @@ export type ImportRecord =
     | { type: 'department'; data: DepartmentRecordInput }
     | { type: 'position'; data: PositionRecordInput }
     | { type: 'branch'; data: BranchRecordInput }
-    | { type: 'employee'; data: EmployeeRecordInput };
+    | { type: 'employee'; data: EmployeeRecordInput }
+    | { type: 'warehouse'; data: WarehouseRecord };
 
 export interface BatchImportBody {
     exchangeId: string;

@@ -111,27 +111,40 @@ export default async function globalSetup(): Promise<void> {
     await postBatch(exchangeId, seedRecordsWithOrganization);
     await waitForRun(exchangeId);
 
-    // erp-import's `tradingPoint` record type has no `servicingBranchId` field — it's
-    // intentionally staff-managed only (see TradingPointService.upsert's comment: "ERP doesn't
-    // know about this concept, a staff override must survive repeated ERP upserts"), defaulted
-    // from the counterparty's own branchId only on a trading point's FIRST-ever creation. This
-    // e2e fixture's trading points were first created before `make seed` reliably assigned the
-    // counterparty a branchId, so they've been stuck at `servicingBranchId: null` ever since
-    // (upserts never touch it, by design) — every department-scoped manager-portal viewer has
-    // therefore never been able to see any order for this counterparty
-    // (OrderVisibilityService's 'department' scope filters by the order's own denormalized
-    // branchId, sourced from here). Patch it once via the real staff-editing mutation so it's
-    // no longer permanently wrong regardless of how many times seeding re-runs.
+    // erp-import's `tradingPoint` record type has no `servicingBranchId` field (staff-managed
+    // only, never overwritten by upserts), and the counterparty's branchId is not written by
+    // erp-import either, so the e2e trading points start with `servicingBranchId: null`. Order
+    // visibility and stock allocation both key on the Branch row id (Warehouse.branchId,
+    // Administrator.branchId), not the ERP id, so patch it once via the real staff-editing mutation.
+    const branchesResult = await adminGql<{ branches: { id: string; erpId: string }[] }>(
+        `query { branches { id erpId } }`,
+        undefined,
+        adminToken,
+    );
+    const centralBranchId = branchesResult.data.branches.find(
+        b => b.erpId === 'branch-central',
+    )?.id;
+    if (!centralBranchId)
+        throw new Error('Seeded branch "branch-central" not found; run make seed');
+
+    const warehousesResult = await adminGql<{ warehouses: { branchId: string | null }[] }>(
+        `query { warehouses { branchId } }`,
+        undefined,
+        adminToken,
+    );
+    if (!warehousesResult.data.warehouses.some(w => w.branchId === centralBranchId))
+        throw new Error('No warehouse seeded for branch-central; run make seed');
+
     const tradingPointFixResult = await adminGql<{
         counterparties: {
             items: {
                 id: string;
                 erpId: string;
-                tradingPoints: { id: string; servicingBranchId: string | null }[];
+                tradingPoints: { id: string; erpId: string; servicingBranchId: string | null }[];
             }[];
         };
     }>(
-        `query { counterparties(options: { take: 100 }) { items { id erpId tradingPoints { id servicingBranchId } } } }`,
+        `query { counterparties(options: { take: 100 }) { items { id erpId tradingPoints { id erpId servicingBranchId } } } }`,
         undefined,
         adminToken,
     );
@@ -140,16 +153,20 @@ export default async function globalSetup(): Promise<void> {
     );
     if (e2eCounterpartyForBranchFix) {
         for (const tp of e2eCounterpartyForBranchFix.tradingPoints) {
-            if (tp.servicingBranchId === 'branch-central') continue;
+            if (tp.servicingBranchId === centralBranchId) continue;
             await adminGql(
                 `mutation($id: ID!, $input: TradingPointDetailsInput!) {
                     updateTradingPointDetails(id: $id, input: $input) { id }
                 }`,
-                { id: tp.id, input: { servicingBranchId: 'branch-central' } },
+                { id: tp.id, input: { servicingBranchId: centralBranchId } },
                 adminToken,
             );
         }
     }
+    const preferredTradingPointId = e2eCounterpartyForBranchFix?.tradingPoints.find(
+        tp => tp.erpId === 'e2e-tp-001',
+    )?.id;
+    if (!preferredTradingPointId) throw new Error('Seeded trading point e2e-tp-001 not found');
 
     // A real, deterministic order for the manager-portal Orders/Order Detail specs — operator
     // has department-wide visibility (see packages/plugins/access-control/src/default-roles.ts), so an
@@ -228,6 +245,14 @@ export default async function globalSetup(): Promise<void> {
             );
         }
     }
+
+    // The order's branch (and so its stock allocation) is resolved from the customer's preferred
+    // trading point at placement time.
+    await adminGql(
+        `mutation($input: UpdateCustomerInput!) { updateCustomer(input: $input) { __typename } }`,
+        { input: { id: customerId, customFields: { preferredTradingPointId } } },
+        adminToken,
+    );
 
     const order = await createConfirmedOrder(operatorToken, customerId, productVariantId);
     fs.writeFileSync(path.join(AUTH_DIR, 'e2e-order.json'), JSON.stringify(order));
