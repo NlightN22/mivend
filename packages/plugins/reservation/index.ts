@@ -26,3 +26,4 @@ export type { ReservationPluginOptions } from './src/types';
 export { DEFAULT_RESERVATION_DAYS } from './src/types';
 export { StockLevelService } from './src/stock-level.service';
 export type { StockTier } from './src/stock-tier';
+export { IN_STOCK_SQL, andProductInStock } from './src/in-stock-filter';

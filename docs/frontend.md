@@ -111,8 +111,9 @@ Codegen picks them up via glob and generates typed composables into `src/api/gen
   DB, not search-service: one paginated id query, no facets, ordered by id (so newest-imported products
   do not come first) or by name. search-service
   rejects such a request and has nothing to rank. The in-stock filter on the bare catalog is applied in
-  that same query: only products with an enabled variant whose branch ATP (same formula as
-  `ReservationAvailabilityService`) is above 0 in the viewer's warehouses; a viewer with no warehouses gets nothing.
+  that same query (SQL in plugin-reservation's `in-stock-filter.ts`, kept in sync with
+  `ReservationAvailabilityService`): only products with an enabled variant whose branch ATP is above 0 in the viewer's warehouses; a viewer with no warehouses gets nothing.
+  A branch with no resolvable stock locations likewise gets an empty in-stock list (no fallback to the default stock location, unlike `getAvailableToPromiseBatch`).
 - Mobile: no filter sidebar is shown on phones, only search. This is deliberate; do not revisit per page.
 
 ## Page priority

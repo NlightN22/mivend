@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Product, RequestContext, TransactionalConnection } from '@vendure/core';
+import { andProductInStock } from '@mivend/plugin-reservation';
 
 // Resolves a search-service partOrProductId back to a Vendure Product + its single/default
 // variant, mirroring erp-integration's product/price handler productId->variant join pattern
@@ -7,23 +8,6 @@ import { Product, RequestContext, TransactionalConnection } from '@vendure/core'
 // repository API rather than duplicating erp-integration's raw SQL. See issue #69 — this mapping
 // is UNVERIFIED against real overlapping data (no reachable shared dataset at implementation
 // time); products with no matching externalId are silently skipped by the caller.
-// Branch ATP > 0 for some enabled variant: per stock location, free = onHand - allocated - active
-// reservations, capped at the ERP's own availableQuantity when known (ReservationAvailabilityService).
-const IN_STOCK_SQL = `EXISTS (
-    SELECT 1 FROM product_variant iv
-    JOIN stock_level sl ON sl."productVariantId" = iv.id
-    JOIN stock_location loc ON loc.id = sl."stockLocationId"
-    WHERE iv."productId" = product.id AND iv."deletedAt" IS NULL AND iv.enabled = true
-    AND loc."customFieldsWarehouseerpid" IN (:...warehouseErpIds)
-    AND LEAST(
-        sl."stockOnHand" - sl."stockAllocated" - COALESCE((
-            SELECT SUM(r.quantity) FROM reservation r
-            WHERE r."productVariantId" = CAST(iv.id AS varchar)
-            AND r."stockLocationId" = CAST(loc.id AS varchar) AND r.status = 'active'), 0),
-        COALESCE(sl."customFieldsErpavailablequantity", 2147483647)
-    ) > 0
-)`;
-
 @Injectable()
 export class ProductLookupService {
     constructor(private connection: TransactionalConnection) {}
@@ -84,7 +68,7 @@ export class ProductLookupService {
             );
         if (!includeDisabled) pageQuery.andWhere('product.enabled = true');
         if (options.inStockWarehouseErpIds) {
-            pageQuery.andWhere(IN_STOCK_SQL, { warehouseErpIds: options.inStockWarehouseErpIds });
+            andProductInStock(pageQuery, options.inStockWarehouseErpIds);
         }
         if (options.sortByName) {
             pageQuery
