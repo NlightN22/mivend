@@ -72,6 +72,13 @@ export class StockStreamHandler implements InboundStreamHandler {
 
         const warehouse = await this.warehouseService.findByErpId(ctx, warehouseId);
         if (!warehouse) {
+            if (await this.hasProcessedTombstone(warehouseId)) {
+                Logger.warn(
+                    `stock ${entityId}: warehouse ${warehouseId} only arrived as a deletion tombstone, ignoring`,
+                    loggerCtx,
+                );
+                return;
+            }
             // Issue #96: an ordinary eventual-consistency race, not a processing bug — the
             // warehouse stream's own event for this erpId simply hasn't been consumed yet. Throw
             // so processOne() routes this through the backoff/retry path instead of silently
@@ -130,6 +137,20 @@ export class StockStreamHandler implements InboundStreamHandler {
                 `erpAvailable=${availableQuantity}`,
             loggerCtx,
         );
+    }
+
+    private async hasProcessedTombstone(warehouseErpId: string): Promise<boolean> {
+        const row = await this.connection.rawConnection
+            .createQueryBuilder()
+            .select('e.id', 'id')
+            .from('integration_inbox_event', 'e')
+            .where("e.stream = 'warehouse'")
+            .andWhere('e.entity_id = :erpId', { erpId: warehouseErpId })
+            .andWhere("e.status = 'processed'")
+            .andWhere("e.payload->>'isDeleted' = 'true'")
+            .limit(1)
+            .getRawOne<{ id: string }>();
+        return row !== undefined;
     }
 
     private async findVariantId(productId: string): Promise<string | undefined> {

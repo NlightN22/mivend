@@ -22,6 +22,8 @@ function createConnection(
                     from: vi.fn().mockReturnThis(),
                     innerJoin: vi.fn().mockReturnThis(),
                     where: vi.fn().mockReturnThis(),
+                    andWhere: vi.fn().mockReturnThis(),
+                    limit: vi.fn().mockReturnThis(),
                     getRawOne: vi.fn().mockResolvedValue(row),
                 };
             },
@@ -73,6 +75,42 @@ describe('StockStreamHandler', () => {
             'loc-1',
             -5,
         );
+    });
+
+    it('ignores stock for a warehouse that only arrived as a processed deletion tombstone', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue(null) };
+        const stockLevelService = { getStockLevel: vi.fn(), updateStockOnHandForLocation: vi.fn() };
+        const handler = new StockStreamHandler(
+            createConnection([{ id: '1' }]) as never,
+            warehouseService as never,
+            stockLevelService as never,
+        );
+
+        await expect(
+            handler.apply(ctx, 'stock-1', {
+                productId: 'prod-1',
+                warehouseId: 'wh-1',
+                quantity: 5,
+            }),
+        ).resolves.toBeUndefined();
+        expect(stockLevelService.getStockLevel).not.toHaveBeenCalled();
+    });
+
+    it('still retries stock for a warehouse with no event at all', async () => {
+        const warehouseService = { findByErpId: vi.fn().mockResolvedValue(null) };
+        const handler = new StockStreamHandler(
+            createConnection([undefined]) as never,
+            warehouseService as never,
+            {} as never,
+        );
+
+        await expect(
+            handler.apply(ctx, 'stock-1', {
+                productId: 'prod-1',
+                warehouseId: 'wh-1',
+                quantity: 5,
+            }),
+        ).rejects.toBeInstanceOf(MissingDependencyError);
     });
 
     it('skips a deleted stock event without writing', async () => {
