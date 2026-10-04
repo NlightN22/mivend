@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { IconChevronLeft } from '@tabler/icons-vue';
+import MvStatusTag from '../MvStatusTag/MvStatusTag.vue';
 
 export interface CategoryNavItem {
     id: string;
     name: string;
     slug: string;
+    isHidden?: boolean;
 }
 
 export interface CategoryNavPanel {
@@ -18,8 +20,13 @@ export interface CategoryNavPanel {
 const MAX_ROWS = 7;
 
 const props = withDefaults(
-    defineProps<{ panel: CategoryNavPanel; moreLabel?: string; lessLabel?: string }>(),
-    { moreLabel: 'More', lessLabel: 'Less' },
+    defineProps<{
+        panel: CategoryNavPanel;
+        moreLabel?: string;
+        lessLabel?: string;
+        hiddenLabel?: string;
+    }>(),
+    { moreLabel: 'More', lessLabel: 'Less', hiddenLabel: 'Hidden' },
 );
 
 const emit = defineEmits<{ navigate: [slug: string] }>();
@@ -47,6 +54,7 @@ const visibleLevel = computed(() => {
         >
             <IconChevronLeft :size="14" />
             {{ item.name }}
+            <MvStatusTag v-if="item.isHidden" variant="unavailable" class="mv-category-nav__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
         </button>
         <span
             v-if="panel.current && panel.levelIsChildren"
@@ -54,6 +62,7 @@ const visibleLevel = computed(() => {
             aria-current="page"
         >
             {{ panel.current.name }}
+            <MvStatusTag v-if="panel.current.isHidden" variant="unavailable" class="mv-category-nav__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
         </span>
         <div :class="{ 'mv-category-nav__children': panel.levelIsChildren }">
             <template v-for="item in visibleLevel" :key="item.id">
@@ -63,9 +72,11 @@ const visibleLevel = computed(() => {
                     aria-current="page"
                 >
                     {{ item.name }}
+                    <MvStatusTag v-if="item.isHidden" variant="unavailable" class="mv-category-nav__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
                 </span>
                 <button v-else type="button" class="mv-category-nav__item" @click="emit('navigate', item.slug)">
                     {{ item.name }}
+                    <MvStatusTag v-if="item.isHidden" variant="unavailable" class="mv-category-nav__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
                 </button>
             </template>
             <button
@@ -117,6 +128,14 @@ const visibleLevel = computed(() => {
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+.mv-category-nav__hidden {
+    margin-left: 6px;
+    padding: 0 6px;
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
 }
 
 .mv-category-nav__more {

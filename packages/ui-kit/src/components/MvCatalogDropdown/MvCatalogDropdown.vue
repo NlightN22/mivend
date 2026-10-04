@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { IconCategory } from '@tabler/icons-vue';
+import MvStatusTag from '../MvStatusTag/MvStatusTag.vue';
 import MvCatalogDropdownGroup, { type CollectionNode } from './MvCatalogDropdownGroup.vue';
 
 export type { CollectionNode };
@@ -12,10 +13,11 @@ const props = withDefaults(
         loading?: boolean;
         moreLabel?: string;
         lessLabel?: string;
+        hiddenLabel?: string;
         loadingLabel?: string;
         emptyLabel?: string;
     }>(),
-    { moreLabel: 'More', lessLabel: 'Less', loadingLabel: 'Loading categories…', emptyLabel: 'No categories available' },
+    { moreLabel: 'More', lessLabel: 'Less', hiddenLabel: 'Hidden', loadingLabel: 'Loading categories…', emptyLabel: 'No categories available' },
 );
 
 const emit = defineEmits<{
@@ -53,6 +55,7 @@ function categoryLink(slug: string): { path: string; query: { collection: string
                             <img v-if="col.iconUrl" class="mv-catalog-dropdown__icon" :src="col.iconUrl" alt="" />
                             <IconCategory v-else class="mv-catalog-dropdown__icon" :size="26" :stroke-width="1.6" />
                             <span>{{ col.name }}</span>
+                            <MvStatusTag v-if="col.isHidden" variant="unavailable" class="mv-catalog-dropdown__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
                         </RouterLink>
                     </nav>
                 </aside>
@@ -65,6 +68,7 @@ function categoryLink(slug: string): { path: string; query: { collection: string
                             @click="emit('close')"
                         >
                             {{ activeCollection.name }}
+                            <MvStatusTag v-if="activeCollection.isHidden" variant="unavailable" class="mv-catalog-dropdown__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
                         </RouterLink>
                     </div>
                     <div v-if="activeCollection.children.length > 0" class="mv-catalog-dropdown__grid">
@@ -74,6 +78,7 @@ function categoryLink(slug: string): { path: string; query: { collection: string
                             :group="group"
                             :more-label="moreLabel"
                             :less-label="lessLabel"
+                            :hidden-label="hiddenLabel"
                             @close="emit('close')"
                         />
                     </div>
@@ -193,6 +198,14 @@ function categoryLink(slug: string): { path: string; query: { collection: string
     grid-template-columns: repeat(3, minmax(180px, 1fr));
     gap: 22px 32px;
     align-items: start;
+}
+
+.mv-catalog-dropdown__hidden {
+    margin-left: 8px;
+    padding: 0 6px;
+    font-size: 11px;
+    line-height: 16px;
+    vertical-align: middle;
 }
 
 .mv-catalog-dropdown__icon {

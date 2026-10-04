@@ -3,6 +3,8 @@ export interface CollectionNode {
     name: string;
     slug: string;
     iconUrl?: string | null;
+    // Set only for private collections (manager sees them); absent means visible.
+    isHidden?: boolean;
     children: CollectionNode[];
 }
 
@@ -12,6 +14,7 @@ export interface RawCollection {
     slug: string;
     breadcrumbs: { id: string; name: string; slug: string }[];
     featuredAsset?: { preview: string } | null;
+    isPrivate?: boolean;
 }
 
 export const COLLECTIONS_PAGE_SIZE = 100;
@@ -38,6 +41,7 @@ export function buildCategoryTree(items: RawCollection[]): CollectionNode[] {
             name: c.name,
             slug: c.slug,
             iconUrl: c.featuredAsset?.preview ?? null,
+            ...(c.isPrivate ? { isHidden: true } : {}),
             children: [],
         });
     }
@@ -81,6 +85,7 @@ export interface CategoryCrumb {
     id: string;
     name: string;
     slug: string;
+    isHidden?: boolean;
 }
 
 export const MAX_PANEL_ANCESTORS = 2;
@@ -95,7 +100,12 @@ export interface CategoryPanelData {
     levelIsChildren: boolean;
 }
 
-const toCrumb = (n: CollectionNode): CategoryCrumb => ({ id: n.id, name: n.name, slug: n.slug });
+const toCrumb = (n: CollectionNode): CategoryCrumb => ({
+    id: n.id,
+    name: n.name,
+    slug: n.slug,
+    ...(n.isHidden ? { isHidden: true } : {}),
+});
 
 export function buildCategoryPanel(
     tree: CollectionNode[],

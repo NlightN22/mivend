@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import MvStatusTag from '../MvStatusTag/MvStatusTag.vue';
 
 export interface CollectionNode {
     id: string;
     name: string;
     slug: string;
     iconUrl?: string | null;
+    isHidden?: boolean;
     children: CollectionNode[];
 }
 
 const PREVIEW_LIMIT = 6;
 
-const props = defineProps<{ group: CollectionNode; moreLabel: string; lessLabel: string }>();
+const props = defineProps<{ group: CollectionNode; moreLabel: string; lessLabel: string; hiddenLabel: string }>();
 
 const emit = defineEmits<{ close: [] }>();
 
@@ -27,6 +29,7 @@ function categoryLink(slug: string): { path: string; query: { collection: string
     <div class="mv-catalog-dropdown-group">
         <RouterLink class="mv-catalog-dropdown-group__title" :to="categoryLink(group.slug)" @click="emit('close')">
             {{ group.name }}
+            <MvStatusTag v-if="group.isHidden" variant="unavailable" class="mv-catalog-dropdown-group__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
         </RouterLink>
         <RouterLink
             v-for="item in items"
@@ -36,6 +39,7 @@ function categoryLink(slug: string): { path: string; query: { collection: string
             @click="emit('close')"
         >
             {{ item.name }}
+            <MvStatusTag v-if="item.isHidden" variant="unavailable" class="mv-catalog-dropdown-group__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
         </RouterLink>
         <button
             v-if="group.children.length > PREVIEW_LIMIT"
@@ -67,6 +71,13 @@ function categoryLink(slug: string): { path: string; query: { collection: string
 .mv-catalog-dropdown-group__title:hover {
     color: var(--app-nav-accent);
     background: var(--app-nav-hover-bg);
+}
+
+.mv-catalog-dropdown-group__hidden {
+    margin-left: 8px;
+    padding: 0 6px;
+    font-size: 11px;
+    line-height: 16px;
 }
 
 .mv-catalog-dropdown-group__more {

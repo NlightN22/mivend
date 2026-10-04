@@ -9,7 +9,12 @@ import {
 } from '../../collectionTree';
 
 const root = { id: '1', name: '__root__', slug: '__root_collection__' };
-const col = (id: string, ancestors: string[], icon?: string): RawCollection => {
+const col = (
+    id: string,
+    ancestors: string[],
+    icon?: string,
+    isPrivate?: boolean,
+): RawCollection => {
     const crumbs = ancestors.map(a => ({ id: a, name: `n${a}`, slug: `s${a}` }));
     return {
         id,
@@ -17,6 +22,7 @@ const col = (id: string, ancestors: string[], icon?: string): RawCollection => {
         slug: `s${id}`,
         breadcrumbs: [root, ...crumbs, { id, name: `n${id}`, slug: `s${id}` }],
         featuredAsset: icon ? { preview: icon } : null,
+        ...(isPrivate === undefined ? {} : { isPrivate }),
     };
 };
 
@@ -45,6 +51,27 @@ describe('buildCategoryTree', () => {
     it('promotes a node to top level when every ancestor is missing', () => {
         const tree = buildCategoryTree([col('4', ['2', '3'])]);
         expect(tree.map(n => n.id)).toEqual(['4']);
+    });
+});
+
+describe('hidden marker', () => {
+    const tree = buildCategoryTree([
+        col('2', [], undefined, false),
+        col('3', ['2'], undefined, true),
+        col('4', ['2']),
+    ]);
+
+    it('flags only private collections, leaving others without the key', () => {
+        const [parent] = tree;
+        expect(parent).not.toHaveProperty('isHidden');
+        expect(parent.children.map(c => c.isHidden)).toEqual([true, undefined]);
+    });
+
+    it('carries the flag into panel crumbs for ancestors, current and level', () => {
+        const panel = buildCategoryPanel(tree, 's3');
+        expect(panel.current?.isHidden).toBe(true);
+        expect(panel.level.map(c => c.isHidden)).toEqual([true, undefined]);
+        expect(buildCategoryPanel(tree, 's4').ancestors[0]).not.toHaveProperty('isHidden');
     });
 });
 

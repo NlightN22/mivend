@@ -23,6 +23,55 @@ test.describe('Manager category tree (#59)', () => {
         expect(new Set(leaf.level)).toEqual(new Set(MINERAL_EXPECTED.level));
     });
 
+    test.describe('hidden categories in the catalog', () => {
+        let token: string;
+        const marker = '[data-testid="category-hidden-marker"]';
+
+        test.beforeAll(async () => {
+            token = await adminToken();
+        });
+
+        test.afterEach(async () => {
+            await restoreCategoryTree(token);
+        });
+
+        test('marks a hidden category in the sidebar and mega-menu, and it stays navigable', async ({
+            page,
+        }, testInfo) => {
+            test.skip(testInfo.project.name !== 'manager-operator', 'Display check runs once');
+            await setOverride(token, SLUG.synthetic, 'hidden');
+
+            await page.goto(url(SLUG.mineral));
+            const nav = page.locator('.mv-category-nav');
+            await expect(nav.locator(marker)).toHaveCount(1);
+            await expect(nav.getByRole('button', { name: /^Synthetic Oils/ })).toContainText(
+                'Hidden',
+            );
+            await expect(
+                nav.getByRole('button', { name: /Semi-Synthetic Oils/ }),
+            ).not.toContainText('Hidden');
+
+            await page.getByRole('button', { name: /Browse by category/ }).click();
+            const menu = page.locator('.mv-catalog-dropdown');
+            const hiddenItem = menu.getByRole('link', { name: /^Synthetic Oils\s*Hidden/ });
+            await expect(hiddenItem).toBeVisible();
+            await expect(menu.locator(marker)).toHaveCount(1);
+
+            await hiddenItem.click();
+            await expect(page).toHaveURL(new RegExp(`collection=${SLUG.synthetic}`));
+            await expect(page.getByRole('heading', { level: 1 })).toHaveText('Synthetic Oils');
+            await expect(page.locator('.catalog-page__row').first()).toBeVisible();
+        });
+
+        test('level-3 category lists only its own products', async ({ page }, testInfo) => {
+            test.skip(testInfo.project.name !== 'manager-operator', 'Listing check runs once');
+            await page.goto(url(SLUG.oils));
+            await expect(page.locator('.catalog-page__row')).toHaveCount(6);
+            await page.goto(url(SLUG.mineral));
+            await expect(page.locator('.catalog-page__row')).toHaveCount(1);
+        });
+    });
+
     test.describe('visibility page', () => {
         let token: string;
 
