@@ -202,6 +202,13 @@ export class KafkaConsumerService implements OnModuleDestroy {
         // routed to a handler in eachMessage below.
         const streamByTopic = new Map<string, InboundStream>();
         for (const [stream, topic] of Object.entries(this.options.kafkaConsumer.topics)) {
+            if (!(stream in SCHEMA_BY_STREAM)) {
+                Logger.error(
+                    `No schema for stream=${stream}, not subscribing to topic=${topic}`,
+                    loggerCtx,
+                );
+                continue;
+            }
             try {
                 await this.consumer.subscribe({ topic, fromBeginning: true });
                 streamByTopic.set(topic, stream as InboundStream);
@@ -267,9 +274,10 @@ export class KafkaConsumerService implements OnModuleDestroy {
         { message }: EachMessagePayload,
     ): Promise<void> {
         if (!message.value) return;
+        const schema = SCHEMA_BY_STREAM[stream];
+        if (!schema) throw new Error(`No schema registered for stream ${stream}`);
         let record: Record<string, unknown>;
         try {
-            const schema = SCHEMA_BY_STREAM[stream];
             const decoded = fromBinary(schema, new Uint8Array(message.value));
             record = toJson(schema, decoded) as Record<string, unknown>;
         } catch (err) {

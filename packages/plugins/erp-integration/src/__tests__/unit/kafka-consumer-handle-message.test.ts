@@ -45,4 +45,18 @@ describe('KafkaConsumerService.handleMessage', () => {
         await expect(setup(enqueue)(new Uint8Array([255, 255, 255]))).resolves.toBeUndefined();
         expect(enqueue).not.toHaveBeenCalled();
     });
+
+    it('rejects when the stream has no schema so the offset is not committed', async () => {
+        const service = new KafkaConsumerService(
+            {} as never,
+            { enqueue: vi.fn() } as never,
+            {} as never,
+        );
+        const handle = service as unknown as {
+            handleMessage(s: string, p: unknown): Promise<void>;
+        };
+        await expect(
+            handle.handleMessage('no-such-stream', { message: { value: Buffer.from(valid) } }),
+        ).rejects.toThrow('No schema');
+    });
 });

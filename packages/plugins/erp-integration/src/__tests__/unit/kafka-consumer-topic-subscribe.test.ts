@@ -95,6 +95,22 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
 
+    it('does not subscribe to a topic whose stream has no schema', async () => {
+        const options = makeOptions();
+        (options.kafkaConsumer.topics as Record<string, string>)['no-schema'] = 'orphan-topic';
+        const service = new KafkaConsumerService(
+            options,
+            { enqueue: vi.fn() } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
+        await service.start();
+
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(27);
+        expect(createdConsumers[0].subscribe).not.toHaveBeenCalledWith(
+            expect.objectContaining({ topic: 'orphan-topic' }),
+        );
+    });
+
     // Regression case for the live incident: an ACL denial on storage-location/stock-organization
     // used to throw out of the whole subscribe loop before consumer.run() was ever reached,
     // silently halting consumption of every other, perfectly healthy topic too.
