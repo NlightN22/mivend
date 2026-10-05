@@ -39,7 +39,6 @@ function next(): void {
     const n = offset.value + STEP;
     offset.value = n >= maxOffset.value ? 0 : n;
 }
-
 </script>
 
 <template>
