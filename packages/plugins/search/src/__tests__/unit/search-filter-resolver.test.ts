@@ -7,6 +7,7 @@ vi.mock('@vendure/core', () => ({
     FacetValue: class {},
     TransactionalConnection: class {},
 }));
+vi.mock('@mivend/plugin-reservation', () => ({ StockLevelService: class {} }));
 
 import { SearchFilterResolver } from '../../search-filter-resolver.service';
 
