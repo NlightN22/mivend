@@ -158,7 +158,10 @@ function handleToggleFavorite(p: ProductItem): void {
         </template>
 
         <div ref="sentinel" class="plv-sentinel" />
-        <div v-if="loadingMore" class="plv-loading-more">Loading more...</div>
+        <div v-if="loadingMore" class="plv-loading-more" role="status">
+            <span class="plv-loading-more__spinner" aria-hidden="true" />
+            Loading more...
+        </div>
     </div>
 </template>
 
@@ -246,10 +249,28 @@ function handleToggleFavorite(p: ProductItem): void {
 .plv-sentinel { height: 1px; }
 
 .plv-loading-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     padding: 20px;
-    text-align: center;
     color: #66736e;
     font-size: 14px;
+}
+
+.plv-loading-more__spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #dde7e2;
+    border-top-color: #00b894;
+    border-radius: 50%;
+    animation: plv-spin 0.7s linear infinite;
+}
+
+@keyframes plv-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .plv-loading-more__spinner { animation-duration: 2s; }
 }
 
 @media (max-width: 1100px) { .plv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
