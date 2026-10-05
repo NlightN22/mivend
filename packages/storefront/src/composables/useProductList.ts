@@ -113,6 +113,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     facetGroups: Ref<FacetGroup[]>;
     totalItems: Ref<number>;
     loading: Ref<boolean>;
+    loadError: Ref<boolean>;
     loadingMore: Ref<boolean>;
     hasMore: Ref<boolean>;
     viewMode: Ref<ViewMode>;
@@ -129,6 +130,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     const facetGroups = ref<FacetGroup[]>([]);
     const totalItems = ref(0);
     const loading = ref(false);
+    const loadError = ref(false);
     const loadingMore = ref(false);
     const hasMore = ref(true);
     const { viewMode, setViewMode } = useViewMode();
@@ -189,10 +191,18 @@ export function useProductList(options: UseProductListOptions = {}): {
                 fetchFacets().catch(() => null),
             ]);
         } catch (e) {
-            if (seq === loadSeq) loading.value = false;
+            if (seq === loadSeq) {
+                items.value = [];
+                facetGroups.value = [];
+                totalItems.value = 0;
+                hasMore.value = false;
+                loadError.value = true;
+                loading.value = false;
+            }
             throw e;
         }
         if (seq !== loadSeq) return;
+        loadError.value = false;
 
         const facetValues = facetsResult?.search.facetValues ?? productsResult.search.facetValues;
         facetGroups.value = buildFacetGroups(facetValues);
@@ -234,6 +244,7 @@ export function useProductList(options: UseProductListOptions = {}): {
         facetGroups,
         totalItems,
         loading,
+        loadError,
         loadingMore,
         hasMore,
         viewMode,

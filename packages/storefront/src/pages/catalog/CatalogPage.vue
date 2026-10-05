@@ -42,7 +42,7 @@ const activeCollectionSlug = computed(() =>
     searchQuery.value ? undefined : ((route.query.collection as string) || undefined),
 );
 
-const { items, facetGroups, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, priceRangeSupported, load, loadMore } =
+const { items, facetGroups, totalItems, loading, loadError, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, priceRangeSupported, load, loadMore } =
     useProductList({ pageSize: 24, query: searchQuery, filters, collectionSlug: activeCollectionSlug });
 
 // Sync filter state → URL (replace so back button works correctly)
@@ -173,6 +173,7 @@ onMounted(() => {
                 :items="items"
                 :total-items="totalItems"
                 :loading="loading"
+                :load-error="loadError"
                 :loading-more="loadingMore"
                 :has-more="hasMore"
                 :view-mode="viewMode"
@@ -183,6 +184,7 @@ onMounted(() => {
                 @update:view-mode="setViewMode($event)"
                 @update:sort-key="sortKey = $event"
                 @load-more="loadMore"
+                @retry="load"
             />
         </div>
     </main>

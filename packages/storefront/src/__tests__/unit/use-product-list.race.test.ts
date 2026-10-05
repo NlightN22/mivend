@@ -147,3 +147,29 @@ describe('useProductList load()/loadMore() race', () => {
         expect(items.value.map(i => i.variants[0].sku)).toEqual(['SKU-B']);
     });
 });
+
+describe('useProductList load() failure', () => {
+    it('clears stale results and flags the error when a reload fails', async () => {
+        shopApiMock.mockReset();
+        const { useProductList } = await import('../../composables/useProductList');
+        const filters = ref({ facetValueIds: [], inStock: false, priceMin: null, priceMax: null });
+        const { load, items, totalItems, loadError } = useProductList({ pageSize: 2, filters });
+
+        shopApiMock.mockImplementation((query: string) =>
+            isFacetsQuery(query)
+                ? Promise.resolve({ search: { facetValues: [] } })
+                : Promise.resolve({
+                      search: { totalItems: 5, items: [makeSearchItem('SKU-A')], facetValues: [] },
+                  }),
+        );
+        await load();
+        expect(items.value).toHaveLength(1);
+
+        shopApiMock.mockRejectedValue(new Error('timeout'));
+        await expect(load()).rejects.toThrow('timeout');
+
+        expect(items.value).toEqual([]);
+        expect(totalItems.value).toBe(0);
+        expect(loadError.value).toBe(true);
+    });
+});

@@ -10,6 +10,7 @@ const props = defineProps<{
     items: ProductItem[];
     totalItems: number;
     loading: boolean;
+    loadError?: boolean;
     loadingMore: boolean;
     hasMore: boolean;
     viewMode: ViewMode;
@@ -24,6 +25,7 @@ const emit = defineEmits<{
     'update:viewMode': [v: ViewMode];
     'update:sortKey': [v: string];
     'loadMore': [];
+    'retry': [];
 }>();
 
 const authStore = useAuthStore();
@@ -95,6 +97,10 @@ function handleToggleFavorite(p: ProductItem): void {
         </div>
 
         <div v-if="loading" class="plv-state">Loading products...</div>
+        <div v-else-if="loadError" class="plv-state" role="alert">
+            Could not load products.
+            <button type="button" class="plv-retry" @click="emit('retry')">Try again</button>
+        </div>
         <div v-else-if="items.length === 0" class="plv-state">No products found</div>
 
         <template v-else-if="viewMode === 'list'">
@@ -247,6 +253,15 @@ function handleToggleFavorite(p: ProductItem): void {
 }
 
 .plv-sentinel { height: 1px; }
+
+.plv-retry {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: #00997a;
+    font-weight: 700;
+    cursor: pointer;
+}
 
 .plv-loading-more {
     display: flex;
