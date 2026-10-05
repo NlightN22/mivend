@@ -10,6 +10,7 @@ export interface SuggestionItem {
     id: string;
     label: string;
     subtitle?: string;
+    to?: string;
 }
 
 export interface SuggestionGroup {
@@ -46,6 +47,7 @@ const emit = defineEmits<{
     search: [value: string];
     clear: [];
     removeScope: [];
+    select: [item: SuggestionItem];
 }>();
 
 const isFocused = ref(false);
@@ -94,6 +96,11 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 function selectItem(item: SuggestionItem): void {
+    if (item.to) {
+        emit('select', item);
+        isFocused.value = false;
+        return;
+    }
     emit('update:modelValue', item.label);
     emit('search', item.label);
     isFocused.value = false;

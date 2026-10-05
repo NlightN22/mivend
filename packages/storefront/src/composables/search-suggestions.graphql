@@ -1,0 +1,21 @@
+query SearchSuggestions($term: String!, $collectionSlug: String) {
+    search(
+        input: {
+            term: $term
+            take: 5
+            skip: 0
+            groupByProduct: true
+            collectionSlug: $collectionSlug
+        }
+    ) {
+        items {
+            productId
+            productName
+            manufacturer {
+                name
+            }
+            slug
+            sku
+        }
+    }
+}

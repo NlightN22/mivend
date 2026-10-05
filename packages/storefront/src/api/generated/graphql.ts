@@ -830,6 +830,11 @@ export type CustomFieldConfig =
     | StructCustomFieldConfig
     | TextCustomFieldConfig;
 
+export type CustomProductMappings = {
+    fullName?: Maybe<Scalars['String']['output']>;
+    oemCodes?: Maybe<Array<Scalars['String']['output']>>;
+};
+
 export type Customer = Node & {
     addresses?: Maybe<Array<Address>>;
     counterparty?: Maybe<Counterparty>;
@@ -3055,6 +3060,11 @@ export type PriceRange = {
     min: Scalars['Money']['output'];
 };
 
+export type PriceRangeBucket = {
+    count: Scalars['Int']['output'];
+    to: Scalars['Int']['output'];
+};
+
 export type PriceRangeInput = {
     max: Scalars['Int']['input'];
     min: Scalars['Int']['input'];
@@ -3650,7 +3660,9 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
+    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
+    priceRange?: InputMaybe<PriceRangeInput>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
@@ -3666,7 +3678,15 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
+    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchResponsePriceData = {
+    buckets: Array<PriceRangeBucket>;
+    bucketsWithTax: Array<PriceRangeBucket>;
+    range: PriceRange;
+    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -3674,11 +3694,15 @@ export type SearchResult = {
     collectionIds: Array<Scalars['ID']['output']>;
     compareAtPrice?: Maybe<Scalars['Int']['output']>;
     currencyCode: CurrencyCode;
+    /** @deprecated Use customProductMappings or customProductVariantMappings */
+    customMappings: CustomProductMappings;
+    customProductMappings: CustomProductMappings;
     customerPrice?: Maybe<Scalars['Int']['output']>;
     description: Scalars['String']['output'];
     discountTiers: Array<DiscountTier>;
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
+    inStock?: Maybe<Scalars['Boolean']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
@@ -4344,6 +4368,23 @@ export type SearchCapabilitiesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type SearchCapabilitiesQuery = {
     searchCapabilities: { sortKeys: Array<string>; priceRange: boolean };
+};
+
+export type SearchSuggestionsQueryVariables = Exact<{
+    term: Scalars['String']['input'];
+    collectionSlug?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type SearchSuggestionsQuery = {
+    search: {
+        items: Array<{
+            productId: string;
+            productName: string;
+            slug: string;
+            sku: string;
+            manufacturer?: { name?: string | null } | null;
+        }>;
+    };
 };
 
 export type ProductWidgetFieldsFragment = {
@@ -5314,6 +5355,23 @@ export const SearchCapabilitiesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<SearchCapabilitiesQuery, SearchCapabilitiesQueryVariables>;
+export const SearchSuggestionsDocument = new TypedDocumentString(`
+    query SearchSuggestions($term: String!, $collectionSlug: String) {
+  search(
+    input: {term: $term, take: 5, skip: 0, groupByProduct: true, collectionSlug: $collectionSlug}
+  ) {
+    items {
+      productId
+      productName
+      manufacturer {
+        name
+      }
+      slug
+      sku
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<SearchSuggestionsQuery, SearchSuggestionsQueryVariables>;
 export const NewArrivalsDocument = new TypedDocumentString(`
     query NewArrivals($since: DateTime!) {
   products(
