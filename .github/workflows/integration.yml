@@ -65,6 +65,8 @@ jobs:
                   cache: pnpm
 
             - run: pnpm install --frozen-lockfile
+              env:
+                  GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
             # Integration tests only ever consume plugin (+ shared, + server) dist output —
             # manager and storefront are separate deployable apps neither test:integration nor
@@ -111,6 +113,8 @@ jobs:
                   node-version: 20
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
+              env:
+                  GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
             - run: pnpm --filter @mivend/e2e exec playwright install --with-deps chromium
             - run: bash infrastructure/scripts/ci-e2e-smoke.sh
             - uses: actions/upload-artifact@v4

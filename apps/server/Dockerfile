@@ -1,39 +1,17 @@
-# Puppeteer's bundled Chromium is not reliably supported on musl/Alpine — skip its
-# download in every stage and rely on the runner's apt-installed Chromium instead
-# (see the `runner` stage below). deps/builder stay on Alpine since no browser is
-# ever launched at install/build time.
+# Build with: docker build -f apps/server/Dockerfile --secret id=npmrc,src=$HOME/.npmrc .
+# Puppeteer's Chromium is skipped on Alpine; the runner stage uses apt-installed Chromium.
 FROM node:20-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10 --activate
 WORKDIR /app
 ENV PUPPETEER_SKIP_DOWNLOAD=1
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/server/package.json apps/server/
-COPY packages/shared/package.json packages/shared/
-COPY packages/plugins/customer-pricing/package.json packages/plugins/customer-pricing/
-COPY packages/plugins/sync/package.json packages/plugins/sync/
-COPY packages/plugins/counterparty/package.json packages/plugins/counterparty/
-COPY packages/plugins/price-entry/package.json packages/plugins/price-entry/
-COPY packages/plugins/erp-import/package.json packages/plugins/erp-import/
-COPY packages/plugins/cross-reference/package.json packages/plugins/cross-reference/
-COPY packages/plugins/search/package.json packages/plugins/search/
-COPY packages/plugins/erp-order/package.json packages/plugins/erp-order/
-COPY packages/plugins/documents/package.json packages/plugins/documents/
-COPY packages/plugins/popular-products/package.json packages/plugins/popular-products/
-COPY packages/storefront/package.json packages/storefront/
-COPY packages/ui-kit/package.json packages/ui-kit/
-RUN pnpm install --frozen-lockfile
+# Full copy: a selective package.json list drifted and skipped erp-integration's private dep.
+COPY . .
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc,required=true \
+    pnpm install --frozen-lockfile
 
 FROM deps AS builder
-COPY . .
-# Build all plugins as one `tsc -b` invocation (TypeScript Project References —
-# see AGENTS.md's "Monorepo dist/ and dev watching"), then just the server
-# itself — its plugin dependencies are already built at this point. Not
-# `pnpm --filter "server..." build` (N independent one-shot tsc processes,
-# one per plugin) — storefront/ui-kit are never copied into the runner stage
-# and have unrelated pre-existing type errors that shouldn't block a
-# server-only image, which `tsc -b`'s explicit plugin-only project list
-# already ensures without relying on pnpm's filter syntax for that guarantee.
+# One `tsc -b` over plugins, then the server only — frontends aren't part of this image.
 RUN pnpm build:plugins && pnpm --filter "server" build
 
 # Debian-based (not Alpine) specifically so Puppeteer can drive a real,

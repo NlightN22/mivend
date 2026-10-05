@@ -10,7 +10,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
 export
 
 .PHONY: up up-rebuild down logs ps restart \
-        build lint fmt \
+        build lint fmt ci \
         test test-int test-e2e mutation-pilot \
         e2e e2e-smoke e2e-ui e2e-report \
         docker-build docker-push \
@@ -237,6 +237,10 @@ check-event-contracts:
 
 fmt:
 	pnpm format
+
+# Same steps as ci.yml on a clean HEAD checkout with an empty store — run before pushing.
+ci:
+	bash infrastructure/scripts/ci-local.sh
 
 # ── Tests ──────────────────────────────────────────────────────────────────────
 

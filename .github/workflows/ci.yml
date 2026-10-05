@@ -23,12 +23,16 @@ jobs:
                   cache: pnpm
 
             - run: pnpm install --frozen-lockfile
+              env:
+                  GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
             - name: Lint
               run: pnpm lint
 
             - name: Check erp-integration event-contracts drift
               run: make check-event-contracts
+              env:
+                  GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
             - name: Format check
               run: pnpm format:check
@@ -61,6 +65,8 @@ jobs:
                   cache: pnpm
 
             - run: pnpm install --frozen-lockfile
+              env:
+                  GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
             - name: Run unit tests
               run: pnpm test

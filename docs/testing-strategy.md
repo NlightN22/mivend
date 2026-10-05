@@ -296,6 +296,7 @@ A change is not done until:
 
 - `make test` — unit tests, offline.
 - `make test-int` — integration/component/contract tests (starts infra via `make up`).
+- `make ci` — the push CI pipeline (lint, format, type check, unit, contract) on a clean HEAD checkout with an empty pnpm store; run before pushing.
 - `make e2e` — Playwright E2E (requires `make dev` + `make seed`).
 
 ## Diagnosing failing tests
@@ -378,8 +379,8 @@ WITH LOGIN` against `/docker-entrypoint-initdb.d/01-create-test-db.sql`'s own `A
   container stdout. Fixed by waiting on `pg_isready -h 127.0.0.1` (forces TCP) before this
   entrypoint's own commands run, which structurally can't observe the temp phase at all.
 
-            Deliberately **not** flipped to run on every PR despite being green now — see "E2E strategy"
-            above for the reasoning (cost vs. benefit for 2 tests) and the re-run command.
+                    Deliberately **not** flipped to run on every PR despite being green now — see "E2E strategy"
+                    above for the reasoning (cost vs. benefit for 2 tests) and the re-run command.
 
 - **CI has 2 jobs with labeled subset-steps, not 4-6 fully separate jobs** — deliberate, see the
   CI section above for the full reasoning and the revisit condition.
