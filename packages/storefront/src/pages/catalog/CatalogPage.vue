@@ -83,9 +83,11 @@ function resetFilters(): void {
     filters.value = { facetValueIds: [], inStock: false, priceMin: null, priceMax: null };
 }
 
+const formatBound = (n: number | null): string => (n == null ? '' : n.toLocaleString('ru-RU'));
+
 const { chips: activeChips, remove: removeChip, clear: clearChips } = useActiveFilterChips(filters, facetGroups, {
     inStock: t('catalogFilters.inStock'),
-    price: (min, max) => t('catalogFilters.price', { range: `${min ?? ''} – ${max ?? ''}` }),
+    price: (min, max) => t('catalogFilters.price', { range: `${formatBound(min)} – ${formatBound(max)}` }),
 });
 
 const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
