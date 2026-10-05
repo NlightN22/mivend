@@ -1,6 +1,13 @@
 # Project Context
 
-Updated: 2026-10-05 17:30
+Updated: 2026-10-05 17:45
+
+## Recent changes (2026-10-05 — #168 brand from manufacturer, shipped/audited/closed; follow-up #173)
+
+- Brand = `Product.manufacturer {id name}` and `SearchResult.manufacturer` in the Shop API (erp-integration `shopApiExtensions`, per-ctx DataLoader in `ProductManufacturerService`). Storefront reads it only via `utils/brand.ts` `brandOf` (catalog, widgets, favorites, cart + discount hints, checkout, product page); manager detail reads Admin `customFields.manufacturer`. There is NO `brand` facet; discounts by brand use the `manufacturer` facet (docs/pricing.md "Brand / manufacturer").
+- Staging bugs found: `UnitStreamHandler.refreshVariants` passed column names to TypeORM `.set()` (failed on every unit event; mocks hid it) → `update(ProductVariant)` + nested `customFields`; an all-zero `defaultSalesUnitId` (ERP empty ref) is treated as unset (other ref fields not checked for it).
+- Not covered by automated tests: Shop API manufacturer resolver and real-SQL unit refresh (no Vendure bootstrap harness; int tests use mirror entities). Issue #173 = API-level e2e on the local contour, needs `erp-import` seed extended (manufacturers, product without one, variant with unit) + `test-design` first.
+- Lessons: `make test-int` restarts the shared Postgres and knocks the running staging contour over (restart it after); a live headless check (`check-page`) beats curl-only verification; `pkill -f` patterns can kill your own shell; codegen output needs `prettier --write` or the diff is thousands of lines; `make ci` catches prettier issues lint/test miss.
 
 ## Recent changes (2026-10-05 — #164 manufacturer names, #171/#172 search+category, lazy PDF Chromium; closed/audited)
 
@@ -10,7 +17,6 @@ Updated: 2026-10-05 17:30
 - `useProductList`: a failed `load()` clears stale results and sets `loadError` (`MvErrorState`, `describeLoadError`); same-tick triggers coalesce into one request. The error state exists only on the catalog list; other pages still fail unevenly.
 - `PdfBrowserService` launches Chromium lazily and closes it after `PDF_BROWSER_IDLE_MS` (5 min), reconnects on `disconnected`, drains on shutdown. Before this every Vendure process held a Chrome (~4 GB, orphans on hot reload). Check `ps aux | grep puppeteer` before blaming code for a slow box.
 - UI: `MvFacetGroup` row hover/selected tints (category-nav tokens), facet search field in the shared input style, "Clear selection"; infinite-scroll spinner; mobile sidebar overflow fixed.
-- #168 done: brand = `Product.manufacturer`/`SearchResult.manufacturer` (Shop API, DataLoader, erp-integration) read via storefront `brandOf`; there is no `brand` facet anywhere (cards, cart, checkout, product page, manager detail). Staging fixes: `UnitStreamHandler.refreshVariants` used column names in a TypeORM `.set()` (never worked; mocks hid it, now `update(ProductVariant)` + nested `customFields`); an all-zero `defaultSalesUnitId` (ERP empty ref) is treated as unset. Zombie `esbuild` children of a long-lived `tsx watch` are harmless.
 
 ## Recent changes (2026-10-05 — #170 active-filter chips in the catalog, shipped/audited/closed)
 
@@ -21,19 +27,9 @@ Updated: 2026-10-05 17:30
 - `make ci` (clean-checkout CI replay) is now required before pushing (AGENTS.md / final-check skill).
 
 
-## Recent changes (2026-10-04 — #162 favorites IDs only, shipped; brand gap filed as #168)
+## Recent changes (2026-10-04 — #162 favorites IDs only, shipped)
 
-- `stores/favorites.ts` keeps only `variantId`/`productId`/`addedAt` (`mv_favorites`; legacy entries
-  without `productId` are dropped on load). `useFavoriteProducts` resolves `customerPrice` + stock tier live per viewer
-  via `products(filter id in)`, batched by 100 slugs (Vendure `take` cap), with an error state.
-  Favorites the API does not return (deleted/disabled/renamed) are never auto-pruned (data loss);
-  they stay in the store and the badge, and "Clear unavailable" removes them. Verified in the browser on :5183 with the test customer.
-- Contour startup: `ManufacturerFacetService` backfill loaded all FacetValues once per manufacturer
-  (O(n²), 1498 rows) and delayed listen for minutes; now loaded once. Healthy restart is ~25-40 s
-  (docs/environments.md). A ts-node-dev child stuck in `waitForFile` can spin at ~90% CPU after a
-  hot-reload during `build:plugins`; kill -9 that child only.
-- Open: #168 — brand is empty everywhere (storefront reads a `brand` facet nobody assigns; the real
-  `Product.manufacturerId` is not exposed by the Shop API).
+- `stores/favorites.ts` keeps only ids (`mv_favorites`); `useFavoriteProducts` resolves prices/stock live in batches of 100; unavailable favorites are never auto-pruned ("Clear unavailable"). Contour startup backfill of `ManufacturerFacetService` is O(n) now. Full text: docs/ai/.backup/PROJECT_CONTEXT.20261005-162-favorites.md.
 
 ## Recent changes (2026-10-04 — #164 category browse/filters/facets on ExternalSearchPlugin, closed/audited)
 
