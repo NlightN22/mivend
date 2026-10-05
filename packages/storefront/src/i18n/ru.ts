@@ -60,6 +60,12 @@ export default {
         loading: 'Загрузка категорий…',
         empty: 'Нет доступных категорий',
     },
+    catalogFilters: {
+        inStock: 'Только в наличии',
+        price: 'Цена: {range}',
+        clearAll: 'Сбросить всё',
+        remove: 'Убрать фильтр',
+    },
     common: {
         loading: 'Загрузка...',
         error: 'Произошла ошибка',

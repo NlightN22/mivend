@@ -6,7 +6,8 @@ import { useAuthStore } from '../../stores/auth';
 import { useCatalogStore } from '../../stores/catalog';
 import { useCategoryPanel } from '../../composables/useCategoryPanel';
 import { useProductList, type FilterState } from '../../composables/useProductList';
-import { MvCatalogFacets, MvBreadcrumbs } from '@mivend/ui-kit';
+import { MvCatalogFacets, MvBreadcrumbs, MvActiveFilters } from '@mivend/ui-kit';
+import { useActiveFilterChips } from '../../composables/useActiveFilterChips';
 import ProductListView from '../../components/ProductListView.vue';
 // Imports the TS source directly — see the comment in useProductList.ts for why 'shared''s
 // compiled package output breaks a Vite production build.
@@ -81,6 +82,11 @@ function resetFilters(): void {
     pendingCategorySlug.value = undefined;
     filters.value = { facetValueIds: [], inStock: false, priceMin: null, priceMax: null };
 }
+
+const { chips: activeChips, remove: removeChip, clear: clearChips } = useActiveFilterChips(filters, facetGroups, {
+    inStock: t('catalogFilters.inStock'),
+    price: (min, max) => t('catalogFilters.price', { range: `${min ?? ''} – ${max ?? ''}` }),
+});
 
 const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
 
@@ -170,6 +176,15 @@ onMounted(() => {
                 @reset="resetFilters"
             />
 
+            <div class="catalog-page__main">
+            <MvActiveFilters
+                class="catalog-page__chips"
+                :chips="activeChips"
+                :clear-label="t('catalogFilters.clearAll')"
+                :remove-label="t('catalogFilters.remove')"
+                @remove="removeChip"
+                @clear="clearChips"
+            />
             <ProductListView
                 :items="items"
                 :total-items="totalItems"
@@ -189,6 +204,7 @@ onMounted(() => {
                 @load-more="loadMore"
                 @retry="load"
             />
+            </div>
         </div>
     </main>
 </template>
@@ -201,6 +217,8 @@ onMounted(() => {
 }
 
 .catalog-page__crumbs { margin-bottom: 14px; }
+.catalog-page__main { min-width: 0; }
+.catalog-page__chips { margin-bottom: 12px; }
 
 .catalog-page__heading {
     margin: 0 0 20px;

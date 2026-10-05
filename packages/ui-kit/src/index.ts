@@ -187,6 +187,8 @@ export {
 
 export { default as MvActiveFilterChips } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
 export type { ActiveFilterChip } from './components/MvActiveFilterChips/MvActiveFilterChips.vue';
+export { default as MvActiveFilters } from './components/MvActiveFilters/MvActiveFilters.vue';
+export type { ActiveFilter } from './components/MvActiveFilters/MvActiveFilters.vue';
 
 // The standard desktop table for the manager portal (see the manager-portal-rules skill) — see
 // MvAdvancedDataTable.vue's own doc comment for the full feature set and component boundary.
