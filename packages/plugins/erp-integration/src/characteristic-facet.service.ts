@@ -1,9 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { LanguageCode } from '@vendure/common/lib/generated-types';
-import { Facet, FacetService, FacetValueService, RequestContext } from '@vendure/core';
+import {
+    Facet,
+    FacetService,
+    FacetValueService,
+    Logger,
+    ProcessContext,
+    RequestContext,
+    RequestContextService,
+    TransactionalConnection,
+} from '@vendure/core';
 import { characteristicFacetCode } from 'shared';
 
+import { ProductCharacteristic } from './entities/product-characteristic.entity';
 import type { ProductCharacteristicRow } from './product-characteristics-mapper';
+import { loggerCtx } from './types';
 
 const MANUFACTURER_KEY = 'Производитель';
 
@@ -11,13 +22,33 @@ const MANUFACTURER_KEY = 'Производитель';
 // storefront filter sidebar renders them through SearchResponse.facetValues. Not assigned to
 // variants: membership and counts come from the external search backend.
 @Injectable()
-export class CharacteristicFacetService {
+export class CharacteristicFacetService implements OnApplicationBootstrap {
     private known = new Map<string, Set<string>>();
 
     constructor(
         private facetService: FacetService,
         private facetValueService: FacetValueService,
+        private connection: TransactionalConnection,
+        private requestContextService: RequestContextService,
+        private processContext: ProcessContext,
     ) {}
+
+    // Heals characteristics ingested before the facets existed; server process only.
+    async onApplicationBootstrap(): Promise<void> {
+        if (!this.processContext.isServer) return;
+        try {
+            const ctx = await this.requestContextService.create({ apiType: 'admin' });
+            const rows = await this.connection
+                .getRepository(ctx, ProductCharacteristic)
+                .createQueryBuilder('c')
+                .select(['c.key AS key', 'c.normalizedValue AS "normalizedValue"'])
+                .distinct(true)
+                .getRawMany<Pick<ProductCharacteristicRow, 'key' | 'normalizedValue'>>();
+            await this.ensureValues(ctx, rows as ProductCharacteristicRow[]);
+        } catch (err) {
+            Logger.error(`characteristic facet backfill failed: ${String(err)}`, loggerCtx);
+        }
+    }
 
     async ensureValues(ctx: RequestContext, rows: ProductCharacteristicRow[]): Promise<void> {
         for (const [key, values] of this.missingByKey(rows)) {

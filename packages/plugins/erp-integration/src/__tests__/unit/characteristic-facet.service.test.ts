@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@vendure/core', () => ({ FacetService: class {}, FacetValueService: class {} }));
+vi.mock('@vendure/core', () => ({
+    FacetService: class {},
+    FacetValueService: class {},
+    Logger: { error: vi.fn() },
+    ProcessContext: class {},
+    RequestContextService: class {},
+    TransactionalConnection: class {},
+}));
+vi.mock('../../entities/product-characteristic.entity', () => ({
+    ProductCharacteristic: class {},
+}));
 
 import { CharacteristicFacetService } from '../../characteristic-facet.service';
 
@@ -12,7 +22,7 @@ const row = (key: string, normalized: string[] | null) => ({
     structuredJson: null,
 });
 
-function makeService(existingFacetValues: string[] = []) {
+function makeService(existingFacetValues: string[] = [], isServer = true, stored: unknown[] = []) {
     const facetService = {
         findByCode: vi.fn().mockResolvedValue(undefined),
         create: vi.fn().mockResolvedValue({ id: 'f1' }),
@@ -21,9 +31,16 @@ function makeService(existingFacetValues: string[] = []) {
         findByFacetId: vi.fn().mockResolvedValue(existingFacetValues.map(code => ({ code }))),
         create: vi.fn().mockResolvedValue({}),
     };
+    const qb: Record<string, unknown> = {};
+    for (const m of ['select', 'distinct']) qb[m] = () => qb;
+    qb.getRawMany = async () => stored;
+    const connection = { getRepository: () => ({ createQueryBuilder: () => qb }) };
     const service = new CharacteristicFacetService(
         facetService as never,
         facetValueService as never,
+        connection as never,
+        { create: vi.fn().mockResolvedValue({}) } as never,
+        { isServer } as never,
     );
     return { service, facetService, facetValueService };
 }
@@ -60,5 +77,15 @@ describe('CharacteristicFacetService', () => {
         const { service, facetService } = makeService();
         await service.ensureValues(ctx, [row('Производитель', ['acme']), row('Тип', null)]);
         expect(facetService.create).not.toHaveBeenCalled();
+    });
+
+    it('backfills facet values from stored characteristics on the server process only', async () => {
+        const stored = [{ key: 'Тип', normalizedValue: '["синтетическое"]' }];
+        const server = makeService([], true, stored);
+        await server.service.onApplicationBootstrap();
+        expect(server.facetValueService.create).toHaveBeenCalledTimes(1);
+        const worker = makeService([], false, stored);
+        await worker.service.onApplicationBootstrap();
+        expect(worker.facetValueService.create).not.toHaveBeenCalled();
     });
 });
