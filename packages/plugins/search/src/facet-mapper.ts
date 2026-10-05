@@ -10,9 +10,8 @@ export interface ExternalFacetValueResult {
     count: number;
 }
 
-// Maps search-service's manufacturer and characteristic facets back to mivend FacetValues
-// (manufacturer by code; characteristics by key facet + normalized value code). Values mivend has
-// not synced yet, or that still carry only their ERP id as a name, are skipped.
+// Maps search-service's manufacturer and characteristic facets back to FacetValues; values mivend
+// has not synced yet (or that only carry their ERP id as a name) are skipped.
 export async function mapFacetsToFacetValues(
     connection: TransactionalConnection,
     ctx: RequestContext,

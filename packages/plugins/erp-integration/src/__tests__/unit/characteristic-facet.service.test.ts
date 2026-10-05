@@ -34,7 +34,10 @@ function makeService(existingFacetValues: string[] = [], isServer = true, stored
     const qb: Record<string, unknown> = {};
     for (const m of ['select', 'distinct']) qb[m] = () => qb;
     qb.getRawMany = async () => stored;
-    const connection = { getRepository: () => ({ createQueryBuilder: () => qb }) };
+    const connection = {
+        getRepository: () => ({ createQueryBuilder: () => qb, query: vi.fn() }),
+        withTransaction: (c: unknown, work: (tx: unknown) => Promise<void>) => work(c),
+    };
     const service = new CharacteristicFacetService(
         facetService as never,
         facetValueService as never,

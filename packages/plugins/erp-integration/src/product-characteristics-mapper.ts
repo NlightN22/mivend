@@ -64,7 +64,7 @@ export function mapProductCharacteristics(
 // separate structured GUID<->name reference on the wire (an earlier assumption about a `valueRef`
 // field was wrong, see category-resolver.ts... no, see the commit history / issue #116 comments
 // for the real-runtime-check correction). Returns undefined when absent, never an empty string.
-const MANUFACTURER_NAME_ATTRIBUTE_KEY = 'Производитель';
+export const MANUFACTURER_NAME_ATTRIBUTE_KEY = 'Производитель';
 
 export function findManufacturerNameFromAttributes(
     payload: Record<string, unknown>,
