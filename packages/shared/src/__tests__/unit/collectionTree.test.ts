@@ -196,6 +196,20 @@ describe('applyCategoryCounts', () => {
         expect(buildCategoryPanel(pruned).level[0].count).toBe(5);
     });
 
+    it('orders categories by match count, largest first, at every level', () => {
+        const sorted = applyCategoryCounts(
+            tree,
+            new Map([
+                ['s2', 5],
+                ['s3', 1],
+                ['s4', 4],
+                ['s5', 9],
+            ]),
+        );
+        expect(sorted.map(n => n.id)).toEqual(['5', '2']);
+        expect(sorted[1].children.map(n => n.id)).toEqual(['4', '3']);
+    });
+
     it('returns an empty tree when nothing matches', () => {
         expect(applyCategoryCounts(tree, new Map())).toEqual([]);
     });

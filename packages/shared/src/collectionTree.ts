@@ -64,12 +64,14 @@ export function applyCategoryCounts(
     tree: CollectionNode[],
     countBySlug: ReadonlyMap<string, number>,
 ): CollectionNode[] {
-    return tree.flatMap(node => {
-        const children = applyCategoryCounts(node.children, countBySlug);
-        const count = countBySlug.get(node.slug) ?? 0;
-        if (count <= 0 && children.length === 0) return [];
-        return [{ ...node, ...(count > 0 ? { count } : {}), children }];
-    });
+    return tree
+        .flatMap(node => {
+            const children = applyCategoryCounts(node.children, countBySlug);
+            const count = countBySlug.get(node.slug) ?? 0;
+            if (count <= 0 && children.length === 0) return [];
+            return [{ ...node, ...(count > 0 ? { count } : {}), children }];
+        })
+        .sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
 }
 
 // Root..self, only nodes present in the tree; empty when the slug is unknown.
