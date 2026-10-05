@@ -1,46 +1,97 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Logger } from '@vendure/core';
 import puppeteer, { Browser } from 'puppeteer';
 
 import { loggerCtx } from '../constants';
 
-// One persistent Chromium instance per worker process, launched once and reused
-// for every render — never one browser per request/job. Mirrors the
-// OnModuleInit/OnModuleDestroy lifecycle used by
-// packages/plugins/sync/src/rabbitmq.service.ts for its persistent AMQP connection.
-@Injectable()
-export class PdfBrowserService implements OnModuleInit, OnModuleDestroy {
-    private browser: Browser | null = null;
+const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
-    async onModuleInit(): Promise<void> {
-        this.browser = await puppeteer.launch({
-            headless: true,
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-            args: ['--disable-dev-shm-usage', '--no-sandbox'],
-        });
-        Logger.verbose('Puppeteer browser launched', loggerCtx);
-    }
+function readIdleMs(): number {
+    const parsed = Number(process.env.PDF_BROWSER_IDLE_MS);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_IDLE_MS;
+}
+
+// Chromium is launched lazily on the first render and closed after an idle period,
+// so only processes that actually render PDFs ever hold a browser.
+@Injectable()
+export class PdfBrowserService implements OnModuleDestroy {
+    private browserPromise: Promise<Browser> | null = null;
+    private idleTimer: NodeJS.Timeout | null = null;
+    private activeRenders = 0;
 
     async onModuleDestroy(): Promise<void> {
-        await this.browser?.close();
-        this.browser = null;
-    }
-
-    requireBrowser(): Browser {
-        if (!this.browser) {
-            throw new Error('PdfBrowserService: browser is not initialized');
-        }
-        return this.browser;
+        this.clearIdleTimer();
+        await this.closeBrowser();
     }
 
     async renderPdf(html: string): Promise<Buffer> {
-        const page = await this.requireBrowser().newPage();
+        this.clearIdleTimer();
+        this.activeRenders++;
         try {
-            await page.setContent(html, { waitUntil: 'load' });
-            const pdf = await page.pdf({ format: 'A4', printBackground: true });
-            return Buffer.from(pdf);
+            const browser = await this.getBrowser();
+            const page = await browser.newPage();
+            try {
+                await page.setContent(html, { waitUntil: 'load' });
+                const pdf = await page.pdf({ format: 'A4', printBackground: true });
+                return Buffer.from(pdf);
+            } finally {
+                await page.close();
+            }
         } finally {
-            await page.close();
+            this.activeRenders--;
+            if (this.activeRenders === 0) {
+                this.armIdleTimer();
+            }
+        }
+    }
+
+    private getBrowser(): Promise<Browser> {
+        if (!this.browserPromise) {
+            const launch = puppeteer
+                .launch({
+                    headless: true,
+                    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+                    args: ['--disable-dev-shm-usage', '--no-sandbox'],
+                })
+                .then(browser => {
+                    Logger.verbose('Puppeteer browser launched', loggerCtx);
+                    return browser;
+                });
+            this.browserPromise = launch;
+            launch.catch(() => {
+                if (this.browserPromise === launch) {
+                    this.browserPromise = null;
+                }
+            });
+        }
+        return this.browserPromise;
+    }
+
+    private async closeBrowser(): Promise<void> {
+        const pending = this.browserPromise;
+        this.browserPromise = null;
+        if (pending) {
+            await (await pending.catch(() => null))?.close();
+        }
+    }
+
+    private armIdleTimer(): void {
+        this.clearIdleTimer();
+        this.idleTimer = setTimeout(() => {
+            this.idleTimer = null;
+            if (this.activeRenders === 0) {
+                void this.closeBrowser().catch(err =>
+                    Logger.warn(`Failed to close idle browser: ${String(err)}`, loggerCtx),
+                );
+            }
+        }, readIdleMs());
+        this.idleTimer.unref();
+    }
+
+    private clearIdleTimer(): void {
+        if (this.idleTimer) {
+            clearTimeout(this.idleTimer);
+            this.idleTimer = null;
         }
     }
 }
