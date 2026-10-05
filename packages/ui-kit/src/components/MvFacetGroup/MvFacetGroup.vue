@@ -120,13 +120,8 @@ function collapse(): void {
     transition: color 0.12s;
 }
 
-.mv-facet-group__row:hover {
-    color: #00997a;
-}
-
 .mv-facet-group__row:hover .mv-facet-group__icon {
-    border-color: #00b894;
-    background: #f0fffa;
+    background: #f4f8f6;
 }
 
 .mv-facet-group__check {
@@ -160,6 +155,13 @@ function collapse(): void {
 .mv-facet-group__row--on .mv-facet-group__icon,
 .mv-facet-group__check:focus-visible + .mv-facet-group__icon {
     border: 2px solid #00b894;
+    background: #f0fffa;
+    color: #00997a;
+}
+
+.mv-facet-group__row--on .mv-facet-group__name {
+    color: #00997a;
+    font-weight: 700;
 }
 
 .mv-facet-group__name {
