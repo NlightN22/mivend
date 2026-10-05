@@ -58,7 +58,7 @@ export class PdfBrowserService implements OnModuleDestroy {
         const current = this.browserPromise;
         if (current) {
             const browser = await current.catch(() => null);
-            if (browser && !browser.isConnected() && this.browserPromise === current) {
+            if (browser && !browser.connected && this.browserPromise === current) {
                 this.browserPromise = null;
             }
         }

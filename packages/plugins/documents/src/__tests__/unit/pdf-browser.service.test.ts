@@ -19,9 +19,6 @@ function makeBrowser(pdfGate?: Promise<void>) {
         page,
         connected: true,
         handlers,
-        isConnected() {
-            return this.connected;
-        },
         on: vi.fn((event: string, handler: () => void) => {
             handlers[event] = handler;
         }),
