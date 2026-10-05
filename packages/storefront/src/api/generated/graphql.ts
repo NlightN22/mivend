@@ -4481,6 +4481,7 @@ export type ProductDetailQuery = {
             stockLevel: string;
         }>;
         facetValues: Array<{ name: string; facet: { code: string } }>;
+        manufacturer?: { name?: string | null } | null;
         collections: Array<{
             id: string;
             name: string;
@@ -4500,6 +4501,7 @@ export type RelatedProductsQuery = {
             slug: string;
             variants: Array<{ price: any; currencyCode: CurrencyCode; stockLevel: string }>;
             facetValues: Array<{ name: string; facet: { code: string } }>;
+            manufacturer?: { name?: string | null } | null;
         }>;
     };
 };
@@ -4862,7 +4864,7 @@ export type ActiveOrderQuery = {
                     id: string;
                     name: string;
                     slug: string;
-                    facetValues: Array<{ name: string; facet: { code: string } }>;
+                    manufacturer?: { name?: string | null } | null;
                 };
             };
         }>;
@@ -4894,7 +4896,7 @@ export type AddToCartMutation = {
                   compareAtPrice?: number | null;
                   productVariant: {
                       id: string;
-                      product: { facetValues: Array<{ name: string; facet: { code: string } }> };
+                      product: { manufacturer?: { name?: string | null } | null };
                   };
               }>;
           }
@@ -5455,6 +5457,9 @@ export const ProductDetailDocument = new TypedDocumentString(`
         code
       }
     }
+    manufacturer {
+      name
+    }
     collections {
       id
       name
@@ -5485,6 +5490,9 @@ export const RelatedProductsDocument = new TypedDocumentString(`
         facet {
           code
         }
+      }
+      manufacturer {
+        name
       }
     }
   }
@@ -5877,11 +5885,8 @@ export const ActiveOrderDocument = new TypedDocumentString(`
           id
           name
           slug
-          facetValues {
+          manufacturer {
             name
-            facet {
-              code
-            }
           }
         }
       }
@@ -5904,11 +5909,8 @@ export const AddToCartDocument = new TypedDocumentString(`
         productVariant {
           id
           product {
-            facetValues {
+            manufacturer {
               name
-              facet {
-                code
-              }
             }
           }
         }

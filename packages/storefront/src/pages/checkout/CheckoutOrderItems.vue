@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { brandOf } from '../../utils/brand';
 import { useCartStore, type CartLine } from '../../stores/cart';
 
 const cartStore = useCartStore();
 
 function getBrand(line: CartLine): string {
-    const bv = line.productVariant.product.facetValues.find(fv => fv.facet.code === 'brand');
-    return bv?.name ?? '';
+    return brandOf(line.productVariant.product.manufacturer);
 }
 
 function formatPrice(kobo: number): string {

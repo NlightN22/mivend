@@ -54,6 +54,8 @@ const CATEGORY_FACET_CODE = 'category';
 // ProductChanged has no `organizationId` field at all (issue #63) — the customFields.organizationId
 // shortcut (issue #62 design point 5) is populated by a different, unrelated path and is left
 // untouched here.
+const EMPTY_ERP_REF = '00000000-0000-0000-0000-000000000000';
+
 @Injectable()
 export class ProductStreamHandler implements InboundStreamHandler {
     constructor(
@@ -463,7 +465,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return String(variant.id);
     }
 
-    // Null when defaultSalesUnitId is absent (base/piece unit). Throws MissingDependencyError
+    // Null when defaultSalesUnitId is absent or the ERP's empty reference (base/piece unit). Throws MissingDependencyError
     // when it's set but not yet synced — see docs/ai/erp-streams-map.md's `unit` row.
     private async resolveUnitFields(
         ctx: RequestContext,
@@ -471,7 +473,9 @@ export class ProductStreamHandler implements InboundStreamHandler {
         payload: Record<string, unknown>,
     ): Promise<ResolvedUnitFields | null> {
         const defaultSalesUnitId =
-            typeof payload.defaultSalesUnitId === 'string' && payload.defaultSalesUnitId !== ''
+            typeof payload.defaultSalesUnitId === 'string' &&
+            payload.defaultSalesUnitId !== '' &&
+            payload.defaultSalesUnitId !== EMPTY_ERP_REF
                 ? payload.defaultSalesUnitId
                 : undefined;
         if (!defaultSalesUnitId) {

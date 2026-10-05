@@ -3,6 +3,11 @@ query ProductBySlug($slug: String) {
         id
         name
         slug
+        customFields {
+            manufacturer {
+                name
+            }
+        }
         facetValues {
             id
             name

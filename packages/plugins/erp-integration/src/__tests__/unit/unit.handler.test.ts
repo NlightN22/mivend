@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { RequestContext } from '@vendure/core';
+import { ProductVariant, type RequestContext } from '@vendure/core';
 
 import { UnitStreamHandler } from '../../handlers/unit.handler';
 
@@ -128,11 +128,9 @@ describe('UnitStreamHandler', () => {
             volumeL: 18.5,
         });
 
-        expect(updateQueryBuilder.update).toHaveBeenCalledWith('product_variant');
+        expect(updateQueryBuilder.update).toHaveBeenCalledWith(ProductVariant);
         expect(updateQueryBuilder.set).toHaveBeenCalledWith({
-            customFieldsUnitratiotobase: 4,
-            customFieldsUnitweightkg: 16.8,
-            customFieldsUnitvolumel: 18.5,
+            customFields: { unitRatioToBase: 4, unitWeightKg: 16.8, unitVolumeL: 18.5 },
         });
         expect(updateQueryBuilder.where).toHaveBeenCalledWith(
             '"customFieldsDefaultsalesunitid" = :defaultSalesUnitId',

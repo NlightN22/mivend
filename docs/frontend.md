@@ -131,3 +131,9 @@ Codegen picks them up via glob and generates typed composables into `src/api/gen
 4. Account (credit limit, price type)
 5. Orders history
 6. Cart + checkout
+
+## Brand
+
+Brand shown anywhere in the storefront comes from the Shop API `manufacturer { name }` field on
+`Product`/`SearchResult` via `brandOf` — not from a `brand` facet (none exists). See
+`docs/pricing.md` "Brand / manufacturer".

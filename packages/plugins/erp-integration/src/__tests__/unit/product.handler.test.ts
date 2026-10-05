@@ -712,6 +712,18 @@ describe('ProductStreamHandler', () => {
             ]);
         });
 
+        it('treats the ERP empty reference as an unset unit instead of retrying forever', async () => {
+            const { handler, unitLookupService } = makeHandler();
+
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget',
+                defaultSalesUnitId: '00000000-0000-0000-0000-000000000000',
+            });
+
+            expect(unitLookupService.findByEntityId).not.toHaveBeenCalled();
+        });
+
         it('populates unit fields from the resolved UnitRecord when defaultSalesUnitId is set', async () => {
             const unitLookupService = {
                 findByEntityId: vi.fn().mockResolvedValue({

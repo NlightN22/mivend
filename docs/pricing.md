@@ -96,8 +96,8 @@ PriceResolutionService.resolve(ctx, variantId)
    → if no PriceEntry row exists for this variant+priceType: fall through to 1b
 
 3. facetValues = merge(ProductVariant.facetValues, Product.facetValues)
-   — erp-import's ProductHandler assigns brand/category facets to the PRODUCT,
-     not the variant, so both levels must be checked or matching silently misses
+   — facets such as category are assigned to the PRODUCT, not the variant (brand is
+     not a facet at all, see "Brand / manufacturer" below), so both levels must be checked or matching silently misses
      everything (this was a real bug during development — verify with both
      relations loaded if debugging "discount doesn't apply")
 
@@ -177,8 +177,8 @@ rules can be edited or reissued from the ERP with the same identity.
 
 ## Business rules (do not deviate)
 
-- Discounts are (almost always) scoped to a facet — brand, category, or any other
-  facet code. A **global** discount (both `facetCode`/`facetValueCode` null) exists but
+- Discounts are (almost always) scoped to a facet — category, manufacturer (facet code
+  `manufacturer`, value code = ERP manufacturer id), or any other facet code. A **global** discount (both `facetCode`/`facetValueCode` null) exists but
   is rare; it applies to every variant for that price type.
 - If a variant matches multiple active rules, the **highest percent wins**. No stacking.
 - Discount periods (`validFrom`/`validTo`) are **always fully bounded** — the business
@@ -292,3 +292,11 @@ worth knowing it exists.
 The default Channel's currency is set by config (`DEFAULT_CURRENCY_CODE`, default `RUB`) and
 reapplied at every boot by `DefaultChannelCurrencyBootstrapService` (single available currency).
 Config is the source of truth: a currency changed in the admin UI is reverted on restart.
+
+## Brand / manufacturer
+
+The brand shown on cards, the cart, checkout, the product page and in discount messages is the
+product's `manufacturer` relation (`Product.customFields.manufacturer`), never a facet. The Shop
+API exposes it as `Product.manufacturer { id name }` and `SearchResult.manufacturer`
+(erp-integration, batched per request); the storefront reads it only through `brandOf`
+(`packages/storefront/src/utils/brand.ts`). There is no `brand` facet — nothing assigns one.

@@ -534,7 +534,7 @@ export type BranchSettings = {
     allowPiecewiseSale: Scalars['Boolean']['output'];
     branchId: Scalars['String']['output'];
     defaultPriceTypeId: Scalars['String']['output'];
-    defaultWarehouseId: Scalars['String']['output'];
+    defaultWarehouseId: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
     visiblePriceTypeIds: Maybe<Array<Scalars['String']['output']>>;
     visibleWarehouseIds: Maybe<Array<Scalars['String']['output']>>;
@@ -1856,11 +1856,6 @@ export type CustomFields = {
     Zone: Array<CustomFieldConfig>;
 };
 
-export type CustomProductMappings = {
-    fullName: Maybe<Scalars['String']['output']>;
-    oemCodes: Maybe<Array<Scalars['String']['output']>>;
-};
-
 export type Customer = Node & {
     addresses: Maybe<Array<Address>>;
     counterparty: Maybe<Counterparty>;
@@ -2737,6 +2732,8 @@ export type GlobalSettings = {
 export type GlobalSettingsCustomFields = {
     defaultBranchId: Maybe<Scalars['String']['output']>;
     organizationSplitEnabled: Maybe<Scalars['Boolean']['output']>;
+    stockTierLowMax: Maybe<Scalars['Int']['output']>;
+    stockTierMediumMax: Maybe<Scalars['Int']['output']>;
 };
 
 export type GrantedRetroBonus = Node & {
@@ -6073,16 +6070,6 @@ export type PriceRange = {
     min: Scalars['Money']['output'];
 };
 
-export type PriceRangeBucket = {
-    count: Scalars['Int']['output'];
-    to: Scalars['Int']['output'];
-};
-
-export type PriceRangeInput = {
-    max: Scalars['Int']['input'];
-    min: Scalars['Int']['input'];
-};
-
 export type PriceType = {
     code: Scalars['String']['output'];
     id: Scalars['ID']['output'];
@@ -7692,10 +7679,6 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
-    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
-    inStock?: InputMaybe<Scalars['Boolean']['input']>;
-    priceRange?: InputMaybe<PriceRangeInput>;
-    priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -7710,15 +7693,7 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
-    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
-};
-
-export type SearchResponsePriceData = {
-    buckets: Array<PriceRangeBucket>;
-    bucketsWithTax: Array<PriceRangeBucket>;
-    range: PriceRange;
-    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -7727,14 +7702,10 @@ export type SearchResult = {
     /** An array of ids of the Collections in which this result appears */
     collectionIds: Array<Scalars['ID']['output']>;
     currencyCode: CurrencyCode;
-    /** @deprecated Use customProductMappings or customProductVariantMappings */
-    customMappings: CustomProductMappings;
-    customProductMappings: CustomProductMappings;
     description: Scalars['String']['output'];
     enabled: Scalars['Boolean']['output'];
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
-    inStock: Maybe<Scalars['Boolean']['output']>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset: Maybe<SearchResultAsset>;
@@ -8644,6 +8615,8 @@ export type UpdateFacetValueInput = {
 export type UpdateGlobalSettingsCustomFieldsInput = {
     defaultBranchId?: InputMaybe<Scalars['String']['input']>;
     organizationSplitEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+    stockTierLowMax?: InputMaybe<Scalars['Int']['input']>;
+    stockTierMediumMax?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateGlobalSettingsInput = {
@@ -9274,7 +9247,7 @@ export type BranchSettingsFieldsFragment = {
     branchId: string;
     defaultPriceTypeId: string;
     visiblePriceTypeIds: Array<string> | null;
-    defaultWarehouseId: string;
+    defaultWarehouseId: string | null;
     visibleWarehouseIds: Array<string> | null;
 };
 
@@ -9328,7 +9301,7 @@ export type BranchSettingsForBranchQuery = {
         branchId: string;
         defaultPriceTypeId: string;
         visiblePriceTypeIds: Array<string> | null;
-        defaultWarehouseId: string;
+        defaultWarehouseId: string | null;
         visibleWarehouseIds: Array<string> | null;
     } | null;
 };
@@ -9351,7 +9324,7 @@ export type SetBranchSettingsMutation = {
         branchId: string;
         defaultPriceTypeId: string;
         visiblePriceTypeIds: Array<string> | null;
-        defaultWarehouseId: string;
+        defaultWarehouseId: string | null;
         visibleWarehouseIds: Array<string> | null;
     };
 };
@@ -10787,6 +10760,7 @@ export type ProductBySlugQuery = {
         id: string;
         name: string;
         slug: string;
+        customFields: { manufacturer: { name: string | null } | null } | null;
         facetValues: Array<{ id: string; name: string; facet: { code: string } }>;
         variants: Array<{ id: string; sku: string; stockLevels: Array<{ stockOnHand: number }> }>;
     } | null;
@@ -13417,6 +13391,11 @@ export const ProductBySlugDocument = new TypedDocumentString(`
     id
     name
     slug
+    customFields {
+      manufacturer {
+        name
+      }
+    }
     facetValues {
       id
       name

@@ -34,10 +34,8 @@ function mockProduct(): void {
                     stockLevel: 'HIGH_STOCK',
                 },
             ],
-            facetValues: [
-                { name: 'Brakes', facet: { code: 'category' } },
-                { name: 'BrandX', facet: { code: 'brand' } },
-            ],
+            manufacturer: { name: 'BrandX' },
+            facetValues: [{ name: 'Brakes', facet: { code: 'category' } }],
         },
     }));
     registerMock('RelatedProducts', () => ({

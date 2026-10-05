@@ -282,7 +282,7 @@ export class PriceResolutionService {
         ctx: RequestContext,
         variantId: string,
     ): Promise<VariantFacetsAndWeight> {
-        // Facet values (e.g. brand) are assigned at the Product level by erp-import,
+        // Facet values (e.g. category) are assigned at the Product level by erp-import,
         // not the variant — merge both so a rule matches regardless of which level
         // the facet was actually assigned to.
         const variant = await this.connection.getRepository(ctx, ProductVariant).findOne({

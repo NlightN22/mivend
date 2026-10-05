@@ -36,11 +36,8 @@ query ActiveOrder {
                     id
                     name
                     slug
-                    facetValues {
+                    manufacturer {
                         name
-                        facet {
-                            code
-                        }
                     }
                 }
             }
@@ -62,11 +59,8 @@ mutation AddToCart($variantId: ID!, $qty: Int!) {
                 productVariant {
                     id
                     product {
-                        facetValues {
+                        manufacturer {
                             name
-                            facet {
-                                code
-                            }
                         }
                     }
                 }

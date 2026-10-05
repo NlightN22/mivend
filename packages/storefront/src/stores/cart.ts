@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { brandOf } from '../utils/brand';
 import { ref, computed } from 'vue';
 import { toast } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
@@ -146,9 +147,7 @@ export const useCartStore = defineStore('cart', () => {
                     const percent = Math.round(
                         (1 - serverLine.unitPrice / serverLine.compareAtPrice) * 100,
                     );
-                    const brand = serverLine.productVariant.product.facetValues.find(
-                        fv => fv.facet.code === 'brand',
-                    )?.name;
+                    const brand = brandOf(serverLine.productVariant.product.manufacturer);
                     if (percent > 0 && brand) discountResult = { brand, percent };
                 }
             }

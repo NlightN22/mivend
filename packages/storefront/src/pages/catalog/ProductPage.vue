@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { brandOf } from '../../utils/brand';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -32,9 +33,7 @@ const loading = ref(true);
 const error = ref('');
 
 const variant = computed(() => product.value?.variants[0]);
-const brand = computed(
-    () => product.value?.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '',
-);
+const brand = computed(() => brandOf(product.value?.manufacturer));
 
 async function handleAddToCart(qty: number): Promise<void> {
     if (!variant.value) return;

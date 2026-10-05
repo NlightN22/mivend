@@ -8,6 +8,7 @@ export interface ProductDetail {
     id: string;
     name: string;
     slug: string;
+    manufacturerName: string;
     facetValues: { id: string; name: string; facetCode: string }[];
     variants: { id: string; sku: string; stockOnHand: number }[];
 }
@@ -19,6 +20,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductDetail | 
         id: result.product.id,
         name: result.product.name,
         slug: result.product.slug,
+        manufacturerName: result.product.customFields?.manufacturer?.name ?? '',
         facetValues: result.product.facetValues.map(fv => ({
             id: fv.id,
             name: fv.name,

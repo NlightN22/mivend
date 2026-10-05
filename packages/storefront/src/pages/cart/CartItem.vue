@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
 import { useCartStore, type CartLine } from '../../stores/cart';
+import { brandOf } from '../../utils/brand';
 import { formatTierValue } from '../../utils/discount';
 import { discountLineReason, discountTierReachedReason } from '../../utils/discountMessages';
 
@@ -19,11 +20,7 @@ watch(
     },
 );
 
-const brand = computed(
-    () =>
-        props.line.productVariant.product.facetValues.find(fv => fv.facet.code === 'brand')?.name ??
-        '',
-);
+const brand = computed(() => brandOf(props.line.productVariant.product.manufacturer));
 
 const totalWeightKg = computed(() => {
     const weight = props.line.productVariant.customFields?.weight;

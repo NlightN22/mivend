@@ -80,11 +80,13 @@ export class UnitStreamHandler implements InboundStreamHandler {
         const result = await this.connection
             .getRepository(ctx, ProductVariant)
             .createQueryBuilder()
-            .update('product_variant')
+            .update(ProductVariant)
             .set({
-                customFieldsUnitratiotobase: unitRatioToBase,
-                customFieldsUnitweightkg: unitWeightKg,
-                customFieldsUnitvolumel: unitVolumeL,
+                customFields: {
+                    unitRatioToBase,
+                    unitWeightKg,
+                    unitVolumeL,
+                },
             })
             .where('"customFieldsDefaultsalesunitid" = :defaultSalesUnitId', { defaultSalesUnitId })
             .andWhere('"deletedAt" IS NULL')

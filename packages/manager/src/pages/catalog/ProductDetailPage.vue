@@ -29,9 +29,7 @@ const notFound = ref(false);
 const category = computed(
     () => product.value?.facetValues.find(fv => fv.facetCode === 'category')?.name ?? '',
 );
-const brand = computed(
-    () => product.value?.facetValues.find(fv => fv.facetCode === 'brand')?.name ?? '',
-);
+const brand = computed(() => product.value?.manufacturerName ?? '');
 const primaryVariant = computed(() => product.value?.variants[0] ?? null);
 const stockOnHand = computed(() => primaryVariant.value?.stockOnHand ?? 0);
 const stockVariantLabel = computed(() => stockVariantFromQuantity(stockOnHand.value));

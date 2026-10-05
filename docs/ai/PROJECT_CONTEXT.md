@@ -10,7 +10,7 @@ Updated: 2026-10-05 17:30
 - `useProductList`: a failed `load()` clears stale results and sets `loadError` (`MvErrorState`, `describeLoadError`); same-tick triggers coalesce into one request. The error state exists only on the catalog list; other pages still fail unevenly.
 - `PdfBrowserService` launches Chromium lazily and closes it after `PDF_BROWSER_IDLE_MS` (5 min), reconnects on `disconnected`, drains on shutdown. Before this every Vendure process held a Chrome (~4 GB, orphans on hot reload). Check `ps aux | grep puppeteer` before blaming code for a slow box.
 - UI: `MvFacetGroup` row hover/selected tints (category-nav tokens), facet search field in the shared input style, "Clear selection"; infinite-scroll spinner; mobile sidebar overflow fixed.
-- Open: #168 brand on cards (needs `Product.manufacturerId` name in the Shop API). Zombie `esbuild` children of a long-lived `tsx watch` are harmless.
+- #168 done: brand = `Product.manufacturer`/`SearchResult.manufacturer` (Shop API, DataLoader, erp-integration) read via storefront `brandOf`; there is no `brand` facet anywhere (cards, cart, checkout, product page, manager detail). Staging fixes: `UnitStreamHandler.refreshVariants` used column names in a TypeORM `.set()` (never worked; mocks hid it, now `update(ProductVariant)` + nested `customFields`); an all-zero `defaultSalesUnitId` (ERP empty ref) is treated as unset. Zombie `esbuild` children of a long-lived `tsx watch` are harmless.
 
 ## Recent changes (2026-10-05 — #170 active-filter chips in the catalog, shipped/audited/closed)
 

@@ -18,7 +18,8 @@ function mockProductDetailData(): void {
             id: '1',
             name: 'Brake pad set',
             slug: 'brake-pad-set',
-            facetValues: [{ id: '1', name: 'Bosch', facet: { code: 'brand' } }],
+            customFields: { manufacturer: { name: 'Bosch' } },
+            facetValues: [],
             variants: [{ id: '1', sku: 'SKU-001', stockLevels: [{ stockOnHand: 12 }] }],
         },
     }));
