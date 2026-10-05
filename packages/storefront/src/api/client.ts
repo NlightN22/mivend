@@ -16,7 +16,9 @@ export function getCapturedAuthToken(): string | null {
 // from a real HTTP/GraphQL error response). Callers (notably the auth store) use this to avoid
 // treating a transient blip — e.g. the dev server mid-restart — as "the user is logged out".
 // See the backend-plugin-rules skill's Vendure gotcha on this.
-export class ApiNetworkError extends Error {}
+export class ApiNetworkError extends Error {
+    name = 'ApiNetworkError';
+}
 
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 600;

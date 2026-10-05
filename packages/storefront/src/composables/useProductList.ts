@@ -1,3 +1,4 @@
+import { describeLoadError, type LoadErrorText } from '../api/describeLoadError';
 import { ref, watch, type Ref } from 'vue';
 import { shopApi } from '../api/client';
 import { buildSort, type SortOption } from './search-sort';
@@ -114,6 +115,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     totalItems: Ref<number>;
     loading: Ref<boolean>;
     loadError: Ref<boolean>;
+    loadErrorInfo: Ref<LoadErrorText>;
     loadingMore: Ref<boolean>;
     hasMore: Ref<boolean>;
     viewMode: Ref<ViewMode>;
@@ -131,6 +133,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     const totalItems = ref(0);
     const loading = ref(false);
     const loadError = ref(false);
+    const loadErrorInfo = ref<LoadErrorText>(describeLoadError(null));
     const loadingMore = ref(false);
     const hasMore = ref(true);
     const { viewMode, setViewMode } = useViewMode();
@@ -192,6 +195,8 @@ export function useProductList(options: UseProductListOptions = {}): {
             ]);
         } catch (e) {
             if (seq === loadSeq) {
+                console.error('Catalog load failed', e);
+                loadErrorInfo.value = describeLoadError(e);
                 items.value = [];
                 facetGroups.value = [];
                 totalItems.value = 0;
@@ -245,6 +250,7 @@ export function useProductList(options: UseProductListOptions = {}): {
         totalItems,
         loading,
         loadError,
+        loadErrorInfo,
         loadingMore,
         hasMore,
         viewMode,

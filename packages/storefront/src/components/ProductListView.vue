@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type StockVariant, stockVariantFromLevel } from '@mivend/ui-kit';
+import { MvErrorState, type StockVariant, stockVariantFromLevel } from '@mivend/ui-kit';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useFavoritesStore } from '../stores/favorites';
@@ -11,6 +11,8 @@ const props = defineProps<{
     totalItems: number;
     loading: boolean;
     loadError?: boolean;
+    errorTitle?: string;
+    errorMessage?: string;
     loadingMore: boolean;
     hasMore: boolean;
     viewMode: ViewMode;
@@ -97,10 +99,12 @@ function handleToggleFavorite(p: ProductItem): void {
         </div>
 
         <div v-if="loading" class="plv-state">Loading products...</div>
-        <div v-else-if="loadError" class="plv-state" role="alert">
-            Could not load products.
-            <button type="button" class="plv-retry" @click="emit('retry')">Try again</button>
-        </div>
+        <MvErrorState
+            v-else-if="loadError"
+            :title="errorTitle ?? 'Could not load products'"
+            :message="errorMessage ?? 'Check your connection and try again.'"
+            @retry="emit('retry')"
+        />
         <div v-else-if="items.length === 0" class="plv-state">No products found</div>
 
         <template v-else-if="viewMode === 'list'">
@@ -253,15 +257,6 @@ function handleToggleFavorite(p: ProductItem): void {
 }
 
 .plv-sentinel { height: 1px; }
-
-.plv-retry {
-    border: 0;
-    background: none;
-    padding: 0;
-    color: #00997a;
-    font-weight: 700;
-    cursor: pointer;
-}
 
 .plv-loading-more {
     display: flex;

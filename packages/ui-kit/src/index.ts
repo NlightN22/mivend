@@ -94,6 +94,7 @@ export { default as MvProductGallery } from './components/MvProductGallery/MvPro
 export { default as MvProductMainCards } from './components/MvProductMainCards/MvProductMainCards.vue';
 
 export { default as MvStockBadge } from './components/MvStockBadge/MvStockBadge.vue';
+export { default as MvErrorState } from './components/MvErrorState/MvErrorState.vue';
 export {
     STOCK_VARIANT_LABELS,
     type StockVariant,
