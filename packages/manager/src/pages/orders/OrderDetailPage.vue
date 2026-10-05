@@ -50,9 +50,9 @@ const editable = computed(
 
 const packagingLabel = computed(() => {
     if (!order.value) return null;
-    const { totalWeightKg, totalVolumeL } = useOrderPackaging(order.value.lines);
-    if (totalWeightKg === 0 && totalVolumeL === 0) return null;
-    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeL.toFixed(1)} L`;
+    const { totalWeightKg, totalVolumeM3 } = useOrderPackaging(order.value.lines);
+    if (totalWeightKg === 0 && totalVolumeM3 === 0) return null;
+    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeM3.toFixed(3)} m³`;
 });
 
 function money(amount: number): string {

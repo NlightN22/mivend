@@ -36,7 +36,7 @@ function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
                 customFields: line.productVariant.customFields ?? {
                     unitRatioToBase: null,
                     unitWeightKg: null,
-                    unitVolumeL: null,
+                    unitVolumeM3: null,
                 },
             },
         })),

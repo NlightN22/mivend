@@ -71,7 +71,7 @@ describe('UnitStreamHandler', () => {
                 name: 'Box',
                 ratioToBase: 0,
                 weightKg: null,
-                volumeL: null,
+                volumeM3: null,
                 isDeleted: false,
             }),
         );
@@ -89,7 +89,7 @@ describe('UnitStreamHandler', () => {
             ownerId: 'product-1',
             ratioToBase: 12,
             weightKg: 5.5,
-            volumeL: 0.0032,
+            volumeL: 3.2,
         });
 
         expect(repo.create).not.toHaveBeenCalled();
@@ -99,18 +99,9 @@ describe('UnitStreamHandler', () => {
                 ownerId: 'product-1',
                 ratioToBase: 12,
                 weightKg: 5.5,
-                volumeL: 3.2,
+                volumeM3: 3.2,
             }),
         );
-    });
-
-    it('converts the ERP cubic-metre volume to litres without float noise', async () => {
-        const { connection, repo } = makeConnection(null);
-        const handler = new UnitStreamHandler(connection as never);
-
-        await handler.apply(ctx, 'unit-1', { code: 'PCS', name: 'Pcs', volumeL: 0.0024 });
-
-        expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ volumeL: 2.4 }));
     });
 
     it('marks isDeleted without removing the row (never destructive on a soft signal)', async () => {
@@ -134,12 +125,12 @@ describe('UnitStreamHandler', () => {
             name: 'Box',
             ratioToBase: 4,
             weightKg: 16.8,
-            volumeL: 0.0185,
+            volumeL: 18.5,
         });
 
         expect(updateQueryBuilder.update).toHaveBeenCalledWith(ProductVariant);
         expect(updateQueryBuilder.set).toHaveBeenCalledWith({
-            customFields: { unitRatioToBase: 4, unitWeightKg: 16.8, unitVolumeL: 18.5 },
+            customFields: { unitRatioToBase: 4, unitWeightKg: 16.8, unitVolumeM3: 18.5 },
         });
         expect(updateQueryBuilder.where).toHaveBeenCalledWith(
             '"customFieldsDefaultsalesunitid" = :defaultSalesUnitId',
@@ -148,7 +139,7 @@ describe('UnitStreamHandler', () => {
         expect(updateQueryBuilder.andWhere).toHaveBeenCalledWith('"deletedAt" IS NULL');
         expect(updateQueryBuilder.andWhere).toHaveBeenCalledWith(
             expect.stringContaining('IS DISTINCT FROM'),
-            { unitRatioToBase: 4, unitWeightKg: 16.8, unitVolumeL: 18.5 },
+            { unitRatioToBase: 4, unitWeightKg: 16.8, unitVolumeM3: 18.5 },
         );
         expect(updateQueryBuilder.execute).toHaveBeenCalled();
     });

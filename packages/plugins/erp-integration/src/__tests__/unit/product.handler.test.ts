@@ -252,7 +252,7 @@ describe('ProductStreamHandler', () => {
                     defaultSalesUnitId: null,
                     unitRatioToBase: null,
                     unitWeightKg: null,
-                    unitVolumeL: null,
+                    unitVolumeM3: null,
                 },
             },
         ]);
@@ -692,7 +692,7 @@ describe('ProductStreamHandler', () => {
         });
     });
 
-    // Issue #103: unitRatioToBase/unitWeightKg/unitVolumeL resolution from
+    // Issue #103: unitRatioToBase/unitWeightKg/unitVolumeM3 resolution from
     // ProductChanged.defaultSalesUnitId via UnitLookupService.
     describe('unit fields (issue #103)', () => {
         it('leaves unit fields null when defaultSalesUnitId is unset (base/piece unit)', async () => {
@@ -707,7 +707,7 @@ describe('ProductStreamHandler', () => {
                         defaultSalesUnitId: null,
                         unitRatioToBase: null,
                         unitWeightKg: null,
-                        unitVolumeL: null,
+                        unitVolumeM3: null,
                     },
                 }),
             ]);
@@ -730,7 +730,7 @@ describe('ProductStreamHandler', () => {
                 findByEntityId: vi.fn().mockResolvedValue({
                     ratioToBase: 12,
                     weightKg: 5.5,
-                    volumeL: 3.2,
+                    volumeM3: 3.2,
                 }),
             };
             const { handler, productVariantService } = makeHandler({ unitLookupService });
@@ -748,7 +748,7 @@ describe('ProductStreamHandler', () => {
                         defaultSalesUnitId: 'unit-box',
                         unitRatioToBase: 12,
                         unitWeightKg: 5.5,
-                        unitVolumeL: 3.2,
+                        unitVolumeM3: 3.2,
                     },
                 }),
             ]);
@@ -773,7 +773,7 @@ describe('ProductStreamHandler', () => {
                 findByEntityId: vi.fn().mockResolvedValue({
                     ratioToBase: 6,
                     weightKg: null,
-                    volumeL: null,
+                    volumeM3: null,
                 }),
             };
             const productVariantService = {
@@ -802,7 +802,7 @@ describe('ProductStreamHandler', () => {
                         defaultSalesUnitId: 'unit-box',
                         unitRatioToBase: 6,
                         unitWeightKg: null,
-                        unitVolumeL: null,
+                        unitVolumeM3: null,
                     },
                 }),
             ]);

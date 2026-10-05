@@ -10,9 +10,9 @@ const cartStore = useCartStore();
 
 const packaging = computed(() => useOrderPackaging(cartStore.lines));
 const packagingLabel = computed(() => {
-    const { totalWeightKg, totalVolumeL } = packaging.value;
-    if (totalWeightKg === 0 && totalVolumeL === 0) return null;
-    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeL.toFixed(1)} L`;
+    const { totalWeightKg, totalVolumeM3 } = packaging.value;
+    if (totalWeightKg === 0 && totalVolumeM3 === 0) return null;
+    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeM3.toFixed(3)} m³`;
 });
 
 function formatRub(kopecks: number): string {
@@ -27,7 +27,7 @@ const discountLabel = computed(() => `− ${formatRub(cartStore.discountAmount)}
 
 const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽');
 
-const totalQty = computed(() => cartStore.itemCount);
+const totalQty = computed(() => cartStore.totalQuantity);
 const lineCount = computed(() => cartStore.lines.length);
 </script>
 

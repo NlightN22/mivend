@@ -61,6 +61,7 @@ export const useCartStore = defineStore('cart', () => {
 
     const lines = computed(() => order.value?.lines ?? []);
     const itemCount = computed(() => lines.value.length);
+    const totalQuantity = computed(() => lines.value.reduce((sum, line) => sum + line.quantity, 0));
     const totalPrice = computed(() => (order.value?.totalWithTax ?? 0) / 100);
     // subTotalWithTax already reflects discounted unit prices (CustomerPriceCalculationStrategy),
     // so each line's discount is added back to show the pre-discount subtotal.
@@ -308,6 +309,7 @@ export const useCartStore = defineStore('cart', () => {
         order,
         lines,
         itemCount,
+        totalQuantity,
         totalPrice,
         discountAmount,
         isEmpty,

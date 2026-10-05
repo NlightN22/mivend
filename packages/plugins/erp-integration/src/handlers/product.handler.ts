@@ -192,7 +192,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                             defaultSalesUnitId: unitFields?.defaultSalesUnitId ?? null,
                             unitRatioToBase: unitFields?.unitRatioToBase ?? null,
                             unitWeightKg: unitFields?.unitWeightKg ?? null,
-                            unitVolumeL: unitFields?.unitVolumeL ?? null,
+                            unitVolumeM3: unitFields?.unitVolumeM3 ?? null,
                         },
                     },
                 ]);
@@ -461,7 +461,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                     defaultSalesUnitId: unitFields?.defaultSalesUnitId ?? null,
                     unitRatioToBase: unitFields?.unitRatioToBase ?? null,
                     unitWeightKg: unitFields?.unitWeightKg ?? null,
-                    unitVolumeL: unitFields?.unitVolumeL ?? null,
+                    unitVolumeM3: unitFields?.unitVolumeM3 ?? null,
                 },
             },
         ]);
@@ -496,7 +496,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
             defaultSalesUnitId,
             unitRatioToBase: unit.ratioToBase,
             unitWeightKg: unit.weightKg,
-            unitVolumeL: unit.volumeL,
+            unitVolumeM3: unit.volumeM3,
         };
     }
 }
@@ -505,5 +505,5 @@ interface ResolvedUnitFields {
     defaultSalesUnitId: string;
     unitRatioToBase: number;
     unitWeightKg: number | null;
-    unitVolumeL: number | null;
+    unitVolumeM3: number | null;
 }

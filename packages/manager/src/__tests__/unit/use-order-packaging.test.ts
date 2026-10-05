@@ -7,19 +7,19 @@ describe('useOrderPackaging', () => {
             {
                 quantity: 3,
                 productVariant: {
-                    customFields: { unitRatioToBase: 20, unitWeightKg: 10, unitVolumeL: 8 },
+                    customFields: { unitRatioToBase: 20, unitWeightKg: 10, unitVolumeM3: 8 },
                 },
             },
             {
                 quantity: 2,
                 productVariant: {
-                    customFields: { unitRatioToBase: 10, unitWeightKg: 5, unitVolumeL: 4 },
+                    customFields: { unitRatioToBase: 10, unitWeightKg: 5, unitVolumeM3: 4 },
                 },
             },
         ]);
 
         expect(totals.totalWeightKg).toBeCloseTo(2.5);
-        expect(totals.totalVolumeL).toBeCloseTo(2);
+        expect(totals.totalVolumeM3).toBeCloseTo(2);
     });
 
     it('contributes 0 for a plain per-piece line with no unit fields', () => {
@@ -27,16 +27,16 @@ describe('useOrderPackaging', () => {
             {
                 quantity: 5,
                 productVariant: {
-                    customFields: { unitRatioToBase: null, unitWeightKg: null, unitVolumeL: null },
+                    customFields: { unitRatioToBase: null, unitWeightKg: null, unitVolumeM3: null },
                 },
             },
         ]);
 
         expect(totals.totalWeightKg).toBe(0);
-        expect(totals.totalVolumeL).toBe(0);
+        expect(totals.totalVolumeM3).toBe(0);
     });
 
     it('returns zero totals for an empty order', () => {
-        expect(useOrderPackaging([])).toEqual({ totalWeightKg: 0, totalVolumeL: 0 });
+        expect(useOrderPackaging([])).toEqual({ totalWeightKg: 0, totalVolumeM3: 0 });
     });
 });

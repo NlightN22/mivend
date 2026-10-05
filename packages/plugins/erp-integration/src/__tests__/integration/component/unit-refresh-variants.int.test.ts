@@ -27,7 +27,7 @@ class TestProductVariant {
     customFieldsUnitweightkg!: number | null;
 
     @Column({ type: 'float', nullable: true })
-    customFieldsUnitvolumel!: number | null;
+    customFieldsUnitvolumem3!: number | null;
 
     @Column({ type: 'timestamp', nullable: true })
     deletedAt!: Date | null;
@@ -60,7 +60,7 @@ function refresh(
     defaultSalesUnitId: string,
     unitRatioToBase: number,
     unitWeightKg: number | null,
-    unitVolumeL: number | null,
+    unitVolumeM3: number | null,
 ): Promise<{ affected?: number | null }> {
     return dataSource
         .createQueryBuilder()
@@ -68,15 +68,15 @@ function refresh(
         .set({
             customFieldsUnitratiotobase: unitRatioToBase,
             customFieldsUnitweightkg: unitWeightKg,
-            customFieldsUnitvolumel: unitVolumeL,
+            customFieldsUnitvolumem3: unitVolumeM3,
         })
         .where('"customFieldsDefaultsalesunitid" = :defaultSalesUnitId', { defaultSalesUnitId })
         .andWhere('"deletedAt" IS NULL')
         .andWhere(
             '("customFieldsUnitratiotobase" IS DISTINCT FROM :unitRatioToBase OR ' +
                 '"customFieldsUnitweightkg" IS DISTINCT FROM :unitWeightKg OR ' +
-                '"customFieldsUnitvolumel" IS DISTINCT FROM :unitVolumeL)',
-            { unitRatioToBase, unitWeightKg, unitVolumeL },
+                '"customFieldsUnitvolumem3" IS DISTINCT FROM :unitVolumeM3)',
+            { unitRatioToBase, unitWeightKg, unitVolumeM3 },
         )
         .execute();
 }

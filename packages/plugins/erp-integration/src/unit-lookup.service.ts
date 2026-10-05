@@ -5,7 +5,7 @@ import { UnitRecord } from './entities/unit-record.entity';
 
 // Read side of the `unit` stream's local cache (see UnitRecord's own doc comment) — the only
 // thing ProductStreamHandler needs to resolve ProductVariant.customFields.unitRatioToBase/
-// unitWeightKg/unitVolumeL from ProductChanged.defaultSalesUnitId.
+// unitWeightKg/unitVolumeM3 from ProductChanged.defaultSalesUnitId.
 @Injectable()
 export class UnitLookupService {
     constructor(private readonly connection: TransactionalConnection) {}

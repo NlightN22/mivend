@@ -419,11 +419,11 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'Sales unit weight (kg)' }],
             },
             {
-                name: 'unitVolumeL',
+                name: 'unitVolumeM3',
                 type: 'float',
                 nullable: true,
                 readonly: true,
-                label: [{ languageCode: LanguageCode.en, value: 'Sales unit volume (L)' }],
+                label: [{ languageCode: LanguageCode.en, value: 'Sales unit volume (m³)' }],
             },
             {
                 // Join key so UnitStreamHandler can refresh this variant when UnitChanged

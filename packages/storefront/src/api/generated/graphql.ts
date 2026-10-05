@@ -3227,7 +3227,7 @@ export type ProductVariantCustomFields = {
     multiplicity?: Maybe<Scalars['Int']['output']>;
     organizationId?: Maybe<Scalars['Int']['output']>;
     unitRatioToBase?: Maybe<Scalars['Float']['output']>;
-    unitVolumeL?: Maybe<Scalars['Float']['output']>;
+    unitVolumeM3?: Maybe<Scalars['Float']['output']>;
     unitWeightKg?: Maybe<Scalars['Float']['output']>;
     weight?: Maybe<Scalars['Float']['output']>;
 };
@@ -3250,7 +3250,7 @@ export type ProductVariantFilterParameter = {
     sku?: InputMaybe<StringOperators>;
     stockLevel?: InputMaybe<StringOperators>;
     unitRatioToBase?: InputMaybe<NumberOperators>;
-    unitVolumeL?: InputMaybe<NumberOperators>;
+    unitVolumeM3?: InputMaybe<NumberOperators>;
     unitWeightKg?: InputMaybe<NumberOperators>;
     updatedAt?: InputMaybe<DateOperators>;
     weight?: InputMaybe<NumberOperators>;
@@ -3288,7 +3288,7 @@ export type ProductVariantSortParameter = {
     sku?: InputMaybe<SortOrder>;
     stockLevel?: InputMaybe<SortOrder>;
     unitRatioToBase?: InputMaybe<SortOrder>;
-    unitVolumeL?: InputMaybe<SortOrder>;
+    unitVolumeM3?: InputMaybe<SortOrder>;
     unitWeightKg?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
     weight?: InputMaybe<SortOrder>;
@@ -4858,7 +4858,7 @@ export type ActiveOrderQuery = {
                     weight?: number | null;
                     unitRatioToBase?: number | null;
                     unitWeightKg?: number | null;
-                    unitVolumeL?: number | null;
+                    unitVolumeM3?: number | null;
                 } | null;
                 product: {
                     id: string;
@@ -5879,7 +5879,7 @@ export const ActiveOrderDocument = new TypedDocumentString(`
           weight
           unitRatioToBase
           unitWeightKg
-          unitVolumeL
+          unitVolumeM3
         }
         product {
           id

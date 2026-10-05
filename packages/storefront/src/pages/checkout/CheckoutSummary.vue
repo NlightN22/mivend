@@ -13,13 +13,13 @@ const submitting = ref(false);
 
 const packaging = computed(() => useOrderPackaging(cartStore.lines));
 const packagingLabel = computed(() => {
-    const { totalWeightKg, totalVolumeL } = packaging.value;
-    if (totalWeightKg === 0 && totalVolumeL === 0) return null;
-    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeL.toFixed(1)} L`;
+    const { totalWeightKg, totalVolumeM3 } = packaging.value;
+    if (totalWeightKg === 0 && totalVolumeM3 === 0) return null;
+    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeM3.toFixed(3)} m³`;
 });
 
 const lineCount = computed(() => cartStore.lines.length);
-const totalQty = computed(() => cartStore.itemCount);
+const totalQty = computed(() => cartStore.totalQuantity);
 
 function formatRub(kopecks: number): string {
     return new Intl.NumberFormat('ru-RU').format(kopecks / 100) + ' ₽';

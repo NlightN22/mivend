@@ -30,7 +30,7 @@ query ActiveOrder {
                     weight
                     unitRatioToBase
                     unitWeightKg
-                    unitVolumeL
+                    unitVolumeM3
                 }
                 product {
                     id

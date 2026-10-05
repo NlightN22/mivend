@@ -31,7 +31,7 @@ declare module '@vendure/core' {
         // order's branch. Null when defaultSalesUnitId is unset (sold in base/piece unit).
         unitRatioToBase?: number | null;
         unitWeightKg?: number | null;
-        unitVolumeL?: number | null;
+        unitVolumeM3?: number | null;
     }
 
     interface CustomStockLevelFields {

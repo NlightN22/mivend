@@ -337,8 +337,8 @@ against 1C (`torg_develop4`) by search-platform, not theoretical:
   (`owner_id=null` = shared classifier, `owner_id=<productId>` = product-owned packaging unit):
   `ratio_to_base` (units-per-package, consistent across products), `weight_kg`/`volume_l` (for
   the packaging unit as a whole, not per piece inside it).
-  **The ERP sends `volume_l` in cubic metres, not litres, despite the contract's field name** —
-  `UnitStreamHandler` multiplies by 1000, so `UnitRecord.volumeL` and `unitVolumeL` are always litres.
+  **`volume_l` actually carries cubic metres** (the contract's name is wrong); mivend stores and
+  shows it as m³ (`UnitRecord.volumeM3`, `unitVolumeM3`) with no conversion.
 
 **Data model — single variant stays in base units, ERP data is informational, enforcement is
 branch-conditional:**
@@ -349,7 +349,7 @@ branch-conditional:**
    branches (not duplicated per branch, see `docs/sync.md`), so a global "this variant IS a box"
    resolution can't represent "piece-sale allowed in branch A, packaging-only in branch B"
    simultaneously.
-2. Add `unitRatioToBase`/`unitWeightKg`/`unitVolumeL` to `ProductVariant.customFields`, resolved
+2. Add `unitRatioToBase`/`unitWeightKg`/`unitVolumeM3` to `ProductVariant.customFields`, resolved
    from `UnitChanged` via `defaultSalesUnitId` at import time (same handler pattern as
    `product.handler.ts`). Purely informational — used only to compute order weight/volume:
    `weightPerPiece = weightKg / ratioToBase`, summed across order lines (`Σ weightPerPiece ×

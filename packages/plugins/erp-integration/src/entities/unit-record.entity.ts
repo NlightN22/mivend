@@ -36,7 +36,7 @@ export class UnitRecord extends VendureEntity {
     weightKg!: number | null;
 
     @Column({ type: 'float', nullable: true })
-    volumeL!: number | null;
+    volumeM3!: number | null;
 
     @Column({ type: 'boolean', default: false })
     isDeleted!: boolean;

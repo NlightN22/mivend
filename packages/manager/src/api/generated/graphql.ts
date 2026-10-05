@@ -6405,7 +6405,7 @@ export type ProductVariantCustomFields = {
     organizationPriority: Maybe<Scalars['Int']['output']>;
     organizationSourceEntityId: Maybe<Scalars['String']['output']>;
     unitRatioToBase: Maybe<Scalars['Float']['output']>;
-    unitVolumeL: Maybe<Scalars['Float']['output']>;
+    unitVolumeM3: Maybe<Scalars['Float']['output']>;
     unitWeightKg: Maybe<Scalars['Float']['output']>;
     weight: Maybe<Scalars['Float']['output']>;
 };
@@ -6435,7 +6435,7 @@ export type ProductVariantFilterParameter = {
     stockOnHand?: InputMaybe<NumberOperators>;
     trackInventory?: InputMaybe<StringOperators>;
     unitRatioToBase?: InputMaybe<NumberOperators>;
-    unitVolumeL?: InputMaybe<NumberOperators>;
+    unitVolumeM3?: InputMaybe<NumberOperators>;
     unitWeightKg?: InputMaybe<NumberOperators>;
     updatedAt?: InputMaybe<DateOperators>;
     useGlobalOutOfStockThreshold?: InputMaybe<BooleanOperators>;
@@ -6484,7 +6484,7 @@ export type ProductVariantSortParameter = {
     stockLevel?: InputMaybe<SortOrder>;
     stockOnHand?: InputMaybe<SortOrder>;
     unitRatioToBase?: InputMaybe<SortOrder>;
-    unitVolumeL?: InputMaybe<SortOrder>;
+    unitVolumeM3?: InputMaybe<SortOrder>;
     unitWeightKg?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
     weight?: InputMaybe<SortOrder>;
@@ -10493,7 +10493,7 @@ export type OrderDetailQuery = {
                     customFields: {
                         unitRatioToBase: number | null;
                         unitWeightKg: number | null;
-                        unitVolumeL: number | null;
+                        unitVolumeM3: number | null;
                     } | null;
                 };
                 customFields: {
@@ -13136,7 +13136,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
           customFields {
             unitRatioToBase
             unitWeightKg
-            unitVolumeL
+            unitVolumeM3
           }
         }
         customFields {

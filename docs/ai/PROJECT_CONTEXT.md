@@ -161,7 +161,7 @@ Durable facts still true: #100/#103/#104/#105/#108/#109/#110/#115/#116/#119/#121
 #131/#140/#141/#144/#145/#147/#148/#149/#152/#153/#101/#102 all shipped/closed; #117 (Position entity, now shipped) was still
 blocked; #130 (Administrator-lifecycle E2E) designed, not implemented; #50/#143/#44 open with
 deferred parts tracked (#150/#151). **#103** (order weight/volume + branch-conditional packaging,
-`unit-changed` stream): `ProductVariant.customFields.unitRatioToBase`/`unitWeightKg`/`unitVolumeL`/
+`unit-changed` stream): `ProductVariant.customFields.unitRatioToBase`/`unitWeightKg`/`unitVolumeM3`/
 `defaultSalesUnitId`, `BranchSettings.allowPiecewiseSale`, `MultiplicityOrderInterceptor` resolves
 branch via the customer's preferred `TradingPoint` (never `order.customFields.branchId` pre-
 placement — real audit bug, fixed). `UnitStreamHandler` refresh is a single bounded

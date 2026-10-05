@@ -5,13 +5,6 @@ import { UnitRecord } from '../entities/unit-record.entity';
 import { loggerCtx } from '../types';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
-// The contract names the field volume_l, but the ERP actually sends cubic metres.
-const M3_TO_LITRES = 1000;
-
-function cubicMetresToLitres(m3: number): number {
-    return Math.round(m3 * M3_TO_LITRES * 1e6) / 1e6;
-}
-
 // Applies the `unit` stream into UnitRecord, then refreshes matching variants — field-by-field
 // accounting: docs/ai/erp-streams-map.md's `unit` row.
 @Injectable()
@@ -34,8 +27,8 @@ export class UnitStreamHandler implements InboundStreamHandler {
             typeof payload.ownerId === 'string' && payload.ownerId !== '' ? payload.ownerId : null;
         const ratioToBase = typeof payload.ratioToBase === 'number' ? payload.ratioToBase : 0;
         const weightKg = typeof payload.weightKg === 'number' ? payload.weightKg : null;
-        const volumeL =
-            typeof payload.volumeL === 'number' ? cubicMetresToLitres(payload.volumeL) : null;
+        // The contract names this field volume_l, but the ERP sends cubic metres.
+        const volumeM3 = typeof payload.volumeL === 'number' ? payload.volumeL : null;
         const isDeleted = payload.isDeleted === true;
 
         const repo = this.connection.getRepository(ctx, UnitRecord);
@@ -49,7 +42,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
                 name,
                 ratioToBase,
                 weightKg,
-                volumeL,
+                volumeM3,
                 isDeleted,
             });
         } else {
@@ -61,7 +54,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
                     name,
                     ratioToBase,
                     weightKg,
-                    volumeL,
+                    volumeM3,
                     isDeleted,
                 }),
             );
@@ -72,7 +65,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
             loggerCtx,
         );
 
-        await this.refreshVariants(ctx, entityId, ratioToBase, weightKg, volumeL);
+        await this.refreshVariants(ctx, entityId, ratioToBase, weightKg, volumeM3);
     }
 
     // Bounded, values-changed-only UPDATE (see docs/ai/erp-streams-map.md's `unit` row) — via the
@@ -83,7 +76,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
         defaultSalesUnitId: string,
         unitRatioToBase: number,
         unitWeightKg: number | null,
-        unitVolumeL: number | null,
+        unitVolumeM3: number | null,
     ): Promise<void> {
         const result = await this.connection
             .getRepository(ctx, ProductVariant)
@@ -93,7 +86,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
                 customFields: {
                     unitRatioToBase,
                     unitWeightKg,
-                    unitVolumeL,
+                    unitVolumeM3,
                 },
             })
             .where('"customFieldsDefaultsalesunitid" = :defaultSalesUnitId', { defaultSalesUnitId })
@@ -101,8 +94,8 @@ export class UnitStreamHandler implements InboundStreamHandler {
             .andWhere(
                 '("customFieldsUnitratiotobase" IS DISTINCT FROM :unitRatioToBase OR ' +
                     '"customFieldsUnitweightkg" IS DISTINCT FROM :unitWeightKg OR ' +
-                    '"customFieldsUnitvolumel" IS DISTINCT FROM :unitVolumeL)',
-                { unitRatioToBase, unitWeightKg, unitVolumeL },
+                    '"customFieldsUnitvolumem3" IS DISTINCT FROM :unitVolumeM3)',
+                { unitRatioToBase, unitWeightKg, unitVolumeM3 },
             )
             .execute();
 
