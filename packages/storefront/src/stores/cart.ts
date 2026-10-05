@@ -62,6 +62,16 @@ export const useCartStore = defineStore('cart', () => {
     const lines = computed(() => order.value?.lines ?? []);
     const itemCount = computed(() => lines.value.length);
     const totalPrice = computed(() => (order.value?.totalWithTax ?? 0) / 100);
+    // subTotalWithTax already reflects discounted unit prices (CustomerPriceCalculationStrategy),
+    // so each line's discount is added back to show the pre-discount subtotal.
+    const discountAmount = computed(() =>
+        lines.value.reduce((sum, line) => {
+            if (line.compareAtPrice == null || line.unitPrice == null || line.unitPrice === 0)
+                return sum;
+            const discountRatio = (line.compareAtPrice - line.unitPrice) / line.unitPrice;
+            return sum + line.linePriceWithTax * discountRatio;
+        }, 0),
+    );
     const isEmpty = computed(() => lines.value.length === 0);
 
     async function fetchCart(): Promise<void> {
@@ -299,6 +309,7 @@ export const useCartStore = defineStore('cart', () => {
         lines,
         itemCount,
         totalPrice,
+        discountAmount,
         isEmpty,
         fetchCart,
         addItem,

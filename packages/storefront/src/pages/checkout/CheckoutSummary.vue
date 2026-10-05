@@ -21,10 +21,14 @@ const packagingLabel = computed(() => {
 const lineCount = computed(() => cartStore.lines.length);
 const totalQty = computed(() => cartStore.itemCount);
 
-const subtotal = computed(
-    () =>
-        new Intl.NumberFormat('ru-RU').format((cartStore.order?.subTotalWithTax ?? 0) / 100) + ' ₽',
+function formatRub(kopecks: number): string {
+    return new Intl.NumberFormat('ru-RU').format(kopecks / 100) + ' ₽';
+}
+
+const subtotal = computed(() =>
+    formatRub((cartStore.order?.subTotalWithTax ?? 0) + cartStore.discountAmount),
 );
+const discountLabel = computed(() => `− ${formatRub(cartStore.discountAmount)}`);
 
 const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽');
 
@@ -70,9 +74,9 @@ async function handlePrimary(): Promise<void> {
                 <span>Delivery</span>
                 <strong>Per contract</strong>
             </div>
-            <div class="checkout-summary__line">
+            <div v-if="cartStore.discountAmount > 0" class="checkout-summary__line">
                 <span>Customer discount</span>
-                <strong class="checkout-summary__discount">— 0 ₽</strong>
+                <strong class="checkout-summary__discount">{{ discountLabel }}</strong>
             </div>
             <div v-if="packagingLabel" class="checkout-summary__line">
                 <span>Weight / volume</span>

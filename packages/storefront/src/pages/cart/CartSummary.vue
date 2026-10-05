@@ -19,23 +19,11 @@ function formatRub(kopecks: number): string {
     return new Intl.NumberFormat('ru-RU').format(kopecks / 100) + ' ₽';
 }
 
-// subTotalWithTax already reflects the discounted unit prices (CustomerPriceCalculationStrategy) —
-// add each line's discount back to show the pre-discount subtotal, so "Customer discount" is a
-// real, non-zero figure rather than the previously-hardcoded placeholder.
-const discountAmount = computed(() =>
-    cartStore.lines.reduce((sum, line) => {
-        if (line.compareAtPrice == null || line.unitPrice == null || line.unitPrice === 0)
-            return sum;
-        const discountRatio = (line.compareAtPrice - line.unitPrice) / line.unitPrice;
-        return sum + line.linePriceWithTax * discountRatio;
-    }, 0),
-);
-
 const subtotal = computed(() =>
-    formatRub((cartStore.order?.subTotalWithTax ?? 0) + discountAmount.value),
+    formatRub((cartStore.order?.subTotalWithTax ?? 0) + cartStore.discountAmount),
 );
 
-const discountLabel = computed(() => `− ${formatRub(discountAmount.value)}`);
+const discountLabel = computed(() => `− ${formatRub(cartStore.discountAmount)}`);
 
 const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽');
 
@@ -64,7 +52,10 @@ const lineCount = computed(() => cartStore.lines.length);
                     <span>Subtotal</span>
                     <strong>{{ subtotal }}</strong>
                 </div>
-                <div v-if="discountAmount > 0" class="cart-summary__line cart-summary__line--discount">
+                <div
+                    v-if="cartStore.discountAmount > 0"
+                    class="cart-summary__line cart-summary__line--discount"
+                >
                     <span>Customer discount</span>
                     <strong>{{ discountLabel }}</strong>
                 </div>
@@ -83,8 +74,6 @@ const lineCount = computed(() => cartStore.lines.length);
                 <strong>{{ total }}</strong>
             </div>
         </section>
-
-
     </aside>
 </template>
 
