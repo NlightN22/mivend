@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { ApprovalRequestDetail, OrderReference, CounterpartyReference } from '../../api/approvals';
+import type {
+    ApprovalRequestDetail,
+    OrderReference,
+    CounterpartyReference,
+} from '../../api/approvals';
 
 const props = defineProps<{
     request: ApprovalRequestDetail;
@@ -51,25 +55,37 @@ const rows = computed<DetailRow[]>(() => {
             { label: 'Price type', value: p.priceTypeCode as string },
             { label: 'Applies to', value: (p.facetValueCode as string | null) ?? 'All products' },
             { label: 'Discount', value: `${p.percent as number}%` },
-            { label: 'Valid from', value: new Date(p.validFrom as string).toLocaleDateString('en-US') },
+            {
+                label: 'Valid from',
+                value: new Date(p.validFrom as string).toLocaleDateString('en-US'),
+            },
             { label: 'Valid to', value: new Date(p.validTo as string).toLocaleDateString('en-US') },
             { label: 'Justification', value: (p.requestedByJustification as string | null) ?? '—' },
             ...(p.supersedesDiscountRuleId
-                ? [{ label: 'Supersedes', value: `Discount rule #${p.supersedesDiscountRuleId as string}` }]
+                ? [
+                      {
+                          label: 'Supersedes',
+                          value: `Discount rule #${p.supersedesDiscountRuleId as string}`,
+                      },
+                  ]
                 : []),
         ];
     }
     // creditTermApproval / creditTermApprovalEscalated
     return [
-        { label: 'Customer', value: props.counterpartyReference?.shortName ?? (p.counterpartyErpId as string) },
+        {
+            label: 'Customer',
+            value: props.counterpartyReference?.shortName ?? (p.counterpartyErpId as string),
+        },
         { label: 'Extra days requested', value: String(p.requestedExtraDays) },
         ...(p.requestedAmount != null
             ? [
                   {
                       label: 'Amount',
-                      value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-                          (p.requestedAmount as number) / 100,
-                      ),
+                      value: new Intl.NumberFormat('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                      }).format((p.requestedAmount as number) / 100),
                   },
               ]
             : []),
@@ -82,12 +98,18 @@ const rows = computed<DetailRow[]>(() => {
     <div v-if="orderLine" class="request-details__line">
         <div class="request-details__line-product">
             <div class="request-details__line-name">{{ orderLine.productName }}</div>
-            <div class="request-details__line-sku">{{ orderLine.sku }} · qty {{ orderLine.quantity }}</div>
+            <div class="request-details__line-sku">
+                {{ orderLine.sku }} · qty {{ orderLine.quantity }}
+            </div>
         </div>
         <div class="request-details__line-prices">
-            <span class="request-details__line-original">{{ money(orderLine.unitPriceWithTax) }}</span>
+            <span class="request-details__line-original">{{
+                money(orderLine.unitPriceWithTax)
+            }}</span>
             <span>→</span>
-            <span class="request-details__line-requested">{{ money(payload.requestedPrice as number) }}</span>
+            <span class="request-details__line-requested">{{
+                money(payload.requestedPrice as number)
+            }}</span>
             <span
                 v-if="priceDeltaPercent !== null"
                 class="request-details__line-delta"

@@ -9,7 +9,14 @@ defineEmits<{ close: [] }>();
             <div class="mv-modal" role="dialog" aria-modal="true">
                 <div class="mv-modal__head">
                     <span class="mv-modal__title">{{ title }}</span>
-                    <button class="mv-modal__close" type="button" aria-label="Close" @click="$emit('close')">✕</button>
+                    <button
+                        class="mv-modal__close"
+                        type="button"
+                        aria-label="Close"
+                        @click="$emit('close')"
+                    >
+                        ✕
+                    </button>
                 </div>
                 <div class="mv-modal__body">
                     <slot />
@@ -75,7 +82,10 @@ defineEmits<{ close: [] }>();
     justify-content: center;
 }
 
-.mv-modal__close:hover { background: #e6f0ec; color: #14231f; }
+.mv-modal__close:hover {
+    background: #e6f0ec;
+    color: #14231f;
+}
 
 .mv-modal__body {
     overflow-y: auto;

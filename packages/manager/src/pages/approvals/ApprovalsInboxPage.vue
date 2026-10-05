@@ -79,7 +79,12 @@ async function load(): Promise<void> {
             fetchCounterpartyReferencesByErpId(),
         ]);
 
-        rows.value = buildApprovalRows(activePage.items, managers.value, orderReferences, counterpartyReferences);
+        rows.value = buildApprovalRows(
+            activePage.items,
+            managers.value,
+            orderReferences,
+            counterpartyReferences,
+        );
     } finally {
         loading.value = false;
     }
@@ -137,9 +142,19 @@ onMounted(load);
                 @reset="resetFilters"
             />
 
-            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+            <MvPagination
+                :page="page"
+                :page-size="PAGE_SIZE"
+                :total="totalItems"
+                @update:page="page = $event"
+            />
             <ApprovalsTable :rows="rows" :page-size="PAGE_SIZE" :loading="loading" />
-            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+            <MvPagination
+                :page="page"
+                :page-size="PAGE_SIZE"
+                :total="totalItems"
+                @update:page="page = $event"
+            />
         </MvPanel>
     </div>
 </template>

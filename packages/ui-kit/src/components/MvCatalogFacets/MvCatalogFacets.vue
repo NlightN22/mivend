@@ -6,7 +6,11 @@ import MvCategoryNav, { type CategoryNavPanel } from '../MvCategoryNav/MvCategor
 
 const props = withDefaults(
     defineProps<{
-        facetGroups: { code: string; name: string; values: { id: string; name: string; count: number; iconUrl?: string | null }[] }[];
+        facetGroups: {
+            code: string;
+            name: string;
+            values: { id: string; name: string; count: number; iconUrl?: string | null }[];
+        }[];
         inStockOnly: boolean;
         selectedFacetValues: Set<string>;
         priceMin: number | null;
@@ -43,11 +47,11 @@ const props = withDefaults(
 
 const emit = defineEmits<{
     'update:inStockOnly': [v: boolean];
-    'toggleFacetValue': [id: string];
-    'clearFacetValues': [ids: string[]];
+    toggleFacetValue: [id: string];
+    clearFacetValues: [ids: string[]];
     'update:priceMin': [v: number | null];
     'update:priceMax': [v: number | null];
-    'navigateCategory': [slug: string | undefined];
+    navigateCategory: [slug: string | undefined];
     reset: [];
 }>();
 
@@ -55,8 +59,18 @@ const emit = defineEmits<{
 const localMin = ref(props.priceMin != null ? String(props.priceMin) : '');
 const localMax = ref(props.priceMax != null ? String(props.priceMax) : '');
 
-watch(() => props.priceMin, v => { localMin.value = v != null ? String(v) : ''; });
-watch(() => props.priceMax, v => { localMax.value = v != null ? String(v) : ''; });
+watch(
+    () => props.priceMin,
+    v => {
+        localMin.value = v != null ? String(v) : '';
+    },
+);
+watch(
+    () => props.priceMax,
+    v => {
+        localMax.value = v != null ? String(v) : '';
+    },
+);
 
 let minTimer: ReturnType<typeof setTimeout>;
 let maxTimer: ReturnType<typeof setTimeout>;
@@ -87,14 +101,20 @@ function onMaxInput(e: Event): void {
         <div v-if="categoryPanel" class="catalog-facets__block">
             <h2 class="catalog-facets__block-title">Category</h2>
             <div v-if="categoryLoading" class="catalog-facets__skeleton">
-                <MvSkeleton v-for="w in ['90%', '75%', '82%', '65%', '78%']" :key="w" :width="w" height="18px" />
+                <MvSkeleton
+                    v-for="w in ['90%', '75%', '82%', '65%', '78%']"
+                    :key="w"
+                    :width="w"
+                    height="18px"
+                />
             </div>
             <MvCategoryNav
                 v-else
                 :panel="categoryPanel"
                 :more-label="categoryMoreLabel"
                 :less-label="categoryLessLabel"
-                @navigate="emit('navigateCategory', $event)" />
+                @navigate="emit('navigateCategory', $event)"
+            />
         </div>
 
         <!-- Availability -->
@@ -104,7 +124,9 @@ function onMaxInput(e: Event): void {
                 <input
                     type="checkbox"
                     :checked="inStockOnly"
-                    @change="emit('update:inStockOnly', ($event.target as HTMLInputElement).checked)"
+                    @change="
+                        emit('update:inStockOnly', ($event.target as HTMLInputElement).checked)
+                    "
                 />
                 <span>In stock only</span>
             </label>
@@ -154,7 +176,8 @@ function onMaxInput(e: Event): void {
                 :clear-label="facetClearLabel"
                 :search-placeholder="facetSearchPlaceholder"
                 @toggle="emit('toggleFacetValue', $event)"
-                @clear="emit('clearFacetValues', $event)" />
+                @clear="emit('clearFacetValues', $event)"
+            />
         </div>
 
         <div class="catalog-facets__block">
@@ -210,7 +233,9 @@ function onMaxInput(e: Event): void {
     cursor: pointer;
 }
 
-.catalog-facets__check input { accent-color: #00b894; }
+.catalog-facets__check input {
+    accent-color: #00b894;
+}
 
 .catalog-facets__price-row {
     display: flex;
@@ -249,7 +274,9 @@ function onMaxInput(e: Event): void {
 }
 
 .catalog-facets__price-input::-webkit-inner-spin-button,
-.catalog-facets__price-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.catalog-facets__price-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+}
 
 .catalog-facets__price-input:focus {
     border-color: #00b894;
@@ -267,13 +294,25 @@ function onMaxInput(e: Event): void {
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
-    transition: border-color 0.15s, color 0.15s;
+    transition:
+        border-color 0.15s,
+        color 0.15s;
 }
 
-.catalog-facets__reset:hover { border-color: #00b894; color: #00b894; }
+.catalog-facets__reset:hover {
+    border-color: #00b894;
+    color: #00b894;
+}
 
-.catalog-facets__skeleton { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
+.catalog-facets__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px 0;
+}
 
-.catalog-facets__count { color: #9aada6; font-size: 12px; }
-
+.catalog-facets__count {
+    color: #9aada6;
+    font-size: 12px;
+}
 </style>

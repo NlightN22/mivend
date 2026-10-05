@@ -13,12 +13,19 @@ export interface CollectionNode {
 
 const PREVIEW_LIMIT = 6;
 
-const props = defineProps<{ group: CollectionNode; moreLabel: string; lessLabel: string; hiddenLabel: string }>();
+const props = defineProps<{
+    group: CollectionNode;
+    moreLabel: string;
+    lessLabel: string;
+    hiddenLabel: string;
+}>();
 
 const emit = defineEmits<{ close: [] }>();
 
 const expanded = ref(false);
-const items = computed(() => (expanded.value ? props.group.children : props.group.children.slice(0, PREVIEW_LIMIT)));
+const items = computed(() =>
+    expanded.value ? props.group.children : props.group.children.slice(0, PREVIEW_LIMIT),
+);
 
 function categoryLink(slug: string): { path: string; query: { collection: string } } {
     return { path: '/catalog', query: { collection: slug } };
@@ -27,9 +34,19 @@ function categoryLink(slug: string): { path: string; query: { collection: string
 
 <template>
     <div class="mv-catalog-dropdown-group">
-        <RouterLink class="mv-catalog-dropdown-group__title" :to="categoryLink(group.slug)" @click="emit('close')">
+        <RouterLink
+            class="mv-catalog-dropdown-group__title"
+            :to="categoryLink(group.slug)"
+            @click="emit('close')"
+        >
             {{ group.name }}
-            <MvStatusTag v-if="group.isHidden" variant="unavailable" class="mv-catalog-dropdown-group__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
+            <MvStatusTag
+                v-if="group.isHidden"
+                variant="unavailable"
+                class="mv-catalog-dropdown-group__hidden"
+                data-testid="category-hidden-marker"
+                >{{ hiddenLabel }}</MvStatusTag
+            >
         </RouterLink>
         <RouterLink
             v-for="item in items"
@@ -39,7 +56,13 @@ function categoryLink(slug: string): { path: string; query: { collection: string
             @click="emit('close')"
         >
             {{ item.name }}
-            <MvStatusTag v-if="item.isHidden" variant="unavailable" class="mv-catalog-dropdown-group__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
+            <MvStatusTag
+                v-if="item.isHidden"
+                variant="unavailable"
+                class="mv-catalog-dropdown-group__hidden"
+                data-testid="category-hidden-marker"
+                >{{ hiddenLabel }}</MvStatusTag
+            >
         </RouterLink>
         <button
             v-if="group.children.length > PREVIEW_LIMIT"
@@ -107,7 +130,9 @@ function categoryLink(slug: string): { path: string; query: { collection: string
     cursor: pointer;
     font-family: inherit;
     border-radius: 8px;
-    transition: color 0.12s, background 0.12s;
+    transition:
+        color 0.12s,
+        background 0.12s;
 }
 
 .mv-catalog-dropdown-group__sub:hover {

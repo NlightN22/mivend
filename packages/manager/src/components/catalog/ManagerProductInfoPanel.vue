@@ -12,11 +12,22 @@ defineProps<{
     <div class="manager-product-info-panel">
         <div class="manager-product-info-panel__card">
             <h2 class="manager-product-info-panel__title">Prices</h2>
-            <p class="manager-product-info-panel__caption">Base prices are managed in the ERP system.</p>
+            <p class="manager-product-info-panel__caption">
+                Base prices are managed in the ERP system.
+            </p>
             <div class="manager-product-info-panel__prices">
-                <div v-for="row in prices" :key="row.priceTypeCode" class="manager-product-info-panel__price-row">
+                <div
+                    v-for="row in prices"
+                    :key="row.priceTypeCode"
+                    class="manager-product-info-panel__price-row"
+                >
                     <span>{{ row.label }}</span>
-                    <MvAmountDisplay v-if="row.price !== null" :amount="row.price / 100" currency="USD" size="sm" />
+                    <MvAmountDisplay
+                        v-if="row.price !== null"
+                        :amount="row.price / 100"
+                        currency="USD"
+                        size="sm"
+                    />
                     <span v-else class="manager-product-info-panel__no-price">—</span>
                 </div>
             </div>

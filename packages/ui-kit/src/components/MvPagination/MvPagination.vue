@@ -22,9 +22,7 @@ function goTo(target: number, event: MouseEvent): void {
 
 <template>
     <div class="mv-pagination">
-        <span class="mv-pagination__summary">
-            {{ rangeStart }}–{{ rangeEnd }} of {{ total }}
-        </span>
+        <span class="mv-pagination__summary"> {{ rangeStart }}–{{ rangeEnd }} of {{ total }} </span>
         <div class="mv-pagination__controls">
             <button
                 type="button"

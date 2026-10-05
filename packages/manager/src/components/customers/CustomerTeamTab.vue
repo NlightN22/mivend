@@ -43,7 +43,12 @@ const ROLE_OPTIONS: { value: CounterpartyTeamMemberRole; label: string }[] = [
 
 // Static mock of "who gets notified" — no backend field/mutation exists yet for this, see the
 // Team tab scoping decision: this panel is a visual placeholder only in this iteration.
-const NOTIFICATION_ROLES = ['Primary manager', 'Backup manager', 'Accounting contact', 'Observers'] as const;
+const NOTIFICATION_ROLES = [
+    'Primary manager',
+    'Backup manager',
+    'Accounting contact',
+    'Observers',
+] as const;
 const notificationChecks = ref<Record<string, boolean>>({
     'Primary manager': true,
     'Backup manager': true,
@@ -63,7 +68,9 @@ const saving = ref(false);
 const availableManagerOptions = computed(() => [
     { value: '', label: 'Select manager' },
     ...props.managers
-        .filter(m => m.id !== props.ownerId && !members.value.some(tm => tm.administratorId === m.id))
+        .filter(
+            m => m.id !== props.ownerId && !members.value.some(tm => tm.administratorId === m.id),
+        )
         .map(m => ({ value: m.id, label: m.name })),
 ]);
 
@@ -177,7 +184,8 @@ const rows = computed<TeamRow[]>(() => {
         <div class="customer-team__panel customer-team__notifications-panel">
             <h4 class="customer-team__panel-title">Team notifications</h4>
             <p class="customer-team__panel-subtitle">
-                Choose who will receive notifications about orders, invoices and payments for this customer.
+                Choose who will receive notifications about orders, invoices and payments for this
+                customer.
             </p>
             <div class="customer-team__notifications">
                 <MvCheckbox
@@ -193,10 +201,16 @@ const rows = computed<TeamRow[]>(() => {
 
         <MvModal v-if="addOpen" title="Add team member" @close="addOpen = false">
             <div class="customer-team__form">
-                <MvSelect v-model="newAdministratorId" :options="availableManagerOptions" :disabled="saving" />
+                <MvSelect
+                    v-model="newAdministratorId"
+                    :options="availableManagerOptions"
+                    :disabled="saving"
+                />
                 <MvSelect v-model="newRole" :options="ROLE_OPTIONS" :disabled="saving" />
                 <MvInput v-model="newPhone" placeholder="Phone (optional)" :disabled="saving" />
-                <MvButton :disabled="!newAdministratorId || saving" @click="handleAdd">Add member</MvButton>
+                <MvButton :disabled="!newAdministratorId || saving" @click="handleAdd"
+                    >Add member</MvButton
+                >
             </div>
         </MvModal>
     </div>

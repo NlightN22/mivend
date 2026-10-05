@@ -116,7 +116,10 @@ fragment CustomerOrderItemFields on Order {
 }
 
 query CustomerOrders($customerId: ID!, $take: Int!) {
-    visibleOrders(options: { take: $take, sort: { orderPlacedAt: DESC } }, customerId: $customerId) {
+    visibleOrders(
+        options: { take: $take, sort: { orderPlacedAt: DESC } }
+        customerId: $customerId
+    ) {
         items {
             ...CustomerOrderItemFields
         }

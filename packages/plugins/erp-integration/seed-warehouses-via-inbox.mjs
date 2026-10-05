@@ -45,7 +45,11 @@ const PG_DB = process.env.PG_DB ?? 'mivend_central';
 
 const warehouses = [
     { erpId: 'wh-central-main', name: 'Central main warehouse', branchId: 'branch-central' },
-    { erpId: 'wh-central-overflow', name: 'Central overflow warehouse', branchId: 'branch-central' },
+    {
+        erpId: 'wh-central-overflow',
+        name: 'Central overflow warehouse',
+        branchId: 'branch-central',
+    },
     { erpId: 'wh-east-main', name: 'East branch warehouse', branchId: 'branch-east' },
 ];
 
@@ -88,9 +92,12 @@ function insertInboxRow(record) {
         `VALUES ('warehouse', ${sqlQuote(entityId)}, ${sqlQuote(version)}, ${sqlQuote(sourceEventId)}, '${payloadJson}'::jsonb, 'pending', 0) ` +
         `ON CONFLICT (stream, entity_id, version) DO NOTHING;`;
 
-    execSync(`docker exec ${PG_CONTAINER} psql -U postgres -d ${PG_DB} -c "${sql.replace(/"/g, '\\"')}"`, {
-        stdio: 'inherit',
-    });
+    execSync(
+        `docker exec ${PG_CONTAINER} psql -U postgres -d ${PG_DB} -c "${sql.replace(/"/g, '\\"')}"`,
+        {
+            stdio: 'inherit',
+        },
+    );
 }
 
 for (const w of warehouses) {

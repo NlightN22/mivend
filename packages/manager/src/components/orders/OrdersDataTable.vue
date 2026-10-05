@@ -88,7 +88,9 @@ const rows = computed<OrderRow[]>(() =>
         return {
             code: order.code,
             customer: counterparty?.shortName ?? '—',
-            customerMeta: counterparty ? `INN ${counterparty.inn ?? '—'} · ${counterparty.priceType}` : '',
+            customerMeta: counterparty
+                ? `INN ${counterparty.inn ?? '—'} · ${counterparty.priceType}`
+                : '',
             manager: managerName(counterparty?.assignedManagerId),
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
             stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
@@ -98,7 +100,11 @@ const rows = computed<OrderRow[]>(() =>
             }).format(order.totalWithTax / 100),
             date: new Date(order.createdAt).toLocaleDateString('en-US'),
             branch: branchName(counterparty?.branchId),
-            attention: isWaitingApproval ? 'Price limit exceeded' : isOverdue ? 'Shipment overdue' : '',
+            attention: isWaitingApproval
+                ? 'Price limit exceeded'
+                : isOverdue
+                  ? 'Shipment overdue'
+                  : '',
         };
     }),
 );
@@ -112,7 +118,9 @@ interface ColumnDef {
 }
 
 const ALL_COLUMNS = computed<ColumnDef[]>(() => {
-    const cols: ColumnDef[] = [{ field: 'code', header: 'Order #', sortField: 'code', width: 160, required: true }];
+    const cols: ColumnDef[] = [
+        { field: 'code', header: 'Order #', sortField: 'code', width: 160, required: true },
+    ];
     cols.push({ field: 'customer', header: 'Customer', width: 220 });
     if (props.showManagerColumn) cols.push({ field: 'manager', header: 'Manager', width: 140 });
     cols.push(
@@ -162,10 +170,15 @@ function toggleColumnsPopover(e: Event): void {
 // viewport-relative height — see CustomerOrdersDataTable.vue's identical fix/comment.
 const ROW_HEIGHT_PX = 52;
 const HEADER_HEIGHT_PX = 54;
-const dynamicScrollHeight = computed(() => `${props.pageSize * ROW_HEIGHT_PX + HEADER_HEIGHT_PX}px`);
+const dynamicScrollHeight = computed(
+    () => `${props.pageSize * ROW_HEIGHT_PX + HEADER_HEIGHT_PX}px`,
+);
 
 const multiSelectModel = computed<string[]>({
-    get: () => ALL_COLUMNS.value.filter(c => !tableState.value.hiddenColumns.includes(c.field)).map(c => c.field),
+    get: () =>
+        ALL_COLUMNS.value
+            .filter(c => !tableState.value.hiddenColumns.includes(c.field))
+            .map(c => c.field),
     set: (fields: string[]) => {
         tableState.value.hiddenColumns = ALL_COLUMNS.value
             .filter(c => !c.required && !fields.includes(c.field))
@@ -185,15 +198,22 @@ function onColumnResizeEnd(event: { element: HTMLElement; delta: number }): void
     // PrimeVue doesn't hand back the field name directly on resize — read it off our own header
     // title span (see the Column's `#header` template below) as a pragmatic fallback since
     // there's no documented stable field accessor on this event.
-    const headerText = event.element?.querySelector('.orders-data-table__col-title')?.textContent?.trim();
+    const headerText = event.element
+        ?.querySelector('.orders-data-table__col-title')
+        ?.textContent?.trim();
     const col = ALL_COLUMNS.value.find(c => c.header === headerText);
     if (!col) return;
     const current = tableState.value.columnWidths[col.field] ?? col.width;
-    tableState.value.columnWidths = { ...tableState.value.columnWidths, [col.field]: current + event.delta };
+    tableState.value.columnWidths = {
+        ...tableState.value.columnWidths,
+        [col.field]: current + event.delta,
+    };
     void field;
 }
 
-function sortFieldToVendure(meta: DataTableSortMeta[]): Partial<Record<OrderSortField, 'ASC' | 'DESC'>> {
+function sortFieldToVendure(
+    meta: DataTableSortMeta[],
+): Partial<Record<OrderSortField, 'ASC' | 'DESC'>> {
     const result: Partial<Record<OrderSortField, 'ASC' | 'DESC'>> = {};
     for (const m of meta) {
         const col = ALL_COLUMNS.value.find(c => c.field === m.field);
@@ -217,7 +237,9 @@ function toggleSort(col: ColumnDef): void {
     if (!col.sortField) return;
     const current = tableState.value.sort[0];
     const next: DataTableSortMeta =
-        current?.field === col.field ? { field: col.field, order: current.order === 1 ? -1 : 1 } : { field: col.field, order: 1 };
+        current?.field === col.field
+            ? { field: col.field, order: current.order === 1 ? -1 : 1 }
+            : { field: col.field, order: 1 };
     tableState.value.sort = [next];
     emit('update:sort', sortFieldToVendure([next]));
 }
@@ -251,7 +273,9 @@ function onHeaderMousedown(event: MouseEvent): void {
     }
 }
 
-const filters = ref<DataTableFilterMeta>({ state: { value: props.stateFilter || null, matchMode: 'equals' } });
+const filters = ref<DataTableFilterMeta>({
+    state: { value: props.stateFilter || null, matchMode: 'equals' },
+});
 watch(
     () => props.stateFilter,
     value => {
@@ -346,7 +370,10 @@ function resetLayout(): void {
                         v-if="col.sortField"
                         type="button"
                         class="orders-data-table__sort-btn"
-                        :class="{ 'orders-data-table__sort-btn--active': tableState.sort[0]?.field === col.field }"
+                        :class="{
+                            'orders-data-table__sort-btn--active':
+                                tableState.sort[0]?.field === col.field,
+                        }"
                         @click.stop="toggleSort(col)"
                     >
                         <component :is="sortIconFor(col)" class="orders-data-table__sort-icon" />
@@ -357,12 +384,18 @@ function resetLayout(): void {
                 </template>
                 <template v-if="col.field === 'customer'" #body="{ data }">
                     <div class="orders-data-table__customer-cell">
-                        <span class="orders-data-table__customer-name">{{ (data as OrderRow).customer }}</span>
-                        <span class="orders-data-table__customer-meta">{{ (data as OrderRow).customerMeta }}</span>
+                        <span class="orders-data-table__customer-name">{{
+                            (data as OrderRow).customer
+                        }}</span>
+                        <span class="orders-data-table__customer-meta">{{
+                            (data as OrderRow).customerMeta
+                        }}</span>
                     </div>
                 </template>
                 <template v-else-if="col.field === 'state'" #body="{ data }">
-                    <MvStatusBadge :variant="(data as OrderRow).stateVariant">{{ (data as OrderRow).state }}</MvStatusBadge>
+                    <MvStatusBadge :variant="(data as OrderRow).stateVariant">{{
+                        (data as OrderRow).state
+                    }}</MvStatusBadge>
                 </template>
                 <template v-if="col.field === 'state'" #filter>
                     <Select
@@ -376,7 +409,11 @@ function resetLayout(): void {
             </Column>
             <Column field="action" header="" :style="{ width: '110px' }">
                 <template #body="{ data }">
-                    <MvButton size="sm" @click.stop="router.push(`/orders/${(data as OrderRow).code}`)">Open order</MvButton>
+                    <MvButton
+                        size="sm"
+                        @click.stop="router.push(`/orders/${(data as OrderRow).code}`)"
+                        >Open order</MvButton
+                    >
                 </template>
             </Column>
         </DataTable>
@@ -420,7 +457,9 @@ function resetLayout(): void {
     background: none;
     color: var(--el-text-color-secondary, #98a2b3);
     cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
+    transition:
+        background-color 0.15s,
+        color 0.15s;
 }
 
 .orders-data-table__sort-btn:hover {
@@ -450,7 +489,9 @@ function resetLayout(): void {
     border-radius: 6px;
     color: var(--el-text-color-secondary, #98a2b3);
     cursor: grab;
-    transition: background-color 0.15s, color 0.15s;
+    transition:
+        background-color 0.15s,
+        color 0.15s;
 }
 
 .orders-data-table__reorder-handle:hover {

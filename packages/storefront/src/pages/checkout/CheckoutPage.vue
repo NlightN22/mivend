@@ -30,8 +30,8 @@ onMounted(() => cartStore.fetchCart());
                 <DeliverySelector />
                 <CheckoutOrderItems />
                 <MvNotice v-if="checkoutStore.selectedPayment === 'online'" variant="info">
-                    After clicking "Pay online" you will be redirected to the payment service.
-                    Order status is updated via webhook, not only on customer return.
+                    After clicking "Pay online" you will be redirected to the payment service. Order
+                    status is updated via webhook, not only on customer return.
                 </MvNotice>
             </section>
 
@@ -47,9 +47,13 @@ onMounted(() => cartStore.fetchCart());
     padding: 24px 28px 70px;
 }
 
-.checkout-page__crumbs { margin-bottom: 12px; }
+.checkout-page__crumbs {
+    margin-bottom: 12px;
+}
 
-.checkout-page__head { margin-bottom: 18px; }
+.checkout-page__head {
+    margin-bottom: 18px;
+}
 
 .checkout-page__title {
     margin: 0;
@@ -65,7 +69,11 @@ onMounted(() => cartStore.fetchCart());
     align-items: start;
 }
 
-.checkout-page__main { display: grid; gap: 18px; min-width: 0; }
+.checkout-page__main {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+}
 
 .checkout-page__side {
     position: sticky;
@@ -73,11 +81,18 @@ onMounted(() => cartStore.fetchCart());
 }
 
 @media (max-width: 1260px) {
-    .checkout-page__layout { grid-template-columns: 1fr; }
-    .checkout-page__side { position: static; }
+    .checkout-page__layout {
+        grid-template-columns: 1fr;
+    }
+    .checkout-page__side {
+        position: static;
+    }
 }
 
 @media (max-width: 560px) {
-    .checkout-page { padding-left: 16px; padding-right: 16px; }
+    .checkout-page {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
 }
 </style>

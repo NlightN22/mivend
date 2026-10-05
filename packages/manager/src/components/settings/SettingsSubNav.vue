@@ -16,9 +16,13 @@ defineProps<{
 
 <template>
     <div class="settings-sub-nav">
-        <RouterLink to="/settings/roles" :class="{ active: active === 'roles' }">Roles & access</RouterLink>
+        <RouterLink to="/settings/roles" :class="{ active: active === 'roles' }"
+            >Roles & access</RouterLink
+        >
         <RouterLink to="/settings/users" :class="{ active: active === 'users' }">Users</RouterLink>
-        <RouterLink to="/settings/branches" :class="{ active: active === 'branches' }">Branches</RouterLink>
+        <RouterLink to="/settings/branches" :class="{ active: active === 'branches' }"
+            >Branches</RouterLink
+        >
         <RouterLink to="/settings/organizations" :class="{ active: active === 'organizations' }">
             Organizations
         </RouterLink>
@@ -28,8 +32,12 @@ defineProps<{
         >
             Category visibility
         </RouterLink>
-        <RouterLink to="/settings/security" :class="{ active: active === 'security' }">Security</RouterLink>
-        <RouterLink to="/settings/system-health" :class="{ active: active === 'system-health' }">System health</RouterLink>
+        <RouterLink to="/settings/security" :class="{ active: active === 'security' }"
+            >Security</RouterLink
+        >
+        <RouterLink to="/settings/system-health" :class="{ active: active === 'system-health' }"
+            >System health</RouterLink
+        >
     </div>
 </template>
 

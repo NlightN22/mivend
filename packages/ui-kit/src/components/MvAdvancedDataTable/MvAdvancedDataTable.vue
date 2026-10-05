@@ -23,7 +23,11 @@ import type { DataTableState, DataTableSortMeta } from '../../composables/useDat
 import { usePagedScrollHeight } from '../../composables/usePagedScrollHeight';
 import { useHorizontalScrollFade } from '../../composables/useHorizontalScrollFade';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
-import type { AdvancedDataTableColumn, AdvancedDataTableSearchConfig, AdvancedDataTableRowClickPayload } from './advancedDataTableTypes';
+import type {
+    AdvancedDataTableColumn,
+    AdvancedDataTableSearchConfig,
+    AdvancedDataTableRowClickPayload,
+} from './advancedDataTableTypes';
 
 // The standard desktop table for the manager portal (see the manager-portal-rules skill) —
 // column toggle/resize, per-column typed filters, active filter chips, server pagination,
@@ -102,13 +106,16 @@ const tableState = defineModel<DataTableState>('tableState', { required: true })
 // directly (no `[object Object]`) — a consumer that needs to show a nested/computed value must
 // supply `#cell-<field>` (see advancedDataTableTypes.ts's doc comment on `field`).
 const warnedFields = new Set<string>();
-function defaultCellText(field: string, value: unknown): string {
+function defaultCellText(field: string, row: unknown): string {
+    const value = (row as Record<string, unknown>)[field];
     if (value === null || value === undefined) return '';
     if (typeof value === 'object') {
         if (import.meta.env.DEV && !warnedFields.has(field)) {
             warnedFields.add(field);
             // eslint-disable-next-line no-console
-            console.warn(`MvAdvancedDataTable: column "${field}" received an object/array value with no #cell-${field} slot — rendering empty instead of "[object Object]".`);
+            console.warn(
+                `MvAdvancedDataTable: column "${field}" received an object/array value with no #cell-${field} slot — rendering empty instead of "[object Object]".`,
+            );
         }
         return '';
     }
@@ -167,7 +174,9 @@ function onColumnsReset(): void {
 }
 
 function onColumnResizeEnd(event: { element: HTMLElement; delta: number }): void {
-    const headerText = event.element?.querySelector('.mv-advanced-data-table__col-title')?.textContent?.trim();
+    const headerText = event.element
+        ?.querySelector('.mv-advanced-data-table__col-title')
+        ?.textContent?.trim();
     const col = props.columns.find(c => c.header === headerText);
     if (!col) return;
     const current = tableState.value.columnWidths[col.field] ?? col.width;
@@ -198,7 +207,9 @@ function toggleSort(col: AdvancedDataTableColumn): void {
     if (!col.sortField) return;
     const current = tableState.value.sort[0];
     const next: DataTableSortMeta =
-        current?.field === col.field ? { field: col.field, order: current.order === 1 ? -1 : 1 } : { field: col.field, order: 1 };
+        current?.field === col.field
+            ? { field: col.field, order: current.order === 1 ? -1 : 1 }
+            : { field: col.field, order: 1 };
     tableState.value.sort = [next];
 }
 function sortIconFor(col: AdvancedDataTableColumn): Component {
@@ -212,7 +223,11 @@ function sortIconFor(col: AdvancedDataTableColumn): Component {
 // (`tableState.filters` is the single source of truth), this only makes PrimeVue draw the
 // funnel/overlay chrome and own its open/close.
 const columnFilters = ref<DataTableFilterMeta>(
-    Object.fromEntries(props.columns.filter(c => c.filterConfig.type !== 'none').map(c => [c.field, { value: null, matchMode: 'equals' }])),
+    Object.fromEntries(
+        props.columns
+            .filter(c => c.filterConfig.type !== 'none')
+            .map(c => [c.field, { value: null, matchMode: 'equals' }]),
+    ),
 );
 
 function onFilterValueChange(col: AdvancedDataTableColumn, value: unknown): void {
@@ -228,7 +243,9 @@ onMounted(() => {
 });
 onBeforeUnmount(() => uninstallFilterOverlayClickFix?.());
 function filterActiveClass(field: string): string | undefined {
-    return hasValue(tableState.value.filters[field]) ? 'mv-advanced-data-table__th--filtered' : undefined;
+    return hasValue(tableState.value.filters[field])
+        ? 'mv-advanced-data-table__th--filtered'
+        : undefined;
 }
 const activeFilterChips = computed<ActiveFilterChip[]>(() => {
     const f = tableState.value.filters;
@@ -237,7 +254,10 @@ const activeFilterChips = computed<ActiveFilterChip[]>(() => {
         if (col.filterConfig.type === 'none' || col.filterConfig.type === 'custom') continue;
         const value = f[col.field];
         if (!hasValue(value)) continue;
-        chips.push({ key: col.field, label: `${col.header}: ${describeValue(col.filterConfig, value)}` });
+        chips.push({
+            key: col.field,
+            label: `${col.header}: ${describeValue(col.filterConfig, value)}`,
+        });
     }
     return chips;
 });
@@ -384,17 +404,34 @@ const isMobile = useIsMobileViewport(800);
             <!-- Selection replaces search/filters/view-chips entirely while anything is selected
                  (Vendure-dashboard-style bulk bar) — real feedback: the count + bulk actions +
                  Reset selection is what matters at that point, not the filter UI underneath it. -->
-            <div v-if="selectable && selectedIds.size > 0" class="mv-advanced-data-table__toolbar-start">
-                <span class="mv-advanced-data-table__selection-count">{{ selectedIds.size }} selected</span>
-                <slot name="selection-actions" :selected-ids="selectedIds" :count="selectedIds.size" />
-                <MvButton size="sm" variant="ghost" @click="resetSelection">✕ Reset selection</MvButton>
+            <div
+                v-if="selectable && selectedIds.size > 0"
+                class="mv-advanced-data-table__toolbar-start"
+            >
+                <span class="mv-advanced-data-table__selection-count"
+                    >{{ selectedIds.size }} selected</span
+                >
+                <slot
+                    name="selection-actions"
+                    :selected-ids="selectedIds"
+                    :count="selectedIds.size"
+                />
+                <MvButton size="sm" variant="ghost" @click="resetSelection"
+                    >✕ Reset selection</MvButton
+                >
             </div>
             <div v-else class="mv-advanced-data-table__toolbar-start">
                 <MvColumnFilterText
                     v-if="search"
-                    :config="{ type: 'text', placeholder: search.placeholder, debounceMs: search.debounceMs }"
+                    :config="{
+                        type: 'text',
+                        placeholder: search.placeholder,
+                        debounceMs: search.debounceMs,
+                    }"
                     :model-value="(tableState.filters[search.filterKey] as string) ?? ''"
-                    @update:model-value="tableState.filters = { ...tableState.filters, [search.filterKey]: $event }"
+                    @update:model-value="
+                        tableState.filters = { ...tableState.filters, [search.filterKey]: $event }
+                    "
                 />
                 <slot name="toolbar-start" />
             </div>
@@ -448,8 +485,14 @@ const isMobile = useIsMobileViewport(800);
             <template #empty>
                 <slot name="empty">{{ emptyMessage }}</slot>
             </template>
-            <template v-for="col in visibleColumns" :key="col.field" #[`cell-${col.field}`]="slotProps">
-                <slot :name="`cell-${col.field}`" v-bind="slotProps">{{ defaultCellText(col.field, (slotProps.data as Record<string, unknown>)[col.field]) }}</slot>
+            <template
+                v-for="col in visibleColumns"
+                :key="col.field"
+                #[`cell-${col.field}`]="slotProps"
+            >
+                <slot :name="`cell-${col.field}`" v-bind="slotProps">{{
+                    defaultCellText(col.field, slotProps.data)
+                }}</slot>
             </template>
         </MvAdvancedMobileCardList>
 
@@ -521,10 +564,16 @@ const isMobile = useIsMobileViewport(800);
                             v-if="col.sortField"
                             type="button"
                             class="mv-advanced-data-table__sort-btn"
-                            :class="{ 'mv-advanced-data-table__sort-btn--active': tableState.sort[0]?.field === col.field }"
+                            :class="{
+                                'mv-advanced-data-table__sort-btn--active':
+                                    tableState.sort[0]?.field === col.field,
+                            }"
                             @click.stop="toggleSort(col)"
                         >
-                            <component :is="sortIconFor(col)" class="mv-advanced-data-table__sort-icon" />
+                            <component
+                                :is="sortIconFor(col)"
+                                class="mv-advanced-data-table__sort-icon"
+                            />
                         </button>
                     </template>
 
@@ -532,8 +581,8 @@ const isMobile = useIsMobileViewport(800);
                         <slot :name="`cell-${col.field}`" :data="data">
                             <span
                                 class="mv-advanced-data-table__cell-text"
-                                :title="defaultCellText(col.field, (data as Record<string, unknown>)[col.field])"
-                                >{{ defaultCellText(col.field, (data as Record<string, unknown>)[col.field]) }}</span
+                                :title="defaultCellText(col.field, data)"
+                                >{{ defaultCellText(col.field, data) }}</span
                             >
                         </slot>
                     </template>
@@ -646,7 +695,9 @@ const isMobile = useIsMobileViewport(800);
     background: none;
     color: var(--el-text-color-secondary, #98a2b3);
     cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
+    transition:
+        background-color 0.15s,
+        color 0.15s;
 }
 
 .mv-advanced-data-table__sort-btn:hover {

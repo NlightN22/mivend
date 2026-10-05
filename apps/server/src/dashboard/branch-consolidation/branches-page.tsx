@@ -67,13 +67,11 @@ export function BranchesPage() {
             <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Branches</h1>
             <p style={{ color: '#666', marginBottom: 20 }}>
                 mivend's own branch consolidation — independent of any ERP data. Assigning
-                warehouses to a branch is a manager-portal task (Settings → Branches); creating
-                the branch itself stays here, restricted to SuperAdmin.
+                warehouses to a branch is a manager-portal task (Settings → Branches); creating the
+                branch itself stays here, restricted to SuperAdmin.
             </p>
 
-            {error && (
-                <div style={{ color: '#b91c1c', marginBottom: 12 }}>{error}</div>
-            )}
+            {error && <div style={{ color: '#b91c1c', marginBottom: 12 }}>{error}</div>}
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
                 <input
@@ -84,7 +82,12 @@ export function BranchesPage() {
                     onKeyDown={e => {
                         if (e.key === 'Enter') void onCreate();
                     }}
-                    style={{ flex: 1, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6 }}
+                    style={{
+                        flex: 1,
+                        padding: '6px 10px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 6,
+                    }}
                 />
                 <button
                     onClick={() => void onCreate()}
@@ -112,7 +115,13 @@ export function BranchesPage() {
                     {branches.map(b => (
                         <tr key={b.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                             <td style={{ padding: '6px 0' }}>{b.name}</td>
-                            <td style={{ padding: '6px 0', color: '#6b7280', fontFamily: 'monospace' }}>
+                            <td
+                                style={{
+                                    padding: '6px 0',
+                                    color: '#6b7280',
+                                    fontFamily: 'monospace',
+                                }}
+                            >
                                 {b.erpId}
                             </td>
                         </tr>

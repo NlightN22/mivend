@@ -1,7 +1,10 @@
 <script setup lang="ts" generic="TRow extends Record<string, unknown>">
 import { computed } from 'vue';
 import MvPagination from '../MvPagination/MvPagination.vue';
-import type { AdvancedDataTableColumn, AdvancedDataTableRowClickPayload } from './advancedDataTableTypes';
+import type {
+    AdvancedDataTableColumn,
+    AdvancedDataTableRowClickPayload,
+} from './advancedDataTableTypes';
 
 // MvAdvancedDataTable's mobile counterpart to its own PrimeVue-based desktop <DataTable> — see
 // MvAdvancedDataTable.vue's own doc comment for why this exists as a separate render path rather
@@ -35,7 +38,9 @@ const emit = defineEmits<{
 
 const primaryColumn = computed(() => props.columns.find(c => c.mobile?.primary));
 const badgeColumn = computed(() => props.columns.find(c => c.mobile?.badge));
-const fieldColumns = computed(() => props.columns.filter(c => !c.mobile?.primary && !c.mobile?.badge && !c.mobile?.hidden));
+const fieldColumns = computed(() =>
+    props.columns.filter(c => !c.mobile?.primary && !c.mobile?.badge && !c.mobile?.hidden),
+);
 
 function rowKey(row: TRow): unknown {
     return row[props.dataKey];
@@ -63,7 +68,11 @@ function rowKey(row: TRow): unknown {
             </div>
 
             <div class="mv-advanced-mobile-card__grid">
-                <div v-for="col in fieldColumns" :key="col.field" class="mv-advanced-mobile-card__field">
+                <div
+                    v-for="col in fieldColumns"
+                    :key="col.field"
+                    class="mv-advanced-mobile-card__field"
+                >
                     <div class="mv-advanced-mobile-card__label">{{ col.header }}</div>
                     <div class="mv-advanced-mobile-card__value">
                         <slot :name="`cell-${col.field}`" :data="row" />
@@ -72,7 +81,12 @@ function rowKey(row: TRow): unknown {
             </div>
         </article>
 
-        <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="emit('update:page', $event)" />
+        <MvPagination
+            :page="page"
+            :page-size="pageSize"
+            :total="totalItems"
+            @update:page="emit('update:page', $event)"
+        />
     </div>
 </template>
 

@@ -152,7 +152,8 @@ watch(
         try {
             await runFetchSettings(branchId);
         } catch (e) {
-            settingsLoadError.value = e instanceof Error ? e.message : 'Could not load branch settings';
+            settingsLoadError.value =
+                e instanceof Error ? e.message : 'Could not load branch settings';
         }
     },
     { immediate: true },
@@ -174,9 +175,13 @@ async function onSave(payload: {
         branchSettings.value = await saveBranchSettings({
             branchId: selectedBranchId.value,
             defaultPriceTypeId: payload.defaultPriceTypeId,
-            visiblePriceTypeIds: payload.visiblePriceTypeIds.length ? payload.visiblePriceTypeIds : null,
+            visiblePriceTypeIds: payload.visiblePriceTypeIds.length
+                ? payload.visiblePriceTypeIds
+                : null,
             defaultWarehouseId: payload.defaultWarehouseId,
-            visibleWarehouseIds: payload.visibleWarehouseIds.length ? payload.visibleWarehouseIds : null,
+            visibleWarehouseIds: payload.visibleWarehouseIds.length
+                ? payload.visibleWarehouseIds
+                : null,
         });
     } catch (e) {
         saveError.value = e instanceof Error ? e.message : 'Could not save branch settings';
@@ -189,7 +194,10 @@ onMounted(loadAll);
 </script>
 
 <template>
-    <div v-if="!authStore.hasPermission('ManageAccessControl')" class="branch-settings-page__not-authorized">
+    <div
+        v-if="!authStore.hasPermission('ManageAccessControl')"
+        class="branch-settings-page__not-authorized"
+    >
         <h1>Not authorized</h1>
         <p>You don't have permission to manage branch settings.</p>
     </div>
@@ -205,8 +213,8 @@ onMounted(loadAll);
             <template #subheader>
                 <p class="branch-settings-page__description">
                     Confirm which branch each warehouse belongs to and whether it counts toward that
-                    branch's available-to-promise stock — the ERP's own branch/isActive values are shown
-                    as read-only reference and are not always reliable.
+                    branch's available-to-promise stock — the ERP's own branch/isActive values are
+                    shown as read-only reference and are not always reliable.
                 </p>
             </template>
 

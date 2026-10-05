@@ -18,5 +18,10 @@ function handleUpdate(value: Record<string, string>): void {
 </script>
 
 <template>
-    <MvTableFilters :fields="fields" :model-value="filterValues" @update:model-value="handleUpdate" @reset="emit('reset')" />
+    <MvTableFilters
+        :fields="fields"
+        :model-value="filterValues"
+        @update:model-value="handleUpdate"
+        @reset="emit('reset')"
+    />
 </template>

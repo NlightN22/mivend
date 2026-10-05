@@ -63,7 +63,10 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: {
             type: 'select',
             placeholder: 'All sources',
-            options: PAYMENT_CHANNEL_OPTIONS.filter(o => o.value).map(o => ({ value: o.value, label: o.label })),
+            options: PAYMENT_CHANNEL_OPTIONS.filter(o => o.value).map(o => ({
+                value: o.value,
+                label: o.label,
+            })),
         },
     },
     {
@@ -100,12 +103,18 @@ const { state: tableState } = useDataTableState<PaymentFilterState>(
         columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
-        filters: { status: props.statusFilter, channel: props.channelFilter, number: props.searchFilter },
+        filters: {
+            status: props.statusFilter,
+            channel: props.channelFilter,
+            number: props.searchFilter,
+        },
         pageSize: props.pageSize,
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
         // Same reasoning as CustomerInvoicesDataTable.vue: status/channel/number(search)/pageSize
         // are the tab's own concern (it owns the fetch) — always seed from the tab's current prop
         // values, never from stale localStorage.
@@ -118,27 +127,45 @@ watch(
     f => emit('update:filters', { status: f.status, channel: f.channel, search: f.number }),
     { deep: true },
 );
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
 
-watch(() => props.statusFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, status: v };
-});
-watch(() => props.channelFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, channel: v };
-});
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, number: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => props.statusFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, status: v };
+    },
+);
+watch(
+    () => props.channelFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, channel: v };
+    },
+);
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, number: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 const CHANNEL_LABEL: Record<string, string> = Object.fromEntries(
     PAYMENT_CHANNEL_OPTIONS.filter(o => o.value).map(o => [o.value, o.label]),
 );
 
 function money(item: { amount: number; currencyCode: string }): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: item.currencyCode }).format(item.amount / 100);
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: item.currencyCode,
+    }).format(item.amount / 100);
 }
 
 interface PaymentRow {
@@ -193,7 +220,9 @@ const rows = computed<PaymentRow[]>(() =>
             <MvDateTimeCell :value="(data as PaymentRow).createdAt" />
         </template>
         <template #cell-status="{ data }">
-            <MvStatusBadge :variant="(data as PaymentRow).statusVariant">{{ (data as PaymentRow).status }}</MvStatusBadge>
+            <MvStatusBadge :variant="(data as PaymentRow).statusVariant">{{
+                (data as PaymentRow).status
+            }}</MvStatusBadge>
         </template>
     </MvAdvancedDataTable>
 </template>

@@ -8,17 +8,25 @@ import { STATUS_LABEL, STATUS_VARIANT } from './useOrders';
 const route = useRoute();
 const { order, loading, load } = useOrderDetail();
 
-onMounted(() => { void load(route.params.id as string); });
+onMounted(() => {
+    void load(route.params.id as string);
+});
 
 function formatAmount(cents: number, currency: string): string {
-    return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100)
-        + ' ' + (currency === 'RUB' ? '₽' : currency);
+    return (
+        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100) +
+        ' ' +
+        (currency === 'RUB' ? '₽' : currency)
+    );
 }
 
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('ru-RU', {
-        day: 'numeric', month: 'long', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     });
 }
 </script>
@@ -66,8 +74,16 @@ function formatDate(iso: string): string {
                                     <td class="od-sku">{{ line.productVariant.sku }}</td>
                                     <td>{{ line.productVariant.product.name }}</td>
                                     <td class="od-num">{{ line.quantity }}</td>
-                                    <td class="od-num">{{ formatAmount(line.unitPriceWithTax, order.currencyCode) }}</td>
-                                    <td class="od-num od-bold">{{ formatAmount(line.linePriceWithTax, order.currencyCode) }}</td>
+                                    <td class="od-num">
+                                        {{
+                                            formatAmount(line.unitPriceWithTax, order.currencyCode)
+                                        }}
+                                    </td>
+                                    <td class="od-num od-bold">
+                                        {{
+                                            formatAmount(line.linePriceWithTax, order.currencyCode)
+                                        }}
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -78,31 +94,46 @@ function formatDate(iso: string): string {
                             <h2 class="od-section-title">Summary</h2>
                             <div class="od-summary-row">
                                 <span>Subtotal</span>
-                                <span>{{ formatAmount(order.subTotalWithTax, order.currencyCode) }}</span>
+                                <span>{{
+                                    formatAmount(order.subTotalWithTax, order.currencyCode)
+                                }}</span>
                             </div>
                             <div class="od-summary-row">
                                 <span>Shipping</span>
-                                <span>{{ formatAmount(order.shippingWithTax, order.currencyCode) }}</span>
+                                <span>{{
+                                    formatAmount(order.shippingWithTax, order.currencyCode)
+                                }}</span>
                             </div>
                             <div class="od-summary-row od-summary-total">
                                 <span>Total</span>
-                                <span>{{ formatAmount(order.totalWithTax, order.currencyCode) }}</span>
+                                <span>{{
+                                    formatAmount(order.totalWithTax, order.currencyCode)
+                                }}</span>
                             </div>
                         </div>
 
                         <div v-if="order.shippingAddress" class="od-address-card">
                             <h2 class="od-section-title">Delivery address</h2>
                             <div class="od-address-line">{{ order.shippingAddress.fullName }}</div>
-                            <div class="od-address-line">{{ order.shippingAddress.streetLine1 }}</div>
+                            <div class="od-address-line">
+                                {{ order.shippingAddress.streetLine1 }}
+                            </div>
                             <div v-if="order.shippingAddress.streetLine2" class="od-address-line">
                                 {{ order.shippingAddress.streetLine2 }}
                             </div>
                             <div class="od-address-line">
-                                {{ [order.shippingAddress.city, order.shippingAddress.postalCode].filter(Boolean).join(', ') }}
+                                {{
+                                    [order.shippingAddress.city, order.shippingAddress.postalCode]
+                                        .filter(Boolean)
+                                        .join(', ')
+                                }}
                             </div>
                         </div>
 
-                        <div v-if="order.customFields?.erpOrderId || order.customFields?.erpStatus" class="od-erp-card">
+                        <div
+                            v-if="order.customFields?.erpOrderId || order.customFields?.erpStatus"
+                            class="od-erp-card"
+                        >
                             <h2 class="od-section-title">ERP</h2>
                             <div v-if="order.customFields?.erpOrderId" class="od-erp-row">
                                 <span>ERP ID</span>
@@ -110,7 +141,9 @@ function formatDate(iso: string): string {
                             </div>
                             <div v-if="order.customFields?.erpStatusAt" class="od-erp-row">
                                 <span>Updated</span>
-                                <span class="od-erp-val">{{ formatDate(order.customFields?.erpStatusAt) }}</span>
+                                <span class="od-erp-val">{{
+                                    formatDate(order.customFields?.erpStatusAt)
+                                }}</span>
                             </div>
                         </div>
                     </aside>
@@ -131,7 +164,9 @@ function formatDate(iso: string): string {
     padding: 24px 28px 56px;
 }
 
-.od-content { min-width: 0; }
+.od-content {
+    min-width: 0;
+}
 
 .od-back {
     display: inline-block;
@@ -141,9 +176,16 @@ function formatDate(iso: string): string {
     font-weight: 850;
     text-decoration: none;
 }
-.od-back:hover { color: #00a878; }
+.od-back:hover {
+    color: #00a878;
+}
 
-.od-state { color: #66736e; font-size: 14px; padding: 32px 0; text-align: center; }
+.od-state {
+    color: #66736e;
+    font-size: 14px;
+    padding: 32px 0;
+    text-align: center;
+}
 
 .od-head {
     display: flex;
@@ -160,7 +202,10 @@ function formatDate(iso: string): string {
     letter-spacing: -0.045em;
 }
 
-.od-meta { color: #66736e; font-size: 13px; }
+.od-meta {
+    color: #66736e;
+    font-size: 13px;
+}
 
 .od-status {
     flex-shrink: 0;
@@ -175,9 +220,18 @@ function formatDate(iso: string): string {
     font-weight: 950;
     white-space: nowrap;
 }
-.od-status.muted { background: #eef4f1; color: #5f6e68; }
-.od-status.warning { background: #fff4e3; color: #a45e00; }
-.od-status.error { background: #ffeeed; color: #c0362c; }
+.od-status.muted {
+    background: #eef4f1;
+    color: #5f6e68;
+}
+.od-status.warning {
+    background: #fff4e3;
+    color: #a45e00;
+}
+.od-status.error {
+    background: #ffeeed;
+    color: #c0362c;
+}
 
 .od-body {
     display: grid;
@@ -208,7 +262,9 @@ function formatDate(iso: string): string {
     font-size: 12px;
 }
 
-.od-th-num { text-align: right; }
+.od-th-num {
+    text-align: right;
+}
 
 .od-row td {
     padding: 10px 10px;
@@ -216,11 +272,24 @@ function formatDate(iso: string): string {
     vertical-align: middle;
 }
 
-.od-sku { color: #66736e; font-size: 12px; font-weight: 850; white-space: nowrap; }
-.od-num { text-align: right; white-space: nowrap; }
-.od-bold { font-weight: 950; }
+.od-sku {
+    color: #66736e;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+.od-num {
+    text-align: right;
+    white-space: nowrap;
+}
+.od-bold {
+    font-weight: 950;
+}
 
-.od-aside { display: grid; gap: 14px; }
+.od-aside {
+    display: grid;
+    gap: 14px;
+}
 
 .od-summary-card,
 .od-address-card,
@@ -247,7 +316,11 @@ function formatDate(iso: string): string {
     font-size: 16px;
 }
 
-.od-address-line { font-size: 13px; color: #344640; line-height: 1.55; }
+.od-address-line {
+    font-size: 13px;
+    color: #344640;
+    line-height: 1.55;
+}
 
 .od-erp-row {
     display: flex;
@@ -256,18 +329,31 @@ function formatDate(iso: string): string {
     padding: 3px 0;
     color: #66736e;
 }
-.od-erp-val { font-weight: 850; color: #344640; }
+.od-erp-val {
+    font-weight: 850;
+    color: #344640;
+}
 
 @media (max-width: 1100px) {
-    .od-body { grid-template-columns: 1fr; }
+    .od-body {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 960px) {
-    .od-layout { grid-template-columns: 1fr; }
+    .od-layout {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 760px) {
-    .od-layout { padding-left: 16px; padding-right: 16px; }
-    .od-head { flex-direction: column; align-items: flex-start; }
+    .od-layout {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    .od-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 </style>

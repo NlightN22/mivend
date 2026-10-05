@@ -12,20 +12,25 @@ const style = computed(() => resolveDocumentTypeStyle(props.type));
 </script>
 
 <template>
-  <MvStatusBadge :variant="style.variant" class="mv-document-type-chip">
-    <component :is="style.icon" class="mv-document-type-chip__icon" :size="14" :stroke-width="2" />
-    {{ type }}
-  </MvStatusBadge>
+    <MvStatusBadge :variant="style.variant" class="mv-document-type-chip">
+        <component
+            :is="style.icon"
+            class="mv-document-type-chip__icon"
+            :size="14"
+            :stroke-width="2"
+        />
+        {{ type }}
+    </MvStatusBadge>
 </template>
 
 <style scoped>
 .mv-document-type-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .mv-document-type-chip__icon {
-  flex-shrink: 0;
+    flex-shrink: 0;
 }
 </style>

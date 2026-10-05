@@ -7,7 +7,19 @@ import ProductListView from '../../components/ProductListView.vue';
 import ProductScrollRow from '../../components/ProductScrollRow.vue';
 
 const authStore = useAuthStore();
-const { items, totalItems, loading, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, load, loadMore } = useProductList({ pageSize: 24 });
+const {
+    items,
+    totalItems,
+    loading,
+    loadingMore,
+    hasMore,
+    viewMode,
+    setViewMode,
+    sortKey,
+    sortOptions,
+    load,
+    loadMore,
+} = useProductList({ pageSize: 24 });
 
 const newArrivals = useWidgetProducts('new-arrivals');
 const sales = useWidgetProducts('sales');
@@ -42,9 +54,11 @@ onMounted(() => {
             <div class="home-page__header">
                 <h2 class="home-page__title">Full catalog</h2>
                 <p class="home-page__subtitle">
-                    {{ authStore.isLoggedIn
-                        ? 'Current stock and prices for your trading point'
-                        : 'Log in to see prices and stock' }}
+                    {{
+                        authStore.isLoggedIn
+                            ? 'Current stock and prices for your trading point'
+                            : 'Log in to see prices and stock'
+                    }}
                 </p>
             </div>
             <ProductListView
@@ -73,7 +87,9 @@ onMounted(() => {
     padding: 24px 28px 56px;
 }
 
-.home-page__header { margin-bottom: 4px; }
+.home-page__header {
+    margin-bottom: 4px;
+}
 
 .home-page__title {
     margin: 0 0 6px;
@@ -90,6 +106,9 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-    .home-page { padding-left: 16px; padding-right: 16px; }
+    .home-page {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
 }
 </style>

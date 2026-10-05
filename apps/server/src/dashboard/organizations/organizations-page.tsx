@@ -83,7 +83,11 @@ export function OrganizationsPage() {
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge variant={org.hasCompleteRequisites ? 'secondary' : 'outline'}>
+                                    <Badge
+                                        variant={
+                                            org.hasCompleteRequisites ? 'secondary' : 'outline'
+                                        }
+                                    >
                                         {org.hasCompleteRequisites ? 'Yes' : 'No'}
                                     </Badge>
                                 </TableCell>

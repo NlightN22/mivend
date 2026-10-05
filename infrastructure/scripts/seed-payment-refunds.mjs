@@ -21,7 +21,11 @@ const API_URL = `http://localhost:${process.env.PORT ?? '3000'}/admin-api`;
 async function gql(query, variables, token) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(API_URL, { method: 'POST', headers, body: JSON.stringify({ query, variables }) });
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query, variables }),
+    });
     const json = await res.json();
     if (json.errors) throw new Error(json.errors[0].message);
     return json.data;
@@ -50,9 +54,27 @@ async function login(username, password) {
 // recently captured online-acquiring payments (oldest scenario first, capped by however many
 // real payments actually exist).
 const SCENARIOS = [
-    { kind: 'refund', fraction: 1, providerRefundId: '48213077', status: 'succeeded', reason: 'Customer requested full refund — order canceled before shipment' },
-    { kind: 'refund', fraction: 0.3, providerRefundId: '48213108', status: 'succeeded', reason: 'Partial refund — one line item returned' },
-    { kind: 'refund', fraction: 0.5, providerRefundId: '48213142', status: 'pending', reason: 'Refund requested, awaiting acquirer confirmation' },
+    {
+        kind: 'refund',
+        fraction: 1,
+        providerRefundId: '48213077',
+        status: 'succeeded',
+        reason: 'Customer requested full refund — order canceled before shipment',
+    },
+    {
+        kind: 'refund',
+        fraction: 0.3,
+        providerRefundId: '48213108',
+        status: 'succeeded',
+        reason: 'Partial refund — one line item returned',
+    },
+    {
+        kind: 'refund',
+        fraction: 0.5,
+        providerRefundId: '48213142',
+        status: 'pending',
+        reason: 'Refund requested, awaiting acquirer confirmation',
+    },
     { kind: 'dispute', type: 'chargeback', status: 'opened', reason: 'chargeback' },
     { kind: 'dispute', type: 'dispute', status: 'won', reason: 'dispute' },
 ];
@@ -69,7 +91,9 @@ async function main() {
     );
 
     if (payments.length === 0) {
-        console.log('No captured online-acquiring payments found yet — nothing to seed. Run a checkout with the online-stub payment method first, then re-run this script.');
+        console.log(
+            'No captured online-acquiring payments found yet — nothing to seed. Run a checkout with the online-stub payment method first, then re-run this script.',
+        );
         return;
     }
 
@@ -92,10 +116,18 @@ async function main() {
                 `mutation($paymentId: ID!, $amount: Int!, $reason: String!, $providerRefundId: String, $status: String) {
                     recordPaymentRefund(paymentId: $paymentId, amount: $amount, reason: $reason, providerRefundId: $providerRefundId, status: $status) { id }
                 }`,
-                { paymentId: payment.id, amount, reason: scenario.reason, providerRefundId: scenario.providerRefundId, status: scenario.status },
+                {
+                    paymentId: payment.id,
+                    amount,
+                    reason: scenario.reason,
+                    providerRefundId: scenario.providerRefundId,
+                    status: scenario.status,
+                },
                 token,
             );
-            console.log(`✔ Refund on payment ${payment.id}: ${(amount / 100).toFixed(2)} ${payment.currencyCode} (${scenario.status})`);
+            console.log(
+                `✔ Refund on payment ${payment.id}: ${(amount / 100).toFixed(2)} ${payment.currencyCode} (${scenario.status})`,
+            );
         } else {
             const { paymentDisputeExists: exists } = await gql(
                 `query($paymentId: ID!, $type: String!) { paymentDisputeExists(paymentId: $paymentId, type: $type) }`,
@@ -103,14 +135,21 @@ async function main() {
                 token,
             );
             if (exists) {
-                console.log(`… ${scenario.type} on payment ${payment.id} already seeded, skipping.`);
+                console.log(
+                    `… ${scenario.type} on payment ${payment.id} already seeded, skipping.`,
+                );
                 continue;
             }
             await gql(
                 `mutation($paymentId: ID!, $type: String!, $amount: Int!, $status: String) {
                     recordPaymentDispute(paymentId: $paymentId, type: $type, amount: $amount, status: $status) { id }
                 }`,
-                { paymentId: payment.id, type: scenario.type, amount: payment.amount, status: scenario.status },
+                {
+                    paymentId: payment.id,
+                    type: scenario.type,
+                    amount: payment.amount,
+                    status: scenario.status,
+                },
                 token,
             );
             console.log(`✔ ${scenario.type} on payment ${payment.id} (${scenario.status})`);

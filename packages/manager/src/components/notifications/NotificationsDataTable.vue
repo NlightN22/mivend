@@ -11,7 +11,10 @@ import {
     type StatusBadgeVariant,
 } from '@mivend/ui-kit';
 import type { NotificationItem } from '@mivend/ui-kit';
-import { NOTIFICATION_STATUS_OPTIONS, NOTIFICATION_STATUS_BADGE_VARIANT } from '../../api/notifications';
+import {
+    NOTIFICATION_STATUS_OPTIONS,
+    NOTIFICATION_STATUS_BADGE_VARIANT,
+} from '../../api/notifications';
 
 // See manager-table-standard skill. `title` is the identifying/required column (what a user
 // searches by first for a notification), backed by the backend's real `search` filter (title
@@ -59,12 +62,19 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
             options: NOTIFICATION_STATUS_OPTIONS.filter(o => o.value).map(o => ({
                 value: o.value,
                 label: o.label,
-                variant: NOTIFICATION_STATUS_BADGE_VARIANT[o.value as 'unread' | 'read' | 'resolved'],
+                variant:
+                    NOTIFICATION_STATUS_BADGE_VARIANT[o.value as 'unread' | 'read' | 'resolved'],
             })),
         },
         mobile: { badge: true },
     },
-    { field: 'sourceType', header: 'Source', width: 180, filterConfig: { type: 'none' }, mobile: { hidden: true } },
+    {
+        field: 'sourceType',
+        header: 'Source',
+        width: 180,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
     { field: 'message', header: 'Message', width: 320, filterConfig: { type: 'none' } },
     { field: 'actions', header: '', width: 200, filterConfig: { type: 'none' } },
 ];
@@ -88,7 +98,9 @@ const { state: tableState } = useDataTableState<NotificationFilterState>(
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
         externallyOwned: { pageSize: true, filterKeys: ['status', 'title'] },
     },
 );
@@ -98,16 +110,28 @@ watch(
     f => emit('update:filters', { status: f.status, search: f.title }),
     { deep: true },
 );
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
-watch(() => props.statusFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, status: v };
-});
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, title: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
+watch(
+    () => props.statusFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, status: v };
+    },
+);
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, title: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 interface NotificationRow {
     [key: string]: unknown;
@@ -179,10 +203,15 @@ function confirmResolve(id: string): void {
             </MvStatusBadge>
         </template>
         <template #cell-message="{ data }">
-            <span class="notifications-data-table__message">{{ (data as NotificationRow).message }}</span>
+            <span class="notifications-data-table__message">{{
+                (data as NotificationRow).message
+            }}</span>
         </template>
         <template #cell-actions="{ data }">
-            <div v-if="resolvingId !== (data as NotificationRow).id" class="notifications-data-table__actions">
+            <div
+                v-if="resolvingId !== (data as NotificationRow).id"
+                class="notifications-data-table__actions"
+            >
                 <button
                     v-if="(data as NotificationRow).status === 'unread'"
                     type="button"

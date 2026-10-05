@@ -22,7 +22,11 @@ import { fetchPendingApprovalsBadgeCount } from '../api/approvals';
 import { useNotificationsStore } from '../stores/notifications';
 
 const notificationsStore = useNotificationsStore();
-const { notifications, unreadCount, loading: notificationsLoading } = storeToRefs(notificationsStore);
+const {
+    notifications,
+    unreadCount,
+    loading: notificationsLoading,
+} = storeToRefs(notificationsStore);
 const { markRead, resolve } = notificationsStore;
 const notificationPanelOpen = ref(false);
 
@@ -36,7 +40,9 @@ const moreSheetOpen = ref(false);
 const onCustomerOrdersTab = computed(
     () => route.path.startsWith('/customers/') && route.query.tab === 'orders',
 );
-const showCreateOrderFab = computed(() => route.path.startsWith('/orders') || onCustomerOrdersTab.value);
+const showCreateOrderFab = computed(
+    () => route.path.startsWith('/orders') || onCustomerOrdersTab.value,
+);
 const createOrderFabTarget = computed(() => {
     if (onCustomerOrdersTab.value) {
         const customerId = route.params.id;
@@ -56,12 +62,17 @@ const approvalsBadgeCount = ref(0);
 // real page so far, the rest route to a shared "coming soon" placeholder (see router/index.ts)
 // until they're built out one at a time.
 const menuItems = computed<AppSidebarItem[]>(() => {
-    const items: AppSidebarItem[] = [{ label: 'Dashboard', path: '/' }, { label: 'Orders', path: '/orders' }];
+    const items: AppSidebarItem[] = [
+        { label: 'Dashboard', path: '/' },
+        { label: 'Orders', path: '/orders' },
+    ];
     // Gated on the same CustomPermission.ReadInvoice/ReadPayment the visibleInvoices/
     // visiblePayments queries themselves check — see AdminInvoiceVisibilityResolver/
     // AdminPaymentVisibilityResolver.
-    if (authStore.hasPermission('ReadInvoice')) items.push({ label: 'Invoices', path: '/invoices' });
-    if (authStore.hasPermission('ReadPayment')) items.push({ label: 'Payments', path: '/payments' });
+    if (authStore.hasPermission('ReadInvoice'))
+        items.push({ label: 'Invoices', path: '/invoices' });
+    if (authStore.hasPermission('ReadPayment'))
+        items.push({ label: 'Payments', path: '/payments' });
     items.push(
         { label: 'Customers', path: '/customers' },
         { label: 'Catalog', path: '/catalog' },
@@ -105,8 +116,10 @@ const mobileNavItems = computed<AppMobileNavItem[]>(() => [
 // route the current admin's permissions would just have the underlying query/mutation reject.
 const moreSheetItems = computed<AppMobileSheetItem[]>(() => {
     const items: AppMobileSheetItem[] = [];
-    if (authStore.hasPermission('ReadInvoice')) items.push({ key: 'invoices', label: 'Invoices', path: '/invoices' });
-    if (authStore.hasPermission('ReadPayment')) items.push({ key: 'payments', label: 'Payments', path: '/payments' });
+    if (authStore.hasPermission('ReadInvoice'))
+        items.push({ key: 'invoices', label: 'Invoices', path: '/invoices' });
+    if (authStore.hasPermission('ReadPayment'))
+        items.push({ key: 'payments', label: 'Payments', path: '/payments' });
     items.push(
         { key: 'catalog', label: 'Catalog', path: '/catalog' },
         { key: 'discounts', label: 'Discounts', path: '/discounts' },
@@ -125,7 +138,6 @@ onMounted(async () => {
         approvalsBadgeCount.value = 0;
     }
 });
-
 
 async function handleLogout(): Promise<void> {
     await authStore.logout();
@@ -186,12 +198,18 @@ function handleRelogin(): void {
                 @mark-read="markRead"
                 @resolve="resolve"
                 @close="notificationPanelOpen = false"
-                @view-all="notificationPanelOpen = false; router.push('/notifications')"
+                @view-all="
+                    notificationPanelOpen = false;
+                    router.push('/notifications');
+                "
             />
         </div>
         <div class="layout__body">
             <MvAppSidebar :items="menuItems" section-title="Workspace" />
-            <main class="layout__content" :class="{ 'layout__content--with-fab': showCreateOrderFab }">
+            <main
+                class="layout__content"
+                :class="{ 'layout__content--with-fab': showCreateOrderFab }"
+            >
                 <MvNotice
                     v-if="authStore.isDefaultSuperadminAccount"
                     variant="warning"
@@ -205,7 +223,11 @@ function handleRelogin(): void {
             </main>
         </div>
 
-        <MvAppMobileNav :items="mobileNavItems" :active-path="route.path" @select-more="moreSheetOpen = true" />
+        <MvAppMobileNav
+            :items="mobileNavItems"
+            :active-path="route.path"
+            @select-more="moreSheetOpen = true"
+        />
         <MvAppMobileMoreSheet
             :open="moreSheetOpen"
             :items="moreSheetItems"

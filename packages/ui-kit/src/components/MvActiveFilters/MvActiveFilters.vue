@@ -15,7 +15,12 @@ const emit = defineEmits<{ remove: [key: string]; clear: [] }>();
 
 <template>
     <div v-if="chips.length" class="mv-active-filters" role="group">
-        <span v-for="chip in chips" :key="chip.key" class="mv-active-filters__chip" :title="chip.label">
+        <span
+            v-for="chip in chips"
+            :key="chip.key"
+            class="mv-active-filters__chip"
+            :title="chip.label"
+        >
             <span class="mv-active-filters__label">{{ chip.label }}</span>
             <button
                 type="button"
@@ -82,7 +87,9 @@ const emit = defineEmits<{ remove: [key: string]; clear: [] }>();
     cursor: pointer;
 }
 
-.mv-active-filters__remove:hover { background: rgba(0, 113, 90, 0.15); }
+.mv-active-filters__remove:hover {
+    background: rgba(0, 113, 90, 0.15);
+}
 
 .mv-active-filters__clear {
     padding: 0 12px 0 8px;
@@ -92,7 +99,9 @@ const emit = defineEmits<{ remove: [key: string]; clear: [] }>();
     cursor: pointer;
 }
 
-.mv-active-filters__clear:hover { background: var(--el-fill-color-light, #f8fafc); }
+.mv-active-filters__clear:hover {
+    background: var(--el-fill-color-light, #f8fafc);
+}
 
 .mv-active-filters__remove:focus-visible,
 .mv-active-filters__clear:focus-visible {

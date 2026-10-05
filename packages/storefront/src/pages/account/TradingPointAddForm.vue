@@ -33,7 +33,11 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
             </label>
             <label class="tp-field tp-field--wide">
                 <span>Delivery comment</span>
-                <textarea v-model="model.deliveryComment" rows="2" placeholder="Gate code, entry from rear, etc." />
+                <textarea
+                    v-model="model.deliveryComment"
+                    rows="2"
+                    placeholder="Gate code, entry from rear, etc."
+                />
             </label>
         </div>
         <div class="tp-add-actions">
@@ -41,7 +45,9 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
                 class="tp-btn tp-btn--primary"
                 :disabled="saving || !model.name || !model.address"
                 @click="emit('submit')"
-            >{{ saving ? 'Saving…' : 'Add point' }}</button>
+            >
+                {{ saving ? 'Saving…' : 'Add point' }}
+            </button>
             <button class="tp-btn tp-btn--ghost" @click="emit('cancel')">Cancel</button>
         </div>
     </div>
@@ -79,7 +85,9 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
     color: #66736e;
 }
 
-.tp-field--wide { grid-column: 1 / -1; }
+.tp-field--wide {
+    grid-column: 1 / -1;
+}
 
 .tp-field input,
 .tp-field textarea {
@@ -98,7 +106,10 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
     box-shadow: 0 0 0 3px rgba(0, 168, 120, 0.1);
 }
 
-.tp-add-actions { display: flex; gap: 8px; }
+.tp-add-actions {
+    display: flex;
+    gap: 8px;
+}
 
 .tp-btn {
     border: 0;
@@ -111,12 +122,26 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
     white-space: nowrap;
     transition: 0.14s ease;
 }
-.tp-btn--primary { background: #00a878; color: #fff; }
-.tp-btn--ghost { background: #f3f8f6; color: #263732; border: 1px solid #dde7e2; }
-.tp-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.tp-btn--primary {
+    background: #00a878;
+    color: #fff;
+}
+.tp-btn--ghost {
+    background: #f3f8f6;
+    color: #263732;
+    border: 1px solid #dde7e2;
+}
+.tp-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
 @media (max-width: 960px) {
-    .tp-form { grid-template-columns: 1fr; }
-    .tp-field--wide { grid-column: auto; }
+    .tp-form {
+        grid-template-columns: 1fr;
+    }
+    .tp-field--wide {
+        grid-column: auto;
+    }
 }
 </style>

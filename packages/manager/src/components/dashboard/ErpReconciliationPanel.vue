@@ -34,7 +34,9 @@ async function handleRunNow(): Promise<void> {
             <MvButton size="sm" variant="secondary" :loading="running" @click="handleRunNow">
                 Run reconciliation now
             </MvButton>
-            <span v-if="lastRunSummary" class="erp-reconciliation__summary">{{ lastRunSummary }}</span>
+            <span v-if="lastRunSummary" class="erp-reconciliation__summary">{{
+                lastRunSummary
+            }}</span>
             <span v-if="runError" class="erp-reconciliation__error">{{ runError }}</span>
         </div>
 

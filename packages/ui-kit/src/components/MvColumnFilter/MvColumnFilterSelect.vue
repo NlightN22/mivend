@@ -15,7 +15,9 @@ function onDocClick(e: MouseEvent): void {
 onMounted(() => document.addEventListener('click', onDocClick));
 onBeforeUnmount(() => document.removeEventListener('click', onDocClick));
 
-const selectedLabel = computed(() => props.config.options.find(o => o.value === props.modelValue)?.label);
+const selectedLabel = computed(
+    () => props.config.options.find(o => o.value === props.modelValue)?.label,
+);
 
 function select(value: string): void {
     emit('update:modelValue', value);

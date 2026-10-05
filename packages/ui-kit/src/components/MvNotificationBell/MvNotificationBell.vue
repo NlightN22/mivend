@@ -31,7 +31,9 @@ defineEmits<{ click: [] }>();
     background: var(--app-surface, #fff);
     color: var(--el-text-color-primary, #17212b);
     cursor: pointer;
-    transition: background 0.14s, color 0.14s;
+    transition:
+        background 0.14s,
+        color 0.14s;
 }
 
 .mv-notification-bell:hover {

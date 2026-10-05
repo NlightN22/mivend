@@ -41,7 +41,11 @@ const emit = defineEmits<{ select: [key: string] }>();
             class="mv-filter-chip"
             :class="[
                 chip.variant ? `mv-filter-chip--${chip.variant}` : '',
-                chip.key === active ? (chip.variant ? 'mv-filter-chip--selected' : 'mv-filter-chip--active') : '',
+                chip.key === active
+                    ? chip.variant
+                        ? 'mv-filter-chip--selected'
+                        : 'mv-filter-chip--active'
+                    : '',
             ]"
             @click="emit('select', chip.key)"
         >

@@ -5,7 +5,7 @@ import { useCartStore, type CartLine } from '../../stores/cart';
 const cartStore = useCartStore();
 
 function getBrand(line: CartLine): string {
-    const bv = line.productVariant.product.facetValues.find((fv) => fv.facet.code === 'brand');
+    const bv = line.productVariant.product.facetValues.find(fv => fv.facet.code === 'brand');
     return bv?.name ?? '';
 }
 
@@ -33,7 +33,8 @@ const totalQty = computed(() => cartStore.itemCount);
                 <div class="checkout-items__info">
                     <div class="checkout-items__name">{{ line.productVariant.product.name }}</div>
                     <div class="checkout-items__meta">
-                        {{ getBrand(line) ? getBrand(line) + ' · ' : '' }}{{ line.quantity }} pcs. · {{ line.productVariant.sku }}
+                        {{ getBrand(line) ? getBrand(line) + ' · ' : '' }}{{ line.quantity }} pcs. ·
+                        {{ line.productVariant.sku }}
                     </div>
                 </div>
                 <div class="checkout-items__sum">{{ formatPrice(line.linePriceWithTax) }}</div>
@@ -85,7 +86,10 @@ const totalQty = computed(() => cartStore.itemCount);
     flex: 0 0 auto;
 }
 
-.checkout-items__list { display: grid; gap: 8px; }
+.checkout-items__list {
+    display: grid;
+    gap: 8px;
+}
 
 .checkout-items__row {
     min-height: 68px;
@@ -130,7 +134,11 @@ const totalQty = computed(() => cartStore.itemCount);
 }
 
 @media (max-width: 900px) {
-    .checkout-items__row { grid-template-columns: 52px minmax(0, 1fr); }
-    .checkout-items__sum { grid-column: 2; }
+    .checkout-items__row {
+        grid-template-columns: 52px minmax(0, 1fr);
+    }
+    .checkout-items__sum {
+        grid-column: 2;
+    }
 }
 </style>

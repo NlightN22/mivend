@@ -56,7 +56,10 @@ onMounted(() => {
 
 <template>
     <div
-        v-if="!authStore.hasPermission('ManageAccessControl') && !authStore.hasPermission('ManageErpIntegration')"
+        v-if="
+            !authStore.hasPermission('ManageAccessControl') &&
+            !authStore.hasPermission('ManageErpIntegration')
+        "
         class="system-health-page__not-authorized"
     >
         <h1>Not authorized</h1>
@@ -70,7 +73,10 @@ onMounted(() => {
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
-        <MvPanel v-if="authStore.hasPermission('ManageAccessControl') && !loading" title="Store setup checklist">
+        <MvPanel
+            v-if="authStore.hasPermission('ManageAccessControl') && !loading"
+            title="Store setup checklist"
+        >
             <ul class="system-health-page__items">
                 <li v-for="item in checklist" :key="item.id" class="system-health-page__row">
                     <div class="system-health-page__row-main">

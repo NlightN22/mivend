@@ -77,11 +77,23 @@ const columns = computed<Column<TableRow>[]>(() => {
             mobile: { badge: true },
         },
         { key: 'total', title: 'Total amount', dataKey: 'total', width: 130, align: 'right' },
-        { key: 'date', title: 'Date created', dataKey: 'date', width: 140, mobile: { hidden: true } },
+        {
+            key: 'date',
+            title: 'Date created',
+            dataKey: 'date',
+            width: 140,
+            mobile: { hidden: true },
+        },
         { key: 'branch', title: 'Branch', dataKey: 'branch', width: 140, mobile: { hidden: true } },
         // Real signal, not decorative: derived above from actual approval-workflow/order-state
         // data (isWaitingApproval / isOverdue), not a fabricated "next action" concept.
-        { key: 'attention', title: 'Attention', dataKey: 'attention', width: 180, mobile: { highlight: true } },
+        {
+            key: 'attention',
+            title: 'Attention',
+            dataKey: 'attention',
+            width: 180,
+            mobile: { highlight: true },
+        },
         {
             key: 'action',
             title: '',
@@ -118,7 +130,9 @@ const rows = computed<TableRow[]>(() =>
         return {
             code: order.code,
             customer: counterparty?.shortName ?? '—',
-            customerMeta: counterparty ? `INN ${counterparty.inn ?? '—'} · ${counterparty.priceType}` : '',
+            customerMeta: counterparty
+                ? `INN ${counterparty.inn ?? '—'} · ${counterparty.priceType}`
+                : '',
             manager: managerName(order.customer?.counterparty?.assignedManagerId),
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
             stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
@@ -128,7 +142,11 @@ const rows = computed<TableRow[]>(() =>
             }).format(order.totalWithTax / 100),
             date: new Date(order.createdAt).toLocaleDateString('en-US'),
             branch: branchName(counterparty?.branchId),
-            attention: isWaitingApproval ? 'Price limit exceeded' : isOverdue ? 'Shipment overdue' : '',
+            attention: isWaitingApproval
+                ? 'Price limit exceeded'
+                : isOverdue
+                  ? 'Shipment overdue'
+                  : '',
         };
     }),
 );

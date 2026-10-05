@@ -18,8 +18,14 @@ const emit = defineEmits<{
          Fades signal "more content this way"; arrows are a click-to-scroll shortcut on top of the
          native scroll, not a replacement for it — both share the same left/right visibility so
          nothing shows once there's nothing left to scroll to. -->
-    <div v-if="canScrollLeft" class="mv-scroll-fade-overlay__fade mv-scroll-fade-overlay__fade--left" />
-    <div v-if="canScrollRight" class="mv-scroll-fade-overlay__fade mv-scroll-fade-overlay__fade--right" />
+    <div
+        v-if="canScrollLeft"
+        class="mv-scroll-fade-overlay__fade mv-scroll-fade-overlay__fade--left"
+    />
+    <div
+        v-if="canScrollRight"
+        class="mv-scroll-fade-overlay__fade mv-scroll-fade-overlay__fade--right"
+    />
     <MvRoundIconButton
         v-if="canScrollLeft"
         :size="32"

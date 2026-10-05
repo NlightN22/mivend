@@ -11,5 +11,8 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 </script>
 
 <template>
-    <MvDatePicker :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" />
+    <MvDatePicker
+        :model-value="modelValue"
+        @update:model-value="emit('update:modelValue', $event)"
+    />
 </template>

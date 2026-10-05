@@ -76,7 +76,10 @@ onMounted(loadAll);
 </script>
 
 <template>
-    <div v-if="!authStore.hasPermission('ManageAccessControl')" class="organizations-page__not-authorized">
+    <div
+        v-if="!authStore.hasPermission('ManageAccessControl')"
+        class="organizations-page__not-authorized"
+    >
         <h1>Not authorized</h1>
         <p>You don't have permission to view organizations.</p>
     </div>
@@ -91,8 +94,8 @@ onMounted(loadAll);
         <MvPanel title="Legal entities">
             <template #subheader>
                 <p class="organizations-page__description">
-                    Read-only view of the business's own legal entities as reported by the ERP,
-                    and whether full legal requisites have arrived yet for each one.
+                    Read-only view of the business's own legal entities as reported by the ERP, and
+                    whether full legal requisites have arrived yet for each one.
                 </p>
             </template>
 

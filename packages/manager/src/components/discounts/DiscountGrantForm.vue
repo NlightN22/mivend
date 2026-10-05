@@ -70,12 +70,23 @@ watch(
 
 async function submit(): Promise<void> {
     error.value = '';
-    if (!form.priceTypeCode || !form.percent || !form.validFrom || !form.validTo || !form.justification.trim()) {
+    if (
+        !form.priceTypeCode ||
+        !form.percent ||
+        !form.validFrom ||
+        !form.validTo ||
+        !form.justification.trim()
+    ) {
         error.value = 'Please fill in all required fields';
         return;
     }
-    if (isRenewal.value && props.renewFrom?.justification && form.justification.trim() === props.renewFrom.justification.trim()) {
-        error.value = "Explain why this is being renewed — don't just repeat the previous justification";
+    if (
+        isRenewal.value &&
+        props.renewFrom?.justification &&
+        form.justification.trim() === props.renewFrom.justification.trim()
+    ) {
+        error.value =
+            "Explain why this is being renewed — don't just repeat the previous justification";
         return;
     }
     submitting.value = true;
@@ -116,7 +127,10 @@ async function submit(): Promise<void> {
                 Price type
                 <MvSelect
                     :model-value="form.priceTypeCode"
-                    :options="[{ value: '', label: 'Select a price type' }, ...priceTypes.map(p => ({ value: p, label: p }))]"
+                    :options="[
+                        { value: '', label: 'Select a price type' },
+                        ...priceTypes.map(p => ({ value: p, label: p })),
+                    ]"
                     @update:model-value="form.priceTypeCode = $event"
                 />
             </label>
@@ -124,7 +138,10 @@ async function submit(): Promise<void> {
                 Product group / facet
                 <MvSelect
                     :model-value="form.facetCode"
-                    :options="[{ value: '', label: 'All products' }, ...facets.map(f => ({ value: f.code, label: f.name }))]"
+                    :options="[
+                        { value: '', label: 'All products' },
+                        ...facets.map(f => ({ value: f.code, label: f.name })),
+                    ]"
                     @update:model-value="form.facetCode = $event"
                 />
             </label>
@@ -138,15 +155,30 @@ async function submit(): Promise<void> {
             </label>
             <label>
                 Discount % (negative = markup)
-                <MvInput size="sm" type="number" :model-value="form.percent" @update:model-value="form.percent = $event" />
+                <MvInput
+                    size="sm"
+                    type="number"
+                    :model-value="form.percent"
+                    @update:model-value="form.percent = $event"
+                />
             </label>
             <label>
                 Valid from
-                <MvInput size="sm" type="date" :model-value="form.validFrom" @update:model-value="form.validFrom = $event" />
+                <MvInput
+                    size="sm"
+                    type="date"
+                    :model-value="form.validFrom"
+                    @update:model-value="form.validFrom = $event"
+                />
             </label>
             <label>
                 Valid to
-                <MvInput size="sm" type="date" :model-value="form.validTo" @update:model-value="form.validTo = $event" />
+                <MvInput
+                    size="sm"
+                    type="date"
+                    :model-value="form.validTo"
+                    @update:model-value="form.validTo = $event"
+                />
             </label>
         </div>
 
@@ -175,7 +207,9 @@ async function submit(): Promise<void> {
 
         <div class="discount-grant-form__actions">
             <MvButton :loading="submitting" @click="submit">Submit for approval</MvButton>
-            <button type="button" class="discount-grant-form__cancel" @click="emit('cancel')">Cancel</button>
+            <button type="button" class="discount-grant-form__cancel" @click="emit('cancel')">
+                Cancel
+            </button>
         </div>
     </div>
 </template>

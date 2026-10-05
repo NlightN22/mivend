@@ -67,7 +67,11 @@ async function onRowClick(item: NotificationItem): Promise<void> {
 
 function formatDate(iso: string): string {
     return (
-        new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+        new Date(iso).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        }) +
         ' · ' +
         new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
     );
@@ -83,7 +87,9 @@ void load();
         <section class="account-notifications-page__content">
             <div class="account-notifications-page__head">
                 <h1 class="account-notifications-page__title">Notifications</h1>
-                <p class="account-notifications-page__subtitle">All your notifications, newest first.</p>
+                <p class="account-notifications-page__subtitle">
+                    All your notifications, newest first.
+                </p>
             </div>
 
             <div class="account-notifications-page__toolbar">
@@ -94,8 +100,13 @@ void load();
                         :key="f.key"
                         type="button"
                         class="account-notifications-page__filter"
-                        :class="{ 'account-notifications-page__filter--active': activeStatus === f.key }"
-                        @click="activeStatus = f.key; page = 1"
+                        :class="{
+                            'account-notifications-page__filter--active': activeStatus === f.key,
+                        }"
+                        @click="
+                            activeStatus = f.key;
+                            page = 1;
+                        "
                     >
                         {{ f.label }}
                     </button>
@@ -107,14 +118,21 @@ void load();
                 No notifications found.
             </div>
             <template v-else>
-                <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+                <MvPagination
+                    :page="page"
+                    :page-size="PAGE_SIZE"
+                    :total="totalItems"
+                    @update:page="page = $event"
+                />
                 <div class="account-notifications-page__list">
                     <button
                         v-for="n in notifications"
                         :key="n.id"
                         type="button"
                         class="account-notifications-page__row"
-                        :class="{ 'account-notifications-page__row--unread': n.status === 'unread' }"
+                        :class="{
+                            'account-notifications-page__row--unread': n.status === 'unread',
+                        }"
                         @click="onRowClick(n)"
                     >
                         <span
@@ -123,14 +141,23 @@ void load();
                         />
                         <div class="account-notifications-page__body">
                             <div class="account-notifications-page__row-header">
-                                <span class="account-notifications-page__row-title">{{ n.title }}</span>
-                                <span class="account-notifications-page__row-time">{{ formatDate(n.createdAt) }}</span>
+                                <span class="account-notifications-page__row-title">{{
+                                    n.title
+                                }}</span>
+                                <span class="account-notifications-page__row-time">{{
+                                    formatDate(n.createdAt)
+                                }}</span>
                             </div>
                             <p class="account-notifications-page__row-message">{{ n.message }}</p>
                         </div>
                     </button>
                 </div>
-                <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+                <MvPagination
+                    :page="page"
+                    :page-size="PAGE_SIZE"
+                    :total="totalItems"
+                    @update:page="page = $event"
+                />
             </template>
         </section>
     </div>
@@ -241,10 +268,18 @@ void load();
     margin-top: 6px;
 }
 
-.account-notifications-page__indicator--info { background: #00a878; }
-.account-notifications-page__indicator--success { background: #10b981; }
-.account-notifications-page__indicator--warning { background: #ff8a00; }
-.account-notifications-page__indicator--error { background: #ef4444; }
+.account-notifications-page__indicator--info {
+    background: #00a878;
+}
+.account-notifications-page__indicator--success {
+    background: #10b981;
+}
+.account-notifications-page__indicator--warning {
+    background: #ff8a00;
+}
+.account-notifications-page__indicator--error {
+    background: #ef4444;
+}
 
 .account-notifications-page__body {
     flex: 1;

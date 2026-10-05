@@ -7,11 +7,21 @@ defineProps<{ events: FailedIntegrationInboxEvent[] }>();
 
 <template>
     <ul class="integration-inbox-errors">
-        <li v-if="!events.length" class="integration-inbox-errors__empty">No failed inbox events</li>
-        <li v-for="event in events.slice(0, 5)" :key="event.id" class="integration-inbox-errors__item">
+        <li v-if="!events.length" class="integration-inbox-errors__empty">
+            No failed inbox events
+        </li>
+        <li
+            v-for="event in events.slice(0, 5)"
+            :key="event.id"
+            class="integration-inbox-errors__item"
+        >
             <div class="integration-inbox-errors__main">
-                <span class="integration-inbox-errors__stream">{{ event.stream }} · {{ event.entityId }}</span>
-                <span class="integration-inbox-errors__error">{{ event.lastError ?? 'No error message recorded' }}</span>
+                <span class="integration-inbox-errors__stream"
+                    >{{ event.stream }} · {{ event.entityId }}</span
+                >
+                <span class="integration-inbox-errors__error">{{
+                    event.lastError ?? 'No error message recorded'
+                }}</span>
             </div>
             <MvStatusBadge variant="danger">{{ event.attempts }} attempts</MvStatusBadge>
         </li>

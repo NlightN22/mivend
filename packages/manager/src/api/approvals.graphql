@@ -45,10 +45,7 @@ query ApprovalsInbox(
     $awaitingOptions: ApprovalListOptions
     $allInvolvedOptions: ApprovalListOptions
 ) {
-    myApprovalsInbox(
-        awaitingOptions: $awaitingOptions
-        allInvolvedOptions: $allInvolvedOptions
-    ) {
+    myApprovalsInbox(awaitingOptions: $awaitingOptions, allInvolvedOptions: $allInvolvedOptions) {
         awaitingMyDecision {
             ...ApprovalRequestPageFields
         }

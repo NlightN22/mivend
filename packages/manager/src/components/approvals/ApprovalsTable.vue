@@ -32,10 +32,14 @@ const columns = computed<Column<TableRow>[]>(() => [
             return h('span', { style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
                 REQUEST_TYPE_LABEL[row.type as string] ?? (row.type as string),
                 row.escalated
-                    ? h(MvTooltip, {}, {
-                          default: () => `Escalated by ${row.escalatedBy as string}`,
-                          trigger: () => h('span', { 'aria-label': 'Escalated' }, '⚠'),
-                      })
+                    ? h(
+                          MvTooltip,
+                          {},
+                          {
+                              default: () => `Escalated by ${row.escalatedBy as string}`,
+                              trigger: () => h('span', { 'aria-label': 'Escalated' }, '⚠'),
+                          },
+                      )
                     : null,
             ]);
         },
@@ -50,8 +54,10 @@ const columns = computed<Column<TableRow>[]>(() => [
         dataKey: 'status',
         width: 120,
         cellRenderer: ({ rowData }) =>
-            h(MvStatusBadge, { variant: statusVariant((rowData as TableRow).status as string) }, () =>
-                (rowData as TableRow).status as string,
+            h(
+                MvStatusBadge,
+                { variant: statusVariant((rowData as TableRow).status as string) },
+                () => (rowData as TableRow).status as string,
             ),
     },
     {

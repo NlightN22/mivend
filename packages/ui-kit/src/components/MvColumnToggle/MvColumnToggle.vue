@@ -90,7 +90,12 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
 
 <template>
     <div ref="rootEl" class="mv-column-toggle">
-        <MvButton size="sm" variant="ghost" :class="{ 'mv-column-toggle__trigger--icon-only': !triggerLabel }" @click="open = !open">
+        <MvButton
+            size="sm"
+            variant="ghost"
+            :class="{ 'mv-column-toggle__trigger--icon-only': !triggerLabel }"
+            @click="open = !open"
+        >
             <slot name="icon" />
             <template v-if="triggerLabel">{{ triggerLabel }}</template>
         </MvButton>
@@ -116,7 +121,11 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
                     @drop="onDrop(col.key)"
                     @click="onRowClick(col)"
                 >
-                    <Rank v-if="reorderable" class="mv-column-toggle__handle" :class="{ 'mv-column-toggle__handle--disabled': col.required }" />
+                    <Rank
+                        v-if="reorderable"
+                        class="mv-column-toggle__handle"
+                        :class="{ 'mv-column-toggle__handle--disabled': col.required }"
+                    />
                     <MvCheckbox
                         v-if="!col.required"
                         :model-value="col.visible"
@@ -126,7 +135,9 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
                     <Lock v-else class="mv-column-toggle__pin" />
                     <span>{{ col.label }}</span>
                 </div>
-                <div v-if="filteredColumns.length === 0" class="mv-column-toggle__empty">No matching columns</div>
+                <div v-if="filteredColumns.length === 0" class="mv-column-toggle__empty">
+                    No matching columns
+                </div>
             </div>
 
             <div v-if="showFooter" class="mv-column-toggle__footer">

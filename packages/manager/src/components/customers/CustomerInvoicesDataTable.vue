@@ -10,7 +10,11 @@ import {
     type AdvancedDataTableRowClickPayload,
     type StatusBadgeVariant,
 } from '@mivend/ui-kit';
-import { INVOICE_STATUS_OPTIONS, INVOICE_STATUS_BADGE_VARIANT, type InvoiceListItem } from '../../api/invoices';
+import {
+    INVOICE_STATUS_OPTIONS,
+    INVOICE_STATUS_BADGE_VARIANT,
+    type InvoiceListItem,
+} from '../../api/invoices';
 
 // Second real consumer of @mivend/ui-kit's MvAdvancedDataTable (the standard table for the
 // manager portal — see CustomerOrdersDataTable.vue, the first one, for the fuller feature set).
@@ -93,7 +97,9 @@ const { state: tableState } = useDataTableState<InvoiceFilterState>(
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
         // `status`/`number` (search) and `pageSize` are the tab's own concern, not this table's —
         // it actually owns the fetch. Declaring them here means useDataTableState itself always
         // seeds them from the passed-in `defaults` (the tab's real current prop values), never
@@ -109,23 +115,38 @@ watch(
     f => emit('update:filters', { status: f.status, search: f.number }),
     { deep: true },
 );
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
 
 // Ongoing sync only (the *initial* value is already guaranteed correct by `externallyOwned`
 // above) — the tab's own statusFilter/searchFilter/pageSize can still change later (e.g. the
 // view-chip bar, or the tab's own URL-synced state), and `tableState` must keep following them.
-watch(() => props.statusFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, status: v };
-});
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, number: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => props.statusFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, status: v };
+    },
+);
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, number: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 function money(item: { amount: number; currencyCode: string }): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: item.currencyCode }).format(item.amount / 100);
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: item.currencyCode,
+    }).format(item.amount / 100);
 }
 
 interface InvoiceRow {
@@ -186,7 +207,9 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<InvoiceRow>): void {
             <MvDateTimeCell :value="(data as InvoiceRow).createdAt" />
         </template>
         <template #cell-status="{ data }">
-            <MvStatusBadge :variant="(data as InvoiceRow).statusVariant">{{ (data as InvoiceRow).status }}</MvStatusBadge>
+            <MvStatusBadge :variant="(data as InvoiceRow).statusVariant">{{
+                (data as InvoiceRow).status
+            }}</MvStatusBadge>
         </template>
         <template #cell-order="{ data }">{{ (data as InvoiceRow).orderCode }}</template>
     </MvAdvancedDataTable>

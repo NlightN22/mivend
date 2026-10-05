@@ -42,7 +42,11 @@ const stateConfig: Record<NonNullable<ResultState>, StateConfig> = {
         title: 'Payment failed',
         text: 'Payment not confirmed. You can retry, choose bank invoice, or return to the order.',
         actions: [
-            { label: 'Try again', primary: true, handler: () => checkoutStore.setResultState(null) },
+            {
+                label: 'Try again',
+                primary: true,
+                handler: () => checkoutStore.setResultState(null),
+            },
             { label: 'Generate invoice', handler: () => checkoutStore.setResultState(null) },
             { label: 'Back to order', handler: () => checkoutStore.setResultState(null) },
         ],
@@ -56,9 +60,13 @@ const stateConfig: Record<NonNullable<ResultState>, StateConfig> = {
             <div
                 class="checkout-result__icon"
                 :class="`checkout-result__icon--${stateConfig[checkoutStore.resultState].variant}`"
-            >{{ stateConfig[checkoutStore.resultState].icon }}</div>
+            >
+                {{ stateConfig[checkoutStore.resultState].icon }}
+            </div>
 
-            <div class="checkout-result__title">{{ stateConfig[checkoutStore.resultState].title }}</div>
+            <div class="checkout-result__title">
+                {{ stateConfig[checkoutStore.resultState].title }}
+            </div>
             <p class="checkout-result__text">{{ stateConfig[checkoutStore.resultState].text }}</p>
 
             <div class="checkout-result__actions">
@@ -69,14 +77,19 @@ const stateConfig: Record<NonNullable<ResultState>, StateConfig> = {
                     :class="{ 'checkout-result__btn--primary': action.primary }"
                     type="button"
                     @click="action.handler()"
-                >{{ action.label }}</button>
+                >
+                    {{ action.label }}
+                </button>
             </div>
         </div>
     </div>
 </template>
 
 <style scoped>
-.checkout-result { max-width: 900px; margin: 0 auto; }
+.checkout-result {
+    max-width: 900px;
+    margin: 0 auto;
+}
 
 .checkout-result__card {
     text-align: center;
@@ -150,12 +163,16 @@ const stateConfig: Record<NonNullable<ResultState>, StateConfig> = {
     transition: background 0.15s;
 }
 
-.checkout-result__btn:hover { background: #e8f2ed; }
+.checkout-result__btn:hover {
+    background: #e8f2ed;
+}
 
 .checkout-result__btn--primary {
     background: #00a878;
     color: #fff;
 }
 
-.checkout-result__btn--primary:hover { background: #008a64; }
+.checkout-result__btn--primary:hover {
+    background: #008a64;
+}
 </style>

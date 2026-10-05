@@ -11,7 +11,12 @@ const emit = defineEmits<{ select: [key: string] }>();
 
 <template>
     <ul class="saved-views">
-        <li v-for="view in views" :key="view.key" class="saved-views__item" @click="emit('select', view.key)">
+        <li
+            v-for="view in views"
+            :key="view.key"
+            class="saved-views__item"
+            @click="emit('select', view.key)"
+        >
             <span class="saved-views__name">{{ view.label }}</span>
             <span class="saved-views__count">{{ view.count }}</span>
         </li>

@@ -59,7 +59,13 @@ interface UrlFilters {
     branch: string;
     pageSize: string;
 }
-const URL_FILTER_DEFAULTS: UrlFilters = { status: '', search: '', manager: '', branch: '', pageSize: '20' };
+const URL_FILTER_DEFAULTS: UrlFilters = {
+    status: '',
+    search: '',
+    manager: '',
+    branch: '',
+    pageSize: '20',
+};
 const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
 
 {
@@ -109,7 +115,10 @@ async function safeLoad(): Promise<void> {
 
 async function loadLookups(): Promise<void> {
     try {
-        const [lookup, branchOptions] = await Promise.all([fetchManagerLookup(), fetchBranchOptions()]);
+        const [lookup, branchOptions] = await Promise.all([
+            fetchManagerLookup(),
+            fetchBranchOptions(),
+        ]);
         managerLookup.value = lookup;
         branches.value = branchOptions;
     } catch {
@@ -130,7 +139,6 @@ watch([page, statusFilter, searchFilter, managerFilter, branchFilter, pageSize, 
 function handleSortChange(next: CounterpartySortParameter): void {
     sort.value = next;
 }
-
 
 function queuePending(action: 'activate' | 'deactivate'): void {
     const next = new Map(pendingActions.value);
@@ -217,11 +225,15 @@ async function applyPending(): Promise<void> {
             @update:selected-ids="selectedIds = $event"
         >
             <template #selection-actions>
-                <MvButton size="sm" @click="queuePending('activate')">Activate portal access</MvButton>
+                <MvButton size="sm" @click="queuePending('activate')"
+                    >Activate portal access</MvButton
+                >
                 <MvButton size="sm" variant="danger" @click="queuePending('deactivate')">
                     Deactivate portal access
                 </MvButton>
-                <MvButton size="sm" variant="ghost" @click="clearPending">Clear pending changes</MvButton>
+                <MvButton size="sm" variant="ghost" @click="clearPending"
+                    >Clear pending changes</MvButton
+                >
             </template>
 
             <template #toolbar-end>
@@ -238,12 +250,14 @@ async function applyPending(): Promise<void> {
 
         <MvModal v-if="confirmOpen" title="Apply changes?" @close="confirmOpen = false">
             <p>
-                All pending changes will be sent as one batch mutation. Activation creates a Customer
-                without a password — the counterparty sets it themselves via the email link
+                All pending changes will be sent as one batch mutation. Activation creates a
+                Customer without a password — the counterparty sets it themselves via the email link
                 (issue #121).
             </p>
             <div class="counterparty-activation-page__modal-actions">
-                <MvButton variant="ghost" :disabled="applying" @click="confirmOpen = false">Cancel</MvButton>
+                <MvButton variant="ghost" :disabled="applying" @click="confirmOpen = false"
+                    >Cancel</MvButton
+                >
                 <MvButton :loading="applying" @click="applyPending">Apply</MvButton>
             </div>
         </MvModal>

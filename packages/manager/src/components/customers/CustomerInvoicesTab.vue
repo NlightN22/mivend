@@ -45,7 +45,11 @@ const VIEWS: { key: ViewKey; label: string; variant?: FilterChip['variant'] }[] 
 ];
 const viewCounts = ref<InvoiceViewCounts>({ all: 0, pending: 0, issued: 0, paid: 0, cancelled: 0 });
 const viewChips = computed<FilterChip[]>(() =>
-    VIEWS.map(v => ({ key: v.key, label: `${v.label} ${viewCounts.value[v.key]}`, variant: v.variant })),
+    VIEWS.map(v => ({
+        key: v.key,
+        label: `${v.label} ${viewCounts.value[v.key]}`,
+        variant: v.variant,
+    })),
 );
 
 // Single source of truth for the active view: this ref *is* the `status` filter value (mirrors
@@ -79,7 +83,11 @@ const URL_FILTER_DEFAULTS: InvoiceUrlFilters = { status: '', search: '', pageSiz
 const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
 
 function buildUrlFilters(): InvoiceUrlFilters {
-    return { status: statusFilter.value, search: searchFilter.value, pageSize: String(pageSize.value) };
+    return {
+        status: statusFilter.value,
+        search: searchFilter.value,
+        pageSize: String(pageSize.value),
+    };
 }
 
 // Applied once, synchronously, before the watchers below are registered — see
@@ -155,7 +163,11 @@ onMounted(() => {
         @reset-page="page = 1"
     >
         <template #view-chips>
-            <MvFilterChips :chips="viewChips" :active="activeView" @select="activeView = $event as ViewKey" />
+            <MvFilterChips
+                :chips="viewChips"
+                :active="activeView"
+                @select="activeView = $event as ViewKey"
+            />
         </template>
     </CustomerInvoicesDataTable>
 </template>

@@ -25,9 +25,24 @@ withDefaults(defineProps<{ variant?: StatusBadgeVariant }>(), { variant: 'neutra
     line-height: 20px;
 }
 
-.mv-status-badge--neutral { background: #F1F5F9; color: #475569; }
-.mv-status-badge--success { background: #D1FAE5; color: #065F46; }
-.mv-status-badge--warning { background: #FEF3C7; color: #92400E; }
-.mv-status-badge--danger  { background: #FEE2E2; color: #991B1B; }
-.mv-status-badge--info    { background: #E0F2FE; color: #0C4A6E; }
+.mv-status-badge--neutral {
+    background: #f1f5f9;
+    color: #475569;
+}
+.mv-status-badge--success {
+    background: #d1fae5;
+    color: #065f46;
+}
+.mv-status-badge--warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+.mv-status-badge--danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.mv-status-badge--info {
+    background: #e0f2fe;
+    color: #0c4a6e;
+}
 </style>

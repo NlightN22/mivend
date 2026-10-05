@@ -42,7 +42,9 @@ const methods = [
                 v-for="method in methods"
                 :key="method.id"
                 class="payment-selector__card"
-                :class="{ 'payment-selector__card--active': checkoutStore.selectedPayment === method.id }"
+                :class="{
+                    'payment-selector__card--active': checkoutStore.selectedPayment === method.id,
+                }"
                 type="button"
                 @click="checkoutStore.setPayment(method.id)"
             >
@@ -57,7 +59,8 @@ const methods = [
                 <span
                     class="payment-selector__badge"
                     :class="{ 'payment-selector__badge--orange': method.badgeOrange }"
-                >{{ method.badge }}</span>
+                    >{{ method.badge }}</span
+                >
             </button>
         </div>
     </article>
@@ -72,7 +75,9 @@ const methods = [
     padding: 22px;
 }
 
-.payment-selector__head { margin-bottom: 16px; }
+.payment-selector__head {
+    margin-bottom: 16px;
+}
 
 .payment-selector__title {
     margin: 0 0 5px;
@@ -193,6 +198,8 @@ const methods = [
 }
 
 @media (max-width: 900px) {
-    .payment-selector__grid { grid-template-columns: 1fr; }
+    .payment-selector__grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

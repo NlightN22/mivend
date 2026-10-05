@@ -43,7 +43,13 @@ const emit = defineEmits<{
 }>();
 
 const ALL_COLUMNS: AdvancedDataTableColumn[] = [
-    { field: 'name', header: 'Name', width: 200, filterConfig: { type: 'none' }, mobile: { primary: true } },
+    {
+        field: 'name',
+        header: 'Name',
+        width: 200,
+        filterConfig: { type: 'none' },
+        mobile: { primary: true },
+    },
     {
         field: 'emailAddress',
         header: 'Email',
@@ -102,16 +108,28 @@ watch(
     f => emit('update:filters', { status: f.status, search: f.emailAddress }),
     { deep: true },
 );
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
-watch(() => props.statusFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, status: v };
-});
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, emailAddress: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
+watch(
+    () => props.statusFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, status: v };
+    },
+);
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, emailAddress: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 interface UserRow {
     [key: string]: unknown;

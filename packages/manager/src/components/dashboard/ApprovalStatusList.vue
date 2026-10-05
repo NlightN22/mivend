@@ -33,8 +33,18 @@ function statusText(approval: SubmittedApproval): string {
             class="approval-list__item"
             @click="router.push(`/approvals/${approval.id}`)"
         >
-            <span class="approval-list__title">{{ typeLabel(approval.requestType) }} #{{ approval.id }}</span>
-            <MvStatusBadge :variant="approval.status === 'approved' ? 'success' : approval.status === 'rejected' ? 'danger' : 'info'">
+            <span class="approval-list__title"
+                >{{ typeLabel(approval.requestType) }} #{{ approval.id }}</span
+            >
+            <MvStatusBadge
+                :variant="
+                    approval.status === 'approved'
+                        ? 'success'
+                        : approval.status === 'rejected'
+                          ? 'danger'
+                          : 'info'
+                "
+            >
                 {{ statusText(approval) }}
             </MvStatusBadge>
         </li>

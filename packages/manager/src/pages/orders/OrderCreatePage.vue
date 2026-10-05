@@ -95,7 +95,9 @@ async function handleAdjusted(
 }
 
 const hasPendingApproval = computed(() => pendingApprovalLineIds.value.size > 0);
-const canPlaceOrder = computed(() => !!order.value && order.value.lines.length > 0 && !submitting.value);
+const canPlaceOrder = computed(
+    () => !!order.value && order.value.lines.length > 0 && !submitting.value,
+);
 
 async function placeOrder(): Promise<void> {
     if (!order.value) return;

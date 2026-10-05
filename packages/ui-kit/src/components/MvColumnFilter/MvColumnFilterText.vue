@@ -27,7 +27,10 @@ watch(
     },
 );
 
-const debouncedEmit = useDebouncedCallback((value: string) => emit('update:modelValue', value), props.config.debounceMs);
+const debouncedEmit = useDebouncedCallback(
+    (value: string) => emit('update:modelValue', value),
+    props.config.debounceMs,
+);
 
 function onInput(e: Event): void {
     localValue.value = (e.target as HTMLInputElement).value;
@@ -48,7 +51,13 @@ function onClear(): void {
             :placeholder="config.placeholder ?? 'Search…'"
             @input="onInput"
         />
-        <button v-if="localValue" type="button" class="mv-column-filter-text__clear" aria-label="Clear" @click="onClear">
+        <button
+            v-if="localValue"
+            type="button"
+            class="mv-column-filter-text__clear"
+            aria-label="Clear"
+            @click="onClear"
+        >
             ×
         </button>
     </div>

@@ -20,7 +20,11 @@ const columns: Column<TableRow>[] = [
         width: 170,
         cellRenderer: ({ rowData }) => {
             const row = rowData as TableRow;
-            return h(MvStatusBadge, { variant: row.stateVariant as StatusBadgeVariant }, () => row.state as string);
+            return h(
+                MvStatusBadge,
+                { variant: row.stateVariant as StatusBadgeVariant },
+                () => row.state as string,
+            );
         },
     },
     { key: 'total', title: 'Total', dataKey: 'total', width: 120, align: 'right' },

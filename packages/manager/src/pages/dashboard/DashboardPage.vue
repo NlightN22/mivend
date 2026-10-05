@@ -65,7 +65,9 @@ const filteredOrders = computed(() => {
             : activeFilter.value === 'awaiting-shipment'
               ? orders.filter(o => o.state === 'PaymentSettled')
               : activeFilter.value === 'today'
-                ? orders.filter(o => o.orderPlacedAt && new Date(o.orderPlacedAt).toDateString() === today)
+                ? orders.filter(
+                      o => o.orderPlacedAt && new Date(o.orderPlacedAt).toDateString() === today,
+                  )
                 : orders;
     return matched.slice(0, 5);
 });
@@ -100,7 +102,10 @@ onMounted(async () => {
             fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
             authStore.hasPermission('ManageAccessControl')
                 ? fetchFailedIntegrationInboxEvents(HEALTH_PANEL_TAKE).catch(e => {
-                      console.warn('[dashboard] could not load failed integration inbox events:', e);
+                      console.warn(
+                          '[dashboard] could not load failed integration inbox events:',
+                          e,
+                      );
                       return [];
                   })
                 : Promise.resolve([]),
@@ -160,13 +165,23 @@ onMounted(async () => {
                 <div class="dashboard__breadcrumb">Dashboard</div>
                 <h1 class="dashboard__title">Welcome back, {{ authStore.fullName }}</h1>
                 <p class="dashboard__subtitle">
-                    {{ new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) }}
+                    {{
+                        new Date().toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            month: 'long',
+                            day: 'numeric',
+                        })
+                    }}
                     · Your operational summary for today.
                 </p>
             </div>
             <div class="dashboard__context">
-                <MvStatusBadge variant="info">{{ authStore.roleLabel ?? authStore.roleCode }}</MvStatusBadge>
-                <MvStatusBadge v-if="departmentName" variant="neutral">{{ departmentName }}</MvStatusBadge>
+                <MvStatusBadge variant="info">{{
+                    authStore.roleLabel ?? authStore.roleCode
+                }}</MvStatusBadge>
+                <MvStatusBadge v-if="departmentName" variant="neutral">{{
+                    departmentName
+                }}</MvStatusBadge>
             </div>
         </div>
 
@@ -178,7 +193,9 @@ onMounted(async () => {
                 :key="card.key"
                 :label="card.label"
                 :value="card.value(data)"
-                :caption="card.key === 'pending-approvals' ? pendingBreakdown : card.caption?.(data)"
+                :caption="
+                    card.key === 'pending-approvals' ? pendingBreakdown : card.caption?.(data)
+                "
                 :to="card.to"
                 :accent="card.accent"
             />
@@ -207,15 +224,24 @@ onMounted(async () => {
                     <ApprovalStatusList :approvals="data.recentApprovals.slice(0, 5)" />
                 </MvPanel>
 
-                <MvPanel v-if="authStore.hasPermission('ManageAccessControl')" title="Integration inbox errors">
+                <MvPanel
+                    v-if="authStore.hasPermission('ManageAccessControl')"
+                    title="Integration inbox errors"
+                >
                     <IntegrationInboxErrorsPanel :events="failedInboxEvents" />
                 </MvPanel>
 
-                <MvPanel v-if="authStore.hasPermission('ReadOrder')" title="Reservation reconciliation">
+                <MvPanel
+                    v-if="authStore.hasPermission('ReadOrder')"
+                    title="Reservation reconciliation"
+                >
                     <ReservationReconciliationPanel :notifications="reservationIssues" />
                 </MvPanel>
 
-                <MvPanel v-if="authStore.hasPermission('ReadPayment')" title="Payment reconciliation">
+                <MvPanel
+                    v-if="authStore.hasPermission('ReadPayment')"
+                    title="Payment reconciliation"
+                >
                     <PaymentReconciliationPanel :notifications="paymentIssues" />
                 </MvPanel>
             </div>

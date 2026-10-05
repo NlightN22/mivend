@@ -9,7 +9,11 @@ import {
     type AdvancedDataTableColumn,
     type AdvancedDataTableRowClickPayload,
 } from '@mivend/ui-kit';
-import { fetchEntityVersionsForRefs, type EntityRef, type EntityVersionRow } from '../../api/history';
+import {
+    fetchEntityVersionsForRefs,
+    type EntityRef,
+    type EntityVersionRow,
+} from '../../api/history';
 import type { ManagerOption } from '../../api/orders';
 
 // Generic audit-trail widget — not Customer-specific. Any page that owns one or more
@@ -173,7 +177,12 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: { type: 'text', placeholder: 'Field, comment, changed by…' },
         mobile: { primary: true },
     },
-    { field: 'createdAt', header: 'When', width: 170, filterConfig: { type: 'select', placeholder: 'All time', options: [...DATE_RANGE_OPTIONS] } },
+    {
+        field: 'createdAt',
+        header: 'When',
+        width: 170,
+        filterConfig: { type: 'select', placeholder: 'All time', options: [...DATE_RANGE_OPTIONS] },
+    },
     {
         field: 'action',
         header: 'Action',
@@ -187,18 +196,33 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     // with exactly one option. Real options spliced in by resolvedColumns below, once refs/
     // managers are known — same shape as CustomerDocumentsDataTable.vue's Type column.
     { field: 'entityName', header: 'Object', width: 140, filterConfig: { type: 'none' } },
-    { field: 'adminName', header: 'Changed by', width: 160, filterConfig: { type: 'select', placeholder: 'Anyone', options: [] } },
+    {
+        field: 'adminName',
+        header: 'Changed by',
+        width: 160,
+        filterConfig: { type: 'select', placeholder: 'Anyone', options: [] },
+    },
 ];
 
 const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
     ALL_COLUMNS.map(col => {
         if (col.field === 'entityName') {
             return entityTypeOptions.value.length > 1
-                ? { ...col, filterConfig: { type: 'select' as const, placeholder: 'All objects', options: entityTypeOptions.value } }
+                ? {
+                      ...col,
+                      filterConfig: {
+                          type: 'select' as const,
+                          placeholder: 'All objects',
+                          options: entityTypeOptions.value,
+                      },
+                  }
                 : col;
         }
         if (col.field === 'adminName' && col.filterConfig.type === 'select') {
-            return { ...col, filterConfig: { ...col.filterConfig, options: changedByOptions.value } };
+            return {
+                ...col,
+                filterConfig: { ...col.filterConfig, options: changedByOptions.value },
+            };
         }
         return col;
     }),
@@ -240,7 +264,8 @@ async function load(): Promise<void> {
             action: (f.action as string) || undefined,
             entityName: (f.entityName as string) || undefined,
             system: f.adminName === 'system' ? true : undefined,
-            administratorId: f.adminName && f.adminName !== 'system' ? (f.adminName as string) : undefined,
+            administratorId:
+                f.adminName && f.adminName !== 'system' ? (f.adminName as string) : undefined,
             createdAfter: dateRangeToCreatedAfter(f.createdAt as string),
         });
         rawRows.value = result.items;
@@ -299,11 +324,12 @@ const filteredRows = computed<HistoryRow[]>(() => {
         summary: summary(row),
     }));
     if (!term) return mapped;
-    return mapped.filter(row =>
-        row.summary.toLowerCase().includes(term) ||
-        row.entityName.toLowerCase().includes(term) ||
-        row.adminName.toLowerCase().includes(term) ||
-        (rawRows.value.find(r => r.id === row.id)?.comment ?? '').toLowerCase().includes(term),
+    return mapped.filter(
+        row =>
+            row.summary.toLowerCase().includes(term) ||
+            row.entityName.toLowerCase().includes(term) ||
+            row.adminName.toLowerCase().includes(term) ||
+            (rawRows.value.find(r => r.id === row.id)?.comment ?? '').toLowerCase().includes(term),
     );
 });
 
@@ -335,7 +361,9 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<HistoryRow>): void {
                 <MvDateTimeCell :value="(data as HistoryRow).createdAt" />
             </template>
             <template #cell-action="{ data }">
-                <MvStatusBadge :variant="ACTION_BADGE_VARIANT[(data as HistoryRow).action] ?? 'neutral'">
+                <MvStatusBadge
+                    :variant="ACTION_BADGE_VARIANT[(data as HistoryRow).action] ?? 'neutral'"
+                >
                     {{ ACTION_LABEL[(data as HistoryRow).action] ?? (data as HistoryRow).action }}
                 </MvStatusBadge>
             </template>

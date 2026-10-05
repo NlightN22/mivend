@@ -18,9 +18,11 @@ function variant(status: string): 'success' | 'danger' | 'warning' {
                 Price adjustment request #{{ request.id }}
             </RouterLink>
             <MvStatusBadge :variant="variant(request.status)">
-                {{ request.status === 'pending' && request.currentStepRole
-                    ? `Waiting on ${request.currentStepRole}`
-                    : request.status }}
+                {{
+                    request.status === 'pending' && request.currentStepRole
+                        ? `Waiting on ${request.currentStepRole}`
+                        : request.status
+                }}
             </MvStatusBadge>
         </li>
     </ul>

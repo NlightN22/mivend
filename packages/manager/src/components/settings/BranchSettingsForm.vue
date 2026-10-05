@@ -60,9 +60,7 @@ const warehouseSelectOptions = computed<SelectOption[]>(() => [
     ...warehouseOptions.value,
 ]);
 
-const missingRequired = computed(
-    () => !form.defaultPriceTypeId || !form.defaultWarehouseId,
-);
+const missingRequired = computed(() => !form.defaultPriceTypeId || !form.defaultWarehouseId);
 
 function onSave(): void {
     if (missingRequired.value) return;
@@ -109,11 +107,7 @@ function onSave(): void {
         <MvNotice v-if="saveError" variant="error">{{ saveError }}</MvNotice>
 
         <div class="branch-settings-form__actions">
-            <MvButton
-                native-type="submit"
-                :disabled="missingRequired || saving"
-                :loading="saving"
-            >
+            <MvButton native-type="submit" :disabled="missingRequired || saving" :loading="saving">
                 Save branch settings
             </MvButton>
         </div>

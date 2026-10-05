@@ -99,8 +99,21 @@ const ALL_COLUMNS = computed<AdvancedDataTableColumn[]>(() => [
             options: props.branchOptions.map(b => ({ value: b.id, label: b.name })),
         },
     },
-    { field: 'phone', header: 'Phone', width: 150, sortField: 'phone', filterConfig: { type: 'none' }, mobile: { hidden: true } },
-    { field: 'officialEmail', header: 'Official email', width: 200, sortField: 'officialEmail', filterConfig: { type: 'none' } },
+    {
+        field: 'phone',
+        header: 'Phone',
+        width: 150,
+        sortField: 'phone',
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
+    {
+        field: 'officialEmail',
+        header: 'Official email',
+        width: 200,
+        sortField: 'officialEmail',
+        filterConfig: { type: 'none' },
+    },
     {
         field: 'readiness',
         header: 'Portal access',
@@ -127,7 +140,11 @@ const { state: tableState } = useDataTableState<FilterState>(
         // Mirrors the backend's own default (CounterpartyService.baseVisibleQb's shortName ASC)
         // so the sort button UI reflects reality on first load, not "no sort active".
         sort: [{ field: 'shortName', order: 1 }],
-        filters: { shortName: props.searchFilter, manager: props.managerFilter, branch: props.branchFilter },
+        filters: {
+            shortName: props.searchFilter,
+            manager: props.managerFilter,
+            branch: props.branchFilter,
+        },
         pageSize: props.pageSize,
     },
     {
@@ -137,10 +154,25 @@ const { state: tableState } = useDataTableState<FilterState>(
     },
 );
 
-watch(() => tableState.value.filters, f => emit('update:search', f.shortName), { deep: true });
-watch(() => tableState.value.filters, f => emit('update:manager-filter', f.manager), { deep: true });
-watch(() => tableState.value.filters, f => emit('update:branch-filter', f.branch), { deep: true });
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
+watch(
+    () => tableState.value.filters,
+    f => emit('update:search', f.shortName),
+    { deep: true },
+);
+watch(
+    () => tableState.value.filters,
+    f => emit('update:manager-filter', f.manager),
+    { deep: true },
+);
+watch(
+    () => tableState.value.filters,
+    f => emit('update:branch-filter', f.branch),
+    { deep: true },
+);
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
 
 // See counterpartySort.ts's mapSortToApi for the mapping logic + the real bug it guards against.
 watch(
@@ -148,18 +180,30 @@ watch(
     meta => emit('update:sort', mapSortToApi(meta, ALL_COLUMNS.value)),
     { deep: true },
 );
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, shortName: v };
-});
-watch(() => props.managerFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, manager: v };
-});
-watch(() => props.branchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, branch: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, shortName: v };
+    },
+);
+watch(
+    () => props.managerFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, manager: v };
+    },
+);
+watch(
+    () => props.branchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, branch: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 const STATUS_OPTIONS = [
     { value: '', label: 'Any status' },
@@ -247,7 +291,9 @@ const READINESS_LABEL: Record<Row['readiness'], string> = {
             <MvSelect
                 :model-value="statusFilter"
                 :options="STATUS_OPTIONS"
-                @update:model-value="emit('update:status-filter', $event as 'active' | 'inactive' | '')"
+                @update:model-value="
+                    emit('update:status-filter', $event as 'active' | 'inactive' | '')
+                "
             />
         </template>
 
@@ -258,11 +304,18 @@ const READINESS_LABEL: Record<Row['readiness'], string> = {
         <template #cell-readiness="{ data }">
             <template v-if="pendingActions.has((data as Row).id)">
                 <MvStatusBadge variant="warning">
-                    {{ pendingActions.get((data as Row).id) === 'activate' ? 'Activate on Save' : 'Deactivate on Save' }}
+                    {{
+                        pendingActions.get((data as Row).id) === 'activate'
+                            ? 'Activate on Save'
+                            : 'Deactivate on Save'
+                    }}
                 </MvStatusBadge>
             </template>
             <template v-else-if="(data as Row).readiness === 'missing-data'">
-                <MvStatusBadge variant="warning" title="Sourced from the ERP integration — not editable in the manager portal">
+                <MvStatusBadge
+                    variant="warning"
+                    title="Sourced from the ERP integration — not editable in the manager portal"
+                >
                     Missing data (ERP)
                 </MvStatusBadge>
             </template>

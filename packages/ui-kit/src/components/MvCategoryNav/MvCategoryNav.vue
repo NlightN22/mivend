@@ -33,7 +33,10 @@ const props = withDefaults(
 const emit = defineEmits<{ navigate: [slug: string] }>();
 
 const expanded = ref(false);
-watch(() => props.panel, () => (expanded.value = false));
+watch(
+    () => props.panel,
+    () => (expanded.value = false),
+);
 
 const canExpand = computed(() => props.panel.level.length > MAX_ROWS);
 const visibleLevel = computed(() => {
@@ -55,7 +58,13 @@ const visibleLevel = computed(() => {
         >
             <IconChevronLeft :size="14" />
             {{ item.name }}
-            <MvStatusTag v-if="item.isHidden" variant="unavailable" class="mv-category-nav__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
+            <MvStatusTag
+                v-if="item.isHidden"
+                variant="unavailable"
+                class="mv-category-nav__hidden"
+                data-testid="category-hidden-marker"
+                >{{ hiddenLabel }}</MvStatusTag
+            >
         </button>
         <span
             v-if="panel.current && panel.levelIsChildren"
@@ -63,7 +72,13 @@ const visibleLevel = computed(() => {
             aria-current="page"
         >
             {{ panel.current.name }}
-            <MvStatusTag v-if="panel.current.isHidden" variant="unavailable" class="mv-category-nav__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
+            <MvStatusTag
+                v-if="panel.current.isHidden"
+                variant="unavailable"
+                class="mv-category-nav__hidden"
+                data-testid="category-hidden-marker"
+                >{{ hiddenLabel }}</MvStatusTag
+            >
         </span>
         <div :class="{ 'mv-category-nav__children': panel.levelIsChildren }">
             <template v-for="item in visibleLevel" :key="item.id">
@@ -73,12 +88,31 @@ const visibleLevel = computed(() => {
                     aria-current="page"
                 >
                     {{ item.name }}
-                    <MvStatusTag v-if="item.isHidden" variant="unavailable" class="mv-category-nav__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
+                    <MvStatusTag
+                        v-if="item.isHidden"
+                        variant="unavailable"
+                        class="mv-category-nav__hidden"
+                        data-testid="category-hidden-marker"
+                        >{{ hiddenLabel }}</MvStatusTag
+                    >
                 </span>
-                <button v-else type="button" class="mv-category-nav__item" @click="emit('navigate', item.slug)">
+                <button
+                    v-else
+                    type="button"
+                    class="mv-category-nav__item"
+                    @click="emit('navigate', item.slug)"
+                >
                     {{ item.name }}
-                    <span v-if="item.count !== undefined" class="mv-category-nav__count">{{ item.count }}</span>
-                    <MvStatusTag v-if="item.isHidden" variant="unavailable" class="mv-category-nav__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
+                    <span v-if="item.count !== undefined" class="mv-category-nav__count">{{
+                        item.count
+                    }}</span>
+                    <MvStatusTag
+                        v-if="item.isHidden"
+                        variant="unavailable"
+                        class="mv-category-nav__hidden"
+                        data-testid="category-hidden-marker"
+                        >{{ hiddenLabel }}</MvStatusTag
+                    >
                 </button>
             </template>
             <button
@@ -114,7 +148,9 @@ const visibleLevel = computed(() => {
     font-family: inherit;
     color: var(--app-nav-text);
     cursor: pointer;
-    transition: color 0.12s, background 0.12s;
+    transition:
+        color 0.12s,
+        background 0.12s;
 }
 
 .mv-category-nav__item:hover {

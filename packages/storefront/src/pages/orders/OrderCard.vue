@@ -10,9 +10,13 @@ const statusLabel = computed(() => STATUS_LABEL[statusKey.value] ?? statusKey.va
 const statusVariant = computed(() => STATUS_VARIANT[statusKey.value] ?? 'default');
 
 const formattedTotal = computed(() => {
-    return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(
-        props.order.totalWithTax / 100,
-    ) + ' ' + (props.order.currencyCode === 'RUB' ? '₽' : props.order.currencyCode);
+    return (
+        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(
+            props.order.totalWithTax / 100,
+        ) +
+        ' ' +
+        (props.order.currencyCode === 'RUB' ? '₽' : props.order.currencyCode)
+    );
 });
 
 const meta = computed(() => {
@@ -54,7 +58,9 @@ const preview = computed(() => {
                 <div>{{ preview }}</div>
             </div>
             <div class="order-card-actions">
-                <router-link :to="`/orders/${order.id}`" class="small-btn primary">Open</router-link>
+                <router-link :to="`/orders/${order.id}`" class="small-btn primary"
+                    >Open</router-link
+                >
                 <button class="small-btn">Repeat</button>
                 <button class="small-btn">Documents</button>
             </div>
@@ -93,7 +99,9 @@ const preview = computed(() => {
     line-height: 1.38;
 }
 
-.order-pay { text-align: right; }
+.order-pay {
+    text-align: right;
+}
 
 .order-sum {
     font-size: 21px;
@@ -115,9 +123,18 @@ const preview = computed(() => {
     white-space: nowrap;
 }
 
-.status-pill.muted { background: #eef4f1; color: #5f6e68; }
-.status-pill.warning { background: #fff4e3; color: #a45e00; }
-.status-pill.error { background: #ffeeed; color: #c0362c; }
+.status-pill.muted {
+    background: #eef4f1;
+    color: #5f6e68;
+}
+.status-pill.warning {
+    background: #fff4e3;
+    color: #a45e00;
+}
+.status-pill.error {
+    background: #ffeeed;
+    color: #c0362c;
+}
 
 .order-card-body {
     padding: 16px 20px 18px;
@@ -171,13 +188,26 @@ const preview = computed(() => {
     transition: 0.14s ease;
 }
 
-.small-btn:hover { background: #e4f0eb; }
-.small-btn.primary { background: #00a878; color: #fff; }
-.small-btn.primary:hover { background: #008a64; }
+.small-btn:hover {
+    background: #e4f0eb;
+}
+.small-btn.primary {
+    background: #00a878;
+    color: #fff;
+}
+.small-btn.primary:hover {
+    background: #008a64;
+}
 
 @media (max-width: 760px) {
-    .order-card-head { grid-template-columns: 1fr; }
-    .order-pay { text-align: left; }
-    .order-card-actions { justify-content: flex-start; }
+    .order-card-head {
+        grid-template-columns: 1fr;
+    }
+    .order-pay {
+        text-align: left;
+    }
+    .order-card-actions {
+        justify-content: flex-start;
+    }
 }
 </style>

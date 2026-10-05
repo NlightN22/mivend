@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { useLatestRequest, MvFilterChips, type DateRangeFilterValue, type FilterChip } from '@mivend/ui-kit';
+import {
+    useLatestRequest,
+    MvFilterChips,
+    type DateRangeFilterValue,
+    type FilterChip,
+} from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import {
@@ -116,7 +121,11 @@ const VIEWS: { key: ViewKey; label: string; variant?: FilterChip['variant'] }[] 
 ];
 const viewCounts = ref<CustomerOrderViewCounts>({ all: 0, unpaid: 0, partial: 0, cancelled: 0 });
 const viewChips = computed<FilterChip[]>(() =>
-    VIEWS.map(v => ({ key: v.key, label: `${v.label} ${viewCounts.value[v.key]}`, variant: v.variant })),
+    VIEWS.map(v => ({
+        key: v.key,
+        label: `${v.label} ${viewCounts.value[v.key]}`,
+        variant: v.variant,
+    })),
 );
 
 // Manager-portal rule (manager-portal-rules skill): every filter/sort/page-controlled list must be a shareable URL.
@@ -189,14 +198,20 @@ function buildUrlFilters(): CustomerOrdersUrlFilters {
     if (parsed.state) stateFilter.value = parsed.state.split(',').filter(Boolean);
     if (parsed.reservationState) reservationStateFilter.value = parsed.reservationState;
     if (parsed.dateFrom || parsed.dateTo || parsed.datePreset) {
-        dateRangeFilter.value = { preset: parsed.datePreset, from: parsed.dateFrom, to: parsed.dateTo };
+        dateRangeFilter.value = {
+            preset: parsed.datePreset,
+            from: parsed.dateFrom,
+            to: parsed.dateTo,
+        };
     }
     if (parsed.code) codeFilter.value = parsed.code;
-    if (parsed.fulfillmentState) fulfillmentStateFilter.value = parsed.fulfillmentState.split(',').filter(Boolean);
+    if (parsed.fulfillmentState)
+        fulfillmentStateFilter.value = parsed.fulfillmentState.split(',').filter(Boolean);
     if (parsed.placedBy) placedByFilter.value = parsed.placedBy;
     if (parsed.totalMin) totalMinFilter.value = Number(parsed.totalMin);
     if (parsed.totalMax) totalMaxFilter.value = Number(parsed.totalMax);
-    if (parsed.sortField) sort.value = { [parsed.sortField]: (parsed.sortDir || 'DESC') as 'ASC' | 'DESC' };
+    if (parsed.sortField)
+        sort.value = { [parsed.sortField]: (parsed.sortDir || 'DESC') as 'ASC' | 'DESC' };
     if (parsed.pageSize) pageSize.value = Number(parsed.pageSize);
 }
 
@@ -317,9 +332,10 @@ function handlePageSizeChange(next: number): void {
 }
 
 function money(order: CustomerOrderItem): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: order.currencyCode }).format(
-        order.totalWithTax / 100,
-    );
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: order.currencyCode,
+    }).format(order.totalWithTax / 100);
 }
 
 // CustomerOrdersDataTable renders this same row shape on both desktop (PrimeVue DataTable) and
@@ -348,7 +364,9 @@ const rows = computed(() =>
         date: order.createdAt,
         placedBy: placedByLabel(order),
         reservation: reservationLabel(order),
-        reservationVariant: ORDER_RESERVATION_STATE_BADGE_VARIANT[order.customFields.reservationState ?? ''] ?? 'neutral',
+        reservationVariant:
+            ORDER_RESERVATION_STATE_BADGE_VARIANT[order.customFields.reservationState ?? ''] ??
+            'neutral',
     })),
 );
 </script>
@@ -379,7 +397,11 @@ const rows = computed(() =>
         @reset-page="page = 1"
     >
         <template #view-chips>
-            <MvFilterChips :chips="viewChips" :active="activeView" @select="activeView = $event as ViewKey" />
+            <MvFilterChips
+                :chips="viewChips"
+                :active="activeView"
+                @select="activeView = $event as ViewKey"
+            />
         </template>
     </CustomerOrdersDataTable>
 </template>

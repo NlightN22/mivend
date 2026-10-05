@@ -18,9 +18,10 @@ const emit = defineEmits<{
 const openAdjustLineId = ref<string | null>(null);
 
 function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: props.currencyCode }).format(
-        amount / 100,
-    );
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: props.currencyCode,
+    }).format(amount / 100);
 }
 
 function toggleAdjust(lineId: string): void {
@@ -63,13 +64,25 @@ function toggleAdjust(lineId: string): void {
                     </td>
                     <td>{{ money(line.unitPriceWithTax) }}</td>
                     <td>
-                        <button type="button" class="order-items__adjust" @click="toggleAdjust(line.id)">
-                            {{ pendingApprovalLineIds.has(line.id) ? '⚠ Pending approval' : 'Adjust price' }}
+                        <button
+                            type="button"
+                            class="order-items__adjust"
+                            @click="toggleAdjust(line.id)"
+                        >
+                            {{
+                                pendingApprovalLineIds.has(line.id)
+                                    ? '⚠ Pending approval'
+                                    : 'Adjust price'
+                            }}
                         </button>
                     </td>
                     <td>{{ money(line.linePriceWithTax) }}</td>
                     <td>
-                        <button type="button" class="order-items__remove" @click="emit('remove', line.id)">
+                        <button
+                            type="button"
+                            class="order-items__remove"
+                            @click="emit('remove', line.id)"
+                        >
                             Remove
                         </button>
                     </td>

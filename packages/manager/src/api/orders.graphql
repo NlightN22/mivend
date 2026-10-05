@@ -41,15 +41,14 @@ query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
     }
     overdue: visibleOrders(
         options: {
-            filter: {
-                state: { eq: "PaymentSettled" }
-                orderPlacedAt: { before: $overdueBefore }
-            }
+            filter: { state: { eq: "PaymentSettled" }, orderPlacedAt: { before: $overdueBefore } }
         }
     ) {
         totalItems
     }
-    today: visibleOrders(options: { take: 500, filter: { orderPlacedAt: { after: $todayStart } } }) {
+    today: visibleOrders(
+        options: { take: 500, filter: { orderPlacedAt: { after: $todayStart } } }
+    ) {
         totalItems
         items {
             totalWithTax

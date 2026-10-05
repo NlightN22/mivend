@@ -54,11 +54,36 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const COLUMNS: AdvancedDataTableColumn[] = [
-    { field: 'name', header: 'Name / Email', width: 240, sortField: 'name', filterConfig: { type: 'none' }, mobile: { primary: true } },
-    { field: 'portalRole', header: 'Portal role', width: 150, sortField: 'portalRole', filterConfig: { type: 'none' } },
+    {
+        field: 'name',
+        header: 'Name / Email',
+        width: 240,
+        sortField: 'name',
+        filterConfig: { type: 'none' },
+        mobile: { primary: true },
+    },
+    {
+        field: 'portalRole',
+        header: 'Portal role',
+        width: 150,
+        sortField: 'portalRole',
+        filterConfig: { type: 'none' },
+    },
     // status is a binary active/inactive badge, not a column worth sorting by.
-    { field: 'status', header: 'Status', width: 120, filterConfig: { type: 'none' }, mobile: { badge: true } },
-    { field: 'createdAt', header: 'Created', width: 130, sortField: 'createdAt', filterConfig: { type: 'none' } },
+    {
+        field: 'status',
+        header: 'Status',
+        width: 120,
+        filterConfig: { type: 'none' },
+        mobile: { badge: true },
+    },
+    {
+        field: 'createdAt',
+        header: 'Created',
+        width: 130,
+        sortField: 'createdAt',
+        filterConfig: { type: 'none' },
+    },
     { field: 'actions', header: 'Actions', width: 150, filterConfig: { type: 'none' } },
 ];
 
@@ -178,19 +203,25 @@ async function handleDeactivate(): Promise<void> {
                 >
                     Deactivate
                 </MvButton>
-                <span v-else-if="!(data as Row).active" class="customer-portal-users__deactivated">Deactivated</span>
+                <span v-else-if="!(data as Row).active" class="customer-portal-users__deactivated"
+                    >Deactivated</span
+                >
             </template>
         </MvAdvancedDataTable>
         <p v-if="error" class="customer-portal-users__error">{{ error }}</p>
 
         <MvModal v-if="confirmTarget" title="Deactivate portal user?" @close="confirmTarget = null">
             <p>
-                {{ confirmTarget.firstName }} {{ confirmTarget.lastName }} will be soft-deleted and lose
-                access to the portal. The record stays in history.
+                {{ confirmTarget.firstName }} {{ confirmTarget.lastName }} will be soft-deleted and
+                lose access to the portal. The record stays in history.
             </p>
             <div class="customer-portal-users__modal-actions">
                 <MvButton variant="ghost" @click="confirmTarget = null">Cancel</MvButton>
-                <MvButton variant="danger" :loading="deactivatingId !== null" @click="handleDeactivate">
+                <MvButton
+                    variant="danger"
+                    :loading="deactivatingId !== null"
+                    @click="handleDeactivate"
+                >
                     Deactivate
                 </MvButton>
             </div>

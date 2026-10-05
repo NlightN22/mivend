@@ -26,7 +26,9 @@ function managerName(id: string | null): string {
 }
 
 function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount / 100);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+        amount / 100,
+    );
 }
 
 // branchId (Counterparty.branchId) is a mivend Branch.id, never Branch.erpId — see
@@ -62,7 +64,13 @@ const columns = computed<Column<TableRow>[]>(() => [
     },
     { key: 'contact', title: 'Contact person', dataKey: 'contact', width: 170 },
     { key: 'manager', title: 'Manager', dataKey: 'manager', width: 150 },
-    { key: 'creditLimit', title: 'Credit limit', dataKey: 'creditLimit', width: 130, align: 'right' },
+    {
+        key: 'creditLimit',
+        title: 'Credit limit',
+        dataKey: 'creditLimit',
+        width: 130,
+        align: 'right',
+    },
     {
         key: 'creditBalance',
         title: 'Credit balance',
@@ -112,7 +120,9 @@ const columns = computed<Column<TableRow>[]>(() => [
         width: 110,
         mobile: { badge: true },
         cellRenderer: ({ cellData }) =>
-            h(MvStatusBadge, { variant: cellData ? 'success' : 'neutral' }, () => (cellData ? 'Active' : 'Inactive')),
+            h(MvStatusBadge, { variant: cellData ? 'success' : 'neutral' }, () =>
+                cellData ? 'Active' : 'Inactive',
+            ),
     },
 ]);
 
@@ -122,7 +132,9 @@ const rows = computed<TableRow[]>(() =>
         const credit = props.credit.get(c.id);
         const lastOrder = props.lastOrderDates.get(c.id);
         const usagePercent =
-            credit && credit.creditLimit > 0 ? (credit.creditBalance / credit.creditLimit) * 100 : null;
+            credit && credit.creditLimit > 0
+                ? (credit.creditBalance / credit.creditLimit) * 100
+                : null;
         const branch = branchName(c.branchId);
         return {
             name: c.shortName,

@@ -44,7 +44,9 @@ const managerName = computed(() => {
     return managers.value.find(m => m.id === managerId)?.name ?? null;
 });
 
-const editable = computed(() => !!order.value && !NON_EDITABLE_ORDER_STATES.includes(order.value.state));
+const editable = computed(
+    () => !!order.value && !NON_EDITABLE_ORDER_STATES.includes(order.value.state),
+);
 
 const packagingLabel = computed(() => {
     if (!order.value) return null;
@@ -77,12 +79,13 @@ async function load(): Promise<void> {
         }
         order.value = detail;
         const counterpartyId = detail.customer?.counterparty?.id;
-        [adjustmentRequests.value, documents.value, reservations.value, credit.value] = await Promise.all([
-            fetchPriceAdjustmentRequestsForOrder(detail.id),
-            fetchRelatedDocuments(detail.id),
-            fetchOrderReservations(detail.id),
-            counterpartyId ? fetchCreditForCounterparty(counterpartyId) : Promise.resolve(null),
-        ]);
+        [adjustmentRequests.value, documents.value, reservations.value, credit.value] =
+            await Promise.all([
+                fetchPriceAdjustmentRequestsForOrder(detail.id),
+                fetchRelatedDocuments(detail.id),
+                fetchOrderReservations(detail.id),
+                counterpartyId ? fetchCreditForCounterparty(counterpartyId) : Promise.resolve(null),
+            ]);
     } finally {
         loading.value = false;
     }
@@ -160,7 +163,11 @@ watch(() => route.params.code, load);
                 </MvPanel>
 
                 <MvPanel title="Order context">
-                    <OrderContextPanel :order="order" :manager-name="managerName" :credit="credit" />
+                    <OrderContextPanel
+                        :order="order"
+                        :manager-name="managerName"
+                        :credit="credit"
+                    />
                 </MvPanel>
 
                 <MvPanel title="Documents">

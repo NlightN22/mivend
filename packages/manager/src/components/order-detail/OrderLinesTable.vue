@@ -29,9 +29,10 @@ onMounted(loadAvailableStock);
 watch(() => props.lines, loadAvailableStock);
 
 function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: props.currencyCode }).format(
-        amount / 100,
-    );
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: props.currencyCode,
+    }).format(amount / 100);
 }
 
 interface AdjustmentInfo {
@@ -67,7 +68,11 @@ const adjustmentByLineId = computed(() => {
     for (const line of props.lines) {
         if (map.has(line.id)) continue;
         if (line.customFields.manualUnitPrice !== null) {
-            map.set(line.id, { label: 'Self-service adjustment', variant: 'info', approvalRequestId: null });
+            map.set(line.id, {
+                label: 'Self-service adjustment',
+                variant: 'info',
+                approvalRequestId: null,
+            });
         }
     }
     return map;
@@ -99,7 +104,13 @@ function toggleAdjust(lineId: string): void {
                     <td>{{ line.productVariant.name }}</td>
                     <td>{{ line.quantity }}</td>
                     <td>
-                        <span :class="{ 'order-lines__stock--low': (availableByVariantId.get(line.productVariant.id) ?? 0) < line.quantity }">
+                        <span
+                            :class="{
+                                'order-lines__stock--low':
+                                    (availableByVariantId.get(line.productVariant.id) ?? 0) <
+                                    line.quantity,
+                            }"
+                        >
                             {{ availableByVariantId.get(line.productVariant.id) ?? '—' }}
                         </span>
                     </td>
@@ -113,12 +124,19 @@ function toggleAdjust(lineId: string): void {
                                 {{ adjustmentByLineId.get(line.id)?.label }}
                             </MvStatusBadge>
                         </RouterLink>
-                        <MvStatusBadge v-else-if="adjustmentByLineId.get(line.id)" :variant="adjustmentByLineId.get(line.id)!.variant">
+                        <MvStatusBadge
+                            v-else-if="adjustmentByLineId.get(line.id)"
+                            :variant="adjustmentByLineId.get(line.id)!.variant"
+                        >
                             {{ adjustmentByLineId.get(line.id)?.label }}
                         </MvStatusBadge>
                     </td>
                     <td v-if="editable">
-                        <button type="button" class="order-lines__adjust" @click="toggleAdjust(line.id)">
+                        <button
+                            type="button"
+                            class="order-lines__adjust"
+                            @click="toggleAdjust(line.id)"
+                        >
                             Adjust price
                         </button>
                     </td>

@@ -6,40 +6,40 @@ import type { MvMobileColumn } from './MvMobileCardList.vue';
 import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 
 export type RowState =
-  | 'default'
-  | 'hover'
-  | 'in-stock'
-  | 'low-stock'
-  | 'by-order'
-  | 'in-cart'
-  | 'reserved'
-  | 'unavailable'
-  | 'analog';
+    | 'default'
+    | 'hover'
+    | 'in-stock'
+    | 'low-stock'
+    | 'by-order'
+    | 'in-cart'
+    | 'reserved'
+    | 'unavailable'
+    | 'analog';
 
 export interface TableRow {
-  [key: string]: unknown;
-  _rowState?: RowState;
+    [key: string]: unknown;
+    _rowState?: RowState;
 }
 
 interface Props {
-  columns: MvMobileColumn[];
-  data: TableRow[];
-  loading?: boolean;
-  rowHeight?: number;
-  height?: number;
-  emptyText?: string;
-  // Columns may carry a `mobile` metadata object (see MvMobileCardList) driving how the same
-  // column config renders as a card below this breakpoint, instead of requiring a second
-  // hand-written mobile template per table.
-  mobileBreakpoint?: number;
+    columns: MvMobileColumn[];
+    data: TableRow[];
+    loading?: boolean;
+    rowHeight?: number;
+    height?: number;
+    emptyText?: string;
+    // Columns may carry a `mobile` metadata object (see MvMobileCardList) driving how the same
+    // column config renders as a card below this breakpoint, instead of requiring a second
+    // hand-written mobile template per table.
+    mobileBreakpoint?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  loading: false,
-  rowHeight: 52,
-  height: 400,
-  emptyText: 'No data',
-  mobileBreakpoint: 800,
+    loading: false,
+    rowHeight: 52,
+    height: 400,
+    emptyText: 'No data',
+    mobileBreakpoint: 800,
 });
 
 const isMobile = useIsMobileViewport(props.mobileBreakpoint);
@@ -49,8 +49,8 @@ const isMobile = useIsMobileViewport(props.mobileBreakpoint);
 // row-divider lines read as visually flat/hard to scan on a long list. A `_rowState` (e.g.
 // low-stock/reserved) always wins over the plain zebra stripe.
 function rowClass({ rowData, rowIndex }: { rowData: TableRow; rowIndex: number }): string {
-  if (rowData._rowState) return `mv-table-row--${rowData._rowState}`;
-  return rowIndex % 2 === 1 ? 'mv-table-row--zebra' : '';
+    if (rowData._rowState) return `mv-table-row--${rowData._rowState}`;
+    return rowIndex % 2 === 1 ? 'mv-table-row--zebra' : '';
 }
 
 const fixedHeight = computed(() => props.height);
@@ -62,111 +62,138 @@ const emit = defineEmits<{ 'row-click': [payload: { rowData: TableRow }] }>();
 // version; @row-click on the component silently does nothing, since Vue never had an emit to
 // attach it to).
 const rowEventHandlers = {
-  onClick: ({ rowData }: { rowData: TableRow }) => emit('row-click', { rowData }),
+    onClick: ({ rowData }: { rowData: TableRow }) => emit('row-click', { rowData }),
 };
 </script>
 
 <template>
-  <div class="mv-table" :class="{ 'mv-table--loading': loading }">
-    <div v-if="loading" class="mv-table__loader">
-      <span class="mv-table__spinner" />
-    </div>
+    <div class="mv-table" :class="{ 'mv-table--loading': loading }">
+        <div v-if="loading" class="mv-table__loader">
+            <span class="mv-table__spinner" />
+        </div>
 
-    <MvMobileCardList
-      v-if="isMobile"
-      :columns="columns"
-      :data="data"
-      :empty-text="emptyText"
-      @row-click="payload => emit('row-click', payload)"
-    />
-    <ElAutoResizer v-else>
-      <template #default="{ width }">
-        <ElTableV2
-          :columns="columns"
-          :data="data"
-          :width="width"
-          :height="fixedHeight"
-          :row-height="rowHeight"
-          :row-class="rowClass"
-          :row-event-handlers="rowEventHandlers"
-        >
-          <template v-if="!data.length && !loading" #empty>
-            <div class="mv-table__empty">{{ emptyText }}</div>
-          </template>
-        </ElTableV2>
-      </template>
-    </ElAutoResizer>
-  </div>
+        <MvMobileCardList
+            v-if="isMobile"
+            :columns="columns"
+            :data="data"
+            :empty-text="emptyText"
+            @row-click="payload => emit('row-click', payload)"
+        />
+        <ElAutoResizer v-else>
+            <template #default="{ width }">
+                <ElTableV2
+                    :columns="columns"
+                    :data="data"
+                    :width="width"
+                    :height="fixedHeight"
+                    :row-height="rowHeight"
+                    :row-class="rowClass"
+                    :row-event-handlers="rowEventHandlers"
+                >
+                    <template v-if="!data.length && !loading" #empty>
+                        <div class="mv-table__empty">{{ emptyText }}</div>
+                    </template>
+                </ElTableV2>
+            </template>
+        </ElAutoResizer>
+    </div>
 </template>
 
 <style>
 .mv-table {
-  position: relative;
-  width: 100%;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid #E4E7EC;
+    position: relative;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e4e7ec;
 }
 
-.mv-table--loading { opacity: 0.6; pointer-events: none; }
+.mv-table--loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
 
 .mv-table__loader {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.7);
-  z-index: 10;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 10;
 }
 
 .mv-table__spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid #E4E7EC;
-  border-top-color: #00B894;
-  border-radius: 50%;
-  animation: mv-table-spin 0.7s linear infinite;
+    width: 28px;
+    height: 28px;
+    border: 3px solid #e4e7ec;
+    border-top-color: #00b894;
+    border-radius: 50%;
+    animation: mv-table-spin 0.7s linear infinite;
 }
 
-@keyframes mv-table-spin { to { transform: rotate(360deg); } }
+@keyframes mv-table-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 .mv-table__empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 120px;
-  font-size: 14px;
-  color: #667085;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 120px;
+    font-size: 14px;
+    color: #667085;
 }
 
 /* Header */
 .el-table-v2__header-row {
-  background: #F8FAFC !important;
+    background: #f8fafc !important;
 }
 .el-table-v2__header-cell {
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.04em !important;
-  color: #667085 !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    color: #667085 !important;
 }
 
 /* Zebra striping — plain data rows only (a real _rowState always overrides, see rowClass).
    --el-fill-color-light (#f8fafc) was tried first and was practically indistinguishable from
    white on a real screen — needs a visibly darker tint to actually read as a stripe. */
-.mv-table-row--zebra { background: var(--el-fill-color, #eef1f5) !important; }
+.mv-table-row--zebra {
+    background: var(--el-fill-color, #eef1f5) !important;
+}
 
 /* Row states */
-.mv-table-row--in-stock .el-table-v2__row-cell { color: #065F46; }
-.mv-table-row--low-stock { background: #FFFBEB !important; }
-.mv-table-row--low-stock .el-table-v2__row-cell { color: #92400E; }
-.mv-table-row--by-order { background: #F0F9FF !important; }
-.mv-table-row--in-cart { background: #FFF8F0 !important; }
-.mv-table-row--reserved { background: #F5F3FF !important; }
-.mv-table-row--unavailable { opacity: 0.55; }
-.mv-table-row--analog { background: #FAF5FF !important; }
+.mv-table-row--in-stock .el-table-v2__row-cell {
+    color: #065f46;
+}
+.mv-table-row--low-stock {
+    background: #fffbeb !important;
+}
+.mv-table-row--low-stock .el-table-v2__row-cell {
+    color: #92400e;
+}
+.mv-table-row--by-order {
+    background: #f0f9ff !important;
+}
+.mv-table-row--in-cart {
+    background: #fff8f0 !important;
+}
+.mv-table-row--reserved {
+    background: #f5f3ff !important;
+}
+.mv-table-row--unavailable {
+    opacity: 0.55;
+}
+.mv-table-row--analog {
+    background: #faf5ff !important;
+}
 
 /* Row hover */
-.el-table-v2__row:hover .el-table-v2__row-cell { background: #F0FFFA !important; }
+.el-table-v2__row:hover .el-table-v2__row-cell {
+    background: #f0fffa !important;
+}
 </style>

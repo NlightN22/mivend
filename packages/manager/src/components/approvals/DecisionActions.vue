@@ -61,8 +61,13 @@ function handleEscalate(): void {
         </div>
 
         <div v-if="showEscalate" class="decision-actions__escalate">
-            <MvSelect v-model="escalateToId" :options="[{ value: '', label: 'Select a person' }, ...escalationCandidates]" />
-            <MvButton size="sm" :disabled="!escalateToId" @click="handleEscalate">Confirm escalation</MvButton>
+            <MvSelect
+                v-model="escalateToId"
+                :options="[{ value: '', label: 'Select a person' }, ...escalationCandidates]"
+            />
+            <MvButton size="sm" :disabled="!escalateToId" @click="handleEscalate"
+                >Confirm escalation</MvButton
+            >
         </div>
     </div>
 </template>

@@ -13,7 +13,12 @@ import {
     type CustomerCredit,
     type CustomerOrderItem,
 } from '../../api/customers';
-import { fetchManagerOptions, fetchBranchOptions, type ManagerOption, type BranchOption } from '../../api/orders';
+import {
+    fetchManagerOptions,
+    fetchBranchOptions,
+    type ManagerOption,
+    type BranchOption,
+} from '../../api/orders';
 import { fetchOutstandingBalance, type OutstandingBalance } from '../../api/invoices';
 import { fetchCounterpartyTeam, type CounterpartyTeamMember } from '../../api/counterpartyTeam';
 import type { EntityRef } from '../../api/history';
@@ -72,7 +77,9 @@ const canViewHistory = computed(() => authStore.hasPermission('ReadEntityHistory
 const canManageTeam = computed(() => authStore.hasPermission('ManageCounterpartyTeam'));
 // Issue #120, Decision 5 — same permission gates both this tab's visibility and its Deactivate
 // action (one permission, two surfaces, per the carried-over decision).
-const canManagePortalAccess = computed(() => authStore.hasPermission('ManageCounterpartyPortalAccess'));
+const canManagePortalAccess = computed(() =>
+    authStore.hasPermission('ManageCounterpartyPortalAccess'),
+);
 
 type CustomerDetailTab =
     | 'overview'
@@ -140,8 +147,12 @@ const visibleTabs = computed(() =>
         t => t !== 'portalUsers' || canManagePortalAccess.value,
     ),
 );
-const primaryTabs = computed(() => (isMobile.value ? visibleTabs.value.slice(0, PRIMARY_TAB_COUNT) : visibleTabs.value));
-const overflowTabs = computed(() => (isMobile.value ? visibleTabs.value.slice(PRIMARY_TAB_COUNT) : []));
+const primaryTabs = computed(() =>
+    isMobile.value ? visibleTabs.value.slice(0, PRIMARY_TAB_COUNT) : visibleTabs.value,
+);
+const overflowTabs = computed(() =>
+    isMobile.value ? visibleTabs.value.slice(PRIMARY_TAB_COUNT) : [],
+);
 const isOverflowActive = computed(() => overflowTabs.value.includes(activeTab.value));
 const tabsMoreOpen = ref(false);
 const tabsMoreRef = ref<HTMLElement | null>(null);
@@ -185,7 +196,9 @@ const openOrdersCount = computed(
 );
 
 function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount / 100);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+        amount / 100,
+    );
 }
 
 async function load(): Promise<void> {
@@ -209,7 +222,9 @@ async function load(): Promise<void> {
         credit.value = creditResult;
 
         vendureCustomerId.value = await fetchCustomerIdForCounterparty(counterpartyId);
-        orders.value = vendureCustomerId.value ? await fetchOrdersForCustomer(vendureCustomerId.value) : [];
+        orders.value = vendureCustomerId.value
+            ? await fetchOrdersForCustomer(vendureCustomerId.value)
+            : [];
         teamMembers.value = await fetchCounterpartyTeam(counterpartyId);
         // CustomerInvoicesTab/CustomerPaymentsTab/CustomerDiscountsTab now own their own
         // fetching/pagination (same shape as CustomerOrdersTab) — this page only still needs
@@ -219,7 +234,10 @@ async function load(): Promise<void> {
         if (canViewHistory.value) {
             historyRefs.value = [
                 { entityName: 'Counterparty', entityId: counterpartyId },
-                ...detail.tradingPoints.map(tp => ({ entityName: 'TradingPoint', entityId: tp.id })),
+                ...detail.tradingPoints.map(tp => ({
+                    entityName: 'TradingPoint',
+                    entityId: tp.id,
+                })),
             ];
         }
     } finally {
@@ -260,7 +278,6 @@ function initials(name: string | null): string {
     const parts = name.trim().split(/\s+/);
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
-
 </script>
 
 <template>
@@ -311,7 +328,9 @@ function initials(name: string | null): string {
                 <Location class="customer-detail__info-icon" />
                 <div class="customer-detail__info-text">
                     <span class="customer-detail__info-label">Location</span>
-                    <span class="customer-detail__info-value">{{ branchName(customer.branchId) ?? '—' }}</span>
+                    <span class="customer-detail__info-value">{{
+                        branchName(customer.branchId) ?? '—'
+                    }}</span>
                 </div>
             </div>
             <span class="customer-detail__info-divider" />
@@ -319,15 +338,21 @@ function initials(name: string | null): string {
                 <Wallet class="customer-detail__info-icon" />
                 <div class="customer-detail__info-text">
                     <span class="customer-detail__info-label">Credit limit</span>
-                    <span class="customer-detail__info-value">{{ credit ? money(credit.creditLimit) : '—' }}</span>
+                    <span class="customer-detail__info-value">{{
+                        credit ? money(credit.creditLimit) : '—'
+                    }}</span>
                 </div>
             </div>
             <span class="customer-detail__info-divider" />
             <div class="customer-detail__info-item">
-                <span class="customer-detail__avatar">{{ initials(managerName(customer.assignedManagerId)) }}</span>
+                <span class="customer-detail__avatar">{{
+                    initials(managerName(customer.assignedManagerId))
+                }}</span>
                 <div class="customer-detail__info-text">
                     <span class="customer-detail__info-label">Primary manager</span>
-                    <span class="customer-detail__info-value">{{ managerName(customer.assignedManagerId) ?? 'Unassigned' }}</span>
+                    <span class="customer-detail__info-value">{{
+                        managerName(customer.assignedManagerId) ?? 'Unassigned'
+                    }}</span>
                 </div>
             </div>
             <div class="customer-detail__info-item">
@@ -379,7 +404,11 @@ function initials(name: string | null): string {
                     :class="{ active: isOverflowActive }"
                     @click="tabsMoreOpen = !tabsMoreOpen"
                 >
-                    <component v-if="isOverflowActive" :is="TAB_ICONS[activeTab]" class="customer-detail__tab-icon" />
+                    <component
+                        v-if="isOverflowActive"
+                        :is="TAB_ICONS[activeTab]"
+                        class="customer-detail__tab-icon"
+                    />
                     {{ isOverflowActive ? TAB_LABELS[activeTab] : 'More' }} ▾
                 </button>
                 <div v-if="tabsMoreOpen" class="customer-detail__tabs-more-menu">
@@ -408,7 +437,9 @@ function initials(name: string | null): string {
                 v-else-if="activeTab === 'orders' && vendureCustomerId"
                 :customer-id="vendureCustomerId"
             />
-            <p v-else-if="activeTab === 'orders'" class="customer-detail__no-orders">No orders yet</p>
+            <p v-else-if="activeTab === 'orders'" class="customer-detail__no-orders">
+                No orders yet
+            </p>
             <CustomerInvoicesTab
                 v-else-if="activeTab === 'invoices'"
                 :counterparty-id="customer.id"
@@ -417,8 +448,14 @@ function initials(name: string | null): string {
                 v-else-if="activeTab === 'payments'"
                 :counterparty-id="customer.id"
             />
-            <CustomerDiscountsTab v-else-if="activeTab === 'discounts'" :counterparty-id="customer.id" />
-            <CustomerDocumentsTab v-else-if="activeTab === 'documents'" :counterparty-id="customer.id" />
+            <CustomerDiscountsTab
+                v-else-if="activeTab === 'discounts'"
+                :counterparty-id="customer.id"
+            />
+            <CustomerDocumentsTab
+                v-else-if="activeTab === 'documents'"
+                :counterparty-id="customer.id"
+            />
             <CustomerTeamTab
                 v-else-if="activeTab === 'team'"
                 :counterparty-id="customer.id"

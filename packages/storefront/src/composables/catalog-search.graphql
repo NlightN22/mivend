@@ -62,7 +62,12 @@ query CatalogProducts(
     }
 }
 
-query CatalogFacets($term: String, $collectionSlug: String, $inStock: Boolean, $priceRangeWithTax: PriceRangeInput) {
+query CatalogFacets(
+    $term: String
+    $collectionSlug: String
+    $inStock: Boolean
+    $priceRangeWithTax: PriceRangeInput
+) {
     search(
         input: {
             term: $term

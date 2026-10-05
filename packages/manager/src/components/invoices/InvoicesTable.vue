@@ -24,9 +24,10 @@ const props = defineProps<{
 const router = useRouter();
 
 function money(item: InvoiceListItem): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: item.currencyCode }).format(
-        item.amount / 100,
-    );
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: item.currencyCode,
+    }).format(item.amount / 100);
 }
 
 const columns = computed<Column<TableRow>[]>(() => {

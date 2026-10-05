@@ -78,13 +78,30 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: { type: 'status', placeholder: 'All roles', options: ROLE_OPTIONS },
         mobile: { badge: true },
     },
-    { field: 'primaryContact', header: 'Primary contact', width: 130, filterConfig: { type: 'none' } },
+    {
+        field: 'primaryContact',
+        header: 'Primary contact',
+        width: 130,
+        filterConfig: { type: 'none' },
+    },
     { field: 'email', header: 'Email', width: 220, filterConfig: { type: 'none' } },
-    { field: 'phone', header: 'Phone', width: 150, filterConfig: { type: 'none' }, mobile: { hidden: true } },
+    {
+        field: 'phone',
+        header: 'Phone',
+        width: 150,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
     // Always "Active" today — no real per-row lifecycle exists yet for a team membership, so a
     // filter here would have exactly one value and mislead the user into thinking it does
     // something. Revisit once team membership has a real status (AGENTS.md's "What not to do" — no hardcoded enums).
-    { field: 'status', header: 'Status', width: 110, filterConfig: { type: 'none' }, mobile: { hidden: true } },
+    {
+        field: 'status',
+        header: 'Status',
+        width: 110,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
     { field: 'actions', header: 'Actions', width: 110, filterConfig: { type: 'none' } },
 ];
 
@@ -107,7 +124,9 @@ const { state: tableState } = useDataTableState<TeamFilterState>(
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
     },
 );
 
@@ -163,11 +182,16 @@ const pagedRows = computed(() => {
         </template>
 
         <template #cell-createdAt="{ data }">
-            <MvDateTimeCell v-if="(data as TeamRow).createdAt" :value="(data as TeamRow).createdAt as string" />
+            <MvDateTimeCell
+                v-if="(data as TeamRow).createdAt"
+                :value="(data as TeamRow).createdAt as string"
+            />
             <span v-else>—</span>
         </template>
         <template #cell-role="{ data }">
-            <MvStatusBadge :variant="ROLE_BADGE_VARIANT[(data as TeamRow).role] ?? 'neutral'">{{ (data as TeamRow).role }}</MvStatusBadge>
+            <MvStatusBadge :variant="ROLE_BADGE_VARIANT[(data as TeamRow).role] ?? 'neutral'">{{
+                (data as TeamRow).role
+            }}</MvStatusBadge>
         </template>
         <template #cell-status="{ data }">
             <MvStatusBadge variant="success">{{ (data as TeamRow).status }}</MvStatusBadge>

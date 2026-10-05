@@ -62,7 +62,8 @@ async function handleSubmit(): Promise<void> {
             state.value = 'success';
         } else {
             state.value = result.reason ? REASON_TO_STATE[result.reason] : 'invalid';
-            if (result.reason === 'validation') validationMessage.value = 'Password does not meet requirements.';
+            if (result.reason === 'validation')
+                validationMessage.value = 'Password does not meet requirements.';
         }
     } catch {
         state.value = 'invalid';
@@ -84,7 +85,9 @@ function goToSignIn(): void {
             <div class="set-password-card">
                 <template v-if="state === 'form' || state === 'validation'">
                     <h1 class="set-password-card__title">Set your password</h1>
-                    <p class="set-password-card__desc">Create a password for your manager portal account.</p>
+                    <p class="set-password-card__desc">
+                        Create a password for your manager portal account.
+                    </p>
 
                     <div v-if="identity" class="set-password-card__identity">
                         <MvAvatar :name="`${identity.firstName} ${identity.lastName}`" size="md" />
@@ -92,11 +95,17 @@ function goToSignIn(): void {
                             <div class="set-password-card__identity-name">
                                 {{ identity.firstName }} {{ identity.lastName }}
                             </div>
-                            <div class="set-password-card__identity-mail">{{ identity.emailAddress }}</div>
+                            <div class="set-password-card__identity-mail">
+                                {{ identity.emailAddress }}
+                            </div>
                         </div>
                     </div>
 
-                    <MvNotice v-if="state === 'validation'" variant="error" class="set-password-card__error">
+                    <MvNotice
+                        v-if="state === 'validation'"
+                        variant="error"
+                        class="set-password-card__error"
+                    >
                         {{ validationMessage }}
                     </MvNotice>
 
@@ -116,7 +125,9 @@ function goToSignIn(): void {
                                 :error="mismatchError"
                             />
                         </MvFormField>
-                        <MvNotice v-if="mismatchError" variant="error">Passwords do not match.</MvNotice>
+                        <MvNotice v-if="mismatchError" variant="error"
+                            >Passwords do not match.</MvNotice
+                        >
 
                         <p class="set-password-card__rules">
                             Use at least {{ MIN_PASSWORD_LENGTH }} characters. The password should
@@ -136,40 +147,63 @@ function goToSignIn(): void {
                     </form>
                 </template>
 
-                <div v-else-if="state === 'success'" class="set-password-state set-password-state--success">
+                <div
+                    v-else-if="state === 'success'"
+                    class="set-password-state set-password-state--success"
+                >
                     <div class="set-password-state__icon">✓</div>
                     <h3>Password saved</h3>
-                    <p>Your password has been set successfully. You can now sign in to the manager portal.</p>
+                    <p>
+                        Your password has been set successfully. You can now sign in to the manager
+                        portal.
+                    </p>
 
-                    <div v-if="identity" class="set-password-card__identity set-password-state__identity">
+                    <div
+                        v-if="identity"
+                        class="set-password-card__identity set-password-state__identity"
+                    >
                         <MvAvatar :name="`${identity.firstName} ${identity.lastName}`" size="md" />
                         <div>
                             <div class="set-password-card__identity-name">
                                 {{ identity.firstName }} {{ identity.lastName }}
                             </div>
-                            <div class="set-password-card__identity-mail">{{ identity.emailAddress }}</div>
+                            <div class="set-password-card__identity-mail">
+                                {{ identity.emailAddress }}
+                            </div>
                         </div>
                     </div>
 
-                    <MvButton variant="primary" size="lg" @click="goToSignIn">Go to sign in</MvButton>
+                    <MvButton variant="primary" size="lg" @click="goToSignIn"
+                        >Go to sign in</MvButton
+                    >
                 </div>
 
                 <div v-else class="set-password-state set-password-state--error">
                     <div class="set-password-state__icon">!</div>
                     <h3>Link is invalid or expired</h3>
-                    <p>This password setup link can no longer be used. Request a new invitation from an administrator.</p>
+                    <p>
+                        This password setup link can no longer be used. Request a new invitation
+                        from an administrator.
+                    </p>
 
-                    <div v-if="identity" class="set-password-card__identity set-password-state__identity">
+                    <div
+                        v-if="identity"
+                        class="set-password-card__identity set-password-state__identity"
+                    >
                         <MvAvatar :name="`${identity.firstName} ${identity.lastName}`" size="md" />
                         <div>
                             <div class="set-password-card__identity-name">
                                 {{ identity.firstName }} {{ identity.lastName }}
                             </div>
-                            <div class="set-password-card__identity-mail">{{ identity.emailAddress }}</div>
+                            <div class="set-password-card__identity-mail">
+                                {{ identity.emailAddress }}
+                            </div>
                         </div>
                     </div>
 
-                    <MvButton variant="secondary" size="lg" @click="goToSignIn">Back to sign in</MvButton>
+                    <MvButton variant="secondary" size="lg" @click="goToSignIn"
+                        >Back to sign in</MvButton
+                    >
                 </div>
             </div>
         </div>

@@ -115,7 +115,10 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
             type: 'status',
             multiple: true,
             placeholder: 'All commercial states',
-            options: NON_BLANK_STATE_OPTIONS.map(o => ({ ...o, variant: ORDER_STATE_BADGE_VARIANT[o.value] ?? 'neutral' })),
+            options: NON_BLANK_STATE_OPTIONS.map(o => ({
+                ...o,
+                variant: ORDER_STATE_BADGE_VARIANT[o.value] ?? 'neutral',
+            })),
         },
         mobile: { badge: true },
     },
@@ -127,7 +130,10 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
             type: 'status',
             multiple: true,
             placeholder: 'All fulfillment states',
-            options: FULFILLMENT_STATE_OPTIONS.map(o => ({ ...o, variant: FULFILLMENT_STATE_BADGE_VARIANT[o.value] ?? 'neutral' })),
+            options: FULFILLMENT_STATE_OPTIONS.map(o => ({
+                ...o,
+                variant: FULFILLMENT_STATE_BADGE_VARIANT[o.value] ?? 'neutral',
+            })),
         },
     },
     { field: 'payment', header: 'Payment', width: 130, filterConfig: { type: 'custom' } },
@@ -157,7 +163,10 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: {
             type: 'status',
             placeholder: 'Any reservation state',
-            options: NON_BLANK_RESERVATION_OPTIONS.map(o => ({ ...o, variant: ORDER_RESERVATION_STATE_BADGE_VARIANT[o.value] ?? 'neutral' })),
+            options: NON_BLANK_RESERVATION_OPTIONS.map(o => ({
+                ...o,
+                variant: ORDER_RESERVATION_STATE_BADGE_VARIANT[o.value] ?? 'neutral',
+            })),
         },
         mobile: { hidden: true },
     },
@@ -181,10 +190,16 @@ const placedByOptions = computed(() => [
 const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
     ALL_COLUMNS.map(col => {
         if (col.field === 'total' && col.filterConfig.type === 'amount-range') {
-            return { ...col, filterConfig: { ...col.filterConfig, currencyCode: currencyCode.value } };
+            return {
+                ...col,
+                filterConfig: { ...col.filterConfig, currencyCode: currencyCode.value },
+            };
         }
         if (col.field === 'placedBy' && col.filterConfig.type === 'enum') {
-            return { ...col, filterConfig: { ...col.filterConfig, options: placedByOptions.value } };
+            return {
+                ...col,
+                filterConfig: { ...col.filterConfig, options: placedByOptions.value },
+            };
         }
         return col;
     }),
@@ -231,7 +246,11 @@ const DEFAULT_FILTERS: CustomerOrdersFilterState = {
     date: props.dateRangeFilter,
     placedBy: props.placedByFilter,
     reservationState: props.reservationStateFilter,
-    total: { mode: 'range', min: toMajorUnits(props.totalMinFilter), max: toMajorUnits(props.totalMaxFilter) },
+    total: {
+        mode: 'range',
+        min: toMajorUnits(props.totalMinFilter),
+        max: toMajorUnits(props.totalMaxFilter),
+    },
 };
 // Distinct from DEFAULT_FILTERS above: this is what "Clear filters" resets to (a genuinely blank
 // slate), not whatever the page happened to load with — the two were conflated before this
@@ -258,7 +277,9 @@ const { state: tableState } = useDataTableState<CustomerOrdersFilterState>(
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
         // `pageSize` is the tab's own concern, not this table's — see that option's own doc
         // comment (useDataTableState.ts) for the real incident this prevents structurally: a
         // stale persisted pageSize from an earlier session silently disagreeing with what the
@@ -294,16 +315,23 @@ function sortToVendure(meta: DataTableSortMeta[]): Partial<Record<OrderSortField
     const result: Partial<Record<OrderSortField, 'ASC' | 'DESC'>> = {};
     for (const m of meta) {
         const col = ALL_COLUMNS.find(c => c.field === m.field);
-        if (col?.sortField) result[col.sortField as OrderSortField] = m.order === 1 ? 'ASC' : 'DESC';
+        if (col?.sortField)
+            result[col.sortField as OrderSortField] = m.order === 1 ? 'ASC' : 'DESC';
     }
     return Object.keys(result).length ? result : { createdAt: 'DESC' };
 }
-watch(() => tableState.value.sort, meta => emit('update:sort', sortToVendure(meta)), { deep: true });
+watch(
+    () => tableState.value.sort,
+    meta => emit('update:sort', sortToVendure(meta)),
+    { deep: true },
+);
 
 // Payment is wired to the same paymentView the chips above the table use — a separate prop/emit,
 // not part of the generic OrderFilterParameter filters, and the one sanctioned `custom` filter
 // type (it doesn't fit any standard pattern).
-const paymentView = ref<CustomerOrdersView | ''>(props.paymentViewProp === 'all' ? '' : props.paymentViewProp);
+const paymentView = ref<CustomerOrdersView | ''>(
+    props.paymentViewProp === 'all' ? '' : props.paymentViewProp,
+);
 watch(
     () => props.paymentViewProp,
     value => {
@@ -325,12 +353,18 @@ function onPage(page: number): void {
 function onResetPage(): void {
     emit('update:page', 1);
 }
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
 // Ongoing sync only — the *initial* value is already guaranteed correct by `externallyOwned`
 // above (see useDataTableState.ts's own doc comment).
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 function onRowClick(event: AdvancedDataTableRowClickPayload<TableRow>): void {
     router.push(`/orders/${event.row.code as string}`);
@@ -368,12 +402,16 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<TableRow>): void {
         </template>
 
         <template #cell-state="{ data }">
-            <MvStatusBadge :variant="(data as TableRow).stateVariant as StatusBadgeVariant">{{ (data as TableRow).state }}</MvStatusBadge>
+            <MvStatusBadge :variant="(data as TableRow).stateVariant as StatusBadgeVariant">{{
+                (data as TableRow).state
+            }}</MvStatusBadge>
         </template>
 
         <template #cell-fulfillment="{ data }">
             <div class="customer-orders-data-table__fulfillment">
-                <MvStatusBadge :variant="(data as TableRow).fulfillmentVariant as StatusBadgeVariant">
+                <MvStatusBadge
+                    :variant="(data as TableRow).fulfillmentVariant as StatusBadgeVariant"
+                >
                     {{ (data as TableRow).fulfillment }}
                 </MvStatusBadge>
                 <div class="customer-orders-data-table__progress-track">
@@ -386,11 +424,15 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<TableRow>): void {
         </template>
 
         <template #cell-reservationState="{ data }">
-            <MvStatusBadge :variant="(data as TableRow).reservationVariant as StatusBadgeVariant">{{ (data as TableRow).reservation }}</MvStatusBadge>
+            <MvStatusBadge :variant="(data as TableRow).reservationVariant as StatusBadgeVariant">{{
+                (data as TableRow).reservation
+            }}</MvStatusBadge>
         </template>
 
         <template #cell-payment="{ data }">
-            <MvStatusBadge :variant="(data as TableRow).paymentVariant as StatusBadgeVariant">{{ (data as TableRow).payment }}</MvStatusBadge>
+            <MvStatusBadge :variant="(data as TableRow).paymentVariant as StatusBadgeVariant">{{
+                (data as TableRow).payment
+            }}</MvStatusBadge>
         </template>
 
         <!-- The one sanctioned `custom` filter (see ALL_COLUMNS' 'payment' entry) — reuses the

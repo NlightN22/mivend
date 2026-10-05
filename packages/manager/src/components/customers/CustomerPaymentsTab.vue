@@ -46,9 +46,19 @@ const VIEWS: { key: ViewKey; label: string; variant?: FilterChip['variant'] }[] 
     { key: 'failed', label: 'Failed', variant: PAYMENT_STATUS_BADGE_VARIANT.failed },
     { key: 'refunded', label: 'Refunded', variant: PAYMENT_STATUS_BADGE_VARIANT.refunded },
 ];
-const viewCounts = ref<PaymentViewCounts>({ all: 0, captured: 0, pending: 0, failed: 0, refunded: 0 });
+const viewCounts = ref<PaymentViewCounts>({
+    all: 0,
+    captured: 0,
+    pending: 0,
+    failed: 0,
+    refunded: 0,
+});
 const viewChips = computed<FilterChip[]>(() =>
-    VIEWS.map(v => ({ key: v.key, label: `${v.label} ${viewCounts.value[v.key]}`, variant: v.variant })),
+    VIEWS.map(v => ({
+        key: v.key,
+        label: `${v.label} ${viewCounts.value[v.key]}`,
+        variant: v.variant,
+    })),
 );
 // Single source of truth for the active view: this ref *is* the `status` filter value, same
 // wiring as CustomerInvoicesTab.vue's activeView.
@@ -68,7 +78,12 @@ interface PaymentUrlFilters {
     search: string;
     pageSize: string;
 }
-const URL_FILTER_DEFAULTS: PaymentUrlFilters = { status: '', channel: '', search: '', pageSize: '20' };
+const URL_FILTER_DEFAULTS: PaymentUrlFilters = {
+    status: '',
+    channel: '',
+    search: '',
+    pageSize: '20',
+};
 const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
 
 function buildUrlFilters(): PaymentUrlFilters {
@@ -151,7 +166,11 @@ onMounted(() => {
         @reset-page="page = 1"
     >
         <template #view-chips>
-            <MvFilterChips :chips="viewChips" :active="activeView" @select="activeView = $event as ViewKey" />
+            <MvFilterChips
+                :chips="viewChips"
+                :active="activeView"
+                @select="activeView = $event as ViewKey"
+            />
         </template>
     </CustomerPaymentsDataTable>
 </template>

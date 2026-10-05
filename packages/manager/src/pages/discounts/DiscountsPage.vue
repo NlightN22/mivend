@@ -134,27 +134,64 @@ onMounted(async () => {
         </div>
 
         <MvPanel v-if="showForm" :title="renewFrom ? 'Renew discount grant' : 'New discount grant'">
-            <DiscountGrantForm :renew-from="renewFrom" @submitted="handleSubmitted" @cancel="showForm = false" />
+            <DiscountGrantForm
+                :renew-from="renewFrom"
+                @submitted="handleSubmitted"
+                @cancel="showForm = false"
+            />
         </MvPanel>
 
         <MvPanel title="Grant registry">
             <MvFilterBar @reset="resetFilters">
                 <MvFilterField label="Search">
-                    <MvInput size="sm" :model-value="search" placeholder="Price type, product group or customer..." @update:model-value="search = $event" />
+                    <MvInput
+                        size="sm"
+                        :model-value="search"
+                        placeholder="Price type, product group or customer..."
+                        @update:model-value="search = $event"
+                    />
                 </MvFilterField>
                 <MvFilterField label="Price type">
-                    <MvSelect :model-value="priceTypeFilter" :options="priceTypeOptions" @update:model-value="priceTypeFilter = ($event as string)" />
+                    <MvSelect
+                        :model-value="priceTypeFilter"
+                        :options="priceTypeOptions"
+                        @update:model-value="priceTypeFilter = $event as string"
+                    />
                 </MvFilterField>
                 <MvFilterField label="Status">
-                    <MvSelect :model-value="statusFilter" :options="STATUS_OPTIONS" @update:model-value="statusFilter = ($event as typeof statusFilter)" />
+                    <MvSelect
+                        :model-value="statusFilter"
+                        :options="STATUS_OPTIONS"
+                        @update:model-value="statusFilter = $event as typeof statusFilter"
+                    />
                 </MvFilterField>
             </MvFilterBar>
 
-            <MvFilterChips class="discounts-page__view-chips" :chips="CHIPS" :active="statusFilter" @select="selectChip" />
+            <MvFilterChips
+                class="discounts-page__view-chips"
+                :chips="CHIPS"
+                :active="statusFilter"
+                @select="selectChip"
+            />
 
-            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
-            <DiscountsTable :rows="rows" :page-size="PAGE_SIZE" :loading="loading" @renew="openRenewForm" />
-            <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+            <MvPagination
+                :page="page"
+                :page-size="PAGE_SIZE"
+                :total="totalItems"
+                @update:page="page = $event"
+            />
+            <DiscountsTable
+                :rows="rows"
+                :page-size="PAGE_SIZE"
+                :loading="loading"
+                @renew="openRenewForm"
+            />
+            <MvPagination
+                :page="page"
+                :page-size="PAGE_SIZE"
+                :total="totalItems"
+                @update:page="page = $event"
+            />
         </MvPanel>
     </div>
 </template>
@@ -187,5 +224,4 @@ onMounted(async () => {
     font-size: 28px;
     letter-spacing: -0.03em;
 }
-
 </style>

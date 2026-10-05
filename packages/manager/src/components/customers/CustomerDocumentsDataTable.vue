@@ -126,7 +126,9 @@ const { state: tableState } = useDataTableState<DocumentFilterState>(
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
         // type/status/number(search)/pageSize are the tab's own concern (it owns the fetch) —
         // always seed from the tab's current prop values, never from stale localStorage.
         externallyOwned: { pageSize: true, filterKeys: ['type', 'status', 'number'] },
@@ -138,20 +140,35 @@ watch(
     f => emit('update:filters', { types: f.type, status: f.status, search: f.number }),
     { deep: true },
 );
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
 
-watch(() => props.typeFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, type: v };
-});
-watch(() => props.statusFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, status: v };
-});
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, number: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => props.typeFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, type: v };
+    },
+);
+watch(
+    () => props.statusFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, status: v };
+    },
+);
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, number: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 interface DocumentRow {
     [key: string]: unknown;
@@ -198,7 +215,9 @@ const rows = computed<DocumentRow[]>(() =>
             <MvDocumentTypeChip :type="(data as DocumentRow).type" />
         </template>
         <template #cell-status="{ data }">
-            <MvStatusBadge :variant="(data as DocumentRow).statusVariant">{{ (data as DocumentRow).status }}</MvStatusBadge>
+            <MvStatusBadge :variant="(data as DocumentRow).statusVariant">{{
+                (data as DocumentRow).status
+            }}</MvStatusBadge>
         </template>
     </MvAdvancedDataTable>
 </template>

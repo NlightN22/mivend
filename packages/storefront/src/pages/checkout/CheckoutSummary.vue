@@ -21,13 +21,12 @@ const packagingLabel = computed(() => {
 const lineCount = computed(() => cartStore.lines.length);
 const totalQty = computed(() => cartStore.itemCount);
 
-const subtotal = computed(() =>
-    new Intl.NumberFormat('ru-RU').format((cartStore.order?.subTotalWithTax ?? 0) / 100) + ' ₽',
+const subtotal = computed(
+    () =>
+        new Intl.NumberFormat('ru-RU').format((cartStore.order?.subTotalWithTax ?? 0) / 100) + ' ₽',
 );
 
-const total = computed(() =>
-    new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽',
-);
+const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽');
 
 const btnLabel = computed(() => {
     if (checkoutStore.selectedPayment === 'online') return 'Pay online →';
@@ -87,11 +86,17 @@ async function handlePrimary(): Promise<void> {
 
             <button
                 class="checkout-summary__pay-btn"
-                :class="btnOrange ? 'checkout-summary__pay-btn--orange' : 'checkout-summary__pay-btn--green'"
+                :class="
+                    btnOrange
+                        ? 'checkout-summary__pay-btn--orange'
+                        : 'checkout-summary__pay-btn--green'
+                "
                 type="button"
                 :disabled="submitting"
                 @click="handlePrimary"
-            >{{ submitting ? 'Processing…' : btnLabel }}</button>
+            >
+                {{ submitting ? 'Processing…' : btnLabel }}
+            </button>
 
             <p v-if="checkoutStore.selectedPayment === 'online'" class="checkout-summary__legal">
                 By clicking the button, you are redirected to the payment service and agree to the
@@ -115,7 +120,10 @@ async function handlePrimary(): Promise<void> {
 </template>
 
 <style scoped>
-.checkout-summary { display: grid; gap: 14px; }
+.checkout-summary {
+    display: grid;
+    gap: 14px;
+}
 
 .checkout-summary__card {
     background: #fff;
@@ -154,7 +162,10 @@ async function handlePrimary(): Promise<void> {
     font-weight: 700;
 }
 
-.checkout-summary__discount { color: #d92d20 !important; font-weight: 800 !important; }
+.checkout-summary__discount {
+    color: #d92d20 !important;
+    font-weight: 800 !important;
+}
 
 .checkout-summary__total {
     display: flex;
@@ -188,13 +199,17 @@ async function handlePrimary(): Promise<void> {
     background: #ff8a00;
     box-shadow: 0 12px 24px rgba(255, 138, 0, 0.22);
 }
-.checkout-summary__pay-btn--orange:hover { background: #e87800; }
+.checkout-summary__pay-btn--orange:hover {
+    background: #e87800;
+}
 
 .checkout-summary__pay-btn--green {
     background: #00a878;
     box-shadow: 0 12px 24px rgba(0, 168, 120, 0.22);
 }
-.checkout-summary__pay-btn--green:hover { background: #008a64; }
+.checkout-summary__pay-btn--green:hover {
+    background: #008a64;
+}
 
 .checkout-summary__legal {
     margin: 12px 0 0;
@@ -203,7 +218,10 @@ async function handlePrimary(): Promise<void> {
     line-height: 1.4;
 }
 
-.checkout-summary__legal a { color: #008a64; font-weight: 800; }
+.checkout-summary__legal a {
+    color: #008a64;
+    font-weight: 800;
+}
 
 .checkout-summary__promo-card {
     background: #fff;
@@ -251,5 +269,7 @@ async function handlePrimary(): Promise<void> {
     transition: background 0.15s;
 }
 
-.checkout-summary__promo-btn:hover { background: #008a64; }
+.checkout-summary__promo-btn:hover {
+    background: #008a64;
+}
 </style>

@@ -33,7 +33,10 @@ export default [
             // https://typescript-eslint.io/rules/explicit-function-return-type/. Named function
             // declarations and const-assigned arrow functions (the codebase's actual style for
             // exported/reusable functions) still require an explicit return type.
-            '@typescript-eslint/explicit-function-return-type': ['warn', { allowExpressions: true }],
+            '@typescript-eslint/explicit-function-return-type': [
+                'warn',
+                { allowExpressions: true },
+            ],
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
             'no-undef': 'off',
         },
@@ -161,7 +164,11 @@ export default [
                     ],
                     patterns: [
                         {
-                            group: ['**/erp-adapter.interface', '**/erp-adapter.stub', '@mivend/plugin-sync/**/erp-adapter*'],
+                            group: [
+                                '**/erp-adapter.interface',
+                                '**/erp-adapter.stub',
+                                '@mivend/plugin-sync/**/erp-adapter*',
+                            ],
                             message:
                                 'The ERP adapter is owned exclusively by plugin-sync (AGENTS.md sync rule #6 — branches never call the ERP). Only plugin-sync may import it.',
                         },
@@ -216,7 +223,11 @@ export default [
         files: ['packages/plugins/erp-integration/src/handlers/**/*.ts'],
         ignores: ['**/*.test.ts', '**/__tests__/**'],
         languageOptions: { parser: tsParser },
-        plugins: { local: { rules: { 'no-null-check-on-plain-proto-scalar': noNullCheckOnPlainProtoScalar } } },
+        plugins: {
+            local: {
+                rules: { 'no-null-check-on-plain-proto-scalar': noNullCheckOnPlainProtoScalar },
+            },
+        },
         rules: {
             'local/no-null-check-on-plain-proto-scalar': 'error',
         },

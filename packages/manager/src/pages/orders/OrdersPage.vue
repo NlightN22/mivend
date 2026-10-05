@@ -74,7 +74,12 @@ const activeChip = ref('all');
 // identify/open a row.
 const ORDER_TABLE_COLUMNS = computed<MvDataTableColumn[]>(() => {
     const cols: MvDataTableColumn[] = [
-        { key: 'search', title: 'Search', required: true, filter: { kind: 'search', placeholder: 'Order number, customer...' } },
+        {
+            key: 'search',
+            title: 'Search',
+            required: true,
+            filter: { kind: 'search', placeholder: 'Order number, customer...' },
+        },
         { key: 'code', title: 'Order #', required: true },
         { key: 'customer', title: 'Customer' },
     ];
@@ -86,19 +91,31 @@ const ORDER_TABLE_COLUMNS = computed<MvDataTableColumn[]>(() => {
             required: true,
             filter: {
                 kind: 'select',
-                options: [{ value: '', label: 'All managers' }, ...managers.value.map(m => ({ value: m.id, label: m.name }))],
+                options: [
+                    { value: '', label: 'All managers' },
+                    ...managers.value.map(m => ({ value: m.id, label: m.name })),
+                ],
             },
         });
     }
     cols.push(
-        { key: 'state', title: 'Status', filter: { kind: 'select', options: [...ORDER_STATE_OPTIONS] } },
+        {
+            key: 'state',
+            title: 'Status',
+            filter: { kind: 'select', options: [...ORDER_STATE_OPTIONS] },
+        },
         {
             key: 'reservationState',
             title: 'Reservation',
             required: true,
             filter: { kind: 'select', options: [...ORDER_RESERVATION_STATE_OPTIONS] },
         },
-        { key: 'dateRange', title: 'Date range', required: true, filter: { kind: 'select', options: [...DATE_RANGE_OPTIONS] } },
+        {
+            key: 'dateRange',
+            title: 'Date range',
+            required: true,
+            filter: { kind: 'select', options: [...DATE_RANGE_OPTIONS] },
+        },
         { key: 'total', title: 'Total amount' },
         { key: 'date', title: 'Date placed' },
         { key: 'branch', title: 'Branch' },
@@ -111,7 +128,9 @@ const { hiddenKeys: hiddenColumnKeys, toggle: toggleColumn } = useColumnVisibili
     `orders-columns:${authStore.administrator?.id ?? 'anonymous'}`,
     toColumnVisibilityDefs(ORDER_TABLE_COLUMNS.value),
 );
-const HIDEABLE_COLUMN_KEYS = computed(() => ORDER_TABLE_COLUMNS.value.filter(c => !c.required).map(c => c.key));
+const HIDEABLE_COLUMN_KEYS = computed(() =>
+    ORDER_TABLE_COLUMNS.value.filter(c => !c.required).map(c => c.key),
+);
 
 function applyMyTableView(view: SavedTableView): void {
     const restoredFilters = JSON.parse(view.filters) as Partial<OrdersFilters>;
@@ -125,7 +144,12 @@ function applyMyTableView(view: SavedTableView): void {
 
 function applyChip(key: string): void {
     activeChip.value = key;
-    filters.state = key === 'processing' ? 'PaymentAuthorized' : key === 'awaiting-shipment' ? 'PaymentSettled' : '';
+    filters.state =
+        key === 'processing'
+            ? 'PaymentAuthorized'
+            : key === 'awaiting-shipment'
+              ? 'PaymentSettled'
+              : '';
     filters.reservationState = key === 'awaiting-confirmation' ? 'AWAITING_CONFIRMATION' : '';
     page.value = 1;
 }
@@ -150,7 +174,11 @@ activeChip.value = chipFromFilters(filters);
 
 const savedViews = computed<SavedView[]>(() => [
     { key: 'processing', label: 'My processing', count: summary.value?.processingCount ?? 0 },
-    { key: 'waiting-approval', label: 'Waiting approval', count: summary.value?.waitingApprovalCount ?? 0 },
+    {
+        key: 'waiting-approval',
+        label: 'Waiting approval',
+        count: summary.value?.waitingApprovalCount ?? 0,
+    },
     { key: 'today', label: "Today's orders", count: summary.value?.todayCount ?? 0 },
     { key: 'drafts', label: 'Drafts', count: summary.value?.draftCount ?? 0 },
 ]);
@@ -168,7 +196,11 @@ function applySavedView(key: string): void {
 
 // Set by OrdersDataTable.vue's (desktop-only) column sort — see api/orders.ts's
 // OrderSortField/fetchOrdersPage doc comment for why only these fields are real.
-const sort = ref<Partial<Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt', 'ASC' | 'DESC'>>>({
+const sort = ref<
+    Partial<
+        Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt', 'ASC' | 'DESC'>
+    >
+>({
     createdAt: 'DESC',
 });
 function handleSortChange(next: typeof sort.value): void {
@@ -271,11 +303,17 @@ const todayAmountFormatted = computed(() => {
             <div>
                 <div class="orders-page__breadcrumb">Workspace / Orders</div>
                 <h1 class="orders-page__title">Orders</h1>
-                <p class="orders-page__subtitle">{{ totalItems }} orders across your accessible scope.</p>
+                <p class="orders-page__subtitle">
+                    {{ totalItems }} orders across your accessible scope.
+                </p>
             </div>
             <div class="orders-page__context">
-                <MvStatusBadge variant="info">{{ authStore.roleLabel ?? authStore.roleCode }}</MvStatusBadge>
-                <MvStatusBadge v-if="departmentName" variant="neutral">{{ departmentName }}</MvStatusBadge>
+                <MvStatusBadge variant="info">{{
+                    authStore.roleLabel ?? authStore.roleCode
+                }}</MvStatusBadge>
+                <MvStatusBadge v-if="departmentName" variant="neutral">{{
+                    departmentName
+                }}</MvStatusBadge>
             </div>
         </div>
 
@@ -291,7 +329,11 @@ const todayAmountFormatted = computed(() => {
         <MvKpiCarousel v-if="summary" class="orders-page__kpis">
             <MvKpiCard label="Open orders" :value="summary.openCount" />
             <MvKpiCard label="Waiting approval" :value="summary.waitingApprovalCount" accent />
-            <MvKpiCard label="Today's amount" :value="todayAmountFormatted" :caption="`${summary.todayCount} orders today`" />
+            <MvKpiCard
+                label="Today's amount"
+                :value="todayAmountFormatted"
+                :caption="`${summary.todayCount} orders today`"
+            />
         </MvKpiCarousel>
 
         <div class="orders-page__grid">
@@ -308,7 +350,12 @@ const todayAmountFormatted = computed(() => {
                     @select-chip="applyChip"
                     hide-column-toggle
                 />
-                <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
+                <MvPagination
+                    :page="page"
+                    :page-size="pageSize"
+                    :total="totalItems"
+                    @update:page="page = $event"
+                />
                 <OrdersTableResponsive
                     :orders="orders"
                     :managers="managers"
@@ -323,7 +370,12 @@ const todayAmountFormatted = computed(() => {
                     @update:sort="handleSortChange"
                     @update:state-filter="filters.state = $event"
                 />
-                <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
+                <MvPagination
+                    :page="page"
+                    :page-size="pageSize"
+                    :total="totalItems"
+                    @update:page="page = $event"
+                />
             </MvPanel>
 
             <aside class="orders-page__right-stack">
@@ -340,7 +392,9 @@ const todayAmountFormatted = computed(() => {
                     <MyTableViewsPanel
                         page-key="orders"
                         :current-filters="filters"
-                        :current-visible-columns="HIDEABLE_COLUMN_KEYS.filter(k => !hiddenColumnKeys.has(k))"
+                        :current-visible-columns="
+                            HIDEABLE_COLUMN_KEYS.filter(k => !hiddenColumnKeys.has(k))
+                        "
                         @recall="applyMyTableView"
                     />
                 </MvPanel>
@@ -385,7 +439,6 @@ const todayAmountFormatted = computed(() => {
 .orders-page__kpis {
     margin-bottom: 18px;
 }
-
 
 .orders-page__grid {
     display: grid;

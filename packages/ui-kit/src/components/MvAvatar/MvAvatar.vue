@@ -41,7 +41,20 @@ const initials = computed(() => {
     line-height: 1;
 }
 
-.mv-avatar--sm { width: 28px; height: 28px; font-size: 11px; border-radius: 50%; }
-.mv-avatar--md { width: 46px; height: 46px; font-size: 15px; }
-.mv-avatar--lg { width: 58px; height: 58px; font-size: 18px; }
+.mv-avatar--sm {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+    border-radius: 50%;
+}
+.mv-avatar--md {
+    width: 46px;
+    height: 46px;
+    font-size: 15px;
+}
+.mv-avatar--lg {
+    width: 58px;
+    height: 58px;
+    font-size: 18px;
+}
 </style>

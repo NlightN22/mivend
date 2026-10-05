@@ -32,7 +32,11 @@ const COUNTERPARTY_ERP_ID = 'cnt-001';
 async function adminGql(query, variables, token) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${BASE_URL}/admin-api`, { method: 'POST', headers, body: JSON.stringify({ query, variables }) });
+    const res = await fetch(`${BASE_URL}/admin-api`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query, variables }),
+    });
     const json = await res.json();
     const authToken = res.headers.get('vendure-auth-token');
     if (json.errors) throw new Error(json.errors[0].message);
@@ -42,7 +46,11 @@ async function adminGql(query, variables, token) {
 async function shopGql(query, variables, token) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${BASE_URL}/shop-api`, { method: 'POST', headers, body: JSON.stringify({ query, variables }) });
+    const res = await fetch(`${BASE_URL}/shop-api`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query, variables }),
+    });
     const json = await res.json();
     const authToken = res.headers.get('vendure-auth-token');
     if (json.errors) throw new Error(json.errors[0].message);
@@ -85,7 +93,11 @@ async function shopLogin(username, password) {
 // 'online-failed'    -> Declined order, Invoice(s) stay 'pending' (never touched), PaymentAttempt 'failed'
 // 'offline-terms'    -> Authorized order, Invoice(s) 'issued', no PaymentAttempt (deferred payment)
 async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminToken) {
-    await shopGql(`mutation { transitionOrderToState(state: "AddingItems") { __typename } }`, undefined, customerToken).catch(() => {});
+    await shopGql(
+        `mutation { transitionOrderToState(state: "AddingItems") { __typename } }`,
+        undefined,
+        customerToken,
+    ).catch(() => {});
     await shopGql(`mutation { removeAllOrderLines { __typename } }`, undefined, customerToken);
     for (const variantId of variantIds) {
         // Real incident this guards against: an InsufficientStockError-type result here isn't a
@@ -99,7 +111,9 @@ async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminTok
             customerToken,
         );
         if (added.data.addItemToOrder.__typename !== 'Order') {
-            throw new Error(`addItemToOrder failed for variant ${variantId}: ${JSON.stringify(added.data.addItemToOrder)}`);
+            throw new Error(
+                `addItemToOrder failed for variant ${variantId}: ${JSON.stringify(added.data.addItemToOrder)}`,
+            );
         }
     }
     await shopGql(
@@ -109,7 +123,11 @@ async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminTok
         undefined,
         customerToken,
     );
-    const methodsData = await shopGql(`query { eligibleShippingMethods { id } }`, undefined, customerToken);
+    const methodsData = await shopGql(
+        `query { eligibleShippingMethods { id } }`,
+        undefined,
+        customerToken,
+    );
     const methodId = methodsData.data.eligibleShippingMethods[0]?.id;
     if (methodId) {
         await shopGql(
@@ -124,7 +142,9 @@ async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminTok
         customerToken,
     );
     if (transition.data.transitionOrderToState.__typename !== 'Order') {
-        throw new Error(`Could not move order to ArrangingPayment: ${JSON.stringify(transition.data)}`);
+        throw new Error(
+            `Could not move order to ArrangingPayment: ${JSON.stringify(transition.data)}`,
+        );
     }
     const orderId = transition.data.transitionOrderToState.id;
 
@@ -139,9 +159,12 @@ async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminTok
     // Inline literal (not a $input variable) to match the exact shape
     // packages/e2e/storefront/invoices/helpers.ts's addPaymentToOrder calls use.
     const method = paymentPlan === 'offline-terms' ? 'offline-terms' : 'online-stub';
-    const metadataLiteral = paymentPlan === 'online-pending' ? '{ status: "pending" }'
-        : paymentPlan === 'online-failed' ? '{ status: "fail" }'
-        : '{}';
+    const metadataLiteral =
+        paymentPlan === 'online-pending'
+            ? '{ status: "pending" }'
+            : paymentPlan === 'online-failed'
+              ? '{ status: "fail" }'
+              : '{}';
     const payment = await shopGql(
         `mutation { addPaymentToOrder(input: { method: "${method}", metadata: ${metadataLiteral} }) { __typename ... on Order { id code } } }`,
         undefined,
@@ -182,7 +205,12 @@ async function payOneInvoice(customerToken, invoiceId) {
     );
 }
 
-async function topUpOrdersInvoicesAndPayments(directorToken, counterpartyId, variantIds, variantsByOrg) {
+async function topUpOrdersInvoicesAndPayments(
+    directorToken,
+    counterpartyId,
+    variantIds,
+    variantsByOrg,
+) {
     const existing = await adminGql(
         `query($options: InvoiceListOptions, $counterpartyId: ID) {
             visibleInvoices(options: $options, counterpartyId: $counterpartyId) { totalItems }
@@ -192,7 +220,9 @@ async function topUpOrdersInvoicesAndPayments(directorToken, counterpartyId, var
     );
     const currentCount = existing.data.visibleInvoices.totalItems;
     const toCreate = Math.max(0, TARGET_COUNT - currentCount);
-    console.log(`Invoices: ${currentCount} existing for counterparty ${counterpartyId}, checking out orders for ${toCreate} more...`);
+    console.log(
+        `Invoices: ${currentCount} existing for counterparty ${counterpartyId}, checking out orders for ${toCreate} more...`,
+    );
 
     const customerToken = await shopLogin(CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
 
@@ -202,7 +232,13 @@ async function topUpOrdersInvoicesAndPayments(directorToken, counterpartyId, var
         // over from 'online-succeeded' and never reaches the later plans (real incident: several
         // small top-up runs in a row never produced a single 'online-failed'/pending-Invoice
         // example because toCreate was never large enough in one run to loop that far).
-        const plans = ['online-succeeded', 'online-succeeded', 'online-pending', 'offline-terms', 'online-failed'];
+        const plans = [
+            'online-succeeded',
+            'online-succeeded',
+            'online-pending',
+            'offline-terms',
+            'online-failed',
+        ];
         let created = 0;
         let i = currentCount;
         while (created < toCreate) {
@@ -229,12 +265,18 @@ async function topUpOrdersInvoicesAndPayments(directorToken, counterpartyId, var
         );
         const existingPartialCount = existingPartial.data.customerOrdersByPaymentView.totalItems;
         const partialToCreate = Math.max(0, partialTarget - existingPartialCount);
-        console.log(`Partially-paid orders: ${existingPartialCount} existing, creating ${partialToCreate} more...`);
+        console.log(
+            `Partially-paid orders: ${existingPartialCount} existing, creating ${partialToCreate} more...`,
+        );
         for (let i = 0; i < partialToCreate; i++) {
             const [orgA, orgB] = [orgIds[i % orgIds.length], orgIds[(i + 1) % orgIds.length]];
             const variantA = variantsByOrg[orgA][0];
             const variantB = variantsByOrg[orgB][0];
-            const result = await checkoutOneOrder(customerToken, [variantA, variantB], 'offline-terms');
+            const result = await checkoutOneOrder(
+                customerToken,
+                [variantA, variantB],
+                'offline-terms',
+            );
             const invoicesRes = await adminGql(
                 `query($orderId: ID!) { invoicesForOrder(orderId: $orderId) { id } }`,
                 { orderId: result.id },
@@ -255,8 +297,13 @@ async function topUpOrdersInvoicesAndPayments(directorToken, counterpartyId, var
         directorToken,
     );
     const unpaidTarget = 3;
-    const unpaidToCreate = Math.max(0, unpaidTarget - existingUnpaid.data.customerOrdersByPaymentView.totalItems);
-    console.log(`Genuinely-unpaid orders (no payment attempted): ${existingUnpaid.data.customerOrdersByPaymentView.totalItems} existing, creating ${unpaidToCreate} more...`);
+    const unpaidToCreate = Math.max(
+        0,
+        unpaidTarget - existingUnpaid.data.customerOrdersByPaymentView.totalItems,
+    );
+    console.log(
+        `Genuinely-unpaid orders (no payment attempted): ${existingUnpaid.data.customerOrdersByPaymentView.totalItems} existing, creating ${unpaidToCreate} more...`,
+    );
     for (let i = 0; i < unpaidToCreate; i++) {
         await checkoutOneOrder(customerToken, [variantIds[i % variantIds.length]], 'unpaid');
     }
@@ -271,7 +318,8 @@ async function resolveVendureCustomerId(directorToken) {
         directorToken,
     );
     const customer = res.data.customers.items.find(c => c.emailAddress === CUSTOMER_EMAIL);
-    if (!customer) throw new Error(`Customer ${CUSTOMER_EMAIL} not found — run \`make seed\` first.`);
+    if (!customer)
+        throw new Error(`Customer ${CUSTOMER_EMAIL} not found — run \`make seed\` first.`);
     vendureCustomerIdCache = customer.id;
     return customer.id;
 }
@@ -292,7 +340,9 @@ async function topUpDocuments() {
             metadata: { seedIndex: i },
         });
     }
-    console.log(`Documents: sending ${documents.length} for ${COUNTERPARTY_ERP_ID} (batch dedup makes reruns a no-op)...`);
+    console.log(
+        `Documents: sending ${documents.length} for ${COUNTERPARTY_ERP_ID} (batch dedup makes reruns a no-op)...`,
+    );
     const res = await fetch(`${BASE_URL}/erp/import/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
@@ -322,7 +372,9 @@ async function topUpHistory(token, tradingPointIds) {
     );
     const currentCount = existing.data.entityVersionsForEntities.totalItems;
     const toCreate = Math.max(0, TARGET_COUNT - currentCount);
-    console.log(`History: ${currentCount} existing EntityVersion rows, creating ${toCreate} more...`);
+    console.log(
+        `History: ${currentCount} existing EntityVersion rows, creating ${toCreate} more...`,
+    );
     for (let i = 0; i < toCreate; i++) {
         const tradingPointId = tradingPointIds[i % tradingPointIds.length];
         // updateTradingPointDetails (not updateTradingPointComment) is the mutation that
@@ -356,7 +408,9 @@ async function topUpFulfillmentVariety(directorToken, customerId) {
         if (s) acc[s] = (acc[s] ?? 0) + 1;
         return acc;
     }, {});
-    console.log(`Fulfillment: existing Pending=${byState.Pending ?? 0} Shipped=${byState.Shipped ?? 0} Delivered=${byState.Delivered ?? 0}, ${settledUnfulfilled.length} settled orders available to fulfill...`);
+    console.log(
+        `Fulfillment: existing Pending=${byState.Pending ?? 0} Shipped=${byState.Shipped ?? 0} Delivered=${byState.Delivered ?? 0}, ${settledUnfulfilled.length} settled orders available to fulfill...`,
+    );
 
     const plan = [
         ...Array(Math.max(0, target.pending - (byState.Pending ?? 0))).fill('Pending'),
@@ -377,7 +431,10 @@ async function topUpFulfillmentVariety(directorToken, customerId) {
             {
                 input: {
                     lines: order.lines.map(l => ({ orderLineId: l.id, quantity: l.quantity })),
-                    handler: { code: 'manual-fulfillment', arguments: [{ name: 'method', value: 'Standard shipping' }] },
+                    handler: {
+                        code: 'manual-fulfillment',
+                        arguments: [{ name: 'method', value: 'Standard shipping' }],
+                    },
                 },
             },
             directorToken,
@@ -442,7 +499,11 @@ async function topUpErpCancelledOrders(customerToken, directorToken, variantIds)
         const res = await fetch(`${BASE_URL}/erp/callback/order-status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderCode, status: 'CANCELLED', erpOrderId: `erp-${orderCode}` }),
+            body: JSON.stringify({
+                orderCode,
+                status: 'CANCELLED',
+                erpOrderId: `erp-${orderCode}`,
+            }),
         });
         const json = await res.json();
         console.log(`  → order ${orderCode} erp-cancelled, callback ok=${json.ok}`);
@@ -471,9 +532,13 @@ async function topUpErpCancelledOrders(customerToken, directorToken, variantIds)
         // idempotency check (byState via erpStatus==='CANCELLED') doesn't retry forever.
         const verifyRaw = execSync(
             `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -tAc "select \\"customFieldsErpstatus\\" from \\"order\\" where id = ${result.id};"`,
-        ).toString().trim();
+        )
+            .toString()
+            .trim();
         if (verifyRaw !== 'CANCELLED') {
-            console.warn(`  … erpStatus did not stick for ${orderCode} (was "${verifyRaw}"), forcing via SQL...`);
+            console.warn(
+                `  … erpStatus did not stick for ${orderCode} (was "${verifyRaw}"), forcing via SQL...`,
+            );
             execSync(
                 `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -c "UPDATE \\"order\\" SET \\"customFieldsErpstatus\\" = 'CANCELLED' WHERE id = ${result.id};"`,
                 { stdio: 'inherit' },
@@ -514,7 +579,9 @@ async function checkoutOneOrderAsAdmin(adminToken, customerId, variantIds) {
                 adminToken,
             );
             if (added.data.addItemToDraftOrder.__typename !== 'Order') {
-                throw new Error(`addItemToDraftOrder failed for variant ${variantId}: ${JSON.stringify(added.data.addItemToDraftOrder)}`);
+                throw new Error(
+                    `addItemToDraftOrder failed for variant ${variantId}: ${JSON.stringify(added.data.addItemToDraftOrder)}`,
+                );
             }
         }
         await adminGql(
@@ -551,7 +618,11 @@ async function checkoutOneOrderAsAdmin(adminToken, customerId, variantIds) {
         );
         return orderId;
     } catch (err) {
-        await adminGql(`mutation($orderId: ID!) { deleteDraftOrder(orderId: $orderId) { result } }`, { orderId }, adminToken).catch(() => {});
+        await adminGql(
+            `mutation($orderId: ID!) { deleteDraftOrder(orderId: $orderId) { result } }`,
+            { orderId },
+            adminToken,
+        ).catch(() => {});
         throw err;
     }
 }
@@ -589,10 +660,15 @@ async function topUpAdminPlacedOrders(customerId, variantIds) {
     for (let i = 0; i < toCreate; i++) {
         const staffToken = await adminLogin(staffLogins[i % staffLogins.length], 'Password123!');
         const lineCount = 1 + (i % 3); // 1, 2, 3 items — real line-count variety
-        const variants = Array.from({ length: lineCount }, (_, j) => variantIds[(i + j) % variantIds.length]);
+        const variants = Array.from(
+            { length: lineCount },
+            (_, j) => variantIds[(i + j) % variantIds.length],
+        );
         try {
             await checkoutOneOrderAsAdmin(staffToken, customerId, variants);
-            console.log(`✔ Admin-placed order (${lineCount} lines) by ${staffLogins[i % staffLogins.length]}`);
+            console.log(
+                `✔ Admin-placed order (${lineCount} lines) by ${staffLogins[i % staffLogins.length]}`,
+            );
         } catch (err) {
             console.warn(`  … admin-placed checkout failed: ${err.message}`);
         }
@@ -628,8 +704,13 @@ function spreadOrderPlacedDates(dbContainer, dbName) {
         "orderPlacedAt" = TIMESTAMP '2026-07-19' - ((id % 90) || ' days')::interval,
         "createdAt" = TIMESTAMP '2026-07-19' - ((id % 90) || ' days')::interval - ((id % 24) || ' hours')::interval - ((id % 60) || ' minutes')::interval
         WHERE "customerId" = (SELECT id FROM customer WHERE "emailAddress" = '${CUSTOMER_EMAIL}');`;
-    console.log('Spreading orderPlacedAt/createdAt dates across the last 90 days (documented raw-SQL exception, no mutation exists for either field)...');
-    execSync(`docker exec ${dbContainer} psql -U postgres -d ${dbName} -c "${sql.replace(/"/g, '\\"')}"`, { stdio: 'inherit' });
+    console.log(
+        'Spreading orderPlacedAt/createdAt dates across the last 90 days (documented raw-SQL exception, no mutation exists for either field)...',
+    );
+    execSync(
+        `docker exec ${dbContainer} psql -U postgres -d ${dbName} -c "${sql.replace(/"/g, '\\"')}"`,
+        { stdio: 'inherit' },
+    );
 }
 
 // Gives the Orders tab's Reservation column real variety — RESERVED/RELEASED/EXPIRED/FAILED, not
@@ -669,7 +750,9 @@ async function topUpReservationVariety(directorToken, customerId, organizationId
     // Reservation table via SQL, not the (always-reset) order-level field.
     const expiredCountRaw = execSync(
         `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -tAc "select count(*) from reservation r join \\"order\\" o on o.id::text = r.\\"orderId\\" join customer c on c.id = o.\\"customerId\\" where c.\\"emailAddress\\" = '${CUSTOMER_EMAIL}' and r.status = 'expired';"`,
-    ).toString().trim();
+    )
+        .toString()
+        .trim();
     const existingExpired = Number(expiredCountRaw) || 0;
     console.log(
         `Reservation: existing RESERVED=${byState.RESERVED ?? 0} RELEASED=${byState.RELEASED ?? 0} ` +
@@ -678,7 +761,9 @@ async function topUpReservationVariety(directorToken, customerId, organizationId
 
     // AWAITING_CONFIRMATION orders with lines are the raw material for RESERVED/RELEASED/EXPIRED —
     // confirmOrder just needs order.lines populated, no Order.state precondition.
-    const candidates = items.filter(o => o.customFields.reservationState === 'AWAITING_CONFIRMATION' && o.lines.length > 0);
+    const candidates = items.filter(
+        o => o.customFields.reservationState === 'AWAITING_CONFIRMATION' && o.lines.length > 0,
+    );
     let idx = 0;
 
     const reservedToCreate = Math.max(0, targets.RESERVED - (byState.RESERVED ?? 0));
@@ -727,8 +812,13 @@ async function topUpReservationVariety(directorToken, customerId, organizationId
         // customFields.reservationState to 'EXPIRED', no need to touch either by hand.
         const idList = expireTargetIds.map(id => `'${id}'`).join(',');
         const sql = `UPDATE reservation SET "expiresAt" = NOW() - interval '1 hour' WHERE "orderId" IN (${idList}) AND status = 'active';`;
-        console.log(`Backdating expiresAt for ${expireTargetIds.length} reservations so the expiry worker sweeps them...`);
-        execSync(`docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -c "${sql.replace(/"/g, '\\"')}"`, { stdio: 'inherit' });
+        console.log(
+            `Backdating expiresAt for ${expireTargetIds.length} reservations so the expiry worker sweeps them...`,
+        );
+        execSync(
+            `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -c "${sql.replace(/"/g, '\\"')}"`,
+            { stdio: 'inherit' },
+        );
     }
 
     // FAILED needs a real stock shortage at *confirm* time, not at add-item time. A deliberately
@@ -777,7 +867,14 @@ async function topUpReservationVariety(directorToken, customerId, organizationId
                             organizationId,
                         },
                     },
-                    { type: 'price', data: { sku: FAILED_SKU, priceTypeCode: 'price-type-wholesale', price: 100 } },
+                    {
+                        type: 'price',
+                        data: {
+                            sku: FAILED_SKU,
+                            priceTypeCode: 'price-type-wholesale',
+                            price: 100,
+                        },
+                    },
                     // Fixed small stock, never touched by any other seed function — each FAILED
                     // pair permanently consumes 1 unit via "order A"'s real reservation, so this
                     // covers many reruns/target increases without going negative.
@@ -787,7 +884,9 @@ async function topUpReservationVariety(directorToken, customerId, organizationId
         });
         const importJson = await importRes.json();
         if (importJson.failed > 0) {
-            console.warn(`  … FAILED-scenario SKU import had errors: ${JSON.stringify(importJson.errors)}`);
+            console.warn(
+                `  … FAILED-scenario SKU import had errors: ${JSON.stringify(importJson.errors)}`,
+            );
         }
         const variantRes = await adminGql(
             `query { productVariants(options: { filter: { sku: { eq: "${FAILED_SKU}" } } }) { items { id } } }`,
@@ -816,7 +915,11 @@ async function topUpReservationVariety(directorToken, customerId, organizationId
                     undefined,
                     directorToken,
                 );
-                const currentAllocated = stockRes.data.productVariants.items[0]?.stockLevels.reduce((sum, l) => sum + l.stockAllocated, 0) ?? 0;
+                const currentAllocated =
+                    stockRes.data.productVariants.items[0]?.stockLevels.reduce(
+                        (sum, l) => sum + l.stockAllocated,
+                        0,
+                    ) ?? 0;
                 // erp-import's 'stock' record type is the intended real path for this (matches
                 // AGENTS.md's "seed only via erp-import" rule), but StockHandler.upsert's raw
                 // UPDATE was found live to silently no-op here — the batch endpoint reports
@@ -858,13 +961,19 @@ async function topUpReservationVariety(directorToken, customerId, organizationId
                     // uses stockOnHand-stockAllocated (10-1=9, so 9 is addable), while reserveOrder's
                     // ATP check additionally subtracts activeReservedQty (10-1-1=8) — quantity 9
                     // lands exactly in that gap: addable, but genuinely short at confirm time.
-                    orderB = await checkoutOneOrderAsAdmin(directorToken, customerId, Array(PAIR_STOCK - 1).fill(variantId));
+                    orderB = await checkoutOneOrderAsAdmin(
+                        directorToken,
+                        customerId,
+                        Array(PAIR_STOCK - 1).fill(variantId),
+                    );
                     await adminGql(
                         `mutation($orderId: ID!, $days: Int!) { confirmOrder(orderId: $orderId, reservationDays: $days) { id } }`,
                         { orderId: orderB, days: 14 },
                         directorToken,
                     );
-                    console.warn(`  … order B unexpectedly succeeded instead of failing (order ${orderB})`);
+                    console.warn(
+                        `  … order B unexpectedly succeeded instead of failing (order ${orderB})`,
+                    );
                 } catch (err) {
                     // reserveOrder() genuinely threw InsufficientStockError here (the real FAILED
                     // case) and internally calls markReservationFailed -> setOrderReservationState
@@ -880,7 +989,9 @@ async function topUpReservationVariety(directorToken, customerId, organizationId
                         `docker exec docker-postgres-central-1 psql -U postgres -d mivend_central -c "UPDATE \\"order\\" SET \\"customFieldsReservationstate\\" = 'FAILED' WHERE id = ${orderB};"`,
                         { stdio: 'inherit' },
                     );
-                    console.log(`✔ FAILED reservation seeded via order A=${orderA} holding the SKU's only unit`);
+                    console.log(
+                        `✔ FAILED reservation seeded via order A=${orderA} holding the SKU's only unit`,
+                    );
                 }
             }
         }
@@ -904,9 +1015,12 @@ async function main() {
     // (real error now, since addItemToOrder's result is checked — see checkoutOneOrder's comment —
     // but previously produced a silent broken empty order); it's only meant to be used explicitly
     // by topUpReservationVariety's own dedicated FAILED-scenario SKU/logic, not the shared pool.
-    const generalPurposeVariants = variantsRes.data.productVariants.items.filter(v => v.sku !== 'BAT-90-AGM');
+    const generalPurposeVariants = variantsRes.data.productVariants.items.filter(
+        v => v.sku !== 'BAT-90-AGM',
+    );
     const variantIds = generalPurposeVariants.map(v => v.id);
-    if (variantIds.length === 0) throw new Error('No seeded product variants found — run `make seed` first.');
+    if (variantIds.length === 0)
+        throw new Error('No seeded product variants found — run `make seed` first.');
     const variantsByOrg = {};
     for (const v of generalPurposeVariants) {
         const orgId = v.customFields?.organizationId;
@@ -919,16 +1033,32 @@ async function main() {
         undefined,
         directorToken,
     );
-    const targetCounterparty = counterpartiesRes.data.counterparties.items.find(c => c.erpId === COUNTERPARTY_ERP_ID);
-    if (!targetCounterparty) throw new Error(`Counterparty ${COUNTERPARTY_ERP_ID} not found — run \`make seed\` first.`);
+    const targetCounterparty = counterpartiesRes.data.counterparties.items.find(
+        c => c.erpId === COUNTERPARTY_ERP_ID,
+    );
+    if (!targetCounterparty)
+        throw new Error(`Counterparty ${COUNTERPARTY_ERP_ID} not found — run \`make seed\` first.`);
     const tradingPointIds = targetCounterparty.tradingPoints.map(tp => tp.id);
 
-    await topUpOrdersInvoicesAndPayments(directorToken, targetCounterparty.id, variantIds, variantsByOrg);
+    await topUpOrdersInvoicesAndPayments(
+        directorToken,
+        targetCounterparty.id,
+        variantIds,
+        variantsByOrg,
+    );
     await topUpFulfillmentVariety(directorToken, await resolveVendureCustomerId(directorToken));
-    await topUpErpCancelledOrders(await shopLogin(CUSTOMER_EMAIL, CUSTOMER_PASSWORD), directorToken, variantIds);
+    await topUpErpCancelledOrders(
+        await shopLogin(CUSTOMER_EMAIL, CUSTOMER_PASSWORD),
+        directorToken,
+        variantIds,
+    );
     await topUpAdminPlacedOrders(await resolveVendureCustomerId(directorToken), variantIds);
     spreadOrderPlacedDates('docker-postgres-central-1', 'mivend_central');
-    await topUpReservationVariety(directorToken, await resolveVendureCustomerId(directorToken), Object.keys(variantsByOrg)[0]);
+    await topUpReservationVariety(
+        directorToken,
+        await resolveVendureCustomerId(directorToken),
+        Object.keys(variantsByOrg)[0],
+    );
     await topUpDocuments();
     await topUpHistory(directorToken, tradingPointIds);
 

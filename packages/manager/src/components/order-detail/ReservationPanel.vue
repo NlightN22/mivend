@@ -107,7 +107,12 @@ async function handleExtend(): Promise<void> {
         <div v-if="!isConfirmed && canConfirm" class="reservation-panel__form">
             <label class="reservation-panel__label">
                 Reservation period (days)
-                <MvInput size="sm" type="number" :model-value="form.days" @update:model-value="form.days = $event" />
+                <MvInput
+                    size="sm"
+                    type="number"
+                    :model-value="form.days"
+                    @update:model-value="form.days = $event"
+                />
             </label>
             <MvButton :loading="submitting" @click="handleConfirm">Confirm order</MvButton>
         </div>
@@ -127,7 +132,12 @@ async function handleExtend(): Promise<void> {
                     Extend reservation
                 </MvButton>
             </div>
-            <MvButton v-if="canConfirm" variant="secondary" :loading="submitting" @click="handleRelease">
+            <MvButton
+                v-if="canConfirm"
+                variant="secondary"
+                :loading="submitting"
+                @click="handleRelease"
+            >
                 Release reservation
             </MvButton>
         </template>

@@ -47,8 +47,14 @@ const isMoreActive = computed(
             :to="item.path ?? '/'"
         >
             <span class="mv-app-mobile-nav__icon-wrap">
-                <el-icon class="mv-app-mobile-nav__icon"><component :is="ICONS[item.icon]" /></el-icon>
-                <MvCountBadge v-if="item.badgeCount" :count="item.badgeCount" class="mv-app-mobile-nav__badge" />
+                <el-icon class="mv-app-mobile-nav__icon"
+                    ><component :is="ICONS[item.icon]"
+                /></el-icon>
+                <MvCountBadge
+                    v-if="item.badgeCount"
+                    :count="item.badgeCount"
+                    class="mv-app-mobile-nav__badge"
+                />
             </span>
             <span class="mv-app-mobile-nav__label">{{ item.label }}</span>
         </RouterLink>
@@ -75,18 +81,18 @@ const isMoreActive = computed(
 
 @media (max-width: 800px) {
     .mv-app-mobile-nav {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 50;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    min-height: 62px;
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-    background: rgba(255, 255, 255, 0.97);
-    border-top: 1px solid var(--el-border-color, #e4e7ec);
-    box-shadow: 0 -8px 24px rgba(20, 42, 65, 0.1);
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        min-height: 62px;
+        padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+        background: rgba(255, 255, 255, 0.97);
+        border-top: 1px solid var(--el-border-color, #e4e7ec);
+        box-shadow: 0 -8px 24px rgba(20, 42, 65, 0.1);
     }
 }
 

@@ -63,7 +63,10 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
             options: DISCOUNT_GRANT_STATUS_OPTIONS.filter(o => o.value).map(o => ({
                 value: o.value,
                 label: o.label,
-                variant: DISCOUNT_GRANT_STATUS_BADGE_VARIANT[o.value as keyof typeof DISCOUNT_GRANT_STATUS_BADGE_VARIANT],
+                variant:
+                    DISCOUNT_GRANT_STATUS_BADGE_VARIANT[
+                        o.value as keyof typeof DISCOUNT_GRANT_STATUS_BADGE_VARIANT
+                    ],
             })),
         },
         mobile: { badge: true },
@@ -89,7 +92,9 @@ const { state: tableState } = useDataTableState<DiscountFilterState>(
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
         // status/number(search)/pageSize are the tab's own concern (it owns the fetch) — always
         // seed from the tab's current prop values, never from stale localStorage (see
         // CustomerPaymentsDataTable.vue's identical reasoning).
@@ -102,17 +107,29 @@ watch(
     f => emit('update:filters', { status: f.status, search: f.number }),
     { deep: true },
 );
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
 
-watch(() => props.statusFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, status: v };
-});
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, number: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => props.statusFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, status: v };
+    },
+);
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, number: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 interface DiscountRow {
     [key: string]: unknown;
@@ -133,7 +150,9 @@ const rows = computed<DiscountRow[]>(() =>
         scope: discount.facetValueCode ?? 'All products',
         percent: `${discount.percent}%`,
         validTo: new Date(discount.validTo).toLocaleDateString('en-US'),
-        status: DISCOUNT_GRANT_STATUS_OPTIONS.find(o => o.value === discount.status)?.label ?? discount.status,
+        status:
+            DISCOUNT_GRANT_STATUS_OPTIONS.find(o => o.value === discount.status)?.label ??
+            discount.status,
         statusVariant: DISCOUNT_GRANT_STATUS_BADGE_VARIANT[discount.status],
     })),
 );
@@ -169,7 +188,9 @@ const rows = computed<DiscountRow[]>(() =>
             <MvDateTimeCell :value="(data as DiscountRow).createdAt" />
         </template>
         <template #cell-status="{ data }">
-            <MvStatusBadge :variant="(data as DiscountRow).statusVariant">{{ (data as DiscountRow).status }}</MvStatusBadge>
+            <MvStatusBadge :variant="(data as DiscountRow).statusVariant">{{
+                (data as DiscountRow).status
+            }}</MvStatusBadge>
         </template>
     </MvAdvancedDataTable>
 </template>

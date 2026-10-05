@@ -13,7 +13,9 @@ import {
 const checkoutStore = useCheckoutStore();
 const authStore = useAuthStore();
 
-const tradingPointName = computed(() => authStore.tradingPoint?.name ?? 'Trading point not selected');
+const tradingPointName = computed(
+    () => authStore.tradingPoint?.name ?? 'Trading point not selected',
+);
 const tradingPointAddress = computed(() => authStore.tradingPoint?.address ?? '');
 
 // ── Change point modal ──────────────────────────────────────────────────────
@@ -57,9 +59,7 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
         <div class="delivery-selector__head">
             <div>
                 <h2 class="delivery-selector__title">Delivery</h2>
-                <p class="delivery-selector__subtitle">
-                    Delivery to your current trading point.
-                </p>
+                <p class="delivery-selector__subtitle">Delivery to your current trading point.</p>
             </div>
             <button class="delivery-selector__change-btn" type="button" @click="openModal">
                 Change point
@@ -68,18 +68,23 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
         <div class="delivery-selector__grid">
             <button
                 class="delivery-selector__card"
-                :class="{ 'delivery-selector__card--active': checkoutStore.selectedDelivery === 'courier' }"
+                :class="{
+                    'delivery-selector__card--active': checkoutStore.selectedDelivery === 'courier',
+                }"
                 type="button"
                 @click="checkoutStore.setDelivery('courier')"
             >
                 <div class="delivery-selector__card-title"><span>🚚</span> Courier</div>
                 <p class="delivery-selector__card-note">
-                    {{ tradingPointAddress || tradingPointName }} · today until 18:00 · per contract terms.
+                    {{ tradingPointAddress || tradingPointName }} · today until 18:00 · per contract
+                    terms.
                 </p>
             </button>
             <button
                 class="delivery-selector__card"
-                :class="{ 'delivery-selector__card--active': checkoutStore.selectedDelivery === 'pickup' }"
+                :class="{
+                    'delivery-selector__card--active': checkoutStore.selectedDelivery === 'pickup',
+                }"
                 type="button"
                 @click="checkoutStore.setDelivery('pickup')"
             >
@@ -160,7 +165,9 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
     flex: 0 0 auto;
 }
 
-.delivery-selector__change-btn:hover { background: #e6f0ec; }
+.delivery-selector__change-btn:hover {
+    background: #e6f0ec;
+}
 
 .delivery-selector__grid {
     display: grid;
@@ -229,14 +236,20 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
     transition: 0.14s ease;
 }
 
-.ds-point-item:hover { background: #f3f8f6; border-color: #b0ccbf; }
+.ds-point-item:hover {
+    background: #f3f8f6;
+    border-color: #b0ccbf;
+}
 
 .ds-point-item--active {
     border-color: #00a878;
     background: linear-gradient(135deg, #fff, #f3fff7);
 }
 
-.ds-point-item--saving { opacity: 0.6; pointer-events: none; }
+.ds-point-item--saving {
+    opacity: 0.6;
+    pointer-events: none;
+}
 
 .ds-point-item__check {
     width: 22px;
@@ -270,6 +283,8 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
 }
 
 @media (max-width: 900px) {
-    .delivery-selector__grid { grid-template-columns: 1fr; }
+    .delivery-selector__grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

@@ -22,7 +22,10 @@ function money(amount: number): string {
         <div class="order-context__row">
             <span class="order-context__label">Customer</span>
             <span class="order-context__value">
-                {{ order.customer.counterparty?.shortName ?? `${order.customer.firstName} ${order.customer.lastName}` }}
+                {{
+                    order.customer.counterparty?.shortName ??
+                    `${order.customer.firstName} ${order.customer.lastName}`
+                }}
             </span>
         </div>
         <div v-if="order.customer.counterparty?.inn" class="order-context__row">

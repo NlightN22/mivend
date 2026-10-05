@@ -14,7 +14,9 @@ function variant(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
 
 <template>
     <ul class="related-documents">
-        <li v-if="!documents.length" class="related-documents__empty">No documents for this order</li>
+        <li v-if="!documents.length" class="related-documents__empty">
+            No documents for this order
+        </li>
         <li v-for="doc in documents" :key="doc.id" class="related-documents__item">
             <RouterLink to="/documents" class="related-documents__link">
                 {{ doc.type }} · {{ doc.number }}

@@ -23,7 +23,9 @@ function isSelected(value: string): boolean {
 }
 function toggle(value: string): void {
     if (props.config.multiple) {
-        const next = isSelected(value) ? selectedValues.value.filter(v => v !== value) : [...selectedValues.value, value];
+        const next = isSelected(value)
+            ? selectedValues.value.filter(v => v !== value)
+            : [...selectedValues.value, value];
         emit('update:modelValue', next);
     } else {
         emit('update:modelValue', isSelected(value) ? '' : value);
@@ -41,14 +43,34 @@ function clearAll(): void {
             <input v-model="search" type="text" :placeholder="config.placeholder ?? 'Search…'" />
         </div>
         <div class="mv-column-filter-enum__list">
-            <label v-for="option in filteredOptions" :key="option.value" class="mv-column-filter-enum__row">
-                <MvCheckbox v-if="config.multiple" :model-value="isSelected(option.value)" @update:model-value="toggle(option.value)" />
-                <input v-else type="radio" :checked="isSelected(option.value)" @change="toggle(option.value)" />
+            <label
+                v-for="option in filteredOptions"
+                :key="option.value"
+                class="mv-column-filter-enum__row"
+            >
+                <MvCheckbox
+                    v-if="config.multiple"
+                    :model-value="isSelected(option.value)"
+                    @update:model-value="toggle(option.value)"
+                />
+                <input
+                    v-else
+                    type="radio"
+                    :checked="isSelected(option.value)"
+                    @change="toggle(option.value)"
+                />
                 <span>{{ option.label }}</span>
             </label>
-            <div v-if="filteredOptions.length === 0" class="mv-column-filter-enum__empty">No matches</div>
+            <div v-if="filteredOptions.length === 0" class="mv-column-filter-enum__empty">
+                No matches
+            </div>
         </div>
-        <button v-if="selectedValues.length > 0" type="button" class="mv-column-filter-enum__clear-all" @click="clearAll">
+        <button
+            v-if="selectedValues.length > 0"
+            type="button"
+            class="mv-column-filter-enum__clear-all"
+            @click="clearAll"
+        >
             Clear all
         </button>
     </div>

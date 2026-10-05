@@ -60,7 +60,13 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: { type: 'text', placeholder: 'Name or ERP id contains…' },
         mobile: { primary: true },
     },
-    { field: 'erpId', header: 'ERP id', width: 140, filterConfig: { type: 'none' }, mobile: { hidden: true } },
+    {
+        field: 'erpId',
+        header: 'ERP id',
+        width: 140,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
     {
         field: 'erpIsActive',
         header: 'ERP isActive',
@@ -68,8 +74,18 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: { type: 'none' },
         mobile: { hidden: true },
     },
-    { field: 'assignedBranchId', header: 'Assigned branch', width: 220, filterConfig: { type: 'none' } },
-    { field: 'includedInBranchAtp', header: 'Included in branch ATP', width: 190, filterConfig: { type: 'none' } },
+    {
+        field: 'assignedBranchId',
+        header: 'Assigned branch',
+        width: 220,
+        filterConfig: { type: 'none' },
+    },
+    {
+        field: 'includedInBranchAtp',
+        header: 'Included in branch ATP',
+        width: 190,
+        filterConfig: { type: 'none' },
+    },
 ];
 
 interface WarehouseFilterState {
@@ -90,7 +106,9 @@ const { state: tableState } = useDataTableState<WarehouseFilterState>(
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
         // `name` (search) and `pageSize` are BranchSettingsPage's own concern — it owns the
         // filtering/slicing — so always seed from its current prop values, never stale
         // localStorage (same reasoning as CustomerInvoicesDataTable.vue).
@@ -103,14 +121,23 @@ watch(
     f => emit('update:filters', { search: f.name }),
     { deep: true },
 );
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
 
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, name: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, name: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 interface WarehouseRow {
     [key: string]: unknown;

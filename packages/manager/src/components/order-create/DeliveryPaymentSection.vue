@@ -19,7 +19,9 @@ const emit = defineEmits<{
             <label>Trading point / delivery address</label>
             <MvSelect
                 :model-value="tradingPointId"
-                :options="tradingPoints.map(p => ({ value: p.id, label: `${p.name} — ${p.address}` }))"
+                :options="
+                    tradingPoints.map(p => ({ value: p.id, label: `${p.name} — ${p.address}` }))
+                "
                 @update:model-value="emit('update:tradingPointId', $event)"
             />
         </div>

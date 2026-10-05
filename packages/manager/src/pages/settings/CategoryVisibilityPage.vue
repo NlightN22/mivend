@@ -31,7 +31,10 @@ async function loadAll(): Promise<void> {
 const savingCollectionId = ref<string | null>(null);
 const saveError = ref('');
 
-async function onSetOverride(payload: { id: string; visibilityOverride: string | null }): Promise<void> {
+async function onSetOverride(payload: {
+    id: string;
+    visibilityOverride: string | null;
+}): Promise<void> {
     savingCollectionId.value = payload.id;
     saveError.value = '';
     try {
@@ -53,7 +56,10 @@ onMounted(loadAll);
     that's the permission setCategoryVisibilityOverride's updateCollection mutation actually
     requires, per mivend.audit.90. Today portal-admin is the only role with either, but checking
     the permission the page truly needs keeps this page correct if that ever changes. -->
-    <div v-if="!authStore.hasPermission('UpdateCatalog')" class="category-visibility-page__not-authorized">
+    <div
+        v-if="!authStore.hasPermission('UpdateCatalog')"
+        class="category-visibility-page__not-authorized"
+    >
         <h1>Not authorized</h1>
         <p>You don't have permission to manage category visibility.</p>
     </div>
@@ -69,9 +75,9 @@ onMounted(loadAll);
             <template #subheader>
                 <p class="category-visibility-page__description">
                     Force a category's storefront visibility regardless of what the ERP feed
-                    reports. "Auto" follows the feed (hidden when the upstream category is
-                    inactive or deleted); "Hidden"/"Visible" pin the category and survive the next
-                    feed update.
+                    reports. "Auto" follows the feed (hidden when the upstream category is inactive
+                    or deleted); "Hidden"/"Visible" pin the category and survive the next feed
+                    update.
                 </p>
             </template>
 

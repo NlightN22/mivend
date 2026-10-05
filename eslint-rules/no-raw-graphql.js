@@ -29,7 +29,7 @@ export default {
                     context.report({
                         node,
                         message:
-                            "Raw gql`...` template literal — add the operation to a co-located .graphql file and run `pnpm codegen` instead.",
+                            'Raw gql`...` template literal — add the operation to a co-located .graphql file and run `pnpm codegen` instead.',
                     });
                 }
             },

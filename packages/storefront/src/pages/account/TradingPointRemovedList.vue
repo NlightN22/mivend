@@ -13,7 +13,9 @@ const emit = defineEmits<{ restore: [id: string] }>();
                 <div class="tp-removed-name">{{ pt.name }}</div>
                 <div class="tp-removed-addr">{{ pt.address }}</div>
             </div>
-            <button class="tp-btn tp-btn--ghost tp-btn--sm" @click="emit('restore', pt.id)">Restore</button>
+            <button class="tp-btn tp-btn--ghost tp-btn--sm" @click="emit('restore', pt.id)">
+                Restore
+            </button>
         </div>
     </div>
 </template>
@@ -28,7 +30,11 @@ const emit = defineEmits<{ restore: [id: string] }>();
     margin-bottom: 10px;
 }
 
-.tp-list { display: grid; gap: 12px; margin-bottom: 20px; }
+.tp-list {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+}
 
 .tp-removed-card {
     display: flex;
@@ -42,8 +48,16 @@ const emit = defineEmits<{ restore: [id: string] }>();
     opacity: 0.7;
 }
 
-.tp-removed-name { font-size: 15px; font-weight: 800; color: #14231f; margin-bottom: 3px; }
-.tp-removed-addr { font-size: 13px; color: #66736e; }
+.tp-removed-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #14231f;
+    margin-bottom: 3px;
+}
+.tp-removed-addr {
+    font-size: 13px;
+    color: #66736e;
+}
 
 .tp-btn {
     border: 0;
@@ -56,6 +70,15 @@ const emit = defineEmits<{ restore: [id: string] }>();
     white-space: nowrap;
     transition: 0.14s ease;
 }
-.tp-btn--ghost { background: #f3f8f6; color: #263732; border: 1px solid #dde7e2; }
-.tp-btn--sm { min-height: 34px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
+.tp-btn--ghost {
+    background: #f3f8f6;
+    color: #263732;
+    border: 1px solid #dde7e2;
+}
+.tp-btn--sm {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+    border-radius: 10px;
+}
 </style>

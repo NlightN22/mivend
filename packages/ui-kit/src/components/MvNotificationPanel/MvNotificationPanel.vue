@@ -145,11 +145,7 @@ function formatRelativeTime(value: string): string {
         </ul>
 
         <div v-if="!loading && notifications.length > 0" class="mv-notification-panel__footer">
-            <button
-                type="button"
-                class="mv-notification-panel__view-all"
-                @click="$emit('viewAll')"
-            >
+            <button type="button" class="mv-notification-panel__view-all" @click="$emit('viewAll')">
                 Show all notifications
             </button>
         </div>
@@ -227,10 +223,18 @@ function formatRelativeTime(value: string): string {
     margin-top: 6px;
 }
 
-.mv-notification-panel__indicator--info { background: #00a878; }
-.mv-notification-panel__indicator--success { background: #10b981; }
-.mv-notification-panel__indicator--warning { background: #ff8a00; }
-.mv-notification-panel__indicator--error { background: #ef4444; }
+.mv-notification-panel__indicator--info {
+    background: #00a878;
+}
+.mv-notification-panel__indicator--success {
+    background: #10b981;
+}
+.mv-notification-panel__indicator--warning {
+    background: #ff8a00;
+}
+.mv-notification-panel__indicator--error {
+    background: #ef4444;
+}
 
 .mv-notification-panel__body {
     flex: 1;

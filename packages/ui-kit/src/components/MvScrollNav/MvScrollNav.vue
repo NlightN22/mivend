@@ -55,7 +55,12 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="mv-scroll-nav">
-        <MvRoundIconButton v-if="showUp" aria-label="Scroll to top" title="Scroll to top" @click="scrollToTop">
+        <MvRoundIconButton
+            v-if="showUp"
+            aria-label="Scroll to top"
+            title="Scroll to top"
+            @click="scrollToTop"
+        >
             ↑
         </MvRoundIconButton>
         <MvRoundIconButton

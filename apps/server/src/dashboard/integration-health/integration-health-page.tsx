@@ -51,7 +51,12 @@ interface TopicLag {
     stream: string;
     totalLag: string | null;
     polledAt: string;
-    partitions: { partition: number; committedOffset: string | null; endOffset: string; lag: string | null }[];
+    partitions: {
+        partition: number;
+        committedOffset: string | null;
+        endOffset: string;
+        lag: string | null;
+    }[];
 }
 
 interface StreamBacklog {
@@ -99,8 +104,8 @@ export function IntegrationHealthPage() {
                 <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Kafka lag</h2>
                 <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 12 }}>
                     Per-topic, per-partition broker-side lag, as of the last scheduled poll. A
-                    "connected" consumer can still be falling behind — this is the raw signal
-                    that catches that.
+                    "connected" consumer can still be falling behind — this is the raw signal that
+                    catches that.
                 </p>
 
                 {topics.length === 0 && loaded && !error && (
@@ -110,14 +115,18 @@ export function IntegrationHealthPage() {
                 {topics.map(t => (
                     <div key={t.topic} style={{ marginBottom: 20 }}>
                         <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
-                            {t.stream} <span style={{ color: '#6b7280', fontWeight: 400 }}>({t.topic})</span>
+                            {t.stream}{' '}
+                            <span style={{ color: '#6b7280', fontWeight: 400 }}>({t.topic})</span>
                         </h3>
                         <p style={{ color: '#6b7280', fontSize: 12, marginBottom: 8 }}>
-                            Total lag: {t.totalLag ?? 'unknown'} · last polled {new Date(t.polledAt).toLocaleString()}
+                            Total lag: {t.totalLag ?? 'unknown'} · last polled{' '}
+                            {new Date(t.polledAt).toLocaleString()}
                         </p>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
+                                <tr
+                                    style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}
+                                >
                                     <th style={{ padding: '4px 8px' }}>Partition</th>
                                     <th style={{ padding: '4px 8px' }}>Committed</th>
                                     <th style={{ padding: '4px 8px' }}>End offset</th>
@@ -126,17 +135,24 @@ export function IntegrationHealthPage() {
                             </thead>
                             <tbody>
                                 {t.partitions.map(p => (
-                                    <tr key={p.partition} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                    <tr
+                                        key={p.partition}
+                                        style={{ borderBottom: '1px solid #f3f4f6' }}
+                                    >
                                         <td style={{ padding: '4px 8px' }}>{p.partition}</td>
                                         <td style={{ padding: '4px 8px', color: '#6b7280' }}>
                                             {p.committedOffset ?? 'never'}
                                         </td>
-                                        <td style={{ padding: '4px 8px', color: '#6b7280' }}>{p.endOffset}</td>
+                                        <td style={{ padding: '4px 8px', color: '#6b7280' }}>
+                                            {p.endOffset}
+                                        </td>
                                         <td
                                             style={{
                                                 padding: '4px 8px',
                                                 fontWeight: isLagOverThreshold(p.lag) ? 600 : 400,
-                                                color: isLagOverThreshold(p.lag) ? '#b91c1c' : undefined,
+                                                color: isLagOverThreshold(p.lag)
+                                                    ? '#b91c1c'
+                                                    : undefined,
                                             }}
                                         >
                                             {p.lag ?? 'unknown'}
@@ -157,7 +173,9 @@ export function IntegrationHealthPage() {
                 </p>
 
                 {backlog.length === 0 && loaded && !error && (
-                    <p style={{ color: '#6b7280' }}>No backlog — every stream is fully processed.</p>
+                    <p style={{ color: '#6b7280' }}>
+                        No backlog — every stream is fully processed.
+                    </p>
                 )}
 
                 {backlog.length > 0 && (

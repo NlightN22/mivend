@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { MvTableFilters, type TableFilterFieldDef } from '@mivend/ui-kit';
-import { PAYMENT_STATUS_OPTIONS, PAYMENT_CHANNEL_OPTIONS, type PaymentFilters } from '../../api/payments';
+import {
+    PAYMENT_STATUS_OPTIONS,
+    PAYMENT_CHANNEL_OPTIONS,
+    type PaymentFilters,
+} from '../../api/payments';
 
 const props = defineProps<{ filters: PaymentFilters }>();
 const emit = defineEmits<{ 'update:filters': [filters: PaymentFilters]; reset: [] }>();
@@ -20,5 +24,10 @@ function handleUpdate(value: Record<string, string>): void {
 </script>
 
 <template>
-    <MvTableFilters :fields="fields" :model-value="filterValues" @update:model-value="handleUpdate" @reset="emit('reset')" />
+    <MvTableFilters
+        :fields="fields"
+        :model-value="filterValues"
+        @update:model-value="handleUpdate"
+        @reset="emit('reset')"
+    />
 </template>

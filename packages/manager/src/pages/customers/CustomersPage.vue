@@ -25,11 +25,18 @@ import {
     type CustomersSummary,
     type HighUsageCustomer,
 } from '../../api/customers';
-import { fetchBranchOptions, fetchManagerOptions, type BranchOption, type ManagerOption } from '../../api/orders';
+import {
+    fetchBranchOptions,
+    fetchManagerOptions,
+    type BranchOption,
+    type ManagerOption,
+} from '../../api/orders';
 import { fetchExpiringDiscountGrants } from '../../api/discounts';
 import { downloadCsv } from '../../utils/csv';
 import CustomersTable from '../../components/customers/CustomersTable.vue';
-import NeedsAttentionPanel, { type AttentionEntry } from '../../components/customers/NeedsAttentionPanel.vue';
+import NeedsAttentionPanel, {
+    type AttentionEntry,
+} from '../../components/customers/NeedsAttentionPanel.vue';
 
 const authStore = useAuthStore();
 // "My Clients" only makes sense for Manager, whose list is their own assigned book — every
@@ -88,23 +95,33 @@ fromQuery(filters, page);
 
 const search = computed({
     get: () => filters.search,
-    set: (value: string) => { filters.search = value; },
+    set: (value: string) => {
+        filters.search = value;
+    },
 });
 const statusFilter = computed({
     get: () => filters.status as '' | 'active' | 'inactive',
-    set: (value: '' | 'active' | 'inactive') => { filters.status = value; },
+    set: (value: '' | 'active' | 'inactive') => {
+        filters.status = value;
+    },
 });
 const managerFilter = computed({
     get: () => filters.managerId,
-    set: (value: string) => { filters.managerId = value; },
+    set: (value: string) => {
+        filters.managerId = value;
+    },
 });
 const branchFilter = computed({
     get: () => filters.branchId,
-    set: (value: string) => { filters.branchId = value; },
+    set: (value: string) => {
+        filters.branchId = value;
+    },
 });
 const groupFilter = computed({
     get: () => filters.groupLabel,
-    set: (value: string) => { filters.groupLabel = value; },
+    set: (value: string) => {
+        filters.groupLabel = value;
+    },
 });
 const STATUS_OPTIONS = [
     { value: '', label: 'All statuses' },
@@ -165,7 +182,15 @@ function resetFilters(): void {
 function exportCsv(): void {
     downloadCsv(
         'customers.csv',
-        ['Company name', 'INN', 'Credit limit', 'Credit balance', 'Active discounts', 'Last order', 'Status'],
+        [
+            'Company name',
+            'INN',
+            'Credit limit',
+            'Credit balance',
+            'Active discounts',
+            'Last order',
+            'Status',
+        ],
         customers.value.map(c => {
             const row = credit.value.get(c.id);
             const lastOrder = lastOrderDates.value.get(c.id);
@@ -221,15 +246,21 @@ watch([search, statusFilter, managerFilter, branchFilter, groupFilter], () => {
 
 onMounted(async () => {
     await loadPage();
-    const [lastOrderMap, branchOptionsResult, managerOptionsResult, expiringGrants, summaryResult, highUsage] =
-        await Promise.all([
-            fetchLastOrderDatesByCounterpartyId(),
-            fetchBranchOptions(),
-            fetchManagerOptions(),
-            fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
-            fetchCustomersSummary(),
-            fetchHighUsageCustomers(ATTENTION_TOP_N),
-        ]);
+    const [
+        lastOrderMap,
+        branchOptionsResult,
+        managerOptionsResult,
+        expiringGrants,
+        summaryResult,
+        highUsage,
+    ] = await Promise.all([
+        fetchLastOrderDatesByCounterpartyId(),
+        fetchBranchOptions(),
+        fetchManagerOptions(),
+        fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
+        fetchCustomersSummary(),
+        fetchHighUsageCustomers(ATTENTION_TOP_N),
+    ]);
     lastOrderDates.value = lastOrderMap;
     branches.value = branchOptionsResult;
     managers.value = managerOptionsResult;
@@ -259,11 +290,20 @@ onMounted(async () => {
             <MvKpiCard
                 v-if="canReadCredit"
                 label="Credit balance used"
-                :value="new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalCreditBalance / 100)"
+                :value="
+                    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+                        totalCreditBalance / 100,
+                    )
+                "
                 :caption="`${highUsageCount} clients above 80%`"
                 accent
             />
-            <MvKpiCard label="Discounts expiring soon" :value="expiringGrantsCount" accent to="/discounts" />
+            <MvKpiCard
+                label="Discounts expiring soon"
+                :value="expiringGrantsCount"
+                accent
+                to="/discounts"
+            />
         </MvKpiCarousel>
 
         <div class="customers-page__grid">
@@ -273,23 +313,50 @@ onMounted(async () => {
                 </template>
                 <MvFilterBar @reset="resetFilters">
                     <MvFilterField label="Search">
-                        <MvInput size="sm" :model-value="search" placeholder="Company name or INN..." @update:model-value="search = $event" />
+                        <MvInput
+                            size="sm"
+                            :model-value="search"
+                            placeholder="Company name or INN..."
+                            @update:model-value="search = $event"
+                        />
                     </MvFilterField>
                     <MvFilterField label="Status">
-                        <MvSelect :model-value="statusFilter" :options="STATUS_OPTIONS" @update:model-value="statusFilter = ($event as typeof statusFilter)" />
+                        <MvSelect
+                            :model-value="statusFilter"
+                            :options="STATUS_OPTIONS"
+                            @update:model-value="statusFilter = $event as typeof statusFilter"
+                        />
                     </MvFilterField>
                     <MvFilterField v-if="authStore.roleCode !== 'manager'" label="Manager">
-                        <MvSelect :model-value="managerFilter" :options="managerOptions" @update:model-value="managerFilter = ($event as string)" />
+                        <MvSelect
+                            :model-value="managerFilter"
+                            :options="managerOptions"
+                            @update:model-value="managerFilter = $event as string"
+                        />
                     </MvFilterField>
                     <MvFilterField label="Branch">
-                        <MvSelect :model-value="branchFilter" :options="branchOptions" @update:model-value="branchFilter = ($event as string)" />
+                        <MvSelect
+                            :model-value="branchFilter"
+                            :options="branchOptions"
+                            @update:model-value="branchFilter = $event as string"
+                        />
                     </MvFilterField>
                     <MvFilterField label="Group">
-                        <MvInput size="sm" :model-value="groupFilter" placeholder="ERP group label..." @update:model-value="groupFilter = $event" />
+                        <MvInput
+                            size="sm"
+                            :model-value="groupFilter"
+                            placeholder="ERP group label..."
+                            @update:model-value="groupFilter = $event"
+                        />
                     </MvFilterField>
                 </MvFilterBar>
 
-                <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+                <MvPagination
+                    :page="page"
+                    :page-size="PAGE_SIZE"
+                    :total="totalItems"
+                    @update:page="page = $event"
+                />
                 <CustomersTable
                     :customers="customers"
                     :credit="credit"
@@ -300,7 +367,12 @@ onMounted(async () => {
                     :loading="loading"
                     :page-size="PAGE_SIZE"
                 />
-                <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+                <MvPagination
+                    :page="page"
+                    :page-size="PAGE_SIZE"
+                    :total="totalItems"
+                    @update:page="page = $event"
+                />
             </MvPanel>
 
             <aside class="customers-page__right-stack">

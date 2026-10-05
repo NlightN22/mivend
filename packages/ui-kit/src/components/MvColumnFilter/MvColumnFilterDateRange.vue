@@ -57,7 +57,12 @@ function tryParseComplete(masked: string): string | null {
     // date (new Date() rolls invalid day/month numbers forward by default) — real feedback: this
     // check already existed, but a rejected value left the input showing the invalid text with no
     // visual sign anything was wrong. See fromInvalid/toInvalid below for the actual fix.
-    if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) return null;
+    if (
+        candidate.getFullYear() !== year ||
+        candidate.getMonth() !== month - 1 ||
+        candidate.getDate() !== day
+    )
+        return null;
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 const fromText = ref(toDisplayText(customFrom.value));
@@ -121,11 +126,16 @@ function selectAllOnFocus(event: FocusEvent): void {
 
 function formatDisplayDate(iso: string): string {
     if (!iso) return '';
-    return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    });
 }
 const currentRangeLabel = computed(() => {
     if (!customFrom.value && !customTo.value) return '';
-    if (customFrom.value && customTo.value) return `${formatDisplayDate(customFrom.value)} – ${formatDisplayDate(customTo.value)}`;
+    if (customFrom.value && customTo.value)
+        return `${formatDisplayDate(customFrom.value)} – ${formatDisplayDate(customTo.value)}`;
     return formatDisplayDate(customFrom.value || customTo.value);
 });
 
@@ -175,8 +185,14 @@ function onClear(): void {
 
 <template>
     <div class="mv-column-filter-date-range">
-        <select v-model="selectedPreset" class="mv-column-filter-date-range__select" @change="onPresetChange">
-            <option v-for="preset in presets" :key="preset.key" :value="preset.key">{{ preset.label }}</option>
+        <select
+            v-model="selectedPreset"
+            class="mv-column-filter-date-range__select"
+            @change="onPresetChange"
+        >
+            <option v-for="preset in presets" :key="preset.key" :value="preset.key">
+                {{ preset.label }}
+            </option>
         </select>
 
         <template v-if="isCustom">
@@ -189,12 +205,18 @@ function onClear(): void {
                         placeholder="DD.MM.YYYY"
                         class="mv-column-filter-date-range__date-input"
                         :class="{
-                            'mv-column-filter-date-range__date-input--active': activeField === 'from',
+                            'mv-column-filter-date-range__date-input--active':
+                                activeField === 'from',
                             'mv-column-filter-date-range__date-input--invalid': fromInvalid,
                         }"
                         :value="fromText"
                         @input="onFromInput"
-                        @focus="(e) => { activeField = 'from'; selectAllOnFocus(e); }"
+                        @focus="
+                            e => {
+                                activeField = 'from';
+                                selectAllOnFocus(e);
+                            }
+                        "
                     />
                 </div>
                 <span class="mv-column-filter-date-range__arrow">→</span>
@@ -211,25 +233,51 @@ function onClear(): void {
                         }"
                         :value="toText"
                         @input="onToInput"
-                        @focus="(e) => { activeField = 'to'; selectAllOnFocus(e); }"
+                        @focus="
+                            e => {
+                                activeField = 'to';
+                                selectAllOnFocus(e);
+                            }
+                        "
                     />
                 </div>
             </div>
-            <p v-if="fromInvalid || toInvalid" class="mv-column-filter-date-range__error">Not a real date</p>
+            <p v-if="fromInvalid || toInvalid" class="mv-column-filter-date-range__error">
+                Not a real date
+            </p>
 
             <!-- hide-clear: the footer's own Clear (below) already clears both From and To — the
                  calendar's own per-field Clear button was a second, redundant clear affordance
                  visible at the same time (real feedback: "Clear" appeared twice). -->
-            <MvDatePicker v-if="activeField === 'from'" hide-input hide-clear :model-value="customFrom" @pick="pickFrom" />
-            <MvDatePicker v-if="activeField === 'to'" hide-input hide-clear :model-value="customTo" @pick="pickTo" />
+            <MvDatePicker
+                v-if="activeField === 'from'"
+                hide-input
+                hide-clear
+                :model-value="customFrom"
+                @pick="pickFrom"
+            />
+            <MvDatePicker
+                v-if="activeField === 'to'"
+                hide-input
+                hide-clear
+                :model-value="customTo"
+                @pick="pickTo"
+            />
 
             <div class="mv-column-filter-date-range__footer">
                 <MvButton size="sm" variant="ghost" @click="onClear">Clear</MvButton>
                 <MvButton size="sm" variant="primary" @click="onApplyCustom">Apply</MvButton>
             </div>
-            <div v-if="currentRangeLabel" class="mv-column-filter-date-range__caption">{{ currentRangeLabel }}</div>
+            <div v-if="currentRangeLabel" class="mv-column-filter-date-range__caption">
+                {{ currentRangeLabel }}
+            </div>
         </template>
-        <button v-else-if="modelValue.preset" type="button" class="mv-column-filter-date-range__clear-all" @click="onClear">
+        <button
+            v-else-if="modelValue.preset"
+            type="button"
+            class="mv-column-filter-date-range__clear-all"
+            @click="onClear"
+        >
             Clear
         </button>
     </div>

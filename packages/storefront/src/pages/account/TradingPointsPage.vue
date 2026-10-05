@@ -8,7 +8,9 @@ import TradingPointRemovedList from './TradingPointRemovedList.vue';
 import { useTradingPoints } from './useTradingPoints';
 
 const authStore = useAuthStore();
-const preferredId = computed(() => authStore.customer?.customFields?.preferredTradingPointId ?? null);
+const preferredId = computed(
+    () => authStore.customer?.customFields?.preferredTradingPointId ?? null,
+);
 
 const {
     visiblePoints,
@@ -38,7 +40,9 @@ onMounted(loadPoints);
             <div class="tp-head">
                 <div>
                     <h1 class="tp-title">Trading Points</h1>
-                    <p class="tp-subtitle">Delivery addresses for your company. Add, edit or remove them anytime.</p>
+                    <p class="tp-subtitle">
+                        Delivery addresses for your company. Add, edit or remove them anytime.
+                    </p>
                 </div>
                 <div class="tp-head-actions">
                     <button
@@ -97,7 +101,9 @@ onMounted(loadPoints);
     padding: 24px 28px 56px;
 }
 
-.tp-content { min-width: 0; }
+.tp-content {
+    min-width: 0;
+}
 
 .tp-head {
     display: flex;
@@ -114,8 +120,16 @@ onMounted(loadPoints);
     letter-spacing: -0.055em;
 }
 
-.tp-subtitle { color: #66736e; font-size: 14px; margin: 0; }
-.tp-head-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.tp-subtitle {
+    color: #66736e;
+    font-size: 14px;
+    margin: 0;
+}
+.tp-head-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
 
 .tp-btn {
     border: 0;
@@ -128,9 +142,19 @@ onMounted(loadPoints);
     white-space: nowrap;
     transition: 0.14s ease;
 }
-.tp-btn--primary { background: #00a878; color: #fff; }
-.tp-btn--ghost { background: #f3f8f6; color: #263732; border: 1px solid #dde7e2; }
-.tp-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.tp-btn--primary {
+    background: #00a878;
+    color: #fff;
+}
+.tp-btn--ghost {
+    background: #f3f8f6;
+    color: #263732;
+    border: 1px solid #dde7e2;
+}
+.tp-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
 .tp-empty {
     text-align: center;
@@ -141,15 +165,27 @@ onMounted(loadPoints);
     gap: 12px;
 }
 
-.tp-empty span { font-size: 40px; }
+.tp-empty span {
+    font-size: 40px;
+}
 
-.tp-list { display: grid; gap: 12px; margin-bottom: 20px; }
+.tp-list {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+}
 
 @media (max-width: 960px) {
-    .tp-page { grid-template-columns: 1fr; padding-left: 16px; padding-right: 16px; }
+    .tp-page {
+        grid-template-columns: 1fr;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
 }
 
 @media (max-width: 640px) {
-    .tp-head { flex-direction: column; }
+    .tp-head {
+        flex-direction: column;
+    }
 }
 </style>

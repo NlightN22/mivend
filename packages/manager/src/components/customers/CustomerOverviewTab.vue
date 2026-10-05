@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { MvStatusBadge, MvModal } from '@mivend/ui-kit';
-import { setTradingPointActive, type CustomerListItem, type CustomerCredit, type TradingPointInfo } from '../../api/customers';
+import {
+    setTradingPointActive,
+    type CustomerListItem,
+    type CustomerCredit,
+    type TradingPointInfo,
+} from '../../api/customers';
 import TradingPointEditForm from './TradingPointEditForm.vue';
 
 defineProps<{ customer: CustomerListItem; credit: CustomerCredit | null }>();
@@ -11,7 +16,9 @@ const editingTradingPoint = ref<TradingPointInfo | null>(null);
 const reactivating = ref<string | null>(null);
 
 function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount / 100);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+        amount / 100,
+    );
 }
 
 function handleEdited(): void {
@@ -35,7 +42,10 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
         <div class="overview-tab__contacts">
             <h3>Contacts</h3>
             <ul v-if="customer.contacts.length">
-                <li v-for="contact in customer.contacts" :key="contact.name + (contact.phone ?? '')">
+                <li
+                    v-for="contact in customer.contacts"
+                    :key="contact.name + (contact.phone ?? '')"
+                >
                     <strong>{{ contact.name }}</strong>
                     <span v-if="contact.isPrimary" class="overview-tab__primary">Primary</span>
                     <div class="overview-tab__contact-meta">
@@ -83,7 +93,11 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                         >
                             Reactivate
                         </button>
-                        <button type="button" class="overview-tab__tp-btn" @click="editingTradingPoint = tp">
+                        <button
+                            type="button"
+                            class="overview-tab__tp-btn"
+                            @click="editingTradingPoint = tp"
+                        >
                             Edit
                         </button>
                     </div>
@@ -92,7 +106,11 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
             <p v-else class="overview-tab__empty">No trading points on file</p>
         </div>
 
-        <MvModal v-if="editingTradingPoint" title="Edit trading point" @close="editingTradingPoint = null">
+        <MvModal
+            v-if="editingTradingPoint"
+            title="Edit trading point"
+            @close="editingTradingPoint = null"
+        >
             <TradingPointEditForm
                 :trading-point="editingTradingPoint"
                 @submitted="handleEdited"

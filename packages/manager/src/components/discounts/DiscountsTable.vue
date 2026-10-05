@@ -22,7 +22,10 @@ const STATUS_LABEL: Record<DiscountRowStatus, string> = {
     rejected: 'Rejected',
 };
 
-const STATUS_VARIANT: Record<DiscountRowStatus, 'success' | 'warning' | 'neutral' | 'info' | 'danger'> = {
+const STATUS_VARIANT: Record<
+    DiscountRowStatus,
+    'success' | 'warning' | 'neutral' | 'info' | 'danger'
+> = {
     active: 'success',
     'expiring-soon': 'warning',
     expired: 'neutral',
@@ -46,7 +49,11 @@ const columns = computed<Column<TableRow>[]>(() => [
         align: 'right',
         cellRenderer: ({ cellData }) => {
             const value = cellData as unknown as number;
-            return h('span', value < 0 ? { style: 'color:#b45309;font-weight:700' } : {}, `${value}%`);
+            return h(
+                'span',
+                value < 0 ? { style: 'color:#b45309;font-weight:700' } : {},
+                `${value}%`,
+            );
         },
     },
     { key: 'validRange', title: 'Valid from — to', dataKey: 'validRange', width: 210 },
@@ -57,7 +64,11 @@ const columns = computed<Column<TableRow>[]>(() => [
         width: 140,
         cellRenderer: ({ rowData }) => {
             const status = (rowData as TableRow).status as DiscountRowStatus;
-            return h(MvStatusBadge, { variant: STATUS_VARIANT[status] }, () => STATUS_LABEL[status]);
+            return h(
+                MvStatusBadge,
+                { variant: STATUS_VARIANT[status] },
+                () => STATUS_LABEL[status],
+            );
         },
     },
     {
@@ -68,7 +79,14 @@ const columns = computed<Column<TableRow>[]>(() => [
         cellRenderer: ({ cellData }) => {
             const text = (cellData as unknown as string) || '—';
             if (text === '—') return h('span', '—');
-            return h(MvTooltip, {}, { default: () => text, trigger: () => h('span', { class: 'discounts-table__truncated' }, text) });
+            return h(
+                MvTooltip,
+                {},
+                {
+                    default: () => text,
+                    trigger: () => h('span', { class: 'discounts-table__truncated' }, text),
+                },
+            );
         },
     },
     {

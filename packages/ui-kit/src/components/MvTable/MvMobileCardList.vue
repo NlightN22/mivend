@@ -30,7 +30,12 @@ const highlightColumn = computed(() => props.columns.find(c => c.mobile?.highlig
 const actionsColumn = computed(() => props.columns.find(c => c.mobile?.actions));
 const fieldColumns = computed(() =>
     props.columns.filter(
-        c => !c.mobile?.hidden && !c.mobile?.primary && !c.mobile?.badge && !c.mobile?.actions && !c.mobile?.highlight,
+        c =>
+            !c.mobile?.hidden &&
+            !c.mobile?.primary &&
+            !c.mobile?.badge &&
+            !c.mobile?.actions &&
+            !c.mobile?.highlight,
     ),
 );
 
@@ -49,7 +54,8 @@ function renderCell(column: Column<TableRow>, rowData: TableRow, rowIndex: numbe
     return String(cellData ?? '—');
 }
 
-const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | string => renderProps.render();
+const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | string =>
+    renderProps.render();
 </script>
 
 <template>
@@ -63,19 +69,29 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
         >
             <div class="mv-mobile-card__head">
                 <div class="mv-mobile-card__title">
-                    <VNodeHost v-if="primaryColumn" :render="() => renderCell(primaryColumn!, row, rowIndex)" />
+                    <VNodeHost
+                        v-if="primaryColumn"
+                        :render="() => renderCell(primaryColumn!, row, rowIndex)"
+                    />
                 </div>
                 <div v-if="badgeColumn" class="mv-mobile-card__badge">
                     <VNodeHost :render="() => renderCell(badgeColumn!, row, rowIndex)" />
                 </div>
             </div>
 
-            <div v-if="highlightColumn && renderCell(highlightColumn, row, rowIndex)" class="mv-mobile-card__highlight">
+            <div
+                v-if="highlightColumn && renderCell(highlightColumn, row, rowIndex)"
+                class="mv-mobile-card__highlight"
+            >
                 <VNodeHost :render="() => renderCell(highlightColumn!, row, rowIndex)" />
             </div>
 
             <div class="mv-mobile-card__grid">
-                <div v-for="col in fieldColumns" :key="String(col.key)" class="mv-mobile-card__field">
+                <div
+                    v-for="col in fieldColumns"
+                    :key="String(col.key)"
+                    class="mv-mobile-card__field"
+                >
                     <div class="mv-mobile-card__label">{{ col.title }}</div>
                     <div class="mv-mobile-card__value">
                         <VNodeHost :render="() => renderCell(col, row, rowIndex)" />

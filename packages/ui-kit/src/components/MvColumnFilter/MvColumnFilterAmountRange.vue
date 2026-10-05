@@ -7,9 +7,16 @@
 // directly as the already-open filter popover's content, like MvColumnFilterDate/Enum/Status.
 import { computed, ref, watch } from 'vue';
 import MvButton from '../MvButton/MvButton.vue';
-import type { AmountRangeFilterConfig, AmountRangeFilterValue, AmountRangePreset } from './columnFilterTypes';
+import type {
+    AmountRangeFilterConfig,
+    AmountRangeFilterValue,
+    AmountRangePreset,
+} from './columnFilterTypes';
 
-const props = defineProps<{ config: AmountRangeFilterConfig; modelValue: AmountRangeFilterValue }>();
+const props = defineProps<{
+    config: AmountRangeFilterConfig;
+    modelValue: AmountRangeFilterValue;
+}>();
 const emit = defineEmits<{ 'update:modelValue': [value: AmountRangeFilterValue]; close: [] }>();
 
 const MODES: { value: AmountRangeFilterValue['mode']; label: string }[] = [
@@ -20,7 +27,10 @@ const MODES: { value: AmountRangeFilterValue['mode']; label: string }[] = [
 ];
 
 const currencySymbol = computed(() => {
-    const parts = new Intl.NumberFormat('en-US', { style: 'currency', currency: props.config.currencyCode }).formatToParts(0);
+    const parts = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: props.config.currencyCode,
+    }).formatToParts(0);
     return parts.find(p => p.type === 'currency')?.value ?? props.config.currencyCode;
 });
 
@@ -48,7 +58,9 @@ const presets = computed(() => {
 const mode = ref(props.modelValue.mode);
 const minLocal = ref(props.modelValue.min);
 const maxLocal = ref(props.modelValue.max);
-const singleLocal = ref<number | undefined>(mode.value === 'range' ? undefined : (props.modelValue.min ?? props.modelValue.max));
+const singleLocal = ref<number | undefined>(
+    mode.value === 'range' ? undefined : (props.modelValue.min ?? props.modelValue.max),
+);
 watch(
     () => props.modelValue,
     v => {
@@ -169,7 +181,9 @@ function onClear(): void {
                 {{ preset.label }}
             </button>
         </div>
-        <p v-if="mode === 'range'" class="mv-amount-range-filter__hint">Leave one side empty for an open range</p>
+        <p v-if="mode === 'range'" class="mv-amount-range-filter__hint">
+            Leave one side empty for an open range
+        </p>
 
         <div class="mv-amount-range-filter__footer">
             <MvButton size="sm" variant="ghost" @click="onClear">Clear</MvButton>

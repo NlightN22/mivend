@@ -10,10 +10,13 @@
 import { computed, ref, watch } from 'vue';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 
-const props = withDefaults(defineProps<{ modelValue: string; hideInput?: boolean; hideClear?: boolean }>(), {
-    hideInput: false,
-    hideClear: false,
-});
+const props = withDefaults(
+    defineProps<{ modelValue: string; hideInput?: boolean; hideClear?: boolean }>(),
+    {
+        hideInput: false,
+        hideClear: false,
+    },
+);
 // `update:modelValue` fires for both typing and calendar clicks (the actual value change).
 // `pick` fires *only* on an explicit calendar-day click — a distinct signal a caller can use to
 // auto-advance/collapse a multi-field UI (e.g. MvColumnFilterDateRange's From→To flow), without
@@ -34,7 +37,11 @@ function toIso(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 function isSameDay(a: Date, b: Date): boolean {
-    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    return (
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate()
+    );
 }
 function toDisplay(date: Date | null): string {
     if (!date) return '';
@@ -89,7 +96,11 @@ function onTextInput(event: Event): void {
     // Rejects "35.02.2026"-style overflow instead of silently normalizing it to a nearby real
     // date (new Date() rolls invalid day/month numbers forward by default) — comparing the
     // constructed date's own fields back against what was typed is the only way to detect that.
-    if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) {
+    if (
+        candidate.getFullYear() !== year ||
+        candidate.getMonth() !== month - 1 ||
+        candidate.getDate() !== day
+    ) {
         invalid.value = true;
         return;
     }
@@ -98,7 +109,9 @@ function onTextInput(event: Event): void {
     emit('update:modelValue', toIso(candidate));
 }
 
-const monthLabel = computed(() => viewMonth.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
+const monthLabel = computed(() =>
+    viewMonth.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+);
 
 interface DayCell {
     date: Date;
@@ -111,7 +124,11 @@ const days = computed<DayCell[]>(() => {
     const startOffset = firstOfMonth.getDay();
     const gridStart = new Date(year, month, 1 - startOffset);
     return Array.from({ length: 42 }, (_, i) => {
-        const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+        const date = new Date(
+            gridStart.getFullYear(),
+            gridStart.getMonth(),
+            gridStart.getDate() + i,
+        );
         return { date, inCurrentMonth: date.getMonth() === month };
     });
 });
@@ -153,11 +170,21 @@ function selectAllOnFocus(event: FocusEvent): void {
         />
         <p v-if="invalid" class="mv-date-picker__error">Not a real date</p>
         <div class="mv-date-picker__header">
-            <button type="button" class="mv-date-picker__nav" aria-label="Previous month" @click="prevMonth">
+            <button
+                type="button"
+                class="mv-date-picker__nav"
+                aria-label="Previous month"
+                @click="prevMonth"
+            >
                 <ArrowLeft />
             </button>
             <span class="mv-date-picker__month">{{ monthLabel }}</span>
-            <button type="button" class="mv-date-picker__nav" aria-label="Next month" @click="nextMonth">
+            <button
+                type="button"
+                class="mv-date-picker__nav"
+                aria-label="Next month"
+                @click="nextMonth"
+            >
                 <ArrowRight />
             </button>
         </div>
@@ -180,7 +207,14 @@ function selectAllOnFocus(event: FocusEvent): void {
                 {{ day.date.getDate() }}
             </button>
         </div>
-        <button v-if="modelValue && !hideClear" type="button" class="mv-date-picker__clear" @click="clear">Clear</button>
+        <button
+            v-if="modelValue && !hideClear"
+            type="button"
+            class="mv-date-picker__clear"
+            @click="clear"
+        >
+            Clear
+        </button>
     </div>
 </template>
 

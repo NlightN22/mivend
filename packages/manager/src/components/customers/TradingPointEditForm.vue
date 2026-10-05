@@ -63,15 +63,27 @@ async function submit(): Promise<void> {
         <div class="tp-edit-form__grid">
             <label>
                 Name
-                <MvInput size="sm" :model-value="form.name" @update:model-value="form.name = $event" />
+                <MvInput
+                    size="sm"
+                    :model-value="form.name"
+                    @update:model-value="form.name = $event"
+                />
             </label>
             <label>
                 Address
-                <MvInput size="sm" :model-value="form.address" @update:model-value="form.address = $event" />
+                <MvInput
+                    size="sm"
+                    :model-value="form.address"
+                    @update:model-value="form.address = $event"
+                />
             </label>
             <label>
                 Working hours
-                <MvInput size="sm" :model-value="form.workingHours" @update:model-value="form.workingHours = $event" />
+                <MvInput
+                    size="sm"
+                    :model-value="form.workingHours"
+                    @update:model-value="form.workingHours = $event"
+                />
             </label>
         </div>
 
@@ -83,13 +95,36 @@ async function submit(): Promise<void> {
         <div class="tp-edit-form__contacts">
             <div class="tp-edit-form__contacts-head">
                 <span>Contacts</span>
-                <button type="button" class="tp-edit-form__add" @click="addContact">+ Add contact</button>
+                <button type="button" class="tp-edit-form__add" @click="addContact">
+                    + Add contact
+                </button>
             </div>
-            <div v-for="(contact, index) in form.contacts" :key="index" class="tp-edit-form__contact-row">
-                <MvInput size="sm" placeholder="Name" :model-value="contact.name" @update:model-value="contact.name = $event" />
-                <MvInput size="sm" placeholder="Phone" :model-value="contact.phone ?? ''" @update:model-value="contact.phone = $event" />
-                <MvInput size="sm" placeholder="Email" :model-value="contact.email ?? ''" @update:model-value="contact.email = $event" />
-                <button type="button" class="tp-edit-form__remove" @click="removeContact(index)">Remove</button>
+            <div
+                v-for="(contact, index) in form.contacts"
+                :key="index"
+                class="tp-edit-form__contact-row"
+            >
+                <MvInput
+                    size="sm"
+                    placeholder="Name"
+                    :model-value="contact.name"
+                    @update:model-value="contact.name = $event"
+                />
+                <MvInput
+                    size="sm"
+                    placeholder="Phone"
+                    :model-value="contact.phone ?? ''"
+                    @update:model-value="contact.phone = $event"
+                />
+                <MvInput
+                    size="sm"
+                    placeholder="Email"
+                    :model-value="contact.email ?? ''"
+                    @update:model-value="contact.email = $event"
+                />
+                <button type="button" class="tp-edit-form__remove" @click="removeContact(index)">
+                    Remove
+                </button>
             </div>
             <p v-if="!form.contacts.length" class="tp-edit-form__empty">No contacts</p>
         </div>
@@ -98,7 +133,9 @@ async function submit(): Promise<void> {
 
         <div class="tp-edit-form__actions">
             <MvButton :loading="submitting" @click="submit">Save changes</MvButton>
-            <button type="button" class="tp-edit-form__cancel" @click="emit('cancel')">Cancel</button>
+            <button type="button" class="tp-edit-form__cancel" @click="emit('cancel')">
+                Cancel
+            </button>
         </div>
     </div>
 </template>

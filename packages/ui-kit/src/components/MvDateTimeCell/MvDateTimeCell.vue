@@ -11,7 +11,12 @@ const props = defineProps<{ value: string }>();
 const date = computed(() => new Date(props.value));
 const dateLabel = computed(() => date.value.toLocaleDateString('en-US'));
 const timeLabel = computed(() =>
-    date.value.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+    date.value.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    }),
 );
 </script>
 

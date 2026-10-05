@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { MvButton, MvCheckbox, MvFormField, MvInput, MvNotice, MvPanel, MvSelect } from '@mivend/ui-kit';
+import {
+    MvButton,
+    MvCheckbox,
+    MvFormField,
+    MvInput,
+    MvNotice,
+    MvPanel,
+    MvSelect,
+} from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import {
     fetchRoleDetail,
@@ -25,7 +33,9 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const code = computed(() => route.params.code as string);
-const notFound = computed(() => !KNOWN_ROLE_CODES.includes(code.value as (typeof KNOWN_ROLE_CODES)[number]));
+const notFound = computed(
+    () => !KNOWN_ROLE_CODES.includes(code.value as (typeof KNOWN_ROLE_CODES)[number]),
+);
 
 const role = ref<RoleDetail | null>(null);
 const permissionCatalog = ref<PermissionInfo[]>([]);
@@ -41,7 +51,11 @@ const form = reactive({
 });
 
 type SectionOutcome = { ok: boolean; message?: string } | null;
-const saveResults = reactive<{ permissions: SectionOutcome; scope: SectionOutcome; credit: SectionOutcome }>({
+const saveResults = reactive<{
+    permissions: SectionOutcome;
+    scope: SectionOutcome;
+    credit: SectionOutcome;
+}>({
     permissions: null,
     scope: null,
     credit: null,
@@ -153,7 +167,11 @@ async function save(): Promise<void> {
 
         <MvPanel title="Access scope">
             <div class="role-detail__scope-grid">
-                <MvFormField v-for="resource in SCOPE_RESOURCES" :key="resource" :label="SCOPE_RESOURCE_LABELS[resource]">
+                <MvFormField
+                    v-for="resource in SCOPE_RESOURCES"
+                    :key="resource"
+                    :label="SCOPE_RESOURCE_LABELS[resource]"
+                >
                     <MvSelect
                         :model-value="form.scopeConfig[resource]"
                         :options="SCOPE_OPTIONS"
@@ -186,15 +204,26 @@ async function save(): Promise<void> {
 
         <MvPanel title="Permissions">
             <div class="role-detail__permission-categories">
-                <div v-for="category in PERMISSION_CATEGORIES" :key="category.key" class="role-detail__permission-category">
+                <div
+                    v-for="category in PERMISSION_CATEGORIES"
+                    :key="category.key"
+                    class="role-detail__permission-category"
+                >
                     <h3>{{ category.label }}</h3>
-                    <div v-for="name in category.permissionNames" :key="name" class="role-detail__permission-row">
+                    <div
+                        v-for="name in category.permissionNames"
+                        :key="name"
+                        class="role-detail__permission-row"
+                    >
                         <MvCheckbox
                             :model-value="form.permissions.has(name)"
                             @update:model-value="togglePermission(name, $event)"
                         >
                             <strong>{{ name }}</strong>
-                            <span v-if="permissionDescription(name)" class="role-detail__permission-desc">
+                            <span
+                                v-if="permissionDescription(name)"
+                                class="role-detail__permission-desc"
+                            >
                                 — {{ permissionDescription(name) }}
                             </span>
                         </MvCheckbox>
@@ -204,14 +233,35 @@ async function save(): Promise<void> {
         </MvPanel>
 
         <div class="role-detail__save-results">
-            <MvNotice v-if="saveResults.permissions" :variant="saveResults.permissions.ok ? 'success' : 'error'">
-                {{ saveResults.permissions.ok ? 'Permissions saved.' : `Permissions could not be saved: ${saveResults.permissions.message}` }}
+            <MvNotice
+                v-if="saveResults.permissions"
+                :variant="saveResults.permissions.ok ? 'success' : 'error'"
+            >
+                {{
+                    saveResults.permissions.ok
+                        ? 'Permissions saved.'
+                        : `Permissions could not be saved: ${saveResults.permissions.message}`
+                }}
             </MvNotice>
-            <MvNotice v-if="saveResults.scope" :variant="saveResults.scope.ok ? 'success' : 'error'">
-                {{ saveResults.scope.ok ? 'Access scope saved.' : `Access scope could not be saved: ${saveResults.scope.message}` }}
+            <MvNotice
+                v-if="saveResults.scope"
+                :variant="saveResults.scope.ok ? 'success' : 'error'"
+            >
+                {{
+                    saveResults.scope.ok
+                        ? 'Access scope saved.'
+                        : `Access scope could not be saved: ${saveResults.scope.message}`
+                }}
             </MvNotice>
-            <MvNotice v-if="saveResults.credit" :variant="saveResults.credit.ok ? 'success' : 'error'">
-                {{ saveResults.credit.ok ? 'Credit term limit saved.' : `Credit term limit could not be saved: ${saveResults.credit.message}` }}
+            <MvNotice
+                v-if="saveResults.credit"
+                :variant="saveResults.credit.ok ? 'success' : 'error'"
+            >
+                {{
+                    saveResults.credit.ok
+                        ? 'Credit term limit saved.'
+                        : `Credit term limit could not be saved: ${saveResults.credit.message}`
+                }}
             </MvNotice>
         </div>
 

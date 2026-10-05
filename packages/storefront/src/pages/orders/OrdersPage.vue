@@ -16,18 +16,18 @@ const searchQuery = ref('');
 const page = ref(1);
 
 const FILTER_GROUPS: Record<string, ErpStatus[]> = {
-    pending:   ['PENDING', 'SENT_TO_ERP', 'RESERVED'],
+    pending: ['PENDING', 'SENT_TO_ERP', 'RESERVED'],
     confirmed: ['CONFIRMED', 'ASSEMBLED'],
     in_transit: ['SHIPPED'],
-    closed:    ['DELIVERED', 'CANCELLED'],
+    closed: ['DELIVERED', 'CANCELLED'],
 };
 
 const filters = [
-    { key: 'all',        label: 'All orders' },
-    { key: 'pending',    label: 'In progress' },
-    { key: 'confirmed',  label: 'Confirmed' },
+    { key: 'all', label: 'All orders' },
+    { key: 'pending', label: 'In progress' },
+    { key: 'confirmed', label: 'Confirmed' },
     { key: 'in_transit', label: 'Shipped' },
-    { key: 'closed',     label: 'Closed' },
+    { key: 'closed', label: 'Closed' },
 ];
 
 function reload(): void {
@@ -56,7 +56,9 @@ onMounted(reload);
             <div class="orders-toolbar">
                 <div>
                     <h1 class="orders-title">My Orders</h1>
-                    <p class="orders-subtitle">Working order list: statuses, amounts, payment, documents and repeat order.</p>
+                    <p class="orders-subtitle">
+                        Working order list: statuses, amounts, payment, documents and repeat order.
+                    </p>
                 </div>
                 <input
                     v-model="searchQuery"
@@ -79,15 +81,23 @@ onMounted(reload);
 
             <div v-if="loading" class="orders-state">Loading orders...</div>
 
-            <div v-else-if="orders.length === 0" class="orders-state">
-                No orders found.
-            </div>
+            <div v-else-if="orders.length === 0" class="orders-state">No orders found.</div>
 
             <div v-else class="orders-page-grid">
                 <div class="orders-page-list">
-                    <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+                    <MvPagination
+                        :page="page"
+                        :page-size="PAGE_SIZE"
+                        :total="totalItems"
+                        @update:page="page = $event"
+                    />
                     <OrderCard v-for="order in orders" :key="order.id" :order="order" />
-                    <MvPagination :page="page" :page-size="PAGE_SIZE" :total="totalItems" @update:page="page = $event" />
+                    <MvPagination
+                        :page="page"
+                        :page-size="PAGE_SIZE"
+                        :total="totalItems"
+                        @update:page="page = $event"
+                    />
                 </div>
                 <OrdersAside />
             </div>
@@ -106,7 +116,9 @@ onMounted(reload);
     padding: 24px 28px 56px;
 }
 
-.orders-content { min-width: 0; }
+.orders-content {
+    min-width: 0;
+}
 
 .orders-toolbar {
     display: flex;
@@ -143,7 +155,9 @@ onMounted(reload);
     flex-shrink: 0;
 }
 
-.toolbar-search:focus { border-color: #00a878; }
+.toolbar-search:focus {
+    border-color: #00a878;
+}
 
 .filter-chips {
     display: flex;
@@ -169,7 +183,9 @@ onMounted(reload);
     transition: 0.14s ease;
 }
 
-.chip:hover { background: #f4faf7; }
+.chip:hover {
+    background: #f4faf7;
+}
 
 .chip.active {
     background: #00a878;
@@ -197,16 +213,27 @@ onMounted(reload);
 }
 
 @media (max-width: 1180px) {
-    .orders-page-grid { grid-template-columns: 1fr; }
+    .orders-page-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 960px) {
-    .orders-layout { grid-template-columns: 1fr; }
+    .orders-layout {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 760px) {
-    .orders-layout { padding-left: 16px; padding-right: 16px; }
-    .orders-toolbar { display: grid; }
-    .toolbar-search { width: 100%; }
+    .orders-layout {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    .orders-toolbar {
+        display: grid;
+    }
+    .toolbar-search {
+        width: 100%;
+    }
 }
 </style>

@@ -23,9 +23,10 @@ const CHANNEL_LABEL: Record<string, string> = {
 };
 
 function money(item: PaymentListItem): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: item.currencyCode }).format(
-        item.amount / 100,
-    );
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: item.currencyCode,
+    }).format(item.amount / 100);
 }
 
 function customerName(item: PaymentListItem): string {

@@ -19,7 +19,11 @@ const API_URL = `http://localhost:${process.env.PORT ?? '3000'}/admin-api`;
 async function gql(query, variables, token) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(API_URL, { method: 'POST', headers, body: JSON.stringify({ query, variables }) });
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query, variables }),
+    });
     const json = await res.json();
     const authToken = res.headers.get('vendure-auth-token');
     if (json.errors) throw new Error(json.errors[0].message);
@@ -47,29 +51,54 @@ const WORKFLOWS = [
         requestType: 'discountGrantApproval',
         displayName: 'Discount grant approval',
         steps: [
-            { order: 0, role: 'department-head', requiredPermission: 'ApproveDiscountRequest', escalatesTo: ['general-director'] },
+            {
+                order: 0,
+                role: 'department-head',
+                requiredPermission: 'ApproveDiscountRequest',
+                escalatesTo: ['general-director'],
+            },
         ],
     },
     {
         requestType: 'priceAdjustmentApproval',
         displayName: 'Price adjustment approval',
         steps: [
-            { order: 0, role: 'department-head', requiredPermission: 'ApproveDiscountRequest', escalatesTo: ['general-director'] },
+            {
+                order: 0,
+                role: 'department-head',
+                requiredPermission: 'ApproveDiscountRequest',
+                escalatesTo: ['general-director'],
+            },
         ],
     },
     {
         requestType: 'creditTermApproval',
         displayName: 'Credit term extension (within limit)',
         steps: [
-            { order: 0, role: 'department-head', requiredPermission: 'ApproveDiscountRequest', escalatesTo: [] },
+            {
+                order: 0,
+                role: 'department-head',
+                requiredPermission: 'ApproveDiscountRequest',
+                escalatesTo: [],
+            },
         ],
     },
     {
         requestType: 'creditTermApprovalEscalated',
         displayName: 'Credit term extension (escalated)',
         steps: [
-            { order: 0, role: 'security-officer', requiredPermission: 'ApproveSecurityLimit', escalatesTo: [] },
-            { order: 1, role: 'general-director', requiredPermission: 'ApproveSecurityLimit', escalatesTo: [] },
+            {
+                order: 0,
+                role: 'security-officer',
+                requiredPermission: 'ApproveSecurityLimit',
+                escalatesTo: [],
+            },
+            {
+                order: 1,
+                role: 'general-director',
+                requiredPermission: 'ApproveSecurityLimit',
+                escalatesTo: [],
+            },
         ],
     },
 ];
@@ -166,7 +195,10 @@ async function main() {
     const customer = customersRes.data.customers.items.find(
         c => c.emailAddress === 'ivan@autoservice-nord.example',
     );
-    if (!customer) throw new Error('Seeded customer ivan@autoservice-nord.example not found — run `make seed` first.');
+    if (!customer)
+        throw new Error(
+            'Seeded customer ivan@autoservice-nord.example not found — run `make seed` first.',
+        );
 
     const counterpartiesRes = await gql(
         `{ counterparties(options: { take: 100 }) { items { id erpId } } }`,
@@ -197,27 +229,113 @@ async function main() {
     // CustomerDetailPage's Discounts tab (discountGrantsForCounterparty) actually lists, so
     // "5 approved grants for cnt-001" is what makes that tab show 5 rows, not just 5 requests.
     const discountGrantScenarios = [
-        { counterpartyErpId: 'cnt-001', percent: 15, justification: 'Loyal customer, consistent volume for 2 years', decision: 'approved' },
-        { counterpartyErpId: 'cnt-001', percent: 12, facetCode: 'brand', facetValueCode: 'castrol', validToDays: 10, justification: 'Castrol volume tier renewal, expiring soon for visibility', decision: 'approved' },
-        { counterpartyErpId: 'cnt-001', percent: 18, facetCode: 'brand', facetValueCode: 'brembo', validToDays: -5, justification: 'Brembo campaign discount from last quarter, now expired', decision: 'approved' },
-        { counterpartyErpId: 'cnt-001', percent: 8, facetCode: 'brand', facetValueCode: 'ngk', validToDays: 180, justification: 'NGK long-term partnership discount', decision: 'approved' },
-        { counterpartyErpId: 'cnt-001', percent: 20, validToDays: 45, justification: 'Renewal of the prior all-products discount at a higher tier', decision: 'approved' },
-        { counterpartyErpId: 'cnt-001', percent: 40, justification: 'Customer is threatening to switch to a competitor', decision: 'rejected', comment: 'Margin impact too high for this price type' },
-        { counterpartyErpId: 'cnt-001', percent: 10, justification: 'New volume tier, first order over 500kg', decision: null },
-        { counterpartyErpId: 'cnt-002', percent: 12, justification: 'Retail partner requesting matching regional discount', decision: 'approved' },
-        { counterpartyErpId: 'cnt-003', percent: 8, justification: 'First bulk order from a new garage chain', decision: null },
-        { counterpartyErpId: 'cnt-004', percent: 20, justification: 'Annual contract renewal with volume commitment', decision: 'approved' },
-        { counterpartyErpId: 'cnt-005', percent: 25, justification: 'One-off clearance deal for slow-moving stock', decision: 'rejected', comment: 'Percent exceeds category margin floor' },
-        { counterpartyErpId: 'cnt-006', percent: 10, justification: 'Seasonal promotion for winter tyre-related parts', decision: null },
-        { counterpartyErpId: 'cnt-007', percent: 15, justification: 'Referral bonus for bringing in a new counterparty', decision: 'approved' },
-        { counterpartyErpId: 'cnt-008', percent: 18, justification: 'Compensation for a delayed prior shipment', decision: null },
+        {
+            counterpartyErpId: 'cnt-001',
+            percent: 15,
+            justification: 'Loyal customer, consistent volume for 2 years',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-001',
+            percent: 12,
+            facetCode: 'brand',
+            facetValueCode: 'castrol',
+            validToDays: 10,
+            justification: 'Castrol volume tier renewal, expiring soon for visibility',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-001',
+            percent: 18,
+            facetCode: 'brand',
+            facetValueCode: 'brembo',
+            validToDays: -5,
+            justification: 'Brembo campaign discount from last quarter, now expired',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-001',
+            percent: 8,
+            facetCode: 'brand',
+            facetValueCode: 'ngk',
+            validToDays: 180,
+            justification: 'NGK long-term partnership discount',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-001',
+            percent: 20,
+            validToDays: 45,
+            justification: 'Renewal of the prior all-products discount at a higher tier',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-001',
+            percent: 40,
+            justification: 'Customer is threatening to switch to a competitor',
+            decision: 'rejected',
+            comment: 'Margin impact too high for this price type',
+        },
+        {
+            counterpartyErpId: 'cnt-001',
+            percent: 10,
+            justification: 'New volume tier, first order over 500kg',
+            decision: null,
+        },
+        {
+            counterpartyErpId: 'cnt-002',
+            percent: 12,
+            justification: 'Retail partner requesting matching regional discount',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-003',
+            percent: 8,
+            justification: 'First bulk order from a new garage chain',
+            decision: null,
+        },
+        {
+            counterpartyErpId: 'cnt-004',
+            percent: 20,
+            justification: 'Annual contract renewal with volume commitment',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-005',
+            percent: 25,
+            justification: 'One-off clearance deal for slow-moving stock',
+            decision: 'rejected',
+            comment: 'Percent exceeds category margin floor',
+        },
+        {
+            counterpartyErpId: 'cnt-006',
+            percent: 10,
+            justification: 'Seasonal promotion for winter tyre-related parts',
+            decision: null,
+        },
+        {
+            counterpartyErpId: 'cnt-007',
+            percent: 15,
+            justification: 'Referral bonus for bringing in a new counterparty',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-008',
+            percent: 18,
+            justification: 'Compensation for a delayed prior shipment',
+            decision: null,
+        },
     ];
-    const existingGrantJustifications = await existingJustifications(directorToken, 'discountGrantApproval');
+    const existingGrantJustifications = await existingJustifications(
+        directorToken,
+        'discountGrantApproval',
+    );
     for (const s of discountGrantScenarios) {
         if (existingGrantJustifications.has(s.justification)) continue;
-        const scenarioValidTo = s.validToDays != null
-            ? new Date(Date.now() + s.validToDays * 24 * 60 * 60 * 1000).toISOString()
-            : validTo;
+        const scenarioValidTo =
+            s.validToDays != null
+                ? new Date(Date.now() + s.validToDays * 24 * 60 * 60 * 1000).toISOString()
+                : validTo;
         const res = await gql(
             `mutation($input: DiscountGrantInput!) { requestDiscountGrant(input: $input) { id } }`,
             {
@@ -250,15 +368,28 @@ async function main() {
     // "no floor configured -> requires-approval" conservative default means every adjustment
     // below always goes through the approval workflow, regardless of the requested price.
     const priceAdjustmentScenarios = [
-        { justification: 'Competitor is offering this SKU at a lower price locally', decision: 'approved' },
+        {
+            justification: 'Competitor is offering this SKU at a lower price locally',
+            decision: 'approved',
+        },
         { justification: 'One-off deal to close a large order this week', decision: null },
         { justification: 'Bulk purchase, requesting a per-unit discount', decision: 'approved' },
-        { justification: 'Matching a price quoted by the customer from another supplier', decision: null },
+        {
+            justification: 'Matching a price quoted by the customer from another supplier',
+            decision: null,
+        },
     ];
-    const existingAdjustmentJustifications = await existingJustifications(directorToken, 'priceAdjustmentApproval');
+    const existingAdjustmentJustifications = await existingJustifications(
+        directorToken,
+        'priceAdjustmentApproval',
+    );
     for (const s of priceAdjustmentScenarios) {
         if (existingAdjustmentJustifications.has(s.justification)) continue;
-        const { orderId, orderLineId } = await createDraftOrderLine(directorToken, customer.id, variant.id);
+        const { orderId, orderLineId } = await createDraftOrderLine(
+            directorToken,
+            customer.id,
+            variant.id,
+        );
         const res = await gql(
             `mutation($orderId: ID!, $orderLineId: ID!, $requestedPrice: Int!, $justification: String) {
                 requestPriceAdjustment(orderId: $orderId, orderLineId: $orderLineId, requestedPrice: $requestedPrice, justification: $justification) {
@@ -281,56 +412,149 @@ async function main() {
 
     // --- creditTermApproval (within limit): varied counterparties/days/decisions ---
     const creditTermScenarios = [
-        { counterpartyErpId: 'cnt-001', days: 7, justification: 'Temporary cash-flow gap, resolves next quarter', decision: 'approved' },
-        { counterpartyErpId: 'cnt-002', days: 5, justification: 'Short delay while awaiting a bank transfer', decision: 'approved' },
-        { counterpartyErpId: 'cnt-003', days: 10, justification: 'Extension requested during a busy seasonal period', decision: null },
-        { counterpartyErpId: 'cnt-004', days: 3, justification: 'Minor delay due to accounting reconciliation', decision: 'approved' },
-        { counterpartyErpId: 'cnt-005', days: 12, justification: 'Extension tied to an unusually large seasonal order', decision: null },
-        { counterpartyErpId: 'cnt-006', days: 14, justification: 'Maximum within-limit extension for a long-term partner', decision: 'rejected', comment: 'Existing balance already elevated' },
+        {
+            counterpartyErpId: 'cnt-001',
+            days: 7,
+            justification: 'Temporary cash-flow gap, resolves next quarter',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-002',
+            days: 5,
+            justification: 'Short delay while awaiting a bank transfer',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-003',
+            days: 10,
+            justification: 'Extension requested during a busy seasonal period',
+            decision: null,
+        },
+        {
+            counterpartyErpId: 'cnt-004',
+            days: 3,
+            justification: 'Minor delay due to accounting reconciliation',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-005',
+            days: 12,
+            justification: 'Extension tied to an unusually large seasonal order',
+            decision: null,
+        },
+        {
+            counterpartyErpId: 'cnt-006',
+            days: 14,
+            justification: 'Maximum within-limit extension for a long-term partner',
+            decision: 'rejected',
+            comment: 'Existing balance already elevated',
+        },
     ];
-    const existingCreditTermJustifications = await existingJustifications(directorToken, 'creditTermApproval');
+    const existingCreditTermJustifications = await existingJustifications(
+        directorToken,
+        'creditTermApproval',
+    );
     for (const s of creditTermScenarios) {
         if (existingCreditTermJustifications.has(s.justification)) continue;
         const res = await gql(
             `mutation($input: CreditTermRequestInput!) { requestCreditTermExtension(input: $input) { id requestType } }`,
-            { input: { counterpartyErpId: s.counterpartyErpId, requestedExtraDays: s.days, justification: s.justification } },
+            {
+                input: {
+                    counterpartyErpId: s.counterpartyErpId,
+                    requestedExtraDays: s.days,
+                    justification: s.justification,
+                },
+            },
             managerToken,
         );
         if (s.decision) {
             await gql(
                 `mutation($requestId: ID!, $decision: String!, $comment: String) { decideCreditTermRequest(requestId: $requestId, decision: $decision, comment: $comment) { id } }`,
-                { requestId: res.data.requestCreditTermExtension.id, decision: s.decision, comment: s.comment ?? null },
+                {
+                    requestId: res.data.requestCreditTermExtension.id,
+                    decision: s.decision,
+                    comment: s.comment ?? null,
+                },
                 deptHeadToken,
             );
         }
-        console.log(`✔ creditTermApproval (within limit): ${s.decision ?? 'pending'} (${s.counterpartyErpId})`);
+        console.log(
+            `✔ creditTermApproval (within limit): ${s.decision ?? 'pending'} (${s.counterpartyErpId})`,
+        );
     }
 
     // --- creditTermApprovalEscalated (exceeds limit): varied counterparties/days/decisions ---
     const escalatedScenarios = [
-        { counterpartyErpId: 'cnt-001', days: 30, justification: 'Customer requests extended terms for a seasonal restock order', decision: 'approved' },
-        { counterpartyErpId: 'cnt-002', days: 45, justification: 'Customer wants to defer payment for a bulk seasonal order', decision: 'rejected', comment: 'Existing balance already near the credit limit' },
-        { counterpartyErpId: 'cnt-007', days: 21, justification: 'Extension requested to bridge a large infrastructure project', decision: null },
-        { counterpartyErpId: 'cnt-008', days: 60, justification: 'Long-term extension tied to a multi-month supply contract', decision: 'approved' },
-        { counterpartyErpId: 'cnt-009', days: 25, justification: 'Extension requested pending resolution of a billing dispute', decision: null },
-        { counterpartyErpId: 'cnt-010', days: 35, justification: 'Extension requested during a temporary cash-flow shortfall', decision: 'rejected', comment: 'Counterparty already past a prior extension' },
+        {
+            counterpartyErpId: 'cnt-001',
+            days: 30,
+            justification: 'Customer requests extended terms for a seasonal restock order',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-002',
+            days: 45,
+            justification: 'Customer wants to defer payment for a bulk seasonal order',
+            decision: 'rejected',
+            comment: 'Existing balance already near the credit limit',
+        },
+        {
+            counterpartyErpId: 'cnt-007',
+            days: 21,
+            justification: 'Extension requested to bridge a large infrastructure project',
+            decision: null,
+        },
+        {
+            counterpartyErpId: 'cnt-008',
+            days: 60,
+            justification: 'Long-term extension tied to a multi-month supply contract',
+            decision: 'approved',
+        },
+        {
+            counterpartyErpId: 'cnt-009',
+            days: 25,
+            justification: 'Extension requested pending resolution of a billing dispute',
+            decision: null,
+        },
+        {
+            counterpartyErpId: 'cnt-010',
+            days: 35,
+            justification: 'Extension requested during a temporary cash-flow shortfall',
+            decision: 'rejected',
+            comment: 'Counterparty already past a prior extension',
+        },
     ];
-    const existingEscalatedJustifications = await existingJustifications(directorToken, 'creditTermApprovalEscalated');
+    const existingEscalatedJustifications = await existingJustifications(
+        directorToken,
+        'creditTermApprovalEscalated',
+    );
     for (const s of escalatedScenarios) {
         if (existingEscalatedJustifications.has(s.justification)) continue;
         const res = await gql(
             `mutation($input: CreditTermRequestInput!) { requestCreditTermExtension(input: $input) { id requestType } }`,
-            { input: { counterpartyErpId: s.counterpartyErpId, requestedExtraDays: s.days, justification: s.justification } },
+            {
+                input: {
+                    counterpartyErpId: s.counterpartyErpId,
+                    requestedExtraDays: s.days,
+                    justification: s.justification,
+                },
+            },
             managerToken,
         );
         if (s.decision) {
             await gql(
                 `mutation($requestId: ID!, $decision: String!, $comment: String) { decideCreditTermRequest(requestId: $requestId, decision: $decision, comment: $comment) { id } }`,
-                { requestId: res.data.requestCreditTermExtension.id, decision: s.decision, comment: s.comment ?? null },
+                {
+                    requestId: res.data.requestCreditTermExtension.id,
+                    decision: s.decision,
+                    comment: s.comment ?? null,
+                },
                 securityToken,
             );
         }
-        console.log(`✔ creditTermApprovalEscalated: ${s.decision ?? 'pending step 1'} (${s.counterpartyErpId})`);
+        console.log(
+            `✔ creditTermApprovalEscalated: ${s.decision ?? 'pending step 1'} (${s.counterpartyErpId})`,
+        );
     }
 
     console.log('\nDone.\n');

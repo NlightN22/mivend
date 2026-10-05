@@ -28,18 +28,31 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
 <template>
     <div v-if="open" class="mv-mobile-sheet-backdrop" @click="emit('close')" />
-    <section class="mv-mobile-sheet" :class="{ 'mv-mobile-sheet--open': open }" :aria-hidden="!open">
+    <section
+        class="mv-mobile-sheet"
+        :class="{ 'mv-mobile-sheet--open': open }"
+        :aria-hidden="!open"
+    >
         <div class="mv-mobile-sheet__handle" />
         <div class="mv-mobile-sheet__head">
             <h2 class="mv-mobile-sheet__title">Workspace</h2>
-            <button type="button" class="mv-mobile-sheet__close" aria-label="Close menu" @click="emit('close')">×</button>
+            <button
+                type="button"
+                class="mv-mobile-sheet__close"
+                aria-label="Close menu"
+                @click="emit('close')"
+            >
+                ×
+            </button>
         </div>
 
         <div v-if="userName" class="mv-mobile-sheet__profile">
             <span class="mv-mobile-sheet__avatar">{{ userInitials }}</span>
             <div>
                 <div class="mv-mobile-sheet__user-name">{{ userName }}</div>
-                <div v-if="userRoleLabel" class="mv-mobile-sheet__user-role">{{ userRoleLabel }}</div>
+                <div v-if="userRoleLabel" class="mv-mobile-sheet__user-role">
+                    {{ userRoleLabel }}
+                </div>
             </div>
         </div>
 
@@ -50,7 +63,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 class="mv-mobile-sheet__item"
                 :class="{
                     'mv-mobile-sheet__item--danger': item.danger,
-                    'mv-mobile-sheet__item--active': !!activePath && activePath.startsWith(item.path),
+                    'mv-mobile-sheet__item--active':
+                        !!activePath && activePath.startsWith(item.path),
                 }"
                 :aria-current="activePath && activePath.startsWith(item.path) ? 'page' : undefined"
                 :to="item.path"
@@ -58,7 +72,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
             >
                 {{ item.label }}
             </RouterLink>
-            <button type="button" class="mv-mobile-sheet__item mv-mobile-sheet__item--wide mv-mobile-sheet__item--danger" @click="emit('logout')">
+            <button
+                type="button"
+                class="mv-mobile-sheet__item mv-mobile-sheet__item--wide mv-mobile-sheet__item--danger"
+                @click="emit('logout')"
+            >
                 Log out
             </button>
         </div>

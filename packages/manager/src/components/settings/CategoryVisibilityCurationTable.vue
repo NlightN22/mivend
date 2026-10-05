@@ -45,16 +45,40 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: { type: 'text', placeholder: 'Name contains…' },
         mobile: { primary: true },
     },
-    { field: 'depth', header: 'Level', width: 90, filterConfig: { type: 'none' }, mobile: { hidden: true } },
-    { field: 'parentName', header: 'Parent', width: 200, filterConfig: { type: 'none' }, mobile: { hidden: true } },
-    { field: 'slug', header: 'Slug', width: 140, filterConfig: { type: 'none' }, mobile: { hidden: true } },
+    {
+        field: 'depth',
+        header: 'Level',
+        width: 90,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
+    {
+        field: 'parentName',
+        header: 'Parent',
+        width: 200,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
+    {
+        field: 'slug',
+        header: 'Slug',
+        width: 140,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
     {
         field: 'isPrivate',
         header: 'Current visibility',
         width: 160,
         filterConfig: { type: 'none' },
     },
-    { field: 'hiddenReason', header: 'Hidden reason', width: 160, filterConfig: { type: 'none' }, mobile: { hidden: true } },
+    {
+        field: 'hiddenReason',
+        header: 'Hidden reason',
+        width: 160,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
     { field: 'visibilityOverride', header: 'Override', width: 200, filterConfig: { type: 'none' } },
 ];
 
@@ -76,7 +100,9 @@ const { state: tableState } = useDataTableState<CategoryVisibilityFilterState>(
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
     },
 );
 

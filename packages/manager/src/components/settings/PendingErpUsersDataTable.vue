@@ -42,7 +42,13 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
     { field: 'email', header: 'Email', width: 220, filterConfig: { type: 'none' } },
     { field: 'department', header: 'Department', width: 160, filterConfig: { type: 'none' } },
-    { field: 'status', header: 'Status', width: 110, filterConfig: { type: 'none' }, mobile: { badge: true } },
+    {
+        field: 'status',
+        header: 'Status',
+        width: 110,
+        filterConfig: { type: 'none' },
+        mobile: { badge: true },
+    },
     { field: 'action', header: 'Action', width: 170, filterConfig: { type: 'none' } },
 ];
 
@@ -69,14 +75,27 @@ const { state: tableState } = useDataTableState<PendingFilterState>(
     },
 );
 
-watch(() => tableState.value.filters, f => emit('update:search', f.fullName), { deep: true });
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, fullName: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => tableState.value.filters,
+    f => emit('update:search', f.fullName),
+    { deep: true },
+);
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, fullName: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 interface Row {
     [key: string]: unknown;

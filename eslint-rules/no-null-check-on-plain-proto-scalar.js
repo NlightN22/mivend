@@ -57,7 +57,9 @@ export default {
             BinaryExpression(node) {
                 if (!['!=', '!==', '==', '==='].includes(node.operator)) return;
                 const [payloadSide, otherSide] =
-                    node.left.type === 'MemberExpression' ? [node.left, node.right] : [node.right, node.left];
+                    node.left.type === 'MemberExpression'
+                        ? [node.left, node.right]
+                        : [node.right, node.left];
                 if (otherSide.type !== 'Literal' || otherSide.value !== null) return;
                 if (!isPayloadMemberAccess(payloadSide)) return;
                 context.report({

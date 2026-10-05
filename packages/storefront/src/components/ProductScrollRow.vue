@@ -42,7 +42,6 @@ function next(): void {
 function getBrand(p: ProductItem): string {
     return p.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '';
 }
-
 </script>
 
 <template>
@@ -57,7 +56,13 @@ function getBrand(p: ProductItem): string {
                 @click="prev"
             >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                        d="M12.5 15L7.5 10L12.5 5"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
                 </svg>
             </button>
 
@@ -70,21 +75,37 @@ function getBrand(p: ProductItem): string {
                         :name="p.name"
                         :sku="p.variants[0]?.sku ?? ''"
                         :brand="getBrand(p)"
-                        :price="p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined"
-                        :customer-price="p.variants[0]?.customerPrice != null ? p.variants[0].customerPrice / 100 : undefined"
-                        :compare-at-price="p.variants[0]?.compareAtPrice != null ? p.variants[0].compareAtPrice / 100 : undefined"
+                        :price="
+                            p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined
+                        "
+                        :customer-price="
+                            p.variants[0]?.customerPrice != null
+                                ? p.variants[0].customerPrice / 100
+                                : undefined
+                        "
+                        :compare-at-price="
+                            p.variants[0]?.compareAtPrice != null
+                                ? p.variants[0].compareAtPrice / 100
+                                : undefined
+                        "
                         :discount-tiers="p.variants[0]?.discountTiers"
                         :currency="p.variants[0]?.currencyCode ?? 'RUB'"
                         :slug="p.slug"
                         :show-prices="authStore.isLoggedIn"
                         :variant-id="p.variants[0]?.id"
-                        :stock-variant="authStore.isLoggedIn ? stockVariantFromLevel(p.variants[0]?.stockLevel) : undefined"
+                        :stock-variant="
+                            authStore.isLoggedIn
+                                ? stockVariantFromLevel(p.variants[0]?.stockLevel)
+                                : undefined
+                        "
                         :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
                         :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                         :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                         @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1)"
                         @update-cart-qty="onUpdateQty"
-                        @toggle-favorite="() => favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.id)"
+                        @toggle-favorite="
+                            () => favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.id)
+                        "
                         @view-analogs="() => {}"
                     />
                 </div>
@@ -97,7 +118,13 @@ function getBrand(p: ProductItem): string {
                 @click="next"
             >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                        d="M7.5 5L12.5 10L7.5 15"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
                 </svg>
             </button>
         </div>
@@ -105,7 +132,9 @@ function getBrand(p: ProductItem): string {
 </template>
 
 <style scoped>
-.psr { margin-bottom: 40px; }
+.psr {
+    margin-bottom: 40px;
+}
 
 .psr-title {
     margin: 0 0 16px;
@@ -137,20 +166,27 @@ function getBrand(p: ProductItem): string {
         border-radius: 50%;
         border: none;
         background: #fff;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
         color: #14231f;
         cursor: pointer;
-        transition: background 0.15s, box-shadow 0.15s, color 0.15s;
+        transition:
+            background 0.15s,
+            box-shadow 0.15s,
+            color 0.15s;
     }
 
     .psr-arrow:hover {
         background: #2db87a;
         color: #fff;
-        box-shadow: 0 4px 16px rgba(45,184,122,0.35);
+        box-shadow: 0 4px 16px rgba(45, 184, 122, 0.35);
     }
 
-    .psr-arrow--left { left: -20px; }
-    .psr-arrow--right { right: -20px; }
+    .psr-arrow--left {
+        left: -20px;
+    }
+    .psr-arrow--right {
+        right: -20px;
+    }
 }
 
 .psr-viewport {
@@ -164,7 +200,9 @@ function getBrand(p: ProductItem): string {
     will-change: transform;
 }
 
-.psr-card { flex: 0 0 220px; }
+.psr-card {
+    flex: 0 0 220px;
+}
 
 .psr-state {
     height: 60px;

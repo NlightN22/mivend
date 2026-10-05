@@ -13,7 +13,9 @@ const router = useRouter();
 
 <template>
     <ul class="attention-list">
-        <li v-if="!items.length" class="attention-list__empty">Nothing needs attention right now</li>
+        <li v-if="!items.length" class="attention-list__empty">
+            Nothing needs attention right now
+        </li>
         <li
             v-for="item in items"
             :key="item.code"

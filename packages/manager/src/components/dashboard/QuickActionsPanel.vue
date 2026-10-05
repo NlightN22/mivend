@@ -25,7 +25,12 @@ const actions = [
 
 <template>
     <div class="quick-actions">
-        <RouterLink v-for="action in actions" :key="action.to" class="quick-actions__item" :to="action.to">
+        <RouterLink
+            v-for="action in actions"
+            :key="action.to"
+            class="quick-actions__item"
+            :to="action.to"
+        >
             <strong>{{ action.label }}</strong>
             <span>{{ action.description }}</span>
         </RouterLink>

@@ -36,7 +36,12 @@ interface DocumentUrlFilters {
     search: string;
     pageSize: string;
 }
-const URL_FILTER_DEFAULTS: DocumentUrlFilters = { type: '', status: '', search: '', pageSize: '20' };
+const URL_FILTER_DEFAULTS: DocumentUrlFilters = {
+    type: '',
+    status: '',
+    search: '',
+    pageSize: '20',
+};
 const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
 
 function buildUrlFilters(): DocumentUrlFilters {
@@ -59,17 +64,12 @@ function buildUrlFilters(): DocumentUrlFilters {
 
 const { loading, run: load } = useLatestRequest(
     () =>
-        fetchDocumentsPageForCounterparty(
-            props.counterpartyId,
-            page.value,
-            pageSize.value,
-            {
-                ...DEFAULT_CUSTOMER_DOCUMENT_FILTERS,
-                types: typeFilter.value,
-                status: statusFilter.value,
-                search: searchFilter.value,
-            },
-        ),
+        fetchDocumentsPageForCounterparty(props.counterpartyId, page.value, pageSize.value, {
+            ...DEFAULT_CUSTOMER_DOCUMENT_FILTERS,
+            types: typeFilter.value,
+            status: statusFilter.value,
+            search: searchFilter.value,
+        }),
     result => {
         documents.value = result.items;
         totalItems.value = result.totalItems;

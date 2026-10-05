@@ -31,7 +31,11 @@ const VIEWS: { key: ViewKey; label: string; variant?: FilterChip['variant'] }[] 
 ];
 const viewCounts = ref<NotificationViewCounts>({ all: 0, unread: 0, read: 0, resolved: 0 });
 const viewChips = computed<FilterChip[]>(() =>
-    VIEWS.map(v => ({ key: v.key, label: `${v.label} ${viewCounts.value[v.key]}`, variant: v.variant })),
+    VIEWS.map(v => ({
+        key: v.key,
+        label: `${v.label} ${viewCounts.value[v.key]}`,
+        variant: v.variant,
+    })),
 );
 
 const statusFilter = ref('');
@@ -61,13 +65,19 @@ const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
 }
 
 function buildUrlFilters(): NotificationUrlFilters {
-    return { status: statusFilter.value, search: searchFilter.value, pageSize: String(pageSize.value) };
+    return {
+        status: statusFilter.value,
+        search: searchFilter.value,
+        pageSize: String(pageSize.value),
+    };
 }
 
 const { loading, run: load } = useLatestRequest(
     () =>
         fetchNotifications({
-            status: statusFilter.value ? (statusFilter.value as 'unread' | 'read' | 'resolved') : undefined,
+            status: statusFilter.value
+                ? (statusFilter.value as 'unread' | 'read' | 'resolved')
+                : undefined,
             search: searchFilter.value || undefined,
             take: pageSize.value,
             skip: (page.value - 1) * pageSize.value,
@@ -163,7 +173,11 @@ onMounted(() => {
             @resolve="onResolve"
         >
             <template #view-chips>
-                <MvFilterChips :chips="viewChips" :active="activeView" @select="activeView = $event as ViewKey" />
+                <MvFilterChips
+                    :chips="viewChips"
+                    :active="activeView"
+                    @select="activeView = $event as ViewKey"
+                />
             </template>
         </NotificationsDataTable>
     </div>

@@ -11,11 +11,16 @@ const props = defineProps<{ discounts: ExpiringDiscount[] }>();
 </script>
 
 <template>
-    <MvWarningBanner v-if="props.discounts.length" action-text="View discounts" action-to="/discounts">
+    <MvWarningBanner
+        v-if="props.discounts.length"
+        action-text="View discounts"
+        action-to="/discounts"
+    >
         <strong>Discounts expiring soon</strong>
         <ul>
             <li v-for="discount in props.discounts.slice(0, 3)" :key="discount.id">
-                {{ discount.customerName }} — expires {{ new Date(discount.validTo).toLocaleDateString('en-US') }}
+                {{ discount.customerName }} — expires
+                {{ new Date(discount.validTo).toLocaleDateString('en-US') }}
             </li>
         </ul>
     </MvWarningBanner>

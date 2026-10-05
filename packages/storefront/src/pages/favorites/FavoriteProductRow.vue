@@ -10,18 +10,18 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <MvProductRow
-    :name="props.product.name"
-    :sku="props.product.sku"
-    :brand="props.product.brand"
-    :stock-variant="props.product.stockVariant"
-    :price="props.product.unitPrice"
-    :customer-price="props.product.unitPrice"
-    :currency="props.product.currency"
-    :show-prices="true"
-    :is-favorited="true"
-    @add-to-cart="(qty: number) => emit('addToCart', props.product.id, qty)"
-    @toggle-favorite="() => emit('remove', props.product.id)"
-    @view-analogs="() => {}"
-  />
+    <MvProductRow
+        :name="props.product.name"
+        :sku="props.product.sku"
+        :brand="props.product.brand"
+        :stock-variant="props.product.stockVariant"
+        :price="props.product.unitPrice"
+        :customer-price="props.product.unitPrice"
+        :currency="props.product.currency"
+        :show-prices="true"
+        :is-favorited="true"
+        @add-to-cart="(qty: number) => emit('addToCart', props.product.id, qty)"
+        @toggle-favorite="() => emit('remove', props.product.id)"
+        @view-analogs="() => {}"
+    />
 </template>

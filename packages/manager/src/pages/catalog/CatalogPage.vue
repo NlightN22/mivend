@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { MvPanel, MvPagination, MvCatalogFacets, MvProductRow, MvCatalogDropdown, MvBreadcrumbs } from '@mivend/ui-kit';
-import { DEFAULT_CATALOG_FILTERS, fetchCatalogFacets, type CatalogFilters } from '../../api/catalog';
+import {
+    MvPanel,
+    MvPagination,
+    MvCatalogFacets,
+    MvProductRow,
+    MvCatalogDropdown,
+    MvBreadcrumbs,
+} from '@mivend/ui-kit';
+import {
+    DEFAULT_CATALOG_FILTERS,
+    fetchCatalogFacets,
+    type CatalogFilters,
+} from '../../api/catalog';
 import { fetchPriceTypeCodes } from '../../api/discounts';
 import type { FacetGroup } from 'shared';
 import { parseCatalogQuery, buildCatalogQuery } from '../../composables/catalogQuery';
@@ -29,11 +40,13 @@ const priceTypeCodes = ref<string[]>([]);
 const ready = ref(false);
 
 const selectedFacetValues = computed(() => new Set(filters.facetValueIds));
-const categories = useCatalogCategories(collection, computed(() => route.query));
-const categoryDropdownOpen = ref(false);
-const { items, totalItems, stock, basePrices, extraPriceColumns, floorPrices, loading, loadPage } = useCatalogRows(
-    filters, page, collection, facetGroups, priceTypeCodes,
+const categories = useCatalogCategories(
+    collection,
+    computed(() => route.query),
 );
+const categoryDropdownOpen = ref(false);
+const { items, totalItems, stock, basePrices, extraPriceColumns, floorPrices, loading, loadPage } =
+    useCatalogRows(filters, page, collection, facetGroups, priceTypeCodes);
 
 async function toggleCategoryDropdown(): Promise<void> {
     if (!categoryDropdownOpen.value) await categories.loadTree();
@@ -58,22 +71,34 @@ function toggleFacetValue(id: string): void {
 }
 
 // Filter edits restart paging; the URL (collection / browser history) restores both together.
-watch(() => [filters.facetValueIds.join(','), filters.inStock, filters.priceMin, filters.priceMax], () => {
-    page.value = 1;
-});
+watch(
+    () => [filters.facetValueIds.join(','), filters.inStock, filters.priceMin, filters.priceMax],
+    () => {
+        page.value = 1;
+    },
+);
 // Back/forward and category navigation: the URL is the source of truth.
-watch(() => route.query, query => {
-    const state = parseCatalogQuery(query);
-    if (state.facetValueIds.join(',') !== filters.facetValueIds.join(',')) filters.facetValueIds = state.facetValueIds;
-    if (state.inStock !== filters.inStock) filters.inStock = state.inStock;
-    if (state.priceMin !== filters.priceMin) filters.priceMin = state.priceMin;
-    if (state.priceMax !== filters.priceMax) filters.priceMax = state.priceMax;
-    if (state.page !== page.value) page.value = state.page;
-});
+watch(
+    () => route.query,
+    query => {
+        const state = parseCatalogQuery(query);
+        if (state.facetValueIds.join(',') !== filters.facetValueIds.join(','))
+            filters.facetValueIds = state.facetValueIds;
+        if (state.inStock !== filters.inStock) filters.inStock = state.inStock;
+        if (state.priceMin !== filters.priceMin) filters.priceMin = state.priceMin;
+        if (state.priceMax !== filters.priceMax) filters.priceMax = state.priceMax;
+        if (state.page !== page.value) page.value = state.page;
+    },
+);
 
 watch(
     () => [
-        filters.facetValueIds.join(','), filters.inStock, filters.priceMin, filters.priceMax, page.value, collection.value,
+        filters.facetValueIds.join(','),
+        filters.inStock,
+        filters.priceMin,
+        filters.priceMax,
+        page.value,
+        collection.value,
     ],
     () => {
         const state = parseCatalogQuery(route.query);
@@ -111,7 +136,10 @@ void loadAll();
             <div class="catalog-page__header-row">
                 <h1 class="catalog-page__title">{{ categories.heading.value }}</h1>
                 <button
-                    :class="['catalog-page__category-btn', { 'catalog-page__category-btn--open': categoryDropdownOpen }]"
+                    :class="[
+                        'catalog-page__category-btn',
+                        { 'catalog-page__category-btn--open': categoryDropdownOpen },
+                    ]"
                     type="button"
                     @click="toggleCategoryDropdown"
                 >
@@ -126,7 +154,11 @@ void loadAll();
                 @navigate="navigateToCategory"
             />
         </div>
-        <div v-if="categoryDropdownOpen" class="catalog-page__backdrop" @click="categoryDropdownOpen = false" />
+        <div
+            v-if="categoryDropdownOpen"
+            class="catalog-page__backdrop"
+            @click="categoryDropdownOpen = false"
+        />
 
         <div class="catalog-page__layout">
             <MvCatalogFacets
@@ -151,13 +183,22 @@ void loadAll();
             />
 
             <MvPanel class="catalog-page__results">
-                <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
+                <MvPagination
+                    :page="page"
+                    :page-size="pageSize"
+                    :total="totalItems"
+                    @update:page="page = $event"
+                />
                 <div
                     class="catalog-page__rows"
                     :class="{ 'catalog-page__rows--loading': loading }"
                     :style="{ minHeight: `${Math.max(items.length, pageSize) * 90}px` }"
                 >
-                    <div v-for="item in items" :key="item.productVariantId" class="catalog-page__row">
+                    <div
+                        v-for="item in items"
+                        :key="item.productVariantId"
+                        class="catalog-page__row"
+                    >
                         <MvProductRow
                             :name="item.productName"
                             :sku="item.sku"
@@ -186,9 +227,16 @@ void loadAll();
                             :extra-price-columns="extraPriceColumns"
                         />
                     </div>
-                    <p v-if="!items.length" class="catalog-page__empty">No products match your filters</p>
+                    <p v-if="!items.length" class="catalog-page__empty">
+                        No products match your filters
+                    </p>
                 </div>
-                <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
+                <MvPagination
+                    :page="page"
+                    :page-size="pageSize"
+                    :total="totalItems"
+                    @update:page="page = $event"
+                />
             </MvPanel>
         </div>
     </div>
@@ -225,7 +273,9 @@ void loadAll();
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
-    transition: border-color 0.15s, color 0.15s;
+    transition:
+        border-color 0.15s,
+        color 0.15s;
 }
 
 .catalog-page__category-btn:hover,

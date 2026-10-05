@@ -101,7 +101,9 @@ const { loading: usersLoading, run: loadUsers } = useLatestRequest(
             {
                 skip: (page.value - 1) * pageSize.value,
                 take: pageSize.value,
-                filter: searchFilter.value ? { emailAddress: { contains: searchFilter.value } } : undefined,
+                filter: searchFilter.value
+                    ? { emailAddress: { contains: searchFilter.value } }
+                    : undefined,
             },
             (statusFilter.value || undefined) as 'active' | 'inactive' | undefined,
         ),
@@ -237,7 +239,10 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div v-if="!authStore.hasPermission('ManageAdministratorLifecycle')" class="users-page__not-authorized">
+    <div
+        v-if="!authStore.hasPermission('ManageAdministratorLifecycle')"
+        class="users-page__not-authorized"
+    >
         <h1>Not authorized</h1>
         <p>You don't have permission to manage users.</p>
     </div>
@@ -271,7 +276,11 @@ onMounted(async () => {
             @resend-password-reset="onResendPasswordReset"
         >
             <template #view-chips>
-                <MvFilterChips :chips="viewChips" :active="view" @select="view = $event as ViewKey" />
+                <MvFilterChips
+                    :chips="viewChips"
+                    :active="view"
+                    @select="view = $event as ViewKey"
+                />
             </template>
         </UsersDataTable>
 
@@ -291,7 +300,11 @@ onMounted(async () => {
             @create="onCreateAdministrator"
         >
             <template #view-chips>
-                <MvFilterChips :chips="viewChips" :active="view" @select="view = $event as ViewKey" />
+                <MvFilterChips
+                    :chips="viewChips"
+                    :active="view"
+                    @select="view = $event as ViewKey"
+                />
             </template>
         </PendingErpUsersDataTable>
     </div>

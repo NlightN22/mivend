@@ -66,7 +66,9 @@ export function CounterpartyDetailPage({ route }: Readonly<{ route: AnyRoute }>)
                 <PageTitle>Counterparty not found</PageTitle>
                 <PageLayout>
                     <PageBlock column="main" blockId="error">
-                        <p className="text-destructive">{error || 'This counterparty could not be found.'}</p>
+                        <p className="text-destructive">
+                            {error || 'This counterparty could not be found.'}
+                        </p>
                     </PageBlock>
                 </PageLayout>
             </Page>
@@ -112,7 +114,11 @@ export function CounterpartyDetailPage({ route }: Readonly<{ route: AnyRoute }>)
                     )}
                     <div className="mt-2">
                         <Badge variant={status === 'linked' ? 'secondary' : 'outline'}>
-                            {status === 'erp-inactive' ? 'ERP inactive' : status === 'linked' ? 'Linked' : 'Unlinked'}
+                            {status === 'erp-inactive'
+                                ? 'ERP inactive'
+                                : status === 'linked'
+                                  ? 'Linked'
+                                  : 'Unlinked'}
                         </Badge>
                     </div>
                 </PageBlock>
@@ -120,14 +126,21 @@ export function CounterpartyDetailPage({ route }: Readonly<{ route: AnyRoute }>)
                 <PageBlock column="side" blockId="assignment" title="Assignment">
                     <Field label="Branch" value={formatBranch(counterparty.branchId)} />
                     <Field label="Department" value={counterparty.departmentId} />
-                    <Field label="Assigned manager (Administrator id)" value={counterparty.assignedManagerId} />
+                    <Field
+                        label="Assigned manager (Administrator id)"
+                        value={counterparty.assignedManagerId}
+                    />
                     <Field label="Manager ERP ID" value={counterparty.managerErpId} muted />
                 </PageBlock>
 
                 <PageBlock column="side" blockId="commercial-terms" title="Commercial terms">
                     <Field
                         label="Credit limit"
-                        value={counterparty.creditLimit != null ? counterparty.creditLimit.toLocaleString() : 'Hidden'}
+                        value={
+                            counterparty.creditLimit != null
+                                ? counterparty.creditLimit.toLocaleString()
+                                : 'Hidden'
+                        }
                     />
                     <Field
                         label="Credit balance"
@@ -150,7 +163,10 @@ export function CounterpartyDetailPage({ route }: Readonly<{ route: AnyRoute }>)
                 </PageBlock>
 
                 <PageBlock column="side" blockId="related-entities" title="Related entities">
-                    <Field label="Trading points" value={String(counterparty.tradingPoints.length)} />
+                    <Field
+                        label="Trading points"
+                        value={String(counterparty.tradingPoints.length)}
+                    />
                     <Field label="Team members" value={String(counterparty.teamMembers.length)} />
                 </PageBlock>
             </PageLayout>
@@ -158,7 +174,11 @@ export function CounterpartyDetailPage({ route }: Readonly<{ route: AnyRoute }>)
     );
 }
 
-function Field({ label, value, muted }: Readonly<{ label: string; value: string | null | undefined; muted?: boolean }>) {
+function Field({
+    label,
+    value,
+    muted,
+}: Readonly<{ label: string; value: string | null | undefined; muted?: boolean }>) {
     return (
         <div className="mb-3">
             <div className="text-xs text-muted-foreground mb-1">{label}</div>

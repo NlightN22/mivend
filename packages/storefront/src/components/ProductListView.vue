@@ -26,8 +26,8 @@ const props = defineProps<{
 const emit = defineEmits<{
     'update:viewMode': [v: ViewMode];
     'update:sortKey': [v: string];
-    'loadMore': [];
-    'retry': [];
+    loadMore: [];
+    retry: [];
 }>();
 
 const authStore = useAuthStore();
@@ -35,14 +35,19 @@ const favoritesStore = useFavoritesStore();
 const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
 const sentinel = ref<HTMLElement | null>(null);
 const gridStyle = computed(() =>
-    props.gridColumns ? `repeat(${props.gridColumns}, minmax(0, 1fr))` : 'repeat(4, minmax(0, 1fr))'
+    props.gridColumns
+        ? `repeat(${props.gridColumns}, minmax(0, 1fr))`
+        : 'repeat(4, minmax(0, 1fr))',
 );
 let observer: IntersectionObserver | null = null;
 
 onMounted(() => {
-    observer = new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting) emit('loadMore');
-    }, { rootMargin: '200px' });
+    observer = new IntersectionObserver(
+        ([entry]) => {
+            if (entry.isIntersecting) emit('loadMore');
+        },
+        { rootMargin: '200px' },
+    );
     if (sentinel.value) observer.observe(sentinel.value);
 });
 
@@ -57,11 +62,9 @@ function stockProps(stockLevel: string): { stockVariant?: StockVariant } {
     return { stockVariant: stockVariantFromLevel(stockLevel) };
 }
 
-
 function handleToggleFavorite(p: ProductItem): void {
     favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.id);
 }
-
 </script>
 
 <template>
@@ -85,15 +88,25 @@ function handleToggleFavorite(p: ProductItem): void {
                 </select>
                 <div class="plv-toolbar__view">
                     <button
-                        :class="['plv-toolbar__view-btn', { 'plv-toolbar__view-btn--active': viewMode === 'grid' }]"
+                        :class="[
+                            'plv-toolbar__view-btn',
+                            { 'plv-toolbar__view-btn--active': viewMode === 'grid' },
+                        ]"
                         type="button"
                         @click="emit('update:viewMode', 'grid')"
-                    >&#9638; Grid</button>
+                    >
+                        &#9638; Grid
+                    </button>
                     <button
-                        :class="['plv-toolbar__view-btn', { 'plv-toolbar__view-btn--active': viewMode === 'list' }]"
+                        :class="[
+                            'plv-toolbar__view-btn',
+                            { 'plv-toolbar__view-btn--active': viewMode === 'list' },
+                        ]"
                         type="button"
                         @click="emit('update:viewMode', 'list')"
-                    >&#9783; List</button>
+                    >
+                        &#9783; List
+                    </button>
                 </div>
             </div>
         </div>
@@ -110,8 +123,8 @@ function handleToggleFavorite(p: ProductItem): void {
         <template v-else-if="viewMode === 'list'">
             <div class="plv-list">
                 <div class="plv-list__header">
-                    <span></span><span>Product</span><span>SKU</span>
-                    <span>Stock</span><span>Multiplicity</span><span>Price</span><span>Order</span>
+                    <span></span><span>Product</span><span>SKU</span> <span>Stock</span
+                    ><span>Multiplicity</span><span>Price</span><span>Order</span>
                 </div>
                 <MvProductRow
                     v-for="p in items"
@@ -120,8 +133,16 @@ function handleToggleFavorite(p: ProductItem): void {
                     :sku="p.variants[0]?.sku ?? ''"
                     :brand="getBrand(p)"
                     :price="p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined"
-                    :customer-price="p.variants[0]?.customerPrice != null ? p.variants[0].customerPrice / 100 : undefined"
-                    :old-price="p.variants[0]?.compareAtPrice != null ? p.variants[0].compareAtPrice / 100 : undefined"
+                    :customer-price="
+                        p.variants[0]?.customerPrice != null
+                            ? p.variants[0].customerPrice / 100
+                            : undefined
+                    "
+                    :old-price="
+                        p.variants[0]?.compareAtPrice != null
+                            ? p.variants[0].compareAtPrice / 100
+                            : undefined
+                    "
                     :discount-tiers="p.variants[0]?.discountTiers"
                     :currency="p.variants[0]?.currencyCode ?? 'RUB'"
                     :slug="p.slug"
@@ -148,8 +169,16 @@ function handleToggleFavorite(p: ProductItem): void {
                     :sku="p.variants[0]?.sku ?? ''"
                     :brand="getBrand(p)"
                     :price="p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined"
-                    :customer-price="p.variants[0]?.customerPrice != null ? p.variants[0].customerPrice / 100 : undefined"
-                    :compare-at-price="p.variants[0]?.compareAtPrice != null ? p.variants[0].compareAtPrice / 100 : undefined"
+                    :customer-price="
+                        p.variants[0]?.customerPrice != null
+                            ? p.variants[0].customerPrice / 100
+                            : undefined
+                    "
+                    :compare-at-price="
+                        p.variants[0]?.compareAtPrice != null
+                            ? p.variants[0].compareAtPrice / 100
+                            : undefined
+                    "
                     :discount-tiers="p.variants[0]?.discountTiers"
                     :currency="p.variants[0]?.currencyCode ?? 'RUB'"
                     :slug="p.slug"
@@ -176,7 +205,11 @@ function handleToggleFavorite(p: ProductItem): void {
 </template>
 
 <style scoped>
-.plv { display: flex; flex-direction: column; gap: 14px; }
+.plv {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
 
 .plv-toolbar {
     background: #fff;
@@ -191,9 +224,23 @@ function handleToggleFavorite(p: ProductItem): void {
     flex-wrap: wrap;
 }
 
-.plv-toolbar__title { font-size: 18px; font-weight: 900; letter-spacing: -0.03em; color: #14231f; }
-.plv-toolbar__count { font-size: 13px; color: #66736e; margin-top: 2px; }
-.plv-toolbar__right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.plv-toolbar__title {
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: #14231f;
+}
+.plv-toolbar__count {
+    font-size: 13px;
+    color: #66736e;
+    margin-top: 2px;
+}
+.plv-toolbar__right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
 
 .plv-toolbar__select {
     height: 36px;
@@ -207,7 +254,12 @@ function handleToggleFavorite(p: ProductItem): void {
     cursor: pointer;
 }
 
-.plv-toolbar__view { display: flex; border: 1.5px solid #dde7e2; border-radius: 10px; overflow: hidden; }
+.plv-toolbar__view {
+    display: flex;
+    border: 1.5px solid #dde7e2;
+    border-radius: 10px;
+    overflow: hidden;
+}
 
 .plv-toolbar__view-btn {
     height: 36px;
@@ -218,11 +270,18 @@ function handleToggleFavorite(p: ProductItem): void {
     font-family: inherit;
     color: #66736e;
     cursor: pointer;
-    transition: background 0.1s, color 0.1s;
+    transition:
+        background 0.1s,
+        color 0.1s;
 }
 
-.plv-toolbar__view-btn:hover { background: #f4faf7; }
-.plv-toolbar__view-btn--active { background: #00b894; color: #fff; }
+.plv-toolbar__view-btn:hover {
+    background: #f4faf7;
+}
+.plv-toolbar__view-btn--active {
+    background: #00b894;
+    color: #fff;
+}
 
 .plv-list {
     background: #fff;
@@ -245,7 +304,11 @@ function handleToggleFavorite(p: ProductItem): void {
     color: #66736e;
 }
 
-.plv-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.plv-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
 
 .plv-state {
     padding: 60px;
@@ -257,7 +320,9 @@ function handleToggleFavorite(p: ProductItem): void {
     border: 1px solid #edf3f0;
 }
 
-.plv-sentinel { height: 1px; }
+.plv-sentinel {
+    height: 1px;
+}
 
 .plv-loading-more {
     display: flex;
@@ -278,13 +343,31 @@ function handleToggleFavorite(p: ProductItem): void {
     animation: plv-spin 0.7s linear infinite;
 }
 
-@keyframes plv-spin { to { transform: rotate(360deg); } }
-
-@media (prefers-reduced-motion: reduce) {
-    .plv-loading-more__spinner { animation-duration: 2s; }
+@keyframes plv-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
-@media (max-width: 1100px) { .plv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
-@media (max-width: 760px) { .plv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
-@media (max-width: 480px) { .plv-grid { grid-template-columns: 1fr !important; } }
+@media (prefers-reduced-motion: reduce) {
+    .plv-loading-more__spinner {
+        animation-duration: 2s;
+    }
+}
+
+@media (max-width: 1100px) {
+    .plv-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+@media (max-width: 760px) {
+    .plv-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+@media (max-width: 480px) {
+    .plv-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
 </style>

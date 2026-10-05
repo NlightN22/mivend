@@ -52,7 +52,9 @@ onMounted(load);
                     </RouterLink>
                 </li>
             </ul>
-            <p v-else-if="!error" class="roles-list__description">No roles visible to your account.</p>
+            <p v-else-if="!error" class="roles-list__description">
+                No roles visible to your account.
+            </p>
         </MvPanel>
     </div>
 </template>

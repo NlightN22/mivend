@@ -27,7 +27,9 @@ fragment ProductWidgetFields on Product {
 }
 
 query NewArrivals($since: DateTime!) {
-    products(options: { take: 12, sort: { createdAt: DESC }, filter: { createdAt: { after: $since } } }) {
+    products(
+        options: { take: 12, sort: { createdAt: DESC }, filter: { createdAt: { after: $since } } }
+    ) {
         items {
             ...ProductWidgetFields
         }

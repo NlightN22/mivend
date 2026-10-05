@@ -49,9 +49,15 @@ function handleMobileQueryChange(e: MediaQueryListEvent): void {
 }
 
 const PRIMARY_TAB_COUNT = 3;
-const primaryDepartments = computed(() => (isMobile.value ? departments.value.slice(0, PRIMARY_TAB_COUNT) : departments.value));
-const overflowDepartments = computed(() => (isMobile.value ? departments.value.slice(PRIMARY_TAB_COUNT) : []));
-const isOverflowActive = computed(() => overflowDepartments.value.some(d => d.erpId === activeDepartmentId.value));
+const primaryDepartments = computed(() =>
+    isMobile.value ? departments.value.slice(0, PRIMARY_TAB_COUNT) : departments.value,
+);
+const overflowDepartments = computed(() =>
+    isMobile.value ? departments.value.slice(PRIMARY_TAB_COUNT) : [],
+);
+const isOverflowActive = computed(() =>
+    overflowDepartments.value.some(d => d.erpId === activeDepartmentId.value),
+);
 const activeOverflowLabel = computed(
     () => overflowDepartments.value.find(d => d.erpId === activeDepartmentId.value)?.name ?? 'More',
 );
@@ -101,7 +107,11 @@ onBeforeUnmount(() => {
                 >
                     {{ department.name }}
                 </button>
-                <div v-if="overflowDepartments.length" ref="tabsMoreRef" class="team-page__tabs-more">
+                <div
+                    v-if="overflowDepartments.length"
+                    ref="tabsMoreRef"
+                    class="team-page__tabs-more"
+                >
                     <button
                         type="button"
                         class="team-page__tab team-page__tabs-more-trigger"

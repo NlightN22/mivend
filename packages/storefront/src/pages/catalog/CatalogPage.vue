@@ -23,9 +23,7 @@ const authStore = useAuthStore();
 const catalogStore = useCatalogStore();
 
 function parseFiltersFromQuery(): FilterState {
-    const facetValueIds = route.query.fv
-        ? String(route.query.fv).split(',').filter(Boolean)
-        : [];
+    const facetValueIds = route.query.fv ? String(route.query.fv).split(',').filter(Boolean) : [];
     return {
         facetValueIds,
         inStock: route.query.inStock === '1',
@@ -41,23 +39,49 @@ const pendingCategorySlug = ref<string | undefined>(
 const filters = ref<FilterState>(parseFiltersFromQuery());
 const activeCollectionSlug = computed(() => (route.query.collection as string) || undefined);
 
-const { items, facetGroups, categoryCounts, categoryCountsLoading, totalItems, loading, loadError, loadErrorInfo, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, priceRangeSupported, load, loadMore } =
-    useProductList({ pageSize: 24, query: searchQuery, filters, collectionSlug: activeCollectionSlug });
+const {
+    items,
+    facetGroups,
+    categoryCounts,
+    categoryCountsLoading,
+    totalItems,
+    loading,
+    loadError,
+    loadErrorInfo,
+    loadingMore,
+    hasMore,
+    viewMode,
+    setViewMode,
+    sortKey,
+    sortOptions,
+    priceRangeSupported,
+    load,
+    loadMore,
+} = useProductList({
+    pageSize: 24,
+    query: searchQuery,
+    filters,
+    collectionSlug: activeCollectionSlug,
+});
 
 // Sync filter state → URL (replace so back button works correctly)
 let syncingFromUrl = false;
-watch(filters, f => {
-    if (syncingFromUrl) return;
-    router.replace({
-        query: {
-            ...route.query,
-            fv: f.facetValueIds.length ? f.facetValueIds.join(',') : undefined,
-            inStock: f.inStock ? '1' : undefined,
-            priceMin: f.priceMin ?? undefined,
-            priceMax: f.priceMax ?? undefined,
-        },
-    });
-}, { deep: true });
+watch(
+    filters,
+    f => {
+        if (syncingFromUrl) return;
+        router.replace({
+            query: {
+                ...route.query,
+                fv: f.facetValueIds.length ? f.facetValueIds.join(',') : undefined,
+                inStock: f.inStock ? '1' : undefined,
+                priceMin: f.priceMin ?? undefined,
+                priceMax: f.priceMax ?? undefined,
+            },
+        });
+    },
+    { deep: true },
+);
 
 function applyPendingCategory(): void {
     if (!pendingCategorySlug.value) return;
@@ -92,9 +116,14 @@ function resetFilters(): void {
 
 const formatBound = (v: number | null): string => (v == null ? '' : n(v));
 
-const { chips: activeChips, remove: removeChip, clear: clearChips } = useActiveFilterChips(filters, facetGroups, () => ({
+const {
+    chips: activeChips,
+    remove: removeChip,
+    clear: clearChips,
+} = useActiveFilterChips(filters, facetGroups, () => ({
     inStock: t('catalogFilters.inStock'),
-    price: (min, max) => t('catalogFilters.price', { range: `${formatBound(min)} – ${formatBound(max)}` }),
+    price: (min, max) =>
+        t('catalogFilters.price', { range: `${formatBound(min)} – ${formatBound(max)}` }),
 }));
 
 const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
@@ -109,7 +138,9 @@ const categoryPanel = useCategoryPanel(
 );
 
 const categoryPath = computed(() =>
-    selectedCategorySlug.value ? findCategoryPath(catalogStore.collections, selectedCategorySlug.value) : [],
+    selectedCategorySlug.value
+        ? findCategoryPath(catalogStore.collections, selectedCategorySlug.value)
+        : [],
 );
 
 // Always at least [{ label: t('nav.catalog') }] so this block keeps a stable height.
@@ -129,25 +160,35 @@ function navigateCategory(slug: string | undefined): void {
     router.push({ query: { ...route.query, collection: slug, fv: undefined } });
 }
 
-watch(() => route.query.q, q => {
-    searchQuery.value = (q as string) ?? '';
-    pendingCategorySlug.value = undefined;
-    resetFilters();
-});
+watch(
+    () => route.query.q,
+    q => {
+        searchQuery.value = (q as string) ?? '';
+        pendingCategorySlug.value = undefined;
+        resetFilters();
+    },
+);
 
-watch(() => route.query.collection, slug => {
-    // resetFilters() also clears pendingCategorySlug — must run before assigning the new
-    // slug below, or it immediately wipes out the value this watcher just set.
-    resetFilters();
-    if (!searchQuery.value) pendingCategorySlug.value = (slug as string) || undefined;
-});
+watch(
+    () => route.query.collection,
+    slug => {
+        // resetFilters() also clears pendingCategorySlug — must run before assigning the new
+        // slug below, or it immediately wipes out the value this watcher just set.
+        resetFilters();
+        if (!searchQuery.value) pendingCategorySlug.value = (slug as string) || undefined;
+    },
+);
 
 // Restore filters when navigating back via browser history
-watch(() => [route.query.fv, route.query.inStock, route.query.priceMin, route.query.priceMax].join('|'), () => {
-    syncingFromUrl = true;
-    filters.value = parseFiltersFromQuery();
-    syncingFromUrl = false;
-});
+watch(
+    () =>
+        [route.query.fv, route.query.inStock, route.query.priceMin, route.query.priceMax].join('|'),
+    () => {
+        syncingFromUrl = true;
+        filters.value = parseFiltersFromQuery();
+        syncingFromUrl = false;
+    },
+);
 
 onMounted(() => {
     load();
@@ -188,33 +229,33 @@ onMounted(() => {
             />
 
             <div class="catalog-page__main">
-            <MvActiveFilters
-                class="catalog-page__chips"
-                :chips="activeChips"
-                :clear-label="t('catalogFilters.clearAll')"
-                :remove-label="t('catalogFilters.remove')"
-                @remove="removeChip"
-                @clear="clearChips"
-            />
-            <ProductListView
-                :items="items"
-                :total-items="totalItems"
-                :loading="loading"
-                :load-error="loadError"
-                :error-title="loadErrorInfo.title"
-                :error-message="loadErrorInfo.message"
-                :loading-more="loadingMore"
-                :has-more="hasMore"
-                :view-mode="viewMode"
-                :sort-key="sortKey"
-                :sort-options="sortOptions"
-                :title="searchQuery ? `Search: &quot;${searchQuery}&quot;` : 'Product catalog'"
-                :show-prices="authStore.isLoggedIn"
-                @update:view-mode="setViewMode($event)"
-                @update:sort-key="sortKey = $event"
-                @load-more="loadMore"
-                @retry="load"
-            />
+                <MvActiveFilters
+                    class="catalog-page__chips"
+                    :chips="activeChips"
+                    :clear-label="t('catalogFilters.clearAll')"
+                    :remove-label="t('catalogFilters.remove')"
+                    @remove="removeChip"
+                    @clear="clearChips"
+                />
+                <ProductListView
+                    :items="items"
+                    :total-items="totalItems"
+                    :loading="loading"
+                    :load-error="loadError"
+                    :error-title="loadErrorInfo.title"
+                    :error-message="loadErrorInfo.message"
+                    :loading-more="loadingMore"
+                    :has-more="hasMore"
+                    :view-mode="viewMode"
+                    :sort-key="sortKey"
+                    :sort-options="sortOptions"
+                    :title="searchQuery ? `Search: &quot;${searchQuery}&quot;` : 'Product catalog'"
+                    :show-prices="authStore.isLoggedIn"
+                    @update:view-mode="setViewMode($event)"
+                    @update:sort-key="sortKey = $event"
+                    @load-more="loadMore"
+                    @retry="load"
+                />
             </div>
         </div>
     </main>
@@ -227,9 +268,15 @@ onMounted(() => {
     padding: 24px 28px 56px;
 }
 
-.catalog-page__crumbs { margin-bottom: 14px; }
-.catalog-page__main { min-width: 0; }
-.catalog-page__chips { margin-bottom: 12px; }
+.catalog-page__crumbs {
+    margin-bottom: 14px;
+}
+.catalog-page__main {
+    min-width: 0;
+}
+.catalog-page__chips {
+    margin-bottom: 12px;
+}
 
 .catalog-page__heading {
     margin: 0 0 20px;
@@ -246,10 +293,15 @@ onMounted(() => {
 }
 
 @media (max-width: 960px) {
-    .catalog-page__inner { grid-template-columns: minmax(0, 1fr); }
+    .catalog-page__inner {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 @media (max-width: 640px) {
-    .catalog-page { padding-left: 16px; padding-right: 16px; }
+    .catalog-page {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
 }
 </style>

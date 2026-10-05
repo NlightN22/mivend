@@ -77,7 +77,9 @@ watch(search, () => {
         <div v-else class="customer-picker__card">
             <div class="customer-picker__card-main">
                 <strong>{{ selected.shortName }}</strong>
-                <span v-if="selected.inn" class="customer-picker__meta">INN {{ selected.inn }}</span>
+                <span v-if="selected.inn" class="customer-picker__meta"
+                    >INN {{ selected.inn }}</span
+                >
                 <MvStatusBadge variant="info">{{ selected.priceType }}</MvStatusBadge>
             </div>
             <div v-if="credit" class="customer-picker__credit">

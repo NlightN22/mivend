@@ -53,9 +53,7 @@ export function PendingErpUsersPage({ route }: { route: AnyRoute }) {
 
     useEffect(() => {
         void api.query(departmentsDocument).then(data => {
-            setDepartmentNames(
-                Object.fromEntries(data.departments.map(d => [d.erpId, d.name])),
-            );
+            setDepartmentNames(Object.fromEntries(data.departments.map(d => [d.erpId, d.name])));
         });
     }, []);
 
@@ -98,7 +96,14 @@ export function PendingErpUsersPage({ route }: { route: AnyRoute }) {
                 firstSeenAt: true,
                 actions: true,
             }}
-            defaultColumnOrder={['fullName', 'email', 'erpId', 'departmentId', 'firstSeenAt', 'actions']}
+            defaultColumnOrder={[
+                'fullName',
+                'email',
+                'erpId',
+                'departmentId',
+                'firstSeenAt',
+                'actions',
+            ]}
             customizeColumns={{
                 // Overrides the auto-generated "Department Id" column in place — additionalColumns
                 // would add a second, duplicate-keyed column instead (real incident: shipped that
@@ -108,7 +113,8 @@ export function PendingErpUsersPage({ route }: { route: AnyRoute }) {
                     header: 'Department',
                     cell: ({ row }) =>
                         row.original.departmentId
-                            ? (departmentNames[row.original.departmentId] ?? row.original.departmentId)
+                            ? (departmentNames[row.original.departmentId] ??
+                              row.original.departmentId)
                             : '—',
                 },
             }}
@@ -122,7 +128,9 @@ export function PendingErpUsersPage({ route }: { route: AnyRoute }) {
                             onClick={() =>
                                 void handleCreate(
                                     row.original.erpId,
-                                    row.original.fullName ?? row.original.email ?? row.original.erpId,
+                                    row.original.fullName ??
+                                        row.original.email ??
+                                        row.original.erpId,
                                 )
                             }
                         >

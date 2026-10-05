@@ -27,17 +27,27 @@ const { invoices, load: loadInvoices } = useInvoices();
 const advanceBalances = ref<{ amount: number; currencyCode: string }[]>([]);
 
 function formatMoney(cents: number, currency: string): string {
-    return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100)
-        + ' ' + (currency === 'RUB' ? '₽' : currency);
+    return (
+        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100) +
+        ' ' +
+        (currency === 'RUB' ? '₽' : currency)
+    );
 }
 
 const unpaidTotal = computed(() => {
     const byCurrency = new Map<string, number>();
     for (const invoice of invoices.value) {
         if (invoice.status === 'paid' || invoice.status === 'cancelled') continue;
-        byCurrency.set(invoice.currencyCode, (byCurrency.get(invoice.currencyCode) ?? 0) + invoice.amount);
+        byCurrency.set(
+            invoice.currencyCode,
+            (byCurrency.get(invoice.currencyCode) ?? 0) + invoice.amount,
+        );
     }
-    return [...byCurrency.entries()].map(([currency, amount]) => formatMoney(amount, currency)).join(', ') || '0 ₽';
+    return (
+        [...byCurrency.entries()]
+            .map(([currency, amount]) => formatMoney(amount, currency))
+            .join(', ') || '0 ₽'
+    );
 });
 
 const advanceTotal = computed(() =>
@@ -55,16 +65,27 @@ onMounted(async () => {
     <aside class="orders-aside">
         <div class="aside-card">
             <div class="aside-title">Payments &amp; invoices</div>
-            <div class="aside-subtitle">Every order can split into several invoices (one per organization) — pay any of them any time from the Invoices page.</div>
+            <div class="aside-subtitle">
+                Every order can split into several invoices (one per organization) — pay any of them
+                any time from the Invoices page.
+            </div>
             <router-link to="/invoices" class="wide-btn orange">Go to invoices</router-link>
         </div>
 
         <div class="aside-card">
             <div class="aside-title">Balance &amp; limits</div>
-            <div class="aside-line"><span>Available limit</span><strong>{{ availableLimit }}</strong></div>
-            <div class="aside-line"><span>Payment delay</span><strong>{{ paymentDelay }}</strong></div>
-            <div class="aside-line"><span>Unpaid (all invoices)</span><strong>{{ unpaidTotal }}</strong></div>
-            <div v-if="advanceBalances.length" class="aside-line"><span>Advance balance</span><strong>{{ advanceTotal }}</strong></div>
+            <div class="aside-line">
+                <span>Available limit</span><strong>{{ availableLimit }}</strong>
+            </div>
+            <div class="aside-line">
+                <span>Payment delay</span><strong>{{ paymentDelay }}</strong>
+            </div>
+            <div class="aside-line">
+                <span>Unpaid (all invoices)</span><strong>{{ unpaidTotal }}</strong>
+            </div>
+            <div v-if="advanceBalances.length" class="aside-line">
+                <span>Advance balance</span><strong>{{ advanceTotal }}</strong>
+            </div>
         </div>
     </aside>
 </template>
@@ -117,9 +138,15 @@ onMounted(async () => {
     transition: 0.14s ease;
 }
 
-.wide-btn:hover { background: #008a64; }
-.wide-btn.orange { background: #ff8a00; }
-.wide-btn.orange:hover { background: #e87800; }
+.wide-btn:hover {
+    background: #008a64;
+}
+.wide-btn.orange {
+    background: #ff8a00;
+}
+.wide-btn.orange:hover {
+    background: #e87800;
+}
 
 .aside-line {
     display: flex;
@@ -131,10 +158,16 @@ onMounted(async () => {
     color: #66736e;
 }
 
-.aside-line:last-child { border-bottom: none; }
-.aside-line strong { color: #17231f; }
+.aside-line:last-child {
+    border-bottom: none;
+}
+.aside-line strong {
+    color: #17231f;
+}
 
 @media (max-width: 1180px) {
-    .orders-aside { position: static; }
+    .orders-aside {
+        position: static;
+    }
 }
 </style>

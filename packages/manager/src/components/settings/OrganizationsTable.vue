@@ -43,9 +43,27 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: { type: 'text', placeholder: 'Legal name contains…' },
         mobile: { primary: true },
     },
-    { field: 'createdAt', header: 'Created', width: 140, filterConfig: { type: 'none' }, mobile: { hidden: true } },
-    { field: 'erpId', header: 'ERP id', width: 220, filterConfig: { type: 'none' }, mobile: { hidden: true } },
-    { field: 'isActive', header: 'Status', width: 120, filterConfig: { type: 'none' }, mobile: { badge: true } },
+    {
+        field: 'createdAt',
+        header: 'Created',
+        width: 140,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
+    {
+        field: 'erpId',
+        header: 'ERP id',
+        width: 220,
+        filterConfig: { type: 'none' },
+        mobile: { hidden: true },
+    },
+    {
+        field: 'isActive',
+        header: 'Status',
+        width: 120,
+        filterConfig: { type: 'none' },
+        mobile: { badge: true },
+    },
     {
         field: 'hasCompleteRequisites',
         header: 'Requisites',
@@ -72,7 +90,9 @@ const { state: tableState } = useDataTableState<OrganizationFilterState>(
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(c => c.field),
+        allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
+            c => c.field,
+        ),
         // `legalName` (search) and `pageSize` are OrganizationsPage's own concern — it owns the
         // filtering/slicing — so always seed from its current prop values, never stale
         // localStorage (same reasoning as WarehouseCurationTable.vue).
@@ -85,14 +105,23 @@ watch(
     f => emit('update:filters', { search: f.legalName }),
     { deep: true },
 );
-watch(() => tableState.value.pageSize, size => emit('update:page-size', size));
+watch(
+    () => tableState.value.pageSize,
+    size => emit('update:page-size', size),
+);
 
-watch(() => props.searchFilter, v => {
-    tableState.value.filters = { ...tableState.value.filters, legalName: v };
-});
-watch(() => props.pageSize, v => {
-    tableState.value.pageSize = v;
-});
+watch(
+    () => props.searchFilter,
+    v => {
+        tableState.value.filters = { ...tableState.value.filters, legalName: v };
+    },
+);
+watch(
+    () => props.pageSize,
+    v => {
+        tableState.value.pageSize = v;
+    },
+);
 
 interface OrganizationRow {
     [key: string]: unknown;

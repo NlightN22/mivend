@@ -39,7 +39,11 @@ type ViewKey = 'all' | 'active' | 'expiring-soon' | 'expired';
 const VIEWS: { key: ViewKey; label: string; variant?: FilterChip['variant'] }[] = [
     { key: 'all', label: 'All' },
     { key: 'active', label: 'Active', variant: DISCOUNT_GRANT_STATUS_BADGE_VARIANT.active },
-    { key: 'expiring-soon', label: 'Expiring soon', variant: DISCOUNT_GRANT_STATUS_BADGE_VARIANT['expiring-soon'] },
+    {
+        key: 'expiring-soon',
+        label: 'Expiring soon',
+        variant: DISCOUNT_GRANT_STATUS_BADGE_VARIANT['expiring-soon'],
+    },
     { key: 'expired', label: 'Expired', variant: DISCOUNT_GRANT_STATUS_BADGE_VARIANT.expired },
 ];
 const viewCounts = ref<DiscountGrantViewCounts>({ all: 0, active: 0, expiringSoon: 0, expired: 0 });
@@ -73,7 +77,11 @@ const URL_FILTER_DEFAULTS: DiscountUrlFilters = { status: '', search: '', pageSi
 const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
 
 function buildUrlFilters(): DiscountUrlFilters {
-    return { status: statusFilter.value, search: searchFilter.value, pageSize: String(pageSize.value) };
+    return {
+        status: statusFilter.value,
+        search: searchFilter.value,
+        pageSize: String(pageSize.value),
+    };
 }
 
 {
@@ -88,7 +96,11 @@ const { loading, run: load } = useLatestRequest(
     () =>
         fetchDiscountGrantsPage(
             props.counterpartyId,
-            { ...DEFAULT_DISCOUNT_GRANT_FILTERS, status: statusFilter.value, search: searchFilter.value },
+            {
+                ...DEFAULT_DISCOUNT_GRANT_FILTERS,
+                status: statusFilter.value,
+                search: searchFilter.value,
+            },
             page.value,
             pageSize.value,
         ),
@@ -141,7 +153,11 @@ onMounted(() => {
         @reset-page="page = 1"
     >
         <template #view-chips>
-            <MvFilterChips :chips="viewChips" :active="activeView" @select="activeView = $event as ViewKey" />
+            <MvFilterChips
+                :chips="viewChips"
+                :active="activeView"
+                @select="activeView = $event as ViewKey"
+            />
         </template>
         <template #toolbar-end>
             <MvButton size="sm" @click="goToDiscounts">New discount grant</MvButton>

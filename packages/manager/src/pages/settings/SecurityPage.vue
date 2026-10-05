@@ -3,7 +3,12 @@ import { onMounted, ref } from 'vue';
 import { MvButton, MvFormField, MvNotice, MvPanel, MvPasswordInput } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
-import { endAllSessions, endSession, fetchMySessions, type SessionSummary } from '../../api/sessions';
+import {
+    endAllSessions,
+    endSession,
+    fetchMySessions,
+    type SessionSummary,
+} from '../../api/sessions';
 import { changeOwnPassword } from '../../api/account';
 
 const authStore = useAuthStore();
@@ -123,12 +128,17 @@ async function handleSignOutEverywhere(): Promise<void> {
                     <MvPasswordInput v-model="newPassword" placeholder="At least 8 characters" />
                 </MvFormField>
                 <MvFormField label="Confirm new password" required>
-                    <MvPasswordInput v-model="confirmPassword" placeholder="Repeat the new password" />
+                    <MvPasswordInput
+                        v-model="confirmPassword"
+                        placeholder="Repeat the new password"
+                    />
                 </MvFormField>
                 <MvNotice v-if="passwordError" variant="error">{{ passwordError }}</MvNotice>
                 <MvNotice v-if="passwordSuccess" variant="success">Password changed.</MvNotice>
                 <div class="security-page__password-actions">
-                    <MvButton native-type="submit" :loading="passwordSubmitting">Change password</MvButton>
+                    <MvButton native-type="submit" :loading="passwordSubmitting"
+                        >Change password</MvButton
+                    >
                 </div>
             </form>
         </MvPanel>
@@ -136,7 +146,9 @@ async function handleSignOutEverywhere(): Promise<void> {
         <MvPanel v-if="!loading" title="Sign out">
             <div class="security-page__danger">
                 <p>Sign out from all devices, including this one.</p>
-                <MvButton variant="danger" @click="handleSignOutEverywhere">Sign out everywhere</MvButton>
+                <MvButton variant="danger" @click="handleSignOutEverywhere"
+                    >Sign out everywhere</MvButton
+                >
             </div>
         </MvPanel>
     </div>

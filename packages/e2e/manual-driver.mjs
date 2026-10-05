@@ -64,7 +64,9 @@ async function login(page, accountKey) {
 async function main() {
     const args = parseArgs(process.argv.slice(2));
     if (!ACCOUNTS[args.account]) {
-        console.error(`Unknown --account "${args.account}". Options: ${Object.keys(ACCOUNTS).join(', ')}`);
+        console.error(
+            `Unknown --account "${args.account}". Options: ${Object.keys(ACCOUNTS).join(', ')}`,
+        );
         process.exit(1);
     }
 
@@ -85,7 +87,9 @@ async function main() {
         console.log(`screenshot saved to ${args.screenshot}`);
     }
 
-    console.log(logs.length ? `console/page errors:\n${logs.join('\n')}` : 'no console/page errors');
+    console.log(
+        logs.length ? `console/page errors:\n${logs.join('\n')}` : 'no console/page errors',
+    );
 
     await browser.close();
 }

@@ -68,7 +68,9 @@ onMounted(load);
         <div class="invoices-page__header">
             <div class="invoices-page__breadcrumb">Workspace / Invoices</div>
             <h1 class="invoices-page__title">Invoices</h1>
-            <p class="invoices-page__subtitle">{{ totalItems }} invoices across your accessible scope.</p>
+            <p class="invoices-page__subtitle">
+                {{ totalItems }} invoices across your accessible scope.
+            </p>
         </div>
 
         <MvWarningBanner
@@ -76,19 +78,35 @@ onMounted(load);
             action-text="Show all customers"
             @action="clearCounterpartyFilter"
         >
-            Filtered to one customer ({{ counterpartyNames.get(filters.counterpartyId) ?? filters.counterpartyId }}).
+            Filtered to one customer ({{
+                counterpartyNames.get(filters.counterpartyId) ?? filters.counterpartyId
+            }}).
         </MvWarningBanner>
 
         <MvPanel title="Invoices list">
-            <InvoicesFilterBar :filters="filters" @update:filters="Object.assign(filters, $event)" @reset="resetFilters" />
-            <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
+            <InvoicesFilterBar
+                :filters="filters"
+                @update:filters="Object.assign(filters, $event)"
+                @reset="resetFilters"
+            />
+            <MvPagination
+                :page="page"
+                :page-size="pageSize"
+                :total="totalItems"
+                @update:page="page = $event"
+            />
             <InvoicesTable
                 :invoices="invoices"
                 :counterparty-names="counterpartyNames"
                 :page-size="pageSize"
                 :loading="loading"
             />
-            <MvPagination :page="page" :page-size="pageSize" :total="totalItems" @update:page="page = $event" />
+            <MvPagination
+                :page="page"
+                :page-size="pageSize"
+                :total="totalItems"
+                @update:page="page = $event"
+            />
         </MvPanel>
     </div>
 </template>

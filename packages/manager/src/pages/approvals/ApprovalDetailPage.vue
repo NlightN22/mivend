@@ -65,7 +65,7 @@ async function load(): Promise<void> {
                 const payload = JSON.parse(detail.payload) as { counterpartyErpId?: string };
                 const refs = await fetchCounterpartyReferencesByErpId();
                 counterpartyReference.value = payload.counterpartyErpId
-                    ? refs.get(payload.counterpartyErpId) ?? null
+                    ? (refs.get(payload.counterpartyErpId) ?? null)
                     : null;
             } catch {
                 counterpartyReference.value = null;
@@ -88,7 +88,9 @@ const stepperItems = computed<ApprovalStepperItem[]>(() => {
                 label: role,
                 state: 'done',
                 meta: `Approved by ${managerName(auditRow.approverAdministratorId)}${
-                    auditRow.decidedAt ? `, ${new Date(auditRow.decidedAt).toLocaleDateString('en-US')}` : ''
+                    auditRow.decidedAt
+                        ? `, ${new Date(auditRow.decidedAt).toLocaleDateString('en-US')}`
+                        : ''
                 }${auditRow.comment ? ` — ${auditRow.comment}` : ''}`,
             };
         }
@@ -97,7 +99,9 @@ const stepperItems = computed<ApprovalStepperItem[]>(() => {
                 label: role,
                 state: 'rejected',
                 meta: `Rejected by ${managerName(auditRow.approverAdministratorId)}${
-                    auditRow.decidedAt ? `, ${new Date(auditRow.decidedAt).toLocaleDateString('en-US')}` : ''
+                    auditRow.decidedAt
+                        ? `, ${new Date(auditRow.decidedAt).toLocaleDateString('en-US')}`
+                        : ''
                 }${auditRow.comment ? ` — ${auditRow.comment}` : ''}`,
             };
         }
@@ -124,7 +128,12 @@ async function handleDecision(decision: 'approved' | 'rejected', comment: string
     submitting.value = true;
     error.value = '';
     try {
-        await decideApprovalRequest(request.value.requestType, request.value.id, decision, comment || undefined);
+        await decideApprovalRequest(
+            request.value.requestType,
+            request.value.id,
+            decision,
+            comment || undefined,
+        );
         await load();
     } catch (e) {
         error.value = e instanceof Error ? e.message : 'Could not record the decision';
@@ -166,7 +175,9 @@ function statusVariant(status: string): 'success' | 'danger' | 'warning' {
         </div>
         <h1 class="approval-detail__title">
             {{ REQUEST_TYPE_LABEL[request.requestType] ?? request.requestType }}
-            <MvStatusBadge :variant="statusVariant(request.status)">{{ request.status }}</MvStatusBadge>
+            <MvStatusBadge :variant="statusVariant(request.status)">{{
+                request.status
+            }}</MvStatusBadge>
         </h1>
 
         <MvPanel>
@@ -195,7 +206,11 @@ function statusVariant(status: string): 'success' | 'danger' | 'warning' {
         <MvPanel v-else title="Outcome">
             <p class="approval-detail__outcome">
                 {{ request.status === 'approved' ? 'Approved' : 'Rejected' }}
-                {{ request.decidedAt ? `on ${new Date(request.decidedAt).toLocaleDateString('en-US')}` : '' }}
+                {{
+                    request.decidedAt
+                        ? `on ${new Date(request.decidedAt).toLocaleDateString('en-US')}`
+                        : ''
+                }}
             </p>
         </MvPanel>
     </div>

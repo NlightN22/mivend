@@ -18,10 +18,7 @@ query ManagerDashboard(
     }
     overdue: visibleOrders(
         options: {
-            filter: {
-                state: { eq: "PaymentSettled" }
-                orderPlacedAt: { before: $overdueBefore }
-            }
+            filter: { state: { eq: "PaymentSettled" }, orderPlacedAt: { before: $overdueBefore } }
         }
     ) {
         totalItems

@@ -42,7 +42,9 @@ const visible = computed(() => {
     return needle ? props.values.filter(v => v.name.toLowerCase().includes(needle)) : props.values;
 });
 
-const selectedIds = computed(() => props.values.filter(v => props.selected.has(v.id)).map(v => v.id));
+const selectedIds = computed(() =>
+    props.values.filter(v => props.selected.has(v.id)).map(v => v.id),
+);
 
 function collapse(): void {
     expanded.value = false;
@@ -121,7 +123,9 @@ function collapse(): void {
     border-radius: 10px;
     background: #f9fbfa;
     font-size: 14px;
-    transition: border-color 0.15s, background 0.15s;
+    transition:
+        border-color 0.15s,
+        background 0.15s;
 }
 
 .mv-facet-group__search:focus {
@@ -147,7 +151,9 @@ function collapse(): void {
     color: #43524d;
     font-size: 14px;
     cursor: pointer;
-    transition: color 0.12s, background 0.12s;
+    transition:
+        color 0.12s,
+        background 0.12s;
 }
 
 .mv-facet-group__row:hover {
@@ -174,7 +180,9 @@ function collapse(): void {
     font-weight: 800;
     color: #6b7c75;
     overflow: hidden;
-    transition: border-color 0.12s, background 0.12s;
+    transition:
+        border-color 0.12s,
+        background 0.12s;
 }
 
 .mv-facet-group__icon img {

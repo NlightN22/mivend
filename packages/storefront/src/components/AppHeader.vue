@@ -35,18 +35,31 @@ watch(
     { immediate: true },
 );
 
-watch(() => route.query.q, (q) => {
-    searchQuery.value = (q as string) ?? '';
-});
+watch(
+    () => route.query.q,
+    q => {
+        searchQuery.value = (q as string) ?? '';
+    },
+);
 const catalogOpen = ref(false);
 const mobileNavOpen = ref(false);
 
 // Pages under these prefixes render AccountSidebar (packages/storefront/src/pages/account/AccountSidebar.vue),
 // which already lists Account/Orders/Favourites — duplicating them in the mobile off-canvas nav
 // there is redundant (the sidebar itself is what should collapse on mobile, not this menu).
-const ACCOUNT_ZONE_PREFIXES = ['/account', '/orders', '/documents', '/invoices', '/payments', '/favorites', '/requests'];
+const ACCOUNT_ZONE_PREFIXES = [
+    '/account',
+    '/orders',
+    '/documents',
+    '/invoices',
+    '/payments',
+    '/favorites',
+    '/requests',
+];
 const inAccountZone = computed(() =>
-    ACCOUNT_ZONE_PREFIXES.some(prefix => route.path === prefix || route.path.startsWith(`${prefix}/`)),
+    ACCOUNT_ZONE_PREFIXES.some(
+        prefix => route.path === prefix || route.path.startsWith(`${prefix}/`),
+    ),
 );
 
 const cartTotal = computed(() => {
@@ -93,7 +106,10 @@ function onKeydown(e: KeyboardEvent): void {
     if (e.key === 'Escape') closeAll();
 }
 
-watch(() => route.fullPath, () => closeMobileNav());
+watch(
+    () => route.fullPath,
+    () => closeMobileNav(),
+);
 
 onMounted(() => {
     document.addEventListener('keydown', onKeydown);
@@ -106,7 +122,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     <div class="app-header-wrap" :class="{ 'app-header-wrap--open': catalogOpen || mobileNavOpen }">
         <div v-if="authStore.isLoggedIn" class="app-header__strip">
             <div class="app-header__strip-inner">
-                <span><strong>B2B Portal</strong> for fast ordering of auto parts and consumables</span>
+                <span
+                    ><strong>B2B Portal</strong> for fast ordering of auto parts and
+                    consumables</span
+                >
                 <span>Live stock and prices</span>
             </div>
         </div>
@@ -118,7 +137,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 </RouterLink>
 
                 <button
-                    :class="['app-header__catalog-btn', { 'app-header__catalog-btn--open': catalogOpen }]"
+                    :class="[
+                        'app-header__catalog-btn',
+                        { 'app-header__catalog-btn--open': catalogOpen },
+                    ]"
                     type="button"
                     @click="toggleCatalog"
                 >
@@ -138,30 +160,75 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
                 <nav
                     class="app-header__nav"
-                    :class="{ 'app-header__nav--open': mobileNavOpen, 'app-header__nav--in-zone': inAccountZone }"
+                    :class="{
+                        'app-header__nav--open': mobileNavOpen,
+                        'app-header__nav--in-zone': inAccountZone,
+                    }"
                 >
                     <template v-if="authStore.isLoggedIn">
-                        <RouterLink to="/account" class="app-header__nav-btn app-header__nav-btn--zone-dup">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="8" r="4"/>
-                                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                        <RouterLink
+                            to="/account"
+                            class="app-header__nav-btn app-header__nav-btn--zone-dup"
+                        >
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="12" cy="8" r="4" />
+                                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
                             </svg>
                             <span>Account</span>
                         </RouterLink>
-                        <RouterLink to="/orders" class="app-header__nav-btn app-header__nav-btn--zone-dup">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 9l1.5-6h15L21 9"/>
-                                <rect x="3" y="9" width="18" height="12" rx="2"/>
-                                <path d="M9 13h6M9 17h4"/>
+                        <RouterLink
+                            to="/orders"
+                            class="app-header__nav-btn app-header__nav-btn--zone-dup"
+                        >
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M3 9l1.5-6h15L21 9" />
+                                <rect x="3" y="9" width="18" height="12" rx="2" />
+                                <path d="M9 13h6M9 17h4" />
                             </svg>
                             <span>Orders</span>
                         </RouterLink>
-                        <RouterLink to="/favorites" class="app-header__nav-btn app-header__nav-btn--zone-dup">
+                        <RouterLink
+                            to="/favorites"
+                            class="app-header__nav-btn app-header__nav-btn--zone-dup"
+                        >
                             <span class="app-header__nav-icon-wrap">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                <svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                                    />
                                 </svg>
-                                <span v-if="favoritesStore.count > 0" class="app-header__fav-badge">{{ favoritesStore.count }}</span>
+                                <span
+                                    v-if="favoritesStore.count > 0"
+                                    class="app-header__fav-badge"
+                                    >{{ favoritesStore.count }}</span
+                                >
                             </span>
                             <span>Favourites</span>
                         </RouterLink>
@@ -169,9 +236,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
                     <template v-else>
                         <RouterLink to="/login" class="app-header__nav-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="8" r="4"/>
-                                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="12" cy="8" r="4" />
+                                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
                             </svg>
                             <span>Sign in</span>
                         </RouterLink>
@@ -209,7 +285,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     <template v-if="authStore.tradingPoint">
                         Trading point &middot;
                         <strong>{{ authStore.tradingPoint.name }}</strong>
-                        <span class="app-header__delivery-address">&nbsp;— {{ authStore.tradingPoint.address }}</span>
+                        <span class="app-header__delivery-address"
+                            >&nbsp;— {{ authStore.tradingPoint.address }}</span
+                        >
                     </template>
                     <template v-else>
                         <span class="app-header__delivery-hint">No trading point selected</span>
@@ -229,14 +307,20 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
             />
         </header>
 
-        <div v-if="notificationPanelOpen && notificationsStore" class="app-header__notification-panel">
+        <div
+            v-if="notificationPanelOpen && notificationsStore"
+            class="app-header__notification-panel"
+        >
             <MvNotificationPanel
                 :notifications="notificationsStore.notifications"
                 :loading="notificationsStore.loading"
                 @mark-read="notificationsStore.markRead"
                 @resolve="notificationsStore.resolve"
                 @close="notificationPanelOpen = false"
-                @view-all="notificationPanelOpen = false; router.push('/account/notifications')"
+                @view-all="
+                    notificationPanelOpen = false;
+                    router.push('/account/notifications');
+                "
             />
         </div>
 
@@ -272,7 +356,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     gap: 18px;
 }
 
-.app-header__strip strong { color: #fff; }
+.app-header__strip strong {
+    color: #fff;
+}
 
 .app-header {
     /* No backdrop-filter here: per spec it creates a new containing block for
@@ -323,7 +409,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     background: #b8e010;
 }
 
-.app-header__search { min-width: 0; }
+.app-header__search {
+    min-width: 0;
+}
 
 .app-header__nav {
     display: flex;
@@ -342,7 +430,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     text-decoration: none;
     color: #66736e;
     cursor: pointer;
-    transition: background 0.14s, color 0.14s;
+    transition:
+        background 0.14s,
+        color 0.14s;
 }
 
 .app-header__nav-btn span {
@@ -402,9 +492,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     padding: 0 6px;
 }
 
-.app-header__nav-link:hover { background: #f4faf7; color: #008a64; }
-.app-header__nav-icon { font-size: 18px; line-height: 1; }
-
+.app-header__nav-link:hover {
+    background: #f4faf7;
+    color: #008a64;
+}
+.app-header__nav-icon {
+    font-size: 18px;
+    line-height: 1;
+}
 
 .app-header__hamburger {
     display: none;
@@ -426,12 +521,20 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     height: 2px;
     background: #14231f;
     border-radius: 2px;
-    transition: transform 0.15s, opacity 0.15s;
+    transition:
+        transform 0.15s,
+        opacity 0.15s;
 }
 
-.app-header__hamburger--open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.app-header__hamburger--open span:nth-child(2) { opacity: 0; }
-.app-header__hamburger--open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.app-header__hamburger--open span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+.app-header__hamburger--open span:nth-child(2) {
+    opacity: 0;
+}
+.app-header__hamburger--open span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
 
 .app-header__cart {
     min-height: 52px;
@@ -492,8 +595,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     font-weight: 900;
 }
 
-.app-header__delivery-address { color: #a8b8b2; }
-.app-header__delivery-hint { color: #a8b8b2; font-style: italic; }
+.app-header__delivery-address {
+    color: #a8b8b2;
+}
+.app-header__delivery-hint {
+    color: #a8b8b2;
+    font-style: italic;
+}
 
 .app-header__notification-panel {
     position: fixed;
@@ -517,14 +625,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 }
 
 @media (max-width: 1180px) {
-    .app-header__strip { display: none; }
+    .app-header__strip {
+        display: none;
+    }
 
     .app-header__inner {
         grid-template-columns: auto 1fr auto auto;
         padding: 10px 16px 8px;
     }
 
-    .app-header__catalog-btn { display: none; }
+    .app-header__catalog-btn {
+        display: none;
+    }
 
     .app-header__search {
         grid-column: 1 / -1;
@@ -538,7 +650,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         padding: 0 10px;
     }
 
-    .app-header__cart-text { display: none; }
+    .app-header__cart-text {
+        display: none;
+    }
 
     .app-header__hamburger {
         display: flex;
@@ -563,11 +677,15 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         overflow-y: auto;
     }
 
-    .app-header__nav--open { transform: translateX(0); }
+    .app-header__nav--open {
+        transform: translateX(0);
+    }
 
     /* AccountSidebar already lists Account/Orders/Favourites on these pages — no need to
        duplicate them in the mobile off-canvas nav too. */
-    .app-header__nav--in-zone .app-header__nav-btn--zone-dup { display: none; }
+    .app-header__nav--in-zone .app-header__nav-btn--zone-dup {
+        display: none;
+    }
 
     .app-header__nav-btn {
         flex-direction: row;
@@ -581,7 +699,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         font-family: inherit;
         text-align: left;
     }
-
 
     .app-header__delivery {
         justify-content: flex-start;

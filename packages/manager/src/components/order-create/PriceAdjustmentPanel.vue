@@ -67,7 +67,10 @@ async function submit(): Promise<void> {
             </div>
         </div>
 
-        <div v-else-if="result === 'apply-directly'" class="price-adjustment__result price-adjustment__result--ok">
+        <div
+            v-else-if="result === 'apply-directly'"
+            class="price-adjustment__result price-adjustment__result--ok"
+        >
             ✓ Within self-service limit — applied immediately.
         </div>
         <div v-else class="price-adjustment__result price-adjustment__result--warn">
