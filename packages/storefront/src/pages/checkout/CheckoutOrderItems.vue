@@ -14,7 +14,7 @@ function formatPrice(kobo: number): string {
 }
 
 const lineCount = computed(() => cartStore.lines.length);
-const totalQty = computed(() => cartStore.itemCount);
+const totalQty = computed(() => cartStore.totalQuantity);
 </script>
 
 <template>
