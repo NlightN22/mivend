@@ -96,12 +96,15 @@ const visibleLevel = computed(() => {
 <style scoped>
 .mv-category-nav {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
 }
 
 .mv-category-nav__item {
     display: block;
     width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
     padding: 5px 8px;
     border: none;
     border-radius: 8px;
@@ -153,6 +156,7 @@ const visibleLevel = computed(() => {
 
 .mv-category-nav__children {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
     margin-left: 14px;
     padding-left: 8px;

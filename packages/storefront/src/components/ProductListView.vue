@@ -188,6 +188,7 @@ function handleToggleFavorite(p: ProductItem): void {
     align-items: center;
     justify-content: space-between;
     gap: 18px;
+    flex-wrap: wrap;
 }
 
 .plv-toolbar__title { font-size: 18px; font-weight: 900; letter-spacing: -0.03em; color: #14231f; }

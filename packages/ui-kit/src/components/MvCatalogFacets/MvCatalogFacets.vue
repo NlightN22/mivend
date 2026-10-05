@@ -163,6 +163,7 @@ function onMaxInput(e: Event): void {
 <style scoped>
 .catalog-facets {
     position: sticky;
+    min-width: 0;
     top: 88px;
     border-radius: 20px;
     background: #fff;
