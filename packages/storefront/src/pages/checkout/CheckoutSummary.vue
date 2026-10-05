@@ -8,7 +8,6 @@ import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPa
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
 const router = useRouter();
-const promoCode = ref('');
 const submitting = ref(false);
 
 const packaging = computed(() => useOrderPackaging(cartStore.lines));
@@ -105,19 +104,6 @@ async function handlePrimary(): Promise<void> {
                 By clicking the button, you are redirected to the payment service and agree to the
                 <a href="#">payment terms</a>.
             </p>
-        </div>
-
-        <div class="checkout-summary__promo-card">
-            <div class="checkout-summary__promo-title">Promo code or certificate</div>
-            <div class="checkout-summary__promo-row">
-                <input
-                    v-model="promoCode"
-                    class="checkout-summary__promo-input"
-                    placeholder="Enter code"
-                    type="text"
-                />
-                <button class="checkout-summary__promo-btn" type="button">Apply</button>
-            </div>
         </div>
     </aside>
 </template>
@@ -224,55 +210,5 @@ async function handlePrimary(): Promise<void> {
 .checkout-summary__legal a {
     color: #008a64;
     font-weight: 800;
-}
-
-.checkout-summary__promo-card {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    padding: 20px;
-    display: grid;
-    gap: 10px;
-}
-
-.checkout-summary__promo-title {
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-}
-
-.checkout-summary__promo-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-}
-
-.checkout-summary__promo-input {
-    min-height: 44px;
-    border: 1px solid #dde7e2;
-    border-radius: 14px;
-    outline: none;
-    padding: 0 13px;
-    font: inherit;
-    font-weight: 700;
-}
-
-.checkout-summary__promo-btn {
-    border: 0;
-    min-height: 40px;
-    border-radius: 13px;
-    padding: 0 14px;
-    background: #00a878;
-    color: #fff;
-    font-weight: 800;
-    cursor: pointer;
-    white-space: nowrap;
-    font: inherit;
-    transition: background 0.15s;
-}
-
-.checkout-summary__promo-btn:hover {
-    background: #008a64;
 }
 </style>
