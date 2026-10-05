@@ -3,6 +3,7 @@ import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vu
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { MvNotificationBell, MvNotificationPanel } from '@mivend/ui-kit';
+import { buildSearchLocation, resolveScopeLabel } from '../composables/searchScope';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
 import { useCatalogStore } from '../stores/catalog';
@@ -53,8 +54,15 @@ const cartTotal = computed(() => {
     return new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽';
 });
 
+const scopeSlug = computed(() => (route.query.collection as string) || undefined);
+const scopeLabel = computed(() => resolveScopeLabel(catalogStore.collections, scopeSlug.value));
+
 function onSearch(value: string): void {
-    router.push({ path: '/catalog', query: value ? { q: value } : {} });
+    router.push(buildSearchLocation(value, scopeSlug.value));
+}
+
+function onRemoveScope(): void {
+    router.push(buildSearchLocation((route.query.q as string) ?? '', undefined));
 }
 
 function toggleCatalog(): void {
@@ -122,6 +130,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                         v-model="searchQuery"
                         placeholder="Article, VIN, brand, name or OEM"
                         :suggestions="[]"
+                        :scope-label="scopeLabel"
+                        @remove-scope="onRemoveScope"
                         @search="onSearch"
                     />
                 </div>

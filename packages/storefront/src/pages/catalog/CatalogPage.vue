@@ -35,14 +35,12 @@ function parseFiltersFromQuery(): FilterState {
 
 const searchQuery = ref((route.query.q as string) ?? '');
 const pendingCategorySlug = ref<string | undefined>(
-    (route.query.collection as string) || undefined,
+    route.query.q ? undefined : (route.query.collection as string) || undefined,
 );
 const filters = ref<FilterState>(parseFiltersFromQuery());
-const activeCollectionSlug = computed(() =>
-    searchQuery.value ? undefined : ((route.query.collection as string) || undefined),
-);
+const activeCollectionSlug = computed(() => (route.query.collection as string) || undefined);
 
-const { items, facetGroups, categoryCounts, totalItems, loading, loadError, loadErrorInfo, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, priceRangeSupported, load, loadMore } =
+const { items, facetGroups, categoryCounts, categoryCountsLoading, totalItems, loading, loadError, loadErrorInfo, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, priceRangeSupported, load, loadMore } =
     useProductList({ pageSize: 24, query: searchQuery, filters, collectionSlug: activeCollectionSlug });
 
 // Sync filter state → URL (replace so back button works correctly)
@@ -126,8 +124,7 @@ watch(() => route.query.collection, slug => {
     // resetFilters() also clears pendingCategorySlug — must run before assigning the new
     // slug below, or it immediately wipes out the value this watcher just set.
     resetFilters();
-    pendingCategorySlug.value = (slug as string) || undefined;
-    searchQuery.value = '';
+    if (!searchQuery.value) pendingCategorySlug.value = (slug as string) || undefined;
 });
 
 // Restore filters when navigating back via browser history
@@ -159,6 +156,7 @@ onMounted(() => {
                 :price-max="filters.priceMax"
                 :show-price="priceRangeSupported"
                 :category-panel="categoryPanel"
+                :category-loading="categoryCountsLoading"
                 :category-more-label="t('catalogNav.more')"
                 :category-less-label="t('catalogNav.less')"
                 :facet-show-all-label="t('catalogNav.showAll')"

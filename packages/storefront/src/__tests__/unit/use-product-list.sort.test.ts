@@ -85,3 +85,29 @@ describe('useProductList sort and price range follow the backend capabilities', 
         expect(priceRangeSupported.value).toBe(false);
     });
 });
+
+describe('useProductList term and category together', () => {
+    beforeEach(() => {
+        shopApiMock.mockReset();
+        vi.resetModules();
+    });
+
+    it('sends both the term and the collection slug, and flags category counts as loading', async () => {
+        mockBackend({ sortKeys: ['relevance'], priceRange: false });
+        const { useProductList } = await import('../../composables/useProductList');
+        const { load, categoryCountsLoading } = useProductList({
+            query: ref('zic'),
+            collectionSlug: ref('oils'),
+        });
+
+        const pending = load();
+        expect(categoryCountsLoading.value).toBe(true);
+        await pending;
+        expect(categoryCountsLoading.value).toBe(false);
+        expect(productsVariables()).toMatchObject({ term: 'zic', collectionSlug: 'oils' });
+        const facetsCall = shopApiMock.mock.calls.find(([doc]) =>
+            String(doc).includes('CatalogFacets'),
+        );
+        expect(facetsCall?.[1]).toMatchObject({ term: 'zic', collectionSlug: 'oils' });
+    });
+});

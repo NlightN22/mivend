@@ -113,6 +113,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     items: Ref<ProductItem[]>;
     facetGroups: Ref<FacetGroup[]>;
     categoryCounts: Ref<Map<string, number>>;
+    categoryCountsLoading: Ref<boolean>;
     totalItems: Ref<number>;
     loading: Ref<boolean>;
     loadError: Ref<boolean>;
@@ -132,6 +133,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     const items = ref<ProductItem[]>([]);
     const facetGroups = ref<FacetGroup[]>([]);
     const categoryCounts = ref(new Map<string, number>());
+    const categoryCountsLoading = ref(false);
     const totalItems = ref(0);
     const loading = ref(false);
     const loadError = ref(false);
@@ -183,10 +185,13 @@ export function useProductList(options: UseProductListOptions = {}): {
     }
 
     let loadSeq = 0;
+    let countsTerm: string | undefined;
 
     async function load(): Promise<void> {
         const seq = ++loadSeq;
         loading.value = true;
+        const term = query?.value || undefined;
+        if (term && term !== countsTerm) categoryCountsLoading.value = true;
         await capabilitiesReady;
         let productsResult: CatalogProductsQuery;
         let facetsResult: CatalogFacetsQuery | null;
@@ -206,6 +211,7 @@ export function useProductList(options: UseProductListOptions = {}): {
                 hasMore.value = false;
                 loadError.value = true;
                 loading.value = false;
+                categoryCountsLoading.value = false;
             }
             throw e;
         }
@@ -223,6 +229,8 @@ export function useProductList(options: UseProductListOptions = {}): {
         hasMore.value =
             productsResult.search.items.length === pageSize &&
             currentSkip < productsResult.search.totalItems;
+        countsTerm = term;
+        categoryCountsLoading.value = false;
         loading.value = false;
     }
 
@@ -254,6 +262,7 @@ export function useProductList(options: UseProductListOptions = {}): {
         items,
         facetGroups,
         categoryCounts,
+        categoryCountsLoading,
         totalItems,
         loading,
         loadError,
