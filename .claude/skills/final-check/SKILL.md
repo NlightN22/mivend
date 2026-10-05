@@ -26,6 +26,13 @@ If integration/component tests were added or changed (per AGENTS.md's testing re
 
 **Never invoke `vitest`/`pnpm --filter <plugin> test:integration` directly, bypassing `make test`/`make test-int`.** This machine's `docker-postgres-central-1` (the test DB) is mapped to host port 5434, not Postgres's default 5432 — port 5432 here is already occupied by an unrelated project's own Postgres container. The `TEST_DB_PORT=5434` override needed to reach the right database lives in the gitignored, machine-specific `.env.local` and is only exported because the Makefile does `-include .env.local` + `export` before running its `test`/`test-int` targets — running vitest directly in a subshell silently skips that export. The resulting `password authentication failed for user "postgres"` looks exactly like a corrupted/recreated Postgres volume, but is actually just tests connecting to the wrong container. If you ever need to run a single test file directly for faster iteration, prefix it with `TEST_DB_PORT=5434` explicitly instead of assuming the default port is correct.
 
+## Before pushing
+
+Run `make ci` before any push (including from the `finish-task` skill). It replays `.github/workflows/ci.yml`
+on the committed HEAD in a fresh worktree with an empty pnpm store — format check, type checks of
+server/storefront/manager/dashboard and a clean install — which `make lint`/`make test` on the warm
+working copy do not catch. Commit first: uncommitted changes are not checked.
+
 ## When checks may be skipped
 
 Skip final checks only when the change is clearly documentation-only and does not affect:
