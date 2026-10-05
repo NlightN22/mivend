@@ -25,6 +25,7 @@ interface Props {
   suggestions?: SuggestionGroup[];
   collapsed?: boolean;
   buttonLabel?: string;
+  scopeLabel?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -35,12 +36,14 @@ const props = withDefaults(defineProps<Props>(), {
   suggestions: undefined,
   collapsed: false,
   buttonLabel: 'Search',
+  scopeLabel: undefined,
 });
 
 const emit = defineEmits<{
   'update:modelValue': [value: string];
   search: [value: string];
   clear: [];
+  removeScope: [];
 }>();
 
 const isFocused = ref(false);
@@ -81,6 +84,7 @@ function onClear(): void {
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key === 'Enter') onSearch();
+  if (event.key === 'Backspace' && props.scopeLabel && !props.modelValue) emit('removeScope');
   if (event.key === 'Escape') {
     isFocused.value = false;
     inputRef.value?.blur();
@@ -136,6 +140,17 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
           },
         ]"
       >
+        <span v-if="scopeLabel" class="mv-search__scope" :title="scopeLabel">
+          <span class="mv-search__scope-label">{{ scopeLabel }}</span>
+          <button
+            class="mv-search__scope-remove"
+            type="button"
+            aria-label="Remove category"
+            @click="emit('removeScope')"
+          >
+            ×
+          </button>
+        </span>
         <input
           ref="inputRef"
           class="mv-search__input"
@@ -231,6 +246,38 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
   background: transparent;
   outline: none;
 }
+
+.mv-search__scope {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 4px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+  margin-left: 10px;
+  padding: 4px 4px 4px 10px;
+  border-radius: 10px;
+  background: #E6F7F2;
+  color: #00715A;
+  font-size: 13px;
+  font-weight: 700;
+}
+.mv-search__scope-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-search__scope-remove {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.mv-search__scope-remove:hover { background: rgba(0, 113, 90, 0.15); }
 
 .mv-search__input::placeholder { color: #667085; }
 

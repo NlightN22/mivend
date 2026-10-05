@@ -89,3 +89,19 @@ export const ManagerView: Story = {
     `,
     }),
 };
+
+export const CategoryLoading: Story = {
+    args: {
+        categoryLoading: true,
+        categoryPanel: { ancestors: [], level: [], levelIsChildren: false },
+    },
+    render: args => ({
+        components: { MvCatalogFacets },
+        setup: () => ({ args }),
+        template: `
+      <div style="max-width: 280px;">
+        <MvCatalogFacets v-bind="args" />
+      </div>
+    `,
+    }),
+};

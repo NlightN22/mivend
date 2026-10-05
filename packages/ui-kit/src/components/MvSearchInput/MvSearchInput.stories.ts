@@ -187,3 +187,19 @@ export const MobileCollapsed: Story = {
     `,
     }),
 };
+
+export const WithScopeChip: Story = {
+    render: () => ({
+        components: { MvSearchInput },
+        setup() {
+            const value = ref('ZIC 5W30');
+            const scope = ref<string | undefined>('Engine oils and lubricants for passenger cars');
+            return { value, scope };
+        },
+        template: `
+      <div style="padding: 24px; max-width: 640px;">
+        <MvSearchInput v-model="value" :scope-label="scope" @remove-scope="scope = undefined" />
+      </div>
+    `,
+    }),
+};

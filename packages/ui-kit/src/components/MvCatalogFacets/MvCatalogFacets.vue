@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import MvFacetGroup from '../MvFacetGroup/MvFacetGroup.vue';
 import MvCategoryNav, { type CategoryNavPanel } from '../MvCategoryNav/MvCategoryNav.vue';
 
@@ -19,6 +20,7 @@ const props = withDefaults(
         // Siblings/current/children of the selected category — one more section
         // in this widget (MvCategoryNav). Omit to not render it.
         categoryPanel?: CategoryNavPanel;
+        categoryLoading?: boolean;
         categoryMoreLabel?: string;
         categoryLessLabel?: string;
         facetShowAllLabel?: string;
@@ -28,6 +30,7 @@ const props = withDefaults(
     {
         hiddenFacetCodes: () => ['category'],
         showPrice: true,
+        categoryLoading: false,
         categoryMoreLabel: undefined,
         categoryLessLabel: undefined,
         facetShowAllLabel: undefined,
@@ -80,7 +83,11 @@ function onMaxInput(e: Event): void {
     <aside class="catalog-facets">
         <div v-if="categoryPanel" class="catalog-facets__block">
             <h2 class="catalog-facets__block-title">Category</h2>
+            <div v-if="categoryLoading" class="catalog-facets__skeleton">
+                <MvSkeleton v-for="w in ['90%', '75%', '82%', '65%', '78%']" :key="w" :width="w" height="18px" />
+            </div>
             <MvCategoryNav
+                v-else
                 :panel="categoryPanel"
                 :more-label="categoryMoreLabel"
                 :less-label="categoryLessLabel"
@@ -258,6 +265,8 @@ function onMaxInput(e: Event): void {
 }
 
 .catalog-facets__reset:hover { border-color: #00b894; color: #00b894; }
+
+.catalog-facets__skeleton { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
 
 .catalog-facets__count { color: #9aada6; font-size: 12px; }
 
