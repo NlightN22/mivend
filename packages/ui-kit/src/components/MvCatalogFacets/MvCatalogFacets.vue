@@ -190,16 +190,12 @@ function onMaxInput(e: Event): void {
 
 <style scoped>
 .catalog-facets {
-    position: sticky;
     min-width: 0;
-    top: 88px;
     border-radius: 20px;
     background: #fff;
     box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
     padding: 18px;
     border: 1px solid rgba(221, 231, 226, 0.86);
-    max-height: calc(100vh - 108px);
-    overflow-y: auto;
 }
 
 .catalog-facets__block {
