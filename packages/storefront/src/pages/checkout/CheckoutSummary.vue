@@ -2,8 +2,8 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
-import { useCheckoutStore } from '../../stores/checkout';
-import { useOrderPackaging } from '../../composables/useOrderPackaging';
+import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
+import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
@@ -12,11 +12,7 @@ const promoCode = ref('');
 const submitting = ref(false);
 
 const packaging = computed(() => useOrderPackaging(cartStore.lines));
-const packagingLabel = computed(() => {
-    const { totalWeightKg, totalVolumeM3 } = packaging.value;
-    if (totalWeightKg === 0 && totalVolumeM3 === 0) return null;
-    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeM3.toFixed(3)} m³`;
-});
+const packagingLabel = computed(() => formatPackaging(packaging.value));
 
 const lineCount = computed(() => cartStore.lines.length);
 const totalQty = computed(() => cartStore.totalQuantity);
@@ -38,9 +34,8 @@ const btnLabel = computed(() => {
     return 'Confirm order';
 });
 
-const deliveryLabel = computed(() =>
-    checkoutStore.selectedDelivery === 'courier' ? 'Courier' : 'Self-pickup',
-);
+const DELIVERY_LABELS: Record<DeliveryType, string> = { courier: 'Courier', pickup: 'Self-pickup' };
+const deliveryLabel = computed(() => DELIVERY_LABELS[checkoutStore.selectedDelivery]);
 
 const btnOrange = computed(() => checkoutStore.selectedPayment === 'online');
 

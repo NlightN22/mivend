@@ -34,3 +34,15 @@ export function useOrderPackaging(lines: PackagingLine[]): OrderPackagingTotals 
         totalVolumeM3: lines.reduce((sum, line) => sum + lineVolumeM3(line), 0),
     };
 }
+
+function formatVolumeM3(volumeM3: number): string {
+    return volumeM3 < 0.001 ? '< 0.001 m³' : `${volumeM3.toFixed(3)} m³`;
+}
+
+// Unknown volume is summed as 0, so it is left out rather than shown as a misleading "0.000".
+export function formatPackaging(totals: OrderPackagingTotals): string | null {
+    const { totalWeightKg, totalVolumeM3 } = totals;
+    if (totalWeightKg === 0 && totalVolumeM3 === 0) return null;
+    const weight = `${totalWeightKg.toFixed(1)} kg`;
+    return totalVolumeM3 > 0 ? `${weight} · ${formatVolumeM3(totalVolumeM3)}` : weight;
+}

@@ -2,18 +2,14 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
-import { useOrderPackaging } from '../../composables/useOrderPackaging';
+import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
 const router = useRouter();
 
 const cartStore = useCartStore();
 
 const packaging = computed(() => useOrderPackaging(cartStore.lines));
-const packagingLabel = computed(() => {
-    const { totalWeightKg, totalVolumeM3 } = packaging.value;
-    if (totalWeightKg === 0 && totalVolumeM3 === 0) return null;
-    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeM3.toFixed(3)} m³`;
-});
+const packagingLabel = computed(() => formatPackaging(packaging.value));
 
 function formatRub(kopecks: number): string {
     return new Intl.NumberFormat('ru-RU').format(kopecks / 100) + ' ₽';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { useOrderPackaging } from '../../composables/useOrderPackaging';
+import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
 describe('useOrderPackaging', () => {
     it('sums weight/volume per piece across lines with a packaging unit', () => {
@@ -41,5 +41,21 @@ describe('useOrderPackaging', () => {
 
     it('returns zero totals for an empty order', () => {
         expect(useOrderPackaging([])).toEqual({ totalWeightKg: 0, totalVolumeM3: 0 });
+    });
+});
+
+describe('formatPackaging', () => {
+    it('shows weight and volume, with a floor for tiny volumes', () => {
+        expect(formatPackaging({ totalWeightKg: 3.84, totalVolumeM3: 0.0123 })).toBe(
+            '3.8 kg · 0.012 m³',
+        );
+        expect(formatPackaging({ totalWeightKg: 0.1, totalVolumeM3: 0.0002 })).toBe(
+            '0.1 kg · < 0.001 m³',
+        );
+    });
+
+    it('omits an unknown (zero) volume and returns null for an empty order', () => {
+        expect(formatPackaging({ totalWeightKg: 2, totalVolumeM3: 0 })).toBe('2.0 kg');
+        expect(formatPackaging({ totalWeightKg: 0, totalVolumeM3: 0 })).toBeNull();
     });
 });

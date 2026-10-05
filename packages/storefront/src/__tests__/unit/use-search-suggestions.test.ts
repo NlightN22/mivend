@@ -87,6 +87,22 @@ describe('useSearchSuggestions', () => {
         expect(groups.value).toEqual([]);
     });
 
+    it('does not fire a pending query for a term the user already erased', async () => {
+        shopApiMock.mockResolvedValue(searchResult('x'));
+        const query = ref('');
+        const groups = useSearchSuggestions(query, ref(undefined));
+
+        query.value = 'фильт';
+        await nextTick();
+        await vi.advanceTimersByTimeAsync(100);
+        query.value = '';
+        await nextTick();
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(shopApiMock).not.toHaveBeenCalled();
+        expect(groups.value).toBeUndefined();
+    });
+
     it('hides the dropdown when the request fails', async () => {
         shopApiMock.mockRejectedValue(new Error('Shop API error: 500'));
         const query = ref('');

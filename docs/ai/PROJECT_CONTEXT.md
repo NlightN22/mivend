@@ -166,7 +166,9 @@ deferred parts tracked (#150/#151). **#103** (order weight/volume + branch-condi
 branch via the customer's preferred `TradingPoint` (never `order.customFields.branchId` pre-
 placement — real audit bug, fixed). `UnitStreamHandler` refresh is a single bounded
 values-changed-only UPDATE inside the inbox transaction, not a `ProductVariantService.update`
-fan-out (a shared base unit can match nearly every variant in the catalog).
+fan-out (a shared base unit can match nearly every variant in the catalog). Unit volume is stored/shown in m³ (the ERP's `volume_l` carries m³); a local DB on
+`synchronize` that pulls this loses old volumes (column renamed) until the `unit` stream is
+re-imported — resync it after pulling.
 
 ## Project purpose
 

@@ -28,6 +28,7 @@ export function useSearchSuggestions(
     );
 
     const debouncedRun = useDebouncedCallback((term: string) => {
+        if (query.value.trim() !== term) return;
         run(term, collectionSlug.value).catch(() => {
             groups.value = undefined;
         });

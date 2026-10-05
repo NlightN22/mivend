@@ -70,7 +70,7 @@ export const useCartStore = defineStore('cart', () => {
             if (line.compareAtPrice == null || line.unitPrice == null || line.unitPrice === 0)
                 return sum;
             const discountRatio = (line.compareAtPrice - line.unitPrice) / line.unitPrice;
-            return sum + line.linePriceWithTax * discountRatio;
+            return sum + Math.round(line.linePriceWithTax * discountRatio);
         }, 0),
     );
     const isEmpty = computed(() => lines.value.length === 0);

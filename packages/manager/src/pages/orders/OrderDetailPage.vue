@@ -14,7 +14,7 @@ import {
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
 import { fetchCreditForCounterparty, type CustomerCredit } from '../../api/customers';
 import { fetchOrderReservations, type OrderReservation } from '../../api/reservation';
-import { useOrderPackaging } from '../../composables/useOrderPackaging';
+import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
@@ -50,9 +50,7 @@ const editable = computed(
 
 const packagingLabel = computed(() => {
     if (!order.value) return null;
-    const { totalWeightKg, totalVolumeM3 } = useOrderPackaging(order.value.lines);
-    if (totalWeightKg === 0 && totalVolumeM3 === 0) return null;
-    return `${totalWeightKg.toFixed(1)} kg · ${totalVolumeM3.toFixed(3)} m³`;
+    return formatPackaging(useOrderPackaging(order.value.lines));
 });
 
 function money(amount: number): string {
