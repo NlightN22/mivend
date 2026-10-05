@@ -56,6 +56,7 @@ export default {
         more: 'Ещё',
         less: 'Свернуть',
         showAll: 'Посмотреть все',
+        clearSelection: 'Сбросить выбор',
         search: 'Найти',
         loading: 'Загрузка категорий…',
         empty: 'Нет доступных категорий',

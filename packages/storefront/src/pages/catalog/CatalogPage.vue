@@ -78,6 +78,13 @@ function toggleFacetValue(id: string): void {
     };
 }
 
+function clearFacetValues(ids: string[]): void {
+    filters.value = {
+        ...filters.value,
+        facetValueIds: filters.value.facetValueIds.filter(v => !ids.includes(v)),
+    };
+}
+
 function resetFilters(): void {
     pendingCategorySlug.value = undefined;
     filters.value = { facetValueIds: [], inStock: false, priceMin: null, priceMax: null };
@@ -169,9 +176,11 @@ onMounted(() => {
                 :category-less-label="t('catalogNav.less')"
                 :facet-show-all-label="t('catalogNav.showAll')"
                 :facet-collapse-label="t('catalogNav.less')"
+                :facet-clear-label="t('catalogNav.clearSelection')"
                 :facet-search-placeholder="t('catalogNav.search')"
                 @update:in-stock-only="filters = { ...filters, inStock: $event }"
                 @toggle-facet-value="toggleFacetValue"
+                @clear-facet-values="clearFacetValues"
                 @update:price-min="filters = { ...filters, priceMin: $event }"
                 @update:price-max="filters = { ...filters, priceMax: $event }"
                 @navigate-category="navigateCategory"

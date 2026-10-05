@@ -17,12 +17,18 @@ const props = withDefaults(
         selected: Set<string>;
         showAllLabel?: string;
         collapseLabel?: string;
+        clearLabel?: string;
         searchPlaceholder?: string;
     }>(),
-    { showAllLabel: 'Show all', collapseLabel: 'Collapse', searchPlaceholder: 'Search' },
+    {
+        showAllLabel: 'Show all',
+        collapseLabel: 'Collapse',
+        clearLabel: 'Clear selection',
+        searchPlaceholder: 'Search',
+    },
 );
 
-const emit = defineEmits<{ toggle: [id: string] }>();
+const emit = defineEmits<{ toggle: [id: string]; clear: [ids: string[]] }>();
 
 const expanded = ref(false);
 const search = ref('');
@@ -35,6 +41,8 @@ const visible = computed(() => {
     const needle = search.value.trim().toLowerCase();
     return needle ? props.values.filter(v => v.name.toLowerCase().includes(needle)) : props.values;
 });
+
+const selectedIds = computed(() => props.values.filter(v => props.selected.has(v.id)).map(v => v.id));
 
 function collapse(): void {
     expanded.value = false;
@@ -73,14 +81,24 @@ function collapse(): void {
                 <span class="mv-facet-group__count">{{ val.count }}</span>
             </label>
         </div>
-        <button
-            v-if="canExpand"
-            type="button"
-            class="mv-facet-group__toggle"
-            @click="expanded ? collapse() : (expanded = true)"
-        >
-            {{ expanded ? collapseLabel : showAllLabel }}
-        </button>
+        <div v-if="canExpand || selectedIds.length > 0" class="mv-facet-group__actions">
+            <button
+                v-if="canExpand"
+                type="button"
+                class="mv-facet-group__toggle"
+                @click="expanded ? collapse() : (expanded = true)"
+            >
+                {{ expanded ? collapseLabel : showAllLabel }}
+            </button>
+            <button
+                v-if="selectedIds.length > 0"
+                type="button"
+                class="mv-facet-group__toggle mv-facet-group__clear"
+                @click="emit('clear', selectedIds)"
+            >
+                {{ clearLabel }}
+            </button>
+        </div>
     </div>
 </template>
 
@@ -99,9 +117,17 @@ function collapse(): void {
     box-sizing: border-box;
     margin-bottom: 8px;
     padding: 8px 12px;
-    border: 1px solid #dde7e2;
+    border: 1.5px solid #dde7e2;
     border-radius: 10px;
+    background: #f9fbfa;
     font-size: 14px;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.mv-facet-group__search:focus {
+    outline: none;
+    border-color: #00b894;
+    background: #fff;
 }
 
 .mv-facet-group__list--scroll {
@@ -186,8 +212,19 @@ function collapse(): void {
     font-size: 12px;
 }
 
-.mv-facet-group__toggle {
+.mv-facet-group__actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
     margin-top: 6px;
+}
+
+.mv-facet-group__clear {
+    color: #8a9a94;
+}
+
+.mv-facet-group__toggle {
+    margin-top: 0;
     padding: 0;
     border: 0;
     background: none;

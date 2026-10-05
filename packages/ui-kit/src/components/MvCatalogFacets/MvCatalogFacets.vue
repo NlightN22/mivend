@@ -25,6 +25,7 @@ const props = withDefaults(
         categoryLessLabel?: string;
         facetShowAllLabel?: string;
         facetCollapseLabel?: string;
+        facetClearLabel?: string;
         facetSearchPlaceholder?: string;
     }>(),
     {
@@ -35,6 +36,7 @@ const props = withDefaults(
         categoryLessLabel: undefined,
         facetShowAllLabel: undefined,
         facetCollapseLabel: undefined,
+        facetClearLabel: undefined,
         facetSearchPlaceholder: undefined,
     },
 );
@@ -42,6 +44,7 @@ const props = withDefaults(
 const emit = defineEmits<{
     'update:inStockOnly': [v: boolean];
     'toggleFacetValue': [id: string];
+    'clearFacetValues': [ids: string[]];
     'update:priceMin': [v: number | null];
     'update:priceMax': [v: number | null];
     'navigateCategory': [slug: string | undefined];
@@ -148,8 +151,10 @@ function onMaxInput(e: Event): void {
                 :selected="selectedFacetValues"
                 :show-all-label="facetShowAllLabel"
                 :collapse-label="facetCollapseLabel"
+                :clear-label="facetClearLabel"
                 :search-placeholder="facetSearchPlaceholder"
-                @toggle="emit('toggleFacetValue', $event)" />
+                @toggle="emit('toggleFacetValue', $event)"
+                @clear="emit('clearFacetValues', $event)" />
         </div>
 
         <div class="catalog-facets__block">
