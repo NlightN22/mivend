@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { MvButton, MvProductGallery, MvProductMainCards, stockVariantFromQuantity } from '@mivend/ui-kit';
+import {
+    MvButton,
+    MvProductGallery,
+    MvProductMainCards,
+    stockVariantFromQuantity,
+} from '@mivend/ui-kit';
 import {
     fetchProductBySlug,
     fetchCrossReferences,
