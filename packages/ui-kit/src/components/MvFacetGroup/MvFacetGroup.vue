@@ -107,21 +107,26 @@ function collapse(): void {
 .mv-facet-group__list--scroll {
     max-height: 280px;
     overflow-y: auto;
+    margin: 0 -8px;
+    padding: 0 8px;
 }
 
 .mv-facet-group__row {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 5px 0;
+    padding: 5px 8px;
+    margin: 0 -8px;
+    border-radius: 10px;
     color: #43524d;
     font-size: 14px;
     cursor: pointer;
-    transition: color 0.12s;
+    transition: color 0.12s, background 0.12s;
 }
 
-.mv-facet-group__row:hover .mv-facet-group__icon {
-    background: #f4f8f6;
+.mv-facet-group__row:hover {
+    color: var(--app-nav-accent, #008a64);
+    background: var(--app-nav-hover-bg, #f3f7f5);
 }
 
 .mv-facet-group__check {
@@ -155,12 +160,16 @@ function collapse(): void {
 .mv-facet-group__row--on .mv-facet-group__icon,
 .mv-facet-group__check:focus-visible + .mv-facet-group__icon {
     border: 2px solid #00b894;
-    background: #f0fffa;
-    color: #00997a;
+    color: var(--app-nav-accent, #008a64);
+}
+
+.mv-facet-group__row--on,
+.mv-facet-group__row--on:hover {
+    color: var(--app-nav-accent, #008a64);
+    background: var(--app-nav-active-bg, #e2f8ef);
 }
 
 .mv-facet-group__row--on .mv-facet-group__name {
-    color: #00997a;
     font-weight: 700;
 }
 
