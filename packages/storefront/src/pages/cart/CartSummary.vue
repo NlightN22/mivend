@@ -97,14 +97,6 @@ const lineCount = computed(() => cartStore.lines.length);
             <div class="cart-summary__arrow">›</div>
         </a>
 
-        <a class="cart-summary__side-card cart-summary__side-card--orange" href="#">
-            <div class="cart-summary__side-icon cart-summary__side-icon--orange">↻</div>
-            <div>
-                <div class="cart-summary__side-title">Repeat last order</div>
-                <div class="cart-summary__side-text">Quickly add regular items to cart</div>
-            </div>
-            <div class="cart-summary__arrow">›</div>
-        </a>
     </aside>
 </template>
 
@@ -242,10 +234,6 @@ const lineCount = computed(() => cartStore.lines.length);
 .cart-summary__side-icon--green {
     background: #e2f8ef;
     color: #008a64;
-}
-.cart-summary__side-icon--orange {
-    background: #fff1df;
-    color: #ff8a00;
 }
 
 .cart-summary__side-title {
