@@ -62,6 +62,21 @@ const noDb = {};
 
 // Issue #69, test-design coverage areas 2 and 3.
 describe('ExternalSearchService.search', () => {
+    it('returns no items for a facets-only request (take 0) but keeps the total', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 7 }),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+        );
+        const result = await service.search(ctx, { term: 'oil', take: 0 } as SearchInput);
+        expect(result.items).toEqual([]);
+        expect(result.totalItems).toBe(7);
+    });
+
     it('skips a search-service item with no matching Product.customFields.externalId, without erroring', async () => {
         const client = {
             resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),

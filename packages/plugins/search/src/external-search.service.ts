@@ -8,6 +8,7 @@ import {
 } from '@vendure/core';
 import type { SearchInput } from '@vendure/common/lib/generated-types';
 
+import { ExternalCollectionResult, mapFacetsToCollections } from './category-facet-mapper';
 import { mapFacetsToFacetValues, ExternalFacetValueResult } from './facet-mapper';
 import { hasBrowseCriteria, mapSearchInputToResolveQueryRequest } from './query-mapper';
 import { SearchFilterResolver } from './search-filter-resolver.service';
@@ -43,12 +44,12 @@ export interface ExternalSearchResponse {
     items: ExternalSearchResult[];
     totalItems: number;
     facetValues: ExternalFacetValueResult[];
-    collections: never[];
+    collections: ExternalCollectionResult[];
 }
 
 // Backend for SEARCH_BACKEND=external (issue #69, #164): resolves the shop-api `search` query
-// against search-service. Only the manufacturer facet is mapped; collections stay empty (the
-// category tree comes from the Collection query).
+// against search-service. Manufacturer facets map to facetValues and category facets to
+// collections (counts only; the tree itself comes from the Collection query).
 @Injectable()
 export class ExternalSearchService {
     constructor(
@@ -80,7 +81,7 @@ export class ExternalSearchService {
             includeDisabled,
         );
         const items: ExternalSearchResult[] = [];
-        for (const item of response.items) {
+        for (const item of input.take === 0 ? [] : response.items) {
             const result = this.toSearchResult(
                 ctx,
                 item.canonicalName,
@@ -96,7 +97,7 @@ export class ExternalSearchService {
             // are skipped from `items`, which can leave a page shorter than `take`.
             totalItems: response.total,
             facetValues: await mapFacetsToFacetValues(this.connection, ctx, response.facets),
-            collections: [],
+            collections: await mapFacetsToCollections(this.connection, ctx, response.facets),
         };
     }
 

@@ -57,7 +57,9 @@ export function mapSearchInputToResolveQueryRequest(
         ...(Object.keys(filters).length > 0 ? { filters } : {}),
         availableOnly: Boolean(input.inStock),
         sort: mapSort(input),
-        limit: input.take ?? undefined,
+        // search-service rejects limit 0; a facets-only request (take 0) still needs one hit.
+        limit:
+            input.take === undefined || input.take === null ? undefined : Math.max(input.take, 1),
         offset: input.skip ?? undefined,
     };
 }

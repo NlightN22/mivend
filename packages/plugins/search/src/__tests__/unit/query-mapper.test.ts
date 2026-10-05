@@ -21,6 +21,10 @@ describe('mapSearchInputToResolveQueryRequest', () => {
         });
     });
 
+    it('sends limit 1 for a facets-only request (take 0), which search-service would reject', () => {
+        expect(mapSearchInputToResolveQueryRequest({ term: 'pad', take: 0 }, none).limit).toBe(1);
+    });
+
     it('passes resolved category and manufacturer filters', () => {
         const request = mapSearchInputToResolveQueryRequest(
             {},

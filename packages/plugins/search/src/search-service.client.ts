@@ -19,6 +19,7 @@ export interface ResolveQueryResponseItem {
 
 export interface ResolveQueryFacets {
     manufacturer: Array<{ value: string; count: number }>;
+    category?: Array<{ value: string; count: number }>;
 }
 
 export interface ResolveQueryResponse {
