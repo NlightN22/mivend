@@ -1,3 +1,4 @@
+import { orderFacetGroups } from './facetOrder';
 import { describeLoadError, type LoadErrorText } from '../api/describeLoadError';
 import { ref, watch, type Ref } from 'vue';
 import { shopApi } from '../api/client';
@@ -219,7 +220,7 @@ export function useProductList(options: UseProductListOptions = {}): {
         loadError.value = false;
 
         const facetValues = facetsResult?.search.facetValues ?? productsResult.search.facetValues;
-        facetGroups.value = buildFacetGroups(facetValues);
+        facetGroups.value = orderFacetGroups(buildFacetGroups(facetValues));
         categoryCounts.value = new Map(
             (facetsResult?.search.collections ?? []).map(c => [c.collection.slug, c.count]),
         );
