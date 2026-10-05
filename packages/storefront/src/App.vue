@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { MvToastContainer, MvNotice } from '@mivend/ui-kit';
+import { MvToastContainer, MvConnectionBar } from '@mivend/ui-kit';
 import { useAuthStore } from './stores/auth';
 import { useCartStore } from './stores/cart';
 
@@ -24,22 +24,30 @@ onMounted(async () => {
         await cartStore.fetchCart();
     }
 });
+
+// Hard navigation: logout() may itself hang during an outage, a reload resets all stuck state.
+function handleRelogin(): void {
+    void authStore.logout();
+    window.location.href = '/login';
+}
 </script>
 
 <template>
     <RouterView />
-    <MvNotice v-if="authStore.isReconnecting" variant="warning" class="app__reconnecting">
-        Reconnecting to the server… your session is still active.
-    </MvNotice>
+    <MvConnectionBar
+        v-if="authStore.isReconnecting"
+        :since="authStore.reconnectingSince"
+        @relogin="handleRelogin"
+    />
+    <MvConnectionBar
+        v-else-if="
+            authStore.authStatus === 'unauthenticated' &&
+            authStore.initialized &&
+            $route.meta.requiresAuth
+        "
+        :since="null"
+        logged-out
+        @relogin="handleRelogin"
+    />
     <MvToastContainer />
 </template>
-
-<style scoped>
-.app__reconnecting {
-    position: fixed;
-    bottom: 16px;
-    right: 16px;
-    max-width: 320px;
-    z-index: 2000;
-}
-</style>

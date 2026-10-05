@@ -3,13 +3,20 @@ import { brandOf } from '../../utils/brand';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { toast, MvProductGallery, MvProductMainCards, stockVariantFromLevel } from '@mivend/ui-kit';
+import {
+    toast,
+    MvErrorState,
+    MvProductGallery,
+    MvProductMainCards,
+    stockVariantFromLevel,
+} from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
 import { useCatalogStore } from '../../stores/catalog';
 import { filterVisibleCrumbs } from '../../../../shared/src/collectionTree';
 import { discountAddToCartHint } from '../../utils/discountMessages';
 import { shopApi } from '../../api/client';
+import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
 import {
     ProductDetailDocument,
     RelatedProductsDocument,
@@ -30,7 +37,7 @@ const catalogStore = useCatalogStore();
 const product = ref<Product | null>(null);
 const related = ref<RelatedProduct[]>([]);
 const loading = ref(true);
-const error = ref('');
+const error = ref<LoadErrorText | null>(null);
 
 const variant = computed(() => product.value?.variants[0]);
 const brand = computed(() => brandOf(product.value?.manufacturer));
@@ -67,7 +74,7 @@ const stockVariantLabel = computed(() => stockVariantFromLevel(variant.value?.st
 
 async function fetchData(slug: string) {
     loading.value = true;
-    error.value = '';
+    error.value = null;
     try {
         const [detailRes, relatedRes] = await Promise.all([
             shopApi(ProductDetailDocument, { slug }),
@@ -76,7 +83,7 @@ async function fetchData(slug: string) {
         product.value = detailRes.product ?? null;
         related.value = relatedRes.products.items.filter(p => p.slug !== slug).slice(0, 3);
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Ошибка загрузки товара';
+        error.value = describeLoadError(e);
     } finally {
         loading.value = false;
     }
@@ -97,7 +104,12 @@ onMounted(() => {
 <template>
     <main class="product-page">
         <div v-if="loading" class="product-page__state">Загрузка товара...</div>
-        <MvNotice v-else-if="error" variant="error">{{ error }}</MvNotice>
+        <MvErrorState
+            v-else-if="error"
+            :title="error.title"
+            :message="error.message"
+            @retry="fetchData(route.params.slug as string)"
+        />
         <MvNotice v-else-if="!product" variant="error">Товар не найден</MvNotice>
 
         <template v-else>

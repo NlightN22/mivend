@@ -18,6 +18,7 @@ type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 // network failure is not the same as 'logged out'" gotcha.
 const BACKGROUND_RETRY_INITIAL_MS = 2_000;
 const BACKGROUND_RETRY_MAX_MS = 20_000;
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 export const useAuthStore = defineStore('auth', () => {
     const customer = ref<ActiveCustomer | null>(null);
@@ -28,11 +29,13 @@ export const useAuthStore = defineStore('auth', () => {
     // never 'unknown', so a prolonged outage never force-logs-out a still-valid session.
     const authStatus = ref<AuthStatus>('unknown');
     const isReconnecting = ref(false);
+    const reconnectingSince = ref<number | null>(null);
     let initPromise: Promise<void> | null = null;
     // Bumped on every fetchCurrentCustomer()/login()/logout() call so a stale background retry
     // loop from an earlier call can detect it's been superseded and stop touching state.
     let generation = 0;
     let backgroundRetryTimer: ReturnType<typeof setTimeout> | null = null;
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
     const isLoggedIn = computed(() => customer.value !== null);
 
@@ -78,6 +81,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
         generation++;
         stopBackgroundRetry();
+        stopHeartbeat();
         customer.value = null;
         authStatus.value = 'unauthenticated';
         isReconnecting.value = false;
@@ -91,6 +95,21 @@ export const useAuthStore = defineStore('auth', () => {
             backgroundRetryTimer = null;
         }
         isReconnecting.value = false;
+        reconnectingSince.value = null;
+    }
+
+    function startHeartbeat(): void {
+        if (heartbeatTimer !== null) return;
+        heartbeatTimer = setInterval(() => {
+            void fetchCurrentCustomer();
+        }, HEARTBEAT_INTERVAL_MS);
+    }
+
+    function stopHeartbeat(): void {
+        if (heartbeatTimer !== null) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
     }
 
     function applyResult(myGeneration: number, result: ActiveCustomerForAuthQuery): void {
@@ -98,6 +117,8 @@ export const useAuthStore = defineStore('auth', () => {
         customer.value = result.activeCustomer ?? null;
         authStatus.value = result.activeCustomer ? 'authenticated' : 'unauthenticated';
         isReconnecting.value = false;
+        if (result.activeCustomer) startHeartbeat();
+        else stopHeartbeat();
     }
 
     // Keeps retrying indefinitely (capped backoff) after shopApi's own bounded ~4.2s retry is
@@ -151,6 +172,7 @@ export const useAuthStore = defineStore('auth', () => {
             // hands off to an indefinite background retry rather than blocking this call (and
             // whatever awaits it, e.g. App.vue/the route guard).
             isReconnecting.value = true;
+            reconnectingSince.value = Date.now();
             scheduleBackgroundRetry(myGeneration, BACKGROUND_RETRY_INITIAL_MS);
         }
     }
@@ -161,6 +183,7 @@ export const useAuthStore = defineStore('auth', () => {
         isLoggedIn,
         authStatus,
         isReconnecting,
+        reconnectingSince,
         init,
         portalRole,
         isClientAdmin,
