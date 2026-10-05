@@ -89,7 +89,7 @@ describe('UnitStreamHandler', () => {
             ownerId: 'product-1',
             ratioToBase: 12,
             weightKg: 5.5,
-            volumeL: 3.2,
+            volumeL: 0.0032,
         });
 
         expect(repo.create).not.toHaveBeenCalled();
@@ -102,6 +102,15 @@ describe('UnitStreamHandler', () => {
                 volumeL: 3.2,
             }),
         );
+    });
+
+    it('converts the ERP cubic-metre volume to litres without float noise', async () => {
+        const { connection, repo } = makeConnection(null);
+        const handler = new UnitStreamHandler(connection as never);
+
+        await handler.apply(ctx, 'unit-1', { code: 'PCS', name: 'Pcs', volumeL: 0.0024 });
+
+        expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ volumeL: 2.4 }));
     });
 
     it('marks isDeleted without removing the row (never destructive on a soft signal)', async () => {
@@ -125,7 +134,7 @@ describe('UnitStreamHandler', () => {
             name: 'Box',
             ratioToBase: 4,
             weightKg: 16.8,
-            volumeL: 18.5,
+            volumeL: 0.0185,
         });
 
         expect(updateQueryBuilder.update).toHaveBeenCalledWith(ProductVariant);

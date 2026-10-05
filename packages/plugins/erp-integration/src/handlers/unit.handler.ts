@@ -5,6 +5,13 @@ import { UnitRecord } from '../entities/unit-record.entity';
 import { loggerCtx } from '../types';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
+// The contract names the field volume_l, but the ERP actually sends cubic metres.
+const M3_TO_LITRES = 1000;
+
+function cubicMetresToLitres(m3: number): number {
+    return Math.round(m3 * M3_TO_LITRES * 1e6) / 1e6;
+}
+
 // Applies the `unit` stream into UnitRecord, then refreshes matching variants — field-by-field
 // accounting: docs/ai/erp-streams-map.md's `unit` row.
 @Injectable()
@@ -27,7 +34,8 @@ export class UnitStreamHandler implements InboundStreamHandler {
             typeof payload.ownerId === 'string' && payload.ownerId !== '' ? payload.ownerId : null;
         const ratioToBase = typeof payload.ratioToBase === 'number' ? payload.ratioToBase : 0;
         const weightKg = typeof payload.weightKg === 'number' ? payload.weightKg : null;
-        const volumeL = typeof payload.volumeL === 'number' ? payload.volumeL : null;
+        const volumeL =
+            typeof payload.volumeL === 'number' ? cubicMetresToLitres(payload.volumeL) : null;
         const isDeleted = payload.isDeleted === true;
 
         const repo = this.connection.getRepository(ctx, UnitRecord);

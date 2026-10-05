@@ -337,6 +337,8 @@ against 1C (`torg_develop4`) by search-platform, not theoretical:
   (`owner_id=null` = shared classifier, `owner_id=<productId>` = product-owned packaging unit):
   `ratio_to_base` (units-per-package, consistent across products), `weight_kg`/`volume_l` (for
   the packaging unit as a whole, not per piece inside it).
+  **The ERP sends `volume_l` in cubic metres, not litres, despite the contract's field name** —
+  `UnitStreamHandler` multiplies by 1000, so `UnitRecord.volumeL` and `unitVolumeL` are always litres.
 
 **Data model — single variant stays in base units, ERP data is informational, enforcement is
 branch-conditional:**
