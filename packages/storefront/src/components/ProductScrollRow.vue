@@ -4,6 +4,7 @@ import { ref, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useFavoritesStore } from '../stores/favorites';
 import { useCartActions } from '../composables/useCartActions';
+import { brandOf } from '../utils/brand';
 import type { ProductItem } from '../composables/useProductList';
 
 const props = defineProps<{
@@ -39,9 +40,6 @@ function next(): void {
     offset.value = n >= maxOffset.value ? 0 : n;
 }
 
-function getBrand(p: ProductItem): string {
-    return p.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '';
-}
 </script>
 
 <template>
@@ -74,7 +72,7 @@ function getBrand(p: ProductItem): string {
                         class="psr-card"
                         :name="p.name"
                         :sku="p.variants[0]?.sku ?? ''"
-                        :brand="getBrand(p)"
+                        :brand="brandOf(p.manufacturer)"
                         :price="
                             p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined
                         "

@@ -4,6 +4,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useFavoritesStore } from '../stores/favorites';
 import { useCartActions } from '../composables/useCartActions';
+import { brandOf } from '../utils/brand';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 
 const props = defineProps<{
@@ -52,10 +53,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => observer?.disconnect());
-
-function getBrand(p: ProductItem): string {
-    return p.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '';
-}
 
 function stockProps(stockLevel: string): { stockVariant?: StockVariant } {
     if (!authStore.isLoggedIn) return {};
@@ -131,7 +128,7 @@ function handleToggleFavorite(p: ProductItem): void {
                     :key="p.id"
                     :name="p.name"
                     :sku="p.variants[0]?.sku ?? ''"
-                    :brand="getBrand(p)"
+                    :brand="brandOf(p.manufacturer)"
                     :price="p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined"
                     :customer-price="
                         p.variants[0]?.customerPrice != null
@@ -167,7 +164,7 @@ function handleToggleFavorite(p: ProductItem): void {
                     :key="p.id"
                     :name="p.name"
                     :sku="p.variants[0]?.sku ?? ''"
-                    :brand="getBrand(p)"
+                    :brand="brandOf(p.manufacturer)"
                     :price="p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined"
                     :customer-price="
                         p.variants[0]?.customerPrice != null

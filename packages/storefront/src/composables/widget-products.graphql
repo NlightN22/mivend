@@ -2,6 +2,9 @@ fragment ProductWidgetFields on Product {
     id
     name
     slug
+    manufacturer {
+        name
+    }
     variants {
         id
         sku

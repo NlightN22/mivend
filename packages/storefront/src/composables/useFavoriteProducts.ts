@@ -3,6 +3,7 @@ import { stockVariantFromLevel, type StockVariant } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import { FavoriteProductsDocument } from '../api/generated/graphql';
 import { useFavoritesStore } from '../stores/favorites';
+import { brandOf } from '../utils/brand';
 
 export interface FavoriteVariantView {
     variantId: string;
@@ -62,7 +63,7 @@ export function useFavoriteProducts(): {
                         variantId: v.id,
                         name: v.name,
                         sku: v.sku,
-                        brand: p.facetValues.find(fv => fv.facet.code === 'brand')?.name ?? '',
+                        brand: brandOf(p.manufacturer),
                         price: v.customerPrice != null ? v.customerPrice / 100 : undefined,
                         currency: v.currencyCode,
                         stockVariant: stockVariantFromLevel(v.stockLevel),

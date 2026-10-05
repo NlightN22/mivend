@@ -26,6 +26,9 @@ query CatalogProducts(
             productId
             productVariantId
             productName
+            manufacturer {
+                name
+            }
             slug
             sku
             priceWithTax {

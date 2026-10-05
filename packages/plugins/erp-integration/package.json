@@ -26,6 +26,7 @@
         "@mivend/plugin-retro-bonus": "workspace:*",
         "@nestjs/swagger": "^11.0.0",
         "@nlightn22/event-contracts": "^0.43.1",
+        "dataloader": "2.2.3",
         "graphql-tag": "^2.12.6",
         "kafkajs": "^2.2.4",
         "shared": "workspace:*"

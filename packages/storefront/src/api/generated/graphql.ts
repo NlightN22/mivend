@@ -3071,6 +3071,7 @@ export type Product = Node & {
     featuredAsset?: Maybe<Asset>;
     id: Scalars['ID']['output'];
     languageCode: LanguageCode;
+    manufacturer?: Maybe<ProductManufacturer>;
     name: Scalars['String']['output'];
     optionGroups: Array<ProductOptionGroup>;
     slug: Scalars['String']['output'];
@@ -3124,6 +3125,11 @@ export type ProductListOptions = {
     sort?: InputMaybe<ProductSortParameter>;
     /** Takes n results, for use in pagination */
     take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type ProductManufacturer = {
+    id: Scalars['ID']['output'];
+    name?: Maybe<Scalars['String']['output']>;
 };
 
 export type ProductOption = Node & {
@@ -3673,6 +3679,7 @@ export type SearchResult = {
     discountTiers: Array<DiscountTier>;
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
+    manufacturer?: Maybe<ProductManufacturer>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset?: Maybe<SearchResultAsset>;
@@ -4291,6 +4298,7 @@ export type CatalogProductsQuery = {
             facetValueIds: Array<string>;
             customerPrice?: number | null;
             compareAtPrice?: number | null;
+            manufacturer?: { name?: string | null } | null;
             priceWithTax: { min: any } | { value: any };
             discountTiers: Array<{
                 percent: number;
@@ -4342,6 +4350,7 @@ export type ProductWidgetFieldsFragment = {
     id: string;
     name: string;
     slug: string;
+    manufacturer?: { name?: string | null } | null;
     variants: Array<{
         id: string;
         sku: string;
@@ -4369,6 +4378,7 @@ export type NewArrivalsQuery = {
             id: string;
             name: string;
             slug: string;
+            manufacturer?: { name?: string | null } | null;
             variants: Array<{
                 id: string;
                 sku: string;
@@ -4396,6 +4406,7 @@ export type SaleProductsQuery = {
             id: string;
             name: string;
             slug: string;
+            manufacturer?: { name?: string | null } | null;
             variants: Array<{
                 id: string;
                 sku: string;
@@ -4430,6 +4441,7 @@ export type PopularProductsQuery = {
             id: string;
             name: string;
             slug: string;
+            manufacturer?: { name?: string | null } | null;
             variants: Array<{
                 id: string;
                 sku: string;
@@ -4537,6 +4549,7 @@ export type FavoriteProductsQuery = {
     products: {
         items: Array<{
             id: string;
+            manufacturer?: { name?: string | null } | null;
             variants: Array<{
                 id: string;
                 sku: string;
@@ -4545,7 +4558,6 @@ export type FavoriteProductsQuery = {
                 currencyCode: CurrencyCode;
                 stockLevel: string;
             }>;
-            facetValues: Array<{ name: string; facet: { code: string } }>;
         }>;
     };
 };
@@ -5078,6 +5090,9 @@ export const ProductWidgetFieldsFragmentDoc = new TypedDocumentString(
   id
   name
   slug
+  manufacturer {
+    name
+  }
   variants {
     id
     sku
@@ -5224,6 +5239,9 @@ export const CatalogProductsDocument = new TypedDocumentString(`
       productId
       productVariantId
       productName
+      manufacturer {
+        name
+      }
       slug
       sku
       priceWithTax {
@@ -5308,6 +5326,9 @@ export const NewArrivalsDocument = new TypedDocumentString(`
   id
   name
   slug
+  manufacturer {
+    name
+  }
   variants {
     id
     sku
@@ -5343,6 +5364,9 @@ export const SaleProductsDocument = new TypedDocumentString(`
   id
   name
   slug
+  manufacturer {
+    name
+  }
   variants {
     id
     sku
@@ -5383,6 +5407,9 @@ export const PopularProductsDocument = new TypedDocumentString(`
   id
   name
   slug
+  manufacturer {
+    name
+  }
   variants {
     id
     sku
@@ -5509,6 +5536,9 @@ export const FavoriteProductsDocument = new TypedDocumentString(`
   products(options: {take: $take, filter: {id: {in: $ids}}}) {
     items {
       id
+      manufacturer {
+        name
+      }
       variants {
         id
         sku
@@ -5516,12 +5546,6 @@ export const FavoriteProductsDocument = new TypedDocumentString(`
         customerPrice
         currencyCode
         stockLevel
-      }
-      facetValues {
-        name
-        facet {
-          code
-        }
       }
     }
   }

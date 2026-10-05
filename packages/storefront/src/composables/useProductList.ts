@@ -53,6 +53,7 @@ export interface ProductItem {
     slug: string;
     variants: ProductVariant[];
     facetValues: FacetValue[];
+    manufacturer?: { name?: string | null } | null;
 }
 
 export type ViewMode = 'list' | 'grid';
@@ -82,6 +83,7 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
         id: item.productId,
         name: item.productName,
         slug: item.slug,
+        manufacturer: item.manufacturer,
         variants: [
             {
                 id: item.productVariantId,

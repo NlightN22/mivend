@@ -79,6 +79,12 @@ import { CategoryOverrideRecomputeListener } from './category-override-recompute
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, isEmailOnlyWorker } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 import { adminApiExtensions } from './api/admin.schema';
+import { shopApiExtensions } from './api/shop.schema';
+import { ProductManufacturerService } from './product-manufacturer.service';
+import {
+    ProductManufacturerResolver,
+    SearchResultManufacturerResolver,
+} from './product-manufacturer.resolver';
 import { ReconciliationSummaryClient } from './reconciliation-summary.client';
 import { ReconciliationLocalCountsService } from './reconciliation-local-counts.service';
 import { ReconciliationService } from './reconciliation.service';
@@ -173,6 +179,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         OrderSubmittedListener,
         CategoryOverrideRecomputeListener,
         ProductTaxCodeFlagService,
+        ProductManufacturerService,
         ProductCategoryFlagService,
         ManufacturerService,
         ManufacturerFacetService,
@@ -195,6 +202,10 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
             ReconciliationResolver,
             KafkaLagResolver,
         ],
+    },
+    shopApiExtensions: {
+        schema: shopApiExtensions,
+        resolvers: [ProductManufacturerResolver, SearchResultManufacturerResolver],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
         // worker-email.ts never runs erp-integration's own tasks (#149) — see isEmailOnlyWorker.

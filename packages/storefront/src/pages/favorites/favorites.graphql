@@ -2,6 +2,9 @@ query FavoriteProducts($ids: [String!]!, $take: Int!) {
     products(options: { take: $take, filter: { id: { in: $ids } } }) {
         items {
             id
+            manufacturer {
+                name
+            }
             variants {
                 id
                 sku
@@ -9,12 +12,6 @@ query FavoriteProducts($ids: [String!]!, $take: Int!) {
                 customerPrice
                 currencyCode
                 stockLevel
-            }
-            facetValues {
-                name
-                facet {
-                    code
-                }
             }
         }
     }
