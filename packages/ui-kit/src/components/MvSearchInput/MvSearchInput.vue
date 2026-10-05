@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import MvSearchDropdown from './MvSearchDropdown.vue';
+import MvSearchScopeChip from './MvSearchScopeChip.vue';
+import MvSearchSubmitButton from './MvSearchSubmitButton.vue';
 
 export type SuggestionGroupType = 'products' | 'brands' | 'oem' | 'vin' | 'analogs' | 'previous';
 
@@ -140,17 +142,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
           },
         ]"
       >
-        <span v-if="scopeLabel" class="mv-search__scope" :title="scopeLabel">
-          <span class="mv-search__scope-label">{{ scopeLabel }}</span>
-          <button
-            class="mv-search__scope-remove"
-            type="button"
-            aria-label="Remove category"
-            @click="emit('removeScope')"
-          >
-            ×
-          </button>
-        </span>
+        <MvSearchScopeChip v-if="scopeLabel" :label="scopeLabel" @remove="emit('removeScope')" />
         <input
           ref="inputRef"
           class="mv-search__input"
@@ -172,15 +164,12 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
         >
           ×
         </button>
-        <button
-          class="mv-search__btn"
-          type="button"
+        <MvSearchSubmitButton
+          :label="props.buttonLabel"
+          :loading="loading"
           :disabled="disabled"
           @click="onSearch"
-        >
-          <span v-if="loading" class="mv-search__spinner" aria-hidden="true" />
-          <span v-else>{{ props.buttonLabel }}</span>
-        </button>
+        />
       </div>
 
       <p v-if="error" class="mv-search__error">{{ error }}</p>
@@ -247,38 +236,6 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
   outline: none;
 }
 
-.mv-search__scope {
-  display: flex;
-  align-items: center;
-  align-self: center;
-  gap: 4px;
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 40%;
-  margin-left: 10px;
-  padding: 4px 4px 4px 10px;
-  border-radius: 10px;
-  background: #E6F7F2;
-  color: #00715A;
-  font-size: 13px;
-  font-weight: 700;
-}
-.mv-search__scope-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mv-search__scope-remove {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: inherit;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-}
-.mv-search__scope-remove:hover { background: rgba(0, 113, 90, 0.15); }
-
 .mv-search__input::placeholder { color: #667085; }
 
 .mv-search__clear {
@@ -295,36 +252,6 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
   padding: 0;
 }
 .mv-search__clear:hover { color: #17212B; }
-
-.mv-search__btn {
-  min-width: 100px;
-  border: none;
-  background: #00B894;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  font-family: var(--app-font-family, Inter, system-ui, sans-serif);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 20px;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.mv-search__btn:hover:not(:disabled) { background: #00A884; }
-.mv-search__btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.mv-search__spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255,255,255,0.4);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: mv-spin 0.6s linear infinite;
-}
-@keyframes mv-spin { to { transform: rotate(360deg); } }
 
 .mv-search__error {
   margin: 6px 2px 0;
