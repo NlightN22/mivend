@@ -1,6 +1,16 @@
 # Project Context
 
-Updated: 2026-10-05 16:30
+Updated: 2026-10-05 17:30
+
+## Recent changes (2026-10-05 — #164 manufacturer names, #171/#172 search+category, lazy PDF Chromium; closed/audited)
+
+- Manufacturers: own inbox stream `manufacturer` (topic `company.catalog.events.v1.manufacturer-changed`, search-platform#130) → `ManufacturerStreamHandler` → `ManufacturerService.upsert` → facet; the product-side nameless stub stays. Facet response skips FacetValues whose name equals their code. Bulk backfill = search-platform `resync:bulk --types manufacturer` (#163); ask `sp.auditor.common`. Staging: 1812 manufacturers, 0 nameless.
+- Kafka consumer: `handleMessage` rethrows inbox `enqueue` failures (no offset commit); only decode errors are skipped. A stream with no `SCHEMA_BY_STREAM` entry is not subscribed. Lesson: ts-node-dev workers can keep a stale build after a plugin change; restart the contour (`make dev-staging-integration`) before trusting a consumer run.
+- Search: `facets.category` from search-platform#166 → `SearchResponse.collections` (slug `cat-<ErpId>`, rolled-up counts, ordered by count). Term + category work together (category narrows the search; header `MvSearchInput` shows it as a removable scope chip, `buildSearchLocation` keeps only q+collection). Category skeleton while counts load. Manufacturer facet ordered by count (storefront only). `CatalogFacets` `take:0` is sent as limit 1 (search-service rejects limit 0).
+- `useProductList`: a failed `load()` clears stale results and sets `loadError` (`MvErrorState`, `describeLoadError`); same-tick triggers coalesce into one request. The error state exists only on the catalog list; other pages still fail unevenly.
+- `PdfBrowserService` launches Chromium lazily and closes it after `PDF_BROWSER_IDLE_MS` (5 min), reconnects on `disconnected`, drains on shutdown. Before this every Vendure process held a Chrome (~4 GB, orphans on hot reload). Check `ps aux | grep puppeteer` before blaming code for a slow box.
+- UI: `MvFacetGroup` row hover/selected tints (category-nav tokens), facet search field in the shared input style, "Clear selection"; infinite-scroll spinner; mobile sidebar overflow fixed.
+- Open: #168 brand on cards (needs `Product.manufacturerId` name in the Shop API). Zombie `esbuild` children of a long-lived `tsx watch` are harmless.
 
 ## Recent changes (2026-10-05 — #170 active-filter chips in the catalog, shipped/audited/closed)
 
