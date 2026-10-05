@@ -343,27 +343,14 @@ export const config: VendureConfig = {
                 defaultValue: false,
                 label: [{ languageCode: LanguageCode.en, value: 'On Sale' }],
             },
-            // Issue #116 — ProductChanged's `manufacturer` field is an ERP directory GUID, not a
-            // display name (confirmed live with Search Platform — the field's own OpenAPI
-            // description is misleading). A relation to the real Manufacturer entity, not a
-            // plain string field; ProductStreamHandler resolves/creates the Manufacturer and
-            // backfills its name from the 'attributes' map's own 'Производитель' key.
+            // ERP directory GUID resolved to a Manufacturer entity (#116), not a display name.
             {
                 name: 'manufacturer',
                 type: 'relation',
                 entity: Manufacturer,
                 graphQLType: 'Manufacturer',
                 nullable: true,
-                // Admin-only for now — not consumed anywhere in packages/storefront yet, and the
-                // "Manufacturer" GraphQL type is only declared in erp-integration's
-                // adminApiExtensions, not a shopApiExtensions (which doesn't exist in that
-                // plugin at all). Without `public: false`, Vendure tries to expose this relation
-                // in the Shop API too and fails schema build at bootstrap since that type isn't
-                // there — a real, previously-unnoticed startup crash (only @vendure/dashboard's
-                // own standalone schema-generator building the Admin API surfaced the sibling
-                // Admin API version of this bug first; the real server bootstrap hits the Shop
-                // API version). If a future storefront feature needs to read this field, add a
-                // `type Manufacturer` to a new shopApiExtensions and flip this back to public.
+                // Hidden from the generic Shop API field; it serves `ProductManufacturer` via a resolver (#168).
                 public: false,
                 label: [{ languageCode: LanguageCode.en, value: 'Manufacturer' }],
             },

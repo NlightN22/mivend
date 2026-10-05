@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
-import { brandOf } from '../utils/brand';
 import { ref, computed } from 'vue';
 import { toast } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
+import { brandOf } from '../utils/brand';
 import {
     AddToCartDocument,
     AdjustCartLineDocument,

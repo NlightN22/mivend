@@ -45,6 +45,8 @@ const CATEGORY_FACET_CACHE_TTL_MS = 5_000;
 // reads it, never creates a category facet or facet value itself.
 const CATEGORY_FACET_CODE = 'category';
 
+const EMPTY_ERP_REF = '00000000-0000-0000-0000-000000000000';
+
 // Applies Integration Service's `product` stream (ProductChanged). Deliberately reuses the same
 // lookup shape as erp-import's ProductHandler (match by `customFieldsExternalid`) rather than a
 // second, competing external-id scheme — both are "the ERP's product id", just arriving over two
@@ -54,8 +56,6 @@ const CATEGORY_FACET_CODE = 'category';
 // ProductChanged has no `organizationId` field at all (issue #63) — the customFields.organizationId
 // shortcut (issue #62 design point 5) is populated by a different, unrelated path and is left
 // untouched here.
-const EMPTY_ERP_REF = '00000000-0000-0000-0000-000000000000';
-
 @Injectable()
 export class ProductStreamHandler implements InboundStreamHandler {
     constructor(

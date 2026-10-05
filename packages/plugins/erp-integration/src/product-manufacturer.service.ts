@@ -18,7 +18,6 @@ export class ProductManufacturerService {
 
     constructor(private connection: TransactionalConnection) {}
 
-    // Batches the per-product field resolvers of one request into a single query.
     getForProduct(ctx: RequestContext, productId: ID): Promise<ProductManufacturerView | null> {
         let loader = this.loaders.get(ctx);
         if (!loader) {
@@ -31,7 +30,7 @@ export class ProductManufacturerService {
         return loader.load(String(productId));
     }
 
-    async getForProducts(
+    private async getForProducts(
         ctx: RequestContext,
         productIds: string[],
     ): Promise<Map<string, ProductManufacturerView>> {
