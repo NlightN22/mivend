@@ -38,6 +38,10 @@ const btnLabel = computed(() => {
     return 'Confirm order';
 });
 
+const deliveryLabel = computed(() =>
+    checkoutStore.selectedDelivery === 'courier' ? 'Courier' : 'Self-pickup',
+);
+
 const btnOrange = computed(() => checkoutStore.selectedPayment === 'online');
 
 async function handlePrimary(): Promise<void> {
@@ -72,7 +76,7 @@ async function handlePrimary(): Promise<void> {
             </div>
             <div class="checkout-summary__line">
                 <span>Delivery</span>
-                <strong>Per contract</strong>
+                <strong>{{ deliveryLabel }}</strong>
             </div>
             <div v-if="cartStore.discountAmount > 0" class="checkout-summary__line">
                 <span>Customer discount</span>
