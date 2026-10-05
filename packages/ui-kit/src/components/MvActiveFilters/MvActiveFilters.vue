@@ -28,11 +28,11 @@ const emit = defineEmits<{ remove: [key: string]; clear: [] }>();
                 :aria-label="`${removeLabel}: ${chip.label}`"
                 @click="emit('remove', chip.key)"
             >
-                <IconX :size="14" :stroke="2.2" />
+                <IconX :size="14" stroke-width="2.2" />
             </button>
         </span>
         <button type="button" class="mv-active-filters__clear" @click="emit('clear')">
-            <IconX :size="14" :stroke="2.2" />
+            <IconX :size="14" stroke-width="2.2" />
             {{ clearLabel }}
         </button>
     </div>
