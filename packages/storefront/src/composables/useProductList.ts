@@ -254,10 +254,21 @@ export function useProductList(options: UseProductListOptions = {}): {
         }
     }
 
-    if (query) watch(query, load);
-    if (collectionSlug) watch(collectionSlug, load);
-    if (filters) watch(filters, load, { deep: true });
-    watch(sortKey, load);
+    // Several triggers in one tick (query + collection + filters reset) must issue one request.
+    let loadScheduled = false;
+    function scheduleLoad(): void {
+        if (loadScheduled) return;
+        loadScheduled = true;
+        queueMicrotask(() => {
+            loadScheduled = false;
+            load().catch(() => undefined); // load() already records the error state
+        });
+    }
+
+    if (query) watch(query, scheduleLoad);
+    if (collectionSlug) watch(collectionSlug, scheduleLoad);
+    if (filters) watch(filters, scheduleLoad, { deep: true });
+    watch(sortKey, scheduleLoad);
 
     return {
         items,
