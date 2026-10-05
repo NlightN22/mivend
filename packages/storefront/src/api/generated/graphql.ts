@@ -4319,6 +4319,7 @@ export type CatalogFacetsQueryVariables = Exact<{
 
 export type CatalogFacetsQuery = {
     search: {
+        collections: Array<{ count: number; collection: { slug: string } }>;
         facetValues: Array<{
             count: number;
             facetValue: {
@@ -5264,6 +5265,12 @@ export const CatalogFacetsDocument = new TypedDocumentString(`
   search(
     input: {term: $term, take: 0, skip: 0, groupByProduct: true, collectionSlug: $collectionSlug, inStock: $inStock, priceRangeWithTax: $priceRangeWithTax}
   ) {
+    collections {
+      collection {
+        slug
+      }
+      count
+    }
     facetValues {
       facetValue {
         id

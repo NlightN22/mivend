@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+    applyCategoryCounts,
     buildCategoryPanel,
     buildCategoryTree,
     fetchAllCollections,
@@ -175,5 +176,27 @@ describe('filterVisibleCrumbs', () => {
         const tree = buildCategoryTree([col('2', []), col('3', ['2'])]);
         expect(tree[0].children[0].children).toEqual([]);
         expect(buildCategoryPanel(tree, 's3').level.map(c => c.id)).toEqual(['3']);
+    });
+});
+
+describe('applyCategoryCounts', () => {
+    const tree = buildCategoryTree([col('2', []), col('3', ['2']), col('4', ['2']), col('5', [])]);
+
+    it('keeps only categories with matches and attaches their counts', () => {
+        const pruned = applyCategoryCounts(
+            tree,
+            new Map([
+                ['s2', 5],
+                ['s3', 5],
+                ['zzz', 9],
+            ]),
+        );
+        expect(pruned.map(n => [n.id, n.count])).toEqual([['2', 5]]);
+        expect(pruned[0].children.map(n => [n.id, n.count])).toEqual([['3', 5]]);
+        expect(buildCategoryPanel(pruned).level[0].count).toBe(5);
+    });
+
+    it('returns an empty tree when nothing matches', () => {
+        expect(applyCategoryCounts(tree, new Map())).toEqual([]);
     });
 });

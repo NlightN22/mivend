@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, toRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { useCatalogStore } from '../../stores/catalog';
+import { useCategoryPanel } from '../../composables/useCategoryPanel';
 import { useProductList, type FilterState } from '../../composables/useProductList';
 import { MvCatalogFacets, MvBreadcrumbs } from '@mivend/ui-kit';
 import ProductListView from '../../components/ProductListView.vue';
@@ -11,7 +12,6 @@ import ProductListView from '../../components/ProductListView.vue';
 // compiled package output breaks a Vite production build.
 import {
     resolveCategoryFacetValueId,
-    buildCategoryPanel,
     findCategoryPath,
 } from '../../../../shared/src/collectionTree';
 
@@ -42,7 +42,7 @@ const activeCollectionSlug = computed(() =>
     searchQuery.value ? undefined : ((route.query.collection as string) || undefined),
 );
 
-const { items, facetGroups, totalItems, loading, loadError, loadErrorInfo, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, priceRangeSupported, load, loadMore } =
+const { items, facetGroups, categoryCounts, totalItems, loading, loadError, loadErrorInfo, loadingMore, hasMore, viewMode, setViewMode, sortKey, sortOptions, priceRangeSupported, load, loadMore } =
     useProductList({ pageSize: 24, query: searchQuery, filters, collectionSlug: activeCollectionSlug });
 
 // Sync filter state → URL (replace so back button works correctly)
@@ -88,8 +88,11 @@ const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds))
 
 const selectedCategorySlug = computed(() => (route.query.collection as string) || undefined);
 
-const categoryPanel = computed(() =>
-    buildCategoryPanel(catalogStore.collections, selectedCategorySlug.value),
+const categoryPanel = useCategoryPanel(
+    toRef(catalogStore, 'collections'),
+    selectedCategorySlug,
+    searchQuery,
+    categoryCounts,
 );
 
 const categoryPath = computed(() =>
@@ -155,7 +158,7 @@ onMounted(() => {
                 :price-min="filters.priceMin"
                 :price-max="filters.priceMax"
                 :show-price="priceRangeSupported"
-                :category-panel="searchQuery ? undefined : categoryPanel"
+                :category-panel="categoryPanel"
                 :category-more-label="t('catalogNav.more')"
                 :category-less-label="t('catalogNav.less')"
                 :facet-show-all-label="t('catalogNav.showAll')"

@@ -8,6 +8,7 @@ export interface CategoryNavItem {
     name: string;
     slug: string;
     isHidden?: boolean;
+    count?: number;
 }
 
 export interface CategoryNavPanel {
@@ -76,6 +77,7 @@ const visibleLevel = computed(() => {
                 </span>
                 <button v-else type="button" class="mv-category-nav__item" @click="emit('navigate', item.slug)">
                     {{ item.name }}
+                    <span v-if="item.count !== undefined" class="mv-category-nav__count">{{ item.count }}</span>
                     <MvStatusTag v-if="item.isHidden" variant="unavailable" class="mv-category-nav__hidden" data-testid="category-hidden-marker">{{ hiddenLabel }}</MvStatusTag>
                 </button>
             </template>
@@ -128,6 +130,12 @@ const visibleLevel = computed(() => {
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+.mv-category-nav__count {
+    margin-left: 6px;
+    color: #8a9a94;
+    font-size: 12px;
 }
 
 .mv-category-nav__hidden {

@@ -74,6 +74,12 @@ query CatalogFacets($term: String, $collectionSlug: String, $inStock: Boolean, $
             priceRangeWithTax: $priceRangeWithTax
         }
     ) {
+        collections {
+            collection {
+                slug
+            }
+            count
+        }
         facetValues {
             facetValue {
                 id

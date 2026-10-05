@@ -112,6 +112,7 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
 export function useProductList(options: UseProductListOptions = {}): {
     items: Ref<ProductItem[]>;
     facetGroups: Ref<FacetGroup[]>;
+    categoryCounts: Ref<Map<string, number>>;
     totalItems: Ref<number>;
     loading: Ref<boolean>;
     loadError: Ref<boolean>;
@@ -130,6 +131,7 @@ export function useProductList(options: UseProductListOptions = {}): {
 
     const items = ref<ProductItem[]>([]);
     const facetGroups = ref<FacetGroup[]>([]);
+    const categoryCounts = ref(new Map<string, number>());
     const totalItems = ref(0);
     const loading = ref(false);
     const loadError = ref(false);
@@ -199,6 +201,7 @@ export function useProductList(options: UseProductListOptions = {}): {
                 loadErrorInfo.value = describeLoadError(e);
                 items.value = [];
                 facetGroups.value = [];
+                categoryCounts.value = new Map();
                 totalItems.value = 0;
                 hasMore.value = false;
                 loadError.value = true;
@@ -211,6 +214,9 @@ export function useProductList(options: UseProductListOptions = {}): {
 
         const facetValues = facetsResult?.search.facetValues ?? productsResult.search.facetValues;
         facetGroups.value = buildFacetGroups(facetValues);
+        categoryCounts.value = new Map(
+            (facetsResult?.search.collections ?? []).map(c => [c.collection.slug, c.count]),
+        );
         items.value = mapItems(productsResult.search.items, facetValues);
         totalItems.value = productsResult.search.totalItems;
         currentSkip = productsResult.search.items.length;
@@ -247,6 +253,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     return {
         items,
         facetGroups,
+        categoryCounts,
         totalItems,
         loading,
         loadError,

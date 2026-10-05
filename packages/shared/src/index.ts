@@ -20,6 +20,7 @@ export {
 export {
     buildCategoryTree,
     buildCategoryPanel,
+    applyCategoryCounts,
     findCategoryPath,
     filterVisibleCrumbs,
     fetchAllCollections,

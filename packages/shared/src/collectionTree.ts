@@ -5,6 +5,8 @@ export interface CollectionNode {
     iconUrl?: string | null;
     // Set only for private collections (manager sees them); absent means visible.
     isHidden?: boolean;
+    // Matching products; set only on search-result trees (see applyCategoryCounts).
+    count?: number;
     children: CollectionNode[];
 }
 
@@ -57,6 +59,19 @@ export function buildCategoryTree(items: RawCollection[]): CollectionNode[] {
     return roots;
 }
 
+// Keeps only categories with matching products (counts are rolled up to ancestors upstream).
+export function applyCategoryCounts(
+    tree: CollectionNode[],
+    countBySlug: ReadonlyMap<string, number>,
+): CollectionNode[] {
+    return tree.flatMap(node => {
+        const children = applyCategoryCounts(node.children, countBySlug);
+        const count = countBySlug.get(node.slug) ?? 0;
+        if (count <= 0 && children.length === 0) return [];
+        return [{ ...node, ...(count > 0 ? { count } : {}), children }];
+    });
+}
+
 // Root..self, only nodes present in the tree; empty when the slug is unknown.
 export function findCategoryPath(tree: CollectionNode[], slug: string): CollectionNode[] {
     for (const node of tree) {
@@ -86,6 +101,7 @@ export interface CategoryCrumb {
     name: string;
     slug: string;
     isHidden?: boolean;
+    count?: number;
 }
 
 export const MAX_PANEL_ANCESTORS = 2;
@@ -105,6 +121,7 @@ const toCrumb = (n: CollectionNode): CategoryCrumb => ({
     name: n.name,
     slug: n.slug,
     ...(n.isHidden ? { isHidden: true } : {}),
+    ...(n.count !== undefined ? { count: n.count } : {}),
 });
 
 export function buildCategoryPanel(
