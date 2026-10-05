@@ -22,17 +22,14 @@ jobs:
                   node-version: 20
                   cache: pnpm
 
+            - run: pnpm config set "//npm.pkg.github.com/:_authToken" "${{ secrets.PACKAGES_READ_TOKEN }}"
             - run: pnpm install --frozen-lockfile
-              env:
-                  GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
             - name: Lint
               run: pnpm lint
 
             - name: Check erp-integration event-contracts drift
               run: make check-event-contracts
-              env:
-                  GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
             - name: Format check
               run: pnpm format:check
@@ -64,9 +61,8 @@ jobs:
                   node-version: 20
                   cache: pnpm
 
+            - run: pnpm config set "//npm.pkg.github.com/:_authToken" "${{ secrets.PACKAGES_READ_TOKEN }}"
             - run: pnpm install --frozen-lockfile
-              env:
-                  GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
             - name: Run unit tests
               run: pnpm test
