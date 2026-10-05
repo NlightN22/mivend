@@ -4,6 +4,9 @@ import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import MvFacetGroup from '../MvFacetGroup/MvFacetGroup.vue';
 import MvCategoryNav, { type CategoryNavPanel } from '../MvCategoryNav/MvCategoryNav.vue';
 
+// Mirrors shared/characteristicFacet.ts; ui-kit does not depend on shared.
+const CHARACTERISTIC_FACET_PREFIX = 'characteristic:';
+
 const props = withDefaults(
     defineProps<{
         facetGroups: {
@@ -175,6 +178,7 @@ function onMaxInput(e: Event): void {
                 :collapse-label="facetCollapseLabel"
                 :clear-label="facetClearLabel"
                 :search-placeholder="facetSearchPlaceholder"
+                :plain="group.code.startsWith(CHARACTERISTIC_FACET_PREFIX)"
                 @toggle="emit('toggleFacetValue', $event)"
                 @clear="emit('clearFacetValues', $event)"
             />

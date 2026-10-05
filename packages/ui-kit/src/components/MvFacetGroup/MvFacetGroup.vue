@@ -19,6 +19,7 @@ const props = withDefaults(
         collapseLabel?: string;
         clearLabel?: string;
         searchPlaceholder?: string;
+        plain?: boolean;
     }>(),
     {
         showAllLabel: 'Show all',
@@ -67,7 +68,10 @@ function collapse(): void {
                 v-for="val in visible"
                 :key="val.id"
                 class="mv-facet-group__row"
-                :class="{ 'mv-facet-group__row--on': selected.has(val.id) }"
+                :class="{
+                    'mv-facet-group__row--on': selected.has(val.id),
+                    'mv-facet-group__row--plain': plain,
+                }"
             >
                 <input
                     class="mv-facet-group__check"
@@ -75,7 +79,7 @@ function collapse(): void {
                     :checked="selected.has(val.id)"
                     @change="emit('toggle', val.id)"
                 />
-                <span class="mv-facet-group__icon">
+                <span v-if="!plain" class="mv-facet-group__icon">
                     <img v-if="val.iconUrl" :src="val.iconUrl" alt="" loading="lazy" />
                     <template v-else>{{ val.name.charAt(0).toUpperCase() }}</template>
                 </span>
@@ -165,6 +169,18 @@ function collapse(): void {
     position: absolute;
     opacity: 0;
     pointer-events: none;
+}
+
+.mv-facet-group__row--plain .mv-facet-group__check {
+    position: static;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    opacity: 1;
+    pointer-events: auto;
+    accent-color: #00b894;
+    cursor: pointer;
 }
 
 .mv-facet-group__icon {
