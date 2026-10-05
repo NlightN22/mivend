@@ -1,6 +1,16 @@
 # Project Context
 
-Updated: 2026-10-05 17:45
+Updated: 2026-10-05 20:30
+
+## Recent changes (2026-10-05 evening — storefront UX pass, audited by mivend.audit.common, pushed to main up to 9844399)
+
+- Cart/checkout: dead "Repeat last order"/"Pre-order checks" cards removed (repeat-last-order = #175, low priority); zero "Customer discount" and the pre-discount Subtotal/Goods row are hidden unless a discount applies; `discountAmount` (rounded per line) and `totalQuantity` live in the cart store (unit-tested); "pcs." = sum of quantities everywhere; checkout Delivery shows the selected method; weight/volume via shared `formatPackaging` ("< 0.001 m³", unknown volume omitted).
+- Unit volume is m³ end to end: the ERP's `volume_l` field carries cubic metres despite its name; stored unconverted as `UnitRecord.volumeM3` / `ProductVariant.customFields.unitVolumeM3` (migration 1791000000007 = RENAME COLUMN only; staging/local DBs were renamed by hand, values as received). A local DB on `synchronize` loses old volumes until the `unit` stream is re-imported. Some ERP units have garbage volumes (e.g. 59160 m³ for a car seat, likely cm³) — being fixed in the ERP side.
+- Storefront outage handling mirrors the manager: `MvConnectionBar` (top bar + relogin escalation), live dead-session heartbeat in `stores/auth.ts` (`reconnectingSince`), `ProductPage` uses `MvErrorState` + `describeLoadError`.
+- Header search suggestions (`useSearchSuggestions`, top-5 products via the shared `search` query, debounced 250 ms, min 2 chars, scoped by the category chip; `MvSearchInput` emits `select` for items with `to`). Works on both backends (no new capability).
+- `MvCatalogFacets` sidebar no longer scrolls/sticks: it grows with content.
+- Open issues from this pass: #174 (sale widget from active promo/discount rules + show price before/after; "new arrivals" use local `Product.createdAt`, ERP sends no new/sale flags), #175 (repeat last order). Home widgets being empty on staging was a data gap, not a regression.
+- Gotchas learned: `make test`/lint do not restart the dev stack but any source edit under `apps/server`/plugins respawns ts-node-dev (API ~1 min down); dev/staging use `synchronize`, so a column rename in code must be preceded by the same rename in the DB or data is lost.
 
 ## Recent changes (2026-10-05 — #168 brand from manufacturer, shipped/audited/closed; follow-up #173)
 
@@ -59,37 +69,11 @@ Updated: 2026-10-05 17:45
 - Restart lesson: `main.ts` on :3010 does not hot-reload linked plugin `dist`; use
   `make dev-staging-integration` (it kills the old contour itself) and wait for `/health` 200.
 
-## Recent changes (2026-10-04 — #70 guest price, branch stock tiers, currency; closed/audited)
+## #70 guest price, branch stock tiers (compressed, closed/audited — full text: `.backup/PROJECT_CONTEXT.20261005-70-stock-tiers.md`)
 
-- Prices: API resolves a guest's default price (branch default `PriceType`, general discounts only);
-  the storefront UI hides price AND stock tier from guests ("Log in to see prices"). docs/pricing.md.
-- Default branch/price type bootstrapped by `plugin-access-control` options (#161, closed):
-  `BOOTSTRAP_BRANCH_NAMES` (first = `GlobalSettings.defaultBranchId` if empty), `DEFAULT_PRICE_TYPE_CODE`
-  (looked up via `CustomerPricingService`), `BranchSettings.defaultWarehouseId` nullable. Branch is
-  mivend's own entity (never from ERP), bootstrap-by-name is its source of truth.
-- Stock tiers (docs/order-flow.md): `SearchResult.stockLevel` and the overridden Shop API
-  `ProductVariant.stockLevel` = tier of the viewer's branch ATP (none ≤0, low 1–4, medium 5–19, high
-  20+; thresholds `stockTierLowMax`/`stockTierMediumMax` in GlobalSettings, migration 1791000000006).
-  Branch = counterparty's, else default branch (guest, admin-api contexts too). `inStock` input sends
-  the branch warehouse ERP ids as `filters.warehouseIds` (search-platform#158, live). Resolver-only
-  override: never `extend type ProductVariant { stockLevel }` (crashes bootstrap). Four tiers in the UI
-  via one ui-kit mapper (`StockVariant`, `stockVariantFromLevel`, labels В наличии/Достаточно/Мало/Нет).
-- Stock bug fixed (f46a2e7): `stock.handler.ts` saved a stale StockLevel and reset stockOnHand to 0;
-  staging replayed by resetting the latest processed `stock` inbox row per entity to `pending`.
-- Default channel currency bootstrapped to RUB (`DEFAULT_CURRENCY_CODE`, config is source of truth).
-- Staging-integration data set by hand: 5 warehouses assigned to branches (Abakan: ids 18, 15;
-  Krasnoyarsk: 8, 14, 30; service/defect warehouses stay unassigned). Test customer
-  `test@komponent-m.ru` (counterparty 21560, retail price type; login/password in the gitignored `apps/server/.env.central.staging-integration` as `STAGING_TEST_CUSTOMER_EMAIL`/`STAGING_TEST_CUSTOMER_PASSWORD` (reset in the contour DB on 2026-10-04),
-  not in the repo; KEEP it). Counterparty `officialEmail` comes from ERP kind "Служебный адрес
-  электронной почты контрагента" only.
-- #167 (closed, audited, 4fe0e1a + 4651c5f): `stock.handler.ts` ignores a stock fact for an unknown warehouse
-  when the LATEST inbox `warehouse` event for it is a processed tombstone (`warehouse-tombstone.query.ts`,
-  real-Postgres test); otherwise still retries (ordering race). Staging: 12833 failed stock rows reset
-  to pending, all processed, none failed. Doc: order-flow.md.
-- Open follow-ups: #162 (favorites IDs only + gate stock by login), #163
-  (warehouse hierarchy, other session), search-platform#159 (stop exporting deleted warehouses).
-  Known limits: `inStock` filter (ERP stock) can disagree briefly with `stockLevel` (mivend ATP).
-
+- Guests: API resolves default price (branch default `PriceType`); UI hides price AND stock tier. Default branch/price type/RUB currency bootstrapped from options (`BOOTSTRAP_BRANCH_NAMES`, `DEFAULT_PRICE_TYPE_CODE`, `DEFAULT_CURRENCY_CODE`); branch is mivend's own entity.
+- Stock tiers: `stockLevel` = tier of the viewer's branch ATP (none/low/medium/high, thresholds in GlobalSettings). Resolver-only override: never `extend type ProductVariant { stockLevel }` (crashes bootstrap). `inStock` filter (ERP stock) can briefly disagree with `stockLevel` (mivend ATP). #167: `stock.handler.ts` skips facts for tombstoned warehouses.
+- Staging test customer `test@komponent-m.ru` (creds: `STAGING_TEST_CUSTOMER_EMAIL`/`_PASSWORD` in the gitignored `.env.central.staging-integration`); KEEP it. Warehouses were assigned to branches by hand.
 ## Recent changes (2026-10-04 — #160 ExternalSearchPlugin, unblocked part shipped/audited)
 
 - `SEARCH_BACKEND=external`: `totalItems` = search-service `total` (hits not synced into our DB are
