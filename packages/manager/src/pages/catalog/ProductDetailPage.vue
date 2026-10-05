@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { MvButton, MvProductGallery, MvProductMainCards } from '@mivend/ui-kit';
+import { MvButton, MvProductGallery, MvProductMainCards, stockVariantFromQuantity } from '@mivend/ui-kit';
 import {
     fetchProductBySlug,
     fetchCrossReferences,
@@ -29,11 +29,7 @@ const brand = computed(
 );
 const primaryVariant = computed(() => product.value?.variants[0] ?? null);
 const stockOnHand = computed(() => primaryVariant.value?.stockOnHand ?? 0);
-const stockVariantLabel = computed((): 'ok' | 'low' | 'out' => {
-    if (stockOnHand.value === 0) return 'out';
-    if (stockOnHand.value < 10) return 'low';
-    return 'ok';
-});
+const stockVariantLabel = computed(() => stockVariantFromQuantity(stockOnHand.value));
 
 onMounted(async () => {
     loading.value = true;
