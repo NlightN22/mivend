@@ -95,4 +95,19 @@ describe('SearchFilterResolver', () => {
             'wh-2',
         ]);
     });
+
+    it('maps characteristic facet values to key + normalized filters', async () => {
+        const facetValues = [
+            { code: 'синтетическое', facet: { code: 'characteristic:Тип' } },
+            { code: 'SN', facet: { code: 'characteristic:Классификация API' } },
+        ];
+        const r = await makeResolver({ facetValues }).resolve(ctx, {
+            facetValueFilters: [{ or: ['1', '2'] }],
+        });
+        expect(r.characteristics).toEqual([
+            { key: 'Тип', normalized: 'синтетическое' },
+            { key: 'Классификация API', normalized: 'SN' },
+        ]);
+        expect(r.unsatisfiable).toBe(false);
+    });
 });

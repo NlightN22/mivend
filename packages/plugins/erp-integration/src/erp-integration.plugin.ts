@@ -22,6 +22,7 @@ import { ProductManufacturerCode } from './entities/product-manufacturer-code.en
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import { ProductTaxCodeFlagService } from './product-tax-code-flag.service';
 import { ProductCategoryFlagService } from './product-category-flag.service';
+import { CharacteristicFacetService } from './characteristic-facet.service';
 import { ManufacturerFacetService } from './manufacturer-facet.service';
 import { ManufacturerService } from './manufacturer.service';
 import { ProductAncillaryDataService } from './product-ancillary-data.service';
@@ -183,6 +184,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ProductCategoryFlagService,
         ManufacturerService,
         ManufacturerFacetService,
+        CharacteristicFacetService,
         ProductAncillaryDataService,
         ReconciliationSummaryClient,
         ReconciliationLocalCountsService,

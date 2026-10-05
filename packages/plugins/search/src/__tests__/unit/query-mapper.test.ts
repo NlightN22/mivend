@@ -6,7 +6,7 @@ import {
     type ResolveQueryRequest,
 } from '../../query-mapper';
 
-const none = { manufacturer: [] as string[], unsatisfiable: false };
+const none = { manufacturer: [] as string[], characteristics: [], unsatisfiable: false };
 
 describe('mapSearchInputToResolveQueryRequest', () => {
     it('maps term/take/skip to query/limit/offset with relevance sort', () => {
@@ -28,7 +28,12 @@ describe('mapSearchInputToResolveQueryRequest', () => {
     it('passes resolved category and manufacturer filters', () => {
         const request = mapSearchInputToResolveQueryRequest(
             {},
-            { categoryId: 'cat-1', manufacturer: ['m-1', 'm-2'], unsatisfiable: false },
+            {
+                categoryId: 'cat-1',
+                manufacturer: ['m-1', 'm-2'],
+                characteristics: [],
+                unsatisfiable: false,
+            },
         );
         expect(request).toMatchObject({
             query: '',
@@ -40,7 +45,7 @@ describe('mapSearchInputToResolveQueryRequest', () => {
     it('inStock narrows availability to the viewer branch warehouses', () => {
         const request = mapSearchInputToResolveQueryRequest(
             { term: 'oil', inStock: true },
-            { manufacturer: [], warehouseIds: ['wh-1'], unsatisfiable: false },
+            { manufacturer: [], characteristics: [], warehouseIds: ['wh-1'], unsatisfiable: false },
         );
         expect(request).toMatchObject({
             availableOnly: true,
@@ -51,7 +56,7 @@ describe('mapSearchInputToResolveQueryRequest', () => {
     it('an empty warehouse list is still sent (no visible stock means no results, not all)', () => {
         const request = mapSearchInputToResolveQueryRequest(
             { term: 'oil', inStock: true },
-            { manufacturer: [], warehouseIds: [], unsatisfiable: false },
+            { manufacturer: [], characteristics: [], warehouseIds: [], unsatisfiable: false },
         );
         expect(request.filters).toEqual({ warehouseIds: [] });
     });
@@ -93,6 +98,13 @@ describe('hasBrowseCriteria', () => {
         [{ query: '', sort: 'priceAsc' }],
         [{ query: '', sort: 'priceDesc' }],
     ])('is true for %o', request => {
+        expect(hasBrowseCriteria(request)).toBe(true);
+    });
+
+    it('passes characteristic filters and counts them as browse criteria', () => {
+        const characteristics = [{ key: 'Тип', normalized: 'синтетическое' }];
+        const request = mapSearchInputToResolveQueryRequest({}, { ...none, characteristics });
+        expect(request.filters).toEqual({ characteristics });
         expect(hasBrowseCriteria(request)).toBe(true);
     });
 });

@@ -1,5 +1,7 @@
 import { FacetValue, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { characteristicFacetCode } from 'shared';
+
 import type { ResolveQueryFacets } from './search-service.client';
 import { loggerCtx } from './types';
 
@@ -8,9 +10,21 @@ export interface ExternalFacetValueResult {
     count: number;
 }
 
-// Maps search-service's manufacturer facet back to mivend FacetValues by code; values mivend
-// has not synced yet, or that still carry only their ERP id as a name, are skipped.
+// Maps search-service's manufacturer and characteristic facets back to mivend FacetValues
+// (manufacturer by code; characteristics by key facet + normalized value code). Values mivend has
+// not synced yet, or that still carry only their ERP id as a name, are skipped.
 export async function mapFacetsToFacetValues(
+    connection: TransactionalConnection,
+    ctx: RequestContext,
+    facets: ResolveQueryFacets | undefined,
+): Promise<ExternalFacetValueResult[]> {
+    return [
+        ...(await mapManufacturers(connection, ctx, facets)),
+        ...(await mapCharacteristics(connection, ctx, facets)),
+    ];
+}
+
+async function mapManufacturers(
     connection: TransactionalConnection,
     ctx: RequestContext,
     facets: ResolveQueryFacets | undefined,
@@ -36,6 +50,37 @@ export async function mapFacetsToFacetValues(
         else if (facetValue)
             Logger.verbose(`manufacturer facet ${value} has no name yet, skipped`, loggerCtx);
         else Logger.verbose(`manufacturer facet ${value} unknown to mivend, skipped`, loggerCtx);
+    }
+    return result;
+}
+
+async function mapCharacteristics(
+    connection: TransactionalConnection,
+    ctx: RequestContext,
+    facets: ResolveQueryFacets | undefined,
+): Promise<ExternalFacetValueResult[]> {
+    const entries = (facets?.characteristics ?? []).filter(e => e.count > 0);
+    if (entries.length === 0) return [];
+
+    const values = await connection
+        .getRepository(ctx, FacetValue)
+        .createQueryBuilder('fv')
+        .leftJoinAndSelect('fv.facet', 'facet')
+        .leftJoinAndSelect('fv.translations', 'translations')
+        .leftJoinAndSelect('facet.translations', 'facetTranslations')
+        .where('facet.code IN (:...facetCodes)', {
+            facetCodes: [...new Set(entries.map(e => characteristicFacetCode(e.key)))],
+        })
+        .andWhere('fv.code IN (:...codes)', { codes: [...new Set(entries.map(e => e.normalized))] })
+        .getMany();
+    const byKey = new Map(values.map(v => [`${v.facet.code}\u0000${v.code}`, v]));
+
+    const result: ExternalFacetValueResult[] = [];
+    for (const { key, normalized, count } of entries) {
+        const facetValue = byKey.get(`${characteristicFacetCode(key)}\u0000${normalized}`);
+        if (facetValue) result.push({ facetValue, count });
+        else
+            Logger.verbose(`characteristic facet ${key}=${normalized} unknown, skipped`, loggerCtx);
     }
     return result;
 }

@@ -14,6 +14,7 @@ import {
 import { ProductTaxCodeFlagService } from '../product-tax-code-flag.service';
 import { ProductCategoryFlagService } from '../product-category-flag.service';
 import { ManufacturerService } from '../manufacturer.service';
+import { CharacteristicFacetService } from '../characteristic-facet.service';
 import { ProductAncillaryDataService } from '../product-ancillary-data.service';
 import { TaxCategoryAutoCreateService } from '../tax-category-auto-create.service';
 import { resolveVatCode } from '../vat-code-resolver';
@@ -69,6 +70,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         private readonly productCategoryFlagService: ProductCategoryFlagService,
         private readonly manufacturerService: ManufacturerService,
         private readonly productAncillaryDataService: ProductAncillaryDataService,
+        private readonly characteristicFacetService: CharacteristicFacetService,
         private readonly taxCategoryAutoCreateService: TaxCategoryAutoCreateService,
         private readonly unitLookupService: UnitLookupService,
     ) {}
@@ -231,6 +233,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
             productId,
             characteristicRows,
         );
+        await this.characteristicFacetService.ensureValues(ctx, characteristicRows);
         await this.productAncillaryDataService.replaceManufacturerCodes(
             ctx,
             productId,

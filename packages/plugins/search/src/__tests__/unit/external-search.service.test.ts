@@ -56,7 +56,9 @@ function makeLookup(product: Product | null): {
 }
 
 const noFilters = {
-    resolve: vi.fn().mockResolvedValue({ manufacturer: [], unsatisfiable: false }),
+    resolve: vi
+        .fn()
+        .mockResolvedValue({ manufacturer: [], characteristics: [], unsatisfiable: false }),
 };
 const noDb = {};
 
@@ -253,7 +255,11 @@ describe('ExternalSearchService.search', () => {
             }),
         };
         const filters = {
-            resolve: vi.fn().mockResolvedValue({ categoryId: 'cat-erp', manufacturer: [] }),
+            resolve: vi.fn().mockResolvedValue({
+                categoryId: 'cat-erp',
+                manufacturer: [],
+                characteristics: [],
+            }),
         };
         const facetValue = { id: 7, code: 'mfr-1', translations: [{ name: 'Acme' }] };
         const getMany = vi.fn().mockResolvedValue([facetValue]);
@@ -356,6 +362,7 @@ describe('ExternalSearchService.search', () => {
         const filters = {
             resolve: vi.fn().mockResolvedValue({
                 manufacturer: [],
+                characteristics: [],
                 warehouseIds: ['wh-1', 'wh-2'],
                 unsatisfiable: false,
             }),
@@ -387,6 +394,7 @@ describe('ExternalSearchService.search', () => {
         const filters = {
             resolve: vi.fn().mockResolvedValue({
                 manufacturer: [],
+                characteristics: [],
                 warehouseIds: [],
                 unsatisfiable: false,
             }),
@@ -406,7 +414,9 @@ describe('ExternalSearchService.search', () => {
     it('returns an empty result without calling search-service when a requested filter is unsatisfiable', async () => {
         const client = { resolveQuery: vi.fn() };
         const filters = {
-            resolve: vi.fn().mockResolvedValue({ manufacturer: [], unsatisfiable: true }),
+            resolve: vi
+                .fn()
+                .mockResolvedValue({ manufacturer: [], characteristics: [], unsatisfiable: true }),
         };
         const service = new ExternalSearchService(
             client as unknown as SearchServiceClient,

@@ -50,3 +50,8 @@ export {
     ensureParentCategoryCollection,
     moveCategoryIfParentChanged,
 } from './categoryParentCollection';
+export {
+    CHARACTERISTIC_FACET_PREFIX,
+    characteristicFacetCode,
+    characteristicKeyFromFacetCode,
+} from './characteristicFacet';

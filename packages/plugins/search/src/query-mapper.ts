@@ -9,6 +9,7 @@ export interface ResolveQueryRequest {
     filters?: {
         manufacturer?: string[];
         warehouseIds?: string[];
+        characteristics?: Array<{ key: string; normalized: string }>;
         priceRange?: { min?: number; max?: number };
     };
     sort?: SearchServiceSort;
@@ -22,6 +23,7 @@ export function hasBrowseCriteria(request: ResolveQueryRequest): boolean {
         request.query ||
         request.categoryId ||
         request.filters?.manufacturer?.length ||
+        request.filters?.characteristics?.length ||
         request.filters?.priceRange ||
         request.sort === 'priceAsc' ||
         request.sort === 'priceDesc',
@@ -49,6 +51,9 @@ export function mapSearchInputToResolveQueryRequest(
     const filters = {
         ...(priceRange ? { priceRange } : {}),
         ...(resolved.manufacturer.length > 0 ? { manufacturer: resolved.manufacturer } : {}),
+        ...(resolved.characteristics.length > 0
+            ? { characteristics: resolved.characteristics }
+            : {}),
         ...(resolved.warehouseIds ? { warehouseIds: resolved.warehouseIds } : {}),
     };
     return {

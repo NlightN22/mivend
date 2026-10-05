@@ -8,7 +8,7 @@ import {
 } from '@vendure/core';
 import type { ID } from '@vendure/common/lib/shared-types';
 import { StockLevelService } from '@mivend/plugin-reservation';
-import { categoryErpIdFromSlug } from 'shared';
+import { categoryErpIdFromSlug, characteristicKeyFromFacetCode } from 'shared';
 
 import { loggerCtx, ShopSearchInput } from './types';
 
@@ -18,6 +18,7 @@ const CATEGORY_FACET_CODE = 'category';
 export interface ResolvedSearchFilters {
     categoryId?: string;
     manufacturer: string[];
+    characteristics: Array<{ key: string; normalized: string }>;
     warehouseIds?: string[];
     unsatisfiable: boolean;
 }
@@ -37,6 +38,7 @@ export class SearchFilterResolver {
         const categoryIds = fromCollections.ids;
         let unsatisfiable = fromCollections.unresolved;
         const manufacturer: string[] = [];
+        const characteristics: Array<{ key: string; normalized: string }> = [];
 
         const facetValueIds = [
             ...(input.facetValueIds ?? []),
@@ -50,7 +52,12 @@ export class SearchFilterResolver {
         for (const value of loaded) {
             if (value.facet.code === MANUFACTURER_FACET_CODE) manufacturer.push(value.code);
             else if (value.facet.code === CATEGORY_FACET_CODE) categoryIds.push(value.code);
-            else {
+            else if (characteristicKeyFromFacetCode(value.facet.code) !== undefined) {
+                characteristics.push({
+                    key: characteristicKeyFromFacetCode(value.facet.code) as string,
+                    normalized: value.code,
+                });
+            } else {
                 unsatisfiable = true;
                 Logger.warn(`unsupported facet filter (${value.facet.code})`, loggerCtx);
             }
@@ -62,6 +69,7 @@ export class SearchFilterResolver {
         return {
             categoryId: categoryIds[0],
             manufacturer: [...new Set(manufacturer)],
+            characteristics,
             unsatisfiable,
             ...(input.inStock
                 ? { warehouseIds: await this.stockLevelService.getViewerWarehouseErpIds(ctx) }

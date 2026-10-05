@@ -163,6 +163,7 @@ function makeHandler(overrides?: {
         productCategoryFlagService as never,
         manufacturerService as never,
         productAncillaryDataService as never,
+        { ensureValues: vi.fn() } as never,
         taxCategoryAutoCreateService as never,
         unitLookupService as never,
     );

@@ -32,4 +32,26 @@ describe('mapFacetsToFacetValues', () => {
         );
         expect(result.map(r => r.facetValue.code)).toEqual(['m-1']);
     });
+
+    it('maps characteristic buckets to facet values by key facet and value code', async () => {
+        const typeFv = {
+            code: 'синтетическое',
+            facet: { code: 'characteristic:Тип' },
+            translations: [{ name: 'синтетическое' }],
+        } as unknown as FacetValue;
+        const conn = connectionReturning([typeFv]);
+        const result = await mapFacetsToFacetValues(
+            conn,
+            {} as RequestContext,
+            {
+                manufacturer: [],
+                characteristics: [
+                    { key: 'Тип', normalized: 'синтетическое', count: 325 },
+                    { key: 'Тип', normalized: 'неизвестное', count: 2 },
+                    { key: 'Сезонность', normalized: 'летние', count: 0 },
+                ],
+            } as never,
+        );
+        expect(result).toEqual([{ facetValue: typeFv, count: 325 }]);
+    });
 });
