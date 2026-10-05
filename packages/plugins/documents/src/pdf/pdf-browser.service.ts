@@ -5,6 +5,7 @@ import puppeteer, { Browser } from 'puppeteer';
 import { loggerCtx } from '../constants';
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
+const DESTROY_DRAIN_MS = 10_000;
 
 function readIdleMs(): number {
     const parsed = Number(process.env.PDF_BROWSER_IDLE_MS);
@@ -21,6 +22,10 @@ export class PdfBrowserService implements OnModuleDestroy {
 
     async onModuleDestroy(): Promise<void> {
         this.clearIdleTimer();
+        const deadline = Date.now() + DESTROY_DRAIN_MS;
+        while (this.activeRenders > 0 && Date.now() < deadline) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
         await this.closeBrowser();
     }
 
@@ -35,7 +40,11 @@ export class PdfBrowserService implements OnModuleDestroy {
                 const pdf = await page.pdf({ format: 'A4', printBackground: true });
                 return Buffer.from(pdf);
             } finally {
-                await page.close();
+                await page
+                    .close()
+                    .catch(err =>
+                        Logger.verbose(`Failed to close PDF page: ${String(err)}`, loggerCtx),
+                    );
             }
         } finally {
             this.activeRenders--;
@@ -45,7 +54,14 @@ export class PdfBrowserService implements OnModuleDestroy {
         }
     }
 
-    private getBrowser(): Promise<Browser> {
+    private async getBrowser(): Promise<Browser> {
+        const current = this.browserPromise;
+        if (current) {
+            const browser = await current.catch(() => null);
+            if (browser && !browser.isConnected() && this.browserPromise === current) {
+                this.browserPromise = null;
+            }
+        }
         if (!this.browserPromise) {
             const launch = puppeteer
                 .launch({
@@ -54,6 +70,12 @@ export class PdfBrowserService implements OnModuleDestroy {
                     args: ['--disable-dev-shm-usage', '--no-sandbox'],
                 })
                 .then(browser => {
+                    browser.on('disconnected', () => {
+                        if (this.browserPromise === launch) {
+                            this.browserPromise = null;
+                            this.clearIdleTimer();
+                        }
+                    });
                     Logger.verbose('Puppeteer browser launched', loggerCtx);
                     return browser;
                 });

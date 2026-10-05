@@ -14,7 +14,17 @@ function makeBrowser(pdfGate?: Promise<void>) {
         }),
         close: vi.fn().mockResolvedValue(undefined),
     };
+    const handlers: Record<string, () => void> = {};
     return {
+        page,
+        connected: true,
+        handlers,
+        isConnected() {
+            return this.connected;
+        },
+        on: vi.fn((event: string, handler: () => void) => {
+            handlers[event] = handler;
+        }),
         newPage: vi.fn().mockResolvedValue(page),
         close: vi.fn().mockResolvedValue(undefined),
     };
@@ -84,6 +94,55 @@ describe('PdfBrowserService', () => {
         release();
         await inFlight;
         await vi.advanceTimersByTimeAsync(1000);
+        expect(browser.close).toHaveBeenCalledTimes(1);
+    });
+
+    it('relaunches after a disconnect event and ignores a stale disconnect of an old browser', async () => {
+        const first = makeBrowser();
+        const second = makeBrowser();
+        launch.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+        const service = new PdfBrowserService();
+        await service.renderPdf('a');
+        first.handlers.disconnected();
+        await service.renderPdf('b');
+        expect(launch).toHaveBeenCalledTimes(2);
+        first.handlers.disconnected();
+        await service.renderPdf('c');
+        expect(launch).toHaveBeenCalledTimes(2);
+        expect(second.newPage).toHaveBeenCalledTimes(2);
+    });
+
+    it('relaunches when the cached browser reports it is not connected', async () => {
+        const first = makeBrowser();
+        launch.mockResolvedValueOnce(first).mockResolvedValueOnce(makeBrowser());
+        const service = new PdfBrowserService();
+        await service.renderPdf('a');
+        first.connected = false;
+        await service.renderPdf('b');
+        expect(launch).toHaveBeenCalledTimes(2);
+    });
+
+    it('surfaces the original render error when page.close also fails', async () => {
+        const browser = makeBrowser();
+        browser.page.setContent.mockRejectedValue(new Error('render failed'));
+        browser.page.close.mockRejectedValue(new Error('close failed'));
+        launch.mockResolvedValue(browser);
+        const service = new PdfBrowserService();
+        await expect(service.renderPdf('a')).rejects.toThrow('render failed');
+    });
+
+    it('waits for in-flight renders on destroy, then closes after a bounded timeout', async () => {
+        const gate = new Promise<void>(() => undefined);
+        const browser = makeBrowser(gate);
+        launch.mockResolvedValue(browser);
+        const service = new PdfBrowserService();
+        void service.renderPdf('a').catch(() => undefined);
+        await vi.advanceTimersByTimeAsync(0);
+        const destroying = service.onModuleDestroy();
+        await vi.advanceTimersByTimeAsync(9000);
+        expect(browser.close).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1500);
+        await destroying;
         expect(browser.close).toHaveBeenCalledTimes(1);
     });
 });
