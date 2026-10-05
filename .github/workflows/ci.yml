@@ -34,6 +34,9 @@ jobs:
             - name: Format check
               run: pnpm format:check
 
+            - name: Build shared types
+              run: pnpm --filter shared build
+
             - name: Type check (server)
               run: pnpm --filter server exec tsc --noEmit
 

@@ -18,6 +18,7 @@ pnpm install --frozen-lockfile --store-dir "$tmp/store"
 pnpm lint
 make check-event-contracts
 pnpm format:check
+pnpm --filter shared build
 pnpm --filter server exec tsc --noEmit
 pnpm --filter @mivend/storefront exec vue-tsc --noEmit
 pnpm --filter @mivend/manager exec vue-tsc --noEmit
