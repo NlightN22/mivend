@@ -3,3 +3,4 @@ dist/
 *.log
 *.hbs
 *.md
+mockServiceWorker.js
