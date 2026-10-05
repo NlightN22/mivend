@@ -117,6 +117,16 @@ function collapse(): void {
     color: #43524d;
     font-size: 14px;
     cursor: pointer;
+    transition: color 0.12s;
+}
+
+.mv-facet-group__row:hover {
+    color: #00997a;
+}
+
+.mv-facet-group__row:hover .mv-facet-group__icon {
+    border-color: #00b894;
+    background: #f0fffa;
 }
 
 .mv-facet-group__check {
@@ -138,6 +148,7 @@ function collapse(): void {
     font-weight: 800;
     color: #6b7c75;
     overflow: hidden;
+    transition: border-color 0.12s, background 0.12s;
 }
 
 .mv-facet-group__icon img {
@@ -173,5 +184,9 @@ function collapse(): void {
     font-weight: 700;
     font-size: 14px;
     cursor: pointer;
+}
+
+.mv-facet-group__toggle:hover {
+    text-decoration: underline;
 }
 </style>
