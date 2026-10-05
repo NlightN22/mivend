@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, toRef, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, toRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
@@ -64,30 +64,46 @@ const {
     collectionSlug: activeCollectionSlug,
 });
 
-// Sync filter state → URL (replace so back button works correctly)
+// Sync filter state → URL; user changes push history entries (see below).
 let syncingFromUrl = false;
 watch(
     filters,
     f => {
         if (syncingFromUrl) return;
-        router.replace({
-            query: {
-                ...route.query,
-                fv: f.facetValueIds.length ? f.facetValueIds.join(',') : undefined,
-                inStock: f.inStock ? '1' : undefined,
-                priceMin: f.priceMin ?? undefined,
-                priceMax: f.priceMax ?? undefined,
-            },
-        });
+        const query = {
+            ...route.query,
+            fv: f.facetValueIds.length ? f.facetValueIds.join(',') : undefined,
+            inStock: f.inStock ? '1' : undefined,
+            priceMin: f.priceMin ?? undefined,
+            priceMax: f.priceMax ?? undefined,
+        };
+        const same = (['fv', 'inStock', 'priceMin', 'priceMax'] as const).every(
+            k => String(query[k] ?? '') === String(route.query[k] ?? ''),
+        );
+        if (same) return;
+        // User changes get a history entry; programmatic resets must not add one.
+        if (programmaticChange) router.replace({ query });
+        else router.push({ query });
     },
     { deep: true },
 );
+
+let programmaticChange = false;
+function runProgrammatically(change: () => void): void {
+    programmaticChange = true;
+    change();
+    void nextTick(() => {
+        programmaticChange = false;
+    });
+}
 
 function applyPendingCategory(): void {
     if (!pendingCategorySlug.value) return;
     const valueId = resolveCategoryFacetValueId(pendingCategorySlug.value, facetGroups.value);
     if (valueId) {
-        filters.value = { ...filters.value, facetValueIds: [valueId] };
+        runProgrammatically(() => {
+            filters.value = { ...filters.value, facetValueIds: [valueId] };
+        });
         pendingCategorySlug.value = undefined;
     }
 }
@@ -112,6 +128,10 @@ function clearFacetValues(ids: string[]): void {
 function resetFilters(): void {
     pendingCategorySlug.value = undefined;
     filters.value = { facetValueIds: [], inStock: false, priceMin: null, priceMax: null };
+}
+
+function resetFiltersProgrammatically(): void {
+    runProgrammatically(resetFilters);
 }
 
 const formatBound = (v: number | null): string => (v == null ? '' : n(v));
@@ -165,7 +185,7 @@ watch(
     q => {
         searchQuery.value = (q as string) ?? '';
         pendingCategorySlug.value = undefined;
-        resetFilters();
+        resetFiltersProgrammatically();
     },
 );
 
@@ -174,7 +194,7 @@ watch(
     slug => {
         // resetFilters() also clears pendingCategorySlug — must run before assigning the new
         // slug below, or it immediately wipes out the value this watcher just set.
-        resetFilters();
+        resetFiltersProgrammatically();
         if (!searchQuery.value) pendingCategorySlug.value = (slug as string) || undefined;
     },
 );
