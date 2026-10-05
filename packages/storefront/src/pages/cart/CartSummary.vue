@@ -48,7 +48,7 @@ const lineCount = computed(() => cartStore.lines.length);
             </div>
 
             <div class="cart-summary__lines">
-                <div class="cart-summary__line">
+                <div v-if="cartStore.discountAmount > 0" class="cart-summary__line">
                     <span>Subtotal</span>
                     <strong>{{ subtotal }}</strong>
                 </div>

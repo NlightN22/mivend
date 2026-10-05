@@ -66,7 +66,7 @@ async function handlePrimary(): Promise<void> {
             <div class="checkout-summary__title">Your order</div>
             <div class="checkout-summary__caption">{{ lineCount }} items · {{ totalQty }} pcs.</div>
 
-            <div class="checkout-summary__line">
+            <div v-if="cartStore.discountAmount > 0" class="checkout-summary__line">
                 <span>Goods</span>
                 <strong>{{ subtotal }}</strong>
             </div>
