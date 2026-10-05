@@ -35,9 +35,7 @@ const subtotal = computed(() =>
     formatRub((cartStore.order?.subTotalWithTax ?? 0) + discountAmount.value),
 );
 
-const discountLabel = computed(() =>
-    discountAmount.value > 0 ? `− ${formatRub(discountAmount.value)}` : '— 0 ₽',
-);
+const discountLabel = computed(() => `− ${formatRub(discountAmount.value)}`);
 
 const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽');
 
@@ -66,7 +64,7 @@ const lineCount = computed(() => cartStore.lines.length);
                     <span>Subtotal</span>
                     <strong>{{ subtotal }}</strong>
                 </div>
-                <div class="cart-summary__line cart-summary__line--discount">
+                <div v-if="discountAmount > 0" class="cart-summary__line cart-summary__line--discount">
                     <span>Customer discount</span>
                     <strong>{{ discountLabel }}</strong>
                 </div>
@@ -86,16 +84,6 @@ const lineCount = computed(() => cartStore.lines.length);
             </div>
         </section>
 
-        <a class="cart-summary__side-card" href="#">
-            <div class="cart-summary__side-icon cart-summary__side-icon--green">✓</div>
-            <div>
-                <div class="cart-summary__side-title">Pre-order checks</div>
-                <div class="cart-summary__side-text">
-                    Price, stock, multiplicity, limits and contract
-                </div>
-            </div>
-            <div class="cart-summary__arrow">›</div>
-        </a>
 
     </aside>
 </template>
@@ -201,55 +189,5 @@ const lineCount = computed(() => cartStore.lines.length);
     font-weight: 950;
     letter-spacing: -0.045em;
     white-space: nowrap;
-}
-
-.cart-summary__side-card {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    border-radius: 20px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    min-height: 78px;
-    padding: 16px 18px;
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 18px;
-    gap: 12px;
-    align-items: center;
-    text-decoration: none;
-    color: inherit;
-    transition: box-shadow 0.15s;
-}
-.cart-summary__side-card:hover {
-    box-shadow: 0 18px 40px rgba(27, 45, 38, 0.12);
-}
-
-.cart-summary__side-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 15px;
-    display: grid;
-    place-items: center;
-    font-size: 20px;
-    font-weight: 900;
-}
-.cart-summary__side-icon--green {
-    background: #e2f8ef;
-    color: #008a64;
-}
-
-.cart-summary__side-title {
-    margin-bottom: 3px;
-    font-weight: 900;
-    line-height: 1.2;
-    font-size: 14px;
-}
-.cart-summary__side-text {
-    color: #66736e;
-    font-size: 13px;
-    line-height: 1.35;
-}
-.cart-summary__arrow {
-    color: #a0aca7;
-    font-size: 24px;
-    font-weight: 600;
 }
 </style>
