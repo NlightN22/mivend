@@ -18,7 +18,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const { t } = useI18n();
+const { t, n } = useI18n();
 const authStore = useAuthStore();
 const catalogStore = useCatalogStore();
 
@@ -83,12 +83,12 @@ function resetFilters(): void {
     filters.value = { facetValueIds: [], inStock: false, priceMin: null, priceMax: null };
 }
 
-const formatBound = (n: number | null): string => (n == null ? '' : n.toLocaleString('ru-RU'));
+const formatBound = (v: number | null): string => (v == null ? '' : n(v));
 
-const { chips: activeChips, remove: removeChip, clear: clearChips } = useActiveFilterChips(filters, facetGroups, {
+const { chips: activeChips, remove: removeChip, clear: clearChips } = useActiveFilterChips(filters, facetGroups, () => ({
     inStock: t('catalogFilters.inStock'),
     price: (min, max) => t('catalogFilters.price', { range: `${formatBound(min)} – ${formatBound(max)}` }),
-});
+}));
 
 const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
 
@@ -136,7 +136,7 @@ watch(() => route.query.collection, slug => {
 });
 
 // Restore filters when navigating back via browser history
-watch(() => route.query.fv, () => {
+watch(() => [route.query.fv, route.query.inStock, route.query.priceMin, route.query.priceMax].join('|'), () => {
     syncingFromUrl = true;
     filters.value = parseFiltersFromQuery();
     syncingFromUrl = false;

@@ -90,3 +90,23 @@ describe('clearRefinementFilters', () => {
         });
     });
 });
+
+describe('before facets are available', () => {
+    const active: FilterState = {
+        facetValueIds: ['c1', 'b1'],
+        inStock: true,
+        priceMin: 1,
+        priceMax: 2,
+    };
+
+    it('clear-all never drops the category when facet groups are empty', () => {
+        expect(clearRefinementFilters(active, []).facetValueIds).toEqual(['c1', 'b1']);
+    });
+
+    it('builds only the non-facet chips', () => {
+        expect(buildActiveFilterChips(active, [], labels).map(c => c.key)).toEqual([
+            'price',
+            'inStock',
+        ]);
+    });
+});

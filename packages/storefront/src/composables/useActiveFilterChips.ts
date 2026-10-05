@@ -3,6 +3,8 @@ import type { ActiveFilter } from '@mivend/ui-kit';
 import type { FacetGroup } from '../../../shared/src/catalogFacets';
 import type { FilterState } from './useProductList';
 
+const CATEGORY_FACET_CODE = 'category';
+
 export interface ChipLabels {
     inStock: string;
     price: (min: number | null, max: number | null) => string;
@@ -12,12 +14,11 @@ export function buildActiveFilterChips(
     filters: FilterState,
     facetGroups: FacetGroup[],
     labels: ChipLabels,
-    hiddenFacetCodes: string[] = ['category'],
 ): ActiveFilter[] {
     const chips: ActiveFilter[] = [];
     const selected = new Set(filters.facetValueIds);
     for (const group of facetGroups) {
-        if (hiddenFacetCodes.includes(group.code)) continue;
+        if (group.code === CATEGORY_FACET_CODE) continue;
         for (const value of group.values) {
             if (selected.has(value.id)) {
                 chips.push({ key: `fv:${value.id}`, label: `${group.name}: ${value.name}` });
@@ -44,15 +45,14 @@ export function removeFilterChip(filters: FilterState, key: string): FilterState
 export function clearRefinementFilters(
     filters: FilterState,
     facetGroups: FacetGroup[],
-    hiddenFacetCodes: string[] = ['category'],
 ): FilterState {
-    const kept = new Set(
+    const refinementIds = new Set(
         facetGroups
-            .filter(g => hiddenFacetCodes.includes(g.code))
+            .filter(g => g.code !== CATEGORY_FACET_CODE)
             .flatMap(g => g.values.map(v => v.id)),
     );
     return {
-        facetValueIds: filters.facetValueIds.filter(id => kept.has(id)),
+        facetValueIds: filters.facetValueIds.filter(id => !refinementIds.has(id)),
         inStock: false,
         priceMin: null,
         priceMax: null,
@@ -62,9 +62,12 @@ export function clearRefinementFilters(
 export function useActiveFilterChips(
     filters: Ref<FilterState>,
     facetGroups: Ref<FacetGroup[]>,
-    labels: ChipLabels,
+    labels: () => ChipLabels,
 ) {
-    const chips = computed(() => buildActiveFilterChips(filters.value, facetGroups.value, labels));
+    // Facet-value chips need the facet names, so they appear only once facets have loaded.
+    const chips = computed(() =>
+        buildActiveFilterChips(filters.value, facetGroups.value, labels()),
+    );
     function remove(key: string): void {
         filters.value = removeFilterChip(filters.value, key);
     }
