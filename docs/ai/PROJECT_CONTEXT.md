@@ -1,6 +1,15 @@
 # Project Context
 
-Updated: 2026-10-04 15:45
+Updated: 2026-10-05 16:30
+
+## Recent changes (2026-10-05 — #170 active-filter chips in the catalog, shipped/audited/closed)
+
+- ui-kit `MvActiveFilters` (chips in; `remove`/`clear` out; pill metrics/palette copied from `MvFilterChips`, Tabler `IconX`; styles are a hand-copy, shared partial is a follow-up). The older `MvActiveFilterChips` is the table-toolbar variant, not for the catalog.
+- storefront `composables/useActiveFilterChips.ts` (pure `buildActiveFilterChips`/`removeFilterChip`/`clearRefinementFilters` + wrapper) wired in `CatalogPage.vue`. Category facet is NOT a chip and clear-all keeps it (it only drops ids found in non-category groups, so it is safe before facets load). Facet-value chips need loaded facets by design.
+- Catalog URL sync: user filter changes now `router.push` (history entries; back/forward restores chips); programmatic resets (category/search change, pending-category apply) use `router.replace` via `runProgrammatically`. The URL→state watcher re-parses fv+inStock+priceMin+priceMax. Not covered by an automated test (verified live in a browser only).
+- Price chip bounds use i18n `n()`; labels are a reactive getter. Commits dba561b, 3f668d1, 16ca99f, ba5a77c; audited by `mivend.audit.common`.
+- `make ci` (clean-checkout CI replay) is now required before pushing (AGENTS.md / final-check skill).
+
 
 ## Recent changes (2026-10-04 — #162 favorites IDs only, shipped; brand gap filed as #168)
 
@@ -65,7 +74,7 @@ Updated: 2026-10-04 15:45
 - Staging-integration data set by hand: 5 warehouses assigned to branches (Abakan: ids 18, 15;
   Krasnoyarsk: 8, 14, 30; service/defect warehouses stay unassigned). Test customer
   `test@komponent-m.ru` (counterparty 21560, retail price type; login/password in the gitignored `apps/server/.env.central.staging-integration` as `STAGING_TEST_CUSTOMER_EMAIL`/`STAGING_TEST_CUSTOMER_PASSWORD` (reset in the contour DB on 2026-10-04),
-  not in the repo; KEEP it). Counterparty `officialEmail` comes from 1C kind "Служебный адрес
+  not in the repo; KEEP it). Counterparty `officialEmail` comes from ERP kind "Служебный адрес
   электронной почты контрагента" only.
 - #167 (closed, audited, 4fe0e1a + 4651c5f): `stock.handler.ts` ignores a stock fact for an unknown warehouse
   when the LATEST inbox `warehouse` event for it is a processed tombstone (`warehouse-tombstone.query.ts`,
@@ -124,26 +133,8 @@ deleted in the ERP that still have live children (hidden with them). **Open**: s
 `collections(take:100)` flat, so only 1 of 26 top-level categories shows on real trees — handed to #59
 (mega-menu concept: left top-level list, right level-2 groups with level-3 links and "more").
 
-## Recent changes (2026-10-03 — #117 Position entity + Administrator.positionId, shipped/audited/closed)
-
-`Position` (ERP master data, `erpId` unique, `name`, `parentErpId`, `isActive`) in `plugin-access-control`,
-fed by the `position` inbound stream (`PositionChanged`, `...customers.events.v1.position-changed`,
-`PositionStreamHandler`; nameless tombstone only flips `isActive`, never creates). `Administrator.
-customFields.position` (free text) replaced by `positionId` = `Position.erpId`, written from
-`UserChanged.position_id` (search-platform confirmed: same Ref_Key as `PositionChanged.entity_id`; absent =
-unchanged, null = clear). **Soft link**: no dependency error if the Position hasn't arrived; name is resolved
-on read (`PositionService.findNamesByErpIds`) — `teamDirectory` exposes `positionId` + resolved `position`.
-Migrations `1791000000002` (table) + `...03` (drops old free-text column, no data migration). **REST contract
-change**: erp-import `EmployeeRecord.position` -> `positionErpId` (old field ignored); new erp-import `position`
-record type; seed fixtures have positions, seed `run` bumped to `v6` (exchangeId dedup skips unchanged runs).
-Commits 2a9a45b/7348a08/167a592, audited clean (`mivend.audit.common`). `role` of `UserChanged` still not consumed.
-**Staging-integration**: topic ACL fine, 199 positions (110 active) via search-platform bulk resync (they added
-`position` to `resync:bulk` RELAY_STATE_TYPES); 1C has 226, gap is upstream materialization. Staging
-`teamDirectory` positions stay empty: its only Administrator has no `erpId` (stand property, not a bug).
-**Dev-stack gotcha**: ts-node-dev children can hang forever in `waitForFile` (busy-wait for a compile reply
-that never comes, seen under load ~10 right after many plugin edits). Fix: free load (kill stale puppeteer
-chromes older than 1 day) and restart via `make dev` / `make dev-staging-integration`; never raw kill.
-Replay API for a stream needs explicit entityIds (take them from `integration_inbox_event` payloads).
+## #117 Position entity (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT.20261005-117-position.md`)
+`Position` (ERP master data) in `plugin-access-control`, fed by the `position` stream; `Administrator.customFields.positionId` = `Position.erpId` is a **soft link** (name resolved on read, no error if absent). erp-import `EmployeeRecord.position` -> `positionErpId`. Dev gotcha: ts-node-dev children can hang in `waitForFile` under load — free load, restart via `make dev`, never raw kill.
 
 ## Kafka reference streams #101/#102/#106/#108 (compressed, shipped/audited/closed)
 
