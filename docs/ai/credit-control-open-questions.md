@@ -42,13 +42,38 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 4. Limits should be computed by a **worker/scheduled job**, not during import (import would slow down).
 5. Changing a contract or limit in the manager portal must reach 1C, so write-back streams are needed.
 
+## Working model (owner's direction 2026-10-06, to be confirmed)
+
+- **Contracts**: every order is attributed to the counterparty's **main contract** automatically
+  (search-platform#172 gives the main-contract reference). Customers do not choose a contract (not
+  planned); a manager can re-attribute an order to another contract. A re-attributed order starts
+  counting against that contract's limit only after the manager changes it.
+- **Limit calculation (scheduled job, not during import)**: all contracts **without** the per-contract
+  control flag are pooled into one **general limit** (sum of their limits, this is how 1C pools them).
+  Contracts **with** the flag (`controlledIndividually`) are **sublimits** inside it and must not exceed
+  the general total. Later we may drop 1C's limits entirely and keep only our own.
+- **Provisional order amount**: an order reserves limit immediately (in-flight, until 1C confirms), and
+  that estimate must be released once the shipment document arrives (receivables are formed by the
+  shipment, not the order) or after a timeout, so stale orders stop blocking the counterparty.
+
+## Documents: what we have and what we do not
+
+- `Invoice` (plugin-acquiring) is our own payment-request object that a payment settles, not an ERP
+  document. `plugin-documents`' `Document` is a generic file record (invoice/contract/reconciliation/
+  return), type not enforced.
+- **No shipment document ("РеализацияТоваровУслуг") exists in our model.** The only trace is that the
+  `granted-discount` stream is sourced from it. `@nlightn22/event-contracts@0.47.0` has no invoice,
+  shipment, payment or settlement-register stream: only `counterparty-credit-balance-changed`,
+  `contract-changed`, `order-changed`, `order-registration-result`, `granted-discount-changed`.
+- Asked search-platform (sp.auditor.common) to confirm and to say which receivables source is feasible.
+
 ## Open questions
 
-1. **Counterparty-level limit formula**: sum of contract limits, limit of the main contract
-   (search-platform#172 provides the reference), max, or something else?
-2. **Contract-level checks vs "no contract on the order"**: per-contract limits need an order->contract
-   attribution (`contractId` already travels on `order-changed`, #123). If the order carries no
-   contract, are per-contract limits informational only, or enforced when the manager assigns the contract?
+1. **Counterparty-level limit formula**: working model above (pool of non-flagged contracts + flagged
+   sublimits capped by the pool) — confirm, including what happens when sublimits exceed the pool.
+2. **Order->contract attribution**: default main contract, manager can re-attribute (see working model);
+   `contractId` already travels on `order-changed` (#123). Confirm how the checkout-time check treats
+   a flagged non-main contract.
 3. **Receivables source**: new 1C export of debtors + documents (owner's plan) versus the existing
    settlement-register idea (#45) and balance stream (#129). Who builds it, what shape, what is the
    contract of the event, and does it replace `CounterpartyCreditBalanceChanged`?
