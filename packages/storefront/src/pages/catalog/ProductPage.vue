@@ -11,6 +11,7 @@ import {
     stockVariantFromLevel,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import { assetUrl } from '../../composables/assetUrl';
 import { useCartActions } from '../../composables/useCartActions';
 import { useCatalogStore } from '../../stores/catalog';
 import { filterVisibleCrumbs } from '../../../../shared/src/collectionTree';
@@ -18,6 +19,7 @@ import { shopApi } from '../../api/client';
 import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
 import { ProductDetailDocument, type ProductDetailQuery } from '../../api/generated/graphql';
 import ProductBuyPanel from './ProductBuyPanel.vue';
+import ProductSkeleton from './ProductSkeleton.vue';
 
 type Product = NonNullable<ProductDetailQuery['product']>;
 
@@ -31,6 +33,12 @@ const product = ref<Product | null>(null);
 const loading = ref(true);
 const error = ref<LoadErrorText | null>(null);
 
+const galleryImages = computed(() =>
+    (product.value?.assets ?? []).map(a => ({
+        thumb: assetUrl(a.preview, 'thumb'),
+        full: assetUrl(a.preview, 'large'),
+    })),
+);
 const variant = computed(() => product.value?.variants[0]);
 const brand = computed(() => brandOf(product.value?.manufacturer));
 
@@ -101,7 +109,7 @@ onMounted(() => {
 
 <template>
     <main class="product-page">
-        <div v-if="loading" class="product-page__state">Загрузка товара...</div>
+        <ProductSkeleton v-if="loading" />
         <MvErrorState
             v-else-if="error"
             :title="error.title"
@@ -114,7 +122,11 @@ onMounted(() => {
             <MvBreadcrumbs class="product-page__crumbs" :items="breadcrumbItems" />
 
             <div class="product-page__layout">
-                <MvProductGallery class="product-page__gallery" :product-name="product.name" />
+                <MvProductGallery
+                    class="product-page__gallery"
+                    :product-name="product.name"
+                    :images="galleryImages"
+                />
 
                 <MvProductMainCards
                     :name="product.name"
@@ -155,13 +167,6 @@ onMounted(() => {
     max-width: 1440px;
     margin: 0 auto;
     padding: 24px 28px 56px;
-}
-
-.product-page__state {
-    padding: 80px;
-    text-align: center;
-    color: #66736e;
-    font-size: 15px;
 }
 
 .product-page__crumbs {
