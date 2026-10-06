@@ -862,6 +862,12 @@ export const config: VendureConfig = {
                     'legal-form':
                         process.env.INTEGRATION_KAFKA_TOPIC_LEGAL_FORM ??
                         'company.customers.events.v1.legal-form-changed',
+                    bank:
+                        process.env.INTEGRATION_KAFKA_TOPIC_BANK ??
+                        'company.customers.events.v1.bank-changed',
+                    'bank-account':
+                        process.env.INTEGRATION_KAFKA_TOPIC_BANK_ACCOUNT ??
+                        'company.customers.events.v1.bank-account-changed',
                     // Issue #181: normalized product photos (metadata + pre-signed URL).
                     'product-photo':
                         process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT_PHOTO ??

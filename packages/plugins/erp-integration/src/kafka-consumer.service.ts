@@ -28,6 +28,8 @@ import {
     ManufacturerChangedSchema,
     RegionChangedSchema,
     LegalFormChangedSchema,
+    BankChangedSchema,
+    BankAccountChangedSchema,
     ProductPhotoChangedSchema,
     UnitChangedSchema,
     UserChangedSchema,
@@ -113,6 +115,8 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     manufacturer: ManufacturerChangedSchema,
     region: RegionChangedSchema,
     'legal-form': LegalFormChangedSchema,
+    bank: BankChangedSchema,
+    'bank-account': BankAccountChangedSchema,
     'product-photo': ProductPhotoChangedSchema,
 };
 

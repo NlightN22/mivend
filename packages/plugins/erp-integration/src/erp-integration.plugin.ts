@@ -79,6 +79,10 @@ import { UnitStreamHandler } from './handlers/unit.handler';
 import { UnitRecord } from './entities/unit-record.entity';
 import { RegionRecord } from './entities/region-record.entity';
 import { LegalFormRecord } from './entities/legal-form-record.entity';
+import { BankRecord } from './entities/bank-record.entity';
+import { BankAccountRecord } from './entities/bank-account-record.entity';
+import { BankStreamHandler } from './handlers/bank.handler';
+import { BankAccountStreamHandler } from './handlers/bank-account.handler';
 import { RegionStreamHandler } from './handlers/region.handler';
 import { LegalFormStreamHandler } from './handlers/legal-form.handler';
 import { UnitLookupService } from './unit-lookup.service';
@@ -154,6 +158,8 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         UnitRecord,
         RegionRecord,
         LegalFormRecord,
+        BankRecord,
+        BankAccountRecord,
     ],
     controllers: [KafkaStatusController],
     providers: [
@@ -190,6 +196,8 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ManufacturerStreamHandler,
         RegionStreamHandler,
         LegalFormStreamHandler,
+        BankStreamHandler,
+        BankAccountStreamHandler,
         ProductPhotoStreamHandler,
         ProductPhotoSyncService,
         ProductPhotoRecoveryService,

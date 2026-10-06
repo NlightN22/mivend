@@ -39,6 +39,8 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             manufacturer: 't-manufacturer',
             region: 'region',
             'legal-form': 'legal-form',
+            bank: 'bank',
+            'bank-account': 'bank-account',
             'product-photo': 't-product-photo',
             'order-registration-result': 't-order-registration-result',
             'order-changed': 'oc',

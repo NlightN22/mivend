@@ -173,6 +173,9 @@ export type InboundStream =
     // Region and legal-form reference directories (company.customers); soft-linked from CounterpartyChanged.
     | 'region'
     | 'legal-form'
+    // Bank directory and bank accounts (owner = counterparty/organization by owner_type); soft links only.
+    | 'bank'
+    | 'bank-account'
     // Issue #181: normalized product photos (ProductPhotoChanged); metadata + pre-signed download URL.
     | 'product-photo'
     // Issue #108: the ERP's own per-counterparty/contract, optionally per-product automatic
@@ -289,6 +292,8 @@ const ALL_INBOUND_STREAMS_MAP = {
     manufacturer: true,
     region: true,
     'legal-form': true,
+    bank: true,
+    'bank-account': true,
     'product-photo': true,
     'discount-rule': true,
     'granted-discount': true,

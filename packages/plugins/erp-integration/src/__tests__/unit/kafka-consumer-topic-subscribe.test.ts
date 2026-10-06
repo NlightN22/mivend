@@ -59,6 +59,8 @@ function makeOptions(): ErpIntegrationPluginOptions {
                 manufacturer: 'manufacturer',
                 region: 'region',
                 'legal-form': 'legal-form',
+                bank: 'bank',
+                'bank-account': 'bank-account',
                 'product-photo': 'product-photo',
                 'order-registration-result': 'orr',
                 'order-changed': 'oc',
@@ -94,7 +96,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(30);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(32);
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
 
@@ -108,7 +110,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(30);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(32);
         expect(createdConsumers[0].subscribe).not.toHaveBeenCalledWith(
             expect.objectContaining({ topic: 'orphan-topic' }),
         );
@@ -138,7 +140,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
 
         await consumerPromise;
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(30);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(32);
         // run() must still be reached even though one subscribe() rejected.
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
