@@ -9,7 +9,11 @@ import {
 } from '@vendure/core';
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
-import { DeferredPaymentPlugin, deferredPaymentHandler } from '@mivend/plugin-deferred-payment';
+import {
+    DeferredPaymentPlugin,
+    deferredPaymentHandler,
+    deferredEligibilityChecker,
+} from '@mivend/plugin-deferred-payment';
 import { PickupShippingPlugin } from '@mivend/plugin-pickup-shipping';
 import { OnlinePaymentPlugin, onlineStubPaymentHandler } from '@mivend/plugin-online-payment';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
@@ -535,6 +539,7 @@ export const config: VendureConfig = {
             onlineStubPaymentHandler,
             deferredPaymentHandler,
         ],
+        paymentMethodEligibilityCheckers: [deferredEligibilityChecker],
     },
     plugins: [
         AssetServerPlugin.init({
@@ -633,7 +638,7 @@ export const config: VendureConfig = {
         RetroBonusPlugin,
         DocumentsPlugin,
         DeferredPaymentPlugin,
-        OnlinePaymentPlugin,
+        ...(process.env.ONLINE_PAYMENT_STUB_ENABLED === 'true' ? [OnlinePaymentPlugin] : []),
         PickupShippingPlugin,
         ...(erpImportEnabled ? [ErpImportPlugin] : []),
         CrossReferencePlugin,

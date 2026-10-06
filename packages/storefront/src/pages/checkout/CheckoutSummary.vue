@@ -3,18 +3,22 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
+import type { CreditOverrun } from '../../utils/creditOverrun';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
 const router = useRouter();
 const submitting = ref(false);
+const overrun = ref<CreditOverrun | null>(null);
 
 const packaging = computed(() => useOrderPackaging(cartStore.lines));
 const packagingLabel = computed(() => formatPackaging(packaging.value));
 
 const lineCount = computed(() => cartStore.lines.length);
 const totalQty = computed(() => cartStore.totalQuantity);
+
+const rub = (value: number): string => new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
 
 function formatRub(kopecks: number): string {
     return new Intl.NumberFormat('ru-RU').format(kopecks / 100) + ' ₽';
@@ -47,6 +51,15 @@ async function handlePrimary(): Promise<void> {
 
         if (checkoutStore.selectedPayment === 'online') {
             router.push('/payment-stub');
+            return;
+        }
+        if (checkoutStore.selectedPayment === 'deferred') {
+            const result = await cartStore.completeDeferredPayment();
+            if (!result.placed) {
+                overrun.value = result.overrun ?? null;
+                return;
+            }
+            router.push('/order-created?method=deferred');
             return;
         }
         const placed = await cartStore.completeOfflinePayment();
@@ -94,7 +107,7 @@ async function handlePrimary(): Promise<void> {
                         : 'checkout-summary__pay-btn--green'
                 "
                 type="button"
-                :disabled="submitting"
+                :disabled="submitting || !checkoutStore.selectedPayment"
                 @click="handlePrimary"
             >
                 {{ submitting ? 'Processing…' : btnLabel }}
@@ -105,10 +118,26 @@ async function handlePrimary(): Promise<void> {
                 <a href="#">payment terms</a>.
             </p>
         </div>
+        <MvModal v-if="overrun" title="Deferred payment is unavailable" @close="overrun = null">
+            <p class="checkout-summary__overrun">
+                This order would exceed your credit limit: limit {{ rub(overrun.creditLimit) }},
+                already used {{ rub(overrun.creditBalance) }}, this order
+                {{ rub(overrun.orderTotal) }}.
+            </p>
+            <p class="checkout-summary__overrun">
+                Pay by bank invoice instead, reduce the order, or contact your manager.
+            </p>
+        </MvModal>
     </aside>
 </template>
 
 <style scoped>
+.checkout-summary__overrun {
+    margin: 0 0 10px;
+    color: #66736e;
+    font-size: 14px;
+}
+
 .checkout-summary {
     display: grid;
     gap: 14px;

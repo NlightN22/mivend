@@ -46,7 +46,14 @@ export class OfflineTermsBootstrapService implements OnApplicationBootstrap {
         const ctx = RequestContext.empty();
         const repo = this.connection.getRepository(ctx, PaymentMethod);
         const existing = await repo.findOne({ where: { code: OFFLINE_TERMS_METHOD_CODE } });
-        if (existing) return;
+        const enabled = process.env.OFFLINE_TERMS_ENABLED !== 'false';
+        if (existing) {
+            if (existing.enabled !== enabled) {
+                await this.paymentMethodService.update(ctx, { id: existing.id, enabled });
+            }
+            return;
+        }
+        if (!enabled) return;
 
         const defaultChannel = await this.channelService.getDefaultChannel();
         await this.paymentMethodService.create(ctx, {

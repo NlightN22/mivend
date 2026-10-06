@@ -546,6 +546,10 @@ importers:
                 version: 5.9.3
 
     packages/plugins/deferred-payment:
+        dependencies:
+            '@mivend/plugin-counterparty':
+                specifier: workspace:*
+                version: link:../counterparty
         devDependencies:
             '@nestjs/common':
                 specifier: ^11.0.0

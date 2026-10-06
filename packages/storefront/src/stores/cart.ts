@@ -3,10 +3,12 @@ import { ref, computed } from 'vue';
 import { toast } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import { brandOf } from '../utils/brand';
+import { parseCreditOverrun, type CreditOverrun } from '../utils/creditOverrun';
 import {
     AddToCartDocument,
     AdjustCartLineDocument,
     ActiveOrderDocument,
+    CompleteDeferredPaymentDocument,
     CompleteOfflinePaymentDocument,
     CompleteOnlinePaymentDocument,
     EligibleShippingMethodsForCheckoutDocument,
@@ -26,6 +28,11 @@ import {
     stockInsufficientGeneric,
     stockUpdateFailed,
 } from '../utils/discountMessages';
+
+interface DeferredPaymentResult {
+    placed: boolean;
+    overrun?: CreditOverrun;
+}
 
 interface MutationResult {
     __typename: string;
@@ -277,6 +284,19 @@ export const useCartStore = defineStore('cart', () => {
         return true;
     }
 
+    // A credit-limit rejection is returned (not toasted) so checkout can explain it in a dialog.
+    async function completeDeferredPayment(): Promise<DeferredPaymentResult> {
+        const result = await shopApi(CompleteDeferredPaymentDocument);
+        await fetchCart();
+        const payment = result.addPaymentToOrder;
+        if (payment.__typename === 'Order') return { placed: true };
+        const declined = 'paymentErrorMessage' in payment ? payment.paymentErrorMessage : undefined;
+        await shopApi(ResumeAddingItemsDocument);
+        const overrun = parseCreditOverrun(declined);
+        if (!overrun) toast(payment.message ?? 'Could not place order', 'error');
+        return { placed: false, overrun };
+    }
+
     async function completeOnlinePayment(status: 'success' | 'pending' | 'fail'): Promise<boolean> {
         const result = await shopApi(CompleteOnlinePaymentDocument, { status: { status } });
         await fetchCart();
@@ -321,6 +341,7 @@ export const useCartStore = defineStore('cart', () => {
         clearCart,
         beginCheckout,
         completeOfflinePayment,
+        completeDeferredPayment,
         completeOnlinePayment,
     };
 });

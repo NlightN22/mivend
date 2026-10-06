@@ -5046,6 +5046,31 @@ export type CompleteOfflinePaymentMutation = {
         | { __typename: 'PaymentFailedError'; errorCode: ErrorCode; message: string };
 };
 
+export type CompleteDeferredPaymentMutationVariables = Exact<{ [key: string]: never }>;
+
+export type CompleteDeferredPaymentMutation = {
+    addPaymentToOrder:
+        | { __typename: 'CouponRemovedDuringCheckoutError'; errorCode: ErrorCode; message: string }
+        | { __typename: 'IneligiblePaymentMethodError'; errorCode: ErrorCode; message: string }
+        | { __typename: 'NoActiveOrderError'; errorCode: ErrorCode; message: string }
+        | { __typename: 'Order' }
+        | { __typename: 'OrderPaymentStateError'; errorCode: ErrorCode; message: string }
+        | { __typename: 'OrderStateTransitionError'; errorCode: ErrorCode; message: string }
+        | {
+              __typename: 'PaymentDeclinedError';
+              errorCode: ErrorCode;
+              message: string;
+              paymentErrorMessage: string;
+          }
+        | { __typename: 'PaymentFailedError'; errorCode: ErrorCode; message: string };
+};
+
+export type EligiblePaymentMethodsForCheckoutQueryVariables = Exact<{ [key: string]: never }>;
+
+export type EligiblePaymentMethodsForCheckoutQuery = {
+    eligiblePaymentMethods: Array<{ code: string; isEligible: boolean }>;
+};
+
 export type CompleteOnlinePaymentMutationVariables = Exact<{
     status: Scalars['JSON']['input'];
 }>;
@@ -6108,6 +6133,34 @@ export const CompleteOfflinePaymentDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CompleteOfflinePaymentMutation,
     CompleteOfflinePaymentMutationVariables
+>;
+export const CompleteDeferredPaymentDocument = new TypedDocumentString(`
+    mutation CompleteDeferredPayment {
+  addPaymentToOrder(input: {method: "deferred-payment", metadata: {}}) {
+    __typename
+    ... on ErrorResult {
+      errorCode
+      message
+    }
+    ... on PaymentDeclinedError {
+      paymentErrorMessage
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CompleteDeferredPaymentMutation,
+    CompleteDeferredPaymentMutationVariables
+>;
+export const EligiblePaymentMethodsForCheckoutDocument = new TypedDocumentString(`
+    query EligiblePaymentMethodsForCheckout {
+  eligiblePaymentMethods {
+    code
+    isEligible
+  }
+}
+    `) as unknown as TypedDocumentString<
+    EligiblePaymentMethodsForCheckoutQuery,
+    EligiblePaymentMethodsForCheckoutQueryVariables
 >;
 export const CompleteOnlinePaymentDocument = new TypedDocumentString(`
     mutation CompleteOnlinePayment($status: JSON!) {

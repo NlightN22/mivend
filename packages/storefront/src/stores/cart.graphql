@@ -175,6 +175,26 @@ mutation CompleteOfflinePayment {
     }
 }
 
+mutation CompleteDeferredPayment {
+    addPaymentToOrder(input: { method: "deferred-payment", metadata: {} }) {
+        __typename
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+        ... on PaymentDeclinedError {
+            paymentErrorMessage
+        }
+    }
+}
+
+query EligiblePaymentMethodsForCheckout {
+    eligiblePaymentMethods {
+        code
+        isEligible
+    }
+}
+
 mutation CompleteOnlinePayment($status: JSON!) {
     addPaymentToOrder(input: { method: "online-stub", metadata: $status }) {
         __typename

@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useCheckoutStore } from '../../stores/checkout';
 
 const checkoutStore = useCheckoutStore();
 
-const methods = [
+const methodCards = [
     {
         id: 'online' as const,
         icon: '💳',
@@ -29,6 +30,10 @@ const methods = [
         badgeOrange: false,
     },
 ];
+
+const methods = computed(() =>
+    methodCards.filter(card => checkoutStore.availableMethods.includes(card.id)),
+);
 </script>
 
 <template>
@@ -37,7 +42,10 @@ const methods = [
             <h2 class="payment-selector__title">Payment method</h2>
             <p class="payment-selector__subtitle">Choose how to pay for the order.</p>
         </div>
-        <div class="payment-selector__grid">
+        <MvNotice v-if="checkoutStore.methodsLoaded && !methods.length" variant="warning">
+            No payment method is available for your account. Please contact your manager.
+        </MvNotice>
+        <div v-else class="payment-selector__grid">
             <button
                 v-for="method in methods"
                 :key="method.id"

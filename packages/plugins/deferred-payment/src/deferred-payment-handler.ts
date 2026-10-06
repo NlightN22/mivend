@@ -1,24 +1,44 @@
+import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { LanguageCode, PaymentMethodHandler } from '@vendure/core';
+
+import { exceedsCreditLimit, formatOverrunMessage } from './credit-limit-decision';
 
 export const DEFERRED_PAYMENT_METHOD_CODE = 'deferred-payment';
 
-// Groundwork for issue #142 (real credit-limit check via plugin-approval-workflow's
-// creditTermApproval gate) — deliberately unchecked for now, mirroring
-// offlineTermsPaymentHandler's own "settle straight to Authorized, money collection
-// happens outside Vendure" reasoning. This is NOT a policy decision that deferred
-// payment is unconditionally allowed forever; #142 adds the real gate on top.
+let counterpartyService: CounterpartyService;
+
 export const deferredPaymentHandler = new PaymentMethodHandler({
     code: DEFERRED_PAYMENT_METHOD_CODE,
     description: [
-        { languageCode: LanguageCode.en, value: 'Deferred payment (credit-limit gated, see #142)' },
+        { languageCode: LanguageCode.en, value: 'Deferred payment (credit-limit gated)' },
     ],
     args: {},
-    createPayment: async (_ctx, order) => {
-        return {
-            amount: order.totalWithTax,
-            state: 'Authorized' as const,
-            metadata: {},
-        };
+    init(injector) {
+        counterpartyService = injector.get(CounterpartyService);
+    },
+    createPayment: async (ctx, order) => {
+        const customerId = order.customer?.id ?? order.customerId;
+        const counterparty = customerId
+            ? await counterpartyService.getForCustomer(ctx, customerId)
+            : null;
+        if (!counterparty) {
+            return {
+                amount: order.totalWithTax,
+                state: 'Declined' as const,
+                errorMessage: 'Customer has no counterparty — deferred payment is unavailable',
+                metadata: {},
+            };
+        }
+        const overrun = exceedsCreditLimit(counterparty, order.totalWithTax);
+        if (overrun) {
+            return {
+                amount: order.totalWithTax,
+                state: 'Declined' as const,
+                errorMessage: formatOverrunMessage(overrun),
+                metadata: {},
+            };
+        }
+        return { amount: order.totalWithTax, state: 'Authorized' as const, metadata: {} };
     },
     settlePayment: () => ({ success: true }),
 });

@@ -640,3 +640,11 @@ These are real, acknowledged gaps — not guessed at here, tracked for a future 
   known-benign rounding difference under some threshold) is an open, deliberately deferred
   question — don't build auto-resolution speculatively before a real pattern of issues shows
   which ones are actually safe.
+
+## Checkout payment method availability (issue #180)
+
+- The storefront renders only what `eligiblePaymentMethods` returns; no hardcoded list.
+- `deferred-payment` (plugin-deferred-payment) owns credit-limit control: the eligibility checker hides it for counterparties without a credit limit; `createPayment` declines with `credit-limit-exceeded: {json}` when `creditBalance + order total` exceeds the limit (whole rubles vs. minor units handled in `credit-limit-decision.ts`). The storefront shows a dialog for that decline.
+- `offline-terms` stays in acquiring; `OFFLINE_TERMS_ENABLED=false` disables the PaymentMethod row.
+- `OnlinePaymentPlugin` loads only when `ONLINE_PAYMENT_STUB_ENABLED=true` (set in `.env.local`). A stale `online-stub` row in a DB where the plugin is no longer loaded must be disabled in Admin.
+- Not done yet: per-contract limits, links to related orders in the dialog, overrun surfacing in the orders list, mandatory invoice requisites.
