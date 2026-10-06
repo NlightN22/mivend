@@ -5,9 +5,10 @@ withDefaults(
     defineProps<{
         productName: string;
         emoji?: string;
+        images?: { thumb: string; full: string }[];
         showFavorite?: boolean;
     }>(),
-    { showFavorite: true },
+    { showFavorite: true, images: () => [] },
 );
 
 const THUMBS = ['📦', '🏷️', '🔍', '📋', '🧾'];
@@ -20,7 +21,16 @@ const favorited = ref(false);
         <div class="gallery__card">
             <div class="gallery__thumbs">
                 <button
-                    v-for="(t, i) in THUMBS"
+                    v-for="(img, i) in images"
+                    :key="`img-${i}`"
+                    :class="['gallery__thumb', { 'gallery__thumb--active': active === i }]"
+                    type="button"
+                    @click="active = i"
+                >
+                    <img class="gallery__thumb-photo" :src="img.thumb" :alt="productName" />
+                </button>
+                <button
+                    v-for="(t, i) in images.length ? [] : THUMBS"
                     :key="i"
                     :class="['gallery__thumb', { 'gallery__thumb--active': active === i }]"
                     type="button"
@@ -40,7 +50,13 @@ const favorited = ref(false);
                 >
                     {{ favorited ? '♥' : '♡' }}
                 </button>
-                <div class="gallery__img">
+                <img
+                    v-if="images.length"
+                    class="gallery__photo"
+                    :src="images[active]?.full ?? images[0].full"
+                    :alt="productName"
+                />
+                <div v-else class="gallery__img">
                     {{ active === 0 ? (emoji ?? '📦') : THUMBS[active] }}
                 </div>
             </div>
@@ -97,7 +113,8 @@ const favorited = ref(false);
 .gallery__main {
     flex: 1;
     position: relative;
-    min-height: 320px;
+    height: 380px;
+    overflow: hidden;
     background: linear-gradient(135deg, #f4f9f7, #e8f5ee);
     border-radius: 14px;
     display: flex;
@@ -106,6 +123,7 @@ const favorited = ref(false);
 }
 
 .gallery__fav {
+    z-index: 1;
     position: absolute;
     top: 10px;
     right: 10px;
@@ -124,6 +142,23 @@ const favorited = ref(false);
 }
 .gallery__fav:hover {
     border-color: #e05;
+}
+
+.gallery__thumb-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.gallery__photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 12px;
+    box-sizing: border-box;
 }
 
 .gallery__img {

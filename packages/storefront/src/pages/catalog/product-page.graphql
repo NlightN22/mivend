@@ -4,6 +4,9 @@ query ProductDetail($slug: String!) {
         name
         slug
         description
+        assets {
+            preview
+        }
         customFields {
             fullName
             manufacturerPartNumber

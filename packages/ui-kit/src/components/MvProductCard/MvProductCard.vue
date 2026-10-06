@@ -11,6 +11,7 @@ interface Props {
     name: string;
     sku: string;
     brand?: string;
+    imageUrl?: string;
     price?: number;
     compareAtPrice?: number;
     customerPrice?: number;
@@ -65,7 +66,14 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     <article class="mv-product-card">
         <a :href="`${linkBase}/${slug}`" class="mv-product-card__img-link">
             <div class="mv-product-card__img">
-                <span class="mv-product-card__img-icon" aria-hidden="true" />
+                <img
+                    v-if="imageUrl"
+                    class="mv-product-card__img-photo"
+                    :src="imageUrl"
+                    :alt="name"
+                    loading="lazy"
+                />
+                <span v-else class="mv-product-card__img-icon" aria-hidden="true" />
                 <span
                     v-if="discountTiers.length > 0"
                     class="mv-product-card__discount-badge"
@@ -190,6 +198,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 .mv-product-card__img {
     position: relative;
     height: 138px;
+    overflow: hidden;
     display: grid;
     place-items: center;
     background: linear-gradient(145deg, #f7fbfa, #ebf8f2);
@@ -200,6 +209,16 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     position: absolute;
     bottom: 8px;
     left: 8px;
+}
+
+.mv-product-card__img-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 6px;
+    box-sizing: border-box;
 }
 
 .mv-product-card__img-icon {

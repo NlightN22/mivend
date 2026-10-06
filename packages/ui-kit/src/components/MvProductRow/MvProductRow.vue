@@ -11,6 +11,7 @@ interface Props {
     name: string;
     sku: string;
     brand?: string;
+    imageUrl?: string;
     price?: number;
     customerPrice?: number;
     oldPrice?: number;
@@ -88,7 +89,16 @@ function onStepperChange(qty: number): void {
     <article class="mv-product-row" :class="{ 'mv-product-row--with-floor-price': showFloorPrice }">
         <div class="mv-product-row__media">
             <div class="mv-product-row__img-wrap">
-                <slot name="image"><div class="mv-product-row__img-placeholder">&#9744;</div></slot>
+                <slot name="image">
+                    <img
+                        v-if="imageUrl"
+                        class="mv-product-row__img-photo"
+                        :src="imageUrl"
+                        :alt="name"
+                        loading="lazy"
+                    />
+                    <div v-else class="mv-product-row__img-placeholder">&#9744;</div>
+                </slot>
             </div>
         </div>
 
@@ -242,6 +252,11 @@ function onStepperChange(qty: number): void {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+}
+.mv-product-row__img-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 .mv-product-row__img-placeholder {
     font-size: 22px;

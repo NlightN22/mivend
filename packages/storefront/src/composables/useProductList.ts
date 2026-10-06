@@ -2,6 +2,7 @@ import { orderFacetGroups } from './facetOrder';
 import { describeLoadError, type LoadErrorText } from '../api/describeLoadError';
 import { ref, watch, type Ref } from 'vue';
 import { shopApi } from '../api/client';
+import { assetUrl } from './assetUrl';
 import { buildSort, type SortOption } from './search-sort';
 import { useSearchCapabilities } from './useSearchCapabilities';
 import {
@@ -54,6 +55,7 @@ export interface ProductItem {
     variants: ProductVariant[];
     facetValues: FacetValue[];
     manufacturer?: { name?: string | null } | null;
+    imageUrl?: string;
 }
 
 export type ViewMode = 'list' | 'grid';
@@ -84,6 +86,7 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
         name: item.productName,
         slug: item.slug,
         manufacturer: item.manufacturer,
+        imageUrl: item.productAsset ? assetUrl(item.productAsset.preview, 'small') : undefined,
         variants: [
             {
                 id: item.productVariantId,

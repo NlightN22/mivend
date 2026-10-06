@@ -29,6 +29,9 @@ query CatalogProducts(
             manufacturer {
                 name
             }
+            productAsset {
+                preview
+            }
             slug
             sku
             priceWithTax {

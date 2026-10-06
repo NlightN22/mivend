@@ -4326,6 +4326,7 @@ export type CatalogProductsQuery = {
             customerPrice?: number | null;
             compareAtPrice?: number | null;
             manufacturer?: { name?: string | null } | null;
+            productAsset?: { preview: string } | null;
             priceWithTax: { min: any } | { value: any };
             discountTiers: Array<{
                 percent: number;
@@ -4515,6 +4516,7 @@ export type ProductDetailQuery = {
         name: string;
         slug: string;
         description: string;
+        assets: Array<{ preview: string }>;
         customFields?: { fullName?: string | null; manufacturerPartNumber?: string | null } | null;
         variants: Array<{
             id: string;
@@ -5312,6 +5314,9 @@ export const CatalogProductsDocument = new TypedDocumentString(`
       manufacturer {
         name
       }
+      productAsset {
+        preview
+      }
       slug
       sku
       priceWithTax {
@@ -5527,6 +5532,9 @@ export const ProductDetailDocument = new TypedDocumentString(`
     name
     slug
     description
+    assets {
+      preview
+    }
     customFields {
       fullName
       manufacturerPartNumber
