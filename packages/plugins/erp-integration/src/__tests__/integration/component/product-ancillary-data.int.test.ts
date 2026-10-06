@@ -1,5 +1,13 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { Column, DataSource, Entity, EntityManager, Index, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    DataSource,
+    Entity,
+    EntityManager,
+    EntityTarget,
+    Index,
+    PrimaryGeneratedColumn,
+} from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestSchema,
@@ -134,10 +142,10 @@ describe('ManufacturerService (integration, real Postgres)', () => {
     });
 });
 
-function characteristicsService(): ProductAncillaryDataService {
+function ancillaryService(entity: EntityTarget<object>): ProductAncillaryDataService {
     return new ProductAncillaryDataService({
         getRepository: (c: { manager?: EntityManager }) =>
-            (c.manager ?? dataSource.manager).getRepository(TestCharacteristic),
+            (c.manager ?? dataSource.manager).getRepository(entity),
         withTransaction: (_c: unknown, fn: (c: unknown) => Promise<void>) =>
             dataSource.transaction(manager => fn({ manager })),
     } as unknown as TransactionalConnection);
@@ -184,7 +192,7 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
     });
 
     it('replaceCharacteristics fully replaces the prior set for the product', async () => {
-        const service = characteristicsService();
+        const service = ancillaryService(TestCharacteristic);
 
         await service.replaceCharacteristics(ctx, 'product-1', [
             {
@@ -212,7 +220,7 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
     });
 
     it('replaceCharacteristics for one product run concurrently never hits the unique constraint', async () => {
-        const service = characteristicsService();
+        const service = ancillaryService(TestCharacteristic);
         const rows = ['A', 'B', 'C'].map(key => ({
             group: 'attribute',
             key,
@@ -232,9 +240,7 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
     });
 
     it('replaceManufacturerCodes fully replaces the prior set for the product', async () => {
-        const service = new ProductAncillaryDataService({
-            getRepository: () => dataSource.getRepository(TestManufacturerCode),
-        } as unknown as TransactionalConnection);
+        const service = ancillaryService(TestManufacturerCode);
 
         await service.replaceManufacturerCodes(ctx, 'product-1', [
             { lineNumber: 1, code: 'OEM-1', manufacturer: 'guid-a' },
@@ -248,5 +254,25 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
             .getRepository(TestManufacturerCode)
             .find({ where: { productId: 'product-1' } });
         expect(rows.map(r => r.code).sort()).toEqual(['OEM-2', 'OEM-3']);
+    });
+
+    it('replaceManufacturerCodes for one product run concurrently never duplicates rows', async () => {
+        const service = ancillaryService(TestManufacturerCode);
+        const rows = [1, 2].map(lineNumber => ({
+            lineNumber,
+            code: `OEM-${lineNumber}`,
+            manufacturer: 'guid-a',
+        }));
+
+        await Promise.all(
+            Array.from({ length: 8 }, () =>
+                service.replaceManufacturerCodes(ctx, 'product-1', rows),
+            ),
+        );
+
+        const stored = await dataSource
+            .getRepository(TestManufacturerCode)
+            .find({ where: { productId: 'product-1' } });
+        expect(stored.map(r => r.code).sort()).toEqual(['OEM-1', 'OEM-2']);
     });
 });

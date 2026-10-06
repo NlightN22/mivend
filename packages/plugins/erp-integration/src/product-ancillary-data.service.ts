@@ -50,9 +50,14 @@ export class ProductAncillaryDataService {
         productId: string,
         rows: ManufacturerCodeRow[],
     ): Promise<void> {
-        const repo = this.connection.getRepository(ctx, ProductManufacturerCode);
-        await repo.delete({ productId });
-        if (rows.length === 0) return;
-        await repo.save(rows.map(row => repo.create({ productId, ...row })));
+        await this.connection.withTransaction(ctx, async txCtx => {
+            const repo = this.connection.getRepository(txCtx, ProductManufacturerCode);
+            await repo.query('select pg_advisory_xact_lock(hashtext($1))', [
+                `product-manufacturer-codes:${productId}`,
+            ]);
+            await repo.delete({ productId });
+            if (rows.length === 0) return;
+            await repo.save(rows.map(row => repo.create({ productId, ...row })));
+        });
     }
 }
