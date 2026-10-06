@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseCreditOverrun } from './creditOverrun';
+import { parseCreditOverrun } from '../../utils/creditOverrun';
 
 describe('parseCreditOverrun', () => {
     it('parses the server decline message', () => {

@@ -4,6 +4,7 @@ import { setActivePinia, createPinia } from 'pinia';
 vi.mock('@mivend/ui-kit', () => ({ toast: vi.fn() }));
 vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
 
+import { shopApi } from '../../api/client';
 import { useCartStore } from '../../stores/cart';
 
 interface TestLine {
@@ -53,5 +54,32 @@ describe('cart store totals', () => {
         ]);
 
         expect(store.discountAmount).toBe(0);
+    });
+});
+
+describe('cart store fetchCart', () => {
+    beforeEach(() => {
+        setActivePinia(createPinia());
+        vi.useFakeTimers();
+        vi.mocked(shopApi).mockReset();
+    });
+
+    it('keeps the known cart when the fetch fails, then recovers on retry', async () => {
+        const store = useCartStore();
+        setLines(store, [
+            { quantity: 4, unitPrice: 100, compareAtPrice: null, linePriceWithTax: 400 },
+        ]);
+        vi.mocked(shopApi)
+            .mockRejectedValueOnce(new Error('network'))
+            .mockResolvedValueOnce({
+                activeOrder: { lines: [{ quantity: 6 }] },
+            } as never);
+
+        await store.fetchCart();
+        expect(store.totalQuantity).toBe(4);
+
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(store.totalQuantity).toBe(6);
+        vi.useRealTimers();
     });
 });

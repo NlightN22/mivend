@@ -29,6 +29,9 @@ import {
     stockUpdateFailed,
 } from '../utils/discountMessages';
 
+const CART_FETCH_RETRIES = 4;
+const CART_FETCH_RETRY_MS = 2000;
+
 interface DeferredPaymentResult {
     placed: boolean;
     overrun?: CreditOverrun;
@@ -82,12 +85,15 @@ export const useCartStore = defineStore('cart', () => {
     );
     const isEmpty = computed(() => lines.value.length === 0);
 
-    async function fetchCart(): Promise<void> {
+    // A failed fetch must not look like an empty cart — the server order is untouched.
+    async function fetchCart(attempt = 0): Promise<void> {
         try {
             const result = await shopApi(ActiveOrderDocument);
             if (pendingMutations === 0) order.value = result.activeOrder ?? null;
         } catch {
-            if (pendingMutations === 0) order.value = null;
+            if (attempt < CART_FETCH_RETRIES) {
+                setTimeout(() => void fetchCart(attempt + 1), CART_FETCH_RETRY_MS * (attempt + 1));
+            }
         }
     }
 
