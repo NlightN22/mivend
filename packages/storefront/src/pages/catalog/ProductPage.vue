@@ -59,7 +59,9 @@ const breadcrumbItems = computed(() => {
 });
 const extraSpecs = computed(() => {
     const weight = variant.value?.customFields?.weight;
+    const code = product.value?.customFields?.manufacturerPartNumber;
     return [
+        ...(code ? [{ label: 'Manufacturer code', value: code }] : []),
         ...facetSpecs(product.value?.facetValues ?? []),
         ...(weight ? [{ label: 'Weight', value: `${weight} kg` }] : []),
     ];

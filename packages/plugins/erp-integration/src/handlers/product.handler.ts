@@ -22,6 +22,7 @@ import { resolveCategoryFacetValueId } from '../category-resolver';
 import {
     extractBarcodes,
     extractManufacturerCodes,
+    extractOptionalString,
     extractManufacturerId,
 } from '../product-ancillary-fields';
 import {
@@ -145,6 +146,13 @@ export class ProductStreamHandler implements InboundStreamHandler {
 
         const characteristicRows = mapProductCharacteristics(payload);
         const manufacturerCodeRows = extractManufacturerCodes(payload);
+        const manufacturerPartNumber = extractOptionalString(payload, 'manufacturerPartNumber');
+        const fullName = extractOptionalString(payload, 'fullName');
+        const optionalCustomFields = {
+            ...(manufacturerId ? { manufacturerId } : {}),
+            ...(manufacturerPartNumber ? { manufacturerPartNumber } : {}),
+            ...(fullName ? { fullName } : {}),
+        };
         const barcodes = extractBarcodes(payload);
 
         const existing = await this.connection.rawConnection
@@ -163,10 +171,12 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 id: productId,
                 enabled: isActive,
                 translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
-                // Omit manufacturerId when unset (never clear an already-resolved relation).
+                // Omit unset fields (never clear an already-resolved relation or stored value).
                 // `${field.name}Id` is the input key CustomFieldRelationService reads; the "not
                 // found" warning comes from CustomFieldsValidationSubscriber and is harmless.
-                ...(manufacturerId ? { customFields: { manufacturerId } } : {}),
+                ...(Object.keys(optionalCustomFields).length > 0
+                    ? { customFields: optionalCustomFields }
+                    : {}),
             });
             const variants = await this.productVariantService.getVariantsByProductId(
                 ctx,
@@ -212,7 +222,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
             const created = await this.productService.create(ctx, {
                 enabled: isActive,
                 translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
-                customFields: { externalId: entityId, manufacturerId },
+                customFields: { externalId: entityId, ...optionalCustomFields },
             });
             productId = String(created.id);
             variantId = await this.createDefaultVariant(

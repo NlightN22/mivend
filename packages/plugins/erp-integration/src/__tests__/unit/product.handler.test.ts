@@ -258,6 +258,73 @@ describe('ProductStreamHandler', () => {
         ]);
     });
 
+    describe('manufacturerPartNumber / fullName', () => {
+        const updateDeps = () => {
+            const connection = makeConnection('existing-product-id');
+            const productVariantService = {
+                getVariantsByProductId: vi.fn().mockResolvedValue({ items: [{ id: 'variant-1' }] }),
+                create: vi.fn(),
+                update: vi.fn().mockResolvedValue([{}]),
+                findOne: vi.fn().mockResolvedValue({ id: 'variant-1', facetValues: [] }),
+            };
+            const productService = { create: vi.fn(), update: vi.fn().mockResolvedValue({}) };
+            return { connection, productVariantService, productService };
+        };
+
+        it('stores both on create', async () => {
+            const { handler, productService } = makeHandler();
+
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget',
+                manufacturerPartNumber: 'KT 100511',
+                fullName: 'Widget, new model',
+            });
+
+            expect(productService.create).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    customFields: {
+                        externalId: 'p-1',
+                        manufacturerPartNumber: 'KT 100511',
+                        fullName: 'Widget, new model',
+                    },
+                }),
+            );
+        });
+
+        it('on update, sends them when present', async () => {
+            const deps = updateDeps();
+            const { handler } = makeHandler(deps);
+
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget',
+                manufacturerPartNumber: 'KT 100511',
+            });
+
+            expect(deps.productService.update).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    customFields: { manufacturerPartNumber: 'KT 100511' },
+                }),
+            );
+        });
+
+        it('on update, never clears stored values when the fields are absent or empty', async () => {
+            const deps = updateDeps();
+            const { handler } = makeHandler(deps);
+
+            await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget',
+                manufacturerPartNumber: '',
+            });
+
+            expect(deps.productService.update.mock.calls[0][1]).not.toHaveProperty('customFields');
+        });
+    });
+
     // #144: stringified ids made TypeORM's many-to-many save INSERT a new variant (numeric IDs).
     it('on update, passes the variant and category facet value ids through as Vendure IDs', async () => {
         const productVariantService = {

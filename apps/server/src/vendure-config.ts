@@ -359,6 +359,12 @@ export const config: VendureConfig = {
                 defaultValue: false,
                 label: [{ languageCode: LanguageCode.en, value: 'On Sale' }],
             },
+            {
+                name: 'manufacturerPartNumber',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Manufacturer part number' }],
+            },
             // ERP directory GUID resolved to a Manufacturer entity (#116), not a display name.
             {
                 name: 'manufacturer',

@@ -3100,6 +3100,7 @@ export type ProductVariantListArgs = {
 export type ProductCustomFields = {
     externalId?: Maybe<Scalars['String']['output']>;
     fullName?: Maybe<Scalars['String']['output']>;
+    manufacturerPartNumber?: Maybe<Scalars['String']['output']>;
     onSale?: Maybe<Scalars['Boolean']['output']>;
 };
 
@@ -3113,6 +3114,7 @@ export type ProductFilterParameter = {
     fullName?: InputMaybe<StringOperators>;
     id?: InputMaybe<IdOperators>;
     languageCode?: InputMaybe<StringOperators>;
+    manufacturerPartNumber?: InputMaybe<StringOperators>;
     name?: InputMaybe<StringOperators>;
     onSale?: InputMaybe<BooleanOperators>;
     slug?: InputMaybe<StringOperators>;
@@ -3191,6 +3193,7 @@ export type ProductSortParameter = {
     externalId?: InputMaybe<SortOrder>;
     fullName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
+    manufacturerPartNumber?: InputMaybe<SortOrder>;
     name?: InputMaybe<SortOrder>;
     onSale?: InputMaybe<SortOrder>;
     slug?: InputMaybe<SortOrder>;
@@ -4512,7 +4515,7 @@ export type ProductDetailQuery = {
         name: string;
         slug: string;
         description: string;
-        customFields?: { fullName?: string | null } | null;
+        customFields?: { fullName?: string | null; manufacturerPartNumber?: string | null } | null;
         variants: Array<{
             id: string;
             sku: string;
@@ -5526,6 +5529,7 @@ export const ProductDetailDocument = new TypedDocumentString(`
     description
     customFields {
       fullName
+      manufacturerPartNumber
     }
     variants {
       id

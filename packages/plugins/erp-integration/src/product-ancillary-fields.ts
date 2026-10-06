@@ -15,6 +15,16 @@ export function extractManufacturerId(payload: Record<string, unknown>): string 
         : undefined;
 }
 
+// Optional string fields (`manufacturerPartNumber`, `fullName`) — absent or empty means "not sent",
+// never an instruction to clear the stored value.
+export function extractOptionalString(
+    payload: Record<string, unknown>,
+    key: 'manufacturerPartNumber' | 'fullName',
+): string | undefined {
+    const value = payload[key];
+    return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
 // `barcodes` (repeated string) — proto3 omits an empty repeated field entirely; an absent key
 // means "no barcodes," never an explicit empty array write.
 export function extractBarcodes(payload: Record<string, unknown>): string[] {
