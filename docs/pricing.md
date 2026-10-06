@@ -41,6 +41,31 @@ The default channel currency is set from `DEFAULT_CURRENCY_CODE` (default `RUB`)
 
 ## How a customer gets a price type
 
+**Target rule (decided 2026-10-06):** a customer's price type is the price type of their
+counterparty's **main contract**. If the main contract cannot be determined, the customer gets
+the **branch default** price type (`BranchSettings.defaultPriceTypeId`) — the same fallback a
+guest gets (see "How a price is resolved", step 1b). A contract's own name is never used to
+guess which one is main: one counterparty can have several contracts named "main", one per
+organization.
+
+```
+counterparty.mainContractId (1C: counterparty's main-contract reference)
+    → contract (by erpId) → contract.priceTypeId (1C price type GUID)
+        → PriceType (by externalId) → CustomerPriceType(customerId → priceType)
+no mainContractId / contract or price type not found  → no CustomerPriceType row
+                                                        → branch-default fallback
+```
+
+**Current state (not implemented yet):** the contract event carries `priceTypeId` but no "main"
+flag, and the counterparty event does not carry the main-contract reference. So no customer has a
+`CustomerPriceType` row on staging and everyone is priced at the branch default (retail). The
+`priceType` string on `Counterparty` (`retail` on every row) is a seed placeholder, not ERP data.
+Blocked on search-platform#172 (`main_contract_id` on `CounterpartyChanged`); a counterparty
+resync is needed after it ships.
+
+**Legacy flow (description below is what the old code did, kept for context; the ERP counterparty
+stream does not carry `priceType`, so it never fires against real data):**
+
 ```
 ERP counterparty record (priceType: "WHOLESALE")
     → erp-import: CustomerCounterpartyHandler.assign()
@@ -300,3 +325,12 @@ product's `manufacturer` relation (`Product.customFields.manufacturer`), never a
 API exposes it as `Product.manufacturer { id name }` and `SearchResult.manufacturer`
 (erp-integration, batched per request); the storefront reads it only through `brandOf`
 (`packages/storefront/src/utils/brand.ts`). There is no `brand` facet — nothing assigns one.
+
+---
+
+## Products without a price
+
+The ERP publishes prices per product and price type; a large part of the catalog (mostly items
+not in stock) has no price row at all (staging, 2026-10-06: ~38% of variants), which is real
+upstream data, not a sync loss. A logged-in customer sees "Price on request" with a "Request
+price" action instead of a dash; guests see "Log in to see prices".
