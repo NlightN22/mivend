@@ -307,6 +307,8 @@ export const useCartStore = defineStore('cart', () => {
     // addPaymentToOrder call. Vendure refuses this transition without a shipping
     // method attached, so pick the (currently single) eligible one first.
     async function beginCheckout(): Promise<boolean> {
+        // A previous attempt (declined payment, closed tab) can leave the order in ArrangingPayment.
+        if (order.value?.state === 'ArrangingPayment') await shopApi(ResumeAddingItemsDocument);
         const eligible = await shopApi(EligibleShippingMethodsForCheckoutDocument);
         const methodId = eligible.eligibleShippingMethods[0]?.id;
         if (!methodId) {
@@ -354,11 +356,10 @@ export const useCartStore = defineStore('cart', () => {
             toast(payment.message ?? 'Could not place order', 'error');
             return { placed: false, limitExceeded: false };
         }
-        const limitExceeded = payment.payments?.some(
-            p =>
-                (p.metadata as Record<string, unknown> | null)?.[CREDIT_LIMIT_EXCEEDED_KEY] ===
-                true,
-        );
+        const limitExceeded = payment.payments?.some(p => {
+            const meta = p.metadata as { public?: Record<string, unknown> } | null;
+            return meta?.public?.[CREDIT_LIMIT_EXCEEDED_KEY] === true;
+        });
         return { placed: true, limitExceeded: Boolean(limitExceeded) };
     }
 

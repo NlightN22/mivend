@@ -188,3 +188,50 @@ describe('cart store mutation queue', () => {
         vi.useRealTimers();
     });
 });
+
+describe('cart store deferred checkout', () => {
+    beforeEach(() => {
+        setActivePinia(createPinia());
+        vi.mocked(shopApi).mockReset();
+    });
+
+    const placed = (metadata: unknown) =>
+        ({
+            addPaymentToOrder: {
+                __typename: 'Order',
+                payments: [{ method: 'deferred-payment', metadata }],
+            },
+        }) as never;
+
+    it('reports the credit-limit flag from the public payment metadata', async () => {
+        const store = useCartStore();
+        vi.mocked(shopApi)
+            .mockResolvedValueOnce(placed({ public: { creditLimitExceeded: true } }))
+            .mockResolvedValueOnce({ activeOrder: null } as never);
+        expect(await store.completeDeferredPayment()).toEqual({
+            placed: true,
+            limitExceeded: true,
+        });
+    });
+
+    it.each([[{ public: { creditLimitExceeded: false } }], [{}], [null]])(
+        'does not warn for metadata %j',
+        async metadata => {
+            const store = useCartStore();
+            vi.mocked(shopApi)
+                .mockResolvedValueOnce(placed(metadata))
+                .mockResolvedValueOnce({ activeOrder: null } as never);
+            expect((await store.completeDeferredPayment()).limitExceeded).toBe(false);
+        },
+    );
+
+    it('leaves ArrangingPayment before starting checkout again', async () => {
+        const store = useCartStore();
+        store.order = { state: 'ArrangingPayment', lines: [] } as never;
+        vi.mocked(shopApi)
+            .mockResolvedValueOnce({} as never) // ResumeAddingItems
+            .mockResolvedValueOnce({ eligibleShippingMethods: [] } as never);
+        expect(await store.beginCheckout()).toBe(false);
+        expect(String(vi.mocked(shopApi).mock.calls[0][0])).toContain('AddingItems');
+    });
+});

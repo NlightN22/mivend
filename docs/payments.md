@@ -673,3 +673,17 @@ through is decided downstream (ERP, later a manager-portal approval workflow, se
 - Known limitations: concurrent checkouts of one counterparty are not serialized (the warning may be
   missed in a race, nothing is blocked either way); related-orders links and overrun surfacing in the
   orders list are not built; mandatory invoice requisites are deferred.
+
+### Local verification data and tests
+
+- `infrastructure/scripts/seed-erp.mjs` (local contour only) seeds two buyers for this flow:
+  `credit-limited@buyer.example` (limit 100000, balance 0) and `prepay@buyer.example` (limit 0), password
+  `Password123!`. Bump the script's `run` id whenever seed records change: ERP import is idempotent by
+  `exchangeId`, so a reused id silently skips new records.
+- Seeded customers have no servicing branch, so placing an order needs a preferred trading point whose
+  `servicingBranchId` is set (local e2e fixtures create one); otherwise payment fails with "no
+  branch-scoped StockLocation".
+- Integration test (real Postgres schema): `packages/plugins/deferred-payment/src/__tests__/integration/
+  deferred-credit.int.test.ts` covers eligibility, within/over/exact-boundary limits, several open
+  orders, confirmed/cancelled/other-method exclusion, counterparty isolation and idempotent re-runs.
+  The Shop API layer itself still has no bootstrap harness; it was verified live in a browser.
