@@ -713,8 +713,8 @@ importers:
                 specifier: ^11.0.0
                 version: 11.4.5(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(reflect-metadata@0.2.2)
             '@nlightn22/event-contracts':
-                specifier: ^0.47.0
-                version: 0.47.0
+                specifier: ^0.50.1
+                version: 0.50.1
             dataloader:
                 specifier: 2.2.3
                 version: 2.2.3
@@ -4612,11 +4612,11 @@ packages:
             rxjs: ^7.2.0
             typeorm: ^0.3.0 || ^1.0.0-dev
 
-    '@nlightn22/event-contracts@0.47.0':
+    '@nlightn22/event-contracts@0.50.1':
         resolution:
             {
-                integrity: sha512-J1XcrfhTJ+rrPU9sY8vheTGc6Wi1JhsMc9E3oXQ/ThIOCiFVkyQXoOolbtWUYsgBbwQAwa0wfm+hRu6mBm6Q5g==,
-                tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.47.0/1e7729e5965b38a24c2708d9933f89f5a9ebb4d5,
+                integrity: sha512-c7fc/vzmBQgEVHW6wVSl4eNQ5/YFj/hFaUQnwuHaeVRR1Fas65RulTsA1x1OkRE5aTUn52evGJ4lYa7H2OPsiA==,
+                tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.50.1/cc5b7e8306b3ed5057f1ccfa8bcd582a4991d0b0,
             }
 
     '@nodelib/fs.scandir@2.1.5':
@@ -18126,7 +18126,7 @@ snapshots:
             rxjs: 7.8.2
             typeorm: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
 
-    '@nlightn22/event-contracts@0.47.0':
+    '@nlightn22/event-contracts@0.50.1':
         dependencies:
             '@bufbuild/protobuf': 2.13.0
 
