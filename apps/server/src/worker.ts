@@ -10,6 +10,12 @@ const ALL_QUEUES_EXCEPT_EMAIL = [
     'generate-document', // this project's own (plugin-documents, PdfGeneratorService)
 ];
 
+// Nest's shutdown hooks close the app but leftover handles can keep the process alive with no
+// connections (issue #186); ts-node-dev then leaves a dead worker consuming nothing.
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.once(signal, () => setTimeout(() => process.exit(0), 10_000).unref());
+}
+
 assertDatabaseLocale()
     .then(() =>
         bootstrapWorker({

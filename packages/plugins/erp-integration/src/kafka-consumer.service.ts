@@ -330,6 +330,20 @@ export class KafkaConsumerService implements OnModuleDestroy {
     async onModuleDestroy(): Promise<void> {
         this.destroyed = true;
         if (this.crashRetryTimeout) clearTimeout(this.crashRetryTimeout);
-        await this.consumer?.disconnect();
+        this.connected = false;
+        try {
+            await this.consumer?.disconnect();
+        } catch (err) {
+            Logger.error(
+                `Kafka consumer disconnect failed on shutdown: ${
+                    err instanceof Error ? err.message : String(err)
+                }`,
+                loggerCtx,
+            );
+        }
+        await this.dataSource
+            .getRepository(KafkaConsumerStatus)
+            .upsert({ key: STATUS_KEY, connected: false }, { conflictPaths: ['key'] })
+            .catch(() => undefined);
     }
 }
