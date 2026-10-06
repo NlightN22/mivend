@@ -4,6 +4,9 @@ query ProductDetail($slug: String!) {
         name
         slug
         description
+        customFields {
+            fullName
+        }
         variants {
             id
             sku
@@ -12,11 +15,16 @@ query ProductDetail($slug: String!) {
             compareAtPrice
             currencyCode
             stockLevel
+            customFields {
+                multiplicity
+                weight
+            }
         }
         facetValues {
             name
             facet {
                 code
+                name
             }
         }
         manufacturer {
@@ -30,30 +38,6 @@ query ProductDetail($slug: String!) {
                 id
                 name
                 slug
-            }
-        }
-    }
-}
-
-query RelatedProducts {
-    products(options: { take: 5 }) {
-        items {
-            id
-            name
-            slug
-            variants {
-                price
-                currencyCode
-                stockLevel
-            }
-            facetValues {
-                name
-                facet {
-                    code
-                }
-            }
-            manufacturer {
-                name
             }
         }
     }

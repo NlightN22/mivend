@@ -72,7 +72,6 @@ onMounted(async () => {
                     class="product-detail-page__gallery"
                     :product-name="product.name"
                     :show-favorite="false"
-                    :show-documents="false"
                 />
 
                 <MvProductMainCards

@@ -22,6 +22,9 @@ interface Props {
     description: string;
     brand: string;
     category: string;
+    fullName?: string;
+    multiplicity?: number;
+    extraSpecs?: { label: string; value: string }[];
     stockVariantLabel: StockVariant;
     related: RelatedProduct[];
     // Whether the caller can see a price for related/analog products at all — storefront passes
@@ -34,6 +37,9 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+    fullName: '',
+    multiplicity: 1,
+    extraSpecs: () => [],
     showRelatedPrices: false,
     showAddToCartButton: true,
     linkBase: '/product',
@@ -45,6 +51,9 @@ const specs = computed(() => {
         { label: 'Brand', value: props.brand || '—' },
         { label: 'Category', value: props.category || '—' },
     ];
+    if (props.fullName && props.fullName !== props.name)
+        rows.splice(1, 0, { label: 'Full name', value: props.fullName });
+    rows.push(...props.extraSpecs);
     if (props.description) rows.push({ label: 'Description', value: props.description });
     return rows;
 });
@@ -60,7 +69,6 @@ function getBrand(p: RelatedProduct) {
         <div class="pmc__card">
             <div class="pmc__labels">
                 <MvStockBadge :variant="stockVariantLabel" />
-                <span v-if="category" class="pmc__label">{{ category }}</span>
                 <span v-if="brand" class="pmc__label pmc__label--brand">{{ brand }}</span>
             </div>
             <h1 class="pmc__title">{{ name }}</h1>
@@ -74,16 +82,12 @@ function getBrand(p: RelatedProduct) {
             </div>
             <div class="pmc__mini">
                 <div class="pmc__mini-item">
-                    <div class="pmc__mini-lbl">Category</div>
-                    <div class="pmc__mini-val">{{ category || '—' }}</div>
-                </div>
-                <div class="pmc__mini-item">
                     <div class="pmc__mini-lbl">Unit</div>
                     <div class="pmc__mini-val">pc.</div>
                 </div>
                 <div class="pmc__mini-item">
                     <div class="pmc__mini-lbl">Multiplicity</div>
-                    <div class="pmc__mini-val">1 pc.</div>
+                    <div class="pmc__mini-val">{{ multiplicity }} pc.</div>
                 </div>
             </div>
         </div>
@@ -183,7 +187,7 @@ function getBrand(p: RelatedProduct) {
 
 .pmc__mini {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
     padding-top: 14px;
     border-top: 1px solid #edf2ef;
@@ -232,6 +236,7 @@ function getBrand(p: RelatedProduct) {
 }
 .pmc__spec-row span {
     color: #66736e;
+    white-space: nowrap;
 }
 .pmc__spec-row strong {
     color: #14231f;

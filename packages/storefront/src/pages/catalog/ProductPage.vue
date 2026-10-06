@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { brandOf } from '../../utils/brand';
+import { facetSpecs } from '../../utils/productSpecs';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -19,14 +20,11 @@ import { shopApi } from '../../api/client';
 import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
 import {
     ProductDetailDocument,
-    RelatedProductsDocument,
     type ProductDetailQuery,
-    type RelatedProductsQuery,
 } from '../../api/generated/graphql';
 import ProductBuyPanel from './ProductBuyPanel.vue';
 
 type Product = NonNullable<ProductDetailQuery['product']>;
-type RelatedProduct = RelatedProductsQuery['products']['items'][number];
 
 const route = useRoute();
 const { t } = useI18n();
@@ -35,7 +33,6 @@ const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
 
 const product = ref<Product | null>(null);
-const related = ref<RelatedProduct[]>([]);
 const loading = ref(true);
 const error = ref<LoadErrorText | null>(null);
 
@@ -70,18 +67,21 @@ const breadcrumbItems = computed(() => {
         { label: product.value?.name ?? '' },
     ];
 });
+const extraSpecs = computed(() => {
+    const weight = variant.value?.customFields?.weight;
+    return [
+        ...facetSpecs(product.value?.facetValues ?? []),
+        ...(weight ? [{ label: 'Weight', value: `${weight} kg` }] : []),
+    ];
+});
 const stockVariantLabel = computed(() => stockVariantFromLevel(variant.value?.stockLevel));
 
 async function fetchData(slug: string) {
     loading.value = true;
     error.value = null;
     try {
-        const [detailRes, relatedRes] = await Promise.all([
-            shopApi(ProductDetailDocument, { slug }),
-            shopApi(RelatedProductsDocument),
-        ]);
+        const detailRes = await shopApi(ProductDetailDocument, { slug });
         product.value = detailRes.product ?? null;
-        related.value = relatedRes.products.items.filter(p => p.slug !== slug).slice(0, 3);
     } catch (e) {
         error.value = describeLoadError(e);
     } finally {
@@ -124,9 +124,11 @@ onMounted(() => {
                     :description="product.description"
                     :brand="brand"
                     :category="category"
+                    :full-name="product.customFields?.fullName ?? ''"
+                    :multiplicity="variant?.customFields?.multiplicity ?? 1"
+                    :extra-specs="extraSpecs"
                     :stock-variant-label="stockVariantLabel"
-                    :related="related"
-                    :show-related-prices="authStore.isLoggedIn"
+                    :related="[]"
                 />
 
                 <ProductBuyPanel

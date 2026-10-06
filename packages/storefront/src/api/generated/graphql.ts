@@ -4512,6 +4512,7 @@ export type ProductDetailQuery = {
         name: string;
         slug: string;
         description: string;
+        customFields?: { fullName?: string | null } | null;
         variants: Array<{
             id: string;
             sku: string;
@@ -4520,8 +4521,9 @@ export type ProductDetailQuery = {
             compareAtPrice?: number | null;
             currencyCode: CurrencyCode;
             stockLevel: string;
+            customFields?: { multiplicity?: number | null; weight?: number | null } | null;
         }>;
-        facetValues: Array<{ name: string; facet: { code: string } }>;
+        facetValues: Array<{ name: string; facet: { code: string; name: string } }>;
         manufacturer?: { name?: string | null } | null;
         collections: Array<{
             id: string;
@@ -4530,21 +4532,6 @@ export type ProductDetailQuery = {
             breadcrumbs: Array<{ id: string; name: string; slug: string }>;
         }>;
     } | null;
-};
-
-export type RelatedProductsQueryVariables = Exact<{ [key: string]: never }>;
-
-export type RelatedProductsQuery = {
-    products: {
-        items: Array<{
-            id: string;
-            name: string;
-            slug: string;
-            variants: Array<{ price: any; currencyCode: CurrencyCode; stockLevel: string }>;
-            facetValues: Array<{ name: string; facet: { code: string } }>;
-            manufacturer?: { name?: string | null } | null;
-        }>;
-    };
 };
 
 export type MyTradingPointsForDeliverySelectorQueryVariables = Exact<{ [key: string]: never }>;
@@ -5537,6 +5524,9 @@ export const ProductDetailDocument = new TypedDocumentString(`
     name
     slug
     description
+    customFields {
+      fullName
+    }
     variants {
       id
       sku
@@ -5545,11 +5535,16 @@ export const ProductDetailDocument = new TypedDocumentString(`
       compareAtPrice
       currencyCode
       stockLevel
+      customFields {
+        multiplicity
+        weight
+      }
     }
     facetValues {
       name
       facet {
         code
+        name
       }
     }
     manufacturer {
@@ -5568,31 +5563,6 @@ export const ProductDetailDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<ProductDetailQuery, ProductDetailQueryVariables>;
-export const RelatedProductsDocument = new TypedDocumentString(`
-    query RelatedProducts {
-  products(options: {take: 5}) {
-    items {
-      id
-      name
-      slug
-      variants {
-        price
-        currencyCode
-        stockLevel
-      }
-      facetValues {
-        name
-        facet {
-          code
-        }
-      }
-      manufacturer {
-        name
-      }
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<RelatedProductsQuery, RelatedProductsQueryVariables>;
 export const MyTradingPointsForDeliverySelectorDocument = new TypedDocumentString(`
     query MyTradingPointsForDeliverySelector {
   myTradingPoints {

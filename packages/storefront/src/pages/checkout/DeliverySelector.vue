@@ -90,7 +90,7 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
             >
                 <div class="delivery-selector__card-title"><span>🏬</span> Self-pickup</div>
                 <p class="delivery-selector__card-note">
-                    Central warehouse · available after assembly confirmation.
+                    Available after assembly confirmation.
                 </p>
             </button>
         </div>

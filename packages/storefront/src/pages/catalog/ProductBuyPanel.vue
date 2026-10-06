@@ -8,8 +8,6 @@ interface Props {
     compareAtPrice?: number;
     currency?: string;
     stockLevel?: string;
-    stock?: number;
-    stockQuantity?: number;
     showPrices: boolean;
     productName?: string;
 }
@@ -19,8 +17,6 @@ const props = withDefaults(defineProps<Props>(), {
     compareAtPrice: undefined,
     currency: 'RUB',
     stockLevel: undefined,
-    stock: undefined,
-    stockQuantity: undefined,
     productName: '',
 });
 
@@ -42,17 +38,11 @@ const formatRub = (n: number) =>
     }).format(n);
 
 const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
-
-const stockLabel = computed(() => (props.stock !== undefined ? `${props.stock} pcs.` : undefined));
 </script>
 
 <template>
     <div class="buy-panel">
         <div class="buy-panel__card">
-            <div class="buy-panel__price-label">
-                {{ counterparty?.priceType ? counterparty.priceType + ' price' : 'Customer price' }}
-            </div>
-
             <MvAmountDisplay
                 v-if="showPrices && compareAtPrice !== undefined"
                 :amount="compareAtPrice"
@@ -72,24 +62,8 @@ const stockLabel = computed(() => (props.stock !== undefined ? `${props.stock} p
 
             <div class="buy-panel__price-note">Price includes customer terms and VAT.</div>
 
-            <div class="buy-panel__info">
-                <div v-if="showPrices" class="buy-panel__info-row">
-                    <span>Stock</span>
-                    <MvStockBadge v-if="stockQuantity !== undefined" :quantity="stockQuantity" />
-                    <MvStockBadge v-else :variant="stockVariant" :label="stockLabel" />
-                </div>
-                <div class="buy-panel__info-row">
-                    <span>Warehouse</span><strong>Central warehouse</strong>
-                </div>
-                <div class="buy-panel__info-row"><span>Dispatch</span><strong>Today</strong></div>
-                <div class="buy-panel__info-row">
-                    <span>Multiplicity</span><strong>1 pc.</strong>
-                </div>
-            </div>
-
             <div class="buy-panel__qty-row">
-                <MvQtyStepper v-model="qty" />
-                <button class="buy-panel__fav" type="button">♡ Favorites</button>
+                <MvQtyStepper v-model="qty" block />
             </div>
 
             <button
@@ -117,26 +91,6 @@ const stockLabel = computed(() => (props.stock !== undefined ? `${props.stock} p
                 {{ counterparty!.paymentDelayDays }} days.
             </div>
         </div>
-
-        <div class="buy-panel__card buy-panel__delivery">
-            <h2 class="buy-panel__delivery-title">Delivery</h2>
-            <div class="buy-panel__delivery-sub">To the customer's current trading point.</div>
-            <div class="buy-panel__info">
-                <div class="buy-panel__info-row">
-                    <span>Address</span>
-                    <strong>{{ authStore.tradingPoint?.address ?? 'Not selected' }}</strong>
-                </div>
-                <div class="buy-panel__info-row">
-                    <span>ETA</span><strong>Today by 18:00</strong>
-                </div>
-                <div class="buy-panel__info-row">
-                    <span>Terms</span><strong>Per contract</strong>
-                </div>
-            </div>
-            <p v-if="authStore.tradingPoint?.deliveryComment" class="buy-panel__delivery-comment">
-                {{ authStore.tradingPoint.deliveryComment }}
-            </p>
-        </div>
     </div>
 </template>
 
@@ -155,14 +109,6 @@ const stockLabel = computed(() => (props.stock !== undefined ? `${props.stock} p
     padding: 20px;
 }
 
-.buy-panel__price-label {
-    font-size: 12px;
-    color: #a8b8b2;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 6px;
-}
 .buy-panel__compare-at-price {
     font-size: 14px !important;
     color: #a8b8b2;
@@ -189,48 +135,11 @@ const stockLabel = computed(() => (props.stock !== undefined ? `${props.stock} p
     margin-bottom: 16px;
 }
 
-.buy-panel__info {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 16px;
-}
-.buy-panel__info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-}
-.buy-panel__info-row span {
-    color: #66736e;
-}
-.buy-panel__info-row strong {
-    color: #14231f;
-    font-weight: 700;
-}
-
 .buy-panel__qty-row {
     display: flex;
     gap: 10px;
     align-items: center;
     margin-bottom: 12px;
-}
-
-.buy-panel__fav {
-    flex: 1;
-    height: 44px;
-    border: 1.5px solid #dde7e2;
-    border-radius: 12px;
-    background: transparent;
-    color: #66736e;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-}
-.buy-panel__fav:hover {
-    border-color: #e05;
-    color: #e05;
 }
 
 .buy-panel__add {
@@ -300,26 +209,5 @@ const stockLabel = computed(() => (props.stock !== undefined ? `${props.stock} p
 .buy-panel__notice strong {
     display: block;
     margin-bottom: 2px;
-}
-
-.buy-panel__delivery {
-    margin-top: 0;
-}
-.buy-panel__delivery-title {
-    font-size: 17px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    margin: 0 0 4px;
-}
-.buy-panel__delivery-sub {
-    font-size: 13px;
-    color: #66736e;
-    margin-bottom: 14px;
-}
-.buy-panel__delivery-comment {
-    font-size: 12px;
-    color: #66736e;
-    margin: 10px 0 0;
-    font-style: italic;
 }
 </style>

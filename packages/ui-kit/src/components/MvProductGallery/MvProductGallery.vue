@@ -6,11 +6,8 @@ withDefaults(
         productName: string;
         emoji?: string;
         showFavorite?: boolean;
-        // The "Documents" block links to mock certificate/quality-passport PDFs — meaningful
-        // for a customer-facing product page, not for an internal staff lookup view.
-        showDocuments?: boolean;
     }>(),
-    { showFavorite: true, showDocuments: true },
+    { showFavorite: true },
 );
 
 const THUMBS = ['📦', '🏷️', '🔍', '📋', '🧾'];
@@ -48,12 +45,6 @@ const favorited = ref(false);
                 </div>
             </div>
         </div>
-
-        <div v-if="showDocuments" class="gallery__docs">
-            <div class="gallery__docs-title">Documents</div>
-            <a class="gallery__doc-link" href="#">Certificate of conformity <span>PDF</span></a>
-            <a class="gallery__doc-link" href="#">Quality passport <span>PDF</span></a>
-        </div>
     </div>
 </template>
 
@@ -82,8 +73,8 @@ const favorited = ref(false);
 }
 
 .gallery__thumb {
-    width: 44px;
-    height: 44px;
+    width: 52px;
+    height: 52px;
     border-radius: 10px;
     border: 1.5px solid #dde7e2;
     background: #f7fbfa;
@@ -106,7 +97,7 @@ const favorited = ref(false);
 .gallery__main {
     flex: 1;
     position: relative;
-    min-height: 200px;
+    min-height: 320px;
     background: linear-gradient(135deg, #f4f9f7, #e8f5ee);
     border-radius: 14px;
     display: flex;
@@ -136,47 +127,8 @@ const favorited = ref(false);
 }
 
 .gallery__img {
-    font-size: 80px;
+    font-size: 120px;
     line-height: 1;
     user-select: none;
-}
-
-.gallery__docs {
-    background: #fff;
-    border-radius: 16px;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    box-shadow: 0 4px 12px rgba(27, 45, 38, 0.05);
-    padding: 16px;
-}
-
-.gallery__docs-title {
-    font-size: 13px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #2c3b36;
-    margin-bottom: 10px;
-}
-
-.gallery__doc-link {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #edf2ef;
-    color: #2c3b36;
-    font-size: 13px;
-    text-decoration: none;
-}
-.gallery__doc-link:last-child {
-    border-bottom: none;
-}
-.gallery__doc-link:hover {
-    color: #00b894;
-}
-.gallery__doc-link span {
-    font-size: 11px;
-    font-weight: 700;
-    color: #a8b8b2;
 }
 </style>
