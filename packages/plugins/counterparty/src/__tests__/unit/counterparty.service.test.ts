@@ -212,6 +212,32 @@ describe('CounterpartyService', () => {
             );
         });
 
+        it('stores ERP reference details; omitted keep, null clears', async () => {
+            const entity = {
+                id: '1',
+                erpId: 'cp-1',
+                legalName: 'N',
+                shortName: 'N',
+                isActive: true,
+                kpp: 'old-kpp',
+                regionId: 'region-1',
+            };
+            mockRepo.findOne.mockResolvedValue(entity);
+            await service.upsertActiveState(mockCtx, 'cp-1', {
+                name: 'N',
+                isActive: true,
+                mainContractId: 'contract-1',
+                kpp: null,
+            });
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    mainContractId: 'contract-1',
+                    kpp: null,
+                    regionId: 'region-1',
+                }),
+            );
+        });
+
         it('applies an explicit null for legalAddress/factualAddress/phone/officialEmail', async () => {
             const entity = {
                 id: '1',

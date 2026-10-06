@@ -14,6 +14,7 @@ import { AccessScopeService } from '@mivend/plugin-access-control';
 
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
 import { Counterparty } from './entities/counterparty.entity';
+import { CounterpartyErpDetails, definedErpDetails } from './counterparty-erp-details';
 import { CounterpartySortParameter, CounterpartyUpsertPayload, loggerCtx } from './types';
 
 // Whitelisted against CounterpartySortParameter's own fields — never derive a column name from
@@ -95,7 +96,7 @@ export class CounterpartyService {
             factualAddress?: string | null;
             phone?: string | null;
             officialEmail?: string | null;
-        },
+        } & CounterpartyErpDetails,
     ): Promise<void> {
         const repo = this.connection.getRepository(ctx, Counterparty);
         const entity = await repo.findOne({ where: { erpId } });
@@ -118,6 +119,7 @@ export class CounterpartyService {
             }
             if (fields.phone !== undefined) entity.phone = fields.phone;
             if (fields.officialEmail !== undefined) entity.officialEmail = fields.officialEmail;
+            Object.assign(entity, definedErpDetails(fields));
             await repo.save(entity);
             return;
         }
@@ -137,6 +139,7 @@ export class CounterpartyService {
                 factualAddress: fields.factualAddress ?? null,
                 phone: fields.phone ?? null,
                 officialEmail: fields.officialEmail ?? null,
+                ...definedErpDetails(fields),
             }),
         );
         Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);

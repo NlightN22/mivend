@@ -100,4 +100,33 @@ export class Counterparty extends VendureEntity {
     // but #120's Decision 1/2 only need phone+officialEmail for activation, and no other mivend
     // feature reads it yet. Deferred, not dropped — CounterpartyStreamHandler documents the same
     // deferral at the point it would otherwise be read. Add a column once a real consumer exists.
+
+    // Soft links to other ERP entities (mainContractId -> contract, mainBankAccountId -> bank
+    // account, regionId -> region, legalFormId -> legal form): no FK, the target may arrive later or never.
+    @Column({ type: 'varchar', nullable: true })
+    mainContractId!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    fullName!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    mainBankAccountId!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    ogrnip!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    kpp!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    okpo!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    legalType!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    regionId!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    legalFormId!: string | null;
 }

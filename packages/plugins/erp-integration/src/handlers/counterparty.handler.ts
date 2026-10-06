@@ -4,6 +4,7 @@ import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { UserEnrichmentService } from '@mivend/plugin-access-control';
 
 import { MissingDependencyError } from '../types';
+import { optionalErpDetails } from './counterparty-erp-details';
 import type { InboundStreamHandler } from './inbound-stream-handler';
 
 interface ManagerResolution {
@@ -100,6 +101,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                 'officialEmail' in payload
                     ? ((payload.officialEmail as string | null) ?? null)
                     : undefined,
+            ...optionalErpDetails(payload),
             // notificationPhone: deliberately unread — see this file's own top-of-file field
             // accounting comment.
         });

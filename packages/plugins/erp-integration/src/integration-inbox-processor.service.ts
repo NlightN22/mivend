@@ -27,6 +27,8 @@ import { StorageLocationStreamHandler } from './handlers/storage-location.handle
 import { ManufacturerStreamHandler } from './handlers/manufacturer.handler';
 import { ProductPhotoStreamHandler } from './handlers/product-photo.handler';
 import { UnitStreamHandler } from './handlers/unit.handler';
+import { RegionStreamHandler } from './handlers/region.handler';
+import { LegalFormStreamHandler } from './handlers/legal-form.handler';
 import { UserStreamHandler } from './handlers/user.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
@@ -68,6 +70,8 @@ export class IntegrationInboxProcessorService {
         contractHandler: ContractStreamHandler,
         unitHandler: UnitStreamHandler,
         manufacturerHandler: ManufacturerStreamHandler,
+        regionHandler: RegionStreamHandler,
+        legalFormHandler: LegalFormStreamHandler,
         productPhotoHandler: ProductPhotoStreamHandler,
         discountRuleHandler: DiscountRuleStreamHandler,
         grantedDiscountHandler: GrantedDiscountStreamHandler,
@@ -97,6 +101,8 @@ export class IntegrationInboxProcessorService {
             contract: contractHandler,
             unit: unitHandler,
             manufacturer: manufacturerHandler,
+            region: regionHandler,
+            'legal-form': legalFormHandler,
             'product-photo': productPhotoHandler,
             'discount-rule': discountRuleHandler,
             'granted-discount': grantedDiscountHandler,

@@ -170,6 +170,9 @@ export type InboundStream =
     | 'unit'
     // Issue #164: the ERP's manufacturer reference directory; the only reliable source of names.
     | 'manufacturer'
+    // Region and legal-form reference directories (company.customers); soft-linked from CounterpartyChanged.
+    | 'region'
+    | 'legal-form'
     // Issue #181: normalized product photos (ProductPhotoChanged); metadata + pre-signed download URL.
     | 'product-photo'
     // Issue #108: the ERP's own per-counterparty/contract, optionally per-product automatic
@@ -284,6 +287,8 @@ const ALL_INBOUND_STREAMS_MAP = {
     contract: true,
     unit: true,
     manufacturer: true,
+    region: true,
+    'legal-form': true,
     'product-photo': true,
     'discount-rule': true,
     'granted-discount': true,

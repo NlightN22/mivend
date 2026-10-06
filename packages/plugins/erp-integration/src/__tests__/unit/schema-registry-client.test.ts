@@ -23,6 +23,8 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             'stock-organization': 't-stock-organization',
             unit: 't-unit',
             manufacturer: 't-manufacturer',
+            region: 'region',
+            'legal-form': 'legal-form',
             'product-photo': 't-product-photo',
             'order-registration-result': 't-order-registration-result',
             'order-changed': 'oc',

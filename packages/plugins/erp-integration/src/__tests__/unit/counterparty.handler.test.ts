@@ -389,3 +389,64 @@ describe('CounterpartyStreamHandler', () => {
         });
     });
 });
+
+describe('CounterpartyStreamHandler: ERP reference details', () => {
+    const ctx = {} as RequestContext;
+
+    it('forwards the new optional fields as plain ids, without resolving them', async () => {
+        const { handler, counterpartyService } = makeHandler();
+
+        await handler.apply(ctx, 'cp-1', {
+            name: 'Acme',
+            isActive: true,
+            mainContractId: 'contract-absent-from-stream',
+            fullName: 'Acme Full',
+            mainBankAccountId: 'bank-1',
+            ogrnip: '123',
+            kpp: '456',
+            okpo: '789',
+            legalType: 'LegalEntity',
+            regionId: 'region-1',
+            legalFormId: 'form-1',
+        });
+
+        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'cp-1',
+            expect.objectContaining({
+                mainContractId: 'contract-absent-from-stream',
+                fullName: 'Acme Full',
+                mainBankAccountId: 'bank-1',
+                ogrnip: '123',
+                kpp: '456',
+                okpo: '789',
+                legalType: 'LegalEntity',
+                regionId: 'region-1',
+                legalFormId: 'form-1',
+            }),
+        );
+    });
+
+    it('omitted fields are left undefined so stored values are kept (same as inn/phone)', async () => {
+        const { handler, counterpartyService } = makeHandler();
+
+        await handler.apply(ctx, 'cp-1', { name: 'Acme', isActive: true });
+
+        const fields = counterpartyService.upsertActiveState.mock.calls[0][2];
+        for (const key of ['mainContractId', 'kpp', 'regionId', 'legalFormId', 'legalType']) {
+            expect(key in fields).toBe(false);
+        }
+    });
+
+    it('an explicit null clears the stored value', async () => {
+        const { handler, counterpartyService } = makeHandler();
+
+        await handler.apply(ctx, 'cp-1', { name: 'Acme', isActive: true, kpp: null });
+
+        expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'cp-1',
+            expect.objectContaining({ kpp: null }),
+        );
+    });
+});

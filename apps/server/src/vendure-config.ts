@@ -856,6 +856,12 @@ export const config: VendureConfig = {
                     manufacturer:
                         process.env.INTEGRATION_KAFKA_TOPIC_MANUFACTURER ??
                         'company.catalog.events.v1.manufacturer-changed',
+                    region:
+                        process.env.INTEGRATION_KAFKA_TOPIC_REGION ??
+                        'company.customers.events.v1.region-changed',
+                    'legal-form':
+                        process.env.INTEGRATION_KAFKA_TOPIC_LEGAL_FORM ??
+                        'company.customers.events.v1.legal-form-changed',
                     // Issue #181: normalized product photos (metadata + pre-signed URL).
                     'product-photo':
                         process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT_PHOTO ??

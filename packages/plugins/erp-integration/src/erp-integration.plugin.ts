@@ -77,6 +77,10 @@ import { ContractStreamHandler } from './handlers/contract.handler';
 import { ManufacturerStreamHandler } from './handlers/manufacturer.handler';
 import { UnitStreamHandler } from './handlers/unit.handler';
 import { UnitRecord } from './entities/unit-record.entity';
+import { RegionRecord } from './entities/region-record.entity';
+import { LegalFormRecord } from './entities/legal-form-record.entity';
+import { RegionStreamHandler } from './handlers/region.handler';
+import { LegalFormStreamHandler } from './handlers/legal-form.handler';
 import { UnitLookupService } from './unit-lookup.service';
 import { TaxCategoryAutoCreateService } from './tax-category-auto-create.service';
 import { TaxZoneService } from './tax-zone.service';
@@ -148,6 +152,8 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ProductManufacturerCode,
         ErpReconciliationIssue,
         UnitRecord,
+        RegionRecord,
+        LegalFormRecord,
     ],
     controllers: [KafkaStatusController],
     providers: [
@@ -182,6 +188,8 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ContractStreamHandler,
         UnitStreamHandler,
         ManufacturerStreamHandler,
+        RegionStreamHandler,
+        LegalFormStreamHandler,
         ProductPhotoStreamHandler,
         ProductPhotoSyncService,
         ProductPhotoRecoveryService,

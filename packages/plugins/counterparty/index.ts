@@ -20,3 +20,4 @@ export type {
     PortalAccessChangeResult,
 } from './src/counterparty-portal-access.service';
 export type { PortalRole, CounterpartyUpsertPayload } from './src/types';
+export type { CounterpartyErpDetails } from './src/counterparty-erp-details';

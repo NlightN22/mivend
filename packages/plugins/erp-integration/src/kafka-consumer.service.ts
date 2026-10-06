@@ -26,6 +26,8 @@ import {
     StockOrganizationChangedSchema,
     StorageLocationChangedSchema,
     ManufacturerChangedSchema,
+    RegionChangedSchema,
+    LegalFormChangedSchema,
     ProductPhotoChangedSchema,
     UnitChangedSchema,
     UserChangedSchema,
@@ -109,6 +111,8 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     contract: ContractChangedSchema,
     unit: UnitChangedSchema,
     manufacturer: ManufacturerChangedSchema,
+    region: RegionChangedSchema,
+    'legal-form': LegalFormChangedSchema,
     'product-photo': ProductPhotoChangedSchema,
 };
 
