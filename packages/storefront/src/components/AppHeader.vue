@@ -47,7 +47,11 @@ watch(
     },
 );
 watch(searchQuery, value => {
-    const target = clearedSearchLocation(value, route.query.q as string | undefined, scopeSlug.value);
+    const target = clearedSearchLocation(
+        value,
+        route.query.q as string | undefined,
+        scopeSlug.value,
+    );
     if (target) router.push(target);
 });
 const catalogOpen = ref(false);

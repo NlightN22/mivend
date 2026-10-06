@@ -83,9 +83,7 @@ export function ProductPhotosPage({ route }: { route: AnyRoute }) {
                 status: {
                     cell: ({ row }) => (
                         <Badge
-                            variant={
-                                row.original.status === 'failed' ? 'destructive' : 'secondary'
-                            }
+                            variant={row.original.status === 'failed' ? 'destructive' : 'secondary'}
                         >
                             {row.original.status}
                         </Badge>

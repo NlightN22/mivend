@@ -89,9 +89,7 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                 @click="checkoutStore.setDelivery('pickup')"
             >
                 <div class="delivery-selector__card-title"><span>🏬</span> Self-pickup</div>
-                <p class="delivery-selector__card-note">
-                    Available after assembly confirmation.
-                </p>
+                <p class="delivery-selector__card-note">Available after assembly confirmation.</p>
             </button>
         </div>
     </article>
