@@ -19,17 +19,24 @@ describe('OnlineStubBootstrapService', () => {
     let repo: ReturnType<typeof createMockRepo>;
     let connection: { getRepository: (...args: unknown[]) => ReturnType<typeof createMockRepo> };
     let channelService: { getDefaultChannel: ReturnType<typeof vi.fn> };
-    let paymentMethodService: { create: ReturnType<typeof vi.fn> };
+    let paymentMethodService: {
+        create: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+    };
     let processContext: { isWorker: boolean };
     let service: OnlineStubBootstrapService;
 
     beforeEach(() => {
+        vi.stubEnv('ONLINE_PAYMENT_STUB_ENABLED', 'true');
         repo = createMockRepo();
         connection = { getRepository: () => repo };
         channelService = {
             getDefaultChannel: vi.fn().mockResolvedValue({ id: 1, code: '__default_channel__' }),
         };
-        paymentMethodService = { create: vi.fn().mockResolvedValue({ id: 1 }) };
+        paymentMethodService = {
+            create: vi.fn().mockResolvedValue({ id: 1 }),
+            update: vi.fn().mockResolvedValue({ id: 1 }),
+        };
         processContext = { isWorker: false };
         service = new OnlineStubBootstrapService(
             connection as unknown as TransactionalConnection,
@@ -59,9 +66,24 @@ describe('OnlineStubBootstrapService', () => {
     });
 
     it('is idempotent: does not create a duplicate when the payment method already exists', async () => {
-        repo.findOne.mockResolvedValue({ id: 1, code: ONLINE_STUB_METHOD_CODE });
+        repo.findOne.mockResolvedValue({ id: 1, code: ONLINE_STUB_METHOD_CODE, enabled: true });
         await service.onApplicationBootstrap();
 
+        expect(paymentMethodService.create).not.toHaveBeenCalled();
+        expect(paymentMethodService.update).not.toHaveBeenCalled();
+    });
+
+    it('disables an existing method and creates nothing when the flag is off', async () => {
+        vi.stubEnv('ONLINE_PAYMENT_STUB_ENABLED', '');
+        repo.findOne.mockResolvedValue({ id: 1, code: ONLINE_STUB_METHOD_CODE, enabled: true });
+        await service.onApplicationBootstrap();
+        expect(paymentMethodService.update).toHaveBeenCalledWith(expect.anything(), {
+            id: 1,
+            enabled: false,
+        });
+
+        repo.findOne.mockResolvedValue(null);
+        await service.onApplicationBootstrap();
         expect(paymentMethodService.create).not.toHaveBeenCalled();
     });
 

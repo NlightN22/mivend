@@ -638,7 +638,7 @@ export const config: VendureConfig = {
         RetroBonusPlugin,
         DocumentsPlugin,
         DeferredPaymentPlugin,
-        ...(process.env.ONLINE_PAYMENT_STUB_ENABLED === 'true' ? [OnlinePaymentPlugin] : []),
+        OnlinePaymentPlugin,
         PickupShippingPlugin,
         ...(erpImportEnabled ? [ErpImportPlugin] : []),
         CrossReferencePlugin,
