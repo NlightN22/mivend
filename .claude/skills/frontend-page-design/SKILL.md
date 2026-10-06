@@ -1,6 +1,6 @@
 ---
 name: frontend-page-design
-description: Mandatory before building or restyling ANY page, form, or non-table UI in packages/manager or packages/storefront — checks ui-kit-first compliance, finds the right reference page, and requires a real screenshot before declaring done. For tables specifically, manager-table-standard is still the authority (this skill defers to it, does not replace it).
+description: Mandatory before building or restyling ANY page, form, or non-table UI in packages/manager or packages/storefront — checks ui-kit-first compliance, finds the right reference page, and requires a real screenshot and a colors/button-states audit before declaring done. For tables specifically, manager-table-standard is still the authority (this skill defers to it, does not replace it).
 ---
 
 # Frontend page design (manager + storefront)
@@ -108,6 +108,18 @@ Never report a UI change as complete from reading the code alone.
   time this matters enough to justify it). Until then, use Storybook (`make storybook-up`) for
   isolated component verification, and a manual browser check via the running dev stack for the
   full page — do not skip visual verification just because no scripted driver exists yet.
+
+## Step 5 — colors and interactive states audit (mandatory, last step)
+
+Read `docs/ui-standards.md` (the canonical button-state table and the audit grep) and check the
+changed files against it:
+
+- every button or button-like link has idle, hover, active, and disabled states;
+- hover/active colors come from `--app-*` tokens (or `MvButton`), never from a raw hex;
+- no new hex for an interactive color — add a token to `packages/ui-kit/src/styles/tokens.css` first;
+- run the audit grep from that doc and explain or fix every hit in the files you touched;
+- hover the element in a real browser (Playwright `hover()` + computed `background-color`) — a
+  screenshot alone does not show hover.
 
 ## What this skill does not cover
 

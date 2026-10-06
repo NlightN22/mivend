@@ -50,3 +50,8 @@ genuinely has no reasonable icon for the concept — and if so, document why in 
 adds it. Reference usage: `MvDocumentTypeChip` (`packages/ui-kit/src/components/MvDocumentTypeChip`)
 for a colored icon+label chip keyed off free-text business data with a neutral fallback, and
 `CustomerDetailPage.vue`'s `TAB_ICONS` for per-tab icons.
+
+## Colors and button states
+
+Canonical hover/active colors and tokens live in `docs/ui-standards.md`; follow it for any button or
+button-like element in either portal.
