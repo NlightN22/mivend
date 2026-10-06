@@ -49,17 +49,11 @@ async function handlePrimary(): Promise<void> {
             router.push('/payment-stub');
             return;
         }
-        if (checkoutStore.selectedPayment === 'deferred') {
-            const result = await cartStore.completeDeferredPayment();
-            if (!result.placed) return;
-            router.push(
-                `/order-created?method=deferred${result.limitExceeded ? '&limitExceeded=1' : ''}`,
-            );
-            return;
-        }
-        const placed = await cartStore.completeOfflinePayment();
-        if (!placed) return;
-        router.push(`/order-created?method=${checkoutStore.selectedPayment}`);
+        const code =
+            checkoutStore.selectedPayment === 'deferred'
+                ? await cartStore.completeDeferredPayment()
+                : await cartStore.completeOfflinePayment();
+        if (code) router.push({ path: '/order-created', query: { code } });
     } finally {
         submitting.value = false;
     }

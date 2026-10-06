@@ -172,6 +172,9 @@ mutation CompleteOfflinePayment {
             errorCode
             message
         }
+        ... on Order {
+            code
+        }
     }
 }
 
@@ -183,10 +186,7 @@ mutation CompleteDeferredPayment {
             message
         }
         ... on Order {
-            payments {
-                method
-                metadata
-            }
+            code
         }
     }
 }

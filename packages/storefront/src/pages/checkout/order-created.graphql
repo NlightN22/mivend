@@ -1,0 +1,32 @@
+query OrderCreated($code: String!) {
+    orderByCode(code: $code) {
+        id
+        code
+        orderPlacedAt
+        payments {
+            method
+            metadata
+        }
+        shippingLines {
+            shippingMethod {
+                name
+            }
+        }
+        customFields {
+            tradingPointId
+        }
+    }
+    myTradingPoints {
+        id
+        name
+        address
+    }
+    myInvoices(options: { take: 50 }) {
+        items {
+            id
+            order {
+                code
+            }
+        }
+    }
+}

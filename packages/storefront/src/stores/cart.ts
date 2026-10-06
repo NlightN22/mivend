@@ -3,7 +3,6 @@ import { ref, computed } from 'vue';
 import { toast } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import { brandOf } from '../utils/brand';
-import type { CREDIT_LIMIT_EXCEEDED_KEY as SharedKey } from 'shared';
 import {
     AddToCartDocument,
     AdjustCartLineDocument,
@@ -29,8 +28,6 @@ import {
     stockUpdateFailed,
 } from '../utils/discountMessages';
 
-// Type-only import of the shared key: a rename on the server breaks this build instead of the warning.
-const CREDIT_LIMIT_EXCEEDED_KEY: typeof SharedKey = 'creditLimitExceeded';
 const ADJUST_DEBOUNCE_MS = 350;
 const CART_FETCH_RETRIES = 4;
 const CART_FETCH_RETRY_MS = 2000;
@@ -39,11 +36,6 @@ interface AdjustWindow {
     timer: ReturnType<typeof setTimeout>;
     fire: () => void;
     done: Promise<void>;
-}
-
-interface DeferredPaymentResult {
-    placed: boolean;
-    limitExceeded: boolean;
 }
 
 interface MutationResult {
@@ -337,30 +329,26 @@ export const useCartStore = defineStore('cart', () => {
     // Offline payment terms (invoice / deferred) settle immediately in Vendure's
     // payment flow — actual money collection happens outside the system, tracked
     // via the existing ERP status sync, not via Vendure's payment state.
-    async function completeOfflinePayment(): Promise<boolean> {
+    // Returns the placed order's code, or null when the payment was rejected.
+    async function completeOfflinePayment(): Promise<string | null> {
         const result = await shopApi(CompleteOfflinePaymentDocument);
         await fetchCart();
         if (result.addPaymentToOrder.__typename !== 'Order') {
             toast(result.addPaymentToOrder.message ?? 'Could not place order', 'error');
-            return false;
+            return null;
         }
-        return true;
+        return result.addPaymentToOrder.code;
     }
 
-    // An over-limit deferred order is still placed; the server flags it for the customer warning.
-    async function completeDeferredPayment(): Promise<DeferredPaymentResult> {
+    async function completeDeferredPayment(): Promise<string | null> {
         const result = await shopApi(CompleteDeferredPaymentDocument);
         await fetchCart();
         const payment = result.addPaymentToOrder;
         if (payment.__typename !== 'Order') {
             toast(payment.message ?? 'Could not place order', 'error');
-            return { placed: false, limitExceeded: false };
+            return null;
         }
-        const limitExceeded = payment.payments?.some(p => {
-            const meta = p.metadata as { public?: Record<string, unknown> } | null;
-            return meta?.public?.[CREDIT_LIMIT_EXCEEDED_KEY] === true;
-        });
-        return { placed: true, limitExceeded: Boolean(limitExceeded) };
+        return payment.code;
     }
 
     async function completeOnlinePayment(status: 'success' | 'pending' | 'fail'): Promise<boolean> {

@@ -195,35 +195,34 @@ describe('cart store deferred checkout', () => {
         vi.mocked(shopApi).mockReset();
     });
 
-    const placed = (metadata: unknown) =>
-        ({
-            addPaymentToOrder: {
-                __typename: 'Order',
-                payments: [{ method: 'deferred-payment', metadata }],
-            },
-        }) as never;
+    const placed = (code: string) =>
+        ({ addPaymentToOrder: { __typename: 'Order', code } }) as never;
 
-    it('reports the credit-limit flag from the public payment metadata', async () => {
+    it('returns the placed order code for a deferred payment', async () => {
         const store = useCartStore();
         vi.mocked(shopApi)
-            .mockResolvedValueOnce(placed({ public: { creditLimitExceeded: true } }))
+            .mockResolvedValueOnce(placed('ORD-1'))
             .mockResolvedValueOnce({ activeOrder: null } as never);
-        expect(await store.completeDeferredPayment()).toEqual({
-            placed: true,
-            limitExceeded: true,
-        });
+        expect(await store.completeDeferredPayment()).toBe('ORD-1');
     });
 
-    it.each([[{ public: { creditLimitExceeded: false } }], [{}], [null]])(
-        'does not warn for metadata %j',
-        async metadata => {
-            const store = useCartStore();
-            vi.mocked(shopApi)
-                .mockResolvedValueOnce(placed(metadata))
-                .mockResolvedValueOnce({ activeOrder: null } as never);
-            expect((await store.completeDeferredPayment()).limitExceeded).toBe(false);
-        },
-    );
+    it('returns the placed order code for an invoice payment', async () => {
+        const store = useCartStore();
+        vi.mocked(shopApi)
+            .mockResolvedValueOnce(placed('ORD-2'))
+            .mockResolvedValueOnce({ activeOrder: null } as never);
+        expect(await store.completeOfflinePayment()).toBe('ORD-2');
+    });
+
+    it('returns null when the payment is rejected', async () => {
+        const store = useCartStore();
+        vi.mocked(shopApi)
+            .mockResolvedValueOnce({
+                addPaymentToOrder: { __typename: 'PaymentFailedError', message: 'no' },
+            } as never)
+            .mockResolvedValueOnce({ activeOrder: null } as never);
+        expect(await store.completeDeferredPayment()).toBeNull();
+    });
 
     it('leaves ArrangingPayment before starting checkout again', async () => {
         const store = useCartStore();

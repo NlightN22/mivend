@@ -4561,6 +4561,23 @@ export type SetPreferredTradingPointForDeliverySelectorMutation = {
     setPreferredTradingPoint: boolean;
 };
 
+export type OrderCreatedQueryVariables = Exact<{
+    code: Scalars['String']['input'];
+}>;
+
+export type OrderCreatedQuery = {
+    orderByCode?: {
+        id: string;
+        code: string;
+        orderPlacedAt?: any | null;
+        payments?: Array<{ method: string; metadata?: any | null }> | null;
+        shippingLines: Array<{ shippingMethod: { name: string } }>;
+        customFields?: { tradingPointId?: string | null } | null;
+    } | null;
+    myTradingPoints: Array<{ id: string; name: string; address: string }>;
+    myInvoices: { items: Array<{ id: string; order: { code: string } }> };
+};
+
 export type MyDocumentsQueryVariables = Exact<{
     options?: InputMaybe<DocumentListOptions>;
 }>;
@@ -5039,7 +5056,7 @@ export type CompleteOfflinePaymentMutation = {
         | { __typename: 'CouponRemovedDuringCheckoutError'; errorCode: ErrorCode; message: string }
         | { __typename: 'IneligiblePaymentMethodError'; errorCode: ErrorCode; message: string }
         | { __typename: 'NoActiveOrderError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'Order' }
+        | { __typename: 'Order'; code: string }
         | { __typename: 'OrderPaymentStateError'; errorCode: ErrorCode; message: string }
         | { __typename: 'OrderStateTransitionError'; errorCode: ErrorCode; message: string }
         | { __typename: 'PaymentDeclinedError'; errorCode: ErrorCode; message: string }
@@ -5053,10 +5070,7 @@ export type CompleteDeferredPaymentMutation = {
         | { __typename: 'CouponRemovedDuringCheckoutError'; errorCode: ErrorCode; message: string }
         | { __typename: 'IneligiblePaymentMethodError'; errorCode: ErrorCode; message: string }
         | { __typename: 'NoActiveOrderError'; errorCode: ErrorCode; message: string }
-        | {
-              __typename: 'Order';
-              payments?: Array<{ method: string; metadata?: any | null }> | null;
-          }
+        | { __typename: 'Order'; code: string }
         | { __typename: 'OrderPaymentStateError'; errorCode: ErrorCode; message: string }
         | { __typename: 'OrderStateTransitionError'; errorCode: ErrorCode; message: string }
         | { __typename: 'PaymentDeclinedError'; errorCode: ErrorCode; message: string }
@@ -5599,6 +5613,40 @@ export const SetPreferredTradingPointForDeliverySelectorDocument = new TypedDocu
     SetPreferredTradingPointForDeliverySelectorMutation,
     SetPreferredTradingPointForDeliverySelectorMutationVariables
 >;
+export const OrderCreatedDocument = new TypedDocumentString(`
+    query OrderCreated($code: String!) {
+  orderByCode(code: $code) {
+    id
+    code
+    orderPlacedAt
+    payments {
+      method
+      metadata
+    }
+    shippingLines {
+      shippingMethod {
+        name
+      }
+    }
+    customFields {
+      tradingPointId
+    }
+  }
+  myTradingPoints {
+    id
+    name
+    address
+  }
+  myInvoices(options: {take: 50}) {
+    items {
+      id
+      order {
+        code
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<OrderCreatedQuery, OrderCreatedQueryVariables>;
 export const MyDocumentsDocument = new TypedDocumentString(`
     query MyDocuments($options: DocumentListOptions) {
   myDocuments(options: $options) {
@@ -6126,6 +6174,9 @@ export const CompleteOfflinePaymentDocument = new TypedDocumentString(`
       errorCode
       message
     }
+    ... on Order {
+      code
+    }
   }
 }
     `) as unknown as TypedDocumentString<
@@ -6141,10 +6192,7 @@ export const CompleteDeferredPaymentDocument = new TypedDocumentString(`
       message
     }
     ... on Order {
-      payments {
-        method
-        metadata
-      }
+      code
     }
   }
 }

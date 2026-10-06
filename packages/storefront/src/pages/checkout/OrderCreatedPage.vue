@@ -1,43 +1,102 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { MvErrorState } from '@mivend/ui-kit';
+import { shopApi } from '../../api/client';
+import { useAuthStore } from '../../stores/auth';
+import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
+import { OrderCreatedDocument, type OrderCreatedQuery } from '../../api/generated/graphql';
 
 const route = useRoute();
-const method = computed(() => (route.query.method === 'deferred' ? 'deferred' : 'invoice'));
+const authStore = useAuthStore();
+const router = useRouter();
+const code = computed(() => (typeof route.query.code === 'string' ? route.query.code : ''));
 
-const limitExceeded = computed(() => route.query.limitExceeded === '1');
+const data = ref<OrderCreatedQuery | null>(null);
+const loading = ref(true);
+const error = ref<LoadErrorText | null>(null);
 
-const paymentLabel = computed(() =>
-    method.value === 'deferred' ? 'Deferred payment' : 'Bank invoice',
+const order = computed(() => data.value?.orderByCode ?? null);
+const payment = computed(() => order.value?.payments?.[0] ?? null);
+const methodCode = computed(() => payment.value?.method ?? '');
+
+const PAYMENT_LABELS: Record<string, string> = {
+    'offline-terms': 'Bank invoice',
+    'deferred-payment': 'Deferred payment',
+    'online-stub': 'Online payment',
+};
+const paymentLabel = computed(() => PAYMENT_LABELS[methodCode.value] ?? methodCode.value);
+
+const limitExceeded = computed(() => {
+    const meta = payment.value?.metadata as { public?: { creditLimitExceeded?: boolean } } | null;
+    return meta?.public?.creditLimitExceeded === true;
+});
+
+const tradingPoint = computed(() => {
+    const id = order.value?.customFields?.tradingPointId;
+    if (!id) return null;
+    const point =
+        data.value?.myTradingPoints?.find(p => p.id === id) ??
+        (authStore.tradingPoint?.id === id ? authStore.tradingPoint : null);
+    return point ? (point.address ?? point.name) : null;
+});
+
+const delivery = computed(() => order.value?.shippingLines?.[0]?.shippingMethod.name ?? null);
+const placedAt = computed(() =>
+    order.value?.orderPlacedAt
+        ? new Intl.DateTimeFormat('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+          }).format(new Date(order.value.orderPlacedAt))
+        : null,
+);
+const invoiceId = computed(
+    () => data.value?.myInvoices.items.find(i => i.order?.code === code.value)?.id ?? null,
 );
 
-const statusText = computed(() =>
-    method.value === 'deferred'
-        ? 'Your order #348744 has been created and will be processed under your deferred payment terms.'
-        : 'Your order #348744 has been created. Download the invoice and pay via your bank. The order will be reserved once payment is received.',
-);
+const statusText = computed(() => {
+    const ref = `Your order ${code.value} has been created`;
+    if (methodCode.value === 'deferred-payment')
+        return `${ref} and will be processed under your deferred payment terms.`;
+    if (methodCode.value === 'offline-terms')
+        return `${ref}. Pay the invoice via your bank; the order will be reserved once payment is received.`;
+    return `${ref}.`;
+});
 
 const steps = computed(() =>
-    method.value === 'deferred'
+    methodCode.value === 'offline-terms'
         ? [
-              'Your order is queued for processing.',
-              'Goods will be reserved.',
+              'Download and send the invoice to your bank.',
+              "We'll reserve the goods when payment arrives.",
               "You'll get a notification when the order is ready.",
           ]
         : [
-              'Download and send the invoice to your bank.',
-              "We'll reserve the goods when payment arrives.",
+              'Your order is queued for processing.',
+              'Goods will be reserved.',
               "You'll get a notification when the order is ready.",
           ],
 );
 
-const today = new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-}).format(new Date());
+async function load(): Promise<void> {
+    if (!code.value) {
+        await router.replace('/orders');
+        return;
+    }
+    loading.value = true;
+    error.value = null;
+    try {
+        data.value = await shopApi(OrderCreatedDocument, { code: code.value });
+    } catch (e) {
+        error.value = describeLoadError(e);
+    } finally {
+        loading.value = false;
+    }
+}
+
+onMounted(load);
 </script>
 
 <template>
@@ -55,56 +114,82 @@ const today = new Intl.DateTimeFormat('en-GB', {
             <h1 class="oc-title">Order placed</h1>
         </div>
 
-        <div class="oc-status-card">
-            <div class="oc-check">✓</div>
-            <h2 class="oc-status-title">Order created</h2>
-            <p class="oc-status-text">{{ statusText }}</p>
-            <MvNotice v-if="limitExceeded" variant="warning">
-                Your credit limit is exceeded. Please wait for your manager to confirm the order.
-            </MvNotice>
-            <div class="oc-actions">
-                <RouterLink to="/orders" class="oc-btn oc-btn--primary">Open order</RouterLink>
-                <a v-if="method === 'invoice'" href="#" class="oc-btn oc-btn--secondary"
-                    >Download invoice</a
-                >
-                <RouterLink to="/catalog" class="oc-btn oc-btn--ghost"
-                    >Continue shopping</RouterLink
-                >
-            </div>
-        </div>
+        <div v-if="loading" class="oc-state">Loading order…</div>
+        <MvErrorState
+            v-else-if="error"
+            :title="error.title"
+            :message="error.message"
+            @retry="load"
+        />
+        <MvNotice v-else-if="!order" variant="error">Order not found</MvNotice>
 
-        <div class="oc-details-grid">
-            <div class="oc-card">
-                <h3 class="oc-card-title">Order details</h3>
-                <div class="oc-detail-list">
-                    <div class="oc-detail"><span>Order number</span><strong>#348744</strong></div>
-                    <div class="oc-detail">
-                        <span>Date</span><strong>{{ today }}</strong>
-                    </div>
-                    <div class="oc-detail">
-                        <span>Trading point</span><strong>Industrial St, 14</strong>
-                    </div>
-                    <div class="oc-detail">
-                        <span>Payment method</span><strong>{{ paymentLabel }}</strong>
-                    </div>
-                    <div class="oc-detail"><span>Delivery</span><strong>Pickup</strong></div>
+        <template v-else>
+            <div class="oc-status-card">
+                <div class="oc-check">✓</div>
+                <h2 class="oc-status-title">Order created</h2>
+                <p class="oc-status-text">{{ statusText }}</p>
+                <MvNotice v-if="limitExceeded" variant="warning">
+                    Your credit limit is exceeded. Please wait for your manager to confirm the
+                    order.
+                </MvNotice>
+                <div class="oc-actions">
+                    <RouterLink :to="`/orders/${order.id}`" class="oc-btn oc-btn--primary"
+                        >Open order</RouterLink
+                    >
+                    <RouterLink
+                        v-if="invoiceId"
+                        :to="`/invoices/${invoiceId}`"
+                        class="oc-btn oc-btn--secondary"
+                        >Open invoice</RouterLink
+                    >
+                    <RouterLink to="/catalog" class="oc-btn oc-btn--ghost"
+                        >Continue shopping</RouterLink
+                    >
                 </div>
             </div>
 
-            <div class="oc-card">
-                <h3 class="oc-card-title">What's next</h3>
-                <ol class="oc-steps">
-                    <li v-for="(step, i) in steps" :key="i" class="oc-step">
-                        <span class="oc-step-num">{{ i + 1 }}</span>
-                        <span>{{ step }}</span>
-                    </li>
-                </ol>
+            <div class="oc-details-grid">
+                <div class="oc-card">
+                    <h3 class="oc-card-title">Order details</h3>
+                    <div class="oc-detail-list">
+                        <div class="oc-detail">
+                            <span>Order number</span><strong>{{ order.code }}</strong>
+                        </div>
+                        <div v-if="placedAt" class="oc-detail">
+                            <span>Date</span><strong>{{ placedAt }}</strong>
+                        </div>
+                        <div v-if="tradingPoint" class="oc-detail">
+                            <span>Trading point</span><strong>{{ tradingPoint }}</strong>
+                        </div>
+                        <div class="oc-detail">
+                            <span>Payment method</span><strong>{{ paymentLabel }}</strong>
+                        </div>
+                        <div v-if="delivery" class="oc-detail">
+                            <span>Delivery</span><strong>{{ delivery }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="oc-card">
+                    <h3 class="oc-card-title">What's next</h3>
+                    <ol class="oc-steps">
+                        <li v-for="(step, i) in steps" :key="i" class="oc-step">
+                            <span class="oc-step-num">{{ i + 1 }}</span>
+                            <span>{{ step }}</span>
+                        </li>
+                    </ol>
+                </div>
             </div>
-        </div>
+        </template>
     </main>
 </template>
 
 <style scoped>
+.oc-state {
+    padding: 40px 0;
+    color: #66736e;
+}
+
 .oc-page {
     max-width: 1440px;
     margin: 0 auto;
