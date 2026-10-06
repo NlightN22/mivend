@@ -16,12 +16,16 @@ import { Manufacturer } from './entities/manufacturer.entity';
 import { loggerCtx } from './types';
 
 export const MANUFACTURER_FACET_CODE = 'manufacturer';
+const SYNCED_TTL_MS = 10 * 60_000;
 
 // Mirrors each Manufacturer as a FacetValue (code = ERP GUID) so the storefront filter sidebar
 // can render it through the standard SearchResponse.facetValues. Not assigned to variants:
 // membership is answered by the external search backend, not by Vendure's own index.
 @Injectable()
 export class ManufacturerFacetService implements OnApplicationBootstrap {
+    // Loading every manufacturer value per product event dominated the inbox's CPU time.
+    private synced = new Map<string, { name: string | null; expiresAt: number }>();
+
     constructor(
         private facetService: FacetService,
         private facetValueService: FacetValueService,
@@ -46,9 +50,15 @@ export class ManufacturerFacetService implements OnApplicationBootstrap {
     }
 
     async ensureValue(ctx: RequestContext, externalId: string, name: string | null): Promise<void> {
+        const cached = this.synced.get(externalId);
+        if (cached && cached.expiresAt > Date.now() && (!name || cached.name === name)) return;
         const facet = await this.ensureFacet(ctx);
         const values = await this.facetValueService.findByFacetId(ctx, facet.id);
         await this.syncValue(ctx, facet, values, externalId, name);
+        this.synced.set(externalId, {
+            name: name ?? cached?.name ?? null,
+            expiresAt: Date.now() + SYNCED_TTL_MS,
+        });
     }
 
     private async syncValue(

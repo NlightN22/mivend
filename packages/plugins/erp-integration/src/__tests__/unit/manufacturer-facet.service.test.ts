@@ -59,6 +59,22 @@ describe('ManufacturerFacetService', () => {
         expect(facetValueService.update).toHaveBeenCalledTimes(1);
     });
 
+    it('does not reload the facet values for a repeated, unchanged manufacturer', async () => {
+        const { service, facetValueService } = setup([{ id: 5, code: 'm-1', name: 'A' }]);
+        await service.ensureValue(ctx, 'm-1', 'A');
+        await service.ensureValue(ctx, 'm-1', 'A');
+        await service.ensureValue(ctx, 'm-1', null);
+        expect(facetValueService.findByFacetId).toHaveBeenCalledTimes(1);
+    });
+
+    it('still syncs when the same manufacturer arrives with a new name', async () => {
+        const { service, facetValueService } = setup([{ id: 5, code: 'm-1', name: 'A' }]);
+        await service.ensureValue(ctx, 'm-1', 'A');
+        await service.ensureValue(ctx, 'm-1', 'B');
+        expect(facetValueService.findByFacetId).toHaveBeenCalledTimes(2);
+        expect(facetValueService.update).toHaveBeenCalledTimes(1);
+    });
+
     it('backfills existing manufacturers on the server process only', async () => {
         const server = setup([]);
         await server.service.onApplicationBootstrap();
