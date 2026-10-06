@@ -268,4 +268,21 @@ describe('cart store deferred checkout', () => {
         expect(await store.beginCheckout()).toBe(false);
         expect(vi.mocked(shopApi)).toHaveBeenCalledTimes(1);
     });
+
+    it('leaves ArrangingPayment before adjusting a line quantity', async () => {
+        vi.useFakeTimers();
+        const store = useCartStore();
+        store.order = { state: 'ArrangingPayment', lines: [] } as never;
+        vi.mocked(shopApi)
+            .mockResolvedValueOnce({} as never) // ResumeAddingItems
+            .mockResolvedValueOnce({ adjustOrderLine: { __typename: 'Order' } } as never)
+            .mockResolvedValueOnce({ activeOrder: null } as never);
+        const done = store.adjustItem('line-1', 3);
+        await vi.advanceTimersByTimeAsync(400);
+        await done;
+        const docs = vi.mocked(shopApi).mock.calls.map(c => String(c[0]));
+        expect(docs[0]).toContain('AddingItems');
+        expect(docs[1]).toContain('adjustOrderLine');
+        vi.useRealTimers();
+    });
 });

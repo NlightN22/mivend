@@ -252,8 +252,17 @@ export const useCartStore = defineStore('cart', () => {
         return entry.done;
     }
 
+    // An order abandoned mid-checkout stays in ArrangingPayment and Vendure rejects edits there.
+    async function resumeIfArrangingPayment(): Promise<void> {
+        if (order.value?.state === 'ArrangingPayment') {
+            await shopApi(ResumeAddingItemsDocument);
+            order.value = { ...order.value, state: 'AddingItems' };
+        }
+    }
+
     async function sendAdjust(lineId: string): Promise<void> {
         try {
+            await resumeIfArrangingPayment();
             const qty = pendingAdjusts.get(lineId);
             if (qty === undefined) return;
             pendingAdjusts.delete(lineId);
@@ -279,6 +288,7 @@ export const useCartStore = defineStore('cart', () => {
         pendingMutations++;
         await enqueue(async () => {
             try {
+                await resumeIfArrangingPayment();
                 await shopApi(RemoveCartLineDocument, { lineId });
             } finally {
                 pendingMutations--;
@@ -293,6 +303,7 @@ export const useCartStore = defineStore('cart', () => {
         pendingMutations++;
         await enqueue(async () => {
             try {
+                await resumeIfArrangingPayment();
                 await shopApi(RemoveAllCartLinesDocument);
             } finally {
                 pendingMutations--;
@@ -378,6 +389,7 @@ export const useCartStore = defineStore('cart', () => {
         pendingMutations++;
         await enqueue(async () => {
             try {
+                await resumeIfArrangingPayment();
                 await Promise.all(
                     lineIds.map(lineId => shopApi(RemoveCartLineInBatchDocument, { lineId })),
                 );
