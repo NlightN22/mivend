@@ -24,6 +24,7 @@ function makeSearchItem(sku: string): {
     productId: string;
     productVariantId: string;
     productName: string;
+    galleryPreviews: string[];
     slug: string;
     sku: string;
     priceWithTax: { value: number };
@@ -38,6 +39,7 @@ function makeSearchItem(sku: string): {
         productId: sku,
         productVariantId: sku,
         productName: sku,
+        galleryPreviews: [],
         slug: sku,
         sku,
         priceWithTax: { value: 1000 },

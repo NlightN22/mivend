@@ -55,7 +55,7 @@ export interface ProductItem {
     variants: ProductVariant[];
     facetValues: FacetValue[];
     manufacturer?: { name?: string | null } | null;
-    imageUrl?: string;
+    images: string[];
 }
 
 export type ViewMode = 'list' | 'grid';
@@ -86,7 +86,7 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
         name: item.productName,
         slug: item.slug,
         manufacturer: item.manufacturer,
-        imageUrl: item.productAsset ? assetUrl(item.productAsset.preview, 'small') : undefined,
+        images: item.galleryPreviews.map(preview => assetUrl(preview, 'small')),
         variants: [
             {
                 id: item.productVariantId,

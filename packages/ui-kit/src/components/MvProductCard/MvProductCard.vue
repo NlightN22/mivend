@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { IconChevronLeft, IconChevronRight } from '@tabler/icons-vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import type { StockVariant } from '../MvStockBadge/stock-variant';
@@ -11,7 +12,7 @@ interface Props {
     name: string;
     sku: string;
     brand?: string;
-    imageUrl?: string;
+    images?: string[];
     price?: number;
     compareAtPrice?: number;
     customerPrice?: number;
@@ -59,6 +60,12 @@ const emit = defineEmits<{
     'view-analogs': [variantId: string | undefined];
 }>();
 
+const imageIndex = ref(0);
+const imageCount = computed(() => props.images?.length ?? 0);
+function step(delta: number): void {
+    imageIndex.value = (imageIndex.value + delta + imageCount.value) % imageCount.value;
+}
+
 const canOrder = computed(() => props.stockVariant !== 'out');
 </script>
 
@@ -67,13 +74,41 @@ const canOrder = computed(() => props.stockVariant !== 'out');
         <a :href="`${linkBase}/${slug}`" class="mv-product-card__img-link">
             <div class="mv-product-card__img">
                 <img
-                    v-if="imageUrl"
+                    v-if="imageCount > 0"
                     class="mv-product-card__img-photo"
-                    :src="imageUrl"
+                    :src="images?.[imageIndex]"
                     :alt="name"
                     loading="lazy"
                 />
                 <span v-else class="mv-product-card__img-icon" aria-hidden="true" />
+                <template v-if="imageCount > 1">
+                    <button
+                        class="mv-product-card__arrow mv-product-card__arrow--prev"
+                        type="button"
+                        aria-label="Previous photo"
+                        @click.stop.prevent="step(-1)"
+                    >
+                        <IconChevronLeft :size="16" />
+                    </button>
+                    <button
+                        class="mv-product-card__arrow mv-product-card__arrow--next"
+                        type="button"
+                        aria-label="Next photo"
+                        @click.stop.prevent="step(1)"
+                    >
+                        <IconChevronRight :size="16" />
+                    </button>
+                    <span class="mv-product-card__dots" aria-hidden="true">
+                        <span
+                            v-for="(_, i) in images"
+                            :key="i"
+                            :class="[
+                                'mv-product-card__dot',
+                                { 'mv-product-card__dot--active': i === imageIndex },
+                            ]"
+                        />
+                    </span>
+                </template>
                 <span
                     v-if="discountTiers.length > 0"
                     class="mv-product-card__discount-badge"
@@ -87,6 +122,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
         <MvFavoriteButton
             v-if="showFavorite"
             class="mv-product-card__fav"
+            overlay
             :is-favorited="isFavorited"
             @toggle="emit('toggle-favorite', variantId)"
         />
@@ -231,9 +267,57 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 
 .mv-product-card__fav {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    box-shadow: 0 8px 18px rgba(27, 45, 38, 0.08);
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+}
+
+.mv-product-card__arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: #1b2d26;
+    box-shadow: 0 2px 8px rgba(27, 45, 38, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.mv-product-card__arrow--prev {
+    left: 8px;
+}
+.mv-product-card__arrow--next {
+    right: 8px;
+}
+.mv-product-card__img:hover .mv-product-card__arrow,
+.mv-product-card__arrow:focus-visible {
+    opacity: 1;
+}
+
+.mv-product-card__dots {
+    position: absolute;
+    bottom: 6px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+}
+.mv-product-card__dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba(27, 45, 38, 0.22);
+}
+.mv-product-card__dot--active {
+    background: #1b2d26;
 }
 
 .mv-product-card__body {

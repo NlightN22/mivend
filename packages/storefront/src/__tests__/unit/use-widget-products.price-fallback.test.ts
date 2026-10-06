@@ -14,6 +14,7 @@ function makeItem(customerPrice: number | null): ProductItem {
         id: 'p-1',
         name: 'Widget Product',
         slug: 'widget-product',
+        images: [],
         facetValues: [],
         variants: [
             {

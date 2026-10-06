@@ -91,8 +91,10 @@ import { shopApiExtensions } from './api/shop.schema';
 import { ProductManufacturerService } from './product-manufacturer.service';
 import {
     ProductManufacturerResolver,
+    SearchResultGalleryResolver,
     SearchResultManufacturerResolver,
 } from './product-manufacturer.resolver';
+import { ProductGalleryService } from './product-gallery.service';
 import { ReconciliationSummaryClient } from './reconciliation-summary.client';
 import { ReconciliationLocalCountsService } from './reconciliation-local-counts.service';
 import { ReconciliationService } from './reconciliation.service';
@@ -193,6 +195,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         CategoryOverrideRecomputeListener,
         ProductTaxCodeFlagService,
         ProductManufacturerService,
+        ProductGalleryService,
         ProductCategoryFlagService,
         ManufacturerService,
         ManufacturerFacetService,
@@ -220,7 +223,11 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
     },
     shopApiExtensions: {
         schema: shopApiExtensions,
-        resolvers: [ProductManufacturerResolver, SearchResultManufacturerResolver],
+        resolvers: [
+            ProductManufacturerResolver,
+            SearchResultManufacturerResolver,
+            SearchResultGalleryResolver,
+        ],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
         // worker-email.ts never runs erp-integration's own tasks (#149) — see isEmailOnlyWorker.

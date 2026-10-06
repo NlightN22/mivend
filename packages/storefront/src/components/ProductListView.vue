@@ -126,7 +126,7 @@ function handleToggleFavorite(p: ProductItem): void {
                 <MvProductRow
                     v-for="p in items"
                     :key="p.id"
-                    :image-url="p.imageUrl"
+                    :image-url="p.images[0]"
                     :name="p.name"
                     :sku="p.variants[0]?.sku ?? ''"
                     :brand="brandOf(p.manufacturer)"
@@ -163,7 +163,7 @@ function handleToggleFavorite(p: ProductItem): void {
                 <MvProductCard
                     v-for="p in items"
                     :key="p.id"
-                    :image-url="p.imageUrl"
+                    :images="p.images"
                     :name="p.name"
                     :sku="p.variants[0]?.sku ?? ''"
                     :brand="brandOf(p.manufacturer)"

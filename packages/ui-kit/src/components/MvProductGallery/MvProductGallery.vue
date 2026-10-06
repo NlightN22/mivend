@@ -1,63 +1,69 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         productName: string;
         emoji?: string;
-        images?: { thumb: string; full: string }[];
         showFavorite?: boolean;
+        images?: { thumb: string; full: string }[];
     }>(),
     { showFavorite: true, images: () => [] },
 );
 
-const THUMBS = ['📦', '🏷️', '🔍', '📋', '🧾'];
+const PLACEHOLDER_THUMBS = ['📦', '🏷️', '🔍', '📋', '🧾'];
 const active = ref(0);
 const favorited = ref(false);
+
+const hasImages = computed(() => props.images.length > 0);
+const showThumbs = computed(() => props.images.length > 1 || !hasImages.value);
 </script>
 
 <template>
     <div class="gallery">
         <div class="gallery__card">
-            <div class="gallery__thumbs">
-                <button
-                    v-for="(img, i) in images"
-                    :key="`img-${i}`"
-                    :class="['gallery__thumb', { 'gallery__thumb--active': active === i }]"
-                    type="button"
-                    @click="active = i"
-                >
-                    <img class="gallery__thumb-photo" :src="img.thumb" :alt="productName" />
-                </button>
-                <button
-                    v-for="(t, i) in images.length ? [] : THUMBS"
-                    :key="i"
-                    :class="['gallery__thumb', { 'gallery__thumb--active': active === i }]"
-                    type="button"
-                    @click="active = i"
-                >
-                    {{ i === 0 ? (emoji ?? '📦') : t }}
-                </button>
+            <div v-if="showThumbs" class="gallery__thumbs">
+                <template v-if="hasImages">
+                    <button
+                        v-for="(img, i) in images"
+                        :key="`img-${i}`"
+                        :class="['gallery__thumb', { 'gallery__thumb--active': active === i }]"
+                        type="button"
+                        @click="active = i"
+                    >
+                        <img class="gallery__thumb-photo" :src="img.thumb" :alt="productName" />
+                    </button>
+                </template>
+                <template v-else>
+                    <button
+                        v-for="(t, i) in PLACEHOLDER_THUMBS"
+                        :key="i"
+                        :class="['gallery__thumb', { 'gallery__thumb--active': active === i }]"
+                        type="button"
+                        @click="active = i"
+                    >
+                        {{ i === 0 ? (emoji ?? '📦') : t }}
+                    </button>
+                </template>
             </div>
 
             <div class="gallery__main">
-                <button
+                <MvFavoriteButton
                     v-if="showFavorite"
                     class="gallery__fav"
-                    type="button"
-                    :aria-label="favorited ? 'Remove from favorites' : 'Add to favorites'"
-                    @click="favorited = !favorited"
-                >
-                    {{ favorited ? '♥' : '♡' }}
-                </button>
+                    overlay
+                    :is-favorited="favorited"
+                    @toggle="favorited = !favorited"
+                />
                 <img
-                    v-if="images.length"
+                    v-if="hasImages"
                     class="gallery__photo"
                     :src="images[active]?.full ?? images[0].full"
                     :alt="productName"
                 />
                 <div v-else class="gallery__img">
-                    {{ active === 0 ? (emoji ?? '📦') : THUMBS[active] }}
+                    {{ active === 0 ? (emoji ?? '📦') : PLACEHOLDER_THUMBS[active] }}
                 </div>
             </div>
         </div>
@@ -91,11 +97,13 @@ const favorited = ref(false);
 .gallery__thumb {
     width: 52px;
     height: 52px;
+    padding: 0;
     border-radius: 10px;
     border: 1.5px solid #dde7e2;
     background: #f7fbfa;
     font-size: 20px;
     cursor: pointer;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -110,10 +118,17 @@ const favorited = ref(false);
     border-color: #aad4c8;
 }
 
+.gallery__thumb-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 .gallery__main {
     flex: 1;
+    min-width: 0;
     position: relative;
-    height: 380px;
+    aspect-ratio: 1 / 1;
     overflow: hidden;
     background: linear-gradient(135deg, #f4f9f7, #e8f5ee);
     border-radius: 14px;
@@ -123,32 +138,10 @@ const favorited = ref(false);
 }
 
 .gallery__fav {
-    z-index: 1;
     position: absolute;
     top: 10px;
     right: 10px;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1.5px solid #dde7e2;
-    background: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #e05;
-    transition: border-color 0.15s;
-}
-.gallery__fav:hover {
-    border-color: #e05;
-}
-
-.gallery__thumb-photo {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    border-radius: 8px;
+    z-index: 1;
 }
 
 .gallery__photo {

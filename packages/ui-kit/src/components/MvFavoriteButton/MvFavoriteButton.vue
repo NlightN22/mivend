@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { IconHeart, IconHeartFilled } from '@tabler/icons-vue';
+
 interface Props {
     isFavorited?: boolean;
+    overlay?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
     isFavorited: false,
+    overlay: false,
 });
 
 const emit = defineEmits<{
@@ -15,12 +19,19 @@ const emit = defineEmits<{
 <template>
     <button
         class="mv-favorite-btn"
-        :class="{ 'mv-favorite-btn--active': isFavorited }"
+        :class="{
+            'mv-favorite-btn--active': isFavorited,
+            'mv-favorite-btn--overlay': overlay,
+        }"
         type="button"
         aria-label="Toggle favorite"
         @click="emit('toggle')"
     >
-        {{ isFavorited ? '♥' : '♡' }}
+        <template v-if="overlay">
+            <IconHeartFilled v-if="isFavorited" :size="22" />
+            <IconHeart v-else :size="22" :stroke-width="1.8" />
+        </template>
+        <template v-else>{{ isFavorited ? '♥' : '♡' }}</template>
     </button>
 </template>
 
@@ -47,6 +58,18 @@ const emit = defineEmits<{
     background: #f4f9f7;
 }
 .mv-favorite-btn--active {
+    color: #ff4d6d;
+}
+.mv-favorite-btn--overlay {
+    background: transparent;
+    color: #4a5b54;
+    filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 1px #fff);
+}
+.mv-favorite-btn--overlay:hover {
+    background: transparent;
+    color: #ff4d6d;
+}
+.mv-favorite-btn--overlay.mv-favorite-btn--active {
     color: #ff4d6d;
 }
 </style>

@@ -3705,6 +3705,8 @@ export type SearchResult = {
     discountTiers: Array<DiscountTier>;
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
+    /** Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels. */
+    galleryPreviews: Array<Scalars['String']['output']>;
     inStock?: Maybe<Scalars['Boolean']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
     price: SearchResultPrice;
@@ -4318,6 +4320,7 @@ export type CatalogProductsQuery = {
             productId: string;
             productVariantId: string;
             productName: string;
+            galleryPreviews: Array<string>;
             slug: string;
             sku: string;
             currencyCode: CurrencyCode;
@@ -4326,7 +4329,6 @@ export type CatalogProductsQuery = {
             customerPrice?: number | null;
             compareAtPrice?: number | null;
             manufacturer?: { name?: string | null } | null;
-            productAsset?: { preview: string } | null;
             priceWithTax: { min: any } | { value: any };
             discountTiers: Array<{
                 percent: number;
@@ -5314,9 +5316,7 @@ export const CatalogProductsDocument = new TypedDocumentString(`
       manufacturer {
         name
       }
-      productAsset {
-        preview
-      }
+      galleryPreviews
       slug
       sku
       priceWithTax {

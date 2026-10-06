@@ -13,5 +13,7 @@ export const shopApiExtensions: DocumentNode = gql`
 
     extend type SearchResult {
         manufacturer: ProductManufacturer
+        "Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels."
+        galleryPreviews: [String!]!
     }
 `;

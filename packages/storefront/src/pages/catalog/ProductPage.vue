@@ -175,7 +175,7 @@ onMounted(() => {
 
 .product-page__layout {
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr) 300px;
+    grid-template-columns: minmax(320px, 460px) minmax(0, 1fr) 300px;
     gap: 20px;
     align-items: start;
 }
@@ -191,7 +191,7 @@ onMounted(() => {
 
 @media (max-width: 1200px) {
     .product-page__layout {
-        grid-template-columns: 240px minmax(0, 1fr) 270px;
+        grid-template-columns: minmax(280px, 380px) minmax(0, 1fr) 270px;
     }
 }
 @media (max-width: 960px) {
