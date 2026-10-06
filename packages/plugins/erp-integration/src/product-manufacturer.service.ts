@@ -41,7 +41,7 @@ export class ProductManufacturerService {
         const result = new Map<string, ProductManufacturerView>();
         for (const product of products) {
             const manufacturer = product.customFields.manufacturer;
-            if (manufacturer) {
+            if (manufacturer?.name) {
                 result.set(String(product.id), { id: manufacturer.id, name: manufacturer.name });
             }
         }

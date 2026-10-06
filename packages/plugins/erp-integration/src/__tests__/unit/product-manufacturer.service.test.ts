@@ -26,4 +26,12 @@ describe('ProductManufacturerService', () => {
         expect(find).toHaveBeenCalledTimes(1);
         expect(results).toEqual([{ id: 7, name: 'Maker' }, null, null]);
     });
+
+    it('hides a manufacturer whose name has not arrived on the manufacturer stream yet', async () => {
+        const { service, ctx } = setup([
+            { id: 1, customFields: { manufacturer: { id: 7, name: null } } },
+        ]);
+
+        expect(await service.getForProduct(ctx, 1)).toBeNull();
+    });
 });
