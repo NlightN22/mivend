@@ -7,10 +7,7 @@ import { MvSkeleton } from '@mivend/ui-kit';
         <MvSkeleton class="product-skeleton__crumbs" width="320px" height="14px" />
         <div class="product-skeleton">
             <div class="product-skeleton__card product-skeleton__gallery">
-                <div class="product-skeleton__thumbs">
-                    <MvSkeleton v-for="n in 5" :key="n" width="52px" height="52px" radius="10px" />
-                </div>
-                <MvSkeleton height="320px" radius="14px" />
+                <MvSkeleton class="product-skeleton__photo" height="auto" radius="14px" />
             </div>
 
             <div class="product-skeleton__main">
@@ -42,7 +39,7 @@ import { MvSkeleton } from '@mivend/ui-kit';
 
 .product-skeleton {
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr) 300px;
+    grid-template-columns: minmax(320px, 460px) minmax(0, 1fr) 300px;
     gap: 20px;
     align-items: start;
 }
@@ -69,19 +66,15 @@ import { MvSkeleton } from '@mivend/ui-kit';
     padding: 16px;
 }
 
-.product-skeleton__gallery > :last-child {
+.product-skeleton__photo {
     flex: 1;
-}
-
-.product-skeleton__thumbs {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    aspect-ratio: 1 / 1;
+    height: auto;
 }
 
 @media (max-width: 1200px) {
     .product-skeleton {
-        grid-template-columns: 240px minmax(0, 1fr) 270px;
+        grid-template-columns: minmax(280px, 380px) minmax(0, 1fr) 270px;
     }
 }
 @media (max-width: 960px) {
