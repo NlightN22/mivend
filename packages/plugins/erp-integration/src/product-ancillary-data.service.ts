@@ -33,10 +33,16 @@ export class ProductAncillaryDataService {
         productId: string,
         rows: ProductCharacteristicRow[],
     ): Promise<void> {
-        const repo = this.connection.getRepository(ctx, ProductCharacteristic);
-        await repo.delete({ productId });
-        if (rows.length === 0) return;
-        await repo.save(rows.map(row => repo.create({ productId, ...row })));
+        await this.connection.withTransaction(ctx, async txCtx => {
+            const repo = this.connection.getRepository(txCtx, ProductCharacteristic);
+            // Parallel events of one product would both delete, then both insert (#176).
+            await repo.query('select pg_advisory_xact_lock(hashtext($1))', [
+                `product-characteristics:${productId}`,
+            ]);
+            await repo.delete({ productId });
+            if (rows.length === 0) return;
+            await repo.save(rows.map(row => repo.create({ productId, ...row })));
+        });
     }
 
     async replaceManufacturerCodes(

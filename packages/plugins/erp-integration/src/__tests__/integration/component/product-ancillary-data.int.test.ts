@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, DataSource, Entity, EntityManager, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestSchema,
@@ -36,6 +36,7 @@ class TestBarcode {
 }
 
 @Entity('anc_test_characteristic')
+@Index(['productId', 'group', 'key'], { unique: true })
 class TestCharacteristic {
     @PrimaryGeneratedColumn()
     id!: number;
@@ -133,6 +134,15 @@ describe('ManufacturerService (integration, real Postgres)', () => {
     });
 });
 
+function characteristicsService(): ProductAncillaryDataService {
+    return new ProductAncillaryDataService({
+        getRepository: (c: { manager?: EntityManager }) =>
+            (c.manager ?? dataSource.manager).getRepository(TestCharacteristic),
+        withTransaction: (_c: unknown, fn: (c: unknown) => Promise<void>) =>
+            dataSource.transaction(manager => fn({ manager })),
+    } as unknown as TransactionalConnection);
+}
+
 describe('ProductAncillaryDataService (integration, real Postgres)', () => {
     it('replaceBarcodes persists the given codes for the variant', async () => {
         const service = new ProductAncillaryDataService({
@@ -174,9 +184,7 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
     });
 
     it('replaceCharacteristics fully replaces the prior set for the product', async () => {
-        const service = new ProductAncillaryDataService({
-            getRepository: () => dataSource.getRepository(TestCharacteristic),
-        } as unknown as TransactionalConnection);
+        const service = characteristicsService();
 
         await service.replaceCharacteristics(ctx, 'product-1', [
             {
@@ -201,6 +209,26 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
             .getRepository(TestCharacteristic)
             .find({ where: { productId: 'product-1' } });
         expect(rows.map(r => r.key)).toEqual(['B']);
+    });
+
+    it('replaceCharacteristics for one product run concurrently never hits the unique constraint', async () => {
+        const service = characteristicsService();
+        const rows = ['A', 'B', 'C'].map(key => ({
+            group: 'attribute',
+            key,
+            rawValue: 'x',
+            normalizedValue: null,
+            structuredJson: null,
+        }));
+
+        await Promise.all(
+            Array.from({ length: 8 }, () => service.replaceCharacteristics(ctx, 'product-1', rows)),
+        );
+
+        const stored = await dataSource
+            .getRepository(TestCharacteristic)
+            .find({ where: { productId: 'product-1' } });
+        expect(stored.map(r => r.key).sort()).toEqual(['A', 'B', 'C']);
     });
 
     it('replaceManufacturerCodes fully replaces the prior set for the product', async () => {
