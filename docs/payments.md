@@ -641,10 +641,35 @@ These are real, acknowledged gaps — not guessed at here, tracked for a future 
   question — don't build auto-resolution speculatively before a real pattern of issues shows
   which ones are actually safe.
 
-## Checkout payment method availability (issue #180)
+## Checkout payment methods and credit control (issue #180)
 
-- The storefront renders only what `eligiblePaymentMethods` returns; no hardcoded list.
-- `deferred-payment` (plugin-deferred-payment) owns credit-limit control: the eligibility checker hides it for counterparties without a credit limit; `createPayment` declines with `credit-limit-exceeded: {json}` when `creditBalance + order total` exceeds the limit (whole rubles vs. minor units handled in `credit-limit-decision.ts`). The storefront shows a dialog for that decline.
-- `offline-terms` stays in acquiring; `OFFLINE_TERMS_ENABLED=false` disables the PaymentMethod row.
-- `OnlinePaymentPlugin` always loads; its bootstrap enables the `online-stub` PaymentMethod only when `ONLINE_PAYMENT_STUB_ENABLED=true` (set in `apps/server/.env.central`; the staging-integration contour leaves it unset) and disables it otherwise.
-- Not done yet: per-contract limits, links to related orders in the dialog, overrun surfacing in the orders list, mandatory invoice requisites.
+**Availability = plugin presence.** The storefront renders only what `eligiblePaymentMethods` returns
+(no hardcoded list); with none eligible, checkout says so and blocks placing the order.
+
+- `deferred-payment` (plugin-deferred-payment) owns credit control. Its eligibility checker hides the
+  method for counterparties without a credit limit (`creditLimit > 0` required; prepayment customers).
+- `offline-terms` (bank invoice) stays in acquiring (documents depend on it). `OFFLINE_TERMS_ENABLED=false`
+  disables its PaymentMethod row.
+- `online-stub` PaymentMethod is enabled by `OnlinePaymentPlugin`'s bootstrap only when
+  `ONLINE_PAYMENT_STUB_ENABLED=true` (`apps/server/.env.central`; the staging-integration contour leaves
+  it unset, so it is disabled there).
+
+### Credit limit on deferred orders
+
+Decision (2026-10-06): exceeding the limit **does not reject** the order. It is placed, and the
+customer sees a warning ("credit limit exceeded, wait for your manager to confirm"). Whether it goes
+through is decided downstream (ERP, later a manager-portal approval workflow, see #142's
+`creditTermApproval`); that workflow is deliberately not built yet.
+
+- Single source of truth for the comparison: `CreditLimitCheckService.decide(counterparty, contract,
+  pendingAmount)` in plugin-counterparty, compared in kopecks (limit/balance are whole rubles).
+- `pendingAmount` = this order's total + the open deferred orders of the same counterparty that ERP has
+  not confirmed yet (`erpStatus` in `PENDING`, `SENT_TO_ERP`, `RESERVED`; `OpenDeferredExposureService`).
+  `creditBalance` itself only changes via the ERP credit-balance stream.
+- The result travels as the public payment metadata flag `creditLimitExceeded` (key
+  `CREDIT_LIMIT_EXCEEDED_KEY` in `packages/shared`); the storefront redirects to `/order-created` with
+  `limitExceeded=1` and shows the warning there.
+- Per-contract limits (`controlledIndividually`) are not evaluated here: the order carries no contract.
+- Known limitations: concurrent checkouts of one counterparty are not serialized (the warning may be
+  missed in a race, nothing is blocked either way); related-orders links and overrun surfacing in the
+  orders list are not built; mandatory invoice requisites are deferred.

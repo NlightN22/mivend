@@ -355,3 +355,11 @@ a concurrent restart by another session also kills the first one (`make: Killed`
 `pnpm build:plugins` can leave the child stuck in ts-node-dev's own `waitForFile` busy-wait
 (its compile process died mid-respawn). Confirm with a stack sample (`kill -USR1 <pid>`, then
 Debugger.pause over `127.0.0.1:9229`), then `kill -9` that child only — the watcher respawns it.
+
+## Auth cookie secret
+
+`COOKIE_SECRET` signs the auth cookie and must be identical for every server/worker process and
+stable across restarts. Vendure's default is a random secret per process start, which logs everyone
+out (and creates a new session row) on every restart. Outside production a fixed dev default is used;
+in production the server refuses to start without a real value (a `change-me…` placeholder is also
+rejected). Changing it logs everybody out exactly once.
