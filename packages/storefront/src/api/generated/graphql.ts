@@ -5025,7 +5025,7 @@ export type RemoveAllCartLinesMutation = {
 export type EligibleShippingMethodsForCheckoutQueryVariables = Exact<{ [key: string]: never }>;
 
 export type EligibleShippingMethodsForCheckoutQuery = {
-    eligibleShippingMethods: Array<{ id: string }>;
+    eligibleShippingMethods: Array<{ id: string; code: string }>;
 };
 
 export type SetOrderShippingMethodForCheckoutMutationVariables = Exact<{
@@ -6132,6 +6132,7 @@ export const EligibleShippingMethodsForCheckoutDocument = new TypedDocumentStrin
     query EligibleShippingMethodsForCheckout {
   eligibleShippingMethods {
     id
+    code
   }
 }
     `) as unknown as TypedDocumentString<

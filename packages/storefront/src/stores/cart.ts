@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { toast } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import { brandOf } from '../utils/brand';
+import { useCheckoutStore, type DeliveryType } from './checkout';
 import {
     AddToCartDocument,
     AdjustCartLineDocument,
@@ -27,6 +28,11 @@ import {
     stockInsufficientGeneric,
     stockUpdateFailed,
 } from '../utils/discountMessages';
+
+const SHIPPING_CODE_BY_DELIVERY: Record<DeliveryType, string> = {
+    courier: 'freight-delivery',
+    pickup: 'pickup',
+};
 
 const ADJUST_DEBOUNCE_MS = 350;
 const CART_FETCH_RETRIES = 4;
@@ -297,14 +303,15 @@ export const useCartStore = defineStore('cart', () => {
 
     // Moves the order from AddingItems to ArrangingPayment — required before any
     // addPaymentToOrder call. Vendure refuses this transition without a shipping
-    // method attached, so pick the (currently single) eligible one first.
+    // method attached, so set the one matching the selected delivery type first.
     async function beginCheckout(): Promise<boolean> {
         // A previous attempt (declined payment, closed tab) can leave the order in ArrangingPayment.
         if (order.value?.state === 'ArrangingPayment') await shopApi(ResumeAddingItemsDocument);
         const eligible = await shopApi(EligibleShippingMethodsForCheckoutDocument);
-        const methodId = eligible.eligibleShippingMethods[0]?.id;
+        const wantedCode = SHIPPING_CODE_BY_DELIVERY[useCheckoutStore().selectedDelivery];
+        const methodId = eligible.eligibleShippingMethods.find(m => m.code === wantedCode)?.id;
         if (!methodId) {
-            toast('No shipping method available', 'error');
+            toast('Selected delivery type is not available for this order', 'error');
             return false;
         }
         const setMethodResult = await shopApi(SetOrderShippingMethodForCheckoutDocument, {

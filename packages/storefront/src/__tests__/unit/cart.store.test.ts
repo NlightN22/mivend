@@ -6,6 +6,7 @@ vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
 
 import { shopApi } from '../../api/client';
 import { useCartStore } from '../../stores/cart';
+import { useCheckoutStore } from '../../stores/checkout';
 import { AdjustCartLineDocument } from '../../api/generated/graphql';
 
 interface TestLine {
@@ -232,5 +233,39 @@ describe('cart store deferred checkout', () => {
             .mockResolvedValueOnce({ eligibleShippingMethods: [] } as never);
         expect(await store.beginCheckout()).toBe(false);
         expect(String(vi.mocked(shopApi).mock.calls[0][0])).toContain('AddingItems');
+    });
+
+    it.each([
+        ['courier', 'freight-delivery', '2'],
+        ['pickup', 'pickup', '1'],
+    ] as const)(
+        'sets the shipping method matching %s delivery',
+        async (type, _code, expectedId) => {
+            const store = useCartStore();
+            useCheckoutStore().setDelivery(type);
+            vi.mocked(shopApi)
+                .mockResolvedValueOnce({
+                    eligibleShippingMethods: [
+                        { id: '1', code: 'pickup' },
+                        { id: '2', code: 'freight-delivery' },
+                    ],
+                } as never)
+                .mockResolvedValueOnce({ setOrderShippingMethod: { __typename: 'Order' } } as never)
+                .mockResolvedValueOnce({
+                    transitionOrderToState: { __typename: 'Order' },
+                } as never);
+            expect(await store.beginCheckout()).toBe(true);
+            expect(vi.mocked(shopApi).mock.calls[1][1]).toEqual({ id: [expectedId] });
+        },
+    );
+
+    it('refuses checkout when the selected delivery type has no eligible method', async () => {
+        const store = useCartStore();
+        useCheckoutStore().setDelivery('courier');
+        vi.mocked(shopApi).mockResolvedValueOnce({
+            eligibleShippingMethods: [{ id: '1', code: 'pickup' }],
+        } as never);
+        expect(await store.beginCheckout()).toBe(false);
+        expect(vi.mocked(shopApi)).toHaveBeenCalledTimes(1);
     });
 });

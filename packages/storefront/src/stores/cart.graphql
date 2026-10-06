@@ -142,6 +142,7 @@ mutation RemoveAllCartLines {
 query EligibleShippingMethodsForCheckout {
     eligibleShippingMethods {
         id
+        code
     }
 }
 
