@@ -64,6 +64,7 @@ const inAccountZone = computed(() =>
 );
 
 const cartTotal = computed(() => {
+    if (!cartStore.loaded) return '';
     if (cartStore.totalPrice === 0) return '0 ₽';
     return new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽';
 });
@@ -274,7 +275,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                         <small>Cart</small>
                         {{ cartTotal }}
                     </span>
-                    <span class="app-header__cart-badge">{{ cartStore.itemCount }}</span>
+                    <span v-if="cartStore.loaded" class="app-header__cart-badge">{{
+                        cartStore.itemCount
+                    }}</span>
                 </RouterLink>
 
                 <button

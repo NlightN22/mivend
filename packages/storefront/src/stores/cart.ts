@@ -68,6 +68,7 @@ type ActiveOrder = NonNullable<ActiveOrderQuery['activeOrder']>;
 
 export const useCartStore = defineStore('cart', () => {
     const order = ref<ActiveOrder | null>(null);
+    const loaded = ref(false);
     // Counts in-flight adjust/remove mutations; fetchCart skips update while non-zero
     let pendingMutations = 0;
     // Order mutations run one at a time: parallel ones on one order fail server-side.
@@ -101,6 +102,7 @@ export const useCartStore = defineStore('cart', () => {
         try {
             const result = await shopApi(ActiveOrderDocument);
             if (pendingMutations === 0) order.value = result.activeOrder ?? null;
+            loaded.value = true;
         } catch {
             if (attempt < CART_FETCH_RETRIES) {
                 setTimeout(() => void fetchCart(attempt + 1), CART_FETCH_RETRY_MS * (attempt + 1));
@@ -361,6 +363,7 @@ export const useCartStore = defineStore('cart', () => {
 
     return {
         order,
+        loaded,
         lines,
         itemCount,
         totalQuantity,

@@ -83,6 +83,21 @@ describe('cart store fetchCart', () => {
         expect(store.totalQuantity).toBe(6);
         vi.useRealTimers();
     });
+
+    it('is not loaded until a fetch succeeds, so an unfetched cart never reads as empty', async () => {
+        const store = useCartStore();
+        vi.mocked(shopApi)
+            .mockRejectedValueOnce(new Error('network'))
+            .mockResolvedValueOnce({ activeOrder: null } as never);
+        expect(store.loaded).toBe(false);
+
+        await store.fetchCart();
+        expect(store.loaded).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(store.loaded).toBe(true);
+        vi.useRealTimers();
+    });
 });
 
 describe('cart store mutation queue', () => {

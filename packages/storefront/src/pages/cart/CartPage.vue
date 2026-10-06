@@ -28,7 +28,9 @@ onMounted(() => cartStore.fetchCart());
             </p>
         </div>
 
-        <div v-if="cartStore.isEmpty" class="cart-page__empty">
+        <p v-if="!cartStore.loaded" class="cart-page__loading">Loading cart…</p>
+
+        <div v-else-if="cartStore.isEmpty" class="cart-page__empty">
             <div class="cart-page__empty-icon">🛒</div>
             <h2 class="cart-page__empty-title">Your cart is empty</h2>
             <p class="cart-page__empty-text">Add products from the catalog to place an order.</p>
@@ -54,6 +56,11 @@ onMounted(() => cartStore.fetchCart());
     max-width: 1440px;
     margin: 0 auto;
     padding: 32px 28px 70px;
+}
+
+.cart-page__loading {
+    color: #66736e;
+    font-weight: 800;
 }
 
 .cart-page__crumbs {

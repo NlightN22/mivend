@@ -8,10 +8,9 @@ const authStore = useAuthStore();
 const cartStore = useCartStore();
 
 onMounted(async () => {
-    await authStore.init();
-    if (authStore.isLoggedIn) {
-        await cartStore.fetchCart();
-    } else if (
+    await Promise.all([authStore.init(), cartStore.fetchCart()]);
+    if (
+        !authStore.isLoggedIn &&
         // Only auto-relogin on a *confirmed* logged-out state — never on 'unknown', which now
         // also covers "still retrying after a network failure that outlasted the bounded
         // retry". Branching on isLoggedIn alone used to conflate the two, so a slow dev-server
