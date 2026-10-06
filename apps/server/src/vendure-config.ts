@@ -16,7 +16,7 @@ import {
 } from '@mivend/plugin-deferred-payment';
 import { PickupShippingPlugin } from '@mivend/plugin-pickup-shipping';
 import { OnlinePaymentPlugin, onlineStubPaymentHandler } from '@mivend/plugin-online-payment';
-import { AssetServerPlugin } from '@vendure/asset-server-plugin';
+import { AssetServerPlugin, configureS3AssetStorage } from '@vendure/asset-server-plugin';
 import {
     EmailPlugin,
     FileBasedTemplateLoader,
@@ -574,6 +574,23 @@ export const config: VendureConfig = {
             // /assets to be proxied to this server under the same public origin
             // the storefront is served from (see storefront/vite.config.ts).
             assetUrlPrefix: process.env.ASSET_URL_PREFIX ?? '/assets/',
+            // S3-compatible storage (Garage in dev) when S3_ENDPOINT is set, else the local dir.
+            ...(process.env.S3_ENDPOINT
+                ? {
+                      storageStrategyFactory: configureS3AssetStorage({
+                          bucket: process.env.S3_BUCKET ?? '',
+                          credentials: {
+                              accessKeyId: process.env.S3_ACCESS_KEY_ID ?? '',
+                              secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? '',
+                          },
+                          nativeS3Configuration: {
+                              endpoint: process.env.S3_ENDPOINT,
+                              region: process.env.S3_REGION ?? 'garage',
+                              forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== 'false',
+                          },
+                      }),
+                  }
+                : {}),
         }),
         emailPlugin,
         // Issue #128: migrated off BullMQJobQueuePlugin (Redis-backed) to Vendure's own

@@ -51,6 +51,19 @@ services:
             timeout: 10s
             retries: 10
 
+    garage:
+        image: dxflrs/garage:v1.1.0
+        ports:
+            - '127.0.0.1:3900:3900'
+        volumes:
+            - ./garage/garage.toml:/etc/garage.toml:ro
+            - garage-data:/var/lib/garage
+        healthcheck:
+            test: ['CMD', '/garage', 'status']
+            interval: 10s
+            timeout: 5s
+            retries: 10
+
     elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
         environment:
@@ -112,3 +125,4 @@ volumes:
     postgres-central-data:
     postgres-branch-data:
     elasticsearch-data:
+    garage-data:

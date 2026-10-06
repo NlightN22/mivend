@@ -14,6 +14,8 @@
         "migration:revert": "ts-node --transpile-only src/migration.ts revert"
     },
     "dependencies": {
+        "@aws-sdk/client-s3": "^3.1146.0",
+        "@aws-sdk/lib-storage": "^3.1146.0",
         "@graphql-tools/schema": "^10.0.23",
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-acquiring": "workspace:*",
@@ -22,7 +24,6 @@
         "@mivend/plugin-cross-reference": "workspace:*",
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-deferred-payment": "workspace:*",
-        "@mivend/plugin-pickup-shipping": "workspace:*",
         "@mivend/plugin-documents": "workspace:*",
         "@mivend/plugin-erp-import": "workspace:*",
         "@mivend/plugin-erp-integration": "workspace:*",
@@ -30,6 +31,7 @@
         "@mivend/plugin-moq": "workspace:*",
         "@mivend/plugin-notification": "workspace:*",
         "@mivend/plugin-online-payment": "workspace:*",
+        "@mivend/plugin-pickup-shipping": "workspace:*",
         "@mivend/plugin-popular-products": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
