@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { MvSkeleton } from '@mivend/ui-kit';
 import { useCheckoutStore } from '../../stores/checkout';
 
 const checkoutStore = useCheckoutStore();
@@ -45,6 +46,13 @@ const methods = computed(() =>
         <MvNotice v-if="checkoutStore.methodsLoaded && !methods.length" variant="warning">
             No payment method is available for your account. Please contact your manager.
         </MvNotice>
+        <div
+            v-else-if="!checkoutStore.methodsLoaded"
+            class="payment-selector__grid"
+            aria-busy="true"
+        >
+            <MvSkeleton height="132px" radius="20px" />
+        </div>
         <div v-else class="payment-selector__grid">
             <button
                 v-for="method in methods"

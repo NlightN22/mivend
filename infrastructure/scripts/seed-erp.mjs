@@ -457,7 +457,7 @@ async function main() {
     // v7 (#59): category icons (iconFile) in the categories fixture.
     // v8 (#59): level-3 oil categories now hold products.
     // v9: warehouse record binding the default stock location to branch-central.
-    const run = 'v9';
+    const run = 'v10';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
@@ -912,6 +912,19 @@ async function main() {
             lastName: 'Frolov',
             password: 'Password123!',
         },
+        // Checkout credit control (#180): one buyer with a deferred-payment limit, one prepayment buyer.
+        {
+            email: 'credit-limited@buyer.example',
+            firstName: 'Credit',
+            lastName: 'Limited',
+            password: 'Password123!',
+        },
+        {
+            email: 'prepay@buyer.example',
+            firstName: 'Prepay',
+            lastName: 'Only',
+            password: 'Password123!',
+        },
     ];
     console.log(`Sending ${customers.length} customers...`);
     const customerResult = await postBatch(
@@ -1064,6 +1077,32 @@ async function main() {
             branchId: 'branch-central',
             erpGroupLabel: 'Accounting',
         },
+        {
+            erpId: 'cnt-credit-limited',
+            legalName: 'Credit Limited Buyer LLC',
+            shortName: 'Credit Limited',
+            creditLimit: 100000,
+            creditBalance: 0,
+            paymentDelayDays: 14,
+            priceType: 'WHOLESALE',
+            isActive: true,
+            departmentId: 'dept-sales',
+            branchId: 'branch-central',
+            erpGroupLabel: 'Accounting',
+        },
+        {
+            erpId: 'cnt-prepay',
+            legalName: 'Prepay Only Buyer LLC',
+            shortName: 'Prepay Only',
+            creditLimit: 0,
+            creditBalance: 0,
+            paymentDelayDays: 0,
+            priceType: 'WHOLESALE',
+            isActive: true,
+            departmentId: 'dept-sales',
+            branchId: 'branch-central',
+            erpGroupLabel: 'Accounting',
+        },
     ];
     console.log(`Sending ${counterparties.length} counterparties...`);
     const counterpartyResult = await postBatch(
@@ -1088,6 +1127,8 @@ async function main() {
         { customerEmail: 'pavel@tehservice.example', counterpartyErpId: 'cnt-008' },
         { customerEmail: 'natalia@vostok-parts.example', counterpartyErpId: 'cnt-009' },
         { customerEmail: 'igor@autobaza.example', counterpartyErpId: 'cnt-010' },
+        { customerEmail: 'credit-limited@buyer.example', counterpartyErpId: 'cnt-credit-limited' },
+        { customerEmail: 'prepay@buyer.example', counterpartyErpId: 'cnt-prepay' },
     ];
     console.log(`Sending ${assignments.length} customer-counterparty assignments...`);
     const assignResult = await postBatch(
