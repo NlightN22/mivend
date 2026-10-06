@@ -1,6 +1,20 @@
 # Project Context
 
-Updated: 2026-10-06 10:00
+Updated: 2026-10-06 12:00
+
+## Recent changes (2026-10-06 — #176 closed; cart/checkout UX pass; #181 photos filed; all pushed to main)
+
+- **#176** (closed): `replaceCharacteristics` and `replaceManufacturerCodes` run in a transaction behind a per-product `pg_advisory_xact_lock`; concurrency tests verified to fail without the lock. Audit passed (`mivend.audit.common`).
+- **Cart** (storefront): mutations go through one queue in `stores/cart.ts` (parallel order mutations failed server-side), per-line 350 ms debounce, one refetch after the queue drains; `loaded` flag so an unfetched cart never reads as empty (header badge hidden, `CartSkeleton.vue` instead of the empty state); cart now loads in parallel with `authStore.init()`. `MvQtyStepper` got an `editable` mode (type a number, confirm with check/Enter). Removed the duplicated "qty N pc." and the hardcoded "Central warehouse" pill from cart lines (still hardcoded in `ProductBuyPanel.vue`).
+- **Checkout**: skeleton card while payment methods load; methods and cart load in parallel.
+- **Known cosmetic**: stepper values can flip back once when stock is capped (server answers `InsufficientStockError`, refetch restores the server value). Fix idea: clamp "+" by available stock if the line data carries it. User said not critical.
+- **Lesson**: a runtime `import` from `shared` in the storefront pulls `@vendure/core` into the Vite bundle and kills the staging storefront at startup — only `import type` from `shared`. Check with `pnpm build:plugins`/storefront start, not just `make lint`/`make test`.
+
+## Product photos (issue #181, open — design agreed, nothing implemented)
+
+- Nothing exists yet on either side: no image fields in `ProductChanged` (event-contracts 0.43.1), Vendure `AssetServerPlugin` writes to local `static/assets`, Integration Service has no storage/endpoint.
+- In the ERP, photos are rows of a generic attached-file catalog (data kind = image, owner type = product catalog; ~30k rows in dev data) plus one main-image pointer per product; MD5-like hash present on some rows, no reliable changed-at date, no position field. A photo change emits no product event, so it needs a **new stream** (metadata only: fileId, contentHash, mimeType, isMain, position; no bytes in Kafka).
+- Agreed design: mivend owns an S3-compatible store (MinIO in the dev compose, bucket auto-created) via Vendure `configureS3AssetStorage` (`@aws-sdk/client-s3`); Integration Service keeps its own copy of originals; a mivend worker downloads async, keys by content hash (`products/{productId}/{hash}.{ext}`), attaches Vendure Assets, detaches removed ones; browsers go through a caching proxy, previews in lists. Step 1 (MinIO + S3 strategy, manual test photos) is independent of the ERP side and can start now.
 
 ## Recent changes (2026-10-05/06 — #166 characteristic checkbox filters, shipped/audited/closed; pushed up to ada148b)
 
@@ -52,33 +66,11 @@ Updated: 2026-10-06 10:00
 
 - `stores/favorites.ts` keeps only ids (`mv_favorites`); `useFavoriteProducts` resolves prices/stock live in batches of 100; unavailable favorites are never auto-pruned ("Clear unavailable"). Contour startup backfill of `ManufacturerFacetService` is O(n) now. Full text: docs/ai/.backup/PROJECT_CONTEXT.20261005-162-favorites.md.
 
-## Recent changes (2026-10-04 — #164 category browse/filters/facets on ExternalSearchPlugin, closed/audited)
+## #164 category browse/filters on ExternalSearchPlugin (compressed, closed/audited — full text: `.backup/PROJECT_CONTEXT.20261006-164-category-facets.md`)
 
-- Category = Collection slug `cat-<ErpId>` → `categoryId` (no `Collection.customFields.externalId`;
-  the `category` FacetValue exists only for the Collection filter and is hidden in the UI).
-- Manufacturer = Facet `manufacturer`, FacetValue `code` = ERP manufacturer id, mirrored from
-  `Manufacturer` by `ManufacturerFacetService` (erp-integration; backfilled at server boot, server
-  process only). Not assigned to variants: search-service answers membership and counts. Filter clicks →
-  `filters.manufacturer`; facet counts map back to FacetValues, unknown ones skipped.
-- A requested filter that resolves to nothing (bad slug, unknown/unsupported FacetValue) =
-  `unsatisfiable` → empty result, never the unfiltered set. One category only (first wins, warns).
-- Sort: `relevance` and `name` ASC only; price/name-desc fall back to relevance (#165 to hide in UI).
-- Bare request (no term/category/filter: home page, `/catalog`) is answered from mivend's own DB
-  (`ProductLookupService.browse`, one paginated id query, ordered by id or name, no facets). Its
-  in-stock filter uses `andProductInStock` in plugin-reservation (SQL twin of
-  `getAvailableToPromiseBatch`, drift-guarded by `in-stock-filter.int.test.ts`); a branch without
-  stock locations gets an empty list. Home/catalog verified: 45042 products, in-stock 17840.
-- Shop schema under `SEARCH_BACKEND=external` adds `SearchInput.inStock/priceRangeWithTax`
-  (accepted; price range ignored) — the storefront sends them on every catalog request.
-- UI: ui-kit `MvFacetGroup` (icon or letter avatar, 7 rows, searchable "show all") inside
-  `MvCatalogFacets` for both portals; storefront sends `collectionSlug`. docs/frontend.md "Catalog
-  filters". No filter sidebar on phones by design.
-- Storefront generated types come from codegen against the :3010 (external) schema; ES-only types are
-  gone (nothing used them). Regenerate against the local contour if they are needed again.
-- Open: #165 (hide unsupported sort/price controls), #166 done (see top), manufacturer icons
-  have no data source (letters shown), staging has two manufacturers both named "собственные нужды".
-- Restart lesson: `main.ts` on :3010 does not hot-reload linked plugin `dist`; use
-  `make dev-staging-integration` (it kills the old contour itself) and wait for `/health` 200.
+- Category = Collection slug `cat-<ErpId>`; manufacturer = Facet `manufacturer` (FacetValue code = ERP id, mirrored by `ManufacturerFacetService`). An unresolvable filter = empty result, never the unfiltered set.
+- A bare request (no term/category/filter) is answered from mivend's own DB (`ProductLookupService.browse`); sort is `relevance`/`name` ASC only (#165 to hide the rest in UI).
+- Restart lesson: `main.ts` on :3010 does not hot-reload linked plugin `dist`; use `make dev-staging-integration` and wait for `/health` 200.
 
 ## #70 guest price, branch stock tiers (compressed, closed/audited — full text: `.backup/PROJECT_CONTEXT.20261005-70-stock-tiers.md`)
 
@@ -249,6 +241,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 ## Planned next work
 
+0. **Issue #181** — product photos, step 1: MinIO in `docker-compose.dev.yml` + S3 asset storage in Vendure (see "Product photos" above); then the new ERP photo stream and download worker.
 1. **Issue #154** (low-priority, open) — discount-rule follow-ups: `limitAmount` enforcement
    (real cap, not just safe-exclude), conflict-scope simplification, unreachable ERP-vs-portal
    branch, upstream version-collision/dedup risk (needs a search-platform-side issue number once
