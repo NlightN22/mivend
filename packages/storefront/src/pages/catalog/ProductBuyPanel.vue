@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 
@@ -9,7 +9,8 @@ interface Props {
     currency?: string;
     stockLevel?: string;
     showPrices: boolean;
-    productName?: string;
+    cartQty?: number;
+    cartLineId?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -17,13 +18,13 @@ const props = withDefaults(defineProps<Props>(), {
     compareAtPrice: undefined,
     currency: 'RUB',
     stockLevel: undefined,
-    productName: '',
+    cartQty: 0,
+    cartLineId: undefined,
 });
 
-const emit = defineEmits<{ 'add-to-cart': [qty: number] }>();
+const emit = defineEmits<{ 'add-to-cart': []; 'update-cart-qty': [lineId: string, qty: number] }>();
 
 const authStore = useAuthStore();
-const qty = ref(1);
 
 const counterparty = computed(() => authStore.counterparty);
 const availableCredit = computed(() => {
@@ -62,21 +63,23 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
 
             <div class="buy-panel__price-note">Price includes customer terms and VAT.</div>
 
-            <div class="buy-panel__qty-row">
-                <MvQtyStepper v-model="qty" block />
-            </div>
-
+            <MvQtyStepper
+                v-if="cartQty > 0"
+                :model-value="cartQty"
+                :min="0"
+                block
+                @update:model-value="
+                    (val: number) => cartLineId && emit('update-cart-qty', cartLineId, val)
+                "
+            />
             <button
+                v-else
                 class="buy-panel__add"
                 type="button"
                 :disabled="!showPrices || stockVariant === 'out'"
-                @click="emit('add-to-cart', qty)"
+                @click="emit('add-to-cart')"
             >
                 Add to cart
-            </button>
-
-            <button class="buy-panel__secondary" type="button" :disabled="!showPrices">
-                Buy in 1 click
             </button>
         </div>
 
@@ -135,13 +138,6 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
     margin-bottom: 16px;
 }
 
-.buy-panel__qty-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
 .buy-panel__add {
     width: 100%;
     height: 52px;
@@ -163,28 +159,6 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
     background: var(--app-accent-orange-active, #cc6e00);
 }
 .buy-panel__add:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-}
-
-.buy-panel__secondary {
-    width: 100%;
-    height: 44px;
-    border: 1.5px solid #dde7e2;
-    border-radius: 14px;
-    background: transparent;
-    color: #2c3b36;
-    font-size: 14px;
-    font-weight: 700;
-    font-family: inherit;
-    cursor: pointer;
-    transition: border-color 0.15s;
-}
-.buy-panel__secondary:hover:not(:disabled) {
-    border-color: #00b894;
-    color: #00b894;
-}
-.buy-panel__secondary:disabled {
     opacity: 0.45;
     cursor: not-allowed;
 }

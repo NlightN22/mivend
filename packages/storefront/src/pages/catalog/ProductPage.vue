@@ -5,23 +5,18 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
-    toast,
     MvErrorState,
     MvProductGallery,
     MvProductMainCards,
     stockVariantFromLevel,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import { useCartStore } from '../../stores/cart';
+import { useCartActions } from '../../composables/useCartActions';
 import { useCatalogStore } from '../../stores/catalog';
 import { filterVisibleCrumbs } from '../../../../shared/src/collectionTree';
-import { discountAddToCartHint } from '../../utils/discountMessages';
 import { shopApi } from '../../api/client';
 import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
-import {
-    ProductDetailDocument,
-    type ProductDetailQuery,
-} from '../../api/generated/graphql';
+import { ProductDetailDocument, type ProductDetailQuery } from '../../api/generated/graphql';
 import ProductBuyPanel from './ProductBuyPanel.vue';
 
 type Product = NonNullable<ProductDetailQuery['product']>;
@@ -29,7 +24,7 @@ type Product = NonNullable<ProductDetailQuery['product']>;
 const route = useRoute();
 const { t } = useI18n();
 const authStore = useAuthStore();
-const cartStore = useCartStore();
+const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
 const catalogStore = useCatalogStore();
 
 const product = ref<Product | null>(null);
@@ -39,21 +34,16 @@ const error = ref<LoadErrorText | null>(null);
 const variant = computed(() => product.value?.variants[0]);
 const brand = computed(() => brandOf(product.value?.manufacturer));
 
-async function handleAddToCart(qty: number): Promise<void> {
-    if (!variant.value) return;
-    // Toast reflects the actual applied discount from the mutation response, not a
-    // catalog-level guess — see stores/cart.ts addItem().
-    const discount = await cartStore.addItem(variant.value.id, qty);
-    if (discount) toast(discountAddToCartHint(discount.percent, discount.brand), 'success');
-}
-const category = computed(
-    () => product.value?.facetValues.find(fv => fv.facet.code === 'category')?.name ?? '',
-);
 // A product can belong to several collections; the deepest one (most breadcrumbs) gives the
 // most specific real ancestry path to show — breadcrumbs = [root, ...ancestors, self].
+const deepestCollection = computed(
+    () =>
+        [...(product.value?.collections ?? [])].sort(
+            (a, b) => b.breadcrumbs.length - a.breadcrumbs.length,
+        )[0],
+);
 const breadcrumbItems = computed(() => {
-    const collections = product.value?.collections ?? [];
-    const deepest = [...collections].sort((a, b) => b.breadcrumbs.length - a.breadcrumbs.length)[0];
+    const deepest = deepestCollection.value;
     const trail = deepest
         ? filterVisibleCrumbs(deepest.breadcrumbs, catalogStore.collections).map(c => ({
               label: c.name,
@@ -74,6 +64,12 @@ const extraSpecs = computed(() => {
         ...(weight ? [{ label: 'Weight', value: `${weight} kg` }] : []),
     ];
 });
+const category = computed(
+    () =>
+        product.value?.facetValues.find(fv => fv.facet.code === 'category')?.name ??
+        deepestCollection.value?.name ??
+        '',
+);
 const stockVariantLabel = computed(() => stockVariantFromLevel(variant.value?.stockLevel));
 
 async function fetchData(slug: string) {
@@ -142,8 +138,10 @@ onMounted(() => {
                     :currency="variant?.currencyCode ?? 'RUB'"
                     :stock-level="variant?.stockLevel"
                     :show-prices="authStore.isLoggedIn"
-                    :product-name="product.name"
-                    @add-to-cart="handleAddToCart"
+                    :cart-qty="cartLineFor(variant?.id)?.quantity ?? 0"
+                    :cart-line-id="cartLineFor(variant?.id)?.id"
+                    @add-to-cart="onAddToCart(variant?.id)"
+                    @update-cart-qty="onUpdateQty"
                 />
             </div>
         </template>
