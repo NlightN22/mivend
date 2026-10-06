@@ -1,5 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { LanguageCode } from '@vendure/common/lib/generated-types';
+import type { ID } from '@vendure/common/lib/shared-types';
 import {
     Facet,
     FacetService,
@@ -16,7 +17,7 @@ import { Manufacturer } from './entities/manufacturer.entity';
 import { loggerCtx } from './types';
 
 export const MANUFACTURER_FACET_CODE = 'manufacturer';
-const SYNCED_TTL_MS = 10 * 60_000;
+const KNOWN_TTL_MS = 10 * 60_000;
 
 // Mirrors each Manufacturer as a FacetValue (code = ERP GUID) so the storefront filter sidebar
 // can render it through the standard SearchResponse.facetValues. Not assigned to variants:
@@ -24,7 +25,7 @@ const SYNCED_TTL_MS = 10 * 60_000;
 @Injectable()
 export class ManufacturerFacetService implements OnApplicationBootstrap {
     // Loading every manufacturer value per product event dominated the inbox's CPU time.
-    private synced = new Map<string, { name: string | null; expiresAt: number }>();
+    private known?: { values: Map<string, { id: ID; name: string }>; expiresAt: number };
 
     constructor(
         private facetService: FacetService,
@@ -50,15 +51,30 @@ export class ManufacturerFacetService implements OnApplicationBootstrap {
     }
 
     async ensureValue(ctx: RequestContext, externalId: string, name: string | null): Promise<void> {
-        const cached = this.synced.get(externalId);
-        if (cached && cached.expiresAt > Date.now() && (!name || cached.name === name)) return;
         const facet = await this.ensureFacet(ctx);
-        const values = await this.facetValueService.findByFacetId(ctx, facet.id);
-        await this.syncValue(ctx, facet, values, externalId, name);
-        this.synced.set(externalId, {
-            name: name ?? cached?.name ?? null,
-            expiresAt: Date.now() + SYNCED_TTL_MS,
+        if (!this.known || this.known.expiresAt <= Date.now()) {
+            const values = await this.facetValueService.findByFacetId(ctx, facet.id);
+            this.known = {
+                values: new Map(values.map(v => [v.code, { id: v.id, name: v.name }])),
+                expiresAt: Date.now() + KNOWN_TTL_MS,
+            };
+        }
+        const current = this.known.values.get(externalId);
+        if (current && (!name || current.name === name)) return;
+        if (!current) {
+            const created = await this.facetValueService.create(ctx, facet as never, {
+                facetId: String(facet.id),
+                code: externalId,
+                translations: [{ languageCode: LanguageCode.en, name: name ?? externalId }],
+            });
+            this.known.values.set(externalId, { id: created.id, name: name ?? externalId });
+            return;
+        }
+        await this.facetValueService.update(ctx, {
+            id: current.id,
+            translations: [{ languageCode: LanguageCode.en, name: name as string }],
         });
+        current.name = name as string;
     }
 
     private async syncValue(

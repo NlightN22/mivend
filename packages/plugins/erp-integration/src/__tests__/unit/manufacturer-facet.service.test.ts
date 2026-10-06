@@ -25,7 +25,7 @@ function setup(
     const facetService = { findByCode: vi.fn().mockResolvedValue(facet), create: vi.fn() };
     const facetValueService = {
         findByFacetId: vi.fn().mockResolvedValue(values),
-        create: vi.fn().mockResolvedValue(undefined),
+        create: vi.fn().mockResolvedValue({ id: 99 }),
         update: vi.fn().mockResolvedValue(undefined),
     };
     const connection = { getRepository: () => ({ find: async () => manufacturers }) };
@@ -59,7 +59,7 @@ describe('ManufacturerFacetService', () => {
         expect(facetValueService.update).toHaveBeenCalledTimes(1);
     });
 
-    it('does not reload the facet values for a repeated, unchanged manufacturer', async () => {
+    it('loads the facet values once for many different manufacturers', async () => {
         const { service, facetValueService } = setup([{ id: 5, code: 'm-1', name: 'A' }]);
         await service.ensureValue(ctx, 'm-1', 'A');
         await service.ensureValue(ctx, 'm-1', 'A');
@@ -71,7 +71,7 @@ describe('ManufacturerFacetService', () => {
         const { service, facetValueService } = setup([{ id: 5, code: 'm-1', name: 'A' }]);
         await service.ensureValue(ctx, 'm-1', 'A');
         await service.ensureValue(ctx, 'm-1', 'B');
-        expect(facetValueService.findByFacetId).toHaveBeenCalledTimes(2);
+        expect(facetValueService.findByFacetId).toHaveBeenCalledTimes(1);
         expect(facetValueService.update).toHaveBeenCalledTimes(1);
     });
 
