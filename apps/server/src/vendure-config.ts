@@ -837,6 +837,10 @@ export const config: VendureConfig = {
                     manufacturer:
                         process.env.INTEGRATION_KAFKA_TOPIC_MANUFACTURER ??
                         'company.catalog.events.v1.manufacturer-changed',
+                    // Issue #181: normalized product photos (metadata + pre-signed URL).
+                    'product-photo':
+                        process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT_PHOTO ??
+                        'company.catalog.events.v1.product-photo-changed',
                     // Issue #108: the ERP's own per-counterparty/contract automatic discount
                     // engine, same company.customers domain as department/counterparty/user/
                     // promo-rule/point-of-sale/contract above. See DiscountRuleStreamHandler.

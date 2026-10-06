@@ -170,6 +170,8 @@ export type InboundStream =
     | 'unit'
     // Issue #164: the ERP's manufacturer reference directory; the only reliable source of names.
     | 'manufacturer'
+    // Issue #181: normalized product photos (ProductPhotoChanged); metadata + pre-signed download URL.
+    | 'product-photo'
     // Issue #108: the ERP's own per-counterparty/contract, optionally per-product automatic
     // discount engine (DiscountRuleChanged), company.customers.events.v1. Feeds the same
     // @mivend/plugin-price-entry DiscountRule entity as the existing facet/priceType-threshold and
@@ -280,6 +282,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     contract: true,
     unit: true,
     manufacturer: true,
+    'product-photo': true,
     'discount-rule': true,
     'granted-discount': true,
     'retro-bonus-rule': true,

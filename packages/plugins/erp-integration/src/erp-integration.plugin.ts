@@ -16,6 +16,9 @@ import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
 import { ProductTaxCodeFlag } from './entities/product-tax-code-flag.entity';
 import { ProductCategoryFlag } from './entities/product-category-flag.entity';
 import { Manufacturer } from './entities/manufacturer.entity';
+import { ProductPhoto } from './entities/product-photo.entity';
+import { ProductPhotoStreamHandler } from './handlers/product-photo.handler';
+import { ProductPhotoSyncService } from './product-photo-sync.service';
 import { ProductVariantBarcode } from './entities/product-variant-barcode.entity';
 import { ProductCharacteristic } from './entities/product-characteristic.entity';
 import { ProductManufacturerCode } from './entities/product-manufacturer-code.entity';
@@ -133,6 +136,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ProductTaxCodeFlag,
         ProductCategoryFlag,
         Manufacturer,
+        ProductPhoto,
         ProductVariantBarcode,
         ProductCharacteristic,
         ProductManufacturerCode,
@@ -172,6 +176,8 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ContractStreamHandler,
         UnitStreamHandler,
         ManufacturerStreamHandler,
+        ProductPhotoStreamHandler,
+        ProductPhotoSyncService,
         UnitLookupService,
         TaxCategoryAutoCreateService,
         TaxZoneService,

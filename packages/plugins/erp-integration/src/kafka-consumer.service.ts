@@ -26,6 +26,7 @@ import {
     StockOrganizationChangedSchema,
     StorageLocationChangedSchema,
     ManufacturerChangedSchema,
+    ProductPhotoChangedSchema,
     UnitChangedSchema,
     UserChangedSchema,
     VatRateChangedSchema,
@@ -108,6 +109,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     contract: ContractChangedSchema,
     unit: UnitChangedSchema,
     manufacturer: ManufacturerChangedSchema,
+    'product-photo': ProductPhotoChangedSchema,
 };
 
 @Injectable()
