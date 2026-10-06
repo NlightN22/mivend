@@ -1,6 +1,6 @@
 # Project Context
 
-Updated: 2026-10-06 12:30
+Updated: 2026-10-06 19:20
 
 ## Recent changes (2026-10-06 — #180 checkout payment methods + credit control, shipped/audited/closed; pushed to f905bcb..81ec017)
 
@@ -21,12 +21,14 @@ Updated: 2026-10-06 12:30
 - **Known cosmetic**: stepper values can flip back once when stock is capped (server answers `InsufficientStockError`, refetch restores the server value). Fix idea: clamp "+" by available stock if the line data carries it. User said not critical.
 - **Lesson**: a runtime `import` from `shared` in the storefront pulls `@vendure/core` into the Vite bundle and kills the staging storefront at startup — only `import type` from `shared`. Check with `pnpm build:plugins`/storefront start, not just `make lint`/`make test`.
 
-## Product photos (issue #181, open — design agreed, nothing implemented)
+## Product photos (issue #181, shipped/audited/closed; pushed to d845536; earlier design text: `.backup/PROJECT_CONTEXT.20261006-181-photos-design.md`)
 
-- **Status 2026-10-06**: contract live (event-contracts 0.46.0+, search-platform#170 done, partial backfill). Implemented in erp-integration: stream `product-photo` -> `ProductPhotoStreamHandler` (metadata into `ProductPhoto`) -> `ProductPhotoSyncService` (Vendure job queue `product-photo-sync`: download, md5 check, `AssetService.createFromFileStream`, product assets by position, 0 = featured). S3/Garage asset storage (step 1) is separate and not part of this change; assets go to whatever storage is configured. Storefront previews (step 4) not done.
-- (Historical, before the above) Nothing exists yet on either side: no image fields in `ProductChanged` (event-contracts 0.43.1), Vendure `AssetServerPlugin` writes to local `static/assets`, Integration Service has no storage/endpoint.
-- In the ERP, photos are rows of a generic attached-file catalog (data kind = image, owner type = product catalog; ~30k rows in dev data) plus one main-image pointer per product; MD5-like hash present on some rows, no reliable changed-at date, no position field. A photo change emits no product event, so it needs a **new stream** (metadata only: fileId, contentHash, mimeType, isMain, position; no bytes in Kafka).
-- Agreed design: mivend owns an S3-compatible store (MinIO in the dev compose, bucket auto-created) via Vendure `configureS3AssetStorage` (`@aws-sdk/client-s3`); Integration Service keeps its own copy of originals; a mivend worker downloads async, keys by content hash (`products/{productId}/{hash}.{ext}`), attaches Vendure Assets, detaches removed ones; browsers go through a caching proxy, previews in lists. Step 1 (MinIO + S3 strategy, manual test photos) is independent of the ERP side and can start now. Steps 2-4 are **blocked by search-platform#170** (`ProductPhotoChanged` in event-contracts 0.46.0, pre-signed URL reference, Integration Service normalizes everything, max 10 photos/product, position 0 = main, `ProductChanged` unchanged); they will notify when done. Storage: own MinIO now, managed S3 later = env-only change.
+- **Flow**: Integration Service stream `product-photo` (`ProductPhotoChanged`, event-contracts 0.46.0+, search-platform#170) -> `ProductPhotoStreamHandler` stores metadata in `ProductPhoto` (+ `syncQueuedAt`, `replayAttempts`) -> `ProductPhotoSyncService` (Vendure job queue `product-photo-sync`, must be in `worker.ts` activeQueues) downloads the pre-signed URL, checks MD5, `AssetService.createFromFileStream`, sets product assets by `position` (0 = featured). Same hash stored once; tombstone detaches. Serialized per product by `pg_advisory_xact_lock`; queue concurrency 1 (long transaction by design). ERP owns product photos: sync REPLACES the product's whole asset list.
+- **Never pass a stringified product id to `productService.update`** (TypeORM inserts a duplicate Product, #144 trap; hit once, 517 stray rows deleted on staging). Use the raw numeric id from the raw query.
+- **Self-healing**: scheduled task `erp-integration-product-photo-recovery` (10 min, central) re-queues stuck photos (1 h from `syncQueuedAt`) and, only with `kafkaEnabled`, replays `failed` ones via `POST /api/resync/v1/replay` (`aggregateType: productPhoto`, response `{aggregateType, results:[{entityId,status}]}`, verified live; `sourceSystem` = `INTEGRATION_RESYNC_SOURCE_SYSTEM`, default `onec-main`), max 5 attempts 1 h apart, attempts recorded before the call. Dashboard: Settings > Product photos (pending/failed, Replay). Expired link (7 days) is fixed by replay.
+- **Storage**: Garage (S3) in `docker-compose.dev.yml`, config `infrastructure/docker/garage/garage.toml`. Create bucket+key per contour with `infrastructure/scripts/garage-init.sh <bucket> <GK+24hex> <64hex>` (NOT in `make up`), then set `S3_ENDPOINT/S3_REGION/S3_BUCKET/S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY` in the contour `.env` (gitignored); unset `S3_ENDPOINT` = local `static/assets`. Managed S3 later = env only. MinIO is NOT used (images discontinued).
+- **Storefront**: `SearchResult.galleryPreviews` (erp-integration, batched DataLoader) feeds card carousels; `assetUrl(preview, 'thumb'|'small'|'large')` adds Vendure presets; `MvProductGallery` hides the thumb strip for a single photo; `MvFavoriteButton overlay`. Marketing chips on cards (discounts/price) are a later task.
+- **Facts**: staging got ~1040 photos (source backfill is partial: half of the 1C rows have no file, ~24% of files < 200 px). The watermark on many photos is baked into the file held by 1C (confirmed byte-for-byte), not fixable here. Follow-up #187 (GC of orphaned Assets/S3 objects). Production needs migration `1791000000009` (edited in place before ever running there). Vite dev server of a contour can serve a stale ui-kit module after edits; a contour restart fixes it.
 
 ## Recent changes (2026-10-05/06 — #166 characteristic checkbox filters, shipped/audited/closed; pushed up to ada148b)
 
@@ -253,7 +255,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 ## Planned next work
 
-0. **Issue #181** — product photos, step 1: MinIO in `docker-compose.dev.yml` + S3 asset storage in Vendure (see "Product photos" above); then the new ERP photo stream and download worker.
+0. **Follow-ups of #181**: #187 (asset GC), card marketing chips (discount/price badges), wire `garage-init` into `make up`.
 1. **Issue #154** (low-priority, open) — discount-rule follow-ups: `limitAmount` enforcement
    (real cap, not just safe-exclude), conflict-scope simplification, unreachable ERP-vs-portal
    branch, upstream version-collision/dedup risk (needs a search-platform-side issue number once
