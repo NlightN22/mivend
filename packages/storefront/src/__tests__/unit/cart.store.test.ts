@@ -170,4 +170,21 @@ describe('cart store mutation queue', () => {
         expect(store.lines.find(l => l.id === 'a')?.quantity).toBe(5);
         await pending;
     });
+
+    it('restarts the debounce on every click, so a slow burst is one request', async () => {
+        vi.useFakeTimers();
+        const store = useCartStore();
+        twoLineCart(store);
+
+        const first = store.adjustItem('a', 2);
+        await vi.advanceTimersByTimeAsync(200);
+        const second = store.adjustItem('a', 3);
+        await vi.advanceTimersByTimeAsync(200);
+        expect(adjustCalls).toEqual([]);
+
+        await vi.advanceTimersByTimeAsync(400);
+        await Promise.all([first, second]);
+        expect(adjustCalls).toEqual([{ lineId: 'a', qty: 3 }]);
+        vi.useRealTimers();
+    });
 });

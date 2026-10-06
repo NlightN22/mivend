@@ -31,8 +31,15 @@ import {
 
 // Type-only import of the shared key: a rename on the server breaks this build instead of the warning.
 const CREDIT_LIMIT_EXCEEDED_KEY: typeof SharedKey = 'creditLimitExceeded';
+const ADJUST_DEBOUNCE_MS = 350;
 const CART_FETCH_RETRIES = 4;
 const CART_FETCH_RETRY_MS = 2000;
+
+interface AdjustWindow {
+    timer: ReturnType<typeof setTimeout>;
+    fire: () => void;
+    done: Promise<void>;
+}
 
 interface DeferredPaymentResult {
     placed: boolean;
@@ -74,6 +81,7 @@ export const useCartStore = defineStore('cart', () => {
     // Order mutations run one at a time: parallel ones on one order fail server-side.
     let queue: Promise<unknown> = Promise.resolve();
     const pendingAdjusts = new Map<string, number>();
+    const adjustWindows = new Map<string, AdjustWindow>();
 
     function enqueue<T>(task: () => Promise<T>): Promise<T> {
         const run = queue.then(task, task);
@@ -99,6 +107,7 @@ export const useCartStore = defineStore('cart', () => {
 
     // A failed fetch must not look like an empty cart — the server order is untouched.
     async function fetchCart(attempt = 0): Promise<void> {
+        if (pendingMutations > 0) return;
         try {
             const result = await shopApi(ActiveOrderDocument);
             if (pendingMutations === 0) order.value = result.activeOrder ?? null;
@@ -197,7 +206,7 @@ export const useCartStore = defineStore('cart', () => {
         return discountResult;
     }
 
-    async function adjustItem(lineId: string, qty: number): Promise<void> {
+    function adjustItem(lineId: string, qty: number): Promise<void> {
         // Optimistic update — reflect change immediately, sync with server after.
         // Scale the displayed line total by the same ratio so it doesn't sit stale
         // (wrong digit count for the new quantity) until fetchCart() resolves, which
@@ -220,23 +229,45 @@ export const useCartStore = defineStore('cart', () => {
             };
         }
         pendingAdjusts.set(lineId, qty);
+        const open = adjustWindows.get(lineId);
+        if (open) {
+            clearTimeout(open.timer);
+            open.timer = setTimeout(open.fire, ADJUST_DEBOUNCE_MS);
+            return open.done;
+        }
         pendingMutations++;
-        await enqueue(async () => {
-            try {
-                const latestQty = pendingAdjusts.get(lineId);
-                if (latestQty === undefined) return;
-                pendingAdjusts.delete(lineId);
-                const result = await shopApi(AdjustCartLineDocument, { lineId, qty: latestQty });
-                if (result.adjustOrderLine.__typename !== 'Order') {
-                    // fetchCart() below re-syncs to whatever quantity the server actually
-                    // applied (Vendure's InsufficientStockError can be a partial success).
-                    toast(mutationErrorMessage(result.adjustOrderLine, stockUpdateFailed), 'error');
-                }
-            } finally {
-                pendingMutations--;
-            }
+        let fire!: () => void;
+        const elapsed = new Promise<void>(resolve => {
+            fire = resolve;
         });
-        await fetchCart();
+        const entry: AdjustWindow = {
+            timer: setTimeout(fire, ADJUST_DEBOUNCE_MS),
+            fire,
+            done: Promise.resolve(),
+        };
+        entry.done = elapsed.then(async () => {
+            adjustWindows.delete(lineId);
+            await enqueue(() => sendAdjust(lineId));
+            await fetchCart();
+        });
+        adjustWindows.set(lineId, entry);
+        return entry.done;
+    }
+
+    async function sendAdjust(lineId: string): Promise<void> {
+        try {
+            const qty = pendingAdjusts.get(lineId);
+            if (qty === undefined) return;
+            pendingAdjusts.delete(lineId);
+            const result = await shopApi(AdjustCartLineDocument, { lineId, qty });
+            if (result.adjustOrderLine.__typename !== 'Order') {
+                // fetchCart() re-syncs to whatever quantity the server actually applied
+                // (InsufficientStockError can be a partial success).
+                toast(mutationErrorMessage(result.adjustOrderLine, stockUpdateFailed), 'error');
+            }
+        } finally {
+            pendingMutations--;
+        }
     }
 
     async function removeItem(lineId: string): Promise<void> {
