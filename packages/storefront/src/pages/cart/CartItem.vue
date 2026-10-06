@@ -91,12 +91,10 @@ function cancelRemove(): void {
             <div class="cart-item__meta">
                 <span>SKU {{ line.productVariant.sku }}</span>
                 <span v-if="brand">{{ brand }}</span>
-                <span>qty {{ line.quantity }} pc.</span>
                 <span v-if="totalWeightKg != null">{{ totalWeightKg.toLocaleString() }} kg</span>
             </div>
             <div class="cart-item__pills">
                 <MvStockBadge :variant="stockVariant" />
-                <span class="cart-item__pill">Central warehouse</span>
             </div>
             <div class="cart-item__links">
                 <button type="button">Favorites</button>
@@ -143,7 +141,13 @@ function cancelRemove(): void {
                     No
                 </button>
             </div>
-            <MvQtyStepper v-else :model-value="qty" :min="0" @update:model-value="onQtyChange" />
+            <MvQtyStepper
+                v-else
+                editable
+                :model-value="qty"
+                :min="0"
+                @update:model-value="onQtyChange"
+            />
         </div>
     </article>
 </template>
@@ -221,18 +225,6 @@ function cancelRemove(): void {
     flex-wrap: wrap;
     gap: 6px;
     margin-bottom: 8px;
-}
-
-.cart-item__pill {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    border-radius: 999px;
-    padding: 0 8px;
-    background: #f4faf7;
-    color: #53645e;
-    font-size: 12px;
-    font-weight: 850;
 }
 
 .cart-item__links {

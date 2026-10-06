@@ -40,8 +40,11 @@ export class CreditLimitCheckService {
     decide(
         counterparty: Pick<Counterparty, 'creditLimit' | 'creditBalance'>,
         contract: Pick<Contract, 'controlledIndividually' | 'creditLimit'> | null,
+        pendingAmount = 0,
     ): CreditLimitDecision {
-        const aggregateWithin = counterparty.creditBalance <= counterparty.creditLimit;
+        // Compared in kopecks: limit/balance/pending are rubles and may carry fractions or arrive as strings.
+        const usedKopecks = Math.round((Number(counterparty.creditBalance) + pendingAmount) * 100);
+        const aggregateWithin = usedKopecks <= Math.round(Number(counterparty.creditLimit) * 100);
         const aggregate = {
             status: (aggregateWithin ? 'within-limit' : 'exceeds-limit') as
                 | 'within-limit'

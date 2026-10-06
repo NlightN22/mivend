@@ -5,6 +5,8 @@ import { useRoute } from 'vue-router';
 const route = useRoute();
 const method = computed(() => (route.query.method === 'deferred' ? 'deferred' : 'invoice'));
 
+const limitExceeded = computed(() => route.query.limitExceeded === '1');
+
 const paymentLabel = computed(() =>
     method.value === 'deferred' ? 'Deferred payment' : 'Bank invoice',
 );
@@ -57,6 +59,9 @@ const today = new Intl.DateTimeFormat('en-GB', {
             <div class="oc-check">✓</div>
             <h2 class="oc-status-title">Order created</h2>
             <p class="oc-status-text">{{ statusText }}</p>
+            <MvNotice v-if="limitExceeded" variant="warning">
+                Your credit limit is exceeded. Please wait for your manager to confirm the order.
+            </MvNotice>
             <div class="oc-actions">
                 <RouterLink to="/orders" class="oc-btn oc-btn--primary">Open order</RouterLink>
                 <a v-if="method === 'invoice'" href="#" class="oc-btn oc-btn--secondary"

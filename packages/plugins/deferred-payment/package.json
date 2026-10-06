@@ -18,6 +18,7 @@
         "typescript": "^5.4.0"
     },
     "dependencies": {
-        "@mivend/plugin-counterparty": "workspace:*"
+        "@mivend/plugin-counterparty": "workspace:*",
+        "shared": "workspace:*"
     }
 }

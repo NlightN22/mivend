@@ -9,6 +9,9 @@
     "references": [
         {
             "path": "../counterparty"
+        },
+        {
+            "path": "../../shared"
         }
     ]
 }

@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { toast } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import { brandOf } from '../utils/brand';
-import { parseCreditOverrun, type CreditOverrun } from '../utils/creditOverrun';
+import type { CREDIT_LIMIT_EXCEEDED_KEY as SharedKey } from 'shared';
 import {
     AddToCartDocument,
     AdjustCartLineDocument,
@@ -29,12 +29,14 @@ import {
     stockUpdateFailed,
 } from '../utils/discountMessages';
 
+// Type-only import of the shared key: a rename on the server breaks this build instead of the warning.
+const CREDIT_LIMIT_EXCEEDED_KEY: typeof SharedKey = 'creditLimitExceeded';
 const CART_FETCH_RETRIES = 4;
 const CART_FETCH_RETRY_MS = 2000;
 
 interface DeferredPaymentResult {
     placed: boolean;
-    overrun?: CreditOverrun;
+    limitExceeded: boolean;
 }
 
 interface MutationResult {
@@ -68,6 +70,15 @@ export const useCartStore = defineStore('cart', () => {
     const order = ref<ActiveOrder | null>(null);
     // Counts in-flight adjust/remove mutations; fetchCart skips update while non-zero
     let pendingMutations = 0;
+    // Order mutations run one at a time: parallel ones on one order fail server-side.
+    let queue: Promise<unknown> = Promise.resolve();
+    const pendingAdjusts = new Map<string, number>();
+
+    function enqueue<T>(task: () => Promise<T>): Promise<T> {
+        const run = queue.then(task, task);
+        queue = run.catch(() => undefined);
+        return run;
+    }
 
     const lines = computed(() => order.value?.lines ?? []);
     const itemCount = computed(() => lines.value.length);
@@ -127,57 +138,59 @@ export const useCartStore = defineStore('cart', () => {
             }
         }
         pendingMutations++;
-        let realLineId: string | undefined;
         let discountResult: { brand: string; percent: number } | null = null;
-        try {
-            // Request real lineId + the real applied price in the response so the
-            // caller can show an accurate discount toast — not a pre-add guess from
-            // catalog-level flat compareAtPrice, which can't see a tier this add just
-            // unlocked (or a tier this add crosses out of, once other lines shrink).
-            const addToCart = (): ReturnType<
-                typeof shopApi<AddToCartMutation, AddToCartMutationVariables>
-            > => shopApi(AddToCartDocument, { variantId, qty });
-            let result = await addToCart();
-            if (
-                result.addItemToOrder.__typename !== 'Order' &&
-                result.addItemToOrder.errorCode === 'ORDER_MODIFICATION_ERROR'
-            ) {
-                // The customer's active order was left mid-checkout (transitioned to
-                // ArrangingPayment but never settled — e.g. they backed out of payment).
-                // Vendure forbids adding items outside AddingItems; since this order was
-                // never actually paid, bringing it back to AddingItems is safe and lets
-                // the customer keep shopping instead of being permanently blocked.
-                await shopApi(ResumeAddingItemsDocument);
-                result = await addToCart();
-            }
-            if (result.addItemToOrder.__typename !== 'Order') {
-                // Optimistic line gets discarded below by fetchCart() — surface why.
-                toast(mutationErrorMessage(result.addItemToOrder, stockAddFailed), 'error');
-            } else {
-                const serverLine = result.addItemToOrder.lines?.find(
-                    l => l.productVariant.id === variantId,
-                );
-                realLineId = serverLine?.id;
-                if (realLineId && order.value) {
-                    // Replace temp id with real id so stepper adjustments use the correct lineId
-                    order.value = {
-                        ...order.value,
-                        lines: order.value.lines.map(l =>
-                            l.id === tempId ? { ...l, id: realLineId! } : l,
-                        ),
-                    };
+        await enqueue(async () => {
+            let realLineId: string | undefined;
+            try {
+                // Request real lineId + the real applied price in the response so the
+                // caller can show an accurate discount toast — not a pre-add guess from
+                // catalog-level flat compareAtPrice, which can't see a tier this add just
+                // unlocked (or a tier this add crosses out of, once other lines shrink).
+                const addToCart = (): ReturnType<
+                    typeof shopApi<AddToCartMutation, AddToCartMutationVariables>
+                > => shopApi(AddToCartDocument, { variantId, qty });
+                let result = await addToCart();
+                if (
+                    result.addItemToOrder.__typename !== 'Order' &&
+                    result.addItemToOrder.errorCode === 'ORDER_MODIFICATION_ERROR'
+                ) {
+                    // The customer's active order was left mid-checkout (transitioned to
+                    // ArrangingPayment but never settled — e.g. they backed out of payment).
+                    // Vendure forbids adding items outside AddingItems; since this order was
+                    // never actually paid, bringing it back to AddingItems is safe and lets
+                    // the customer keep shopping instead of being permanently blocked.
+                    await shopApi(ResumeAddingItemsDocument);
+                    result = await addToCart();
                 }
-                if (serverLine?.compareAtPrice != null && serverLine.unitPrice != null) {
-                    const percent = Math.round(
-                        (1 - serverLine.unitPrice / serverLine.compareAtPrice) * 100,
+                if (result.addItemToOrder.__typename !== 'Order') {
+                    // Optimistic line gets discarded below by fetchCart() — surface why.
+                    toast(mutationErrorMessage(result.addItemToOrder, stockAddFailed), 'error');
+                } else {
+                    const serverLine = result.addItemToOrder.lines?.find(
+                        l => l.productVariant.id === variantId,
                     );
-                    const brand = brandOf(serverLine.productVariant.product.manufacturer);
-                    if (percent > 0 && brand) discountResult = { brand, percent };
+                    realLineId = serverLine?.id;
+                    if (realLineId && order.value) {
+                        // Replace temp id with real id so stepper adjustments use the correct lineId
+                        order.value = {
+                            ...order.value,
+                            lines: order.value.lines.map(l =>
+                                l.id === tempId ? { ...l, id: realLineId! } : l,
+                            ),
+                        };
+                    }
+                    if (serverLine?.compareAtPrice != null && serverLine.unitPrice != null) {
+                        const percent = Math.round(
+                            (1 - serverLine.unitPrice / serverLine.compareAtPrice) * 100,
+                        );
+                        const brand = brandOf(serverLine.productVariant.product.manufacturer);
+                        if (percent > 0 && brand) discountResult = { brand, percent };
+                    }
                 }
+            } finally {
+                pendingMutations--;
             }
-        } finally {
-            pendingMutations--;
-        }
+        });
         await fetchCart();
         return discountResult;
     }
@@ -204,18 +217,23 @@ export const useCartStore = defineStore('cart', () => {
                     .filter(l => l.quantity > 0),
             };
         }
+        pendingAdjusts.set(lineId, qty);
         pendingMutations++;
-        try {
-            const result = await shopApi(AdjustCartLineDocument, { lineId, qty });
-            if (result.adjustOrderLine.__typename !== 'Order') {
-                // fetchCart() below re-syncs to whatever quantity the server actually
-                // applied (Vendure's InsufficientStockError can be a partial success) —
-                // surface why it differs from what the user asked for.
-                toast(mutationErrorMessage(result.adjustOrderLine, stockUpdateFailed), 'error');
+        await enqueue(async () => {
+            try {
+                const latestQty = pendingAdjusts.get(lineId);
+                if (latestQty === undefined) return;
+                pendingAdjusts.delete(lineId);
+                const result = await shopApi(AdjustCartLineDocument, { lineId, qty: latestQty });
+                if (result.adjustOrderLine.__typename !== 'Order') {
+                    // fetchCart() below re-syncs to whatever quantity the server actually
+                    // applied (Vendure's InsufficientStockError can be a partial success).
+                    toast(mutationErrorMessage(result.adjustOrderLine, stockUpdateFailed), 'error');
+                }
+            } finally {
+                pendingMutations--;
             }
-        } finally {
-            pendingMutations--;
-        }
+        });
         await fetchCart();
     }
 
@@ -228,11 +246,13 @@ export const useCartStore = defineStore('cart', () => {
             };
         }
         pendingMutations++;
-        try {
-            await shopApi(RemoveCartLineDocument, { lineId });
-        } finally {
-            pendingMutations--;
-        }
+        await enqueue(async () => {
+            try {
+                await shopApi(RemoveCartLineDocument, { lineId });
+            } finally {
+                pendingMutations--;
+            }
+        });
         await fetchCart();
     }
 
@@ -240,11 +260,13 @@ export const useCartStore = defineStore('cart', () => {
         // Single mutation — not a loop of removeItem() calls, one per line.
         if (order.value) order.value = { ...order.value, lines: [] };
         pendingMutations++;
-        try {
-            await shopApi(RemoveAllCartLinesDocument);
-        } finally {
-            pendingMutations--;
-        }
+        await enqueue(async () => {
+            try {
+                await shopApi(RemoveAllCartLinesDocument);
+            } finally {
+                pendingMutations--;
+            }
+        });
         await fetchCart();
     }
 
@@ -290,17 +312,21 @@ export const useCartStore = defineStore('cart', () => {
         return true;
     }
 
-    // A credit-limit rejection is returned (not toasted) so checkout can explain it in a dialog.
+    // An over-limit deferred order is still placed; the server flags it for the customer warning.
     async function completeDeferredPayment(): Promise<DeferredPaymentResult> {
         const result = await shopApi(CompleteDeferredPaymentDocument);
         await fetchCart();
         const payment = result.addPaymentToOrder;
-        if (payment.__typename === 'Order') return { placed: true };
-        const declined = 'paymentErrorMessage' in payment ? payment.paymentErrorMessage : undefined;
-        await shopApi(ResumeAddingItemsDocument);
-        const overrun = parseCreditOverrun(declined);
-        if (!overrun) toast(payment.message ?? 'Could not place order', 'error');
-        return { placed: false, overrun };
+        if (payment.__typename !== 'Order') {
+            toast(payment.message ?? 'Could not place order', 'error');
+            return { placed: false, limitExceeded: false };
+        }
+        const limitExceeded = payment.payments?.some(
+            p =>
+                (p.metadata as Record<string, unknown> | null)?.[CREDIT_LIMIT_EXCEEDED_KEY] ===
+                true,
+        );
+        return { placed: true, limitExceeded: Boolean(limitExceeded) };
     }
 
     async function completeOnlinePayment(status: 'success' | 'pending' | 'fail'): Promise<boolean> {
@@ -321,13 +347,15 @@ export const useCartStore = defineStore('cart', () => {
             };
         }
         pendingMutations++;
-        try {
-            await Promise.all(
-                lineIds.map(lineId => shopApi(RemoveCartLineInBatchDocument, { lineId })),
-            );
-        } finally {
-            pendingMutations--;
-        }
+        await enqueue(async () => {
+            try {
+                await Promise.all(
+                    lineIds.map(lineId => shopApi(RemoveCartLineInBatchDocument, { lineId })),
+                );
+            } finally {
+                pendingMutations--;
+            }
+        });
         await fetchCart();
     }
 

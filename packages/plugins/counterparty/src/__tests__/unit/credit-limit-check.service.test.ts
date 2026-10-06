@@ -64,4 +64,12 @@ describe('CreditLimitCheckService.decide', () => {
         expect(decision.contract.status).toBe('not-applicable');
         expect(decision.withinLimit).toBe(true);
     });
+
+    it('counts pendingAmount against the limit and compares exactly at the kopeck boundary', () => {
+        const at = service.decide(counterparty(100_000, 40_000.1), null, 59_999.9);
+        expect(at.withinLimit).toBe(true);
+        const over = service.decide(counterparty(100_000, 40_000.1), null, 60_000);
+        expect(over.withinLimit).toBe(false);
+        expect(service.decide(counterparty(100_000, 100_000), null).withinLimit).toBe(true);
+    });
 });

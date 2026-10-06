@@ -5053,15 +5053,13 @@ export type CompleteDeferredPaymentMutation = {
         | { __typename: 'CouponRemovedDuringCheckoutError'; errorCode: ErrorCode; message: string }
         | { __typename: 'IneligiblePaymentMethodError'; errorCode: ErrorCode; message: string }
         | { __typename: 'NoActiveOrderError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'Order' }
+        | {
+              __typename: 'Order';
+              payments?: Array<{ method: string; metadata?: any | null }> | null;
+          }
         | { __typename: 'OrderPaymentStateError'; errorCode: ErrorCode; message: string }
         | { __typename: 'OrderStateTransitionError'; errorCode: ErrorCode; message: string }
-        | {
-              __typename: 'PaymentDeclinedError';
-              errorCode: ErrorCode;
-              message: string;
-              paymentErrorMessage: string;
-          }
+        | { __typename: 'PaymentDeclinedError'; errorCode: ErrorCode; message: string }
         | { __typename: 'PaymentFailedError'; errorCode: ErrorCode; message: string };
 };
 
@@ -6142,8 +6140,11 @@ export const CompleteDeferredPaymentDocument = new TypedDocumentString(`
       errorCode
       message
     }
-    ... on PaymentDeclinedError {
-      paymentErrorMessage
+    ... on Order {
+      payments {
+        method
+        metadata
+      }
     }
   }
 }

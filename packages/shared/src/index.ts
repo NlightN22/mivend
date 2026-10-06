@@ -9,6 +9,8 @@ export * from './vendure-events';
 // exist via the `export *` → `__exportStar` runtime loop, which broke storefront's build
 // the first time this package was consumed by a Vite-bundled frontend (sync.ts is only ever
 // consumed by ts-node/Node backend code, so it never hit this).
+export { CREDIT_LIMIT_EXCEEDED_KEY } from './creditLimit';
+
 export {
     buildFacetValueFilters,
     buildFacetGroups,

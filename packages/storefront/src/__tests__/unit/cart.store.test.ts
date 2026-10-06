@@ -6,6 +6,7 @@ vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
 
 import { shopApi } from '../../api/client';
 import { useCartStore } from '../../stores/cart';
+import { AdjustCartLineDocument } from '../../api/generated/graphql';
 
 interface TestLine {
     quantity: number;
@@ -81,5 +82,77 @@ describe('cart store fetchCart', () => {
         await vi.advanceTimersByTimeAsync(2000);
         expect(store.totalQuantity).toBe(6);
         vi.useRealTimers();
+    });
+});
+
+describe('cart store mutation queue', () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const adjustCalls: Array<{ lineId: string; qty: number }> = [];
+
+    beforeEach(() => {
+        setActivePinia(createPinia());
+        vi.useRealTimers();
+        inFlight = 0;
+        maxInFlight = 0;
+        adjustCalls.length = 0;
+        vi.mocked(shopApi).mockReset();
+        vi.mocked(shopApi).mockImplementation((async (doc: unknown, vars?: unknown) => {
+            if (doc === AdjustCartLineDocument) {
+                adjustCalls.push(vars as { lineId: string; qty: number });
+                inFlight++;
+                maxInFlight = Math.max(maxInFlight, inFlight);
+                await new Promise(resolve => setTimeout(resolve, 5));
+                inFlight--;
+                return { adjustOrderLine: { __typename: 'Order' } };
+            }
+            return { activeOrder: null };
+        }) as never);
+    });
+
+    function twoLineCart(store: ReturnType<typeof useCartStore>): void {
+        store.order = {
+            lines: ['a', 'b'].map(id => ({
+                id,
+                quantity: 1,
+                linePrice: 100,
+                linePriceWithTax: 100,
+            })),
+        } as never;
+    }
+
+    it('never runs adjusts of different lines in parallel', async () => {
+        const store = useCartStore();
+        twoLineCart(store);
+
+        await Promise.all([store.adjustItem('a', 2), store.adjustItem('b', 3)]);
+
+        expect(adjustCalls).toEqual([
+            { lineId: 'a', qty: 2 },
+            { lineId: 'b', qty: 3 },
+        ]);
+        expect(maxInFlight).toBe(1);
+    });
+
+    it('collapses rapid adjusts of one line into the latest quantity', async () => {
+        const store = useCartStore();
+        twoLineCart(store);
+
+        await Promise.all([
+            store.adjustItem('a', 2),
+            store.adjustItem('a', 3),
+            store.adjustItem('a', 4),
+        ]);
+
+        expect(adjustCalls).toEqual([{ lineId: 'a', qty: 4 }]);
+    });
+
+    it('keeps the optimistic quantity while mutations are pending', async () => {
+        const store = useCartStore();
+        twoLineCart(store);
+
+        const pending = store.adjustItem('a', 5);
+        expect(store.lines.find(l => l.id === 'a')?.quantity).toBe(5);
+        await pending;
     });
 });

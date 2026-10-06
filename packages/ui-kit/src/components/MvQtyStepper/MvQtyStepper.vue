@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
+import { IconCheck } from '@tabler/icons-vue';
+
 interface Props {
     modelValue: number;
     min?: number;
     step?: number;
     disabled?: boolean;
     size?: 'md' | 'sm';
+    editable?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -12,9 +16,32 @@ const props = withDefaults(defineProps<Props>(), {
     step: 1,
     disabled: false,
     size: 'md',
+    editable: false,
 });
 
 const emit = defineEmits<{ 'update:modelValue': [n: number] }>();
+
+const draft = ref(String(props.modelValue));
+const parsedDraft = computed(() => (/^\d+$/.test(draft.value) ? Number(draft.value) : null));
+const dirty = computed(() => draft.value !== String(props.modelValue));
+const canConfirm = computed(
+    () => parsedDraft.value !== null && parsedDraft.value >= props.min && dirty.value,
+);
+
+watch(
+    () => props.modelValue,
+    v => {
+        draft.value = String(v);
+    },
+);
+
+function confirm() {
+    if (canConfirm.value) emit('update:modelValue', parsedDraft.value as number);
+}
+
+function revert() {
+    draft.value = String(props.modelValue);
+}
 
 function dec() {
     const next = props.modelValue - props.step;
@@ -39,9 +66,27 @@ function inc() {
         >
             −
         </button>
-        <span class="mv-qty-stepper__val">{{ modelValue }}</span>
+        <input
+            v-if="editable"
+            v-model="draft"
+            class="mv-qty-stepper__val mv-qty-stepper__input"
+            inputmode="numeric"
+            :disabled="disabled"
+            @keydown.enter.prevent="confirm"
+            @keydown.esc.prevent="revert"
+        />
+        <span v-else class="mv-qty-stepper__val">{{ modelValue }}</span>
         <button class="mv-qty-stepper__btn" type="button" :disabled="disabled" @click="inc">
             +
+        </button>
+        <button
+            v-if="editable && dirty"
+            class="mv-qty-stepper__btn mv-qty-stepper__confirm"
+            type="button"
+            :disabled="!canConfirm"
+            @click="confirm"
+        >
+            <IconCheck :size="18" />
         </button>
     </div>
 </template>
@@ -68,7 +113,22 @@ function inc() {
     width: 28px;
     font-size: 16px;
 }
-.mv-qty-stepper--sm .mv-qty-stepper__val {
+.mv-qty-stepper--sm .mv-qty-stepper__input {
+    width: 44px;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    user-select: text;
+}
+.mv-qty-stepper__confirm {
+    width: 34px;
+    background: #e2f8ef;
+    color: #008a64;
+}
+
+.mv-qty-stepper__val {
     min-width: 26px;
     font-size: 13px;
 }
@@ -94,6 +154,21 @@ function inc() {
 .mv-qty-stepper__btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+.mv-qty-stepper__input {
+    width: 44px;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    user-select: text;
+}
+.mv-qty-stepper__confirm {
+    width: 34px;
+    background: #e2f8ef;
+    color: #008a64;
 }
 
 .mv-qty-stepper__val {

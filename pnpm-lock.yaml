@@ -550,6 +550,9 @@ importers:
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../counterparty
+            shared:
+                specifier: workspace:*
+                version: link:../../shared
         devDependencies:
             '@nestjs/common':
                 specifier: ^11.0.0

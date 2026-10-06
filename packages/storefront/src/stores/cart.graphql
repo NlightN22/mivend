@@ -182,8 +182,11 @@ mutation CompleteDeferredPayment {
             errorCode
             message
         }
-        ... on PaymentDeclinedError {
-            paymentErrorMessage
+        ... on Order {
+            payments {
+                method
+                metadata
+            }
         }
     }
 }

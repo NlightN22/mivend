@@ -11,6 +11,7 @@ const meta: Meta<typeof MvQtyStepper> = {
         step: { control: 'number' },
         disabled: { control: 'boolean' },
         size: { control: 'select', options: ['md', 'sm'] },
+        editable: { control: 'boolean' },
     },
     args: {
         modelValue: 1,
@@ -18,6 +19,7 @@ const meta: Meta<typeof MvQtyStepper> = {
         step: 1,
         disabled: false,
         size: 'md',
+        editable: false,
     },
 };
 

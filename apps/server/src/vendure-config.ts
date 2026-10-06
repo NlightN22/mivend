@@ -94,10 +94,11 @@ function requiredKafkaId(envVar: string): string {
 const cookieSecret =
     (process.env.COOKIE_SECRET || undefined) ??
     (process.env.NODE_ENV === 'production' ? undefined : 'mivend-dev-cookie-secret');
-if (!cookieSecret) {
-    throw new Error(
-        'COOKIE_SECRET must be set in production (shared by every server/worker process)',
-    );
+if (
+    !cookieSecret ||
+    (process.env.NODE_ENV === 'production' && cookieSecret.startsWith('change-me'))
+) {
+    throw new Error('COOKIE_SECRET must be a real secret in production (same for every process)');
 }
 
 // DocumentsPlugin (always loaded, every instance) already imports AcquiringPlugin as a NestJS
