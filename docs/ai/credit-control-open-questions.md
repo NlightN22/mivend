@@ -1,5 +1,7 @@
 # Credit control: scope map and open questions
 
+Tracking: MVP #188, phase 2 #189, UI #190 (they replaced #50, #151, #45, #48, #31).
+
 Status: **discussion, nothing here is decided unless marked "Decided"**. Written 2026-10-06 to gather
 everything about limits/receivables in one place before a dedicated implementation session.
 
