@@ -42,7 +42,7 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 4. Limits should be computed by a **worker/scheduled job**, not during import (import would slow down).
 5. Changing a contract or limit in the manager portal must reach 1C, so write-back streams are needed.
 
-## Working model (owner's direction 2026-10-06, to be confirmed)
+## Working model (owner's decisions 2026-10-06)
 
 - **Contracts**: every order is attributed to the counterparty's **main contract** automatically
   (search-platform#172 gives the main-contract reference). Customers do not choose a contract (not
@@ -51,10 +51,12 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 - **Limit calculation (scheduled job, not during import)**: all contracts **without** the per-contract
   control flag are pooled into one **general limit** (sum of their limits, this is how 1C pools them).
   Contracts **with** the flag (`controlledIndividually`) are **sublimits** inside it and must not exceed
-  the general total. Later we may drop 1C's limits entirely and keep only our own.
-- **Provisional order amount**: an order reserves limit immediately (in-flight, until 1C confirms), and
-  that estimate must be released once the shipment document arrives (receivables are formed by the
-  shipment, not the order) or after a timeout, so stale orders stop blocking the counterparty.
+  the general total; if they do, our calculation **clamps them down** to fit (our own control wins over
+  1C's numbers). Later we may drop 1C's limits entirely and keep only our own.
+- **Provisional order amount**: an order takes limit immediately and keeps it until it is released by
+  either the arrival of its shipment document (receivables are formed by the shipment, not the order)
+  or its cancellation (by a 1C timeout or by a manager). Cancelled orders must never keep blocking the
+  counterparty.
 
 ## Documents: what we have and what we do not
 
@@ -69,8 +71,8 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 
 ## Open questions
 
-1. **Counterparty-level limit formula**: working model above (pool of non-flagged contracts + flagged
-   sublimits capped by the pool) — confirm, including what happens when sublimits exceed the pool.
+1. ~~Counterparty-level limit formula~~ **Decided 2026-10-06**: pool of non-flagged contracts + flagged
+   sublimits; sublimits above the pool are clamped down (see working model).
 2. **Order->contract attribution**: default main contract, manager can re-attribute (see working model);
    `contractId` already travels on `order-changed` (#123). Confirm how the checkout-time check treats
    a flagged non-main contract.
