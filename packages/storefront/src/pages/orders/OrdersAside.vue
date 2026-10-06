@@ -142,10 +142,13 @@ onMounted(async () => {
     background: #008a64;
 }
 .wide-btn.orange {
-    background: #ff8a00;
+    background: var(--app-accent-orange, #ff8a00);
 }
 .wide-btn.orange:hover {
-    background: #e87800;
+    background: var(--app-accent-orange-hover, #e67c00);
+}
+.wide-btn.orange:active {
+    background: var(--app-accent-orange-active, #cc6e00);
 }
 
 .aside-line {

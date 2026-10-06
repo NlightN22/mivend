@@ -26,6 +26,8 @@
     /* App tokens */
     --app-accent-lime: #c8f21a;
     --app-accent-orange: #ff8a00;
+    --app-accent-orange-hover: #e67c00;
+    --app-accent-orange-active: #cc6e00;
     --app-catalog-bg: #f2fff8;
     --app-catalog-active: #d9ffe9;
     --app-surface: #ffffff;

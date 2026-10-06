@@ -238,7 +238,7 @@ const stockLabel = computed(() => (props.stock !== undefined ? `${props.stock} p
     height: 52px;
     border: none;
     border-radius: 14px;
-    background: #ff8a00;
+    background: var(--app-accent-orange, #ff8a00);
     color: #fff;
     font-size: 16px;
     font-weight: 800;
@@ -248,7 +248,10 @@ const stockLabel = computed(() => (props.stock !== undefined ? `${props.stock} p
     transition: background 0.15s;
 }
 .buy-panel__add:hover:not(:disabled) {
-    background: #e07a00;
+    background: var(--app-accent-orange-hover, #e67c00);
+}
+.buy-panel__add:active:not(:disabled) {
+    background: var(--app-accent-orange-active, #cc6e00);
 }
 .buy-panel__add:disabled {
     opacity: 0.45;

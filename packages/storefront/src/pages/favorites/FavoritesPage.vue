@@ -252,8 +252,14 @@ function handleClearUnavailable(): void {
     color: #fff;
 }
 .favorites-page__btn--orange {
-    background: #ff8a00;
+    background: var(--app-accent-orange, #ff8a00);
     color: #fff;
+}
+.favorites-page__btn--orange:hover:not(:disabled) {
+    background: var(--app-accent-orange-hover, #e67c00);
+}
+.favorites-page__btn--orange:active:not(:disabled) {
+    background: var(--app-accent-orange-active, #cc6e00);
 }
 
 .favorites-page__empty {

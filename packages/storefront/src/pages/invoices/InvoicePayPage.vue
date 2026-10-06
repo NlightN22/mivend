@@ -176,8 +176,14 @@ async function choose(outcome: PayInvoiceOutcome): Promise<void> {
     box-shadow: 0 8px 20px rgba(0, 168, 120, 0.22);
 }
 .stub-btn--orange {
-    background: #ff8a00;
+    background: var(--app-accent-orange, #ff8a00);
     box-shadow: 0 8px 20px rgba(255, 138, 0, 0.22);
+}
+.stub-btn--orange:hover:not(:disabled) {
+    background: var(--app-accent-orange-hover, #e67c00);
+}
+.stub-btn--orange:active:not(:disabled) {
+    background: var(--app-accent-orange-active, #cc6e00);
 }
 .stub-btn--red {
     background: #d92d20;

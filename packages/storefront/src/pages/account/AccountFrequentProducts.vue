@@ -149,11 +149,17 @@ const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
     height: 38px;
     border: 0;
     border-radius: 12px;
-    background: #ff8a00;
+    background: var(--app-accent-orange, #ff8a00);
     color: #fff;
     font-weight: 950;
     cursor: pointer;
     font: inherit;
+}
+.frequent-products__add:hover:not(:disabled) {
+    background: var(--app-accent-orange-hover, #e67c00);
+}
+.frequent-products__add:active:not(:disabled) {
+    background: var(--app-accent-orange-active, #cc6e00);
 }
 
 @media (max-width: 1240px) {

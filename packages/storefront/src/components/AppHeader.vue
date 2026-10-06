@@ -558,6 +558,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     font-size: 15px;
     text-decoration: none;
     box-shadow: 0 10px 22px rgba(255, 138, 0, 0.22);
+    transition: background 0.15s;
+}
+.app-header__cart:hover {
+    background: var(--app-accent-orange-hover, #e67c00);
+}
+.app-header__cart:active {
+    background: var(--app-accent-orange-active, #cc6e00);
 }
 
 .app-header__cart-text {

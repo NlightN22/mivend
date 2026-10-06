@@ -343,9 +343,15 @@ const payments = [
     border-color: transparent;
 }
 .bal-btn--orange {
-    background: #ff8a00;
+    background: var(--app-accent-orange, #ff8a00);
     color: #fff;
     border-color: transparent;
+}
+.bal-btn--orange:hover:not(:disabled) {
+    background: var(--app-accent-orange-hover, #e67c00);
+}
+.bal-btn--orange:active:not(:disabled) {
+    background: var(--app-accent-orange-active, #cc6e00);
 }
 
 .bal-layout {

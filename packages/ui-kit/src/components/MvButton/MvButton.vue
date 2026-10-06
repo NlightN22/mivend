@@ -146,14 +146,14 @@ function handleClick(event: MouseEvent): void {
 }
 
 .mv-button--buy {
-    background: #ff8a00;
+    background: var(--app-accent-orange, #ff8a00);
     color: #fff;
 }
 .mv-button--buy:hover:not(:disabled) {
-    background: #e67c00;
+    background: var(--app-accent-orange-hover, #e67c00);
 }
 .mv-button--buy:active:not(:disabled) {
-    background: #cc6e00;
+    background: var(--app-accent-orange-active, #cc6e00);
 }
 
 .mv-button--ghost {

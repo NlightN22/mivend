@@ -214,11 +214,14 @@ async function handlePrimary(): Promise<void> {
 }
 
 .checkout-summary__pay-btn--orange {
-    background: #ff8a00;
+    background: var(--app-accent-orange, #ff8a00);
     box-shadow: 0 12px 24px rgba(255, 138, 0, 0.22);
 }
 .checkout-summary__pay-btn--orange:hover {
-    background: #e87800;
+    background: var(--app-accent-orange-hover, #e67c00);
+}
+.checkout-summary__pay-btn--orange:active {
+    background: var(--app-accent-orange-active, #cc6e00);
 }
 
 .checkout-summary__pay-btn--green {
