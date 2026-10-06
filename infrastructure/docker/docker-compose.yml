@@ -29,6 +29,7 @@ services:
             PORT: 3000
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
             SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-superadmin}
+            COOKIE_SECRET: ${COOKIE_SECRET:-}
         ports:
             - '3000:3000'
         depends_on:
@@ -52,6 +53,7 @@ services:
             INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
             SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-superadmin}
+            COOKIE_SECRET: ${COOKIE_SECRET:-}
         depends_on:
             postgres:
                 condition: service_healthy
@@ -73,6 +75,7 @@ services:
             INSTANCE_TYPE: ${INSTANCE_TYPE:-branch}
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
             SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-superadmin}
+            COOKIE_SECRET: ${COOKIE_SECRET:-}
         depends_on:
             postgres:
                 condition: service_healthy

@@ -91,6 +91,15 @@ function requiredKafkaId(envVar: string): string {
     return 'mivend-central-hub-local';
 }
 
+const cookieSecret =
+    (process.env.COOKIE_SECRET || undefined) ??
+    (process.env.NODE_ENV === 'production' ? undefined : 'mivend-dev-cookie-secret');
+if (!cookieSecret) {
+    throw new Error(
+        'COOKIE_SECRET must be set in production (shared by every server/worker process)',
+    );
+}
+
 // DocumentsPlugin (always loaded, every instance) already imports AcquiringPlugin as a NestJS
 // module dependency, so AcquiringPlugin's entities/services/resolvers run on every instance
 // regardless of this array — confirmed empirically (offline-terms/online-stub/deferred-payment
@@ -161,6 +170,8 @@ export const config: VendureConfig = {
     },
     authOptions: {
         tokenMethod: ['bearer', 'cookie'],
+        // Vendure's default secret is random per process start, which logs everyone out on every restart.
+        cookieOptions: { secret: cookieSecret },
         superadminCredentials: {
             identifier: process.env.SUPERADMIN_USERNAME ?? 'superadmin',
             password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
