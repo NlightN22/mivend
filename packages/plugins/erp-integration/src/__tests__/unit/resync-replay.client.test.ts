@@ -27,6 +27,35 @@ describe('ResyncReplayClient', () => {
         expect((init.headers as Record<string, string>)['X-Api-Key']).toBe('key-1');
     });
 
+    it('uses the configured source system instead of the default', async () => {
+        const fetchMock = vi.fn(async () => new Response('[]'));
+        vi.stubGlobal('fetch', fetchMock);
+        await new ResyncReplayClient({
+            reconciliationApiUrl: 'https://is.example',
+            resyncSourceSystem: 'source-b',
+        } as never).replay('productPhoto', ['a']);
+        const init = (fetchMock.mock.calls[0] as unknown as [URL, RequestInit])[1];
+        expect(JSON.parse(String(init.body)).sourceSystem).toBe('source-b');
+    });
+
+    it('accepts the live {aggregateType, results} response shape', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                async () =>
+                    new Response(
+                        JSON.stringify({
+                            aggregateType: 'productPhoto',
+                            results: [{ entityId: 'a', status: 'replayed_from_business_db' }],
+                        }),
+                    ),
+            ),
+        );
+        expect(await client.replay('productPhoto', ['a'])).toEqual([
+            { entityId: 'a', status: 'replayed_from_business_db' },
+        ]);
+    });
+
     it('throws on a non-2xx response instead of reporting success', async () => {
         vi.stubGlobal(
             'fetch',

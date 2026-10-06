@@ -1,6 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { ERP_INTEGRATION_PLUGIN_OPTIONS, RECONCILIATION_API_URL_DEFAULT } from './types';
+import {
+    ERP_INTEGRATION_PLUGIN_OPTIONS,
+    RECONCILIATION_API_URL_DEFAULT,
+    RESYNC_SOURCE_SYSTEM_DEFAULT,
+} from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
 export interface ReplayResult {
@@ -31,7 +35,11 @@ export class ResyncReplayClient {
                 'Content-Type': 'application/json',
                 'X-Api-Key': this.options.reconciliationApiKey ?? '',
             },
-            body: JSON.stringify({ aggregateType, sourceSystem: 'onec-main', entityIds }),
+            body: JSON.stringify({
+                aggregateType,
+                sourceSystem: this.options.resyncSourceSystem ?? RESYNC_SOURCE_SYSTEM_DEFAULT,
+                entityIds,
+            }),
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
         if (!response.ok) {

@@ -25,9 +25,10 @@ function photo(over: Partial<ProductPhoto>): ProductPhoto {
 
 function setup(rows: ProductPhoto[], kafkaEnabled = true, replayStatus = 'replayed_from_state') {
     const repo = {
-        find: vi.fn(async (q: { where: { status: string } }) =>
-            rows.filter(r => r.status === q.where.status),
-        ),
+        find: vi.fn(async (q: { where: { status?: string } | { status?: string }[] }) => {
+            const first = Array.isArray(q.where) ? q.where[0] : q.where;
+            return rows.filter(r => r.status === first.status);
+        }),
         findOneOrFail: vi.fn(async () => rows[0]),
         update: vi.fn(),
     };
@@ -71,6 +72,16 @@ describe('ProductPhotoRecoveryService.recover', () => {
         ]);
         await service.recover(ctx);
         expect(replay).not.toHaveBeenCalled();
+    });
+
+    it('counts the attempt even when the replay call fails, so it cannot loop forever', async () => {
+        const { service, repo, replay } = setup([photo({ id: 'a', externalId: 'a' })]);
+        replay.mockRejectedValueOnce(new Error('HTTP 400'));
+        await expect(service.recover(ctx)).rejects.toThrow('HTTP 400');
+        expect(repo.update).toHaveBeenCalledWith(
+            'a',
+            expect.objectContaining({ replayAttempts: 1, lastReplayAt: expect.any(Date) }),
+        );
     });
 
     it('replays photos whose last replay is old enough', async () => {

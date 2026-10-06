@@ -242,6 +242,8 @@ export interface ErpIntegrationPluginOptions {
     // ScheduledTask's own gate) — a plain `make dev` never reaches this code path at all.
     reconciliationApiUrl?: string;
     reconciliationApiKey?: string;
+    // sourceSystem sent to the resync replay API; defaults to RESYNC_SOURCE_SYSTEM_DEFAULT.
+    resyncSourceSystem?: string;
     reconciliationIntervalMs?: number;
     // Issue #91: how often KafkaLagPollerService recomputes per-partition consumer lag for every
     // inbound topic. Defaults to KAFKA_LAG_POLL_INTERVAL_DEFAULT.
@@ -392,6 +394,7 @@ export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
 export const CATEGORY_TREE_RECOMPUTE_INTERVAL_DEFAULT = 3_600_000;
 // Once daily — no sub-day freshness requirement raised for this (issue #84).
 export const RECONCILIATION_INTERVAL_DEFAULT = 24 * 60 * 60 * 1000;
+export const RESYNC_SOURCE_SYSTEM_DEFAULT = 'onec-main';
 export const RECONCILIATION_API_URL_DEFAULT = 'https://is.komponent-m.ru';
 // Frequent enough to catch a stalled consumer well before it becomes a support ticket, without
 // hammering the broker's admin API — no sub-minute freshness requirement raised for issue #91.

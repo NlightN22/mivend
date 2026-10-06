@@ -52,15 +52,32 @@ export class ProductPhotoSyncService implements OnModuleInit {
     }
 
     async enqueue(productExternalId: string): Promise<void> {
+        await this.connection.rawConnection
+            .getRepository(ProductPhoto)
+            .update({ productExternalId }, { syncQueuedAt: new Date() });
         await this.queue.add({ productExternalId }, { retries: 3 });
     }
 
+    // Serialized per product: parallel jobs would both download one pending row and race on assetIds.
     async syncProduct(ctx: RequestContext, productExternalId: string): Promise<void> {
+        const transientError = await this.connection.withTransaction(ctx, txCtx =>
+            this.syncLocked(txCtx, productExternalId),
+        );
+        if (transientError) throw transientError;
+    }
+
+    private async syncLocked(
+        ctx: RequestContext,
+        productExternalId: string,
+    ): Promise<Error | undefined> {
+        const repo = this.connection.getRepository(ctx, ProductPhoto);
+        await repo.query('select pg_advisory_xact_lock(hashtext($1))', [
+            `product-photo:${productExternalId}`,
+        ]);
         const productId = await this.findProductId(productExternalId);
         if (!productId) {
             throw new MissingDependencyError(`product ${productExternalId} not imported yet`);
         }
-        const repo = this.connection.getRepository(ctx, ProductPhoto);
         const rows = await repo.find({ where: { productExternalId } });
         let transientError: Error | undefined;
         for (const row of rows) {
@@ -78,7 +95,7 @@ export class ProductPhotoSyncService implements OnModuleInit {
             }
         }
         await this.attach(ctx, productId, await repo.find({ where: { productExternalId } }));
-        if (transientError) throw transientError;
+        return transientError;
     }
 
     private async download(ctx: RequestContext, row: ProductPhoto): Promise<void> {
@@ -110,6 +127,7 @@ export class ProductPhotoSyncService implements OnModuleInit {
         const live = rows
             .filter(r => !r.isDeleted && r.status === 'downloaded' && r.assetId)
             .sort((a, b) => a.position - b.position || a.externalId.localeCompare(b.externalId));
+        // ERP is the sole owner of product photos: this replaces the product's whole asset list.
         const assetIds = [...new Set(live.map(r => r.assetId as string))];
         await this.productService.update(ctx, {
             id: productId,

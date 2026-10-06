@@ -73,6 +73,19 @@ describe('ProductPhotoStreamHandler', () => {
         expect(repo.save).not.toHaveBeenCalled();
     });
 
+    it('stores a photo without a download link as failed so it shows up and gets replayed', async () => {
+        const { repo, enqueue, handler } = setup();
+        await handler.apply(ctx, 'f-1', { ...payload, downloadUrl: undefined });
+        expect(repo.save).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: 'failed',
+                downloadUrl: null,
+                lastError: 'no download reference in the event',
+            }),
+        );
+        expect(enqueue).not.toHaveBeenCalled();
+    });
+
     it('keeps the downloaded asset when the same binary is replayed with a fresh URL', async () => {
         const { repo, handler } = setup({
             existing: {

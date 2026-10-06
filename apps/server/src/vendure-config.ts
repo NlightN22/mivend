@@ -891,6 +891,7 @@ export const config: VendureConfig = {
             reconciliationApiUrl:
                 process.env.INTEGRATION_SERVICE_BASE_URL ?? 'https://is.komponent-m.ru',
             reconciliationApiKey: process.env.INTEGRATION_SERVICE_API_KEY ?? '',
+            resyncSourceSystem: process.env.INTEGRATION_RESYNC_SOURCE_SYSTEM,
         }),
         ReservationPlugin.init({}),
         NotificationPlugin,

@@ -1,33 +1,33 @@
 <script setup lang="ts">
-import { MvSkeleton } from '@mivend/ui-kit';
+import { MvCard, MvSkeleton } from '@mivend/ui-kit';
 </script>
 
 <template>
     <div aria-busy="true">
         <MvSkeleton class="product-skeleton__crumbs" width="320px" height="14px" />
         <div class="product-skeleton">
-            <div class="product-skeleton__card product-skeleton__gallery">
+            <MvCard class="product-skeleton__card product-skeleton__gallery" padding="16px">
                 <MvSkeleton class="product-skeleton__photo" height="auto" radius="14px" />
-            </div>
+            </MvCard>
 
             <div class="product-skeleton__main">
-                <div class="product-skeleton__card">
+                <MvCard class="product-skeleton__card">
                     <MvSkeleton width="120px" height="22px" radius="999px" />
                     <MvSkeleton width="75%" height="26px" />
                     <MvSkeleton width="40%" height="14px" />
                     <MvSkeleton height="40px" />
-                </div>
-                <div class="product-skeleton__card">
+                </MvCard>
+                <MvCard class="product-skeleton__card">
                     <MvSkeleton width="160px" height="20px" />
                     <MvSkeleton v-for="n in 4" :key="n" height="16px" />
-                </div>
+                </MvCard>
             </div>
 
-            <div class="product-skeleton__card">
+            <MvCard class="product-skeleton__card">
                 <MvSkeleton width="50%" height="32px" />
                 <MvSkeleton width="70%" height="12px" />
                 <MvSkeleton height="52px" radius="14px" />
-            </div>
+            </MvCard>
         </div>
     </div>
 </template>
@@ -54,16 +54,10 @@ import { MvSkeleton } from '@mivend/ui-kit';
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: #fff;
-    border-radius: 20px;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    padding: 20px;
 }
 
 .product-skeleton__gallery {
     flex-direction: row;
-    padding: 16px;
 }
 
 .product-skeleton__photo {

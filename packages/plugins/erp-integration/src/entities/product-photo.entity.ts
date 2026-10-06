@@ -20,6 +20,7 @@ export class ProductPhoto extends VendureEntity {
     @Column({ type: 'varchar' })
     productExternalId!: string;
 
+    @Index()
     @Column({ type: 'varchar', nullable: true })
     contentHash!: string | null;
 
@@ -43,6 +44,9 @@ export class ProductPhoto extends VendureEntity {
 
     @Column({ type: 'varchar', nullable: true })
     assetId!: string | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    syncQueuedAt!: Date | null;
 
     @Column({ type: 'int', default: 0 })
     replayAttempts!: number;

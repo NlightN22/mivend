@@ -34,7 +34,7 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
         const contentHash = String(payload.contentHash ?? '');
         const mimeType = String(payload.mimeType ?? '');
         const downloadUrl = String(payload.downloadUrl ?? '');
-        if (!productExternalId || !contentHash || !mimeType || !downloadUrl) {
+        if (!productExternalId || !contentHash || !mimeType) {
             Logger.warn(`product-photo ${entityId}: incomplete payload, skipping`, loggerCtx);
             return;
         }
@@ -54,16 +54,20 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
                 contentHash,
                 mimeType,
                 position: Number(payload.position ?? 0),
-                downloadUrl,
+                downloadUrl: downloadUrl || null,
                 downloadUrlExpiresAt: expires,
                 isDeleted: false,
                 // A replay of an unchanged binary must not re-download; a new binary must.
-                status: sameBinary && existing?.status === 'downloaded' ? 'downloaded' : 'pending',
+                status: !downloadUrl
+                    ? 'failed'
+                    : sameBinary && existing?.status === 'downloaded'
+                      ? 'downloaded'
+                      : 'pending',
                 assetId: sameBinary ? (existing?.assetId ?? null) : null,
-                lastError: null,
+                lastError: downloadUrl ? null : 'no download reference in the event',
             }),
         );
-        await this.syncService.enqueue(productExternalId);
+        if (downloadUrl) await this.syncService.enqueue(productExternalId);
     }
 
     private async productExists(externalId: string): Promise<boolean> {

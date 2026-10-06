@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     downloadVerifiedPhoto,
+    MAX_PHOTO_BYTES,
     PermanentPhotoError,
     photoFileName,
 } from '../../product-photo-download';
@@ -34,6 +35,25 @@ describe('downloadVerifiedPhoto', () => {
         const error = await downloadVerifiedPhoto('u', hash, respond(503)).catch(e => e);
         expect(error).toBeInstanceOf(Error);
         expect(error).not.toBeInstanceOf(PermanentPhotoError);
+    });
+});
+
+describe('downloadVerifiedPhoto limits', () => {
+    it('aborts a body larger than the cap even without content-length', async () => {
+        const big = Buffer.alloc(MAX_PHOTO_BYTES + 1);
+        await expect(downloadVerifiedPhoto('u', 'x', respond(200, big))).rejects.toBeInstanceOf(
+            PermanentPhotoError,
+        );
+    });
+
+    it('passes an abort signal so a hung connection cannot hold the job', async () => {
+        let signal: AbortSignal | undefined;
+        const spy = (async (_u: unknown, init?: RequestInit) => {
+            signal = init?.signal ?? undefined;
+            return new Response(body);
+        }) as typeof fetch;
+        await downloadVerifiedPhoto('u', hash, spy);
+        expect(signal).toBeInstanceOf(AbortSignal);
     });
 });
 

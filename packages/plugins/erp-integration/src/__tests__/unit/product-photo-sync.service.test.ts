@@ -44,6 +44,7 @@ function setup(rows: ProductPhoto[], productExists = true) {
             Object.assign(store.find(r => r.id === id) as ProductPhoto, patch);
         }),
         remove: vi.fn(),
+        query: vi.fn(),
     };
     const qb = {
         select: vi.fn(),
@@ -62,7 +63,12 @@ function setup(rows: ProductPhoto[], productExists = true) {
     const service = new ProductPhotoSyncService(
         {} as never,
         {} as never,
-        { getRepository: () => repo, rawConnection: { createQueryBuilder: () => qb } } as never,
+        {
+            getRepository: () => repo,
+            withTransaction: (c: RequestContext, work: (t: RequestContext) => Promise<unknown>) =>
+                work(c),
+            rawConnection: { createQueryBuilder: () => qb },
+        } as never,
         assetService as never,
         productService as never,
     );
@@ -89,6 +95,19 @@ describe('ProductPhotoSyncService.syncProduct', () => {
         const { service, productService } = setup([photo({ id: 'a', externalId: 'a' })]);
         await service.syncProduct(ctx, 'p-1');
         expect(productService.update.mock.calls[0][1].id).toBe(7);
+    });
+
+    it('takes a per-product advisory lock before touching the photos', async () => {
+        const { service, repo } = setup([
+            photo({ id: 'a', externalId: 'a', status: 'downloaded' }),
+        ]);
+        await service.syncProduct(ctx, 'p-1');
+        expect(repo.query).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [
+            'product-photo:p-1',
+        ]);
+        expect(repo.query.mock.invocationCallOrder[0]).toBeLessThan(
+            repo.find.mock.invocationCallOrder[0],
+        );
     });
 
     it('stores one binary once for two photos sharing a hash', async () => {

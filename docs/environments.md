@@ -188,6 +188,15 @@ own Postgres database and are isolated by `DB_NAME` the same way everything else
 longer applies. Redis itself (the `redis` container/env vars) has been removed from this project
 entirely as a follow-up to #128 — nothing in the codebase depends on it anymore.
 
+## Asset storage (S3, issue #181)
+
+Vendure stores assets in an S3-compatible bucket when `S3_ENDPOINT` is set (dev: Garage from
+`docker-compose.dev.yml`, port 3900); unset keeps the local `static/assets` directory. One bucket
+and key per contour. Garage does not create them itself, so after the first `make up` run
+`infrastructure/scripts/garage-init.sh <bucket> <GK + 24 hex key id> <64 hex secret>` once per
+contour (idempotent), then put `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
+`S3_SECRET_ACCESS_KEY` into that contour's `.env`. Moving to a managed S3 changes only these values.
+
 ## Testing must stay within the local contour
 
 **`make test`/`make test-int`/`make e2e` run exclusively against the local contour's seeded,
