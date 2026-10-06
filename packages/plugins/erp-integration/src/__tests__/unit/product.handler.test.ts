@@ -59,8 +59,8 @@ function makeFacetServices(
     return { facetService, facetValueService };
 }
 
-function makeManufacturerService(): { upsert: ReturnType<typeof vi.fn> } {
-    return { upsert: vi.fn().mockResolvedValue({ id: 'manufacturer-1' }) };
+function makeManufacturerService(): { ensureReference: ReturnType<typeof vi.fn> } {
+    return { ensureReference: vi.fn().mockResolvedValue({ id: 'manufacturer-1' }) };
 }
 
 function makeTaxCategoryAutoCreateService(): {
@@ -105,7 +105,7 @@ function makeHandler(overrides?: {
     facetService?: { findByCode: ReturnType<typeof vi.fn> };
     facetValueService?: { findByFacetId: ReturnType<typeof vi.fn> };
     productCategoryFlagService?: { report: ReturnType<typeof vi.fn> };
-    manufacturerService?: { upsert: ReturnType<typeof vi.fn> };
+    manufacturerService?: { ensureReference: ReturnType<typeof vi.fn> };
     productAncillaryDataService?: ReturnType<typeof makeProductAncillaryDataService>;
     taxCategoryAutoCreateService?: ReturnType<typeof makeTaxCategoryAutoCreateService>;
     unitLookupService?: ReturnType<typeof makeUnitLookupService>;
@@ -120,7 +120,7 @@ function makeHandler(overrides?: {
     };
     productTaxCodeFlagService: { report: ReturnType<typeof vi.fn> };
     productCategoryFlagService: { report: ReturnType<typeof vi.fn> };
-    manufacturerService: { upsert: ReturnType<typeof vi.fn> };
+    manufacturerService: { ensureReference: ReturnType<typeof vi.fn> };
     productAncillaryDataService: ReturnType<typeof makeProductAncillaryDataService>;
     taxCategoryAutoCreateService: ReturnType<typeof makeTaxCategoryAutoCreateService>;
     unitLookupService: ReturnType<typeof makeUnitLookupService>;
@@ -573,7 +573,7 @@ describe('ProductStreamHandler', () => {
 
     // issue #116 Tier 2 — Manufacturer entity/relation
     describe('manufacturer', () => {
-        it('finds-or-creates the Manufacturer by GUID and assigns manufacturerId on create', async () => {
+        it('references the Manufacturer by GUID (no name, no facet) and assigns manufacturerId on create', async () => {
             const manufacturerService = makeManufacturerService();
             const { handler, productService } = makeHandler({ manufacturerService });
 
@@ -581,10 +581,9 @@ describe('ProductStreamHandler', () => {
                 sku: 'SKU-1',
                 name: 'Widget',
                 manufacturer: 'guid-acme',
-                attributes: { Производитель: { raw: 'Acme Corp', normalized: ['acme corp'] } },
             });
 
-            expect(manufacturerService.upsert).toHaveBeenCalledWith(ctx, 'guid-acme', 'Acme Corp');
+            expect(manufacturerService.ensureReference).toHaveBeenCalledWith(ctx, 'guid-acme');
             expect(productService.create).toHaveBeenCalledWith(
                 ctx,
                 expect.objectContaining({
@@ -599,7 +598,7 @@ describe('ProductStreamHandler', () => {
 
             await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' });
 
-            expect(manufacturerService.upsert).not.toHaveBeenCalled();
+            expect(manufacturerService.ensureReference).not.toHaveBeenCalled();
             expect(productService.create).toHaveBeenCalledWith(
                 ctx,
                 expect.objectContaining({ customFields: { externalId: 'p-1' } }),

@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import {
-    findManufacturerNameFromAttributes,
-    mapProductCharacteristics,
-} from '../../product-characteristics-mapper';
+import { mapProductCharacteristics } from '../../product-characteristics-mapper';
 
 describe('mapProductCharacteristics', () => {
     it('maps the attributes map into rows with group "attribute"', () => {
@@ -65,29 +62,5 @@ describe('mapProductCharacteristics', () => {
         });
 
         expect(rows[0].structuredJson).toBeNull();
-    });
-});
-
-describe('findManufacturerNameFromAttributes', () => {
-    it('returns the raw value of the Производитель attribute when present', () => {
-        const name = findManufacturerNameFromAttributes({
-            attributes: { Производитель: { raw: 'Yokohama', normalized: ['yokohama'] } },
-        });
-
-        expect(name).toBe('Yokohama');
-    });
-
-    it('returns undefined when attributes has no Производитель key', () => {
-        const name = findManufacturerNameFromAttributes({
-            attributes: { Диаметр: { raw: '15', normalized: ['15'] } },
-        });
-
-        expect(name).toBeUndefined();
-    });
-
-    it('returns undefined when attributes is absent entirely', () => {
-        const name = findManufacturerNameFromAttributes({ sku: 'SKU-1' });
-
-        expect(name).toBeUndefined();
     });
 });

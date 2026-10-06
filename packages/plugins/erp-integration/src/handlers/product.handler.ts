@@ -25,10 +25,7 @@ import {
     extractOptionalString,
     extractManufacturerId,
 } from '../product-ancillary-fields';
-import {
-    findManufacturerNameFromAttributes,
-    mapProductCharacteristics,
-} from '../product-characteristics-mapper';
+import { mapProductCharacteristics } from '../product-characteristics-mapper';
 import { MissingDependencyError } from '../types';
 import { UnitLookupService } from '../unit-lookup.service';
 import type { InboundStreamHandler } from './inbound-stream-handler';
@@ -123,20 +120,12 @@ export class ProductStreamHandler implements InboundStreamHandler {
             rawCategoryId,
         );
 
-        // issue #116 Tier 2 — Manufacturer is a real entity (find-or-create by the ERP GUID,
-        // name backfilled from the 'attributes' map's own 'Производитель' key), never a plain
-        // string custom field (that field is a GUID, not a display name).
+        // issue #116 Tier 2 — Manufacturer is a real entity referenced by the ERP GUID (never a plain
+        // string); its name arrives only on the manufacturer stream.
         const manufacturerExternalId = extractManufacturerId(payload);
-        const manufacturerName = findManufacturerNameFromAttributes(payload);
         const manufacturerId = manufacturerExternalId
             ? String(
-                  (
-                      await this.manufacturerService.upsert(
-                          ctx,
-                          manufacturerExternalId,
-                          manufacturerName,
-                      )
-                  ).id,
+                  (await this.manufacturerService.ensureReference(ctx, manufacturerExternalId)).id,
               )
             : undefined;
 

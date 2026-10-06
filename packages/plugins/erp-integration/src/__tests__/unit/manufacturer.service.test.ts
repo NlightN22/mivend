@@ -37,3 +37,20 @@ describe('ManufacturerService.upsert facet mirroring', () => {
         expect(facet.ensureValue).toHaveBeenCalledWith(ctx, 'mfr-1', 'Brand A');
     });
 });
+
+describe('ManufacturerService.ensureReference', () => {
+    it('creates a nameless manufacturer without touching the facet', async () => {
+        const { service, facet, repo } = setup(null);
+        await service.ensureReference(ctx, 'mfr-1');
+        expect(repo.save).toHaveBeenCalledWith({ externalId: 'mfr-1', name: null });
+        expect(facet.ensureValue).not.toHaveBeenCalled();
+    });
+
+    it('returns an existing manufacturer untouched', async () => {
+        const existing = { externalId: 'mfr-1', name: 'Brand A' };
+        const { service, facet, repo } = setup(existing);
+        expect(await service.ensureReference(ctx, 'mfr-1')).toBe(existing);
+        expect(repo.save).not.toHaveBeenCalled();
+        expect(facet.ensureValue).not.toHaveBeenCalled();
+    });
+});

@@ -59,23 +59,5 @@ export function mapProductCharacteristics(
     ];
 }
 
-// The human-readable manufacturer name lives alongside the raw GUID, under the 'attributes' map's
-// well-known 'Производитель' key (issue #116, confirmed live with Search Platform) — there is no
-// separate structured GUID<->name reference on the wire (an earlier assumption about a `valueRef`
-// field was wrong, see category-resolver.ts... no, see the commit history / issue #116 comments
-// for the real-runtime-check correction). Returns undefined when absent, never an empty string.
+// The manufacturer's name also arrives as an attribute; it is excluded from characteristics.
 export const MANUFACTURER_NAME_ATTRIBUTE_KEY = 'Производитель';
-
-export function findManufacturerNameFromAttributes(
-    payload: Record<string, unknown>,
-): string | undefined {
-    const attributes = payload.attributes;
-    if (typeof attributes !== 'object' || attributes === null || Array.isArray(attributes)) {
-        return undefined;
-    }
-    const entry = (attributes as Record<string, unknown>)[MANUFACTURER_NAME_ATTRIBUTE_KEY];
-    if (!isCharacteristicValue(entry)) {
-        return undefined;
-    }
-    return typeof entry.raw === 'string' && entry.raw !== '' ? entry.raw : undefined;
-}
