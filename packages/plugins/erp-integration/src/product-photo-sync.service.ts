@@ -58,7 +58,7 @@ export class ProductPhotoSyncService implements OnModuleInit {
         await this.queue.add({ productExternalId }, { retries: 3 });
     }
 
-    // Serialized per product: parallel jobs would both download one pending row and race on assetIds.
+    // Serialized per product (queue concurrency is 1, so the long transaction holds one pool connection).
     async syncProduct(ctx: RequestContext, productExternalId: string): Promise<void> {
         const transientError = await this.connection.withTransaction(ctx, txCtx =>
             this.syncLocked(txCtx, productExternalId),
