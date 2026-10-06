@@ -2,6 +2,7 @@
 import { onMounted } from 'vue';
 import { useCartStore } from '../../stores/cart';
 import CartItemList from './CartItemList.vue';
+import CartSkeleton from './CartSkeleton.vue';
 import CartSummary from './CartSummary.vue';
 import CartPromoBanner from './CartPromoBanner.vue';
 
@@ -20,7 +21,9 @@ onMounted(() => cartStore.fetchCart());
         <div class="cart-page__title-row">
             <h1 class="cart-page__title">
                 Cart
-                <span class="cart-page__count">{{ cartStore.lines.length }} items</span>
+                <span v-if="cartStore.loaded" class="cart-page__count">
+                    {{ cartStore.lines.length }} items
+                </span>
             </h1>
             <p class="cart-page__hint">
                 Prices and stock will be verified before sending the order to ERP. After submission
@@ -28,7 +31,7 @@ onMounted(() => cartStore.fetchCart());
             </p>
         </div>
 
-        <p v-if="!cartStore.loaded" class="cart-page__loading">Loading cart…</p>
+        <CartSkeleton v-if="!cartStore.loaded" />
 
         <div v-else-if="cartStore.isEmpty" class="cart-page__empty">
             <div class="cart-page__empty-icon">🛒</div>
@@ -56,11 +59,6 @@ onMounted(() => cartStore.fetchCart());
     max-width: 1440px;
     margin: 0 auto;
     padding: 32px 28px 70px;
-}
-
-.cart-page__loading {
-    color: #66736e;
-    font-weight: 800;
 }
 
 .cart-page__crumbs {
