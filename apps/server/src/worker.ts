@@ -8,6 +8,7 @@ const ALL_QUEUES_EXCEPT_EMAIL = [
     'clean-sessions', // Vendure core (SessionService)
     'update-search-index', // Vendure core (DefaultSearchPlugin), listed so it's never orphaned
     'generate-document', // this project's own (plugin-documents, PdfGeneratorService)
+    'product-photo-sync', // this project's own (plugin-erp-integration, ProductPhotoSyncService)
 ];
 
 // Nest's shutdown hooks close the app but leftover handles can keep the process alive with no
