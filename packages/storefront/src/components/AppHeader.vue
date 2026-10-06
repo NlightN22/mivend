@@ -3,7 +3,11 @@ import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vu
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { MvNotificationBell, MvNotificationPanel, type SuggestionItem } from '@mivend/ui-kit';
-import { buildSearchLocation, resolveScopeLabel } from '../composables/searchScope';
+import {
+    buildSearchLocation,
+    clearedSearchLocation,
+    resolveScopeLabel,
+} from '../composables/searchScope';
 import { useSearchSuggestions } from '../composables/useSearchSuggestions';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
@@ -42,6 +46,10 @@ watch(
         searchQuery.value = (q as string) ?? '';
     },
 );
+watch(searchQuery, value => {
+    const target = clearedSearchLocation(value, route.query.q as string | undefined, scopeSlug.value);
+    if (target) router.push(target);
+});
 const catalogOpen = ref(false);
 const mobileNavOpen = ref(false);
 

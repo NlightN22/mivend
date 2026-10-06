@@ -15,6 +15,17 @@ export function buildSearchLocation(
     return { path: '/catalog', query };
 }
 
+// Emptying the field must drop the term from the URL, or later navigation (e.g. picking a
+// category) re-applies the stale query. Null = nothing to do.
+export function clearedSearchLocation(
+    inputValue: string,
+    urlTerm: string | undefined,
+    collectionSlug: string | undefined,
+): SearchLocation | null {
+    if (inputValue || !urlTerm) return null;
+    return buildSearchLocation('', collectionSlug);
+}
+
 export function resolveScopeLabel(
     collections: CollectionNode[],
     slug: string | undefined,
