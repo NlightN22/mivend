@@ -1,6 +1,17 @@
 # Project Context
 
-Updated: 2026-10-05 20:30
+Updated: 2026-10-06 10:00
+
+## Recent changes (2026-10-05/06 — #166 characteristic checkbox filters, shipped/audited/closed; pushed up to ada148b)
+
+- Typing came from search-platform #168/#169 (event-contracts 0.45.0): `CharacteristicValue.structuredJson` = `{type:number|boolean|reference|multi,...}` (unit parsed from the key); 1C does type values, the old mapper dropped it. mivend stores it in `ProductCharacteristic.structuredJson` but uses only `normalizedValue` (JSON string array). Only 4 staging keys are truly numeric (Замерзание (t), Ширина (мм), Диаметр ", Высота профиля (%)); the other 7 are reference/discrete. "Замерзание (t)" has a wrong unit in 1C.
+- Decision (variant A): every key is a checkbox group over `characteristics.normalized`. No sliders and no refId-keyed facets until fasteners with real numeric dimensions are exported (search-service needs range/refId query code first; data is already indexed: `structuredNumeric`, `structuredKeyword`). Do not re-ask.
+- Representation: Facet `characteristic:<key>` + FacetValue `code = normalized` (names = normalized value), `shared/characteristicFacet.ts`. Created by erp-integration `CharacteristicFacetService` after `replaceCharacteristics` (skips the manufacturer key), backfilled at server boot, creation serialized per key by `pg_advisory_xact_lock` (Vendure's `FacetService.create` suffixes `-2` on a code clash, which silently breaks keys), known-values cache TTL 60 s.
+- search plugin: `SearchFilterResolver` -> `filters.characteristics [{key, normalized}]` (OR within key, AND across keys; unresolvable = `unsatisfiable`), `facets.characteristics` -> FacetValues in `facet-mapper.ts`, counted in `hasBrowseCriteria`. ui-kit `MvFacetGroup` `plain` prop (checkbox rows, no letter avatar) used for `characteristic:` groups. Verified live on staging in search + category pages (filter, URL `fv`, chips, back).
+- Tests: unit for resolver/mappers/service; `characteristic-facet.int.test.ts` (real Postgres, proves one facet under a race; fails without the lock). Facet services in it are replicas (no Vendure bootstrap harness).
+- New skill `search-backend-parity`: internal and external search backends share one interface; extend both in the same change, a pinned no-op is OK plus an issue. Internal backend does NOT know characteristics yet.
+- Open follow-ups: #176 (duplicate key on `product_characteristic` under concurrent ProductChanged), #177 (backend-agnostic search interface, internal characteristics, erp-import seed, shared contract tests; low priority), #178 (bound facet growth, key allowlist as a DB entity; fine at 11 keys / <=54 values).
+- Cross-session pattern that worked: ask `sp.auditor.common` for a research report first, then `sp.issue.168.169` for the implementation; do not start typed work before their ping. Note search-platform #168/#169 are not mivend #168.
 
 ## Recent changes (2026-10-05 evening — storefront UX pass, audited by mivend.audit.common, pushed to main up to 9844399)
 
@@ -64,7 +75,7 @@ Updated: 2026-10-05 20:30
   filters". No filter sidebar on phones by design.
 - Storefront generated types come from codegen against the :3010 (external) schema; ES-only types are
   gone (nothing used them). Regenerate against the local contour if they are needed again.
-- Open: #165 (hide unsupported sort/price controls), #166 (characteristics filter), manufacturer icons
+- Open: #165 (hide unsupported sort/price controls), #166 done (see top), manufacturer icons
   have no data source (letters shown), staging has two manufacturers both named "собственные нужды".
 - Restart lesson: `main.ts` on :3010 does not hot-reload linked plugin `dist`; use
   `make dev-staging-integration` (it kills the old contour itself) and wait for `/health` 200.
