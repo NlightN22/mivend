@@ -19,6 +19,10 @@ import { Manufacturer } from './entities/manufacturer.entity';
 import { ProductPhoto } from './entities/product-photo.entity';
 import { ProductPhotoStreamHandler } from './handlers/product-photo.handler';
 import { ProductPhotoSyncService } from './product-photo-sync.service';
+import { ProductPhotoRecoveryService } from './product-photo-recovery.service';
+import { createProductPhotoRecoveryTask } from './product-photo-recovery.scheduled-task';
+import { ProductPhotoResolver } from './product-photo.resolver';
+import { ResyncReplayClient } from './resync-replay.client';
 import { ProductVariantBarcode } from './entities/product-variant-barcode.entity';
 import { ProductCharacteristic } from './entities/product-characteristic.entity';
 import { ProductManufacturerCode } from './entities/product-manufacturer-code.entity';
@@ -178,6 +182,8 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
         ManufacturerStreamHandler,
         ProductPhotoStreamHandler,
         ProductPhotoSyncService,
+        ProductPhotoRecoveryService,
+        ResyncReplayClient,
         UnitLookupService,
         TaxCategoryAutoCreateService,
         TaxZoneService,
@@ -209,6 +215,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
             ProductTaxCodeFlagResolver,
             ReconciliationResolver,
             KafkaLagResolver,
+            ProductPhotoResolver,
         ],
     },
     shopApiExtensions: {
@@ -229,6 +236,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
                 createCategoryTreeRecomputeTask(ErpIntegrationPlugin.options),
                 createReconciliationTask(ErpIntegrationPlugin.options),
                 createKafkaLagPollTask(ErpIntegrationPlugin.options),
+                createProductPhotoRecoveryTask(ErpIntegrationPlugin.options),
             ];
         }
         return config;

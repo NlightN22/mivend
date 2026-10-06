@@ -44,6 +44,12 @@ export class ProductPhoto extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     assetId!: string | null;
 
+    @Column({ type: 'int', default: 0 })
+    replayAttempts!: number;
+
+    @Column({ type: 'timestamp', nullable: true })
+    lastReplayAt!: Date | null;
+
     @Column({ type: 'text', nullable: true })
     lastError!: string | null;
 }

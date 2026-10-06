@@ -103,7 +103,49 @@ export const adminApiExtensions: DocumentNode = gql`
         partitions: [KafkaTopicLagPartition!]!
     }
 
+    "A product photo that is not downloaded yet (pending) or gave up (failed) — issue #181."
+    type ProductPhoto implements Node {
+        id: ID!
+        updatedAt: DateTime!
+        externalId: String!
+        productExternalId: String!
+        position: Int!
+        status: String!
+        lastError: String
+        replayAttempts: Int!
+        lastReplayAt: DateTime
+    }
+
+    type ProductPhotoList implements PaginatedList {
+        items: [ProductPhoto!]!
+        totalItems: Int!
+    }
+
+    input ProductPhotoFilterParameter {
+        externalId: StringOperators
+        productExternalId: StringOperators
+        status: StringOperators
+    }
+
+    input ProductPhotoSortParameter {
+        externalId: SortOrder
+        productExternalId: SortOrder
+        status: SortOrder
+        updatedAt: SortOrder
+        replayAttempts: SortOrder
+    }
+
+    input ProductPhotoListOptions {
+        skip: Int
+        take: Int
+        sort: ProductPhotoSortParameter
+        filter: ProductPhotoFilterParameter
+        filterOperator: LogicalOperator
+    }
+
     extend type Query {
+        "Product photos still pending or failed, newest first (issue #181)."
+        problemProductPhotos(options: ProductPhotoListOptions): ProductPhotoList!
         "Dead-lettered inbound Kafka events, newest first — for the manager-portal dashboard's integration-health panel (issue #76)."
         failedIntegrationInboxEvents(
             options: FailedIntegrationInboxEventListOptions
@@ -121,6 +163,8 @@ export const adminApiExtensions: DocumentNode = gql`
     }
 
     extend type Mutation {
+        "Asks Integration Service to re-publish one photo (fresh download link) and resets its attempt counter (issue #181)."
+        replayProductPhoto(id: ID!): ProductPhoto!
         "Manually runs the reconciliation comparison against Integration Service immediately, instead of waiting for the daily ScheduledTask (issue #84) — same ReconciliationService.runComparison the scheduled run uses, recorded with triggeredBy='manual' and the calling administrator's id."
         runErpReconciliation: ErpReconciliationRunResult!
         "Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved."
