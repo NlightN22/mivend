@@ -59,7 +59,7 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
                 class="buy-panel__price"
             />
             <div v-else-if="!showPrices" class="buy-panel__price-hint">Log in to see prices</div>
-            <div v-else class="buy-panel__price">—</div>
+            <div v-else class="buy-panel__price buy-panel__price--on-request">Price on request</div>
 
             <div class="buy-panel__price-note">Price includes customer terms and VAT.</div>
 
@@ -72,6 +72,13 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
                     (val: number) => cartLineId && emit('update-cart-qty', cartLineId, val)
                 "
             />
+            <RouterLink
+                v-else-if="showPrices && price === undefined"
+                to="/requests"
+                class="buy-panel__add buy-panel__add--link"
+            >
+                Request price
+            </RouterLink>
             <button
                 v-else
                 class="buy-panel__add"
@@ -126,6 +133,17 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
     color: #14231f;
     line-height: 1;
     margin-bottom: 6px;
+}
+.buy-panel__price--on-request {
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+}
+.buy-panel__add--link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
 }
 .buy-panel__price-hint {
     font-size: 14px;
