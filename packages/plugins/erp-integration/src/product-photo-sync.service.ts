@@ -10,6 +10,7 @@ import {
     RequestContextService,
     TransactionalConnection,
 } from '@vendure/core';
+import { ID } from '@vendure/common/lib/shared-types';
 import { Readable } from 'stream';
 import { IsNull, Not } from 'typeorm';
 
@@ -105,11 +106,7 @@ export class ProductPhotoSyncService implements OnModuleInit {
         await repo.update(row.id, { status: 'downloaded', assetId: String(asset.id) });
     }
 
-    private async attach(
-        ctx: RequestContext,
-        productId: string,
-        rows: ProductPhoto[],
-    ): Promise<void> {
+    private async attach(ctx: RequestContext, productId: ID, rows: ProductPhoto[]): Promise<void> {
         const live = rows
             .filter(r => !r.isDeleted && r.status === 'downloaded' && r.assetId)
             .sort((a, b) => a.position - b.position || a.externalId.localeCompare(b.externalId));
@@ -124,13 +121,14 @@ export class ProductPhotoSyncService implements OnModuleInit {
         if (removed.length > 0) await repo.remove(removed);
     }
 
-    private async findProductId(externalId: string): Promise<string | undefined> {
+    // Raw numeric id on purpose: a stringified id makes TypeORM insert a duplicate Product (#144).
+    private async findProductId(externalId: string): Promise<ID | undefined> {
         const found = await this.connection.rawConnection
             .createQueryBuilder()
             .select('p.id', 'id')
             .from('product', 'p')
             .where('p."customFieldsExternalid" = :externalId', { externalId })
-            .getRawOne<{ id: string }>();
-        return found ? String(found.id) : undefined;
+            .getRawOne<{ id: ID }>();
+        return found?.id;
     }
 }

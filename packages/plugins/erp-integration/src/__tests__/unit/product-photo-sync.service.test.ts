@@ -49,7 +49,7 @@ function setup(rows: ProductPhoto[], productExists = true) {
         select: vi.fn(),
         from: vi.fn(),
         where: vi.fn(),
-        getRawOne: vi.fn().mockResolvedValue(productExists ? { id: '7' } : undefined),
+        getRawOne: vi.fn().mockResolvedValue(productExists ? { id: 7 } : undefined),
     };
     qb.select.mockReturnValue(qb);
     qb.from.mockReturnValue(qb);
@@ -82,6 +82,13 @@ describe('ProductPhotoSyncService.syncProduct', () => {
         expect(call.assetIds).toEqual(['102', '101']);
         expect(call.featuredAssetId).toBe('102');
         expect(call.assetIds).toHaveLength(2);
+    });
+
+    it('passes the numeric product id to update (a string id inserts a duplicate product)', async () => {
+        vi.mocked(downloadVerifiedPhoto).mockResolvedValue(Buffer.from('x'));
+        const { service, productService } = setup([photo({ id: 'a', externalId: 'a' })]);
+        await service.syncProduct(ctx, 'p-1');
+        expect(productService.update.mock.calls[0][1].id).toBe(7);
     });
 
     it('stores one binary once for two photos sharing a hash', async () => {
