@@ -222,7 +222,7 @@ describe('ProductAncillaryDataService (integration, real Postgres)', () => {
     it('replaceCharacteristics for one product run concurrently never hits the unique constraint', async () => {
         const service = ancillaryService(TestCharacteristic);
         const rows = ['A', 'B', 'C'].map(key => ({
-            group: 'attribute',
+            group: 'attribute' as const,
             key,
             rawValue: 'x',
             normalizedValue: null,
