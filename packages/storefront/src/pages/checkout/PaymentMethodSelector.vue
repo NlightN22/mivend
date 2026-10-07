@@ -33,8 +33,8 @@ const methodCards = computed(() => [
             (authStore.counterparty?.paymentDelayDays ?? 0) > 0
                 ? `Payment terms: ${authStore.counterparty?.paymentDelayDays} days.`
                 : 'Available per contract terms and limit.',
-        badge: 'Limit available',
-        badgeOrange: false,
+        badge: checkoutStore.creditPreview?.exceeded ? 'Limit exceeded' : 'Limit available',
+        badgeOrange: checkoutStore.creditPreview?.exceeded === true,
     },
 ]);
 

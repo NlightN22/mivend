@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
+import DeferredCreditWarning from './DeferredCreditWarning.vue';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
 const cartStore = useCartStore();
@@ -88,6 +89,8 @@ async function handlePrimary(): Promise<void> {
                 <strong>{{ total }}</strong>
             </div>
 
+            <DeferredCreditWarning class="checkout-summary__credit" />
+
             <button
                 class="checkout-summary__pay-btn"
                 :class="
@@ -170,6 +173,11 @@ async function handlePrimary(): Promise<void> {
 .checkout-summary__total strong {
     font-size: 22px;
     letter-spacing: -0.04em;
+}
+
+.checkout-summary__credit {
+    margin-bottom: 14px;
+    font-size: 13px;
 }
 
 .checkout-summary__pay-btn {
