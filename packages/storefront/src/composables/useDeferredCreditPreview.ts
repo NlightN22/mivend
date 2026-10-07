@@ -23,7 +23,9 @@ export function useDeferredCreditPreview(): void {
     watch(
         () => [checkoutStore.selectedPayment, cartStore.totalPrice] as const,
         ([method]) => {
-            if (method === 'deferred') debouncedRun();
+            if (method !== 'deferred') return;
+            checkoutStore.markCreditPreviewPending();
+            debouncedRun();
         },
         { immediate: true },
     );

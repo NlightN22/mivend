@@ -49,6 +49,24 @@ describe('checkout credit gating', () => {
         expect(store.canPlaceOrder).toBe(true);
     });
 
+    it('keeps deferred disabled until the preview answered and re-disables while it reloads', () => {
+        const store = useCheckoutStore();
+        store.setPayment('deferred');
+        expect(store.canPlaceOrder).toBe(false);
+        store.setCreditPreview({ exceeded: false, availableCredit: 900, orderAmount: 500 });
+        expect(store.canPlaceOrder).toBe(true);
+        store.markCreditPreviewPending();
+        expect(store.canPlaceOrder).toBe(false);
+        store.setCreditPreview(null);
+        expect(store.canPlaceOrder).toBe(true);
+    });
+
+    it('does not wait for the preview when another method is selected', () => {
+        const store = useCheckoutStore();
+        store.setPayment('invoice');
+        expect(store.canPlaceOrder).toBe(true);
+    });
+
     it('resets the acknowledgement when the numbers change', () => {
         const store = useCheckoutStore();
         store.setPayment('deferred');

@@ -36,6 +36,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
     const resultState = ref<ResultState>(null);
     const creditPreview = ref<CreditPreview | null>(null);
     const creditAcknowledged = ref(false);
+    const creditPreviewReady = ref(false);
 
     const creditWarningVisible = computed(
         () => selectedPayment.value === 'deferred' && creditPreview.value?.exceeded === true,
@@ -43,6 +44,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
     const canPlaceOrder = computed(
         () =>
             selectedPayment.value !== null &&
+            (selectedPayment.value !== 'deferred' || creditPreviewReady.value) &&
             (!creditWarningVisible.value || creditAcknowledged.value),
     );
 
@@ -53,6 +55,11 @@ export const useCheckoutStore = defineStore('checkout', () => {
             prev?.orderAmount !== next?.orderAmount;
         if (!next?.exceeded || changed) creditAcknowledged.value = false;
         creditPreview.value = next;
+        creditPreviewReady.value = true;
+    }
+
+    function markCreditPreviewPending(): void {
+        creditPreviewReady.value = false;
     }
 
     async function loadPaymentMethods(): Promise<void> {
@@ -113,6 +120,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
         resultState.value = null;
         creditPreview.value = null;
         creditAcknowledged.value = false;
+        creditPreviewReady.value = false;
     }
 
     return {
@@ -129,6 +137,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
         creditWarningVisible,
         canPlaceOrder,
         setCreditPreview,
+        markCreditPreviewPending,
         loadPaymentMethods,
         loadDeliveryMethods,
         setPayment,
