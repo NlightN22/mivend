@@ -2,6 +2,8 @@
 import { onMounted } from 'vue';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore } from '../../stores/checkout';
+import { useDeferredCreditPreview } from '../../composables/useDeferredCreditPreview';
+import DeferredCreditWarning from './DeferredCreditWarning.vue';
 import PaymentMethodSelector from './PaymentMethodSelector.vue';
 import DeliverySelector from './DeliverySelector.vue';
 import CheckoutOrderItems from './CheckoutOrderItems.vue';
@@ -9,6 +11,7 @@ import CheckoutSummary from './CheckoutSummary.vue';
 
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
+useDeferredCreditPreview();
 
 onMounted(() =>
     Promise.all([
@@ -33,6 +36,7 @@ onMounted(() =>
         <div class="checkout-page__layout">
             <section class="checkout-page__main">
                 <PaymentMethodSelector />
+                <DeferredCreditWarning />
                 <DeliverySelector />
                 <CheckoutOrderItems />
                 <MvNotice v-if="checkoutStore.selectedPayment === 'online'" variant="info">

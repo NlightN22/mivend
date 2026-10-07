@@ -3385,7 +3385,14 @@ export type PublicShippingMethod = {
     translations: Array<ShippingMethodTranslation>;
 };
 
+export type DeferredCreditPreview = {
+    availableCredit: Scalars['Float']['output'];
+    exceeded: Scalars['Boolean']['output'];
+    orderAmount: Scalars['Float']['output'];
+};
+
 export type Query = {
+    deferredCreditPreview: DeferredCreditPreview;
     /** The active Channel */
     activeChannel: Channel;
     /** The active Customer */
@@ -5069,6 +5076,12 @@ export type CompleteDeferredPaymentMutation = {
         | { __typename: 'PaymentFailedError'; errorCode: ErrorCode; message: string };
 };
 
+export type DeferredCreditPreviewQueryVariables = Exact<{ [key: string]: never }>;
+
+export type DeferredCreditPreviewQuery = {
+    deferredCreditPreview: { exceeded: boolean; availableCredit: number; orderAmount: number };
+};
+
 export type EligiblePaymentMethodsForCheckoutQueryVariables = Exact<{ [key: string]: never }>;
 
 export type EligiblePaymentMethodsForCheckoutQuery = {
@@ -6183,6 +6196,18 @@ export const CompleteDeferredPaymentDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CompleteDeferredPaymentMutation,
     CompleteDeferredPaymentMutationVariables
+>;
+export const DeferredCreditPreviewDocument = new TypedDocumentString(`
+    query DeferredCreditPreview {
+  deferredCreditPreview {
+    exceeded
+    availableCredit
+    orderAmount
+  }
+}
+    `) as unknown as TypedDocumentString<
+    DeferredCreditPreviewQuery,
+    DeferredCreditPreviewQueryVariables
 >;
 export const EligiblePaymentMethodsForCheckoutDocument = new TypedDocumentString(`
     query EligiblePaymentMethodsForCheckout {

@@ -96,7 +96,7 @@ async function handlePrimary(): Promise<void> {
                         : 'checkout-summary__pay-btn--green'
                 "
                 type="button"
-                :disabled="submitting || !checkoutStore.selectedPayment"
+                :disabled="submitting || !checkoutStore.canPlaceOrder"
                 @click="handlePrimary"
             >
                 {{ submitting ? 'Processing…' : btnLabel }}

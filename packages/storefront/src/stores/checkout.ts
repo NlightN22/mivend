@@ -8,6 +8,12 @@ import {
 import { SHIPPING_CODE_BY_DELIVERY, type DeliveryType } from '../utils/deliveryMethods';
 import { useAuthStore } from './auth';
 
+export interface CreditPreview {
+    exceeded: boolean;
+    availableCredit: number;
+    orderAmount: number;
+}
+
 export type PaymentMethod = 'online' | 'invoice' | 'deferred';
 export type { DeliveryType };
 
@@ -28,6 +34,26 @@ export const useCheckoutStore = defineStore('checkout', () => {
     const deliveryLoaded = ref(false);
     const selectedDelivery = ref<DeliveryType>('courier');
     const resultState = ref<ResultState>(null);
+    const creditPreview = ref<CreditPreview | null>(null);
+    const creditAcknowledged = ref(false);
+
+    const creditWarningVisible = computed(
+        () => selectedPayment.value === 'deferred' && creditPreview.value?.exceeded === true,
+    );
+    const canPlaceOrder = computed(
+        () =>
+            selectedPayment.value !== null &&
+            (!creditWarningVisible.value || creditAcknowledged.value),
+    );
+
+    function setCreditPreview(next: CreditPreview | null): void {
+        const prev = creditPreview.value;
+        const changed =
+            prev?.availableCredit !== next?.availableCredit ||
+            prev?.orderAmount !== next?.orderAmount;
+        if (!next?.exceeded || changed) creditAcknowledged.value = false;
+        creditPreview.value = next;
+    }
 
     async function loadPaymentMethods(): Promise<void> {
         const { eligiblePaymentMethods } = await shopApi(EligiblePaymentMethodsForCheckoutDocument);
@@ -85,6 +111,8 @@ export const useCheckoutStore = defineStore('checkout', () => {
         deliveryLoaded.value = false;
         selectedDelivery.value = 'courier';
         resultState.value = null;
+        creditPreview.value = null;
+        creditAcknowledged.value = false;
     }
 
     return {
@@ -96,6 +124,11 @@ export const useCheckoutStore = defineStore('checkout', () => {
         deliveryBlocker,
         selectedDelivery,
         resultState,
+        creditPreview,
+        creditAcknowledged,
+        creditWarningVisible,
+        canPlaceOrder,
+        setCreditPreview,
         loadPaymentMethods,
         loadDeliveryMethods,
         setPayment,

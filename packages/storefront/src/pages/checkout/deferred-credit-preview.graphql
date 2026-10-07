@@ -1,0 +1,7 @@
+query DeferredCreditPreview {
+    deferredCreditPreview {
+        exceeded
+        availableCredit
+        orderAmount
+    }
+}
