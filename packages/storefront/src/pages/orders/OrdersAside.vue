@@ -10,7 +10,7 @@ const authStore = useAuthStore();
 const availableLimit = computed(() => {
     const cp = authStore.counterparty;
     if (!cp) return '—';
-    const val = (cp.creditLimit - cp.creditBalance) / 100;
+    const val = cp.creditLimit - cp.creditBalance;
     return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(val) + ' ₽';
 });
 

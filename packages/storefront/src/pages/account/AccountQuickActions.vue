@@ -7,7 +7,7 @@ const authStore = useAuthStore();
 const limitText = computed(() => {
     const cp = authStore.counterparty;
     if (!cp) return 'No limit data';
-    const avail = new Intl.NumberFormat('ru-RU').format((cp.creditLimit - cp.creditBalance) / 100);
+    const avail = new Intl.NumberFormat('ru-RU').format(cp.creditLimit - cp.creditBalance);
     return `${avail} ₽ available, deferred ${cp.paymentDelayDays} days`;
 });
 </script>

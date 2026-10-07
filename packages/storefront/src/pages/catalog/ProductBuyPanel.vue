@@ -29,7 +29,7 @@ const authStore = useAuthStore();
 const counterparty = computed(() => authStore.counterparty);
 const availableCredit = computed(() => {
     if (!counterparty.value) return null;
-    return (counterparty.value.creditLimit - counterparty.value.creditBalance) / 100;
+    return counterparty.value.creditLimit - counterparty.value.creditBalance;
 });
 const formatRub = (n: number) =>
     new Intl.NumberFormat('ru-RU', {
@@ -97,7 +97,9 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
             <span>✓</span>
             <div>
                 <strong>Can be ordered without upfront payment.</strong>
-                Available credit: {{ formatRub(availableCredit) }}. Payment terms:
+                Credit limit: {{ formatRub(counterparty!.creditLimit) }}, debt:
+                {{ formatRub(counterparty!.creditBalance) }}, available:
+                {{ formatRub(availableCredit) }}. Payment terms:
                 {{ counterparty!.paymentDelayDays }} days.
             </div>
         </div>

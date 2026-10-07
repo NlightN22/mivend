@@ -16,9 +16,11 @@ const editingTradingPoint = ref<TradingPointInfo | null>(null);
 const reactivating = ref<string | null>(null);
 
 function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-        amount / 100,
-    );
+    return new Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'RUB',
+        maximumFractionDigits: 0,
+    }).format(amount);
 }
 
 function handleEdited(): void {
@@ -67,8 +69,12 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                 <dd>{{ money(credit.creditLimit) }}</dd>
             </div>
             <div v-if="credit">
-                <dt>Credit balance</dt>
+                <dt>Debt</dt>
                 <dd>{{ money(credit.creditBalance) }}</dd>
+            </div>
+            <div v-if="credit">
+                <dt>Available</dt>
+                <dd>{{ money(credit.creditLimit - credit.creditBalance) }}</dd>
             </div>
         </dl>
 
