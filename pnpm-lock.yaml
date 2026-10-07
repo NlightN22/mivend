@@ -940,6 +940,9 @@ importers:
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../counterparty
+            '@mivend/plugin-customer-pricing':
+                specifier: workspace:*
+                version: link:../customer-pricing
             graphql-tag:
                 specifier: ^2.12.6
                 version: 2.12.7(graphql@16.14.2)

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { mainContractPriceTypeIdSql } from '@mivend/plugin-customer-pricing';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
@@ -97,9 +98,11 @@ export class PriceEntryService {
         if (!ctx.activeUserId) return null;
         const rows = await this.connection.rawConnection.query(
             `SELECT pt.code
-             FROM price_type pt
-             JOIN customer_price_type cpt ON cpt."priceTypeId" = pt.id
-             JOIN customer cu ON cu.id::varchar = cpt."customerId"::varchar
+             FROM customer cu
+             JOIN price_type pt ON pt.id = COALESCE(
+                 ${mainContractPriceTypeIdSql('cu.id')},
+                 (SELECT cpt."priceTypeId" FROM customer_price_type cpt
+                  WHERE cpt."customerId"::varchar = cu.id::varchar LIMIT 1))
              WHERE cu."userId" = $1
              LIMIT 1`,
             [ctx.activeUserId],
@@ -119,9 +122,10 @@ export class PriceEntryService {
         const rows = await this.connection.rawConnection.query(
             `SELECT pt.code
              FROM price_type pt
-             JOIN customer_price_type cpt ON cpt."priceTypeId" = pt.id
-             WHERE cpt."customerId"::varchar = $1
-             LIMIT 1`,
+             WHERE pt.id = COALESCE(
+                 ${mainContractPriceTypeIdSql('$1')},
+                 (SELECT cpt."priceTypeId" FROM customer_price_type cpt
+                  WHERE cpt."customerId"::varchar = $1 LIMIT 1))`,
             [customerId],
         );
         return rows?.[0]?.code ?? null;

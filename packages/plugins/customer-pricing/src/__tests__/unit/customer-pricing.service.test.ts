@@ -16,7 +16,9 @@ const mockCustomerPriceTypeRepo = {
     create: vi.fn(),
     save: vi.fn(),
 };
+const mockRawQuery = vi.fn();
 const mockConnection = {
+    rawConnection: { query: mockRawQuery },
     getRepository: vi.fn((ctx, entity) => {
         const name = entity?.name ?? '';
         return name === 'PriceType' ? mockPriceTypeRepo : mockCustomerPriceTypeRepo;
@@ -39,6 +41,41 @@ describe('CustomerPricingService', () => {
     });
 
     describe('getCustomerPriceType', () => {
+        beforeEach(() => {
+            mockRawQuery.mockResolvedValue([{ id: null }]);
+        });
+
+        it('prefers the main contract price type over assignment and default', async () => {
+            mockRawQuery.mockResolvedValue([{ id: '2' }]);
+            mockPriceTypeRepo.findOne.mockResolvedValue(wholesalePriceType);
+            mockCustomerPriceTypeRepo.findOne.mockResolvedValue({ priceType: retailPriceType });
+
+            const result = await service.getCustomerPriceType(mockCtx, '1');
+
+            expect(result).toEqual(wholesalePriceType);
+            expect(mockPriceTypeRepo.findOne).toHaveBeenCalledWith({ where: { id: '2' } });
+        });
+
+        it('falls back to the default when no main contract price type resolves', async () => {
+            mockPriceTypeRepo.findOne.mockResolvedValue(retailPriceType);
+            mockCustomerPriceTypeRepo.findOne.mockResolvedValue(null);
+
+            const result = await service.getCustomerPriceType(mockCtx, '1');
+
+            expect(result).toEqual(retailPriceType);
+            expect(mockPriceTypeRepo.findOne).toHaveBeenCalledWith({ where: { code: 'RETAIL' } });
+        });
+
+        it('looks up the main contract only for the requested customer', async () => {
+            mockPriceTypeRepo.findOne.mockResolvedValue(null);
+            mockCustomerPriceTypeRepo.findOne.mockResolvedValue(null);
+
+            await service.getCustomerPriceType(mockCtx, '7');
+            await service.getCustomerPriceType(mockCtx, '8');
+
+            expect(mockRawQuery.mock.calls.map(c => c[1])).toEqual([['7'], ['8']]);
+        });
+
         it('returns stored price type when assignment exists', async () => {
             mockCustomerPriceTypeRepo.findOne.mockResolvedValue({
                 customerId: '1',

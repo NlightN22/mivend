@@ -10,6 +10,7 @@
         { "path": "../access-control" },
         { "path": "../approval-workflow" },
         { "path": "../counterparty" },
+        { "path": "../customer-pricing" },
         { "path": "../../shared" }
     ]
 }

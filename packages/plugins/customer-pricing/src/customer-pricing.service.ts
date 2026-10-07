@@ -11,6 +11,7 @@ import {
 import { CUSTOMER_PRICING_PLUGIN_OPTIONS, loggerCtx } from './constants';
 import { CustomerPriceType } from './entities/customer-price-type.entity';
 import { PriceType } from './entities/price-type.entity';
+import { mainContractPriceTypeIdSql } from './main-contract-price-type.sql';
 import { CustomerPricingPluginOptions } from './types';
 
 @Injectable()
@@ -45,6 +46,11 @@ export class CustomerPricingService {
     }
 
     async getCustomerPriceType(ctx: RequestContext, customerId: ID): Promise<PriceType | null> {
+        const fromMainContract = await this.findMainContractPriceType(ctx, customerId);
+        if (fromMainContract) {
+            return fromMainContract;
+        }
+
         const record = await this.connection
             .getRepository(ctx, CustomerPriceType)
             .findOne({ where: { customerId } });
@@ -60,6 +66,23 @@ export class CustomerPricingService {
         }
 
         return null;
+    }
+
+    private async findMainContractPriceType(
+        ctx: RequestContext,
+        customerId: ID,
+    ): Promise<PriceType | null> {
+        const rows: Array<{ id: string }> = await this.connection.rawConnection.query(
+            `SELECT ${mainContractPriceTypeIdSql('$1')} AS id`,
+            [String(customerId)],
+        );
+        const priceTypeId = rows?.[0]?.id;
+        if (priceTypeId === null || priceTypeId === undefined) {
+            return null;
+        }
+        return this.connection
+            .getRepository(ctx, PriceType)
+            .findOne({ where: { id: priceTypeId } });
     }
 
     async setCustomerPriceType(

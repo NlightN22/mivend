@@ -56,12 +56,13 @@ no mainContractId / contract or price type not found  → no CustomerPriceType r
                                                         → branch-default fallback
 ```
 
-**Current state (not implemented yet):** the contract event carries `priceTypeId` but no "main"
-flag, and the counterparty event does not carry the main-contract reference. So no customer has a
-`CustomerPriceType` row on staging and everyone is priced at the branch default (retail). The
-`priceType` string on `Counterparty` (`retail` on every row) is a seed placeholder, not ERP data.
-Blocked on search-platform#172 (`main_contract_id` on `CounterpartyChanged`); a counterparty
-resync is needed after it ships.
+**Current state (implemented, #188):** `Counterparty.mainContractId` is stored and resolved **at
+read time** by SQL (`mainContractPriceTypeIdSql` in plugin-customer-pricing, used by
+`CustomerPricingService.getCustomerPriceType` and `PriceEntryService`), because counterparty and
+contract events arrive in undefined order and a read-time join needs no recompute job. Precedence:
+main-contract price type, then an existing `CustomerPriceType` row (manual/legacy assignment), then
+the branch default. A missing contract, a contract without a matching `PriceType`, or no
+`mainContractId` simply falls through. Nothing is written to `CustomerPriceType` by this path.
 
 **Legacy flow (description below is what the old code did, kept for context; the ERP counterparty
 stream does not carry `priceType`, so it never fires against real data):**

@@ -145,6 +145,27 @@ describe('PriceEntryService', () => {
         });
     });
 
+    describe('getPriceTypeCodeForCustomer', () => {
+        it('resolves the main contract price type first, scoped to the given customer', async () => {
+            mockRawQuery.mockResolvedValue([{ code: 'WHOLESALE' }]);
+
+            const result = await service.getPriceTypeCodeForCustomer(mockCtx, 'c1');
+
+            expect(result).toBe('WHOLESALE');
+            const [sql, params] = mockRawQuery.mock.calls[0];
+            expect(params).toEqual(['c1']);
+            expect(sql.indexOf('"mainContractId"')).toBeLessThan(
+                sql.indexOf('customer_price_type'),
+            );
+        });
+
+        it('returns null when neither main contract nor assignment resolves', async () => {
+            mockRawQuery.mockResolvedValue([]);
+
+            expect(await service.getPriceTypeCodeForCustomer(mockCtx, 'c2')).toBeNull();
+        });
+    });
+
     describe('getPriceTypeCodeForUser', () => {
         it('returns null when activeUserId is absent', async () => {
             const ctx = { activeUserId: undefined } as unknown as RequestContext;
