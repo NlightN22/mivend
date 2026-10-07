@@ -50,6 +50,7 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
             mockCustomerService,
             mockAccessScopeService,
             mockVersioningService,
+            {} as never,
         );
     });
 

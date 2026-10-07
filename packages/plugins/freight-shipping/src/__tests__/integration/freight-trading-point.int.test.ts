@@ -146,6 +146,7 @@ beforeAll(async () => {
         {} as never,
         {} as never,
         {} as never,
+        {} as never,
     );
     providers.set(CounterpartyService, counterpartyService);
     providers.set(TradingPointService, tradingPointService);

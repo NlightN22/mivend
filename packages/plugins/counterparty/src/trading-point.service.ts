@@ -8,7 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { randomUUID } from 'crypto';
-import { AccessScopeService } from '@mivend/plugin-access-control';
+import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
 import { ChangedFieldDiff, VersioningService } from '@mivend/plugin-versioning';
 
 import { ContactPerson } from './entities/contact-person.entity';
@@ -75,6 +75,7 @@ export class TradingPointService {
         private customerService: CustomerService,
         private accessScopeService: AccessScopeService,
         private versioningService: VersioningService,
+        private branchSettingsService: BranchSettingsService,
     ) {}
 
     // Shared by updateDetails/setActive — resolves the owning Counterparty and asserts the
@@ -398,6 +399,21 @@ export class TradingPointService {
         const tpId: string | undefined = rows[0]?.[0]?.tpid;
         if (!tpId) return null;
         return this.findById(ctx, tpId);
+    }
+
+    // Read-time fallback (#198): point override, else counterparty branch, else the global default.
+    async resolveServicingBranchId(
+        ctx: RequestContext,
+        tradingPoint: Pick<TradingPoint, 'servicingBranchId' | 'counterpartyId'>,
+    ): Promise<string | null> {
+        if (tradingPoint.servicingBranchId) return tradingPoint.servicingBranchId;
+        const rows = await this.connection.rawConnection.query(
+            `SELECT "branchId" FROM counterparty WHERE id::text = $1 LIMIT 1`,
+            [String(tradingPoint.counterpartyId)],
+        );
+        return (
+            rows[0]?.branchId ?? (await this.branchSettingsService.getGlobalDefaultBranchId(ctx))
+        );
     }
 
     async setPreferred(ctx: RequestContext, customerId: ID, tradingPointId: ID): Promise<void> {

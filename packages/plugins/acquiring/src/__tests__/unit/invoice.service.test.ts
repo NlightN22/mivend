@@ -17,7 +17,12 @@ const mockConnection = {
 
 const mockEntityHydrator = { hydrate: vi.fn() };
 const mockCounterpartyService = { getForCustomer: vi.fn() };
-const mockTradingPointService = { getPreferredForCustomer: vi.fn().mockResolvedValue(null) };
+const mockTradingPointService = {
+    getPreferredForCustomer: vi.fn().mockResolvedValue(null),
+    resolveServicingBranchId: vi.fn(
+        async (_ctx: unknown, tp: { servicingBranchId: string | null }) => tp.servicingBranchId,
+    ),
+};
 const mockTranslator = { translate: vi.fn(entity => entity) };
 
 const mockCtx = {} as unknown as RequestContext;

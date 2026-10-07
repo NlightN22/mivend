@@ -35,7 +35,13 @@ describe('MultiplicityOrderInterceptor', () => {
                     return { resolveEffective };
                 }
                 if (typeof token === 'function' && token.name === 'TradingPointService') {
-                    return { getPreferredForCustomer };
+                    return {
+                        getPreferredForCustomer,
+                        resolveServicingBranchId: async (
+                            _c: unknown,
+                            tp: { servicingBranchId: string | null },
+                        ) => tp.servicingBranchId,
+                    };
                 }
                 return {
                     hydrate: vi.fn(async () => undefined),

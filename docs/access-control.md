@@ -206,6 +206,8 @@ interchangeable id spaces:
   `Counterparty.branchId` currently has **no automatic assignment at all** (deliberately left
   unset — see issue #65, "Counterparty→Branch auto-assignment worker"); a future writer of that
   field must follow the same resolve-to-`Branch.id` rule.
+  An order's/invoice's branch is resolved at read time (`TradingPointService.resolveServicingBranchId`):
+  the point's `servicingBranchId`, else the counterparty's `branchId`, else the global default branch (#198).
 - **Unrelated naming collision, don't confuse the two**: `docs/architecture.md` also uses the
   word "Branch" for a completely different concept — a **deployed server instance**
   (`INSTANCE_TYPE=branch`, the "Central Hub / Branch Instance" topology). That has nothing to do

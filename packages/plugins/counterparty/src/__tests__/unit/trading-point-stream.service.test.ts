@@ -41,6 +41,7 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
             mockCustomerService,
             mockAccessScopeService,
             mockVersioningService,
+            {} as never,
         );
     });
 

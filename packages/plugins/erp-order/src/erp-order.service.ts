@@ -39,7 +39,8 @@ export class ErpOrderService {
             );
             if (tradingPoint) {
                 order.customFields.tradingPointId = String(tradingPoint.id);
-                order.customFields.branchId = tradingPoint.servicingBranchId;
+                order.customFields.branchId =
+                    await this.tradingPointService.resolveServicingBranchId(ctx, tradingPoint);
             }
         }
 

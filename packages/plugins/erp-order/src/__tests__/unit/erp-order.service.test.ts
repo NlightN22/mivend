@@ -30,7 +30,10 @@ const mockConnection = {
 };
 
 const mockEventBus = { publish: vi.fn() };
-const mockTradingPointService = { getPreferredForCustomer: vi.fn() };
+const mockTradingPointService = {
+    getPreferredForCustomer: vi.fn(),
+    resolveServicingBranchId: vi.fn(),
+};
 const mockAdministratorService = { findOneByUserId: vi.fn() };
 
 const mockCtx = { activeUserId: 'user-1' } as unknown as RequestContext;
@@ -79,6 +82,26 @@ describe('ErpOrderService', () => {
                 (order as { customFields: { placedByAdministratorId?: string } }).customFields
                     .placedByAdministratorId,
             ).toBeUndefined();
+        });
+    });
+
+    describe('onOrderPlaced branch resolution', () => {
+        it('denormalizes the resolved branch (point -> counterparty -> default) onto the order', async () => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+            const point = { id: 7, servicingBranchId: null, counterpartyId: '5' };
+            mockTradingPointService.getPreferredForCustomer.mockResolvedValue(point);
+            mockTradingPointService.resolveServicingBranchId.mockResolvedValue('branch-b');
+            const order = { customFields: {}, customerId: 'cust-1' } as never;
+
+            await service.onOrderPlaced(mockCtx, order);
+
+            expect(mockTradingPointService.resolveServicingBranchId).toHaveBeenCalledWith(
+                mockCtx,
+                point,
+            );
+            expect((order as { customFields: { branchId?: string } }).customFields.branchId).toBe(
+                'branch-b',
+            );
         });
     });
 

@@ -92,7 +92,9 @@ export class InvoiceService {
             ctx,
             order.customer.id,
         );
-        const branchId = tradingPoint?.servicingBranchId ?? null;
+        const branchId = tradingPoint
+            ? await this.tradingPointService.resolveServicingBranchId(ctx, tradingPoint)
+            : null;
 
         const split = await this.computeSplit(ctx, order);
         const invoices = split.map(({ organizationId, amount }) =>

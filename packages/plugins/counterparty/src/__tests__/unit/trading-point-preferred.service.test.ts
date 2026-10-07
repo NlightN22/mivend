@@ -19,6 +19,7 @@ describe('TradingPointService.getPreferredForCustomer', () => {
             {} as CustomerService,
             {} as never,
             {} as never,
+            {} as never,
         );
     });
 

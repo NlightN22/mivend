@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { toast } from '@mivend/ui-kit';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
 import { useCurrency } from '../../composables/useCurrency';
@@ -66,6 +67,8 @@ async function handlePrimary(): Promise<void> {
                 ? await cartStore.completeDeferredPayment()
                 : await cartStore.completeOfflinePayment();
         if (code) router.push({ path: '/order-created', query: { code } });
+    } catch (err) {
+        toast(err instanceof Error ? err.message : 'Could not place order', 'error');
     } finally {
         submitting.value = false;
     }

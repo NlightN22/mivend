@@ -51,6 +51,7 @@ describe('TradingPointService — customer methods', () => {
             mockCustomerService,
             mockAccessScopeService,
             mockVersioningService,
+            {} as never,
         );
     });
 

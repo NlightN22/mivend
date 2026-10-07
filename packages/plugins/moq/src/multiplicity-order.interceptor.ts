@@ -80,9 +80,10 @@ export class MultiplicityOrderInterceptor implements OrderInterceptor {
                 ctx,
                 order.customerId,
             );
-            if (tradingPoint?.servicingBranchId) {
-                return tradingPoint.servicingBranchId;
-            }
+            const branchId = tradingPoint
+                ? await this.tradingPointService.resolveServicingBranchId(ctx, tradingPoint)
+                : null;
+            if (branchId) return branchId;
         }
         return order.customFields?.branchId ?? null;
     }
