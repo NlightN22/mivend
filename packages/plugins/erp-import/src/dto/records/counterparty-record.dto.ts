@@ -38,6 +38,13 @@ export class CounterpartyRecordDto {
     @ApiPropertyOptional({
         type: String,
         nullable: true,
+        description: 'erpId of the contract whose debtDaysLimit drives paymentDelayDays.',
+    })
+    mainContractErpId?: string | null;
+
+    @ApiPropertyOptional({
+        type: String,
+        nullable: true,
         description: 'erpId of the department this counterparty belongs to (see Department).',
     })
     departmentId?: string | null;

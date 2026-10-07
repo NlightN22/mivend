@@ -23,6 +23,7 @@ export interface CounterpartyUpsertPayload {
     paymentDelayDays: number;
     priceType: string;
     isActive: boolean;
+    mainContractId?: string | null;
     // departmentId is the ERP's own id (Department.erpId) — pure ERP org-structure data, display/
     // informational, mirrored as-is (see docs/access-control.md's "Branch vs Department" note).
     //

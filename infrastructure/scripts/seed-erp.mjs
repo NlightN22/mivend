@@ -457,7 +457,8 @@ async function main() {
     // v7 (#59): category icons (iconFile) in the categories fixture.
     // v8 (#59): level-3 oil categories now hold products.
     // v9: warehouse record binding the default stock location to branch-central.
-    const run = 'v10';
+    // v11: contract records — the scheduled credit-limit job derives limit/days from contracts.
+    const run = 'v11';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
@@ -1085,6 +1086,7 @@ async function main() {
             creditBalance: 0,
             paymentDelayDays: 14,
             priceType: 'WHOLESALE',
+            mainContractErpId: 'ctr-credit-limited',
             isActive: true,
             departmentId: 'dept-sales',
             branchId: 'branch-central',
@@ -1098,6 +1100,7 @@ async function main() {
             creditBalance: 0,
             paymentDelayDays: 0,
             priceType: 'WHOLESALE',
+            mainContractErpId: 'ctr-prepay',
             isActive: true,
             departmentId: 'dept-sales',
             branchId: 'branch-central',
@@ -1114,6 +1117,37 @@ async function main() {
     );
     if (counterpartyResult.errors?.length > 0) {
         for (const e of counterpartyResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    const contracts = [
+        {
+            erpId: 'ctr-credit-limited',
+            counterpartyErpId: 'cnt-credit-limited',
+            name: 'Credit limited main contract',
+            priceTypeId: 'WHOLESALE',
+            creditLimit: '100000',
+            debtDaysLimit: 14,
+            isActive: true,
+        },
+        {
+            erpId: 'ctr-prepay',
+            counterpartyErpId: 'cnt-prepay',
+            name: 'Prepay main contract',
+            priceTypeId: 'WHOLESALE',
+            debtDaysLimit: 0,
+            isActive: true,
+        },
+    ];
+    console.log(`Sending ${contracts.length} contracts...`);
+    const contractResult = await postBatch(
+        `seed-contracts-${run}`,
+        contracts.map(data => ({ type: 'contract', data })),
+    );
+    console.log(
+        `  → status=${contractResult.status} processed=${contractResult.processed} failed=${contractResult.failed}`,
+    );
+    if (contractResult.errors?.length > 0) {
+        for (const e of contractResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
     const assignments = [

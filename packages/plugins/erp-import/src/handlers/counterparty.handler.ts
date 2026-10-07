@@ -18,6 +18,7 @@ export class CounterpartyHandler {
             paymentDelayDays: record.paymentDelayDays,
             priceType: record.priceType,
             isActive: record.isActive,
+            mainContractId: record.mainContractErpId ?? null,
             departmentId: record.departmentId ?? null,
             // branchId is deliberately never set here — no automatic ERP-driven or
             // rule-based branch assignment for counterparties exists yet (tracked in issue #65,

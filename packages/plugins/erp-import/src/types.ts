@@ -66,6 +66,8 @@ export interface CounterpartyRecord {
     paymentDelayDays: number;
     priceType: string;
     isActive: boolean;
+    // erpId of the contract that drives paymentDelayDays (Counterparty.mainContractId).
+    mainContractErpId?: string | null;
     // departmentId: erpId of the ERP Department this counterparty belongs to — pure ERP org data,
     // mirrored as-is (informational; see docs/access-control.md's "Branch vs Department" note).
     departmentId?: string | null;
@@ -78,6 +80,18 @@ export interface CounterpartyRecord {
     // access control or business rules (the ERP's own grouping concept is inconsistent). See
     // Counterparty.erpGroupLabel's doc comment.
     erpGroupLabel?: string | null;
+}
+
+export interface ContractRecord {
+    erpId: string;
+    counterpartyErpId: string;
+    name?: string;
+    organizationId?: string;
+    priceTypeId: string;
+    creditLimit?: string | null;
+    debtDaysLimit?: number | null;
+    isActive: boolean;
+    controlledIndividually?: boolean;
 }
 
 export interface CustomerCounterpartyRecord {
@@ -136,7 +150,8 @@ export type ImportRecord =
     | { type: 'position'; data: PositionRecordInput }
     | { type: 'branch'; data: BranchRecordInput }
     | { type: 'employee'; data: EmployeeRecordInput }
-    | { type: 'warehouse'; data: WarehouseRecord };
+    | { type: 'warehouse'; data: WarehouseRecord }
+    | { type: 'contract'; data: ContractRecord };
 
 export interface BatchImportBody {
     exchangeId: string;
