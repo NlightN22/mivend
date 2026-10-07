@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { ID, Order, Payment, RequestContext, TransactionalConnection } from '@vendure/core';
 
-import { DEFERRED_PAYMENT_METHOD_CODE } from './deferred-payment-handler';
+import { DEFERRED_PAYMENT_METHOD_CODE } from './constants';
 import { UNCONFIRMED_ERP_STATUSES } from './open-deferred-exposure.service';
 
 const MAX_SCANNED_ORDERS = 500;

@@ -1,7 +1,7 @@
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { LanguageCode, PaymentMethodEligibilityChecker } from '@vendure/core';
 
-import { DEFERRED_PAYMENT_METHOD_CODE } from './deferred-payment-handler';
+import { DEFERRED_PAYMENT_METHOD_CODE } from './constants';
 
 let counterpartyService: CounterpartyService;
 

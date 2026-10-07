@@ -1,9 +1,8 @@
 import { LanguageCode, PaymentMethodHandler } from '@vendure/core';
 import { CREDIT_LIMIT_EXCEEDED_KEY } from 'shared';
 
+import { DEFERRED_PAYMENT_METHOD_CODE } from './constants';
 import { DeferredCreditAssessmentService } from './deferred-credit-assessment.service';
-
-export const DEFERRED_PAYMENT_METHOD_CODE = 'deferred-payment';
 
 let assessmentService: DeferredCreditAssessmentService;
 

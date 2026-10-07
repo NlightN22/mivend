@@ -10,7 +10,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
-import { DEFERRED_PAYMENT_METHOD_CODE } from './deferred-payment-handler';
+import { DEFERRED_PAYMENT_METHOD_CODE } from './constants';
 import { deferredEligibilityChecker } from './deferred-eligibility-checker';
 import { loggerCtx } from './constants';
 

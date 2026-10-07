@@ -7,7 +7,7 @@ import type {
 } from '@vendure/core';
 
 import { DeferredPaymentBootstrapService } from '../../deferred-payment-bootstrap.service';
-import { DEFERRED_PAYMENT_METHOD_CODE } from '../../deferred-payment-handler';
+import { DEFERRED_PAYMENT_METHOD_CODE } from '../../constants';
 
 function createMockRepo() {
     return {

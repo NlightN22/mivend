@@ -7,8 +7,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
-import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS } from './constants';
-import { DEFERRED_PAYMENT_METHOD_CODE } from './deferred-payment-handler';
+import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS, DEFERRED_PAYMENT_METHOD_CODE } from './constants';
 
 // Deferred orders neither confirmed by ERP nor reflected in its credit balance yet.
 export const UNCONFIRMED_ERP_STATUSES = ['PENDING', 'SENT_TO_ERP', 'RESERVED'];
