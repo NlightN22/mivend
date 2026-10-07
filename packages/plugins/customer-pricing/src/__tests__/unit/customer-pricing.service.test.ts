@@ -56,6 +56,25 @@ describe('CustomerPricingService', () => {
             expect(mockPriceTypeRepo.findOne).toHaveBeenCalledWith({ where: { id: '2' } });
         });
 
+        it('restricts the main contract lookup to active contracts and price types', async () => {
+            mockPriceTypeRepo.findOne.mockResolvedValue(null);
+            mockCustomerPriceTypeRepo.findOne.mockResolvedValue(null);
+
+            await service.getCustomerPriceType(mockCtx, '1');
+
+            const sql = String(mockRawQuery.mock.calls[0][0]);
+            expect(sql).toContain('mco."isActive" = true');
+            expect(sql).toContain('mpt."isActive" = true');
+        });
+
+        it('falls through to the existing assignment when the contract does not resolve', async () => {
+            mockCustomerPriceTypeRepo.findOne.mockResolvedValue({ priceType: wholesalePriceType });
+
+            const result = await service.getCustomerPriceType(mockCtx, '1');
+
+            expect(result).toEqual(wholesalePriceType);
+        });
+
         it('falls back to the default when no main contract price type resolves', async () => {
             mockPriceTypeRepo.findOne.mockResolvedValue(retailPriceType);
             mockCustomerPriceTypeRepo.findOne.mockResolvedValue(null);

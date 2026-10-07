@@ -61,8 +61,11 @@ read time** by SQL (`mainContractPriceTypeIdSql` in plugin-customer-pricing, use
 `CustomerPricingService.getCustomerPriceType` and `PriceEntryService`), because counterparty and
 contract events arrive in undefined order and a read-time join needs no recompute job. Precedence:
 main-contract price type, then an existing `CustomerPriceType` row (manual/legacy assignment), then
-the branch default. A missing contract, a contract without a matching `PriceType`, or no
-`mainContractId` simply falls through. Nothing is written to `CustomerPriceType` by this path.
+the branch default. A missing contract, a contract deactivated in the ERP (`isActive=false`), a
+contract without a matching or with an inactive `PriceType`, or no `mainContractId` simply falls
+through, silently (no logging). There is no manual way to set a customer's price type: the Admin
+API `setCustomerPriceType` mutation was removed; only the legacy `Counterparty.priceType` string
+still creates a `CustomerPriceType` row (fallback step). Nothing is written to `CustomerPriceType` by this path.
 
 **Legacy flow (description below is what the old code did, kept for context; the ERP counterparty
 stream does not carry `priceType`, so it never fires against real data):**

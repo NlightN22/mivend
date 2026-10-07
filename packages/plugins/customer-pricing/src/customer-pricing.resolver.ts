@@ -2,7 +2,6 @@ import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/g
 import { Permission } from '@vendure/common/lib/generated-types';
 import { Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
 
-import { CustomerPriceType } from './entities/customer-price-type.entity';
 import { PriceType } from './entities/price-type.entity';
 import { CustomerPricingService } from './customer-pricing.service';
 
@@ -16,20 +15,6 @@ export class CustomerPricingResolver {
         @Parent() customer: { id: string },
     ): Promise<PriceType | null> {
         return this.customerPricingService.getCustomerPriceType(ctx, customer.id);
-    }
-
-    @Transaction()
-    @Mutation()
-    @Allow(Permission.UpdateCustomer)
-    async setCustomerPriceType(
-        @Ctx() ctx: RequestContext,
-        @Args() args: { customerId: string; priceTypeId: string },
-    ): Promise<CustomerPriceType> {
-        return this.customerPricingService.setCustomerPriceType(
-            ctx,
-            args.customerId,
-            args.priceTypeId,
-        );
     }
 }
 

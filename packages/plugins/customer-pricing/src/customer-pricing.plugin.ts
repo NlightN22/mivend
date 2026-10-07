@@ -26,7 +26,6 @@ const schemaExtension = gql`
 
     extend type Mutation {
         upsertPriceType(code: String!, name: String!): PriceType!
-        setCustomerPriceType(customerId: ID!, priceTypeId: ID!): Customer!
     }
 `;
 

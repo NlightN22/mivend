@@ -9,7 +9,3 @@ enum PriceType {
 extend type Customer {
     priceType: PriceType
 }
-
-extend type Mutation {
-    setCustomerPriceType(customerId: ID!, priceType: PriceType!): Customer!
-}
