@@ -5,6 +5,7 @@ import type { Injector, Order, RequestContext } from '@vendure/core';
 import { deferredPaymentHandler } from '../../deferred-payment-handler';
 import { deferredEligibilityChecker } from '../../deferred-eligibility-checker';
 import { OpenDeferredExposureService } from '../../open-deferred-exposure.service';
+import { DeferredCreditAssessmentService } from '../../deferred-credit-assessment.service';
 
 const getForCustomer = vi.fn();
 const sumUnconfirmedRubles = vi.fn();
@@ -13,6 +14,14 @@ const providers = new Map<unknown, unknown>([
     [CounterpartyService, { getForCustomer }],
     [CreditLimitCheckService, { decide }],
     [OpenDeferredExposureService, { sumUnconfirmedRubles }],
+    [
+        DeferredCreditAssessmentService,
+        new DeferredCreditAssessmentService(
+            { getForCustomer } as never,
+            { decide } as never,
+            { sumUnconfirmedRubles } as never,
+        ),
+    ],
 ]);
 const injector = { get: (token: unknown) => providers.get(token) } as unknown as Injector;
 const ctx = {} as RequestContext;

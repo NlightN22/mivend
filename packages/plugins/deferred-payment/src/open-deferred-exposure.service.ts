@@ -11,7 +11,7 @@ import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS } from './constants';
 import { DEFERRED_PAYMENT_METHOD_CODE } from './deferred-payment-handler';
 
 // Deferred orders neither confirmed by ERP nor reflected in its credit balance yet.
-const UNCONFIRMED_ERP_STATUSES = ['PENDING', 'SENT_TO_ERP', 'RESERVED'];
+export const UNCONFIRMED_ERP_STATUSES = ['PENDING', 'SENT_TO_ERP', 'RESERVED'];
 
 @Injectable()
 export class OpenDeferredExposureService {

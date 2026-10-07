@@ -8,7 +8,8 @@
     "scripts": {
         "build": "tsc",
         "dev": "tsc --watch",
-        "test:integration": "vitest run --config vitest.integration.config.ts"
+        "test:integration": "vitest run --config vitest.integration.config.ts",
+        "test": "vitest run"
     },
     "peerDependencies": {
         "@vendure/core": "^3.7.3"
@@ -22,6 +23,10 @@
     },
     "dependencies": {
         "@mivend/plugin-counterparty": "workspace:*",
+        "@mivend/plugin-erp-order": "workspace:*",
+        "@nestjs/graphql": "^13.0.0",
+        "graphql": "^16.0.0",
+        "graphql-tag": "^2.12.6",
         "shared": "workspace:*"
     }
 }

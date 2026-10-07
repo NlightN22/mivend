@@ -12,6 +12,7 @@ import {
 import { deferredEligibilityChecker } from '../../deferred-eligibility-checker';
 import { deferredPaymentHandler } from '../../deferred-payment-handler';
 import { OpenDeferredExposureService } from '../../open-deferred-exposure.service';
+import { DeferredCreditAssessmentService } from '../../deferred-credit-assessment.service';
 
 // Real SQL (exposure sum), real CreditLimitCheckService.decide and the real handler/checker run over
 // a schema-faithful replica of the Vendure tables they touch. Only CounterpartyService (another
@@ -35,22 +36,29 @@ const counterpartyService = {
         return rows[0] ?? null;
     },
 };
+const creditLimitCheckService = new CreditLimitCheckService(null as never, null as never);
+const exposureService = new OpenDeferredExposureService(
+    {
+        getRepository: () => ({
+            query: (sql: string, params: unknown[]) => run(sql, params),
+        }),
+    } as never,
+    {
+        getSettings: async () => ({
+            customFields: { deferredOrderMaxAgeDays: maxAgeDays },
+        }),
+    } as never,
+);
 const providers = new Map<unknown, unknown>([
     [CounterpartyService, counterpartyService],
-    [CreditLimitCheckService, new CreditLimitCheckService(null as never, null as never)],
+    [CreditLimitCheckService, creditLimitCheckService],
+    [OpenDeferredExposureService, exposureService],
     [
-        OpenDeferredExposureService,
-        new OpenDeferredExposureService(
-            {
-                getRepository: () => ({
-                    query: (sql: string, params: unknown[]) => run(sql, params),
-                }),
-            } as never,
-            {
-                getSettings: async () => ({
-                    customFields: { deferredOrderMaxAgeDays: maxAgeDays },
-                }),
-            } as never,
+        DeferredCreditAssessmentService,
+        new DeferredCreditAssessmentService(
+            counterpartyService as never,
+            creditLimitCheckService,
+            exposureService,
         ),
     ],
 ]);

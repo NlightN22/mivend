@@ -556,6 +556,18 @@ importers:
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../counterparty
+            '@mivend/plugin-erp-order':
+                specifier: workspace:*
+                version: link:../erp-order
+            '@nestjs/graphql':
+                specifier: ^13.0.0
+                version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
+            graphql:
+                specifier: ^16.0.0
+                version: 16.14.2
+            graphql-tag:
+                specifier: ^2.12.6
+                version: 2.12.7(graphql@16.14.2)
             shared:
                 specifier: workspace:*
                 version: link:../../shared

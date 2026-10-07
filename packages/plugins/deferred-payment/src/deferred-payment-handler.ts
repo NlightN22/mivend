@@ -1,14 +1,11 @@
-import { CounterpartyService, CreditLimitCheckService } from '@mivend/plugin-counterparty';
 import { LanguageCode, PaymentMethodHandler } from '@vendure/core';
 import { CREDIT_LIMIT_EXCEEDED_KEY } from 'shared';
 
-import { OpenDeferredExposureService } from './open-deferred-exposure.service';
+import { DeferredCreditAssessmentService } from './deferred-credit-assessment.service';
 
 export const DEFERRED_PAYMENT_METHOD_CODE = 'deferred-payment';
 
-let counterpartyService: CounterpartyService;
-let creditLimitCheckService: CreditLimitCheckService;
-let exposureService: OpenDeferredExposureService;
+let assessmentService: DeferredCreditAssessmentService;
 
 // An overrun never blocks the order: it is placed and flagged in public payment metadata so the
 // storefront can warn the customer; approval/confirmation happens on the ERP/manager side.
@@ -19,16 +16,11 @@ export const deferredPaymentHandler = new PaymentMethodHandler({
     ],
     args: {},
     init(injector) {
-        counterpartyService = injector.get(CounterpartyService);
-        creditLimitCheckService = injector.get(CreditLimitCheckService);
-        exposureService = injector.get(OpenDeferredExposureService);
+        assessmentService = injector.get(DeferredCreditAssessmentService);
     },
     createPayment: async (ctx, order) => {
-        const customerId = order.customer?.id ?? order.customerId;
-        const counterparty = customerId
-            ? await counterpartyService.getForCustomer(ctx, customerId)
-            : null;
-        if (!counterparty) {
+        const assessment = await assessmentService.assess(ctx, order);
+        if (!assessment) {
             return {
                 amount: order.totalWithTax,
                 state: 'Declined' as const,
@@ -36,16 +28,10 @@ export const deferredPaymentHandler = new PaymentMethodHandler({
                 metadata: {},
             };
         }
-        const open = await exposureService.sumUnconfirmedRubles(ctx, counterparty.id, order.id);
-        const decision = creditLimitCheckService.decide(
-            counterparty,
-            null,
-            open + order.totalWithTax / 100,
-        );
         return {
             amount: order.totalWithTax,
             state: 'Authorized' as const,
-            metadata: { public: { [CREDIT_LIMIT_EXCEEDED_KEY]: !decision.withinLimit } },
+            metadata: { public: { [CREDIT_LIMIT_EXCEEDED_KEY]: assessment.exceeded } },
         };
     },
     settlePayment: () => ({ success: true }),
