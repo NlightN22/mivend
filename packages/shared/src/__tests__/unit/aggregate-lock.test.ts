@@ -7,7 +7,7 @@ const ctx = { id: 'outer' } as unknown as RequestContext;
 const txCtx = { id: 'tx' } as unknown as RequestContext;
 
 function makeConnection(order: string[] = []) {
-    const query = vi.fn(async () => {
+    const query = vi.fn(async (_sql: string, _params: string[]) => {
         order.push('lock');
     });
     const connection = {
@@ -17,7 +17,7 @@ function makeConnection(order: string[] = []) {
                 return work(txCtx);
             },
         ),
-        getRepository: vi.fn(() => ({ query })),
+        getRepository: vi.fn((_ctx: RequestContext, _entity: string) => ({ query })),
     };
     return { connection, query, order };
 }
@@ -47,7 +47,7 @@ describe('withAggregateLock', () => {
         await withAggregateLock(connection as never, ctx, 'a:1', async () => undefined);
         await withAggregateLock(connection as never, ctx, 'b:1', async () => undefined);
         await withAggregateLock(connection as never, ctx, 7, async () => undefined);
-        const keys = query.mock.calls.map(c => (c as unknown as [string, string[]])[1][0]);
+        const keys = query.mock.calls.map(c => c[1][0]);
         expect(keys).toEqual(['a:1', 'a:1', 'b:1', '7']);
     });
 
