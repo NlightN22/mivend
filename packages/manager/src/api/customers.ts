@@ -5,6 +5,7 @@ import {
     CounterpartyShortNameDocument,
     CreditByCounterpartyIdDocument,
     CreditForCounterpartyDocument,
+    CreditLimitExceededCounterpartyIdsDocument,
     CustomerByIdDocument,
     CustomerDiscountGrantsPageDocument,
     CustomerDocumentsPageDocument,
@@ -98,6 +99,15 @@ export async function fetchHighUsageCustomers(limit: number): Promise<HighUsageC
             creditLimit: c.creditLimit ?? 0,
             creditBalance: c.creditBalance ?? 0,
         }));
+    } catch {
+        return [];
+    }
+}
+
+export async function fetchCreditLimitExceededCounterpartyIds(): Promise<string[]> {
+    try {
+        const result = await adminApi(CreditLimitExceededCounterpartyIdsDocument);
+        return result.creditLimitExceededCounterpartyIds;
     } catch {
         return [];
     }

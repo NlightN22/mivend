@@ -74,6 +74,7 @@ interface OrderRow {
     manager: string;
     state: string;
     stateVariant: StatusBadgeVariant;
+    creditExceeded: boolean;
     total: string;
     date: string;
     branch: string;
@@ -94,6 +95,7 @@ const rows = computed<OrderRow[]>(() =>
             manager: managerName(counterparty?.assignedManagerId),
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
             stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
+            creditExceeded: order.creditLimitExceeded,
             total: new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: order.currencyCode,
@@ -396,6 +398,9 @@ function resetLayout(): void {
                     <MvStatusBadge :variant="(data as OrderRow).stateVariant">{{
                         (data as OrderRow).state
                     }}</MvStatusBadge>
+                    <MvStatusBadge v-if="(data as OrderRow).creditExceeded" variant="warning"
+                        >Credit limit exceeded</MvStatusBadge
+                    >
                 </template>
                 <template v-if="col.field === 'state'" #filter>
                     <Select

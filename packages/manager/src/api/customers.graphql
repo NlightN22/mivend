@@ -46,6 +46,10 @@ query CustomersSummary {
     }
 }
 
+query CreditLimitExceededCounterpartyIds {
+    creditLimitExceededCounterpartyIds
+}
+
 query HighUsageCustomers($limit: Int!) {
     highUsageCounterparties(limit: $limit) {
         ...CustomerListItemFields

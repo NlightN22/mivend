@@ -119,6 +119,9 @@ watch(() => route.params.code, load);
             <h1 class="order-detail__title">
                 {{ order.code }}
                 <MvStatusBadge variant="info">{{ order.state }}</MvStatusBadge>
+                <MvStatusBadge v-if="order.creditLimitExceeded" variant="warning"
+                    >Credit limit exceeded</MvStatusBadge
+                >
             </h1>
             <p class="order-detail__subtitle">
                 Created

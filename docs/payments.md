@@ -670,13 +670,21 @@ through is decided downstream (ERP, later a manager-portal approval workflow, se
 - The result travels as the public payment metadata flag `creditLimitExceeded` (key
   `CREDIT_LIMIT_EXCEEDED_KEY` in `packages/shared`); the storefront redirects to `/order-created` with
   `limitExceeded=1` and shows the warning there.
+- Pre-placement warning: Shop API `deferredCreditPreview` (active order of the logged-in customer)
+  returns `{ exceeded, availableCredit, orderAmount }` from `DeferredCreditAssessmentService`, the same
+  service the payment handler uses, so the two cannot disagree. Checkout shows the numbers and a required
+  acknowledgement checkbox while deferred is selected and `exceeded` is true (`canPlaceOrder` in the
+  checkout store); another payment method drops the requirement. It never blocks the order itself.
+- Manager portal: Admin API `Order.creditLimitExceeded` (read from the payment metadata flag) drives a
+  badge on the order detail page and in the orders list status column; `creditLimitExceededCounterpartyIds`
+  (scoped through `OrderVisibilityService`, unconfirmed non-cancelled orders, at most 500 scanned) feeds the
+  customers page "Needs attention" block.
 - Cancelled orders (Vendure state `Cancelled`) never count. Interim cap: an open deferred order older
   than `GlobalSettings.deferredOrderMaxAgeDays` (default 7, editable in settings) since placement stops
   counting. Real TTL cancellation and ERP notification are separate work, not built here.
 - Per-contract limits (`controlledIndividually`) are not evaluated here: the order carries no contract.
 - Known limitations: concurrent checkouts of one counterparty are not serialized (the warning may be
-  missed in a race, nothing is blocked either way); related-orders links and overrun surfacing in the
-  orders list are not built; mandatory invoice requisites are deferred.
+  missed in a race, nothing is blocked either way); related-orders links are not built; mandatory invoice requisites are deferred.
 
 ### General credit limit job
 

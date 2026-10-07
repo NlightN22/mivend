@@ -18,6 +18,8 @@ import {
     fetchCustomersPage,
     fetchCustomersSummary,
     fetchHighUsageCustomers,
+    fetchCounterpartyNames,
+    fetchCreditLimitExceededCounterpartyIds,
     fetchCreditByCounterpartyId,
     fetchActiveDiscountCountsByCustomer,
     fetchLastOrderDatesByCounterpartyId,
@@ -63,6 +65,7 @@ const managers = ref<ManagerOption[]>([]);
 const expiringGrantsByCustomerId = ref<Map<string, string>>(new Map());
 const summary = ref<CustomersSummary | null>(null);
 const highUsageCustomers = ref<HighUsageCustomer[]>([]);
+const creditExceededCustomers = ref<Map<string, string>>(new Map());
 const loading = ref(true);
 
 // Same window used by the dashboard's discount banner (docs/ai/manager-portal-concept.md §8.2 —
@@ -173,7 +176,16 @@ const attentionItems = computed<AttentionEntry[]>(() => {
             tag: 'Discounts',
             variant: 'warning',
         }));
-    return [...highUsage, ...expiring];
+    const exceeded: AttentionEntry[] = [...creditExceededCustomers.value.entries()].map(
+        ([customerId, title]) => ({
+            customerId,
+            title,
+            meta: 'Open order exceeds the credit limit and needs confirmation.',
+            tag: 'Credit',
+            variant: 'danger',
+        }),
+    );
+    return [...exceeded, ...highUsage, ...expiring];
 });
 
 function resetFilters(): void {
@@ -255,6 +267,7 @@ onMounted(async () => {
         expiringGrants,
         summaryResult,
         highUsage,
+        exceededIds,
     ] = await Promise.all([
         fetchLastOrderDatesByCounterpartyId(),
         fetchBranchOptions(),
@@ -262,12 +275,16 @@ onMounted(async () => {
         fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
         fetchCustomersSummary(),
         fetchHighUsageCustomers(ATTENTION_TOP_N),
+        fetchCreditLimitExceededCounterpartyIds(),
     ]);
     lastOrderDates.value = lastOrderMap;
     branches.value = branchOptionsResult;
     managers.value = managerOptionsResult;
     summary.value = summaryResult;
     highUsageCustomers.value = highUsage;
+    creditExceededCustomers.value = await fetchCounterpartyNames(
+        exceededIds.slice(0, ATTENTION_TOP_N),
+    );
     const grantsMap = new Map<string, string>();
     for (const grant of expiringGrants) {
         for (const cp of grant.counterparties) {

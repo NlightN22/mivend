@@ -5165,6 +5165,7 @@ export type OpenReservationReconciliationIssueListOptions = {
 };
 
 export type Order = Node & {
+    creditLimitExceeded: Scalars['Boolean']['output'];
     /** An order is active as long as the payment process has not been completed */
     active: Scalars['Boolean']['output'];
     aggregateOrder: Maybe<Order>;
@@ -6659,6 +6660,7 @@ export type QuantityTooGreatError = ErrorResult & {
 };
 
 export type Query = {
+    creditLimitExceededCounterpartyIds: Array<Scalars['ID']['output']>;
     activeAdministrator: Maybe<Administrator>;
     activeChannel: Channel;
     administrator: Maybe<Administrator>;
@@ -9578,6 +9580,12 @@ export type HighUsageCustomersQueryVariables = Exact<{
     limit: Scalars['Int']['input'];
 }>;
 
+export type CreditLimitExceededCounterpartyIdsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type CreditLimitExceededCounterpartyIdsQuery = {
+    creditLimitExceededCounterpartyIds: Array<string>;
+};
+
 export type HighUsageCustomersQuery = {
     highUsageCounterparties: Array<{
         creditLimit: number | null;
@@ -10485,6 +10493,7 @@ export type OrderDetailQuery = {
             state: string;
             orderPlacedAt: any | null;
             createdAt: any;
+            creditLimitExceeded: boolean;
             currencyCode: CurrencyCode;
             subTotalWithTax: any;
             shippingWithTax: any;
@@ -10565,6 +10574,7 @@ export type OrderListItemFieldsFragment = {
     currencyCode: CurrencyCode;
     orderPlacedAt: any | null;
     createdAt: any;
+    creditLimitExceeded: boolean;
     customFields: { reservationState: string | null } | null;
     customer: {
         firstName: string;
@@ -10596,6 +10606,7 @@ export type OrdersPageQuery = {
             currencyCode: CurrencyCode;
             orderPlacedAt: any | null;
             createdAt: any;
+            creditLimitExceeded: boolean;
             customFields: { reservationState: string | null } | null;
             customer: {
                 firstName: string;
@@ -11422,6 +11433,7 @@ export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
   currencyCode
   orderPlacedAt
   createdAt
+  creditLimitExceeded
   customFields {
     reservationState
   }
@@ -12062,6 +12074,14 @@ export const CustomersSummaryDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<CustomersSummaryQuery, CustomersSummaryQueryVariables>;
+export const CreditLimitExceededCounterpartyIdsDocument = new TypedDocumentString(`
+    query CreditLimitExceededCounterpartyIds {
+  creditLimitExceededCounterpartyIds
+}
+    `) as unknown as TypedDocumentString<
+    CreditLimitExceededCounterpartyIdsQuery,
+    CreditLimitExceededCounterpartyIdsQueryVariables
+>;
 export const HighUsageCustomersDocument = new TypedDocumentString(`
     query HighUsageCustomers($limit: Int!) {
   highUsageCounterparties(limit: $limit) {
@@ -13132,6 +13152,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
       state
       orderPlacedAt
       createdAt
+      creditLimitExceeded
       currencyCode
       subTotalWithTax
       shippingWithTax
@@ -13220,6 +13241,7 @@ export const OrdersPageDocument = new TypedDocumentString(`
   currencyCode
   orderPlacedAt
   createdAt
+  creditLimitExceeded
   customFields {
     reservationState
   }
