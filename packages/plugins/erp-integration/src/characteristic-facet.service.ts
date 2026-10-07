@@ -10,7 +10,7 @@ import {
     RequestContextService,
     TransactionalConnection,
 } from '@vendure/core';
-import { characteristicFacetCode } from 'shared';
+import { characteristicFacetCode, withAggregateLock } from 'shared';
 
 import { ProductCharacteristic } from './entities/product-characteristic.entity';
 import {
@@ -54,27 +54,30 @@ export class CharacteristicFacetService implements OnApplicationBootstrap {
 
     async ensureValues(ctx: RequestContext, rows: ProductCharacteristicRow[]): Promise<void> {
         for (const [key, values] of this.missingByKey(rows)) {
-            await this.connection.withTransaction(ctx, async txCtx => {
-                // FacetService.create suffixes a clashing code (-2), so creation must be serialized.
-                await this.connection
-                    .getRepository(txCtx, ProductCharacteristic)
-                    .query('select pg_advisory_xact_lock(hashtext($1))', [
-                        `characteristic-facet:${key}`,
-                    ]);
-                const facet = await this.ensureFacet(txCtx, key);
-                const existing = await this.facetValueService.findByFacetId(txCtx, facet.id);
-                const known = new Set(existing.map(v => v.code));
-                for (const value of values) {
-                    if (known.has(value)) continue;
-                    await this.facetValueService.create(txCtx, facet as never, {
-                        facetId: String(facet.id),
-                        code: value,
-                        translations: [{ languageCode: LanguageCode.en, name: value }],
+            // FacetService.create suffixes a clashing code (-2), so creation must be serialized.
+            await withAggregateLock(
+                this.connection,
+                ctx,
+                `characteristic-facet:${key}`,
+                async txCtx => {
+                    const facet = await this.ensureFacet(txCtx, key);
+                    const existing = await this.facetValueService.findByFacetId(txCtx, facet.id);
+                    const known = new Set(existing.map(v => v.code));
+                    for (const value of values) {
+                        if (known.has(value)) continue;
+                        await this.facetValueService.create(txCtx, facet as never, {
+                            facetId: String(facet.id),
+                            code: value,
+                            translations: [{ languageCode: LanguageCode.en, name: value }],
+                        });
+                        known.add(value);
+                    }
+                    this.known.set(key, {
+                        values: known,
+                        expiresAt: Date.now() + KNOWN_VALUES_TTL_MS,
                     });
-                    known.add(value);
-                }
-                this.known.set(key, { values: known, expiresAt: Date.now() + KNOWN_VALUES_TTL_MS });
-            });
+                },
+            );
         }
     }
 

@@ -20,6 +20,7 @@ import {
     PermanentPhotoError,
     photoFileName,
 } from './product-photo-download';
+import { withAggregateLock } from 'shared';
 import { loggerCtx, MissingDependencyError } from './types';
 
 export const PRODUCT_PHOTO_SYNC_QUEUE = 'product-photo-sync';
@@ -60,8 +61,11 @@ export class ProductPhotoSyncService implements OnModuleInit {
 
     // Serialized per product (queue concurrency is 1, so the long transaction holds one pool connection).
     async syncProduct(ctx: RequestContext, productExternalId: string): Promise<void> {
-        const transientError = await this.connection.withTransaction(ctx, txCtx =>
-            this.syncLocked(txCtx, productExternalId),
+        const transientError = await withAggregateLock(
+            this.connection,
+            ctx,
+            `product-photo:${productExternalId}`,
+            txCtx => this.syncLocked(txCtx, productExternalId),
         );
         if (transientError) throw transientError;
     }
@@ -71,9 +75,6 @@ export class ProductPhotoSyncService implements OnModuleInit {
         productExternalId: string,
     ): Promise<Error | undefined> {
         const repo = this.connection.getRepository(ctx, ProductPhoto);
-        await repo.query('select pg_advisory_xact_lock(hashtext($1))', [
-            `product-photo:${productExternalId}`,
-        ]);
         const productId = await this.findProductId(productExternalId);
         if (!productId) {
             throw new MissingDependencyError(`product ${productExternalId} not imported yet`);

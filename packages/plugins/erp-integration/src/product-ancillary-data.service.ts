@@ -5,6 +5,7 @@ import { ProductVariantBarcode } from './entities/product-variant-barcode.entity
 import { ProductCharacteristic } from './entities/product-characteristic.entity';
 import { ProductManufacturerCode } from './entities/product-manufacturer-code.entity';
 import type { ProductCharacteristicRow } from './product-characteristics-mapper';
+import { withAggregateLock } from 'shared';
 import type { ManufacturerCodeRow } from './product-ancillary-fields';
 
 // Replace-all persistence for ProductChanged's per-product/per-variant child rows (issue #116).
@@ -33,16 +34,18 @@ export class ProductAncillaryDataService {
         productId: string,
         rows: ProductCharacteristicRow[],
     ): Promise<void> {
-        await this.connection.withTransaction(ctx, async txCtx => {
-            const repo = this.connection.getRepository(txCtx, ProductCharacteristic);
-            // Parallel events of one product would both delete, then both insert (#176).
-            await repo.query('select pg_advisory_xact_lock(hashtext($1))', [
-                `product-characteristics:${productId}`,
-            ]);
-            await repo.delete({ productId });
-            if (rows.length === 0) return;
-            await repo.save(rows.map(row => repo.create({ productId, ...row })));
-        });
+        // Parallel events of one product would both delete, then both insert (#176).
+        await withAggregateLock(
+            this.connection,
+            ctx,
+            `product-characteristics:${productId}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, ProductCharacteristic);
+                await repo.delete({ productId });
+                if (rows.length === 0) return;
+                await repo.save(rows.map(row => repo.create({ productId, ...row })));
+            },
+        );
     }
 
     async replaceManufacturerCodes(
@@ -50,14 +53,16 @@ export class ProductAncillaryDataService {
         productId: string,
         rows: ManufacturerCodeRow[],
     ): Promise<void> {
-        await this.connection.withTransaction(ctx, async txCtx => {
-            const repo = this.connection.getRepository(txCtx, ProductManufacturerCode);
-            await repo.query('select pg_advisory_xact_lock(hashtext($1))', [
-                `product-manufacturer-codes:${productId}`,
-            ]);
-            await repo.delete({ productId });
-            if (rows.length === 0) return;
-            await repo.save(rows.map(row => repo.create({ productId, ...row })));
-        });
+        await withAggregateLock(
+            this.connection,
+            ctx,
+            `product-manufacturer-codes:${productId}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, ProductManufacturerCode);
+                await repo.delete({ productId });
+                if (rows.length === 0) return;
+                await repo.save(rows.map(row => repo.create({ productId, ...row })));
+            },
+        );
     }
 }
