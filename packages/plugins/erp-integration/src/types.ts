@@ -302,7 +302,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'retro-bonus-rule': true,
     'granted-retro-bonus': true,
 } satisfies Record<InboundStream, true>;
-const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
+export const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,
 ) as InboundStream[];
 

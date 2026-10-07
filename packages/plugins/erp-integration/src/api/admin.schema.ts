@@ -95,6 +95,26 @@ export const adminApiExtensions: DocumentNode = gql`
         failed: Int!
     }
 
+    type IntegrationStreamHealth {
+        stream: String!
+        topic: String
+        inContract: Boolean!
+        consumed: Boolean!
+        ignoredReason: String
+        "NOT_CONSUMED | NOT_IN_CONTRACT | UNKNOWN_INBOX_STREAM, null when the stream is consistent."
+        drift: String
+        lag: KafkaTopicLag
+        pending: Int!
+        processing: Int!
+        failed: Int!
+        oldestPendingAt: DateTime
+    }
+
+    type IntegrationStreamHealthReport {
+        contractVersion: String!
+        streams: [IntegrationStreamHealth!]!
+    }
+
     type KafkaTopicLag {
         topic: String!
         stream: String!
@@ -160,6 +180,8 @@ export const adminApiExtensions: DocumentNode = gql`
         kafkaConsumerLag: [KafkaTopicLag!]!
         "Live count of not-yet-fully-processed IntegrationInboxEvent rows per stream (pending/processing/failed) — a different number from Kafka lag: these rows were already consumed and committed, this is Postgres-side processing backlog."
         integrationInboxBacklog: [IntegrationInboxBacklogByStream!]!
+        "One row per stream: union of the event contract, configured topics and inbox rows, with Kafka lag, inbox backlog and drift (issue #195)."
+        integrationStreamHealth: IntegrationStreamHealthReport!
     }
 
     extend type Mutation {

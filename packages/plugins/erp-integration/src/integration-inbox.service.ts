@@ -43,6 +43,7 @@ export interface IntegrationInboxBacklogByStream {
     pending: number;
     processing: number;
     failed: number;
+    oldestPendingAt: Date | null;
 }
 
 // The durable inbox for inbound Kafka events from Integration Service (issue #62 Milestone 1).
@@ -257,6 +258,10 @@ export class IntegrationInboxService {
             .select('event.stream', 'stream')
             .addSelect('event.status', 'status')
             .addSelect('COUNT(*)', 'count')
+            .addSelect(
+                `MIN(CASE WHEN event.status = 'pending' THEN event.createdAt END)`,
+                'oldestPending',
+            )
             .where('event.status IN (:...statuses)', {
                 statuses: ['pending', 'processing', 'failed'],
             })
@@ -266,6 +271,7 @@ export class IntegrationInboxService {
                 stream: InboundStream;
                 status: IntegrationInboxEventStatus;
                 count: string;
+                oldestPending: Date | null;
             }>();
 
         const byStream = new Map<InboundStream, IntegrationInboxBacklogByStream>();
@@ -275,7 +281,9 @@ export class IntegrationInboxService {
                 pending: 0,
                 processing: 0,
                 failed: 0,
+                oldestPendingAt: null,
             };
+            if (row.oldestPending) entry.oldestPendingAt = new Date(row.oldestPending);
             entry[row.status as 'pending' | 'processing' | 'failed'] = Number(row.count);
             byStream.set(row.stream, entry);
         }
