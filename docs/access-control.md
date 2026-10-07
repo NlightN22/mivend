@@ -281,6 +281,15 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   `InvoiceVisibilityService` already correctly filtered by this denormalized `branchId` (never
   `Counterparty.branchId`) before today's fix — the only change there was dropping the
   additional, wrong `departmentId` comparison they also used to apply.
+- **The preferred trading point is self-healing, and reading it can write.**
+  `TradingPointService.getPreferredForCustomer` — used by the Shop API `preferredTradingPoint`
+  field, invoices, MOQ and order placement — runs one atomic `UPDATE ... RETURNING` on the
+  customer row. If the stored preferred point is missing, inactive or hidden by the customer, it
+  is replaced by the counterparty's first active, visible point (ordered by name); a working
+  choice is never touched. A customer never has to pick a point by hand, and the placement-time
+  `branchId` above is therefore resolvable for any customer whose counterparty has a point. The
+  point always comes from the customer's own counterparty, so it cannot widen scope. If the
+  counterparty has no usable point, the stored value is left as is.
 
 This is the standard **Key Account Management vs. Territory Management** split used in mature B2B
 CRM/ERP systems (Salesforce territory model, SAP Account/Territory): one axis owns the commercial

@@ -297,6 +297,18 @@ release the reservation. Tradeoff: a rejected order holds stock for its review w
 that TTL tight and monitor slow-to-approve orders separately, rather than reordering the
 steps.
 
+### Courier (freight) delivery
+
+Courier delivery is its own plugin, `plugin-freight-shipping` (ShippingMethod code
+`freight-delivery`, created idempotently at boot like `pickup`). It is available only when the
+customer's counterparty has at least one active, non-hidden trading point
+(`freightEligibilityChecker`, so `eligibleShippingMethods` simply omits it otherwise), and an
+order process guard rejects the transition to `ArrangingPayment` with that method when the
+customer has no usable preferred trading point. The preferred point is assigned automatically
+(see `docs/access-control.md`, "The preferred trading point is self-healing"). The storefront
+renders the delivery options from `eligibleShippingMethods` and applies the method the customer
+selected; the shipping price is currently zero (price rules are not defined yet).
+
 ### Pack-size / MOQ
 
 Independent of the reservation work above. `multiplicity` (already a visible field in the
