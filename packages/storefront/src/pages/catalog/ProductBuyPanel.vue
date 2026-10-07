@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { stockVariantFromLevel } from '@mivend/ui-kit';
-import { useAuthStore } from '../../stores/auth';
-import { useCurrency } from '../../composables/useCurrency';
 
 interface Props {
     price?: number;
@@ -24,15 +22,6 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{ 'add-to-cart': []; 'update-cart-qty': [lineId: string, qty: number] }>();
-
-const authStore = useAuthStore();
-
-const counterparty = computed(() => authStore.counterparty);
-const availableCredit = computed(() => {
-    if (!counterparty.value) return null;
-    return counterparty.value.creditLimit - counterparty.value.creditBalance;
-});
-const { formatWhole } = useCurrency();
 
 const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
 </script>
@@ -84,22 +73,6 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
             >
                 Add to cart
             </button>
-        </div>
-
-        <div
-            v-if="authStore.isLoggedIn && availableCredit !== null && availableCredit > 0"
-            class="buy-panel__notice buy-panel__notice--green"
-        >
-            <span>✓</span>
-            <div>
-                <strong>Can be ordered without upfront payment.</strong>
-                Credit limit: {{ formatWhole(counterparty!.creditLimit) }}, debt:
-                {{ formatWhole(counterparty!.creditBalance) }}, available:
-                {{ formatWhole(availableCredit) }}.
-                <template v-if="counterparty!.paymentDelayDays > 0"
-                    >Payment terms: {{ counterparty!.paymentDelayDays }} days.</template
-                >
-            </div>
         </div>
     </div>
 </template>
@@ -179,27 +152,5 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
 .buy-panel__add:disabled {
     opacity: 0.45;
     cursor: not-allowed;
-}
-
-.buy-panel__notice {
-    border-radius: 16px;
-    padding: 14px 16px;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    font-size: 13px;
-    background: #f0faf6;
-    border: 1px solid #b6e8d4;
-    color: #1a5c40;
-}
-.buy-panel__notice--green span {
-    font-size: 16px;
-    color: #00a873;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-.buy-panel__notice strong {
-    display: block;
-    margin-bottom: 2px;
 }
 </style>
