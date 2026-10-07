@@ -19,6 +19,7 @@ import { OpenDeferredExposureService } from '../../open-deferred-exposure.servic
 const { schema, extra } = testSchemaOptions('deferred_credit');
 let dataSource: DataSource;
 const ctx = {} as RequestContext;
+let maxAgeDays: number | null = 7;
 
 const run = (sql: string, params: unknown[] = []): Promise<Array<Record<string, unknown>>> =>
     dataSource.query(sql, params);
@@ -39,9 +40,18 @@ const providers = new Map<unknown, unknown>([
     [CreditLimitCheckService, new CreditLimitCheckService(null as never, null as never)],
     [
         OpenDeferredExposureService,
-        new OpenDeferredExposureService({
-            getRepository: () => ({ query: (sql: string, params: unknown[]) => run(sql, params) }),
-        } as never),
+        new OpenDeferredExposureService(
+            {
+                getRepository: () => ({
+                    query: (sql: string, params: unknown[]) => run(sql, params),
+                }),
+            } as never,
+            {
+                getSettings: async () => ({
+                    customFields: { deferredOrderMaxAgeDays: maxAgeDays },
+                }),
+            } as never,
+        ),
     ],
 ]);
 const injector = { get: (token: unknown) => providers.get(token) } as unknown as Injector;
@@ -67,11 +77,23 @@ async function addBuyer(creditLimit: number, creditBalance = 0): Promise<Buyer> 
 async function addOrder(
     buyer: Buyer,
     rubles: number,
-    opts: { erpStatus?: string; method?: string; paymentState?: string } = {},
+    opts: {
+        erpStatus?: string;
+        method?: string;
+        paymentState?: string;
+        state?: string;
+        placedDaysAgo?: number;
+    } = {},
 ): Promise<number> {
     const [o] = await run(
-        `INSERT INTO "order" ("customerId", "customFieldsErpstatus") VALUES ($1, $2) RETURNING id`,
-        [buyer.customerId, opts.erpStatus ?? 'PENDING'],
+        `INSERT INTO "order" ("customerId", "customFieldsErpstatus", state, "orderPlacedAt")
+         VALUES ($1, $2, $3, now() - make_interval(days => $4::int)) RETURNING id`,
+        [
+            buyer.customerId,
+            opts.erpStatus ?? 'PENDING',
+            opts.state ?? 'PaymentAuthorized',
+            opts.placedDaysAgo ?? 0,
+        ],
     );
     await run(`INSERT INTO payment ("orderId", method, state, amount) VALUES ($1, $2, $3, $4)`, [
         o.id,
@@ -116,7 +138,8 @@ beforeAll(async () => {
         `CREATE TABLE customer (id serial PRIMARY KEY, "customFieldsCounterpartyid" varchar)`,
     );
     await run(`CREATE TABLE "order" (
-        id serial PRIMARY KEY, "customerId" int, "customFieldsErpstatus" varchar)`);
+        id serial PRIMARY KEY, "customerId" int, "customFieldsErpstatus" varchar,
+        state varchar, "orderPlacedAt" timestamp)`);
     await run(`CREATE TABLE payment (
         id serial PRIMARY KEY, "orderId" int, method varchar, state varchar, amount int)`);
     void deferredPaymentHandler.init?.(injector);
@@ -129,6 +152,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+    maxAgeDays = 7;
     await run(`TRUNCATE payment, "order", customer, counterparty RESTART IDENTITY`);
 });
 
@@ -196,6 +220,25 @@ describe('deferred credit check over open orders (real SQL + decide)', () => {
         await addOrder(buyer, 90_000, { method: 'offline-terms' });
         await addOrder(buyer, 90_000, { paymentState: 'Declined' });
         expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
+    });
+
+    it('never counts a cancelled order even if ERP has not confirmed it', async () => {
+        const buyer = await addBuyer(100_000);
+        await addOrder(buyer, 90_000, { state: 'Cancelled' });
+        expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
+    });
+
+    it('stops counting an open order older than the max age (boundary and setting)', async () => {
+        const buyer = await addBuyer(100_000);
+        await addOrder(buyer, 90_000, { placedDaysAgo: 6 });
+        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
+        await run(`TRUNCATE payment, "order" RESTART IDENTITY`);
+        await addOrder(buyer, 90_000, { placedDaysAgo: 8 });
+        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(false);
+        maxAgeDays = 10;
+        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
+        maxAgeDays = null;
+        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(false);
     });
 
     it('does not count another counterparty’s open orders (data isolation)', async () => {

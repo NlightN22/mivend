@@ -647,7 +647,8 @@ These are real, acknowledged gaps — not guessed at here, tracked for a future 
 (no hardcoded list); with none eligible, checkout says so and blocks placing the order.
 
 - `deferred-payment` (plugin-deferred-payment) owns credit control. Its eligibility checker hides the
-  method for counterparties without a credit limit (`creditLimit > 0` required; prepayment customers).
+  method for counterparties without a computed general limit (`creditLimit > 0` required; prepayment
+  customers). `Counterparty.creditLimit` is filled by the credit-limit job below, not by import.
 - `offline-terms` (bank invoice) stays in acquiring (documents depend on it). `OFFLINE_TERMS_ENABLED=false`
   disables its PaymentMethod row.
 - `online-stub` PaymentMethod is enabled by `OnlinePaymentPlugin`'s bootstrap only when
@@ -669,10 +670,26 @@ through is decided downstream (ERP, later a manager-portal approval workflow, se
 - The result travels as the public payment metadata flag `creditLimitExceeded` (key
   `CREDIT_LIMIT_EXCEEDED_KEY` in `packages/shared`); the storefront redirects to `/order-created` with
   `limitExceeded=1` and shows the warning there.
+- Cancelled orders (Vendure state `Cancelled`) never count. Interim cap: an open deferred order older
+  than `GlobalSettings.deferredOrderMaxAgeDays` (default 7, editable in settings) since placement stops
+  counting. Real TTL cancellation and ERP notification are separate work, not built here.
 - Per-contract limits (`controlledIndividually`) are not evaluated here: the order carries no contract.
 - Known limitations: concurrent checkouts of one counterparty are not serialized (the warning may be
   missed in a race, nothing is blocked either way); related-orders links and overrun surfacing in the
   orders list are not built; mandatory invoice requisites are deferred.
+
+### General credit limit job
+
+Scheduled task `erp-integration-credit-limit-recompute` (worker, central instance only, every 15 min,
+`CreditLimitRecomputeService`; set-based SQL in batches, writes only rows whose value changed):
+
+- pool = sum of `limit` of the counterparty's active contracts without `controlledIndividually`;
+  stored in `Counterparty.creditLimit` (our calculation wins over any 1C number).
+- Flagged active contracts are sublimits inside the pool; if their sum exceeds it, each is clamped to
+  `limit * pool / sumOfFlagged`. The effective value is `Contract.effectiveCreditLimit`.
+- No pool contracts or no limits gives 0: "deferred payment unavailable", never "unlimited".
+- Debt = the counterparty balance stream value (all contracts); check = balance + open deferred
+  orders + this order against the pool.
 
 ### Local verification data and tests
 

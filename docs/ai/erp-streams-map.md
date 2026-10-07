@@ -139,6 +139,10 @@ first pass at this handler). `name` doubles as the deletion-tombstone signal: a 
 deactivates an existing row by erpId only (no counterparty lookup, no other field touched) — same
 class of bug as the point-of-sale #100 tombstone fix, caught by mivend.audit.common before push.
 
+**Resolved for `creditLimit` (2026-10-07, #188)**: `Counterparty.creditLimit` is now our computed general limit
+(credit-limit job), where 0/unset means "deferred payment unavailable", never "unlimited". The
+`debtDaysLimit`/`paymentDelayDays` ambiguity below still stands.
+
 **Known residual ambiguity (mivend.audit.common, second pass, non-blocking)**: `debtDaysLimit`/
 `paymentDelayDays` now read `null` for both "ERP never set this" and "ERP explicitly set 0" — the
 zero-value fix above can't distinguish the two. `creditLimit` stays presence-based (`'x' in

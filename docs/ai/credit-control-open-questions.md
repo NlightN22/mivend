@@ -83,16 +83,18 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
    contract of the event, and does it replace `CounterpartyCreditBalanceChanged`?
 4. **Per-contract balance (#151)**: if the export carries documents per contract, do we compute the
    per-contract balance ourselves, or ask for a stream?
-5. **Where it is computed**: a scheduled worker task (owner's leaning) — which trigger (on receivable
+5. ~~Where it is computed~~ **Decided 2026-10-07**: scheduled task every 15 min, central worker, set-based
+   SQL. **Original:** **Where it is computed**: a scheduled worker task (owner's leaning) — which trigger (on receivable
    change, periodic), and how it avoids the importer's load problems.
 6. **Write-back to 1C**: which entities flow back (contract, limit, payment terms), master of data
    (docs/sync.md currently says ERP is master for credit limit), conflict handling, and the outbound
    contract in `event-contracts`.
 7. **Frontend**: customer view (limit, debts, documents to pay) and manager view (#48 aggregate vs
    per-organization, #31 finance rollup, #133 dashboard); which exists as mock only.
-8. **Presence vs zero** for `creditLimit`/`debtDaysLimit`/`paymentDelayDays` (known ambiguity in
+8. ~~Presence vs zero~~ **Decided 2026-10-07**: `Counterparty.creditLimit` is our computed pool; 0 or unset
+   means deferred payment unavailable, never unlimited (see docs/payments.md). **Original text:** **Presence vs zero** for `creditLimit`/`debtDaysLimit`/`paymentDelayDays` (known ambiguity in
    `erp-streams-map.md`): must be resolved before any gate treats a value as "no limit".
-9. **Deferred checkout eligibility** (`creditLimit > 0` on the counterparty) must switch to the
+9. ~~Deferred eligibility~~ **Done 2026-10-07 (#188)**: eligibility reads the computed pool. **Original:** **Deferred checkout eligibility** (`creditLimit > 0` on the counterparty) must switch to the
    computed limit once question 1 is decided, otherwise the feature stays dead on real data.
 10. **Multiple organizations**: limits and balances per (counterparty, organization) (#50, docs/payments.md)
     versus the flat counterparty total in positions 1-2.

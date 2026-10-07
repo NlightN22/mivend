@@ -45,6 +45,7 @@ import {
     createIntegrationInboxRetentionTask,
     createIntegrationInboxUserTask,
 } from './integration-inbox.scheduled-task';
+import { createCreditLimitRecomputeTask } from './credit-limit-recompute.scheduled-task';
 import { createCategoryTreeRecomputeTask } from './category-tree-recompute.scheduled-task';
 import { createCollectionFiltersRecomputeTask } from './collection-filters-recompute.scheduled-task';
 import { IntegrationInboxEventResolver } from './integration-inbox-event.resolver';
@@ -257,6 +258,7 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
                 createIntegrationOutboxTask(ErpIntegrationPlugin.options),
                 createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
                 createCategoryTreeRecomputeTask(ErpIntegrationPlugin.options),
+                createCreditLimitRecomputeTask(ErpIntegrationPlugin.options),
                 createReconciliationTask(ErpIntegrationPlugin.options),
                 createKafkaLagPollTask(ErpIntegrationPlugin.options),
                 createProductPhotoRecoveryTask(ErpIntegrationPlugin.options),

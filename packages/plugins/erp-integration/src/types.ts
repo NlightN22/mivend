@@ -239,6 +239,8 @@ export interface ErpIntegrationPluginOptions {
     // recomputing every Collection).
     collectionFiltersRecomputeIntervalMs?: number;
     categoryTreeRecomputeIntervalMs?: number;
+    // Defaults to CREDIT_LIMIT_RECOMPUTE_INTERVAL_DEFAULT.
+    creditLimitRecomputeIntervalMs?: number;
     // Issue #84: Integration Service's reconciliation summary API base URL (e.g.
     // https://is.komponent-m.ru) and its X-Api-Key. Reused for both the daily ScheduledTask and
     // the manual-trigger mutation — never hardcoded, never logged. Optional (like
@@ -402,6 +404,7 @@ export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 60_000;
 export const INBOX_BULK_BATCH_SIZE_DEFAULT = 100;
 export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
 export const CATEGORY_TREE_RECOMPUTE_INTERVAL_DEFAULT = 3_600_000;
+export const CREDIT_LIMIT_RECOMPUTE_INTERVAL_DEFAULT = 15 * 60_000;
 // Once daily — no sub-day freshness requirement raised for this (issue #84).
 export const RECONCILIATION_INTERVAL_DEFAULT = 24 * 60 * 60 * 1000;
 export const RESYNC_SOURCE_SYSTEM_DEFAULT = 'onec-main';

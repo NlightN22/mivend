@@ -4,6 +4,7 @@ export { TradingPointService } from './src/trading-point.service';
 export type { TradingPointUpsertPayload } from './src/trading-point.service';
 export { ContractService } from './src/contract.service';
 export type { ContractStreamFields } from './src/contract.service';
+export { CreditLimitRecomputeService } from './src/credit-limit-recompute.service';
 export { CreditLimitCheckService } from './src/credit-limit-check.service';
 export type { CreditLimitDecision, CreditCheckStatus } from './src/credit-limit-check.service';
 export { Counterparty } from './src/entities/counterparty.entity';

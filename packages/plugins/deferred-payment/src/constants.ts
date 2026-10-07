@@ -1,1 +1,8 @@
 export const loggerCtx = 'DeferredPaymentPlugin';
+export const DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS = 7;
+
+declare module '@vendure/core' {
+    interface CustomGlobalSettingsFields {
+        deferredOrderMaxAgeDays?: number | null;
+    }
+}

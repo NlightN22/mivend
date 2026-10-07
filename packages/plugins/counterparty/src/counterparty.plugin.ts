@@ -19,6 +19,7 @@ import { CounterpartyTeamMember } from './entities/counterparty-team-member.enti
 import { Contract } from './entities/contract.entity';
 import { ContractService } from './contract.service';
 import { CreditLimitCheckService } from './credit-limit-check.service';
+import { CreditLimitRecomputeService } from './credit-limit-recompute.service';
 import {
     CustomerCounterpartyResolver,
     CounterpartyResolver,
@@ -424,8 +425,15 @@ const adminResolvers = [
         CounterpartyPortalAccessService,
         ContractService,
         CreditLimitCheckService,
+        CreditLimitRecomputeService,
     ],
-    exports: [CounterpartyService, TradingPointService, ContractService, CreditLimitCheckService],
+    exports: [
+        CounterpartyService,
+        TradingPointService,
+        ContractService,
+        CreditLimitCheckService,
+        CreditLimitRecomputeService,
+    ],
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.Customer = [
             ...(config.customFields.Customer ?? []),

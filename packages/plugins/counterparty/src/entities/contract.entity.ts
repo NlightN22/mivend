@@ -29,6 +29,11 @@ export class Contract extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     creditLimit!: string | null;
 
+    // Computed by CreditLimitRecomputeService: creditLimit after clamping controlled-individually
+    // sublimits into the counterparty's pool; null when inactive or no limit.
+    @Column({ type: 'numeric', precision: 18, scale: 2, nullable: true })
+    effectiveCreditLimit!: string | null;
+
     @Column({ type: 'varchar', nullable: true })
     currency!: string | null;
 
