@@ -351,4 +351,7 @@ Events arriving while a rebalance of the same order runs mark it dirty and trigg
 (bounded), instead of being dropped. Events from the service's own calls are ignored via a tagged
 context. After the last pass `applyPriceAdjustments` recomputes and persists order totals, because
 concurrent line saves from the user's next mutation and the rebalance could leave `Order` totals
-computed from a stale line set. Not done: making `activeOrder` wait for an in-flight rebalance.
+computed from a stale line set. A blocking handler records only a per-order marker (no order mutation) before the mutation responds;
+`ActiveOrderSettleInterceptor` makes Shop API `activeOrder` wait (3 s max, never throwing) until
+the rebalance clears it. Mutation responses themselves are not delayed, so they may show pre-rebalance
+prices; the following `activeOrder` read is settled. The wait is per process.

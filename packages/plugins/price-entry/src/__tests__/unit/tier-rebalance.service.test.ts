@@ -12,6 +12,7 @@ function makeCtx(): RequestContext {
 
 describe('TierRebalanceService', () => {
     let handler: Handler;
+    let blocking: Handler;
     let lines: Record<string, Array<{ id: number; quantity: number }>>;
     let adjust: ReturnType<typeof vi.fn>;
     let applyPrices: ReturnType<typeof vi.fn>;
@@ -39,6 +40,9 @@ describe('TierRebalanceService', () => {
         adjust = vi.fn().mockResolvedValue({});
         applyPrices = vi.fn().mockResolvedValue({});
         const eventBus = {
+            registerBlockingEventHandler: (o: { handler: Handler }) => {
+                blocking = o.handler;
+            },
             ofType: () => ({
                 subscribe: (cb: (e: OrderLineEvent) => unknown) => {
                     handler = async e => {
@@ -83,7 +87,7 @@ describe('TierRebalanceService', () => {
         release();
         await first;
         expect(adjust.mock.calls.map(c => c[2])).toEqual([11, 10]);
-        expect(applyPrices).toHaveBeenCalledTimes(1);
+        expect(applyPrices).toHaveBeenCalledTimes(2);
     });
 
     it('ignores events fired by its own adjustOrderLine calls', async () => {
@@ -102,7 +106,7 @@ describe('TierRebalanceService', () => {
         });
         await fire(1, 11);
         expect(adjust.mock.calls.length).toBeLessThanOrEqual(8);
-        expect(applyPrices).toHaveBeenCalledTimes(1);
+        expect(applyPrices).toHaveBeenCalledTimes(4);
     });
 
     it('releases the guard when a line adjustment fails', async () => {
@@ -123,5 +127,54 @@ describe('TierRebalanceService', () => {
         release();
         await first;
         expect(applyPrices).toHaveBeenCalledTimes(2);
+    });
+
+    describe('waitForSettled', () => {
+        it('returns immediately when nothing is pending', async () => {
+            await service.waitForSettled(1, 50);
+        });
+
+        it('waits for the marker set by the blocking handler until the rebalance ends', async () => {
+            await blocking({
+                type: 'updated',
+                ctx: makeCtx(),
+                order: { id: 1 },
+            } as unknown as OrderLineEvent);
+            let release!: () => void;
+            adjust.mockImplementationOnce(() => new Promise(r => (release = () => r({}))));
+            let done = false;
+            const waiting = service.waitForSettled(1, 1000).then(() => (done = true));
+            await new Promise(r => setTimeout(r, 20));
+            expect(done).toBe(false);
+            const run = fire(1, 10);
+            await vi.waitFor(() => expect(adjust).toHaveBeenCalled());
+            expect(done).toBe(false);
+            release();
+            await run;
+            await waiting;
+            expect(done).toBe(true);
+        });
+
+        it('gives up after the timeout when no rebalance ever starts', async () => {
+            await blocking({
+                type: 'updated',
+                ctx: makeCtx(),
+                order: { id: 1 },
+            } as unknown as OrderLineEvent);
+            const t = Date.now();
+            await service.waitForSettled(1, 40);
+            expect(Date.now() - t).toBeGreaterThanOrEqual(35);
+        });
+
+        it('does not make other orders wait', async () => {
+            await blocking({
+                type: 'updated',
+                ctx: makeCtx(),
+                order: { id: 1 },
+            } as unknown as OrderLineEvent);
+            const t = Date.now();
+            await service.waitForSettled(2, 500);
+            expect(Date.now() - t).toBeLessThan(100);
+        });
     });
 });

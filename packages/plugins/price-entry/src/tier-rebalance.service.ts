@@ -13,6 +13,12 @@ import { subscribeAndLog } from 'shared';
 const loggerCtx = 'TierRebalanceService';
 
 const MAX_PASSES = 4;
+const MARKER_TTL_MS = 10_000;
+
+interface Marker {
+    settled: Promise<void>;
+    release: () => void;
+}
 
 /**
  * Re-runs sibling lines' price calculation after a line mutation so shared tier/brand
@@ -22,6 +28,8 @@ const MAX_PASSES = 4;
 @Injectable()
 export class TierRebalanceService implements OnApplicationBootstrap {
     private running = new Map<string, { dirtyLineId: ID | null }>();
+    // Set synchronously by a blocking handler (marker only, no order mutation) so reads see it.
+    private markers = new Map<string, Marker>();
     // Contexts used by our own adjustOrderLine calls, so their events do not retrigger us.
     private ownContexts = new WeakSet<RequestContext>();
 
@@ -32,6 +40,15 @@ export class TierRebalanceService implements OnApplicationBootstrap {
     ) {}
 
     onApplicationBootstrap(): void {
+        this.eventBus.registerBlockingEventHandler({
+            event: OrderLineEvent,
+            id: 'tier-rebalance-marker',
+            handler: async event => {
+                if (event.type !== 'cancelled' && !this.ownContexts.has(event.ctx)) {
+                    this.mark(String(event.order.id));
+                }
+            },
+        });
         subscribeAndLog(
             this.eventBus,
             OrderLineEvent,
@@ -43,12 +60,44 @@ export class TierRebalanceService implements OnApplicationBootstrap {
         );
     }
 
+    async waitForSettled(orderId: ID, timeoutMs: number): Promise<void> {
+        const marker = this.markers.get(String(orderId));
+        if (!marker) return;
+        let timer: NodeJS.Timeout | undefined;
+        const timeout = new Promise<void>(resolve => {
+            timer = setTimeout(resolve, timeoutMs);
+        });
+        await Promise.race([marker.settled, timeout]);
+        clearTimeout(timer);
+    }
+
+    private mark(key: string): void {
+        if (this.markers.has(key)) return;
+        let release!: () => void;
+        const settled = new Promise<void>(resolve => (release = resolve));
+        const timer = setTimeout(() => this.unmark(key), MARKER_TTL_MS);
+        timer.unref();
+        this.markers.set(key, {
+            settled,
+            release: () => {
+                clearTimeout(timer);
+                release();
+            },
+        });
+    }
+
+    private unmark(key: string): void {
+        this.markers.get(key)?.release();
+        this.markers.delete(key);
+    }
+
     private async rebalanceSiblingLines(
         ctx: RequestContext,
         order: Order,
         changedLineId: ID,
     ): Promise<void> {
         const key = String(order.id);
+        this.mark(key);
         const active = this.running.get(key);
         if (active) {
             active.dirtyLineId = changedLineId;
@@ -72,11 +121,12 @@ export class TierRebalanceService implements OnApplicationBootstrap {
             for (let pass = 0; lineId !== null && pass < MAX_PASSES; pass++) {
                 state.dirtyLineId = null;
                 await this.rebalancePass(ownCtx, orderId, lineId);
+                await this.refreshTotals(ownCtx, orderId);
                 lineId = state.dirtyLineId;
             }
-            await this.refreshTotals(ownCtx, orderId);
         } finally {
             this.running.delete(String(orderId));
+            this.unmark(String(orderId));
         }
     }
 

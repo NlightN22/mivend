@@ -28,6 +28,7 @@ import { DiscountRuleService } from './discount-rule.service';
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
 import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
 import { PriceResolutionService } from './price-resolution.service';
+import { ActiveOrderSettleInterceptor } from './active-order-settle.interceptor';
 import { TierRebalanceService } from './tier-rebalance.service';
 import { PriceAdjustmentGateService } from './price-adjustment-gate.service';
 import { PriceAdjustmentService } from './price-adjustment.service';
@@ -302,6 +303,7 @@ const adminApiSchema = gql`
         CounterpartyDiscountRuleService,
         PriceResolutionService,
         TierRebalanceService,
+        { provide: 'APP_INTERCEPTOR', useClass: ActiveOrderSettleInterceptor },
         PriceAdjustmentGateService,
         PriceAdjustmentService,
         DiscountGrantService,
