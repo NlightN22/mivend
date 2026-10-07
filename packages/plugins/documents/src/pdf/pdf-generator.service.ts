@@ -18,6 +18,7 @@ import { InvoiceService } from '@mivend/plugin-acquiring';
 import { GENERATE_DOCUMENT_QUEUE, loggerCtx } from '../constants';
 import { Document } from '../entities/document.entity';
 import { DocumentsService } from '../documents.service';
+import { resolveBuyerLegalName } from './buyer-legal-name';
 import { buildInvoiceTemplateData, renderInvoiceHtml, InvoiceSource } from './invoice-template';
 import { buildContractTemplateData, renderContractHtml } from './contract-template';
 import { PdfBrowserService } from './pdf-browser.service';
@@ -97,7 +98,7 @@ export class PdfGeneratorService implements OnModuleInit {
         const counterparty = await this.connection
             .getRepository(ctx, Counterparty)
             .findOne({ where: { id: counterpartyId } });
-        return counterparty?.fullName ?? '';
+        return resolveBuyerLegalName(counterparty?.fullName);
     }
 
     // Embeds the logo as a base64 data URI rather than a URL — Puppeteer runs
