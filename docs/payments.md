@@ -677,8 +677,8 @@ through is decided downstream (ERP, later a manager-portal approval workflow, se
   checkout store); another payment method drops the requirement. It never blocks the order itself.
 - Manager portal: Admin API `Order.creditLimitExceeded` (read from the payment metadata flag) drives a
   badge on the order detail page and in the orders list status column; `creditLimitExceededCounterpartyIds`
-  (scoped through `OrderVisibilityService`, unconfirmed non-cancelled orders, at most 500 scanned) feeds the
-  customers page "Needs attention" block.
+  (scoped through `OrderVisibilityService`, unconfirmed non-cancelled orders, at most 500 scanned, in the default list order, so beyond 500
+  orders which ones are scanned is not stable between calls) feeds the customers page "Needs attention" block.
 - Cancelled orders (Vendure state `Cancelled`) never count. Interim cap: an open deferred order older
   than `GlobalSettings.deferredOrderMaxAgeDays` (default 7, editable in settings) since placement stops
   counting. Real TTL cancellation and ERP notification are separate work, not built here.
@@ -689,7 +689,9 @@ through is decided downstream (ERP, later a manager-portal approval workflow, se
 ### General credit limit job
 
 Scheduled task `erp-integration-credit-limit-recompute` (worker, central instance only, every 15 min,
-`CreditLimitRecomputeService`; set-based SQL in batches, writes only rows whose value changed):
+`CreditLimitRecomputeService`; set-based SQL in batches, writes only rows whose value changed). The three
+passes (contracts, counterparty limit, payment delay days) run without a shared lock, so a contract event
+arriving between them can leave the three values briefly inconsistent; the next run (15 min) corrects it:
 
 - pool = sum of `limit` of the counterparty's active contracts without `controlledIndividually`;
   stored in `Counterparty.creditLimit` (our calculation wins over any 1C number).
