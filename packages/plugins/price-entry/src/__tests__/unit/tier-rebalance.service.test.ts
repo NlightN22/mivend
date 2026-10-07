@@ -16,6 +16,8 @@ describe('TierRebalanceService', () => {
     let lines: Record<string, Array<{ id: number; quantity: number }>>;
     let adjust: ReturnType<typeof vi.fn>;
     let applyPrices: ReturnType<typeof vi.fn>;
+    let findOneOrder: ReturnType<typeof vi.fn>;
+    let order: string[];
     let service: TierRebalanceService;
 
     const fire = (orderId: number, lineId: number, ctx = makeCtx()): Promise<void> =>
@@ -37,8 +39,13 @@ describe('TierRebalanceService', () => {
                 { id: 21, quantity: 1 },
             ],
         };
+        order = [];
+        findOneOrder = vi.fn().mockResolvedValue({ id: 1, lines: [] });
         adjust = vi.fn().mockResolvedValue({});
-        applyPrices = vi.fn().mockResolvedValue({});
+        applyPrices = vi.fn(async () => {
+            order.push('apply');
+            return {};
+        });
         const eventBus = {
             registerBlockingEventHandler: (o: { handler: Handler }) => {
                 blocking = o.handler;
@@ -54,11 +61,22 @@ describe('TierRebalanceService', () => {
         };
         const orderService = {
             adjustOrderLine: adjust,
-            findOne: vi.fn().mockResolvedValue({ id: 1, lines: [] }),
+            findOne: findOneOrder,
             applyPriceAdjustments: applyPrices,
         };
+        const queryBuilder = {
+            setLock: vi.fn(() => queryBuilder),
+            where: vi.fn(() => queryBuilder),
+            select: vi.fn(() => queryBuilder),
+            getOne: vi.fn(async () => {
+                order.push('lock');
+                return { id: 1 };
+            }),
+        };
         const connection = {
+            withTransaction: (_ctx: unknown, work: (c: unknown) => Promise<unknown>) => work({}),
             getRepository: () => ({
+                createQueryBuilder: () => queryBuilder,
                 findOne: ({ where }: { where: { id: number } }) =>
                     Promise.resolve({ id: where.id, lines: lines[String(where.id)] }),
             }),
@@ -69,6 +87,29 @@ describe('TierRebalanceService', () => {
             connection as never,
         );
         service.onApplicationBootstrap();
+    });
+
+    it('locks the order row before recomputing totals', async () => {
+        await fire(1, 10);
+        expect(order).toEqual(['lock', 'apply']);
+    });
+
+    it('loads the relations Vendure needs to recompute totals, surcharges included', async () => {
+        await fire(1, 10);
+        expect(findOneOrder.mock.calls[0][2]).toEqual(
+            expect.arrayContaining([
+                'lines',
+                'lines.productVariant',
+                'shippingLines',
+                'surcharges',
+            ]),
+        );
+    });
+
+    it('still refreshes totals when a sibling line adjustment fails', async () => {
+        adjust.mockRejectedValue(new Error('order-does-not-contain-line-with-id'));
+        await fire(1, 10);
+        expect(applyPrices).toHaveBeenCalledTimes(1);
     });
 
     it('rebalances siblings only and refreshes totals once', async () => {
@@ -151,6 +192,26 @@ describe('TierRebalanceService', () => {
             expect(done).toBe(false);
             release();
             await run;
+            await waiting;
+            expect(done).toBe(true);
+        });
+
+        it('keeps the marker while another mutation event is still on its way', async () => {
+            const event = (id: number): OrderLineEvent =>
+                ({
+                    type: 'updated',
+                    ctx: makeCtx(),
+                    order: { id },
+                    orderLine: { id: 10 },
+                }) as never;
+            await blocking(event(1));
+            await blocking(event(1));
+            await fire(1, 10);
+            let done = false;
+            const waiting = service.waitForSettled(1, 1000).then(() => (done = true));
+            await new Promise(r => setTimeout(r, 30));
+            expect(done).toBe(false);
+            await fire(1, 11);
             await waiting;
             expect(done).toBe(true);
         });

@@ -30,6 +30,8 @@ export class TierRebalanceService implements OnApplicationBootstrap {
     private running = new Map<string, { dirtyLineId: ID | null }>();
     // Set synchronously by a blocking handler (marker only, no order mutation) so reads see it.
     private markers = new Map<string, Marker>();
+    // Events seen by the blocking handler whose post-commit subscriber has not started yet.
+    private pending = new Map<string, number>();
     // Contexts used by our own adjustOrderLine calls, so their events do not retrigger us.
     private ownContexts = new WeakSet<RequestContext>();
 
@@ -45,7 +47,9 @@ export class TierRebalanceService implements OnApplicationBootstrap {
             id: 'tier-rebalance-marker',
             handler: async event => {
                 if (event.type !== 'cancelled' && !this.ownContexts.has(event.ctx)) {
-                    this.mark(String(event.order.id));
+                    const key = String(event.order.id);
+                    this.pending.set(key, (this.pending.get(key) ?? 0) + 1);
+                    this.mark(key);
                 }
             },
         });
@@ -97,6 +101,7 @@ export class TierRebalanceService implements OnApplicationBootstrap {
         changedLineId: ID,
     ): Promise<void> {
         const key = String(order.id);
+        this.pending.set(key, Math.max(0, (this.pending.get(key) ?? 0) - 1));
         this.mark(key);
         const active = this.running.get(key);
         if (active) {
@@ -125,8 +130,9 @@ export class TierRebalanceService implements OnApplicationBootstrap {
                 lineId = state.dirtyLineId;
             }
         } finally {
-            this.running.delete(String(orderId));
-            this.unmark(String(orderId));
+            const key = String(orderId);
+            this.running.delete(key);
+            if (!this.pending.get(key)) this.unmark(key);
         }
     }
 
@@ -143,16 +149,30 @@ export class TierRebalanceService implements OnApplicationBootstrap {
         for (const line of freshOrder.lines) {
             if (String(line.id) === String(changedLineId)) continue;
             // Same quantity: only forces calculateUnitPrice() against the current aggregate.
-            await this.orderService.adjustOrderLine(ctx, orderId, line.id, line.quantity);
+            await this.orderService
+                .adjustOrderLine(ctx, orderId, line.id, line.quantity)
+                .catch(() => undefined);
         }
     }
 
+    // Row lock first: a concurrent mutation's commit must be visible before totals are recomputed,
+    // otherwise a stale snapshot overwrites its correct total (lost update).
     private async refreshTotals(ctx: RequestContext, orderId: ID): Promise<void> {
-        const order = await this.orderService.findOne(ctx, orderId, [
-            'lines',
-            'lines.productVariant',
-            'shippingLines',
-        ]);
-        if (order) await this.orderService.applyPriceAdjustments(ctx, order, []);
+        await this.connection.withTransaction(ctx, async txCtx => {
+            await this.connection
+                .getRepository(txCtx, Order)
+                .createQueryBuilder('o')
+                .setLock('pessimistic_write')
+                .where('o.id = :id', { id: orderId })
+                .select('o.id')
+                .getOne();
+            const order = await this.orderService.findOne(txCtx, orderId, [
+                'lines',
+                'lines.productVariant',
+                'shippingLines',
+                'surcharges',
+            ]);
+            if (order) await this.orderService.applyPriceAdjustments(txCtx, order, []);
+        });
     }
 }
