@@ -688,6 +688,11 @@ Scheduled task `erp-integration-credit-limit-recompute` (worker, central instanc
 - Flagged active contracts are sublimits inside the pool; if their sum exceeds it, each is clamped to
   `limit * pool / sumOfFlagged`. The effective value is `Contract.effectiveCreditLimit`.
 - No pool contracts or no limits gives 0: "deferred payment unavailable", never "unlimited".
+- Deferred is available only with a limit > 0 AND `Counterparty.paymentDelayDays` > 0; 0 days (unknown) means
+  prepayment regardless of the limit. Days are the active main contract's `debtDaysLimit`, written by the
+  same job (0 when the main contract is missing, inactive or has no days), even if that contract is flagged.
+- A flagged main contract's own `effectiveCreditLimit` is not enforced at checkout yet (needs per-contract
+  balances, #151); only the pool check applies.
 - Debt = the counterparty balance stream value (all contracts); check = balance + open deferred
   orders + this order against the pool.
 

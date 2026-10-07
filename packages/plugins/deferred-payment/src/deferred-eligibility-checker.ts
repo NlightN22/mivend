@@ -5,10 +5,15 @@ import { DEFERRED_PAYMENT_METHOD_CODE } from './deferred-payment-handler';
 
 let counterpartyService: CounterpartyService;
 
-// A counterparty without a credit limit is a prepayment customer — deferred is hidden for them.
+// Deferred needs both a computed limit and payment terms days; either at 0 means prepayment.
 export const deferredEligibilityChecker = new PaymentMethodEligibilityChecker({
     code: DEFERRED_PAYMENT_METHOD_CODE,
-    description: [{ languageCode: LanguageCode.en, value: 'Counterparty has a credit limit' }],
+    description: [
+        {
+            languageCode: LanguageCode.en,
+            value: 'Counterparty has a credit limit and payment terms days',
+        },
+    ],
     args: {},
     init(injector) {
         counterpartyService = injector.get(CounterpartyService);
@@ -17,6 +22,10 @@ export const deferredEligibilityChecker = new PaymentMethodEligibilityChecker({
         const customerId = order.customer?.id ?? order.customerId;
         if (!customerId) return false;
         const counterparty = await counterpartyService.getForCustomer(ctx, customerId);
-        return Boolean(counterparty && Number(counterparty.creditLimit) > 0);
+        return Boolean(
+            counterparty &&
+            Number(counterparty.creditLimit) > 0 &&
+            Number(counterparty.paymentDelayDays) > 0,
+        );
     },
 });

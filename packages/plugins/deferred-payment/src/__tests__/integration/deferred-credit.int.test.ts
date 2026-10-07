@@ -61,11 +61,11 @@ interface Buyer {
     counterpartyId: number;
 }
 
-async function addBuyer(creditLimit: number, creditBalance = 0): Promise<Buyer> {
+async function addBuyer(creditLimit: number, creditBalance = 0, delayDays = 14): Promise<Buyer> {
     const [cp] = await run(
-        `INSERT INTO counterparty ("erpId", "creditLimit", "creditBalance")
-         VALUES ($1, $2, $3) RETURNING id`,
-        [`cnt-${Math.random()}`, creditLimit, creditBalance],
+        `INSERT INTO counterparty ("erpId", "creditLimit", "creditBalance", "paymentDelayDays")
+         VALUES ($1, $2, $3, $4) RETURNING id`,
+        [`cnt-${Math.random()}`, creditLimit, creditBalance, delayDays],
     );
     const [cu] = await run(
         `INSERT INTO customer ("customFieldsCounterpartyid") VALUES ($1) RETURNING id`,
@@ -133,7 +133,7 @@ beforeAll(async () => {
     await dataSource.initialize();
     await run(`CREATE TABLE counterparty (
         id serial PRIMARY KEY, "erpId" varchar, "creditLimit" bigint NOT NULL DEFAULT 0,
-        "creditBalance" bigint NOT NULL DEFAULT 0)`);
+        "creditBalance" bigint NOT NULL DEFAULT 0, "paymentDelayDays" integer NOT NULL DEFAULT 0)`);
     await run(
         `CREATE TABLE customer (id serial PRIMARY KEY, "customFieldsCounterpartyid" varchar)`,
     );
@@ -169,6 +169,7 @@ describe('deferred eligibility (real counterparty join)', () => {
             );
         expect(await check(limited)).toBe(true);
         expect(await check(prepay)).toBe(false);
+        expect(await check(await addBuyer(100_000, 0, 0))).toBe(false);
     });
 });
 

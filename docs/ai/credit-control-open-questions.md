@@ -99,6 +99,10 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 10. **Multiple organizations**: limits and balances per (counterparty, organization) (#50, docs/payments.md)
     versus the flat counterparty total in positions 1-2.
 
+11. **Decided 2026-10-07 (#188)**: deferred requires limit > 0 and `paymentDelayDays` > 0 (days from the active
+    main contract's `debtDaysLimit`, flagged or not). A flagged main contract's own sublimit
+    (`effectiveCreditLimit`) is not enforced at checkout until per-contract balances exist (#151).
+
 ## Suggested next step
 
 Settle questions 1-3 (formula, contract on order, receivables source) in a discussion, record the

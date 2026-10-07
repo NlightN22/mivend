@@ -19,13 +19,16 @@ beforeEach(() => {
 
 describe('deferredEligibilityChecker', () => {
     it.each([
-        [5000, true],
-        [0, false],
-        [null, false],
+        [5000, 14, true],
+        [5000, 0, false],
+        [0, 14, false],
+        [0, 0, false],
+        [null, 14, false],
+        [5000, null, false],
     ])(
-        'computed limit %j -> eligible %j (zero/unset means unavailable, never unlimited)',
-        async (limit, expected) => {
-            getForCustomer.mockResolvedValue({ creditLimit: limit });
+        'limit %j and days %j -> eligible %j (zero/unset on either side means prepayment)',
+        async (creditLimit, paymentDelayDays, expected) => {
+            getForCustomer.mockResolvedValue({ creditLimit, paymentDelayDays });
             expect(await check({ customer: { id: 1 } } as Partial<Order>)).toBe(expected);
         },
     );

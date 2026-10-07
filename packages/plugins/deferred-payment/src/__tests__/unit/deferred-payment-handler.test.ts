@@ -66,7 +66,8 @@ describe('deferredPaymentHandler.createPayment', () => {
 
 describe('deferredEligibilityChecker.check', () => {
     it.each([
-        [{ creditLimit: 5000 }, true],
+        [{ creditLimit: 5000, paymentDelayDays: 7 }, true],
+        [{ creditLimit: 5000, paymentDelayDays: 0 }, false],
         [{ creditLimit: 0 }, false],
         [null, false],
     ])('counterparty %j → %s', async (counterparty, expected) => {
