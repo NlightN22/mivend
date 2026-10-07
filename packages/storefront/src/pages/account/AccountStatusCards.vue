@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
+import { useCurrency } from '../../composables/useCurrency';
 
 const authStore = useAuthStore();
+const { formatWhole } = useCurrency();
 
 const availableLimit = computed(() => {
     const cp = authStore.counterparty;
     if (!cp) return '—';
     const val = cp.creditLimit - cp.creditBalance;
-    return new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        maximumFractionDigits: 0,
-    }).format(val);
+    return formatWhole(val);
 });
 
 const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);

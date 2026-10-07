@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
+import { useCurrency } from '../../composables/useCurrency';
 
 const authStore = useAuthStore();
+const { formatWhole } = useCurrency();
 const tradingPoint = computed(() => authStore.tradingPoint);
 const counterparty = computed(() => authStore.counterparty);
 
@@ -47,8 +49,7 @@ const limitWarning = computed(() => {
                     <div class="trading-point-info__row-title">Contract B2B-014</div>
                     <div class="trading-point-info__row-note">
                         Deferred {{ counterparty.paymentDelayDays }} days · limit
-                        {{ new Intl.NumberFormat('ru-RU').format(counterparty.creditLimit / 100) }}
-                        ₽
+                        {{ formatWhole(counterparty.creditLimit) }}
                     </div>
                 </div>
             </div>

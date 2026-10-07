@@ -11084,6 +11084,10 @@ export type AdministratorForPasswordResetTokenQuery = {
     } | null;
 };
 
+export type DefaultCurrencyQueryVariables = Exact<{ [key: string]: never }>;
+
+export type DefaultCurrencyQuery = { activeChannel: { defaultCurrencyCode: CurrencyCode } };
+
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -13786,3 +13790,10 @@ export const AdministratorForPasswordResetTokenDocument = new TypedDocumentStrin
     AdministratorForPasswordResetTokenQuery,
     AdministratorForPasswordResetTokenQueryVariables
 >;
+export const DefaultCurrencyDocument = new TypedDocumentString(`
+    query DefaultCurrency {
+  activeChannel {
+    defaultCurrencyCode
+  }
+}
+    `) as unknown as TypedDocumentString<DefaultCurrencyQuery, DefaultCurrencyQueryVariables>;

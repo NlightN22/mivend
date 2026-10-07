@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, h } from 'vue';
+import { useCurrency } from '../../composables/useCurrency';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
 import { MvTable, MvStatusBadge, MvProgressBar } from '@mivend/ui-kit';
@@ -25,11 +26,7 @@ function managerName(id: string | null): string {
     return props.managers.find(m => m.id === id)?.name ?? '—';
 }
 
-function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-        amount / 100,
-    );
-}
+const { formatWhole } = useCurrency();
 
 // branchId (Counterparty.branchId) is a mivend Branch.id, never Branch.erpId — see
 // BranchOption's own doc comment (real, live bug this fixes: comparing against `b.erpId` here
@@ -143,8 +140,8 @@ const rows = computed<TableRow[]>(() =>
                 .join(' · '),
             contact: primaryContact?.name ?? '—',
             manager: managerName(c.assignedManagerId),
-            creditLimit: credit ? money(credit.creditLimit) : '—',
-            creditBalance: credit ? money(credit.creditBalance) : '—',
+            creditLimit: credit ? formatWhole(credit.creditLimit) : '—',
+            creditBalance: credit ? formatWhole(credit.creditBalance) : '—',
             creditUsagePercent: usagePercent,
             discounts: props.discountCounts.get(c.id) ?? 0,
             lastOrder: lastOrder ? new Date(lastOrder).toLocaleDateString('en-US') : '—',

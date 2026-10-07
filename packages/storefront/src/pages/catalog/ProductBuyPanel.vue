@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import { useCurrency } from '../../composables/useCurrency';
 
 interface Props {
     price?: number;
@@ -31,12 +32,7 @@ const availableCredit = computed(() => {
     if (!counterparty.value) return null;
     return counterparty.value.creditLimit - counterparty.value.creditBalance;
 });
-const formatRub = (n: number) =>
-    new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        maximumFractionDigits: 0,
-    }).format(n);
+const { formatWhole } = useCurrency();
 
 const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
 </script>
@@ -97,9 +93,9 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
             <span>✓</span>
             <div>
                 <strong>Can be ordered without upfront payment.</strong>
-                Credit limit: {{ formatRub(counterparty!.creditLimit) }}, debt:
-                {{ formatRub(counterparty!.creditBalance) }}, available:
-                {{ formatRub(availableCredit) }}. Payment terms:
+                Credit limit: {{ formatWhole(counterparty!.creditLimit) }}, debt:
+                {{ formatWhole(counterparty!.creditBalance) }}, available:
+                {{ formatWhole(availableCredit) }}. Payment terms:
                 {{ counterparty!.paymentDelayDays }} days.
             </div>
         </div>

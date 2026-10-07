@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import type { OrderDetail } from '../../api/orderDetail';
 import type { CustomerCredit } from '../../api/customers';
+import { useCurrency } from '../../composables/useCurrency';
 
-const props = defineProps<{
+defineProps<{
     order: OrderDetail;
     managerName: string | null;
     // Null for a caller without ReadCounterpartyCredit — see fetchCreditByCounterpartyId.
     credit: CustomerCredit | null;
 }>();
 
-function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: props.order.currencyCode,
-    }).format(amount / 100);
-}
+const { formatWhole } = useCurrency();
 </script>
 
 <template>
@@ -42,12 +38,12 @@ function money(amount: number): string {
         </div>
         <div v-if="credit" class="order-context__row">
             <span class="order-context__label">Credit limit</span>
-            <span class="order-context__value">{{ money(credit.creditLimit) }}</span>
+            <span class="order-context__value">{{ formatWhole(credit.creditLimit) }}</span>
         </div>
         <div v-if="credit" class="order-context__row">
             <span class="order-context__label">Credit balance</span>
             <span class="order-context__value order-context__value--danger">
-                {{ money(credit.creditBalance) }} used
+                {{ formatWhole(credit.creditBalance) }} used
             </span>
         </div>
         <RouterLink

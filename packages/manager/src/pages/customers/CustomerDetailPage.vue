@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { MvPanel, MvStatusBadge, MvKpiCard, MvKpiCarousel, MvSkeleton } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useTabSync } from '../../composables/useTabSync';
+import { useCurrency } from '../../composables/useCurrency';
 import {
     fetchCustomerById,
     fetchCreditForCounterparty,
@@ -195,11 +196,7 @@ const openOrdersCount = computed(
     () => orders.value.filter(o => !CLOSED_ORDER_STATES.has(o.state)).length,
 );
 
-function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-        amount / 100,
-    );
-}
+const { formatWhole, formatMinor } = useCurrency();
 
 async function load(): Promise<void> {
     loading.value = true;
@@ -339,7 +336,7 @@ function initials(name: string | null): string {
                 <div class="customer-detail__info-text">
                     <span class="customer-detail__info-label">Credit limit</span>
                     <span class="customer-detail__info-value">{{
-                        credit ? money(credit.creditLimit) : '—'
+                        credit ? formatWhole(credit.creditLimit) : '—'
                     }}</span>
                 </div>
             </div>
@@ -373,16 +370,18 @@ function initials(name: string | null): string {
         </div>
 
         <MvKpiCarousel v-if="!loading" class="customer-detail__kpis">
-            <MvKpiCard label="Sales last 30 days" :value="money(sales30d)" />
+            <MvKpiCard label="Sales last 30 days" :value="formatMinor(sales30d)" />
             <MvKpiCard label="Open orders" :value="openOrdersCount" />
             <MvKpiCard
                 label="Outstanding balance"
-                :value="outstandingBalance ? money(outstandingBalance.amount) : money(0)"
+                :value="
+                    outstandingBalance ? formatMinor(outstandingBalance.amount) : formatMinor(0)
+                "
             />
             <MvKpiCard
                 v-if="credit"
                 label="Available credit"
-                :value="money(credit.creditLimit - credit.creditBalance)"
+                :value="formatWhole(credit.creditLimit - credit.creditBalance)"
             />
         </MvKpiCarousel>
 

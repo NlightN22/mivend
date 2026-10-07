@@ -7,6 +7,7 @@ import {
     type CustomerCredit,
     type TradingPointInfo,
 } from '../../api/customers';
+import { useCurrency } from '../../composables/useCurrency';
 import TradingPointEditForm from './TradingPointEditForm.vue';
 
 defineProps<{ customer: CustomerListItem; credit: CustomerCredit | null }>();
@@ -15,13 +16,7 @@ const emit = defineEmits<{ changed: [] }>();
 const editingTradingPoint = ref<TradingPointInfo | null>(null);
 const reactivating = ref<string | null>(null);
 
-function money(amount: number): string {
-    return new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        maximumFractionDigits: 0,
-    }).format(amount);
-}
+const { formatWhole } = useCurrency();
 
 function handleEdited(): void {
     editingTradingPoint.value = null;
@@ -66,15 +61,15 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
             </div>
             <div v-if="credit">
                 <dt>Credit limit</dt>
-                <dd>{{ money(credit.creditLimit) }}</dd>
+                <dd>{{ formatWhole(credit.creditLimit) }}</dd>
             </div>
             <div v-if="credit">
                 <dt>Debt</dt>
-                <dd>{{ money(credit.creditBalance) }}</dd>
+                <dd>{{ formatWhole(credit.creditBalance) }}</dd>
             </div>
             <div v-if="credit">
                 <dt>Available</dt>
-                <dd>{{ money(credit.creditLimit - credit.creditBalance) }}</dd>
+                <dd>{{ formatWhole(credit.creditLimit - credit.creditBalance) }}</dd>
             </div>
         </dl>
 

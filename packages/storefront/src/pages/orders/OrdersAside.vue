@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useAuthStore } from '../../stores/auth';
+import { useCurrency } from '../../composables/useCurrency';
 import { shopApi } from '../../api/client';
 import { MyAdvanceBalanceDocument } from '../../api/generated/graphql';
 import { useInvoices } from '../invoices/useInvoices';
 
 const authStore = useAuthStore();
+const { formatWhole } = useCurrency();
 
 const availableLimit = computed(() => {
     const cp = authStore.counterparty;
     if (!cp) return '—';
     const val = cp.creditLimit - cp.creditBalance;
-    return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(val) + ' ₽';
+    return formatWhole(val);
 });
 
 const paymentDelay = computed(() => {

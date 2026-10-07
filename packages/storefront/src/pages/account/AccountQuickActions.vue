@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
+import { useCurrency } from '../../composables/useCurrency';
 
 const authStore = useAuthStore();
+const { formatWhole } = useCurrency();
 
 const limitText = computed(() => {
     const cp = authStore.counterparty;
     if (!cp) return 'No limit data';
-    const avail = new Intl.NumberFormat('ru-RU').format(cp.creditLimit - cp.creditBalance);
-    return `${avail} ₽ available, deferred ${cp.paymentDelayDays} days`;
+    const avail = formatWhole(cp.creditLimit - cp.creditBalance);
+    return `${avail} available, deferred ${cp.paymentDelayDays} days`;
 });
 </script>
 

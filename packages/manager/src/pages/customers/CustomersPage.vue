@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
+import { useCurrency } from '../../composables/useCurrency';
 import {
     MvPanel,
     MvFilterBar,
@@ -44,6 +45,7 @@ const authStore = useAuthStore();
 // docs/ai/manager-portal-pages/04-customers-list.md).
 const title = computed(() => (authStore.roleCode === 'manager' ? 'My Clients' : 'Customers'));
 
+const { formatWhole } = useCurrency();
 const PAGE_SIZE = 20;
 
 // `customers` now holds only the current page (see issue #39 — server-side pagination via
@@ -290,11 +292,7 @@ onMounted(async () => {
             <MvKpiCard
                 v-if="canReadCredit"
                 label="Credit balance used"
-                :value="
-                    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-                        totalCreditBalance / 100,
-                    )
-                "
+                :value="formatWhole(totalCreditBalance)"
                 :caption="`${highUsageCount} clients above 80%`"
                 accent
             />

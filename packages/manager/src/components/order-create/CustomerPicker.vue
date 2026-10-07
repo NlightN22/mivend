@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useCurrency } from '../../composables/useCurrency';
 import { MvInput, MvStatusBadge } from '@mivend/ui-kit';
 import {
     fetchCustomerOptions,
@@ -10,6 +11,7 @@ import {
 
 const emit = defineEmits<{ select: [customer: CustomerOption] }>();
 
+const { formatWhole } = useCurrency();
 const allCustomers = ref<CustomerOption[]>([]);
 const search = ref('');
 const selected = ref<CustomerOption | null>(null);
@@ -83,8 +85,8 @@ watch(search, () => {
                 <MvStatusBadge variant="info">{{ selected.priceType }}</MvStatusBadge>
             </div>
             <div v-if="credit" class="customer-picker__credit">
-                <span>Credit limit: {{ (credit.creditLimit / 100).toLocaleString('en-US') }}</span>
-                <span>Balance: {{ (credit.creditBalance / 100).toLocaleString('en-US') }}</span>
+                <span>Credit limit: {{ formatWhole(credit.creditLimit) }}</span>
+                <span>Balance: {{ formatWhole(credit.creditBalance) }}</span>
             </div>
             <button type="button" class="customer-picker__change" @click="clearSelection">
                 Change customer
