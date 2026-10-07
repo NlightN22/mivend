@@ -979,6 +979,12 @@ export type DateTimeStructFieldConfig = StructField & {
     ui?: Maybe<Scalars['JSON']['output']>;
 };
 
+export type DeferredCreditPreview = {
+    availableCredit: Scalars['Float']['output'];
+    exceeded: Scalars['Boolean']['output'];
+    orderAmount: Scalars['Float']['output'];
+};
+
 export type DeletionResponse = {
     message?: Maybe<Scalars['String']['output']>;
     result: DeletionResult;
@@ -3385,14 +3391,7 @@ export type PublicShippingMethod = {
     translations: Array<ShippingMethodTranslation>;
 };
 
-export type DeferredCreditPreview = {
-    availableCredit: Scalars['Float']['output'];
-    exceeded: Scalars['Boolean']['output'];
-    orderAmount: Scalars['Float']['output'];
-};
-
 export type Query = {
-    deferredCreditPreview: DeferredCreditPreview;
     /** The active Channel */
     activeChannel: Channel;
     /** The active Customer */
@@ -3413,6 +3412,7 @@ export type Query = {
     collection?: Maybe<Collection>;
     /** A list of Collections available to the shop */
     collections: CollectionList;
+    deferredCreditPreview: DeferredCreditPreview;
     /** Returns a list of payment methods and their eligibility based on the current active Order */
     eligiblePaymentMethods: Array<PaymentMethodQuote>;
     /** Returns a list of eligible shipping methods based on the current active Order */
@@ -4547,6 +4547,12 @@ export type ProductDetailQuery = {
     } | null;
 };
 
+export type DeferredCreditPreviewQueryVariables = Exact<{ [key: string]: never }>;
+
+export type DeferredCreditPreviewQuery = {
+    deferredCreditPreview: { exceeded: boolean; availableCredit: number; orderAmount: number };
+};
+
 export type MyTradingPointsForDeliverySelectorQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MyTradingPointsForDeliverySelectorQuery = {
@@ -5076,12 +5082,6 @@ export type CompleteDeferredPaymentMutation = {
         | { __typename: 'PaymentFailedError'; errorCode: ErrorCode; message: string };
 };
 
-export type DeferredCreditPreviewQueryVariables = Exact<{ [key: string]: never }>;
-
-export type DeferredCreditPreviewQuery = {
-    deferredCreditPreview: { exceeded: boolean; availableCredit: number; orderAmount: number };
-};
-
 export type EligiblePaymentMethodsForCheckoutQueryVariables = Exact<{ [key: string]: never }>;
 
 export type EligiblePaymentMethodsForCheckoutQuery = {
@@ -5590,6 +5590,18 @@ export const ProductDetailDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<ProductDetailQuery, ProductDetailQueryVariables>;
+export const DeferredCreditPreviewDocument = new TypedDocumentString(`
+    query DeferredCreditPreview {
+  deferredCreditPreview {
+    exceeded
+    availableCredit
+    orderAmount
+  }
+}
+    `) as unknown as TypedDocumentString<
+    DeferredCreditPreviewQuery,
+    DeferredCreditPreviewQueryVariables
+>;
 export const MyTradingPointsForDeliverySelectorDocument = new TypedDocumentString(`
     query MyTradingPointsForDeliverySelector {
   myTradingPoints {
@@ -6196,18 +6208,6 @@ export const CompleteDeferredPaymentDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CompleteDeferredPaymentMutation,
     CompleteDeferredPaymentMutationVariables
->;
-export const DeferredCreditPreviewDocument = new TypedDocumentString(`
-    query DeferredCreditPreview {
-  deferredCreditPreview {
-    exceeded
-    availableCredit
-    orderAmount
-  }
-}
-    `) as unknown as TypedDocumentString<
-    DeferredCreditPreviewQuery,
-    DeferredCreditPreviewQueryVariables
 >;
 export const EligiblePaymentMethodsForCheckoutDocument = new TypedDocumentString(`
     query EligiblePaymentMethodsForCheckout {

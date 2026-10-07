@@ -1289,6 +1289,7 @@ export type CreateProductCustomFieldsInput = {
     externalId?: InputMaybe<Scalars['String']['input']>;
     fullName?: InputMaybe<Scalars['String']['input']>;
     manufacturerId?: InputMaybe<Scalars['ID']['input']>;
+    manufacturerPartNumber?: InputMaybe<Scalars['String']['input']>;
     onSale?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
@@ -1854,6 +1855,11 @@ export type CustomFields = {
     TaxRate: Array<CustomFieldConfig>;
     User: Array<CustomFieldConfig>;
     Zone: Array<CustomFieldConfig>;
+};
+
+export type CustomProductMappings = {
+    fullName: Maybe<Scalars['String']['output']>;
+    oemCodes: Maybe<Array<Scalars['String']['output']>>;
 };
 
 export type Customer = Node & {
@@ -2731,6 +2737,7 @@ export type GlobalSettings = {
 
 export type GlobalSettingsCustomFields = {
     defaultBranchId: Maybe<Scalars['String']['output']>;
+    deferredOrderMaxAgeDays: Maybe<Scalars['Int']['output']>;
     organizationSplitEnabled: Maybe<Scalars['Boolean']['output']>;
     stockTierLowMax: Maybe<Scalars['Int']['output']>;
     stockTierMediumMax: Maybe<Scalars['Int']['output']>;
@@ -3888,6 +3895,8 @@ export type Mutation = {
     removeShippingMethodsFromChannel: Array<ShippingMethod>;
     /** Removes StockLocations from the specified Channel */
     removeStockLocationsFromChannel: Array<StockLocation>;
+    /** Asks Integration Service to re-publish one photo (fresh download link) and resets its attempt counter (issue #181). */
+    replayProductPhoto: ProductPhoto;
     requestCreditTermExtension: ApprovalRequest;
     requestDiscountGrant: ApprovalRequest;
     requestPriceAdjustment: PriceAdjustmentResult;
@@ -3911,7 +3920,6 @@ export type Mutation = {
     setBranchSettings: BranchSettings;
     setCreditTermLimit: CreditTermLimit;
     setCustomerForDraftOrder: SetCustomerForDraftOrderResult;
-    setCustomerPriceType: Customer;
     /** Sets the billing address for a draft Order */
     setDraftOrderBillingAddress: Order;
     /** Allows any custom fields to be set for the active order */
@@ -4680,6 +4688,10 @@ export type MutationRemoveStockLocationsFromChannelArgs = {
     input: RemoveStockLocationsFromChannelInput;
 };
 
+export type MutationReplayProductPhotoArgs = {
+    id: Scalars['ID']['input'];
+};
+
 export type MutationRequestCreditTermExtensionArgs = {
     input: CreditTermRequestInput;
 };
@@ -4753,11 +4765,6 @@ export type MutationSetCustomerForDraftOrderArgs = {
     customerId?: InputMaybe<Scalars['ID']['input']>;
     input?: InputMaybe<CreateCustomerInput>;
     orderId: Scalars['ID']['input'];
-};
-
-export type MutationSetCustomerPriceTypeArgs = {
-    customerId: Scalars['ID']['input'];
-    priceTypeId: Scalars['ID']['input'];
 };
 
 export type MutationSetDraftOrderBillingAddressArgs = {
@@ -5165,7 +5172,6 @@ export type OpenReservationReconciliationIssueListOptions = {
 };
 
 export type Order = Node & {
-    creditLimitExceeded: Scalars['Boolean']['output'];
     /** An order is active as long as the payment process has not been completed */
     active: Scalars['Boolean']['output'];
     aggregateOrder: Maybe<Order>;
@@ -5177,6 +5183,7 @@ export type Order = Node & {
     /** An array of all coupon codes applied to the Order */
     couponCodes: Array<Scalars['String']['output']>;
     createdAt: Scalars['DateTime']['output'];
+    creditLimitExceeded: Scalars['Boolean']['output'];
     currencyCode: CurrencyCode;
     customFields: Maybe<OrderCustomFields>;
     customer: Maybe<Customer>;
@@ -5274,6 +5281,7 @@ export type OrderFilterParameter = {
     /** A unique code for the Order */
     code?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
+    creditLimitExceeded?: InputMaybe<BooleanOperators>;
     currencyCode?: InputMaybe<StringOperators>;
     customerLastName?: InputMaybe<StringOperators>;
     erpContractId?: InputMaybe<StringOperators>;
@@ -6071,6 +6079,16 @@ export type PriceRange = {
     min: Scalars['Money']['output'];
 };
 
+export type PriceRangeBucket = {
+    count: Scalars['Int']['output'];
+    to: Scalars['Int']['output'];
+};
+
+export type PriceRangeInput = {
+    max: Scalars['Int']['input'];
+    min: Scalars['Int']['input'];
+};
+
 export type PriceType = {
     code: Scalars['String']['output'];
     id: Scalars['ID']['output'];
@@ -6116,6 +6134,7 @@ export type ProductCustomFields = {
     externalId: Maybe<Scalars['String']['output']>;
     fullName: Maybe<Scalars['String']['output']>;
     manufacturer: Maybe<Manufacturer>;
+    manufacturerPartNumber: Maybe<Scalars['String']['output']>;
     onSale: Maybe<Scalars['Boolean']['output']>;
 };
 
@@ -6130,6 +6149,7 @@ export type ProductFilterParameter = {
     fullName?: InputMaybe<StringOperators>;
     id?: InputMaybe<IdOperators>;
     languageCode?: InputMaybe<StringOperators>;
+    manufacturerPartNumber?: InputMaybe<StringOperators>;
     name?: InputMaybe<StringOperators>;
     onSale?: InputMaybe<BooleanOperators>;
     optionGroupId?: InputMaybe<IdOperators>;
@@ -6309,6 +6329,58 @@ export type ProductOptionTranslationInput = {
     name?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** A product photo that is not downloaded yet (pending) or gave up (failed) — issue #181. */
+export type ProductPhoto = Node & {
+    externalId: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    lastError: Maybe<Scalars['String']['output']>;
+    lastReplayAt: Maybe<Scalars['DateTime']['output']>;
+    position: Scalars['Int']['output'];
+    productExternalId: Scalars['String']['output'];
+    replayAttempts: Scalars['Int']['output'];
+    status: Scalars['String']['output'];
+    updatedAt: Scalars['DateTime']['output'];
+};
+
+export type ProductPhotoFilterParameter = {
+    _and?: InputMaybe<Array<ProductPhotoFilterParameter>>;
+    _or?: InputMaybe<Array<ProductPhotoFilterParameter>>;
+    externalId?: InputMaybe<StringOperators>;
+    id?: InputMaybe<IdOperators>;
+    lastError?: InputMaybe<StringOperators>;
+    lastReplayAt?: InputMaybe<DateOperators>;
+    position?: InputMaybe<NumberOperators>;
+    productExternalId?: InputMaybe<StringOperators>;
+    replayAttempts?: InputMaybe<NumberOperators>;
+    status?: InputMaybe<StringOperators>;
+    updatedAt?: InputMaybe<DateOperators>;
+};
+
+export type ProductPhotoList = PaginatedList & {
+    items: Array<ProductPhoto>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type ProductPhotoListOptions = {
+    filter?: InputMaybe<ProductPhotoFilterParameter>;
+    filterOperator?: InputMaybe<LogicalOperator>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<ProductPhotoSortParameter>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type ProductPhotoSortParameter = {
+    externalId?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    lastError?: InputMaybe<SortOrder>;
+    lastReplayAt?: InputMaybe<SortOrder>;
+    position?: InputMaybe<SortOrder>;
+    productExternalId?: InputMaybe<SortOrder>;
+    replayAttempts?: InputMaybe<SortOrder>;
+    status?: InputMaybe<SortOrder>;
+    updatedAt?: InputMaybe<SortOrder>;
+};
+
 export type ProductSortParameter = {
     createdAt?: InputMaybe<SortOrder>;
     description?: InputMaybe<SortOrder>;
@@ -6316,6 +6388,7 @@ export type ProductSortParameter = {
     fullName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     manufacturer?: InputMaybe<SortOrder>;
+    manufacturerPartNumber?: InputMaybe<SortOrder>;
     name?: InputMaybe<SortOrder>;
     onSale?: InputMaybe<SortOrder>;
     slug?: InputMaybe<SortOrder>;
@@ -6660,7 +6733,6 @@ export type QuantityTooGreatError = ErrorResult & {
 };
 
 export type Query = {
-    creditLimitExceededCounterpartyIds: Array<Scalars['ID']['output']>;
     activeAdministrator: Maybe<Administrator>;
     activeChannel: Channel;
     administrator: Maybe<Administrator>;
@@ -6690,6 +6762,7 @@ export type Query = {
     counterpartySummary: CounterpartySummary;
     countries: CountryList;
     country: Maybe<Country>;
+    creditLimitExceededCounterpartyIds: Array<Scalars['ID']['output']>;
     creditTermLimit: Maybe<CreditTermLimit>;
     customer: Maybe<Customer>;
     customerGroup: Maybe<CustomerGroup>;
@@ -6777,6 +6850,8 @@ export type Query = {
     priceEntriesForVariants: Array<VariantPriceEntry>;
     priceTypeCodes: Array<Scalars['String']['output']>;
     priceTypes: Array<PriceType>;
+    /** Product photos still pending or failed, newest first (issue #181). */
+    problemProductPhotos: ProductPhotoList;
     /** Get a Product either by id or slug. If neither id nor slug is specified, an error will result. */
     product: Maybe<Product>;
     productCrossReferences: Array<ProductCrossReference>;
@@ -7145,6 +7220,10 @@ export type QueryPriceAdjustmentRequestsForOrderArgs = {
 export type QueryPriceEntriesForVariantsArgs = {
     priceTypeCode: Scalars['String']['input'];
     variantIds: Array<Scalars['ID']['input']>;
+};
+
+export type QueryProblemProductPhotosArgs = {
+    options?: InputMaybe<ProductPhotoListOptions>;
 };
 
 export type QueryProductArgs = {
@@ -7681,6 +7760,10 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
+    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
+    inStock?: InputMaybe<Scalars['Boolean']['input']>;
+    priceRange?: InputMaybe<PriceRangeInput>;
+    priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -7695,7 +7778,15 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
+    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchResponsePriceData = {
+    buckets: Array<PriceRangeBucket>;
+    bucketsWithTax: Array<PriceRangeBucket>;
+    range: PriceRange;
+    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -7704,10 +7795,14 @@ export type SearchResult = {
     /** An array of ids of the Collections in which this result appears */
     collectionIds: Array<Scalars['ID']['output']>;
     currencyCode: CurrencyCode;
+    /** @deprecated Use customProductMappings or customProductVariantMappings */
+    customMappings: CustomProductMappings;
+    customProductMappings: CustomProductMappings;
     description: Scalars['String']['output'];
     enabled: Scalars['Boolean']['output'];
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
+    inStock: Maybe<Scalars['Boolean']['output']>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset: Maybe<SearchResultAsset>;
@@ -8616,6 +8711,7 @@ export type UpdateFacetValueInput = {
 
 export type UpdateGlobalSettingsCustomFieldsInput = {
     defaultBranchId?: InputMaybe<Scalars['String']['input']>;
+    deferredOrderMaxAgeDays?: InputMaybe<Scalars['Int']['input']>;
     organizationSplitEnabled?: InputMaybe<Scalars['Boolean']['input']>;
     stockTierLowMax?: InputMaybe<Scalars['Int']['input']>;
     stockTierMediumMax?: InputMaybe<Scalars['Int']['input']>;
@@ -8706,6 +8802,7 @@ export type UpdateProductCustomFieldsInput = {
     externalId?: InputMaybe<Scalars['String']['input']>;
     fullName?: InputMaybe<Scalars['String']['input']>;
     manufacturerId?: InputMaybe<Scalars['ID']['input']>;
+    manufacturerPartNumber?: InputMaybe<Scalars['String']['input']>;
     onSale?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
@@ -9452,6 +9549,10 @@ export type SetCategoryVisibilityOverrideMutation = {
     };
 };
 
+export type DefaultCurrencyQueryVariables = Exact<{ [key: string]: never }>;
+
+export type DefaultCurrencyQuery = { activeChannel: { defaultCurrencyCode: CurrencyCode } };
+
 export type CounterpartyTeamMemberFieldsFragment = {
     id: string;
     administratorId: string;
@@ -9576,15 +9677,15 @@ export type CustomersSummaryQuery = {
     };
 };
 
-export type HighUsageCustomersQueryVariables = Exact<{
-    limit: Scalars['Int']['input'];
-}>;
-
 export type CreditLimitExceededCounterpartyIdsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type CreditLimitExceededCounterpartyIdsQuery = {
     creditLimitExceededCounterpartyIds: Array<string>;
 };
+
+export type HighUsageCustomersQueryVariables = Exact<{
+    limit: Scalars['Int']['input'];
+}>;
 
 export type HighUsageCustomersQuery = {
     highUsageCounterparties: Array<{
@@ -9826,7 +9927,7 @@ export type CreditByCounterpartyIdQuery = {
             id: string;
             creditLimit: number | null;
             creditBalance: number | null;
-            paymentDelayDays: number | null;
+            paymentDelayDays: number;
         }>;
     };
 };
@@ -9839,7 +9940,7 @@ export type CreditForCounterpartyQuery = {
     counterparty: {
         creditLimit: number | null;
         creditBalance: number | null;
-        paymentDelayDays: number | null;
+        paymentDelayDays: number;
     } | null;
 };
 
@@ -11104,10 +11205,6 @@ export type AdministratorForPasswordResetTokenQuery = {
     } | null;
 };
 
-export type DefaultCurrencyQueryVariables = Exact<{ [key: string]: never }>;
-
-export type DefaultCurrencyQuery = { activeChannel: { defaultCurrencyCode: CurrencyCode } };
-
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -11975,6 +12072,13 @@ export const SetCategoryVisibilityOverrideDocument = new TypedDocumentString(`
     SetCategoryVisibilityOverrideMutation,
     SetCategoryVisibilityOverrideMutationVariables
 >;
+export const DefaultCurrencyDocument = new TypedDocumentString(`
+    query DefaultCurrency {
+  activeChannel {
+    defaultCurrencyCode
+  }
+}
+    `) as unknown as TypedDocumentString<DefaultCurrencyQuery, DefaultCurrencyQueryVariables>;
 export const CounterpartyTeamDocument = new TypedDocumentString(`
     query CounterpartyTeam($id: ID!) {
   counterparty(id: $id) {
@@ -13823,10 +13927,3 @@ export const AdministratorForPasswordResetTokenDocument = new TypedDocumentStrin
     AdministratorForPasswordResetTokenQuery,
     AdministratorForPasswordResetTokenQueryVariables
 >;
-export const DefaultCurrencyDocument = new TypedDocumentString(`
-    query DefaultCurrency {
-  activeChannel {
-    defaultCurrencyCode
-  }
-}
-    `) as unknown as TypedDocumentString<DefaultCurrencyQuery, DefaultCurrencyQueryVariables>;
