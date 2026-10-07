@@ -30,7 +30,11 @@ export function subscribeAndLog<E extends VendureEvent>(
     // ignores the return value, so this changes nothing about runtime (fire-and-forget) behavior.
     eventBus.ofType(EventClass).subscribe(event =>
         handler(event).catch((err: unknown) => {
-            Logger.error(`${EventClass.name} handler failed: ${String(err)}`, loggerCtx);
+            Logger.error(
+                `${EventClass.name} handler failed: ${String(err)}`,
+                loggerCtx,
+                err instanceof Error ? err.stack : undefined,
+            );
         }),
     );
 }

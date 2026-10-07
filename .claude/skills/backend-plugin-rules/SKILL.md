@@ -380,6 +380,19 @@ Use **`make seed-all`** to run the full local seeding order in one command: `see
 
 ---
 
+## Concurrency
+
+Full rules: `docs/concurrency.md`. Hard rules for any read-compute-write of shared rows:
+
+1. Take a lock inside a transaction and read AFTER it (`withAggregateLock` from `shared`, or `FOR UPDATE`).
+2. Prefer atomic SQL or recompute-from-source over patching a value from a snapshot.
+3. EventBus subscribers never write from `event.order`; re-read inside the lock.
+4. Never swallow errors in handlers; log at error level (`subscribeAndLog`), or mark `// best-effort: <reason>`.
+5. No raw `pg_advisory_xact_lock`; no SERIALIZABLE by default; fixed lock ordering.
+6. A real-Postgres concurrent-writer test is mandatory; run the `concurrency-audit` skill on such changes.
+
+---
+
 ## Testing
 
 Run the `test-design` skill before writing or changing any test here, per AGENTS.md's Testing

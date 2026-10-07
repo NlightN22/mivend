@@ -12,6 +12,7 @@ Read this before writing any code.
 - **No excess code.** Only implement what is required right now. No speculative abstractions, no "we might need this later."
 - **Research before implementing.** Before adding a library or choosing a pattern, verify it is the current best practice. Check Vendure docs, check npm trends, check GitHub issues. Don't assume.
 - **Clean separation.** Each layer has one responsibility. Resolvers do not contain business logic. Services do not build GraphQL responses. Entities do not have methods beyond simple accessors.
+- **Concurrency.** Any read-compute-write of shared rows follows `docs/concurrency.md` (lock inside a transaction, read under the lock, never swallow errors, concurrent-writer test).
 
 ---
 
