@@ -12,7 +12,7 @@ export
 .PHONY: up up-rebuild down logs ps restart \
         build lint fmt ci \
         test test-int test-e2e mutation-pilot \
-        e2e e2e-smoke e2e-ui e2e-report \
+        e2e e2e-smoke e2e-cart e2e-ui e2e-report \
         docker-build docker-push \
         preview-build preview-up preview-down \
         prod-up prod-down \
@@ -333,6 +333,10 @@ e2e test-e2e:
 # "E2E strategy". Requires the same `make dev` + `make seed` stack as `make e2e`.
 e2e-smoke:
 	pnpm --filter @mivend/e2e test:smoke
+
+# Cart totals invariants group (storefront/cart-totals) — see docs/testing-strategy.md.
+e2e-cart:
+	pnpm --filter @mivend/e2e test:cart $(E2E_ARGS)
 
 e2e-ui:
 	pnpm --filter @mivend/e2e test:ui

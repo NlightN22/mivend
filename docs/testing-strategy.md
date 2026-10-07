@@ -187,6 +187,14 @@ isolated cart/session per test, no inter-test ordering dependency, trace/screens
 failure, no fixed `waitForTimeout` sleeps, a minimal smoke subset runnable in CI, heavy E2E in a
 separate workflow if runtime requires it.
 
+### Cart totals group
+
+`packages/e2e/storefront/cart-totals/` (Playwright project `storefront-cart-totals`, `make e2e-cart`)
+asserts cart money invariants through the Shop API and the rendered cart/checkout UI: order total ==
+sum of lines, discount line == sum of struck-through differences, determinism of identical carts,
+stability across reload/re-login. Runs against the local seeded contour only, never places orders,
+and empties the cart after each test. Run it about every 10 commits and after any pricing change.
+
 A minimal `@smoke`-tagged subset (storefront login, deferred-payment order creation — see
 `packages/e2e/package.json`'s `test:smoke` / `make e2e-smoke`) runs via
 `.github/workflows/integration.yml`'s `e2e-smoke` job, booted non-interactively by

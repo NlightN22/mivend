@@ -25,7 +25,16 @@ export default defineConfig({
         {
             name: 'storefront',
             testDir: './storefront',
-            testIgnore: ['**/auth/**'],
+            testIgnore: ['**/auth/**', '**/cart-totals/**'],
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.STOREFRONT_URL ?? 'http://localhost:5173',
+                storageState: '.auth/storefront-user.json',
+            },
+        },
+        {
+            name: 'storefront-cart-totals',
+            testDir: './storefront/cart-totals',
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.STOREFRONT_URL ?? 'http://localhost:5173',
