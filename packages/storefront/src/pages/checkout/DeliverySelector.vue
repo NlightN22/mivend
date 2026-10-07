@@ -28,7 +28,6 @@ const savingId = ref<string | null>(null);
 
 async function openModal(): Promise<void> {
     modalOpen.value = true;
-    if (points.value.length) return;
     loadingPoints.value = true;
     try {
         const result = await shopApi(MyTradingPointsForDeliverySelectorDocument);
