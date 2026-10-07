@@ -1,10 +1,17 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { shopApi } from '../api/client';
-import { EligiblePaymentMethodsForCheckoutDocument } from '../api/generated/graphql';
+import {
+    EligiblePaymentMethodsForCheckoutDocument,
+    EligibleShippingMethodsForCheckoutDocument,
+} from '../api/generated/graphql';
+import { SHIPPING_CODE_BY_DELIVERY, type DeliveryType } from '../utils/deliveryMethods';
+import { useAuthStore } from './auth';
 
 export type PaymentMethod = 'online' | 'invoice' | 'deferred';
-export type DeliveryType = 'courier' | 'pickup';
+export type { DeliveryType };
+
+const DELIVERY_ORDER: DeliveryType[] = ['courier', 'pickup'];
 export type ResultState = 'success' | 'pending' | 'fail' | null;
 
 const METHOD_BY_CODE: Record<string, PaymentMethod> = {
@@ -17,6 +24,8 @@ export const useCheckoutStore = defineStore('checkout', () => {
     const availableMethods = ref<PaymentMethod[]>([]);
     const methodsLoaded = ref(false);
     const selectedPayment = ref<PaymentMethod | null>(null);
+    const availableDeliveries = ref<DeliveryType[]>([]);
+    const deliveryLoaded = ref(false);
     const selectedDelivery = ref<DeliveryType>('courier');
     const resultState = ref<ResultState>(null);
 
@@ -30,6 +39,31 @@ export const useCheckoutStore = defineStore('checkout', () => {
         }
         methodsLoaded.value = true;
     }
+
+    async function loadDeliveryMethods(): Promise<void> {
+        const { eligibleShippingMethods } = await shopApi(
+            EligibleShippingMethodsForCheckoutDocument,
+        );
+        const codes = new Set(eligibleShippingMethods.map(m => m.code));
+        availableDeliveries.value = DELIVERY_ORDER.filter(t =>
+            codes.has(SHIPPING_CODE_BY_DELIVERY[t]),
+        );
+        if (!availableDeliveries.value.includes(selectedDelivery.value)) {
+            selectedDelivery.value = availableDeliveries.value[0] ?? 'pickup';
+        }
+        deliveryLoaded.value = true;
+    }
+
+    const deliveryBlocker = computed<string | null>(() => {
+        if (!deliveryLoaded.value) return null;
+        if (!availableDeliveries.value.includes(selectedDelivery.value)) {
+            return 'Selected delivery type is not available for this order';
+        }
+        if (selectedDelivery.value === 'courier' && !useAuthStore().tradingPoint) {
+            return 'Select a trading point to use courier delivery';
+        }
+        return null;
+    });
 
     function setPayment(method: PaymentMethod): void {
         selectedPayment.value = method;
@@ -47,6 +81,8 @@ export const useCheckoutStore = defineStore('checkout', () => {
         availableMethods.value = [];
         methodsLoaded.value = false;
         selectedPayment.value = null;
+        availableDeliveries.value = [];
+        deliveryLoaded.value = false;
         selectedDelivery.value = 'courier';
         resultState.value = null;
     }
@@ -55,9 +91,13 @@ export const useCheckoutStore = defineStore('checkout', () => {
         availableMethods,
         methodsLoaded,
         selectedPayment,
+        availableDeliveries,
+        deliveryLoaded,
+        deliveryBlocker,
         selectedDelivery,
         resultState,
         loadPaymentMethods,
+        loadDeliveryMethods,
         setPayment,
         setDelivery,
         setResultState,

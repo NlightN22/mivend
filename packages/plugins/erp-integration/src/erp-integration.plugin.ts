@@ -112,6 +112,8 @@ import { createReconciliationTask } from './reconciliation.scheduled-task';
 import { KafkaLagPollerService } from './kafka-lag-poller.service';
 import { createKafkaLagPollTask } from './kafka-lag-poll.scheduled-task';
 import { KafkaLagResolver } from './kafka-lag.resolver';
+import { freightEligibilityChecker } from './freight-eligibility-checker';
+import { freightOrderGuard } from './freight-order-guard';
 import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.service';
 
 // Central-hub-only, per the external-integration-rules skill ("Branches never call the ERP [or Integration
@@ -264,6 +266,11 @@ import { FreightShippingBootstrapService } from './freight-shipping-bootstrap.se
                 createProductPhotoRecoveryTask(ErpIntegrationPlugin.options),
             ];
         }
+        config.shippingOptions.shippingEligibilityCheckers = [
+            ...(config.shippingOptions.shippingEligibilityCheckers ?? []),
+            freightEligibilityChecker,
+        ];
+        config.orderOptions.process = [...(config.orderOptions.process ?? []), freightOrderGuard];
         return config;
     },
     compatibility: '>0.0.0',

@@ -15,14 +15,17 @@ function createMockRepo() {
 describe('FreightShippingBootstrapService', () => {
     let repo: ReturnType<typeof createMockRepo>;
     let connection: { getRepository: (...args: unknown[]) => ReturnType<typeof createMockRepo> };
-    let shippingMethodService: { create: ReturnType<typeof vi.fn> };
+    let shippingMethodService: {
+        create: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+    };
     let processContext: { isWorker: boolean };
     let service: FreightShippingBootstrapService;
 
     beforeEach(() => {
         repo = createMockRepo();
         connection = { getRepository: () => repo };
-        shippingMethodService = { create: vi.fn().mockResolvedValue({ id: 1 }) };
+        shippingMethodService = { create: vi.fn().mockResolvedValue({ id: 1 }), update: vi.fn() };
         processContext = { isWorker: false };
         service = new FreightShippingBootstrapService(
             connection as unknown as TransactionalConnection,
@@ -49,16 +52,36 @@ describe('FreightShippingBootstrapService', () => {
             fulfillmentHandler: string;
         };
         expect(input.code).toBe(FREIGHT_SHIPPING_METHOD_CODE);
-        expect(input.checker.code).toBe('default-shipping-eligibility-checker');
+        expect(input.checker.code).toBe('freight-eligibility-checker');
         expect(input.calculator.code).toBe('default-shipping-calculator');
         expect(input.fulfillmentHandler).toBe('manual-fulfillment');
     });
 
     it('is idempotent: does not create a duplicate when the shipping method already exists', async () => {
-        repo.findOne.mockResolvedValue({ id: 1, code: FREIGHT_SHIPPING_METHOD_CODE });
+        repo.findOne.mockResolvedValue({
+            id: 1,
+            code: FREIGHT_SHIPPING_METHOD_CODE,
+            checker: { code: 'freight-eligibility-checker' },
+        });
         await service.onApplicationBootstrap();
 
         expect(shippingMethodService.create).not.toHaveBeenCalled();
+        expect(shippingMethodService.update).not.toHaveBeenCalled();
+    });
+
+    it('migrates an existing method that still has the default checker', async () => {
+        repo.findOne.mockResolvedValue({
+            id: 1,
+            code: FREIGHT_SHIPPING_METHOD_CODE,
+            checker: { code: 'default-shipping-eligibility-checker' },
+        });
+        await service.onApplicationBootstrap();
+
+        expect(shippingMethodService.update).toHaveBeenCalledWith(expect.anything(), {
+            id: 1,
+            translations: [],
+            checker: { code: 'freight-eligibility-checker', arguments: [] },
+        });
     });
 
     it('swallows a provisioning failure rather than crashing bootstrap', async () => {

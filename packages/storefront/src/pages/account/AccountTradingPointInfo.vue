@@ -38,7 +38,7 @@ const limitWarning = computed(() => {
                 <div>
                     <div class="trading-point-info__row-title">{{ tradingPoint.address }}</div>
                     <div class="trading-point-info__row-note">
-                        {{ tradingPoint.name }} · delivery today until 18:00
+                        {{ tradingPoint.name }}
                     </div>
                 </div>
             </div>

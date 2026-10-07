@@ -9,6 +9,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
+import { freightEligibilityChecker } from './freight-eligibility-checker';
 import { loggerCtx } from './types';
 
 export const FREIGHT_SHIPPING_METHOD_CODE = 'freight-delivery';
@@ -23,8 +24,7 @@ export const FREIGHT_SHIPPING_METHOD_CODE = 'freight-delivery';
 // warehouse-based freight delivery as a real fulfillment option, distinct from the universal
 // "pickup" default that plugin-pickup-shipping always provides.
 //
-// NOTE: the storefront still calls this concept "courier" (DeliveryType, DeliverySelector.vue) —
-// that's a known naming mismatch tracked by issue #44, not fixed here.
+// The storefront still calls this concept "courier" (DeliveryType).
 @Injectable()
 export class FreightShippingBootstrapService implements OnApplicationBootstrap {
     constructor(
@@ -52,7 +52,16 @@ export class FreightShippingBootstrapService implements OnApplicationBootstrap {
         const ctx = RequestContext.empty();
         const repo = this.connection.getRepository(ctx, ShippingMethod);
         const existing = await repo.findOne({ where: { code: FREIGHT_SHIPPING_METHOD_CODE } });
-        if (existing) return;
+        if (existing) {
+            if (existing.checker?.code !== freightEligibilityChecker.code) {
+                await this.shippingMethodService.update(ctx, {
+                    id: existing.id,
+                    translations: [],
+                    checker: { code: freightEligibilityChecker.code, arguments: [] },
+                });
+            }
+            return;
+        }
 
         await this.shippingMethodService.create(ctx, {
             code: FREIGHT_SHIPPING_METHOD_CODE,
@@ -63,10 +72,7 @@ export class FreightShippingBootstrapService implements OnApplicationBootstrap {
                     description: 'Freight delivery per contract terms',
                 },
             ],
-            checker: {
-                code: 'default-shipping-eligibility-checker',
-                arguments: [{ name: 'orderMinimum', value: '0' }],
-            },
+            checker: { code: freightEligibilityChecker.code, arguments: [] },
             calculator: {
                 code: 'default-shipping-calculator',
                 arguments: [

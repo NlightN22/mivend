@@ -3,7 +3,8 @@ import { ref, computed } from 'vue';
 import { toast } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import { brandOf } from '../utils/brand';
-import { useCheckoutStore, type DeliveryType } from './checkout';
+import { SHIPPING_CODE_BY_DELIVERY } from '../utils/deliveryMethods';
+import { useCheckoutStore } from './checkout';
 import {
     AddToCartDocument,
     AdjustCartLineDocument,
@@ -28,11 +29,6 @@ import {
     stockInsufficientGeneric,
     stockUpdateFailed,
 } from '../utils/discountMessages';
-
-const SHIPPING_CODE_BY_DELIVERY: Record<DeliveryType, string> = {
-    courier: 'freight-delivery',
-    pickup: 'pickup',
-};
 
 const ADJUST_DEBOUNCE_MS = 350;
 const CART_FETCH_RETRIES = 4;
@@ -318,8 +314,13 @@ export const useCartStore = defineStore('cart', () => {
     async function beginCheckout(): Promise<boolean> {
         // A previous attempt (declined payment, closed tab) can leave the order in ArrangingPayment.
         if (order.value?.state === 'ArrangingPayment') await shopApi(ResumeAddingItemsDocument);
+        const checkout = useCheckoutStore();
+        if (checkout.deliveryBlocker) {
+            toast(checkout.deliveryBlocker, 'error');
+            return false;
+        }
         const eligible = await shopApi(EligibleShippingMethodsForCheckoutDocument);
-        const wantedCode = SHIPPING_CODE_BY_DELIVERY[useCheckoutStore().selectedDelivery];
+        const wantedCode = SHIPPING_CODE_BY_DELIVERY[checkout.selectedDelivery];
         const methodId = eligible.eligibleShippingMethods.find(m => m.code === wantedCode)?.id;
         if (!methodId) {
             toast('Selected delivery type is not available for this order', 'error');

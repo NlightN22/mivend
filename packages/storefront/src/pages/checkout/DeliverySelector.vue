@@ -13,9 +13,8 @@ import {
 const checkoutStore = useCheckoutStore();
 const authStore = useAuthStore();
 
-const tradingPointName = computed(
-    () => authStore.tradingPoint?.name ?? 'Trading point not selected',
-);
+const courierAvailable = computed(() => checkoutStore.availableDeliveries.includes('courier'));
+const pickupAvailable = computed(() => checkoutStore.availableDeliveries.includes('pickup'));
 const tradingPointAddress = computed(() => authStore.tradingPoint?.address ?? '');
 
 // ── Change point modal ──────────────────────────────────────────────────────
@@ -70,33 +69,46 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                 class="delivery-selector__card"
                 :class="{
                     'delivery-selector__card--active': checkoutStore.selectedDelivery === 'courier',
+                    'delivery-selector__card--disabled': !courierAvailable,
                 }"
                 type="button"
+                :disabled="!courierAvailable"
                 @click="checkoutStore.setDelivery('courier')"
             >
                 <div class="delivery-selector__card-title"><span>🚚</span> Courier</div>
-                <p class="delivery-selector__card-note">
-                    {{ tradingPointAddress || tradingPointName }} · today until 18:00 · per contract
-                    terms.
+                <p v-if="!courierAvailable" class="delivery-selector__card-note">
+                    Courier delivery needs a trading point.
+                    <RouterLink to="/account/trading-points">Add trading point</RouterLink>
+                </p>
+                <p v-else class="delivery-selector__card-note">
+                    {{ tradingPointAddress || 'Select a trading point' }} · per contract terms.
                 </p>
             </button>
             <button
                 class="delivery-selector__card"
                 :class="{
                     'delivery-selector__card--active': checkoutStore.selectedDelivery === 'pickup',
+                    'delivery-selector__card--disabled': !pickupAvailable,
                 }"
                 type="button"
+                :disabled="!pickupAvailable"
                 @click="checkoutStore.setDelivery('pickup')"
             >
                 <div class="delivery-selector__card-title"><span>🏬</span> Self-pickup</div>
                 <p class="delivery-selector__card-note">Available after assembly confirmation.</p>
             </button>
         </div>
+        <p v-if="checkoutStore.deliveryBlocker" class="delivery-selector__blocker">
+            {{ checkoutStore.deliveryBlocker }}
+        </p>
     </article>
 
     <MvModal v-if="modalOpen" title="Select trading point" @close="modalOpen = false">
         <div v-if="loadingPoints" class="ds-modal-loading">Loading…</div>
-        <div v-else-if="!points.length" class="ds-modal-empty">No trading points found.</div>
+        <div v-else-if="!points.length" class="ds-modal-empty">
+            No trading points found.
+            <RouterLink to="/account/trading-points">Add trading point</RouterLink>
+        </div>
         <ul v-else class="ds-point-list">
             <li
                 v-for="pt in points"
@@ -184,6 +196,17 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
     text-align: left;
     font: inherit;
     transition: 0.16s ease;
+}
+
+.delivery-selector__card--disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.delivery-selector__blocker {
+    margin: 12px 0 0;
+    color: #b42318;
+    font-size: 13px;
 }
 
 .delivery-selector__card--active {

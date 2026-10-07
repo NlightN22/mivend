@@ -10,7 +10,13 @@ import CheckoutSummary from './CheckoutSummary.vue';
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
 
-onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadPaymentMethods()]));
+onMounted(() =>
+    Promise.all([
+        cartStore.fetchCart(),
+        checkoutStore.loadPaymentMethods(),
+        checkoutStore.loadDeliveryMethods(),
+    ]),
+);
 </script>
 
 <template>
