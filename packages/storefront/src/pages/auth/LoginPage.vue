@@ -3,11 +3,13 @@ import { reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
+import { useCartStore } from '../../stores/cart';
 
 const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
 const authStore = useAuthStore();
+const cartStore = useCartStore();
 
 const form = reactive({ email: '', password: '', remember: false });
 const loading = ref(false);
@@ -19,6 +21,7 @@ async function handleSubmit() {
     try {
         const ok = await authStore.login(form.email, form.password, form.remember);
         if (ok) {
+            await cartStore.fetchCart();
             await router.push((route.query.redirect as string) ?? '/');
         } else {
             error.value = t('auth.loginError');
