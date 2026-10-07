@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { IconBuildingStore, IconCheck, IconTruckDelivery } from '@tabler/icons-vue';
+import { IconBuildingStore, IconCheck, IconMapPin, IconTruckDelivery } from '@tabler/icons-vue';
 import { MvModal } from '@mivend/ui-kit';
 import { useCheckoutStore } from '../../stores/checkout';
 import { useAuthStore } from '../../stores/auth';
@@ -16,7 +16,10 @@ const authStore = useAuthStore();
 
 const courierAvailable = computed(() => checkoutStore.availableDeliveries.includes('courier'));
 const pickupAvailable = computed(() => checkoutStore.availableDeliveries.includes('pickup'));
-const tradingPointAddress = computed(() => authStore.tradingPoint?.address ?? '');
+const tradingPoint = computed(() => authStore.tradingPoint);
+const showPointStrip = computed(
+    () => courierAvailable.value && checkoutStore.selectedDelivery === 'courier',
+);
 
 // ── Change point modal ──────────────────────────────────────────────────────
 
@@ -58,11 +61,8 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
         <div class="delivery-selector__head">
             <div>
                 <h2 class="delivery-selector__title">Delivery</h2>
-                <p class="delivery-selector__subtitle">Delivery to your current trading point.</p>
+                <p class="delivery-selector__subtitle">Choose delivery method for your order.</p>
             </div>
-            <button class="delivery-selector__change-btn" type="button" @click="openModal">
-                Change point
-            </button>
         </div>
         <div class="delivery-selector__grid">
             <button
@@ -83,7 +83,7 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                     <RouterLink to="/account/trading-points">Add trading point</RouterLink>
                 </p>
                 <p v-else class="delivery-selector__card-note">
-                    {{ tradingPointAddress || 'Select a trading point' }} · per contract terms.
+                    Delivery to the trading point, per contract terms.
                 </p>
             </button>
             <button
@@ -101,6 +101,26 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                     Self-pickup
                 </div>
                 <p class="delivery-selector__card-note">Available after assembly confirmation.</p>
+            </button>
+        </div>
+        <div v-if="showPointStrip" class="delivery-selector__point">
+            <IconMapPin
+                class="delivery-selector__point-icon"
+                :size="22"
+                stroke-width="1.7"
+                aria-hidden="true"
+            />
+            <div class="delivery-selector__point-body">
+                <div class="delivery-selector__point-label">Trading point for delivery</div>
+                <div class="delivery-selector__point-name">
+                    {{ tradingPoint?.name ?? 'Not selected' }}
+                </div>
+                <div v-if="tradingPoint?.address" class="delivery-selector__point-addr">
+                    {{ tradingPoint.address }}
+                </div>
+            </div>
+            <button class="delivery-selector__change-btn" type="button" @click="openModal">
+                Change
             </button>
         </div>
         <p v-if="checkoutStore.deliveryBlocker" class="delivery-selector__blocker">
@@ -206,6 +226,43 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
     text-align: left;
     font: inherit;
     transition: 0.16s ease;
+}
+
+.delivery-selector__point {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #f3fff7;
+    border: 1px solid #cdeedd;
+}
+
+.delivery-selector__point-icon {
+    flex: 0 0 auto;
+    color: #00a878;
+}
+
+.delivery-selector__point-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.delivery-selector__point-label {
+    font-size: 12px;
+    color: #66736e;
+}
+
+.delivery-selector__point-name {
+    font-size: 14px;
+    font-weight: 800;
+    color: #14231f;
+}
+
+.delivery-selector__point-addr {
+    font-size: 13px;
+    color: #66736e;
 }
 
 .delivery-selector__card--disabled {
