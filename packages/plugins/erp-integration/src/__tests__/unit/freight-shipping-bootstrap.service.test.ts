@@ -9,6 +9,7 @@ import {
 function createMockRepo() {
     return {
         findOne: vi.fn(),
+        update: vi.fn(),
     };
 }
 
@@ -25,7 +26,7 @@ describe('FreightShippingBootstrapService', () => {
     beforeEach(() => {
         repo = createMockRepo();
         connection = { getRepository: () => repo };
-        shippingMethodService = { create: vi.fn().mockResolvedValue({ id: 1 }), update: vi.fn() };
+        shippingMethodService = { create: vi.fn().mockResolvedValue({ id: 1 }) };
         processContext = { isWorker: false };
         service = new FreightShippingBootstrapService(
             connection as unknown as TransactionalConnection,
@@ -66,7 +67,7 @@ describe('FreightShippingBootstrapService', () => {
         await service.onApplicationBootstrap();
 
         expect(shippingMethodService.create).not.toHaveBeenCalled();
-        expect(shippingMethodService.update).not.toHaveBeenCalled();
+        expect(repo.update).not.toHaveBeenCalled();
     });
 
     it('migrates an existing method that still has the default checker', async () => {
@@ -77,10 +78,8 @@ describe('FreightShippingBootstrapService', () => {
         });
         await service.onApplicationBootstrap();
 
-        expect(shippingMethodService.update).toHaveBeenCalledWith(expect.anything(), {
-            id: 1,
-            translations: [],
-            checker: { code: 'freight-eligibility-checker', arguments: [] },
+        expect(repo.update).toHaveBeenCalledWith(1, {
+            checker: { code: 'freight-eligibility-checker', args: [] },
         });
     });
 

@@ -54,10 +54,8 @@ export class FreightShippingBootstrapService implements OnApplicationBootstrap {
         const existing = await repo.findOne({ where: { code: FREIGHT_SHIPPING_METHOD_CODE } });
         if (existing) {
             if (existing.checker?.code !== freightEligibilityChecker.code) {
-                await this.shippingMethodService.update(ctx, {
-                    id: existing.id,
-                    translations: [],
-                    checker: { code: freightEligibilityChecker.code, arguments: [] },
+                await repo.update(existing.id, {
+                    checker: { code: freightEligibilityChecker.code, args: [] },
                 });
             }
             return;
