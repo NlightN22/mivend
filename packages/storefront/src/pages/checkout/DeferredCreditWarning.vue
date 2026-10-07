@@ -1,31 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { MvCheckbox } from '@mivend/ui-kit';
 import { useCheckoutStore } from '../../stores/checkout';
-import { useCurrency } from '../../composables/useCurrency';
 
 const checkoutStore = useCheckoutStore();
-const { formatWhole } = useCurrency();
-
-const preview = computed(() => checkoutStore.creditPreview);
 </script>
 
 <template>
-    <MvNotice v-if="checkoutStore.creditWarningVisible && preview" variant="warning">
-        <p class="deferred-credit-warning__text">
-            This order exceeds your available credit:
-            {{ formatWhole(preview.orderAmount) }} ordered,
-            {{ formatWhole(Math.max(preview.availableCredit, 0)) }} available.
-        </p>
+    <div v-if="checkoutStore.creditWarningVisible" class="deferred-credit-warning">
         <MvCheckbox
             v-model="checkoutStore.creditAcknowledged"
-            label="Understanding that the credit limits are exceeded, manager confirmation is required"
+            label="I understand the limit is exceeded"
         />
-    </MvNotice>
+    </div>
 </template>
 
 <style scoped>
-.deferred-credit-warning__text {
-    margin: 0 0 10px;
+.deferred-credit-warning {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #fff4e0;
+    font-size: 14px;
 }
 </style>

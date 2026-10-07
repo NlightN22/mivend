@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
+import { useCurrency } from '../../composables/useCurrency';
 import DeferredCreditWarning from './DeferredCreditWarning.vue';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
@@ -16,6 +17,16 @@ const packagingLabel = computed(() => formatPackaging(packaging.value));
 
 const lineCount = computed(() => cartStore.lines.length);
 const totalQty = computed(() => cartStore.totalQuantity);
+
+const { formatWhole } = useCurrency();
+const creditPreview = computed(() =>
+    checkoutStore.selectedPayment === 'deferred' ? checkoutStore.creditPreview : null,
+);
+const overLimit = computed(() =>
+    creditPreview.value
+        ? Math.max(creditPreview.value.orderAmount - creditPreview.value.availableCredit, 0)
+        : 0,
+);
 
 function formatRub(kopecks: number): string {
     return new Intl.NumberFormat('ru-RU').format(kopecks / 100) + ' ₽';
@@ -83,6 +94,17 @@ async function handlePrimary(): Promise<void> {
                 <span>Weight / volume</span>
                 <strong>{{ packagingLabel }}</strong>
             </div>
+
+            <template v-if="creditPreview">
+                <div class="checkout-summary__line">
+                    <span>Available credit</span>
+                    <strong>{{ formatWhole(Math.max(creditPreview.availableCredit, 0)) }}</strong>
+                </div>
+                <div v-if="creditPreview.exceeded" class="checkout-summary__line">
+                    <span>Over the limit by</span>
+                    <strong class="checkout-summary__discount">{{ formatWhole(overLimit) }}</strong>
+                </div>
+            </template>
 
             <div class="checkout-summary__total">
                 <span>Total</span>
@@ -223,5 +245,12 @@ async function handlePrimary(): Promise<void> {
 .checkout-summary__legal a {
     color: #008a64;
     font-weight: 800;
+}
+
+.checkout-summary__pay-btn:disabled {
+    background: #c9d2ce;
+    box-shadow: none;
+    color: #fff;
+    cursor: not-allowed;
 }
 </style>
