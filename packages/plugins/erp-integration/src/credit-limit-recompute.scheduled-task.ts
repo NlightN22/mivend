@@ -19,7 +19,12 @@ export function createCreditLimitRecomputeTask(
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
             const result = await injector.get(CreditLimitRecomputeService).recomputeAll();
-            if (result.contractsUpdated + result.counterpartiesUpdated > 0) {
+            if (
+                result.contractsUpdated +
+                    result.counterpartiesUpdated +
+                    result.paymentDelaysUpdated >
+                0
+            ) {
                 Logger.verbose(`Credit limit recompute: ${JSON.stringify(result)}`, loggerCtx);
             }
             return { ...result };

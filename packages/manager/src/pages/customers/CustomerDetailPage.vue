@@ -340,6 +340,18 @@ function initials(name: string | null): string {
                     }}</span>
                 </div>
             </div>
+            <template v-if="credit && credit.paymentDelayDays > 0">
+                <span class="customer-detail__info-divider" />
+                <div class="customer-detail__info-item">
+                    <Wallet class="customer-detail__info-icon" />
+                    <div class="customer-detail__info-text">
+                        <span class="customer-detail__info-label">Payment terms</span>
+                        <span class="customer-detail__info-value"
+                            >{{ credit.paymentDelayDays }} days</span
+                        >
+                    </div>
+                </div>
+            </template>
             <span class="customer-detail__info-divider" />
             <div class="customer-detail__info-item">
                 <span class="customer-detail__avatar">{{

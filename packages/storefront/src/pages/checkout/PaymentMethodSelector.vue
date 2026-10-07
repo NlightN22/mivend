@@ -2,10 +2,12 @@
 import { computed } from 'vue';
 import { MvSkeleton } from '@mivend/ui-kit';
 import { useCheckoutStore } from '../../stores/checkout';
+import { useAuthStore } from '../../stores/auth';
 
 const checkoutStore = useCheckoutStore();
+const authStore = useAuthStore();
 
-const methodCards = [
+const methodCards = computed(() => [
     {
         id: 'online' as const,
         icon: '💳',
@@ -26,14 +28,17 @@ const methodCards = [
         id: 'deferred' as const,
         icon: '⏱',
         title: 'Deferred payment',
-        note: 'Available per contract terms and limit.',
+        note:
+            (authStore.counterparty?.paymentDelayDays ?? 0) > 0
+                ? `Payment terms: ${authStore.counterparty?.paymentDelayDays} days.`
+                : 'Available per contract terms and limit.',
         badge: 'Limit available',
         badgeOrange: false,
     },
-];
+]);
 
 const methods = computed(() =>
-    methodCards.filter(card => checkoutStore.availableMethods.includes(card.id)),
+    methodCards.value.filter(card => checkoutStore.availableMethods.includes(card.id)),
 );
 </script>
 

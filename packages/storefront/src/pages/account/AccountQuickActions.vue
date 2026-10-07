@@ -10,7 +10,9 @@ const limitText = computed(() => {
     const cp = authStore.counterparty;
     if (!cp) return 'No limit data';
     const avail = formatWhole(cp.creditLimit - cp.creditBalance);
-    return `${avail} available, deferred ${cp.paymentDelayDays} days`;
+    return cp.paymentDelayDays > 0
+        ? `${avail} available, deferred ${cp.paymentDelayDays} days`
+        : `${avail} available`;
 });
 </script>
 

@@ -33,7 +33,9 @@ const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);
                 <div class="status-cards__icon">₽</div>
             </div>
             <div class="status-cards__value">{{ availableLimit }}</div>
-            <div class="status-cards__note">Payment delay: {{ delayDays }} days</div>
+            <div v-if="delayDays > 0" class="status-cards__note">
+                Payment delay: {{ delayDays }} days
+            </div>
         </div>
 
         <div class="status-cards__card status-cards__card--warning">

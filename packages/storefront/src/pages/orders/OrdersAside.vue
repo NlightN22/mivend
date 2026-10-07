@@ -18,7 +18,7 @@ const availableLimit = computed(() => {
 
 const paymentDelay = computed(() => {
     const days = authStore.counterparty?.paymentDelayDays;
-    return days != null ? `${days} days` : '—';
+    return days != null && days > 0 ? `${days} days` : '—';
 });
 
 // Real payment obligations now live entirely on /invoices (which can independently span

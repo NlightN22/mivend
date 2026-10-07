@@ -71,6 +71,10 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
                 <dt>Available</dt>
                 <dd>{{ formatWhole(credit.creditLimit - credit.creditBalance) }}</dd>
             </div>
+            <div v-if="credit && credit.paymentDelayDays > 0">
+                <dt>Payment terms</dt>
+                <dd>{{ credit.paymentDelayDays }} days</dd>
+            </div>
         </dl>
 
         <div class="overview-tab__trading-points">

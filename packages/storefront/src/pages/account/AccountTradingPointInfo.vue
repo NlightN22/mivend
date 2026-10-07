@@ -48,8 +48,10 @@ const limitWarning = computed(() => {
                 <div>
                     <div class="trading-point-info__row-title">Contract B2B-014</div>
                     <div class="trading-point-info__row-note">
-                        Deferred {{ counterparty.paymentDelayDays }} days · limit
-                        {{ formatWhole(counterparty.creditLimit) }}
+                        <template v-if="counterparty.paymentDelayDays > 0"
+                            >Deferred {{ counterparty.paymentDelayDays }} days ·
+                        </template>
+                        limit {{ formatWhole(counterparty.creditLimit) }}
                     </div>
                 </div>
             </div>

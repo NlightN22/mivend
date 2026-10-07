@@ -9814,7 +9814,12 @@ export type CreditByCounterpartyIdQueryVariables = Exact<{
 
 export type CreditByCounterpartyIdQuery = {
     counterparties: {
-        items: Array<{ id: string; creditLimit: number | null; creditBalance: number | null }>;
+        items: Array<{
+            id: string;
+            creditLimit: number | null;
+            creditBalance: number | null;
+            paymentDelayDays: number | null;
+        }>;
     };
 };
 
@@ -9823,7 +9828,11 @@ export type CreditForCounterpartyQueryVariables = Exact<{
 }>;
 
 export type CreditForCounterpartyQuery = {
-    counterparty: { creditLimit: number | null; creditBalance: number | null } | null;
+    counterparty: {
+        creditLimit: number | null;
+        creditBalance: number | null;
+        paymentDelayDays: number | null;
+    } | null;
 };
 
 export type ActiveDiscountCountForCounterpartyQueryVariables = Exact<{
@@ -12338,6 +12347,7 @@ export const CreditByCounterpartyIdDocument = new TypedDocumentString(`
       id
       creditLimit
       creditBalance
+      paymentDelayDays
     }
   }
 }
@@ -12350,6 +12360,7 @@ export const CreditForCounterpartyDocument = new TypedDocumentString(`
   counterparty(id: $id) {
     creditLimit
     creditBalance
+    paymentDelayDays
   }
 }
     `) as unknown as TypedDocumentString<

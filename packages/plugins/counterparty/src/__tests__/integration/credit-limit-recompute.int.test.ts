@@ -61,9 +61,11 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     await run(`CREATE TABLE counterparty (
-        id serial PRIMARY KEY, "creditLimit" bigint NOT NULL DEFAULT 0, "updatedAt" timestamp DEFAULT now())`);
+        id serial PRIMARY KEY, "creditLimit" bigint NOT NULL DEFAULT 0,
+        "paymentDelayDays" integer NOT NULL DEFAULT 0, "mainContractId" varchar, "updatedAt" timestamp DEFAULT now())`);
     await run(`CREATE TABLE contract (
-        id serial PRIMARY KEY, "counterpartyId" varchar NOT NULL, "creditLimit" varchar,
+        id serial PRIMARY KEY, "erpId" varchar, "debtDaysLimit" integer,
+        "counterpartyId" varchar NOT NULL, "creditLimit" varchar,
         "controlledIndividually" boolean, "isActive" boolean NOT NULL DEFAULT true,
         "effectiveCreditLimit" numeric(18,2), "updatedAt" timestamp DEFAULT now())`);
     service = new CreditLimitRecomputeService({ rawConnection: dataSource } as never);
@@ -139,10 +141,12 @@ describe('credit limit recompute (real SQL)', () => {
         expect(await service.recomputeAll()).toEqual({
             contractsUpdated: 1,
             counterpartiesUpdated: 1,
+            paymentDelaysUpdated: 0,
         });
         expect(await service.recomputeAll()).toEqual({
             contractsUpdated: 0,
             counterpartiesUpdated: 0,
+            paymentDelaysUpdated: 0,
         });
         await run(`UPDATE contract SET "creditLimit" = '250' WHERE "counterpartyId" = $1`, [
             String(id),
@@ -150,6 +154,7 @@ describe('credit limit recompute (real SQL)', () => {
         expect(await service.recomputeAll()).toEqual({
             contractsUpdated: 1,
             counterpartiesUpdated: 1,
+            paymentDelaysUpdated: 0,
         });
         expect(await poolOf(id)).toBe(250);
     });
@@ -159,10 +164,65 @@ describe('credit limit recompute (real SQL)', () => {
         expect(await service.recomputeAll(2)).toEqual({
             contractsUpdated: 5,
             counterpartiesUpdated: 5,
+            paymentDelaysUpdated: 0,
         });
         expect(await service.recomputeAll(2)).toEqual({
             contractsUpdated: 0,
             counterpartiesUpdated: 0,
+            paymentDelaysUpdated: 0,
+        });
+    });
+
+    describe('payment delay days from the main contract', () => {
+        const addMain = async (
+            mainErpId: string | null,
+            contract: { erpId: string; days: number | null; active?: boolean } | null,
+        ): Promise<number> => {
+            const id = await addCounterparty([]);
+            await run(
+                `UPDATE counterparty SET "mainContractId" = $2, "paymentDelayDays" = 9 WHERE id = $1`,
+                [id, mainErpId],
+            );
+            if (contract) {
+                await run(
+                    `INSERT INTO contract ("erpId", "debtDaysLimit", "counterpartyId", "isActive") VALUES ($1, $2, $3, $4)`,
+                    [contract.erpId, contract.days, String(id), contract.active ?? true],
+                );
+            }
+            return id;
+        };
+        const daysOf = async (id: number): Promise<number> =>
+            Number(
+                (
+                    await run(`SELECT "paymentDelayDays" AS d FROM counterparty WHERE id = $1`, [
+                        id,
+                    ])
+                )[0].d,
+            );
+
+        it('takes debtDaysLimit of the active main contract, 0 otherwise, isolated per counterparty', async () => {
+            const active = await addMain('c-1', { erpId: 'c-1', days: 14 });
+            const other = await addMain('c-2', { erpId: 'c-2', days: 3 });
+            const inactive = await addMain('c-3', { erpId: 'c-3', days: 7, active: false });
+            const noMain = await addMain(null, null);
+            const noDays = await addMain('c-5', { erpId: 'c-5', days: null });
+            const dangling = await addMain('c-missing', null);
+            await service.recomputeAll();
+            expect(await daysOf(active)).toBe(14);
+            expect(await daysOf(other)).toBe(3);
+            expect(await daysOf(inactive)).toBe(0);
+            expect(await daysOf(noMain)).toBe(0);
+            expect(await daysOf(noDays)).toBe(0);
+            expect(await daysOf(dangling)).toBe(0);
+        });
+
+        it('is idempotent and picks up a changed value', async () => {
+            const id = await addMain('c-1', { erpId: 'c-1', days: 10 });
+            expect((await service.recomputeAll()).paymentDelaysUpdated).toBe(1);
+            expect((await service.recomputeAll()).paymentDelaysUpdated).toBe(0);
+            await run(`UPDATE contract SET "debtDaysLimit" = 25 WHERE "erpId" = 'c-1'`);
+            expect((await service.recomputeAll()).paymentDelaysUpdated).toBe(1);
+            expect(await daysOf(id)).toBe(25);
         });
     });
 });

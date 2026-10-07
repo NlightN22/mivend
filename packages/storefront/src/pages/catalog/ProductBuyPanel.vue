@@ -95,8 +95,10 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
                 <strong>Can be ordered without upfront payment.</strong>
                 Credit limit: {{ formatWhole(counterparty!.creditLimit) }}, debt:
                 {{ formatWhole(counterparty!.creditBalance) }}, available:
-                {{ formatWhole(availableCredit) }}. Payment terms:
-                {{ counterparty!.paymentDelayDays }} days.
+                {{ formatWhole(availableCredit) }}.
+                <template v-if="counterparty!.paymentDelayDays > 0"
+                    >Payment terms: {{ counterparty!.paymentDelayDays }} days.</template
+                >
             </div>
         </div>
     </div>

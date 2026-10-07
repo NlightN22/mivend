@@ -4,6 +4,7 @@ import { TransactionalConnection } from '@vendure/core';
 import {
     recomputeContractLimitsSql,
     recomputeCounterpartyLimitsSql,
+    recomputePaymentDelayDaysSql,
 } from './credit-limit-recompute.sql';
 
 export const CREDIT_LIMIT_RECOMPUTE_BATCH_SIZE = 1000;
@@ -11,6 +12,7 @@ export const CREDIT_LIMIT_RECOMPUTE_BATCH_SIZE = 1000;
 export interface CreditLimitRecomputeResult {
     contractsUpdated: number;
     counterpartiesUpdated: number;
+    paymentDelaysUpdated: number;
 }
 
 @Injectable()
@@ -25,6 +27,7 @@ export class CreditLimitRecomputeService {
         return {
             contractsUpdated: await this.drain(recomputeContractLimitsSql, batchSize),
             counterpartiesUpdated: await this.drain(recomputeCounterpartyLimitsSql, batchSize),
+            paymentDelaysUpdated: await this.drain(recomputePaymentDelayDaysSql, batchSize),
         };
     }
 

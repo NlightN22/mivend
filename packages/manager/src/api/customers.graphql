@@ -208,6 +208,7 @@ query CreditByCounterpartyId($options: CounterpartyListOptions) {
             id
             creditLimit
             creditBalance
+            paymentDelayDays
         }
     }
 }
@@ -216,6 +217,7 @@ query CreditForCounterparty($id: ID!) {
     counterparty(id: $id) {
         creditLimit
         creditBalance
+        paymentDelayDays
     }
 }
 

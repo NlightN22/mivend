@@ -504,6 +504,7 @@ export async function fetchDocumentTypes(counterpartyId: string): Promise<string
 export interface CustomerCredit {
     creditLimit: number;
     creditBalance: number;
+    paymentDelayDays: number;
 }
 
 // Isolated on purpose — see api/orderCreate.ts's fetchCustomerCredit for why creditLimit/
@@ -520,7 +521,11 @@ export async function fetchCreditByCounterpartyId(
         return new Map(
             result.counterparties.items.map(c => [
                 c.id,
-                { creditLimit: c.creditLimit ?? 0, creditBalance: c.creditBalance ?? 0 },
+                {
+                    creditLimit: c.creditLimit ?? 0,
+                    creditBalance: c.creditBalance ?? 0,
+                    paymentDelayDays: c.paymentDelayDays ?? 0,
+                },
             ]),
         );
     } catch {
@@ -539,6 +544,7 @@ export async function fetchCreditForCounterparty(
             ? {
                   creditLimit: result.counterparty.creditLimit ?? 0,
                   creditBalance: result.counterparty.creditBalance ?? 0,
+                  paymentDelayDays: result.counterparty.paymentDelayDays ?? 0,
               }
             : null;
     } catch {

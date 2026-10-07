@@ -58,3 +58,24 @@ upd AS (
     RETURNING 1
 )
 SELECT COUNT(*)::int AS n FROM upd`;
+
+export const recomputePaymentDelayDaysSql = `
+WITH target AS (
+    SELECT cp.id,
+           COALESCE(CASE WHEN mc."isActive" THEN mc."debtDaysLimit" END, 0) AS days
+    FROM counterparty cp
+    LEFT JOIN contract mc ON mc."erpId" = cp."mainContractId"
+),
+changed AS (
+    SELECT t.id, t.days
+    FROM target t
+    INNER JOIN counterparty cp ON cp.id = t.id
+    WHERE cp."paymentDelayDays" IS DISTINCT FROM t.days
+    LIMIT $1
+),
+upd AS (
+    UPDATE counterparty SET "paymentDelayDays" = changed.days, "updatedAt" = now()
+    FROM changed WHERE counterparty.id = changed.id
+    RETURNING 1
+)
+SELECT COUNT(*)::int AS n FROM upd`;
