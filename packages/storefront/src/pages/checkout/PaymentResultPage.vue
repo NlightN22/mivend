@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { IconCheck, IconHourglass, IconX } from '@tabler/icons-vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -12,7 +13,7 @@ const status = computed(() => {
 const config = computed(() => {
     if (status.value === 'success') {
         return {
-            icon: '✓',
+            icon: IconCheck,
             iconClass: 'pr-icon--green',
             title: 'Payment successful',
             text: 'Payment for order #348744 has been processed. The order is confirmed.',
@@ -20,14 +21,14 @@ const config = computed(() => {
     }
     if (status.value === 'pending') {
         return {
-            icon: '⏳',
+            icon: IconHourglass,
             iconClass: 'pr-icon--orange',
             title: 'Awaiting confirmation',
             text: 'Payment is being processed. This may take a few minutes. Order status will update automatically.',
         };
     }
     return {
-        icon: '✕',
+        icon: IconX,
         iconClass: 'pr-icon--red',
         title: 'Payment failed',
         text: 'The payment could not be processed. Your order has not been confirmed. You can try again or choose a different payment method.',
@@ -55,7 +56,9 @@ const today = new Intl.DateTimeFormat('en-GB', {
         </div>
 
         <div class="pr-status-card" :class="`pr-status-card--${status}`">
-            <div class="pr-icon" :class="config.iconClass">{{ config.icon }}</div>
+            <div class="pr-icon" :class="config.iconClass">
+                <component :is="config.icon" :size="32" stroke-width="2.5" aria-hidden="true" />
+            </div>
             <h2 class="pr-status-title">{{ config.title }}</h2>
             <p class="pr-status-text">{{ config.text }}</p>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { IconCheck } from '@tabler/icons-vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { MvErrorState } from '@mivend/ui-kit';
@@ -125,7 +126,9 @@ onMounted(load);
 
         <template v-else>
             <div class="oc-status-card">
-                <div class="oc-check">✓</div>
+                <div class="oc-check">
+                    <IconCheck :size="32" stroke-width="3" aria-hidden="true" />
+                </div>
                 <h2 class="oc-status-title">Order created</h2>
                 <p class="oc-status-text">{{ statusText }}</p>
                 <MvNotice v-if="limitExceeded" variant="warning">

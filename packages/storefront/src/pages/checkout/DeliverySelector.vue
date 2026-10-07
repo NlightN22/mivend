@@ -16,6 +16,7 @@ const authStore = useAuthStore();
 
 const courierAvailable = computed(() => checkoutStore.availableDeliveries.includes('courier'));
 const pickupAvailable = computed(() => checkoutStore.availableDeliveries.includes('pickup'));
+const addPointLink = { path: '/account/trading-points', query: { redirect: '/checkout' } };
 const tradingPoint = computed(() => authStore.tradingPoint);
 const showPointStrip = computed(
     () => courierAvailable.value && checkoutStore.selectedDelivery === 'courier',
@@ -80,7 +81,7 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                 </div>
                 <p v-if="!courierAvailable" class="delivery-selector__card-note">
                     Courier delivery needs a trading point.
-                    <RouterLink to="/account/trading-points">Add trading point</RouterLink>
+                    <RouterLink :to="addPointLink">Add trading point</RouterLink>
                 </p>
                 <p v-else class="delivery-selector__card-note">
                     Delivery to the trading point, per contract terms.
@@ -132,7 +133,7 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
         <div v-if="loadingPoints" class="ds-modal-loading">Loading…</div>
         <div v-else-if="!points.length" class="ds-modal-empty">
             No trading points found.
-            <RouterLink to="/account/trading-points">Add trading point</RouterLink>
+            <RouterLink :to="addPointLink">Add trading point</RouterLink>
         </div>
         <ul v-else class="ds-point-list">
             <li

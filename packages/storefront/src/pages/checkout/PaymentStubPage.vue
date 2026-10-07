@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { IconAlertTriangle, IconCheck, IconHourglass, IconLock, IconX } from '@tabler/icons-vue';
 import { useCartStore } from '../../stores/cart';
 
 const router = useRouter();
@@ -14,26 +15,30 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
 <template>
     <div class="stub-page">
         <div class="stub-card">
-            <div class="stub-lock">🔒</div>
+            <div class="stub-lock">
+                <IconLock :size="30" stroke-width="1.8" aria-hidden="true" />
+            </div>
             <h1 class="stub-title">Payment</h1>
             <p class="stub-subtitle">Demo payment service — for testing only</p>
 
             <div class="stub-warning">
-                ⚠️ This is a stub page. In production this will be replaced by a real payment
-                provider redirect.
+                <IconAlertTriangle :size="16" stroke-width="2" aria-hidden="true" /> This is a stub
+                page. In production this will be replaced by a real payment provider redirect.
             </div>
 
             <div class="stub-order">Order #348744 · 12 450 ₽</div>
 
             <div class="stub-actions">
                 <button class="stub-btn stub-btn--green" @click="choose('success')">
-                    ✓ Payment successful
+                    <IconCheck :size="18" stroke-width="2.5" aria-hidden="true" /> Payment
+                    successful
                 </button>
                 <button class="stub-btn stub-btn--orange" @click="choose('pending')">
-                    ⏳ Payment pending
+                    <IconHourglass :size="18" stroke-width="2.2" aria-hidden="true" /> Payment
+                    pending
                 </button>
                 <button class="stub-btn stub-btn--red" @click="choose('fail')">
-                    ✕ Payment failed
+                    <IconX :size="18" stroke-width="2.5" aria-hidden="true" /> Payment failed
                 </button>
             </div>
 
@@ -121,6 +126,10 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
 }
 
 .stub-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     width: 100%;
     min-height: 52px;
     border: 0;

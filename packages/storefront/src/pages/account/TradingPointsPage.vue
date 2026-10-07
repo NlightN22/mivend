@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { IconMapPin } from '@tabler/icons-vue';
 import { useAuthStore } from '../../stores/auth';
 import AccountSidebar from './AccountSidebar.vue';
 import TradingPointCard from './TradingPointCard.vue';
 import TradingPointAddForm from './TradingPointAddForm.vue';
 import TradingPointRemovedList from './TradingPointRemovedList.vue';
+import { safeRedirect } from '../../utils/safeRedirect';
 import { useTradingPoints } from './useTradingPoints';
 
 const authStore = useAuthStore();
@@ -28,6 +31,16 @@ const {
     openAdd,
     submitAdd,
 } = useTradingPoints();
+
+const route = useRoute();
+const router = useRouter();
+const returnTo = computed(() => safeRedirect(route.query.redirect));
+
+async function onSubmitAdd(): Promise<void> {
+    const before = visiblePoints.value.length;
+    await submitAdd();
+    if (returnTo.value && visiblePoints.value.length > before) await router.push(returnTo.value);
+}
 
 onMounted(loadPoints);
 </script>
@@ -60,12 +73,12 @@ onMounted(loadPoints);
                 v-if="addOpen"
                 v-model="addForm"
                 :saving="addSaving"
-                @submit="submitAdd"
+                @submit="onSubmitAdd"
                 @cancel="addOpen = false"
             />
 
             <div v-if="!loading && !visiblePoints.length && !addOpen" class="tp-empty">
-                <span>📍</span>
+                <IconMapPin :size="28" stroke-width="1.6" aria-hidden="true" />
                 <div>No delivery addresses yet. Add your first trading point.</div>
             </div>
 
