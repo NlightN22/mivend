@@ -77,14 +77,13 @@ const tradingPointFields = gql`
     }
 `;
 
-const shopApiSchema = gql`
+export const shopApiSchema = gql`
     ${tradingPointFields}
 
     type Counterparty {
         id: ID!
         erpId: String!
-        legalName: String!
-        shortName: String!
+        fullName: String
         inn: String
         creditLimit: Int!
         creditBalance: Int!

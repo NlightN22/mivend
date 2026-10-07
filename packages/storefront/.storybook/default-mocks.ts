@@ -14,8 +14,7 @@ export function registerDefaultMocks(): void {
             counterparty: {
                 id: '1',
                 erpId: 'cnt-001',
-                legalName: 'Customer LLC',
-                shortName: 'Customer',
+                fullName: 'Customer LLC',
                 inn: '7700000000',
                 creditLimit: 500000,
                 creditBalance: 120000,

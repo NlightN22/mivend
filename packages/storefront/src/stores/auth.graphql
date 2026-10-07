@@ -11,8 +11,7 @@ query ActiveCustomerForAuth {
         counterparty {
             id
             erpId
-            legalName
-            shortName
+            fullName
             inn
             creditLimit
             creditBalance

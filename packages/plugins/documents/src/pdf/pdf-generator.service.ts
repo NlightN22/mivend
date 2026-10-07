@@ -97,7 +97,7 @@ export class PdfGeneratorService implements OnModuleInit {
         const counterparty = await this.connection
             .getRepository(ctx, Counterparty)
             .findOne({ where: { id: counterpartyId } });
-        return counterparty?.legalName ?? `Counterparty #${counterpartyId}`;
+        return counterparty?.fullName ?? '';
     }
 
     // Embeds the logo as a base64 data URI rather than a URL — Puppeteer runs

@@ -352,13 +352,12 @@ export type Counterparty = {
     creditBalance: Scalars['Int']['output'];
     creditLimit: Scalars['Int']['output'];
     erpId: Scalars['String']['output'];
+    fullName?: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
     inn?: Maybe<Scalars['String']['output']>;
     isActive: Scalars['Boolean']['output'];
-    legalName: Scalars['String']['output'];
     paymentDelayDays: Scalars['Int']['output'];
     priceType: Scalars['String']['output'];
-    shortName: Scalars['String']['output'];
     tradingPoints: Array<TradingPoint>;
 };
 
@@ -4840,8 +4839,7 @@ export type ActiveCustomerForAuthQuery = {
         counterparty?: {
             id: string;
             erpId: string;
-            legalName: string;
-            shortName: string;
+            fullName?: string | null;
             inn?: string | null;
             creditLimit: number;
             creditBalance: number;
@@ -5913,8 +5911,7 @@ export const ActiveCustomerForAuthDocument = new TypedDocumentString(`
     counterparty {
       id
       erpId
-      legalName
-      shortName
+      fullName
       inn
       creditLimit
       creditBalance

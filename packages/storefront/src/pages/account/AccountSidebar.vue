@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useInvoices } from '../invoices/useInvoices';
 import { usePayments } from '../payments/usePayments';
+import { useCompanyName } from './useCompanyName';
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -25,17 +26,7 @@ onMounted(() => {
     void loadPayments({ take: 1, skip: 0 });
 });
 
-const initials = computed(() => {
-    const name = authStore.counterparty?.shortName ?? '';
-    if (name.length >= 2) return name.slice(0, 2).toUpperCase();
-    const first = authStore.customer?.firstName?.[0] ?? '';
-    const last = authStore.customer?.lastName?.[0] ?? '';
-    return (first + last).toUpperCase() || '?';
-});
-
-const companyName = computed(
-    () => authStore.counterparty?.shortName ?? authStore.customer?.firstName ?? '—',
-);
+const { companyName, initials } = useCompanyName();
 
 const role = computed(() => authStore.customer?.customFields?.portalRole ?? '—');
 
@@ -59,9 +50,7 @@ const isActive = (path: string) => route.path === path;
                 <div class="account-sidebar__avatar">{{ initials }}</div>
                 <div>
                     <div class="account-sidebar__name">{{ companyName }}</div>
-                    <div class="account-sidebar__role">
-                        {{ authStore.counterparty?.legalName }}<br />{{ role }}
-                    </div>
+                    <div class="account-sidebar__role">{{ role }}</div>
                 </div>
             </div>
 

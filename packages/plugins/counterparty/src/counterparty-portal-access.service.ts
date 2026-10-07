@@ -164,7 +164,7 @@ export class CounterpartyPortalAccessService {
         // password is ever generated, seen, or set by staff.
         const result = await this.customerService.create(ctx, {
             emailAddress: counterparty.officialEmail,
-            firstName: counterparty.legalName,
+            firstName: counterparty.fullName ?? '',
             lastName: '',
             phoneNumber: counterparty.phone,
             customFields: {

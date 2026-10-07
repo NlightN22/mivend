@@ -41,6 +41,7 @@ export default {
     },
     account: {
         title: 'Личный кабинет',
+        companyNameUnknown: 'Название организации не указано',
         creditLimit: 'Кредитный лимит',
         creditUsed: 'Использовано',
         priceType: 'Тип цен',

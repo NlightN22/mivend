@@ -37,7 +37,8 @@ function counterparty(overrides: Record<string, unknown> = {}): Record<string, u
         isActive: true,
         phone: '+7 391 000-00-00',
         officialEmail: 'office@example.ru',
-        legalName: 'ООО Ромашка',
+        legalName: 'Internal Name',
+        fullName: 'Customer Full Legal Name',
         assignedManagerId: null,
         departmentId: null,
         branchId: null,
@@ -71,6 +72,7 @@ describe('CounterpartyPortalAccessService', () => {
                 mockCtx,
                 expect.objectContaining({
                     emailAddress: 'office@example.ru',
+                    firstName: 'Customer Full Legal Name',
                     phoneNumber: '+7 391 000-00-00',
                     customFields: expect.objectContaining({
                         counterpartyId: 'cp-1',

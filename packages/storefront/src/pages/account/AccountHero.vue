@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useAuthStore } from '../../stores/auth';
+import { useCompanyName } from './useCompanyName';
 
-const authStore = useAuthStore();
-const displayName = computed(
-    () => authStore.counterparty?.shortName ?? authStore.customer?.firstName ?? '',
-);
+const { companyName: displayName } = useCompanyName();
 </script>
 
 <template>
