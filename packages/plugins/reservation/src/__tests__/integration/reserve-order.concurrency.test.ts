@@ -157,8 +157,11 @@ beforeAll(async () => {
                 return qb;
             },
         },
-        getRepository: (ctx: RequestContext, entity: { name: string }) => {
+        getRepository: (ctx: RequestContext, entity: { name: string } | string) => {
             const manager = (ctx as unknown as { __manager?: EntityManager }).__manager;
+            if (typeof entity === 'string') {
+                return { query: (sql: string, params?: unknown[]) => manager!.query(sql, params) };
+            }
             const target = entityMap[entity.name as keyof typeof entityMap];
             return manager ? manager.getRepository(target) : dataSource.getRepository(target);
         },
@@ -281,5 +284,33 @@ describe('ReservationService.reserveOrder (integration, real Postgres, concurren
             where: { orderId: order.id, status: 'active' },
         });
         expect(all).toHaveLength(1);
+    });
+
+    it('two concurrent reserveOrder() calls for the SAME order create one reservation set', async () => {
+        await dataSource.getRepository(TestStockLevel).save({
+            productVariantId: 'variant-3',
+            stockLocationId: location.id,
+            stockOnHand: 100,
+            stockAllocated: 0,
+        });
+        const order = await dataSource
+            .getRepository(TestOrder)
+            .save({ customerId: 'customer-1', customFields: { branchId: 'branch-1' } });
+        await dataSource.getRepository(TestOrderLine).save({
+            orderId: order.id,
+            productVariantId: 'variant-3',
+            productVariantEntityId: productVariant.id,
+            quantity: 4,
+        });
+
+        await Promise.all([
+            service.reserveOrder(mockCtx, order.id, 7, 'auto-trust-rule'),
+            service.reserveOrder(mockCtx, order.id, 7, 'manual'),
+        ]);
+
+        const active = await dataSource.getRepository(TestReservation).find({
+            where: { orderId: order.id, status: 'active' },
+        });
+        expect(active).toHaveLength(1);
     });
 });

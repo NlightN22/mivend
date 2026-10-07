@@ -28,6 +28,7 @@ import {
     OrderNotEligibleError,
 } from './reservation-errors';
 import { OrderReservationState, ReservationCreationMethod } from './types';
+import { withAggregateLock } from 'shared';
 
 @Injectable()
 export class ReservationService {
@@ -74,211 +75,226 @@ export class ReservationService {
         }
 
         try {
-            return await this.connection.withTransaction(ctx, async txCtx => {
-                const reservationRepo = this.connection.getRepository(txCtx, Reservation);
+            return await withAggregateLock(
+                this.connection,
+                ctx,
+                `reserve-order:${orderId}`,
+                async txCtx => {
+                    const reservationRepo = this.connection.getRepository(txCtx, Reservation);
 
-                const existingActive = await reservationRepo.find({
-                    where: { orderId: String(orderId), status: 'active' },
-                });
-                if (existingActive.length > 0) {
-                    return existingActive;
-                }
-
-                const order = await this.connection.getRepository(txCtx, Order).findOne({
-                    where: { id: orderId },
-                    relations: ['lines', 'lines.productVariant'],
-                });
-                if (!order) {
-                    throw new OrderNotEligibleError('Order not found');
-                }
-
-                // Defense in depth alongside the moq plugin's OrderInterceptor — see
-                // docs/order-flow.md "Pack-size / MOQ". null/0/negative multiplicity is a data
-                // error, treated as "no constraint" (same as 1), not a rejection.
-                const multiplicityViolations: InvalidMultiplicityLine[] = [];
-                for (const line of order.lines) {
-                    const multiplicity = line.productVariant?.customFields?.multiplicity ?? 1;
-                    const effective = multiplicity > 1 ? multiplicity : 1;
-                    if (line.quantity % effective !== 0) {
-                        multiplicityViolations.push({
-                            orderLineId: String(line.id),
-                            productVariantId: String(line.productVariantId),
-                            quantity: line.quantity,
-                            multiplicity: effective,
-                        });
+                    const existingActive = await reservationRepo.find({
+                        where: { orderId: String(orderId), status: 'active' },
+                    });
+                    if (existingActive.length > 0) {
+                        return existingActive;
                     }
-                }
-                if (multiplicityViolations.length > 0) {
-                    throw new InvalidMultiplicityError(multiplicityViolations);
-                }
 
-                // mivend#85: this order's stock/warehouse facts are about to become final (see
-                // ErpExportDataMissingError's doc comment) — verify every piece of data
-                // erp-integration's order.submitted event will need is already resolvable
-                // *before* writing any Reservation, rather than allowing a reservation that can
-                // never be reported to the ERP. Full-order-only, same as the stock/multiplicity checks.
-                const branchId = order.customFields.branchId ?? null;
-                const candidateLocations = branchId
-                    ? await this.warehouseService.findActiveStockLocationsForBranch(txCtx, branchId)
-                    : [];
+                    const order = await this.connection.getRepository(txCtx, Order).findOne({
+                        where: { id: orderId },
+                        relations: ['lines', 'lines.productVariant'],
+                    });
+                    if (!order) {
+                        throw new OrderNotEligibleError('Order not found');
+                    }
 
-                let missingCustomerId = false;
-                if (!order.customerId) {
-                    missingCustomerId = true;
-                } else {
-                    const counterparty = await this.counterpartyService.getForCustomer(
-                        txCtx,
-                        order.customerId,
-                    );
-                    if (!counterparty) missingCustomerId = true;
-                }
-
-                // Product.customFields.externalId isn't visible on the typed entity from this
-                // plugin's own TS project — read via raw SQL, same as every other cross-plugin
-                // customField read in this codebase (see erp-integration's
-                // order-submitted.listener.ts for the identical query).
-                const productIds = [
-                    ...new Set(
-                        order.lines
-                            .map(line => line.productVariant?.productId)
-                            .filter((id): id is ID => id != null),
-                    ),
-                ];
-                const productExternalIdByProductId = new Map<string, string>();
-                if (productIds.length > 0) {
-                    const productRows = await this.connection.rawConnection
-                        .createQueryBuilder()
-                        .select('p.id', 'id')
-                        .addSelect('p."customFieldsExternalid"', 'externalId')
-                        .from('product', 'p')
-                        .where('p.id IN (:...ids)', { ids: productIds })
-                        .getRawMany<{ id: string; externalId: string | null }>();
-                    for (const row of productRows) {
-                        if (row.externalId) {
-                            productExternalIdByProductId.set(String(row.id), row.externalId);
+                    // Defense in depth alongside the moq plugin's OrderInterceptor — see
+                    // docs/order-flow.md "Pack-size / MOQ". null/0/negative multiplicity is a data
+                    // error, treated as "no constraint" (same as 1), not a rejection.
+                    const multiplicityViolations: InvalidMultiplicityLine[] = [];
+                    for (const line of order.lines) {
+                        const multiplicity = line.productVariant?.customFields?.multiplicity ?? 1;
+                        const effective = multiplicity > 1 ? multiplicity : 1;
+                        if (line.quantity % effective !== 0) {
+                            multiplicityViolations.push({
+                                orderLineId: String(line.id),
+                                productVariantId: String(line.productVariantId),
+                                quantity: line.quantity,
+                                multiplicity: effective,
+                            });
                         }
                     }
-                }
-
-                const erpExportMissingLines: ErpExportDataMissingLine[] = [];
-                for (const line of order.lines) {
-                    const missing: Array<'productId' | 'warehouseId'> = [];
-                    const hasProductId = line.productVariant?.productId
-                        ? productExternalIdByProductId.has(String(line.productVariant.productId))
-                        : false;
-                    if (!hasProductId) missing.push('productId');
-                    if (candidateLocations.length === 0) missing.push('warehouseId');
-                    if (missing.length > 0) {
-                        erpExportMissingLines.push({
-                            orderLineId: String(line.id),
-                            productVariantId: String(line.productVariantId),
-                            missing,
-                        });
+                    if (multiplicityViolations.length > 0) {
+                        throw new InvalidMultiplicityError(multiplicityViolations);
                     }
-                }
-                if (missingCustomerId || erpExportMissingLines.length > 0) {
-                    throw new ErpExportDataMissingError(missingCustomerId, erpExportMissingLines);
-                }
 
-                // Branch-aware, multi-location stock check (mivend#85) — a branch can have
-                // several warehouses/StockLocations (see WarehouseService
-                // .findActiveStockLocationsForBranch's doc comment), so pick the one with the
-                // most available stock per line, mirroring erp-integration's
-                // BranchStockLocationStrategy.pickLocationWithMostAvailableStock. Locks every
-                // candidate location's StockLevel row FOR UPDATE, same concurrency-safety
-                // guarantee as the previous single-location version.
-                const stockLevelRepo = this.connection.getRepository(txCtx, StockLevel);
-                const shortfalls: InsufficientStockLine[] = [];
-                const now = new Date();
-                const expiresAt = new Date(now.getTime() + reservationDays * 24 * 60 * 60 * 1000);
-                const rows: Reservation[] = [];
+                    // mivend#85: this order's stock/warehouse facts are about to become final (see
+                    // ErpExportDataMissingError's doc comment) — verify every piece of data
+                    // erp-integration's order.submitted event will need is already resolvable
+                    // *before* writing any Reservation, rather than allowing a reservation that can
+                    // never be reported to the ERP. Full-order-only, same as the stock/multiplicity checks.
+                    const branchId = order.customFields.branchId ?? null;
+                    const candidateLocations = branchId
+                        ? await this.warehouseService.findActiveStockLocationsForBranch(
+                              txCtx,
+                              branchId,
+                          )
+                        : [];
 
-                for (const line of order.lines) {
-                    let bestLocationId: string | undefined;
-                    let bestAvailable = -Infinity;
-                    for (const location of candidateLocations) {
-                        const locationId = String(location.id);
-                        const stockLevel = await stockLevelRepo
-                            .createQueryBuilder('stockLevel')
-                            .setLock('pessimistic_write')
-                            .where('stockLevel.productVariantId = :variantId', {
-                                variantId: line.productVariantId,
-                            })
-                            .andWhere('stockLevel.stockLocationId = :stockLocationId', {
-                                stockLocationId: locationId,
-                            })
-                            .getOne();
-
-                        const stockOnHand = stockLevel?.stockOnHand ?? 0;
-                        const stockAllocated = stockLevel?.stockAllocated ?? 0;
-                        const activeReserved = await this.sumActiveReservations(
+                    let missingCustomerId = false;
+                    if (!order.customerId) {
+                        missingCustomerId = true;
+                    } else {
+                        const counterparty = await this.counterpartyService.getForCustomer(
                             txCtx,
-                            line.productVariantId,
-                            locationId,
+                            order.customerId,
                         );
-                        const available = stockOnHand - stockAllocated - activeReserved;
-                        if (available > bestAvailable) {
-                            bestAvailable = available;
-                            bestLocationId = locationId;
+                        if (!counterparty) missingCustomerId = true;
+                    }
+
+                    // Product.customFields.externalId isn't visible on the typed entity from this
+                    // plugin's own TS project — read via raw SQL, same as every other cross-plugin
+                    // customField read in this codebase (see erp-integration's
+                    // order-submitted.listener.ts for the identical query).
+                    const productIds = [
+                        ...new Set(
+                            order.lines
+                                .map(line => line.productVariant?.productId)
+                                .filter((id): id is ID => id != null),
+                        ),
+                    ];
+                    const productExternalIdByProductId = new Map<string, string>();
+                    if (productIds.length > 0) {
+                        const productRows = await this.connection.rawConnection
+                            .createQueryBuilder()
+                            .select('p.id', 'id')
+                            .addSelect('p."customFieldsExternalid"', 'externalId')
+                            .from('product', 'p')
+                            .where('p.id IN (:...ids)', { ids: productIds })
+                            .getRawMany<{ id: string; externalId: string | null }>();
+                        for (const row of productRows) {
+                            if (row.externalId) {
+                                productExternalIdByProductId.set(String(row.id), row.externalId);
+                            }
                         }
                     }
 
-                    // bestLocationId is always set here: the ERP-export gate above already
-                    // rejected the whole order if candidateLocations was empty.
-                    const stockLocationId = bestLocationId as string;
-
-                    if (bestAvailable < line.quantity) {
-                        shortfalls.push({
-                            orderLineId: String(line.id),
-                            productVariantId: String(line.productVariantId),
-                            required: line.quantity,
-                            available: bestAvailable,
-                        });
-                        continue;
+                    const erpExportMissingLines: ErpExportDataMissingLine[] = [];
+                    for (const line of order.lines) {
+                        const missing: Array<'productId' | 'warehouseId'> = [];
+                        const hasProductId = line.productVariant?.productId
+                            ? productExternalIdByProductId.has(
+                                  String(line.productVariant.productId),
+                              )
+                            : false;
+                        if (!hasProductId) missing.push('productId');
+                        if (candidateLocations.length === 0) missing.push('warehouseId');
+                        if (missing.length > 0) {
+                            erpExportMissingLines.push({
+                                orderLineId: String(line.id),
+                                productVariantId: String(line.productVariantId),
+                                missing,
+                            });
+                        }
+                    }
+                    if (missingCustomerId || erpExportMissingLines.length > 0) {
+                        throw new ErpExportDataMissingError(
+                            missingCustomerId,
+                            erpExportMissingLines,
+                        );
                     }
 
-                    const generation = await this.nextGeneration(
-                        txCtx,
-                        String(line.id),
-                        stockLocationId,
+                    // Branch-aware, multi-location stock check (mivend#85) — a branch can have
+                    // several warehouses/StockLocations (see WarehouseService
+                    // .findActiveStockLocationsForBranch's doc comment), so pick the one with the
+                    // most available stock per line, mirroring erp-integration's
+                    // BranchStockLocationStrategy.pickLocationWithMostAvailableStock. Locks every
+                    // candidate location's StockLevel row FOR UPDATE, same concurrency-safety
+                    // guarantee as the previous single-location version.
+                    const stockLevelRepo = this.connection.getRepository(txCtx, StockLevel);
+                    const shortfalls: InsufficientStockLine[] = [];
+                    const now = new Date();
+                    const expiresAt = new Date(
+                        now.getTime() + reservationDays * 24 * 60 * 60 * 1000,
                     );
-                    rows.push(
-                        reservationRepo.create({
-                            orderId: String(order.id),
-                            orderLineId: String(line.id),
-                            productVariantId: String(line.productVariantId),
+                    const rows: Reservation[] = [];
+
+                    for (const line of order.lines) {
+                        let bestLocationId: string | undefined;
+                        let bestAvailable = -Infinity;
+                        for (const location of candidateLocations) {
+                            const locationId = String(location.id);
+                            const stockLevel = await stockLevelRepo
+                                .createQueryBuilder('stockLevel')
+                                .setLock('pessimistic_write')
+                                .where('stockLevel.productVariantId = :variantId', {
+                                    variantId: line.productVariantId,
+                                })
+                                .andWhere('stockLevel.stockLocationId = :stockLocationId', {
+                                    stockLocationId: locationId,
+                                })
+                                .getOne();
+
+                            const stockOnHand = stockLevel?.stockOnHand ?? 0;
+                            const stockAllocated = stockLevel?.stockAllocated ?? 0;
+                            const activeReserved = await this.sumActiveReservations(
+                                txCtx,
+                                line.productVariantId,
+                                locationId,
+                            );
+                            const available = stockOnHand - stockAllocated - activeReserved;
+                            if (available > bestAvailable) {
+                                bestAvailable = available;
+                                bestLocationId = locationId;
+                            }
+                        }
+
+                        // bestLocationId is always set here: the ERP-export gate above already
+                        // rejected the whole order if candidateLocations was empty.
+                        const stockLocationId = bestLocationId as string;
+
+                        if (bestAvailable < line.quantity) {
+                            shortfalls.push({
+                                orderLineId: String(line.id),
+                                productVariantId: String(line.productVariantId),
+                                required: line.quantity,
+                                available: bestAvailable,
+                            });
+                            continue;
+                        }
+
+                        const generation = await this.nextGeneration(
+                            txCtx,
+                            String(line.id),
                             stockLocationId,
-                            branchId,
-                            quantity: line.quantity,
-                            status: 'active' as const,
-                            reservedAt: now,
-                            expiresAt,
-                            releasedAt: null,
-                            reservationGeneration: generation,
-                            creationMethod: trigger,
-                            confirmedByAdministratorId: administratorId
-                                ? String(administratorId)
-                                : null,
-                            erpOperationId: randomUUID(),
-                            erpConfirmedAt: null,
-                        }),
-                    );
-                }
+                        );
+                        rows.push(
+                            reservationRepo.create({
+                                orderId: String(order.id),
+                                orderLineId: String(line.id),
+                                productVariantId: String(line.productVariantId),
+                                stockLocationId,
+                                branchId,
+                                quantity: line.quantity,
+                                status: 'active' as const,
+                                reservedAt: now,
+                                expiresAt,
+                                releasedAt: null,
+                                reservationGeneration: generation,
+                                creationMethod: trigger,
+                                confirmedByAdministratorId: administratorId
+                                    ? String(administratorId)
+                                    : null,
+                                erpOperationId: randomUUID(),
+                                erpConfirmedAt: null,
+                            }),
+                        );
+                    }
 
-                if (shortfalls.length > 0) {
-                    throw new InsufficientStockError(shortfalls);
-                }
+                    if (shortfalls.length > 0) {
+                        throw new InsufficientStockError(shortfalls);
+                    }
 
-                const saved = await reservationRepo.save(rows);
-                await this.setOrderReservationState(txCtx, order, 'RESERVED');
-                for (const reservation of saved) {
-                    this.eventBus.publish(
-                        new ReservationConfirmedEvent(txCtx, reservation, order.code),
-                    );
-                }
-                this.eventBus.publish(new OrderReservedEvent(txCtx, order.id, order.code));
-                return saved;
-            });
+                    const saved = await reservationRepo.save(rows);
+                    await this.setOrderReservationState(txCtx, order, 'RESERVED');
+                    for (const reservation of saved) {
+                        this.eventBus.publish(
+                            new ReservationConfirmedEvent(txCtx, reservation, order.code),
+                        );
+                    }
+                    this.eventBus.publish(new OrderReservedEvent(txCtx, order.id, order.code));
+                    return saved;
+                },
+            );
         } catch (error) {
             if (
                 error instanceof InsufficientStockError ||

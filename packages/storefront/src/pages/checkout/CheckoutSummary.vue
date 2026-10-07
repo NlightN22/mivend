@@ -68,7 +68,8 @@ async function handlePrimary(): Promise<void> {
                 : await cartStore.completeOfflinePayment();
         if (code) router.push({ path: '/order-created', query: { code } });
     } catch (err) {
-        toast(err instanceof Error ? err.message : 'Could not place order', 'error');
+        console.error('Checkout failed', err);
+        toast('Could not place order, please try again or contact support', 'error');
     } finally {
         submitting.value = false;
     }

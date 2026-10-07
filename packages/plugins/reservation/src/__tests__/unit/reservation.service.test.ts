@@ -131,7 +131,8 @@ describe('ReservationService', () => {
             getForCustomer: vi.fn(async () => ({ erpId: 'counterparty-erp-1' })),
         };
         connection = {
-            getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) => {
+            getRepository: vi.fn((_ctx: unknown, entity: { name?: string } | string) => {
+                if (typeof entity === 'string') return { query: vi.fn(async () => []) };
                 switch (entity?.name) {
                     case 'Order':
                         return orderRepo;
