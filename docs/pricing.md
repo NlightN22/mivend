@@ -338,3 +338,17 @@ The ERP publishes prices per product and price type; a large part of the catalog
 not in stock) has no price row at all (staging, 2026-10-06: ~38% of variants), which is real
 upstream data, not a sync loss. A logged-in customer sees "Price on request" with a "Request
 price" action instead of a dash; guests see "Log in to see prices".
+
+## Tier rebalance (sibling line repricing)
+
+Vendure re-runs `calculateUnitPrice()` only for the mutated line, so `TierRebalanceService`
+re-adjusts sibling lines after each `OrderLineEvent`. It is a non-blocking subscriber: a blocking
+handler nests `adjustOrderLine()` in the mutation's transaction and corrupts price resolution
+(lines fell back to undiscounted list price). The rebalanced price therefore lands just after the
+mutation response.
+
+Events arriving while a rebalance of the same order runs mark it dirty and trigger another pass
+(bounded), instead of being dropped. Events from the service's own calls are ignored via a tagged
+context. After the last pass `applyPriceAdjustments` recomputes and persists order totals, because
+concurrent line saves from the user's next mutation and the rebalance could leave `Order` totals
+computed from a stale line set. Not done: making `activeOrder` wait for an in-flight rebalance.
