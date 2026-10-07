@@ -44,13 +44,15 @@ the procedure.
 12. Define positive, negative, and edge cases for each scenario.
 13. Identify concurrency, idempotency, retry, and isolation risks explicitly — do not assume they
     don't apply without checking against `docs/testing-patterns.md`.
-14. Implement the tests.
-15. Run targeted tests for the changed package first.
-16. Run the required Makefile commands (`make test`, and `make test-int` if integration/component
+14. Ask: does this change a read-compute-write on shared rows? Then a concurrent-writer test on
+    real Postgres is mandatory (`docs/testing-patterns.md` "Concurrency", `docs/concurrency.md`).
+15. Implement the tests.
+16. Run targeted tests for the changed package first.
+17. Run the required Makefile commands (`make test`, and `make test-int` if integration/component
     tests changed) — see the `final-check` skill.
-17. Report which risks are covered.
-18. Report which risks are deliberately uncovered, and why.
-19. Do not treat green coverage as proof of quality — coverage is a diagnostic signal, not a goal.
+18. Report which risks are covered.
+19. Report which risks are deliberately uncovered, and why.
+20. Do not treat green coverage as proof of quality — coverage is a diagnostic signal, not a goal.
 
 ## Test plan format
 

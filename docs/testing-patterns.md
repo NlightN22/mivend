@@ -174,7 +174,30 @@ resource; the loser's retry (if any) succeeds safely afterward.
 **Common false positive**: `await a(); await b();` labeled a concurrency test — it tests nothing
 race-related.
 
-**mivend example**: `reserve-order.concurrency.test.ts` (`plugin-reservation`).
+**Mandatory for read-compute-write**: any change that reads shared rows, computes from them and
+writes the result back (totals, counters, statuses, upserts, claims; see `docs/concurrency.md`)
+needs a real-Postgres concurrent-writer test. Mocks and sequential calls do not satisfy it.
+
+**How to write one** (integration level, run via `make test-int`):
+
+1. Use two independent connections (two pool clients or two `DataSource` transactions), not one
+   shared connection that serializes the calls.
+2. Force the bad interleaving with a barrier: both actors read, wait on a shared promise (or a
+   `pg_sleep` inside the locked section, as `characteristic-facet.int.test.ts` does), then both
+   write. Without the fix the second write must visibly lose or duplicate.
+3. Start both with `Promise.all` and assert on the final persisted rows (one facet, no duplicate
+   value, totals equal the sum of both mutations), not on return values.
+4. Add the loser-retries case: the second actor succeeds safely after the first commits.
+5. Prove the test can fail: it must go red when the lock or conditional update is removed.
+
+**End-to-end invariant example**: the cart totals group (`make e2e-cart`,
+`packages/e2e/storefront/cart-totals`) asserts order total, discount and line price invariants
+through the Shop API and UI across tier-ladder cart mutations. Use it as the model for a
+cross-component invariant; keep it to a handful of routes, the race itself is proven at the
+integration level.
+
+**mivend examples**: `reserve-order.concurrency.test.ts` (`plugin-reservation`),
+`characteristic-facet.int.test.ts` (`plugin-erp-integration`).
 
 **Exceptions**: none for anything using `SKIP LOCKED`/optimistic locking/unique constraints as a
 concurrency guard — the guard needs a real race to prove it works.
