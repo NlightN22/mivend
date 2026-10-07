@@ -553,12 +553,14 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 pending: 2,
                 processing: 0,
                 failed: 0,
+                oldestPendingAt: expect.any(Date),
             });
             expect(byStream.stock).toEqual({
                 stream: 'stock',
                 pending: 1,
                 processing: 0,
                 failed: 1,
+                oldestPendingAt: expect.any(Date),
             });
         });
 
