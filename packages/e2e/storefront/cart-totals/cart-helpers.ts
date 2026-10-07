@@ -82,9 +82,13 @@ export function expectedDiscount(cart: Cart): number {
     }, 0);
 }
 
-export function expectConsistent(cart: Cart): void {
-    expect(cart.totalWithTax, 'order total must equal the sum of line prices').toBe(sumLines(cart));
-    expect(cart.subTotalWithTax, 'subtotal must equal the sum of line prices').toBe(sumLines(cart));
+export function expectConsistent(cart: Cart, label = 'cart'): void {
+    expect(cart.totalWithTax, `${label}: order total must equal the sum of line prices`).toBe(
+        sumLines(cart),
+    );
+    expect(cart.subTotalWithTax, `${label}: subtotal must equal the sum of line prices`).toBe(
+        sumLines(cart),
+    );
 }
 
 export function parseRub(text: string | null): number {

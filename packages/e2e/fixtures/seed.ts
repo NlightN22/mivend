@@ -104,6 +104,20 @@ export const seedRecords = [
             weight: 50,
         },
     },
+    {
+        type: 'product' as const,
+        data: {
+            externalId: 'e2e-prod-008',
+            sku: 'E2E-OIL-003',
+            name: 'Engine Oil 0W-20',
+            slug: 'engine-oil-0w20-e2e',
+            fullName: 'Engine Oil 0W-20 4L Synthetic',
+            price: 700,
+            stockOnHand: 100,
+            brandCode: 'e2e-discount-brand',
+            weight: 25,
+        },
+    },
     // Second product sharing e2e-amount-brand — same purpose, for the amount-tier ladder.
     {
         type: 'product' as const,
@@ -177,6 +191,10 @@ export const seedRecords = [
     },
     {
         type: 'price' as const,
+        data: { sku: 'E2E-OIL-003', priceTypeCode: 'WHOLESALE', price: 630 },
+    },
+    {
+        type: 'price' as const,
         data: { sku: 'E2E-OIL-002', priceTypeCode: 'WHOLESALE', price: 495 },
     },
     {
@@ -204,6 +222,10 @@ export const seedRecords = [
     {
         type: 'stock' as const,
         data: { sku: 'E2E-BRK-001', stockOnHand: 30 },
+    },
+    {
+        type: 'stock' as const,
+        data: { sku: 'E2E-OIL-003', stockOnHand: 100 },
     },
     {
         type: 'stock' as const,
