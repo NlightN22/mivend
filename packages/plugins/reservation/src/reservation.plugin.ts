@@ -178,6 +178,25 @@ const adminApiSchema = gql`
         config.customFields.GlobalSettings = [
             ...(config.customFields.GlobalSettings ?? []),
             {
+                name: 'autoReserveOnPlacement',
+                type: 'boolean' as const,
+                nullable: true,
+                public: false,
+                defaultValue: false,
+                label: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value: 'Reserve stock and send to ERP right when the order is placed',
+                    },
+                ],
+                description: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value: 'Skips manual confirmation for non-prepaid orders.',
+                    },
+                ],
+            },
+            {
                 name: 'stockTierLowMax',
                 type: 'int' as const,
                 nullable: true,

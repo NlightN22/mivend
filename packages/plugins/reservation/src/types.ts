@@ -10,6 +10,7 @@ declare module '@vendure/core' {
     interface CustomGlobalSettingsFields {
         stockTierLowMax?: number | null;
         stockTierMediumMax?: number | null;
+        autoReserveOnPlacement?: boolean | null;
     }
     interface CustomPaymentMethodFields {
         paymentClassification?: string | null;

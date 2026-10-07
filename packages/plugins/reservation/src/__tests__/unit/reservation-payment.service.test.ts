@@ -23,8 +23,10 @@ describe('ReservationPaymentService', () => {
     };
     let service: ReservationPaymentService;
     const ctx = {} as unknown as RequestContext;
+    let autoReserveOnPlacement = false;
 
     beforeEach(() => {
+        autoReserveOnPlacement = false;
         orderRepo = createMockOrderRepo(null);
         paymentMethodRepo = createMockPaymentMethodRepo();
         connection = {
@@ -39,7 +41,53 @@ describe('ReservationPaymentService', () => {
         service = new ReservationPaymentService(
             connection as unknown as TransactionalConnection,
             reservationService as unknown as ReservationService,
+            { getSettings: async () => ({ customFields: { autoReserveOnPlacement } }) } as never,
         );
+    });
+
+    describe('autoReserveOnPlacement', () => {
+        const placed = () => ({
+            id: 'order-1',
+            customFields: { reservationState: 'NOT_REQUIRED' },
+            payments: [{ method: 'deferred-payment' }],
+        });
+
+        it('reserves right away with the non-prepaid TTL when the switch is on', async () => {
+            autoReserveOnPlacement = true;
+            await service.handleOrderPlaced(ctx, placed() as never);
+            expect(reservationService.reserveOrder).toHaveBeenCalledWith(
+                ctx,
+                'order-1',
+                7,
+                'auto-trust-rule',
+            );
+        });
+
+        it('does not reserve when the switch is off', async () => {
+            await service.handleOrderPlaced(ctx, placed() as never);
+            expect(reservationService.reserveOrder).not.toHaveBeenCalled();
+        });
+
+        it('keeps the order awaiting confirmation when stock is short', async () => {
+            autoReserveOnPlacement = true;
+            reservationService.reserveOrder.mockRejectedValue(new InsufficientStockError([]));
+            await expect(
+                service.handleOrderPlaced(ctx, placed() as never),
+            ).resolves.toBeUndefined();
+            expect(reservationService.setOrderReservationState).toHaveBeenCalledWith(
+                ctx,
+                expect.anything(),
+                'AWAITING_CONFIRMATION',
+            );
+        });
+
+        it('rethrows unexpected errors instead of swallowing them', async () => {
+            autoReserveOnPlacement = true;
+            reservationService.reserveOrder.mockRejectedValue(new Error('db down'));
+            await expect(service.handleOrderPlaced(ctx, placed() as never)).rejects.toThrow(
+                'db down',
+            );
+        });
     });
 
     describe('handleOrderPlaced', () => {

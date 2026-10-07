@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Order, PaymentMethod, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    GlobalSettingsService,
+    Order,
+    PaymentMethod,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
 
 import { InsufficientStockError, OrderNotEligibleError } from './reservation-errors';
 import { ReservationService } from './reservation.service';
@@ -13,6 +19,7 @@ export class ReservationPaymentService {
     constructor(
         private connection: TransactionalConnection,
         private reservationService: ReservationService,
+        private globalSettingsService: GlobalSettingsService,
     ) {}
 
     // Called from an OrderPlacedEvent subscriber (reservation.plugin.ts). Prepaid orders are
@@ -48,6 +55,36 @@ export class ReservationPaymentService {
             fullOrder,
             'AWAITING_CONFIRMATION',
         );
+        await this.autoReserveIfEnabled(ctx, fullOrder, method, classification);
+    }
+
+    // Global switch (GlobalSettings.autoReserveOnPlacement) that skips the manual confirmation
+    // queue; a failed reserve leaves the order in AWAITING_CONFIRMATION for staff.
+    private async autoReserveIfEnabled(
+        ctx: RequestContext,
+        order: Order,
+        method: PaymentMethod | null,
+        classification: string | null,
+    ): Promise<void> {
+        const settings = await this.globalSettingsService.getSettings(ctx);
+        if (!settings.customFields?.autoReserveOnPlacement) return;
+        try {
+            await this.reservationService.reserveOrder(
+                ctx,
+                order.id,
+                this.resolveReservationTtlDays(method, classification),
+                'auto-trust-rule',
+            );
+        } catch (error) {
+            if (error instanceof InsufficientStockError || error instanceof OrderNotEligibleError) {
+                Logger.warn(
+                    `Auto-reserve on placement failed for order ${String(order.id)}: ${error.message}`,
+                    loggerCtx,
+                );
+                return;
+            }
+            throw error;
+        }
     }
 
     // Called from an OrderStateTransitionEvent subscriber (reservation.plugin.ts) on the same
