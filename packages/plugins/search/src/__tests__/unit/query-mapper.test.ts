@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     hasBrowseCriteria,
+    hasPriceCriteria,
     mapSearchInputToResolveQueryRequest,
     type ResolveQueryRequest,
 } from '../../query-mapper';
@@ -106,5 +107,61 @@ describe('hasBrowseCriteria', () => {
         const request = mapSearchInputToResolveQueryRequest({}, { ...none, characteristics });
         expect(request.filters).toEqual({ characteristics });
         expect(hasBrowseCriteria(request)).toBe(true);
+    });
+});
+
+describe('priceTypeId', () => {
+    const guid = '3f2b8c1e-0000-4000-8000-000000000001';
+
+    it('is included at the top level when resolved, with range and sort unchanged', () => {
+        const request = mapSearchInputToResolveQueryRequest(
+            {
+                term: 'x',
+                priceRangeWithTax: { min: 100000, max: 500000 },
+                sort: { price: 'DESC' as never },
+            },
+            none,
+            guid,
+        );
+        expect(request).toMatchObject({
+            priceTypeId: guid,
+            filters: { priceRange: { min: 1000, max: 5000 } },
+            sort: 'priceDesc',
+        });
+    });
+
+    it.each([[null], [undefined]])('is omitted when unresolved (%s)', value => {
+        const request = mapSearchInputToResolveQueryRequest(
+            { sort: { price: 'ASC' as never } },
+            none,
+            value,
+        );
+        expect(request).not.toHaveProperty('priceTypeId');
+    });
+
+    it('matches the documented request body shape', () => {
+        const request = mapSearchInputToResolveQueryRequest(
+            {
+                term: '',
+                priceRangeWithTax: { min: 100000, max: 100000 },
+                sort: { price: 'ASC' as never },
+            },
+            none,
+            guid,
+        );
+        expect(JSON.parse(JSON.stringify(request))).toMatchObject({
+            priceTypeId: guid,
+            filters: { priceRange: { min: 1000 } },
+            sort: 'priceAsc',
+        });
+        expect(typeof request.priceTypeId).toBe('string');
+    });
+});
+
+describe('hasPriceCriteria', () => {
+    it('is true for a price range or price sort only', () => {
+        expect(hasPriceCriteria({ priceRangeWithTax: { min: 1, max: 2 } })).toBe(true);
+        expect(hasPriceCriteria({ sort: { price: 'ASC' as never } })).toBe(true);
+        expect(hasPriceCriteria({ sort: { name: 'ASC' as never }, term: 'x' })).toBe(false);
     });
 });

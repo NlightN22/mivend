@@ -7,8 +7,8 @@ export interface SearchCapabilities {
     priceRange: boolean;
 }
 
-// The internal (Elasticsearch) index never receives mivend's per-customer prices, so it cannot
-// order or filter by price; search-service indexes one fixed price type (#160).
+// The internal (Elasticsearch) index never receives per-customer prices, so it cannot order or
+// filter by price; search-service does it by the viewer's price type (`priceTypeId`).
 export function capabilitiesFor(backend: SearchBackend): SearchCapabilities {
     const base = ['relevance', 'name_asc', 'name_desc'];
     return backend === 'external'

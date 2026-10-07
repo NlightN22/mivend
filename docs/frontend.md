@@ -107,8 +107,9 @@ Codegen picks them up via glob and generates typed composables into `src/api/gen
 - Sort and price filter use Vendure's `SearchInput.sort {name, price}` and `priceRangeWithTax` (minor
   units) on both backends. The shop query `searchCapabilities { sortKeys priceRange }` says what the
   active backend honours; the storefront shows only those sort options and hides the price block
-  otherwise. External: search-service sorts/filters by ONE fixed indexed price type, not the customer's
-  own tier, so the order can differ from displayed customer prices (per-type indexes: search-platform#161).
+  otherwise. External: price range and price sort send `priceTypeId` (the viewer's effective `PriceType.externalId`:
+  main-contract/assigned type, else the branch default; omitted when it has no externalId, then
+  search-service uses its fixed indexed type), so the order follows the displayed tier.
   Internal (Elasticsearch): name sort only; its index holds Vendure's own imported list price, not the customer's price-entry price, so price sort/range would mislead. The catalog shows all products (`availableOnly` is always sent explicitly, search-service defaults it
   to true); the in-stock toggle narrows to the viewer's branch. Manager catalog hides the price
   block (its price/in-stock filters are inert). `inStock` IS applied: it narrows search-service to the viewer's branch warehouses

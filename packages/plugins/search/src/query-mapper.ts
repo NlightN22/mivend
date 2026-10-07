@@ -5,6 +5,7 @@ export type SearchServiceSort = 'relevance' | 'name' | 'nameDesc' | 'priceAsc' |
 
 export interface ResolveQueryRequest {
     query: string;
+    priceTypeId?: string;
     categoryId?: string;
     filters?: {
         manufacturer?: string[];
@@ -16,6 +17,10 @@ export interface ResolveQueryRequest {
     limit?: number;
     offset?: number;
     availableOnly?: boolean;
+}
+
+export function hasPriceCriteria(input: ShopSearchInput): boolean {
+    return Boolean(input.priceRangeWithTax || input.sort?.price);
 }
 
 export function hasBrowseCriteria(request: ResolveQueryRequest): boolean {
@@ -46,6 +51,7 @@ function mapPriceRange(input: ShopSearchInput): { min?: number; max?: number } |
 export function mapSearchInputToResolveQueryRequest(
     input: ShopSearchInput,
     resolved: ResolvedSearchFilters,
+    priceTypeId?: string | null,
 ): ResolveQueryRequest {
     const priceRange = mapPriceRange(input);
     const filters = {
@@ -58,6 +64,7 @@ export function mapSearchInputToResolveQueryRequest(
     };
     return {
         query: input.term ?? '',
+        ...(priceTypeId ? { priceTypeId } : {}),
         ...(resolved.categoryId ? { categoryId: resolved.categoryId } : {}),
         ...(Object.keys(filters).length > 0 ? { filters } : {}),
         availableOnly: Boolean(input.inStock),

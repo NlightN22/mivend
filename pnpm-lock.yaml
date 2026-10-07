@@ -1109,9 +1109,15 @@ importers:
 
     packages/plugins/search:
         dependencies:
+            '@mivend/plugin-access-control':
+                specifier: workspace:*
+                version: link:../access-control
             '@mivend/plugin-cross-reference':
                 specifier: workspace:*
                 version: link:../cross-reference
+            '@mivend/plugin-customer-pricing':
+                specifier: workspace:*
+                version: link:../customer-pricing
             '@mivend/plugin-price-entry':
                 specifier: workspace:*
                 version: link:../price-entry

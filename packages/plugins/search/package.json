@@ -11,6 +11,8 @@
         "test:integration": "vitest run --config vitest.integration.config.ts"
     },
     "dependencies": {
+        "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-cross-reference": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",

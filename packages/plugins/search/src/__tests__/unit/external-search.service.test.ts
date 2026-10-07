@@ -61,6 +61,7 @@ const noFilters = {
         .mockResolvedValue({ manufacturer: [], characteristics: [], unsatisfiable: false }),
 };
 const noDb = {};
+const noPriceType = { resolveExternalId: vi.fn().mockResolvedValue(null) };
 
 // Issue #69, test-design coverage areas 2 and 3.
 describe('ExternalSearchService.search', () => {
@@ -73,6 +74,7 @@ describe('ExternalSearchService.search', () => {
             makeLookup(makeProduct()) as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
         const result = await service.search(ctx, { term: 'oil', take: 0 } as SearchInput);
         expect(result.items).toEqual([]);
@@ -89,6 +91,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -107,6 +110,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
 
         await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -141,6 +145,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -165,6 +170,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -199,6 +205,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -214,6 +221,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
 
         const result = await service.search(ctx, { term: 'no-match-xyz' } as SearchInput);
@@ -235,6 +243,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
 
         const result = await service.search(ctx, {
@@ -272,6 +281,7 @@ describe('ExternalSearchService.search', () => {
             makeLookup(makeProduct()) as unknown as ProductLookupService,
             filters as never,
             db as never,
+            noPriceType as never,
         );
 
         const result = await service.search(ctx, { collectionSlug: 'cat-erp' } as SearchInput);
@@ -294,6 +304,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
         const result = await service.search(ctx, { take: 24, skip: 48 } as SearchInput);
         expect(client.resolveQuery).not.toHaveBeenCalled();
@@ -317,6 +328,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            noPriceType as never,
         );
         await service.search(ctx, { sort: { name: 'DESC' } } as SearchInput);
         expect(lookup.browse).toHaveBeenCalledWith(
@@ -339,6 +351,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             noFilters as never,
             noDb as never,
+            { resolveExternalId: vi.fn().mockResolvedValue(null) } as never,
         );
         await service.search(ctx, {
             priceRangeWithTax: { min: 1000, max: 5000 },
@@ -372,6 +385,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             filters as never,
             noDb as never,
+            noPriceType as never,
         );
         const result = await service.search(ctx, {
             inStock: true,
@@ -404,6 +418,7 @@ describe('ExternalSearchService.search', () => {
             lookup as unknown as ProductLookupService,
             filters as never,
             noDb as never,
+            noPriceType as never,
         );
         const result = await service.search(ctx, { inStock: true } as SearchInput);
         expect(result.items).toEqual([]);
@@ -423,6 +438,7 @@ describe('ExternalSearchService.search', () => {
             makeLookup(null) as unknown as ProductLookupService,
             filters as never,
             noDb as never,
+            noPriceType as never,
         );
         const result = await service.search(ctx, {
             term: 'oil',
@@ -430,5 +446,39 @@ describe('ExternalSearchService.search', () => {
         } as SearchInput);
         expect(result).toMatchObject({ items: [], totalItems: 0 });
         expect(client.resolveQuery).not.toHaveBeenCalled();
+    });
+});
+
+describe('ExternalSearchService price type', () => {
+    function build(priceTypeId: string | null) {
+        const client = { resolveQuery: vi.fn().mockResolvedValue({ items: [], total: 0 }) };
+        const priceTypes = { resolveExternalId: vi.fn().mockResolvedValue(priceTypeId) };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(null) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+            priceTypes as never,
+        );
+        return { client, priceTypes, service };
+    }
+
+    it('sends priceTypeId with a price sort', async () => {
+        const { client, service } = build('guid-1');
+        await service.search(ctx, { term: 'oil', sort: { price: 'ASC' } } as SearchInput);
+        expect(client.resolveQuery.mock.calls[0][0]).toMatchObject({ priceTypeId: 'guid-1' });
+    });
+
+    it('does not resolve a price type for a request without price criteria', async () => {
+        const { client, priceTypes, service } = build('guid-1');
+        await service.search(ctx, { term: 'oil' } as SearchInput);
+        expect(priceTypes.resolveExternalId).not.toHaveBeenCalled();
+        expect(client.resolveQuery.mock.calls[0][0]).not.toHaveProperty('priceTypeId');
+    });
+
+    it('omits priceTypeId when unresolved', async () => {
+        const { client, service } = build(null);
+        await service.search(ctx, { term: 'oil', sort: { price: 'DESC' } } as SearchInput);
+        expect(client.resolveQuery.mock.calls[0][0]).not.toHaveProperty('priceTypeId');
     });
 });

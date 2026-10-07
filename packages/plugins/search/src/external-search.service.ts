@@ -10,9 +10,14 @@ import type { SearchInput } from '@vendure/common/lib/generated-types';
 
 import { ExternalCollectionResult, mapFacetsToCollections } from './category-facet-mapper';
 import { mapFacetsToFacetValues, ExternalFacetValueResult } from './facet-mapper';
-import { hasBrowseCriteria, mapSearchInputToResolveQueryRequest } from './query-mapper';
+import {
+    hasBrowseCriteria,
+    hasPriceCriteria,
+    mapSearchInputToResolveQueryRequest,
+} from './query-mapper';
 import { SearchFilterResolver } from './search-filter-resolver.service';
 import { ProductLookupService } from './product-lookup.service';
+import { SearchPriceTypeService } from './search-price-type.service';
 import { SearchServiceClient } from './search-service.client';
 
 interface SearchResultAssetVM {
@@ -57,6 +62,7 @@ export class ExternalSearchService {
         private productLookup: ProductLookupService,
         private filterResolver: SearchFilterResolver,
         private connection: TransactionalConnection,
+        private priceTypes: SearchPriceTypeService,
     ) {}
 
     async search(
@@ -65,7 +71,10 @@ export class ExternalSearchService {
         includeDisabled = false,
     ): Promise<ExternalSearchResponse> {
         const resolved = await this.filterResolver.resolve(ctx, input);
-        const request = mapSearchInputToResolveQueryRequest(input, resolved);
+        const priceTypeId = hasPriceCriteria(input)
+            ? await this.priceTypes.resolveExternalId(ctx)
+            : null;
+        const request = mapSearchInputToResolveQueryRequest(input, resolved, priceTypeId);
         const empty = { items: [], totalItems: 0, facetValues: [], collections: [] };
         if (resolved.unsatisfiable) return empty;
         if (!hasBrowseCriteria(request)) {
