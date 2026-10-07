@@ -10,21 +10,9 @@ import {
 } from '@vendure/core';
 
 import { freightEligibilityChecker } from './freight-eligibility-checker';
-import { loggerCtx } from './types';
+import { FREIGHT_SHIPPING_METHOD_CODE, loggerCtx } from './constants';
 
-export const FREIGHT_SHIPPING_METHOD_CODE = 'freight-delivery';
-
-// Idempotent ShippingMethod bootstrap, same pattern as plugin-pickup-shipping's
-// PickupShippingBootstrapService — but gated only on `!processContext.isWorker`, NOT
-// instanceType, unlike this plugin's other bootstrap steps (kafka-consumer-bootstrap.service.ts,
-// tax-category-auto-create.service.ts): those are central-only because they're tied to the Kafka
-// connection, but a branch instance can originate its own local checkout too (see
-// docs/sync.md), so this must run on both. This ShippingMethod exists only when
-// plugin-erp-integration is enabled: ERP integration is what conceptually unlocks
-// warehouse-based freight delivery as a real fulfillment option, distinct from the universal
-// "pickup" default that plugin-pickup-shipping always provides.
-//
-// The storefront still calls this concept "courier" (DeliveryType).
+// Idempotent, runs on every boot of both instance types (a branch can originate its own checkout).
 @Injectable()
 export class FreightShippingBootstrapService implements OnApplicationBootstrap {
     constructor(

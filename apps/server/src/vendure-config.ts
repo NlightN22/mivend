@@ -14,6 +14,7 @@ import {
     deferredPaymentHandler,
     deferredEligibilityChecker,
 } from '@mivend/plugin-deferred-payment';
+import { FreightShippingPlugin } from '@mivend/plugin-freight-shipping';
 import { PickupShippingPlugin } from '@mivend/plugin-pickup-shipping';
 import { OnlinePaymentPlugin, onlineStubPaymentHandler } from '@mivend/plugin-online-payment';
 import { AssetServerPlugin, configureS3AssetStorage } from '@vendure/asset-server-plugin';
@@ -677,6 +678,7 @@ export const config: VendureConfig = {
         DeferredPaymentPlugin,
         OnlinePaymentPlugin,
         PickupShippingPlugin,
+        FreightShippingPlugin,
         ...(erpImportEnabled ? [ErpImportPlugin] : []),
         CrossReferencePlugin,
         ...searchPlugins,

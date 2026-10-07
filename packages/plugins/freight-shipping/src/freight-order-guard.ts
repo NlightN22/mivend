@@ -2,7 +2,7 @@ import { TradingPointService } from '@mivend/plugin-counterparty';
 import type { Injector, OrderProcess, OrderState } from '@vendure/core';
 import { ShippingMethod, TransactionalConnection } from '@vendure/core';
 
-import { FREIGHT_SHIPPING_METHOD_CODE } from './freight-shipping-bootstrap.service';
+import { FREIGHT_SHIPPING_METHOD_CODE } from './constants';
 
 export const FREIGHT_NO_TRADING_POINT_MESSAGE = 'Select a trading point to use freight delivery.';
 

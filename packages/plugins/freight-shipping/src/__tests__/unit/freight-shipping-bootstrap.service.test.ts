@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ProcessContext, ShippingMethodService, TransactionalConnection } from '@vendure/core';
 
-import {
-    FreightShippingBootstrapService,
-    FREIGHT_SHIPPING_METHOD_CODE,
-} from '../../freight-shipping-bootstrap.service';
+import { FreightShippingBootstrapService } from '../../freight-shipping-bootstrap.service';
+import { FREIGHT_SHIPPING_METHOD_CODE } from '../../constants';
 
 function createMockRepo() {
     return {
@@ -18,7 +16,6 @@ describe('FreightShippingBootstrapService', () => {
     let connection: { getRepository: (...args: unknown[]) => ReturnType<typeof createMockRepo> };
     let shippingMethodService: {
         create: ReturnType<typeof vi.fn>;
-        update: ReturnType<typeof vi.fn>;
     };
     let processContext: { isWorker: boolean };
     let service: FreightShippingBootstrapService;

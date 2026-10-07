@@ -31,6 +31,7 @@
         "@mivend/plugin-moq": "workspace:*",
         "@mivend/plugin-notification": "workspace:*",
         "@mivend/plugin-online-payment": "workspace:*",
+        "@mivend/plugin-freight-shipping": "workspace:*",
         "@mivend/plugin-pickup-shipping": "workspace:*",
         "@mivend/plugin-popular-products": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",

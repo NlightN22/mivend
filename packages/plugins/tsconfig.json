@@ -15,6 +15,7 @@
         { "path": "./documents" },
         { "path": "./deferred-payment" },
         { "path": "./pickup-shipping" },
+        { "path": "./freight-shipping" },
         { "path": "./online-payment" },
         { "path": "./search" },
         { "path": "./sync" },
