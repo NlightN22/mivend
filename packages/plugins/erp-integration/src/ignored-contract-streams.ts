@@ -3,7 +3,8 @@
 export const IGNORED_CONTRACT_STREAMS: Readonly<Record<string, string>> = {
     'counterparty-contact': 'No consumer yet: no mivend feature reads counterparty contacts',
     'counterparty-group': 'No consumer yet: no mivend feature reads counterparty groups',
-    'order-change-result': 'No consumer yet: order changes are tracked via order-changed',
-    'product-group': 'No consumer yet: catalog grouping comes from category',
-    'point-of-sale-type': 'No consumer yet: point-of-sale types are not used',
+    'order-change-result':
+        'Reply to an order change command; mivend sends no such commands yet (order-changed is consumed)',
+    'product-group': 'Dictionary referenced by point-of-sale product_group_ids; not resolved yet',
+    'point-of-sale-type': 'Dictionary referenced by point-of-sale point_type_ids; not resolved yet',
 };
