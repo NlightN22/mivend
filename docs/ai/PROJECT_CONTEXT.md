@@ -1,8 +1,8 @@
 # Project Context
 
-Updated: 2026-10-07 19:50
+Updated: 2026-10-07 20:40
 
-## #188 credit control MVP (2026-10-07, implemented, NOT yet audited/closed/pushed — 47+ local commits ahead of origin/main)
+## #188 credit control MVP (2026-10-07, shipped/audited/closed; pushed up to ccadbe9, `make ci` green)
 
 - **Contracts feed everything.** Contracts stream = only ERP contracts with a price type; `isActive=false` = marked for deletion in 1C (82% of contracts, normal). `Заключен` flag is ignored (owner: informational). Counterparty gets `mainContractId`, `fullName` (+ ogrnip/kpp/okpo/legalType/regionId/legalFormId/mainBankAccountId); new reference streams `region`, `legal-form`, `bank`, `bank-account` (event-contracts 0.50.1, soft links, no FK).
 - **Price type** = main contract's price type (active contract + active PriceType) -> `CustomerPriceType` row -> branch default; resolved at read time in SQL (`customer-pricing/main-contract-price-type.sql.ts`, also used by price-entry). Manual `setCustomerPriceType` mutation removed. Search sends `priceTypeId` to search-service (their #173) for price filter/sort (only when a price filter/sort is present).
@@ -14,7 +14,7 @@ Updated: 2026-10-07 19:50
 - **Concurrency rules** now in `docs/concurrency.md`, skill `concurrency-audit`, `withAggregateLock` (shared), 2 lint warning rules; audit `docs/ai/concurrency-audit-2026-10.md` -> 6 high findings in #197.
 - **Local seed**: `contract` record type in erp-import, seed run id v11 (credit-limited buyer has limit 100000/14 days, prepay buyer none). Local server :3000, storefront :5173; staging-integration :3010/:5183/:5184 (never seed it).
 - **OPEN PROBLEM (issue #198)**: placing a deferred order on staging fails silently (order stays `ArrangingPayment`, no payment row); likely the preferred trading point has no `servicingBranchId` (0 of 4346 on staging; ~8000 points in prod). Owner: inherit the counterparty's `branchId` by default, override only in the manager portal; `Counterparty.branchId` is also empty. Retry with the server log visible after `make dev-staging-integration` (staging log file went stale at 16:30 UTC). Also: the storefront showed no error (toast path).
-- **Still to do for #188**: live check of the manager badge with a real exceeded order (local contour), price filter/sort on staging catalog (`priceTypeId`), `make ci`, final audit in a separate session (`mivend.audit.188`), then `finish-task` (push + close). Follow-ups filed: #192 (notify managers: price type unresolved), #193 (fill fullName by tax id), #194 (order TTL cancel + ERP), #196 (one-pass tier promotion), #197 (6 concurrency findings), #198 (branch inheritance).
+- **Left after closing #188**: #198 first (checkout fails silently, see above); live check of the manager "Credit limit exceeded" badge with a real exceeded order (local contour; never place orders on staging). Price filter/sort with `priceTypeId` works (owner confirmed). Final audit passed (doc notes applied in 29c95dd). Follow-ups: #192 (notify managers: price type unresolved), #193 (fill fullName by tax id), #194 (order TTL cancel + ERP), #196 (one-pass tier promotion), #197 (6 concurrency findings), #198 (branch inheritance).
 - **Lessons**: unit tests miss Nest DI import cycles (server failed to boot, fixed by moving the code constant to `constants.ts`); verify live after every server-side fix (a "fix" that swallowed its own error stayed green for hours); `make dev-staging-integration` restarts are allowed; never place orders on staging (real Kafka); the 1C card debt can differ from the `balance` stream.
 
 ## Recent changes (2026-10-06 — #180 checkout payment methods + credit control, shipped/audited/closed; pushed to f905bcb..81ec017)
