@@ -375,8 +375,8 @@ export class TradingPointService {
             .findOne({ where: { id: String(id) }, relations: ['contacts'] });
     }
 
-    // Self-heals: a missing/inactive/hidden preferred point is replaced by the counterparty's
-    // first active one, so customers never have to pick a point by hand.
+    // Self-heals a missing/inactive/hidden preferred point (first active one wins); the postgres
+    // driver returns [rows, rowCount] for UPDATE, hence rows[0][0].
     async getPreferredForCustomer(
         ctx: RequestContext,
         customerId: ID,
