@@ -44,7 +44,7 @@ export class ActiveOrderSettleInterceptor implements NestInterceptor {
                 await this.rebalance.waitForSettled(session.activeOrderId, WAIT_TIMEOUT_MS);
             }
         } catch {
-            // Waiting is best-effort; a failure must never break the read.
+            // best-effort: a failed wait must never break the read.
         }
     }
 

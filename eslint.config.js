@@ -6,6 +6,8 @@ import noRawGraphql from './eslint-rules/no-raw-graphql.js';
 import noSyncPaymentProcessing from './eslint-rules/no-sync-payment-processing.js';
 import noNullCheckOnPlainProtoScalar from './eslint-rules/no-null-check-on-plain-proto-scalar.js';
 import maxCommentLines from './eslint-rules/max-comment-lines.js';
+import noSwallowedHandlerError from './eslint-rules/no-swallowed-handler-error.js';
+import noRawAdvisoryLock from './eslint-rules/no-raw-advisory-lock.js';
 
 export default [
     js.configs.recommended,
@@ -231,6 +233,24 @@ export default [
         rules: {
             'local/no-null-check-on-plain-proto-scalar': 'error',
         },
+    },
+    // Concurrency conventions (docs/concurrency.md): warnings, not errors — a nudge over a
+    // pre-existing backlog. Escape hatch for the first rule: `// best-effort: <reason>`.
+    {
+        files: ['packages/plugins/**/src/**/*.ts'],
+        ignores: ['**/*.test.ts', '**/__tests__/**'],
+        languageOptions: { parser: tsParser },
+        plugins: {
+            concurrency: { rules: { 'no-swallowed-handler-error': noSwallowedHandlerError } },
+        },
+        rules: { 'concurrency/no-swallowed-handler-error': 'warn' },
+    },
+    {
+        files: ['packages/**/*.ts', 'apps/**/*.ts'],
+        ignores: ['**/*.test.ts', '**/__tests__/**', 'packages/shared/src/aggregate-lock.ts'],
+        languageOptions: { parser: tsParser },
+        plugins: { locks: { rules: { 'no-raw-advisory-lock': noRawAdvisoryLock } } },
+        rules: { 'locks/no-raw-advisory-lock': 'warn' },
     },
     prettierConfig, // must be last — disables rules that conflict with prettier
     {

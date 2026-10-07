@@ -354,6 +354,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
         await this.dataSource
             .getRepository(KafkaConsumerStatus)
             .upsert({ key: STATUS_KEY, connected: false }, { conflictPaths: ['key'] })
+            // best-effort: status row is advisory and shutdown must not fail on it.
             .catch(() => undefined);
     }
 }

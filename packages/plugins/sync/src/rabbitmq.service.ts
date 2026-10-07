@@ -141,7 +141,7 @@ export class RabbitMQService implements OnModuleDestroy {
                     try {
                         ch.nack(msg, false, true);
                     } catch {
-                        // Channel may already be closed (module shutting down) — nothing to do.
+                        // best-effort: channel may already be closed (module shutting down).
                     }
                 }, delayMs);
             }
