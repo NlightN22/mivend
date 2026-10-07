@@ -98,7 +98,7 @@ describe('integrationStreamHealth', () => {
         const { streams } = await resolver.integrationStreamHealth();
 
         expect(streams.find(s => s.stream === 'ghost-stream')).toMatchObject({
-            drift: 'UNKNOWN_INBOX_STREAM',
+            drift: 'UNKNOWN_STREAM',
             pending: 1,
         });
     });

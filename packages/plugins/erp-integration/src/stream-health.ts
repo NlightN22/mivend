@@ -1,4 +1,4 @@
-export type StreamDrift = 'NOT_CONSUMED' | 'NOT_IN_CONTRACT' | 'UNKNOWN_INBOX_STREAM' | null;
+export type StreamDrift = 'NOT_CONSUMED' | 'NOT_IN_CONTRACT' | 'UNKNOWN_STREAM' | null;
 
 export interface StreamHealthLag {
     topic: string;
@@ -46,11 +46,11 @@ function driftOf(
     inContract: boolean,
     consumed: boolean,
     ignored: boolean,
-    hasInbox: boolean,
+    hasSignals: boolean,
 ): StreamDrift {
     if (inContract && !consumed) return ignored ? null : 'NOT_CONSUMED';
     if (!inContract && consumed) return 'NOT_IN_CONTRACT';
-    if (!inContract && !consumed && hasInbox) return 'UNKNOWN_INBOX_STREAM';
+    if (!inContract && !consumed && hasSignals) return 'UNKNOWN_STREAM';
     return null;
 }
 
@@ -78,7 +78,7 @@ export function buildStreamHealthRows(input: StreamHealthInput): StreamHealthRow
                 contract.has(stream),
                 consumed.has(stream),
                 ignoredReason !== null,
-                backlog !== undefined,
+                backlog !== undefined || lag !== null,
             ),
             lag,
             pending: backlog?.pending ?? 0,

@@ -57,9 +57,15 @@ describe('buildStreamHealthRows', () => {
         ]);
         const rows = buildStreamHealthRows(input({ backlogByStream }));
         expect(find(rows, 'ghost')).toMatchObject({
-            drift: 'UNKNOWN_INBOX_STREAM',
+            drift: 'UNKNOWN_STREAM',
             pending: 2,
             failed: 1,
         });
+    });
+
+    it('flags a stream that only has Kafka lag data', () => {
+        const lag = { topic: 't', totalLag: '3', polledAt: new Date(0), partitions: [] };
+        const rows = buildStreamHealthRows(input({ lagByStream: new Map([['lag-only', lag]]) }));
+        expect(find(rows, 'lag-only').drift).toBe('UNKNOWN_STREAM');
     });
 });

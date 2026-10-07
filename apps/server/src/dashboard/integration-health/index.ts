@@ -6,34 +6,30 @@ import {
 } from '@vendure/dashboard';
 
 import { IntegrationHealthPage } from './integration-health-page.js';
+import { isLagOverThreshold } from './stream-health-view.js';
 
-// See ../system-health/index.ts's own doc comment for why this file sits under
-// apps/server/src instead of a packages/plugins/* package (pnpm-workspace-symlink
-// dashboard-discovery limitation).
+// Lives under apps/server/src, not packages/plugins/*: see ../system-health/index.ts.
 const kafkaLagAlertDocument = graphql(`
     query KafkaConsumerLagForAlert {
-        kafkaConsumerLag {
-            topic
-            partitions {
-                lag
+        integrationStreamHealth {
+            streams {
+                lag {
+                    topic
+                    totalLag
+                }
             }
         }
     }
 `);
-
-const LAG_ALERT_THRESHOLD = 1000n;
 
 export const kafkaLagAlert: DashboardAlertDefinition<string[]> = {
     id: 'kafka-consumer-lag-high',
     check: async () => {
         try {
             const data = await api.query(kafkaLagAlertDocument);
-            const topics = data.kafkaConsumerLag ?? [];
-            return topics
-                .filter(t =>
-                    t.partitions.some(p => p.lag !== null && BigInt(p.lag) > LAG_ALERT_THRESHOLD),
-                )
-                .map(t => t.topic);
+            return data.integrationStreamHealth.streams
+                .filter(st => isLagOverThreshold(st.lag?.totalLag ?? null))
+                .map(st => st.lag!.topic);
         } catch {
             // A viewer lacking ManageErpIntegration (or a transient network error) must not
             // crash the dashboard shell — same fail-closed guard as system-health's own check().

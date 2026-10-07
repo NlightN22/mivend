@@ -101,7 +101,7 @@ export const adminApiExtensions: DocumentNode = gql`
         inContract: Boolean!
         consumed: Boolean!
         ignoredReason: String
-        "NOT_CONSUMED | NOT_IN_CONTRACT | UNKNOWN_INBOX_STREAM, null when the stream is consistent."
+        "NOT_CONSUMED | NOT_IN_CONTRACT | UNKNOWN_STREAM, null when the stream is consistent."
         drift: String
         lag: KafkaTopicLag
         pending: Int!

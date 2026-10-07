@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ResultOf, api, graphql } from '@vendure/dashboard';
 
+import { DRIFT_MESSAGES, formatAge, isLagOverThreshold } from './stream-health-view.js';
+
 const streamHealthDocument = graphql(`
     query IntegrationStreamHealthForDashboard {
         integrationStreamHealth {
@@ -30,26 +32,6 @@ const streamHealthDocument = graphql(`
         }
     }
 `);
-
-const LAG_HIGHLIGHT_THRESHOLD = 1000n;
-
-export function isLagOverThreshold(lag: string | null): boolean {
-    return lag !== null && BigInt(lag) > LAG_HIGHLIGHT_THRESHOLD;
-}
-
-const DRIFT_MESSAGES: Record<string, string> = {
-    NOT_CONSUMED: 'Stream not consumed — add a handler or mark it explicitly ignored',
-    NOT_IN_CONTRACT: 'Stale or renamed stream — configured but absent from the contract',
-    UNKNOWN_INBOX_STREAM: 'Inbox rows exist for a stream unknown to the contract and config',
-};
-
-export function formatAge(from: string | null, now: number): string {
-    if (!from) return '—';
-    const minutes = Math.max(0, Math.round((now - new Date(from).getTime()) / 60000));
-    if (minutes < 60) return `${minutes} min`;
-    if (minutes < 1440) return `${Math.round(minutes / 60)} h`;
-    return `${Math.round(minutes / 1440)} d`;
-}
 
 type StreamHealthReport = ResultOf<typeof streamHealthDocument>['integrationStreamHealth'];
 
