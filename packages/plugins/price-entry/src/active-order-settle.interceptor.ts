@@ -1,16 +1,22 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import type { GraphQLResolveInfo } from 'graphql';
-import { RequestContextService } from '@vendure/core';
+import { ConfigService, SessionService } from '@vendure/core';
 
 import { TierRebalanceService } from './tier-rebalance.service';
 
-const WAIT_TIMEOUT_MS = 3000;
+const WAIT_TIMEOUT_MS = 8000;
+
+interface SessionRequest {
+    session?: { token?: string };
+    headers?: Record<string, string | string[] | undefined>;
+}
 
 @Injectable()
 export class ActiveOrderSettleInterceptor implements NestInterceptor {
     constructor(
-        private requestContextService: RequestContextService,
+        private sessionService: SessionService,
+        private configService: ConfigService,
         private rebalance: TierRebalanceService,
     ) {}
 
@@ -20,28 +26,39 @@ export class ActiveOrderSettleInterceptor implements NestInterceptor {
     ): Promise<ReturnType<CallHandler['handle']>> {
         if (context.getType<string>() === 'graphql') {
             const gql = GqlExecutionContext.create(context);
-            const info = gql.getInfo<GraphQLResolveInfo>();
-            if (info.fieldName === 'activeOrder') {
-                await this.waitSafely(
-                    gql.getContext<{ req: Parameters<RequestContextService['fromRequest']>[0] }>()
-                        .req,
-                    info,
-                );
+            if (gql.getInfo<GraphQLResolveInfo>().fieldName === 'activeOrder') {
+                await this.waitSafely(gql.getContext<{ req: SessionRequest }>().req);
             }
         }
         return next.handle();
     }
 
-    private async waitSafely(
-        req: Parameters<RequestContextService['fromRequest']>[0],
-        info: GraphQLResolveInfo,
-    ): Promise<void> {
+    // The Vendure guard keeps the session in its own request context, so resolve it from the token.
+    private async waitSafely(req: SessionRequest): Promise<void> {
         try {
-            const ctx = await this.requestContextService.fromRequest(req, info);
-            const orderId = ctx.session?.activeOrderId;
-            if (orderId) await this.rebalance.waitForSettled(orderId, WAIT_TIMEOUT_MS);
+            const token = this.extractToken(req);
+            const session = token
+                ? await this.sessionService.getSessionFromToken(token)
+                : undefined;
+            if (session?.activeOrderId) {
+                await this.rebalance.waitForSettled(session.activeOrderId, WAIT_TIMEOUT_MS);
+            }
         } catch {
             // Waiting is best-effort; a failure must never break the read.
         }
+    }
+
+    private extractToken(req: SessionRequest): string | undefined {
+        if (req.session?.token) return req.session.token;
+        const header =
+            req.headers?.[
+                this.configService.authOptions.authTokenHeaderKey ?? 'vendure-auth-token'
+            ];
+        const value = Array.isArray(header) ? header[0] : header;
+        if (value) return value;
+        const bearer = req.headers?.authorization;
+        return typeof bearer === 'string' && bearer.startsWith('Bearer ')
+            ? bearer.slice(7)
+            : undefined;
     }
 }
