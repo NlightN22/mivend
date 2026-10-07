@@ -16,6 +16,7 @@ import {
     type DataTableSortMeta,
 } from '@mivend/ui-kit';
 import type { TableRow } from '@mivend/ui-kit';
+import { useCurrency } from '../../composables/useCurrency';
 import {
     ORDER_STATE_OPTIONS,
     ORDER_STATE_BADGE_VARIANT,
@@ -146,7 +147,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         // currencyCode is a placeholder here — the real value is spliced in per-render by
         // resolvedColumns below, since ALL_COLUMNS itself is a plain, non-reactive array (seeded
         // once into useDataTableState's defaults).
-        filterConfig: { type: 'amount-range', currencyCode: 'USD' },
+        filterConfig: { type: 'amount-range', currencyCode: '' },
     },
     {
         field: 'placedBy',
@@ -172,7 +173,10 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     },
 ];
 
-const currencyCode = computed(() => (props.rows[0]?.currencyCode as string | undefined) ?? 'USD');
+const { currencyCode: channelCurrency } = useCurrency();
+const currencyCode = computed(
+    () => (props.rows[0]?.currencyCode as string | undefined) ?? channelCurrency.value ?? '',
+);
 // A customer can place their own order directly via the storefront (see the "Ivan Petrov
 // (customer)" rows placedByLabel() produces) — the manager list alone can't express that value,
 // same gap Fulfillment's 'Not started' fills for a null customField. PLACED_BY_CUSTOMER_VALUE is

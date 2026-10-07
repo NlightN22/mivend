@@ -28,7 +28,7 @@ const ORDERS: CustomerOrderItem[] = Array.from({ length: 34 }, (_, i) => ({
     code: `ORD-202607-${(1000 + i).toString(16).toUpperCase()}`,
     state: STATES[i % STATES.length],
     totalWithTax: 45000 + i * 12345,
-    currencyCode: 'USD',
+    currencyCode: 'RUB',
     orderPlacedAt: new Date(Date.now() - i * 86400000).toISOString(),
     createdAt: new Date(Date.now() - i * 86400000).toISOString(),
     totalQuantity: 3 + (i % 12),

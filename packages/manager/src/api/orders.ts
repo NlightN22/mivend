@@ -153,7 +153,6 @@ export interface OrdersSummary {
     processingCount: number;
     draftCount: number;
     totalAmount: number;
-    currencyCode: string;
     pendingApprovalOrderIds: Set<string>;
     attentionCandidates: AttentionCandidate[];
 }
@@ -195,7 +194,6 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
         processingCount: result.processing.totalItems,
         draftCount: result.drafts.totalItems,
         totalAmount: result.allOpen.items.reduce((sum, o) => sum + o.totalWithTax, 0),
-        currencyCode: result.allOpen.items[0]?.currencyCode ?? 'USD',
         pendingApprovalOrderIds: pendingIds,
         attentionCandidates,
     };

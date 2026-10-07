@@ -17,10 +17,12 @@ import {
 import { fetchPriceTypeCodes } from '../../api/discounts';
 import type { FacetGroup } from 'shared';
 import { parseCatalogQuery, buildCatalogQuery } from '../../composables/catalogQuery';
+import { useCurrency } from '../../composables/useCurrency';
 import { useCatalogRows } from '../../composables/useCatalogRows';
 import { useCatalogCategories } from '../../composables/useCatalogCategories';
 import CatalogRowExtras from '../../components/catalog/CatalogRowExtras.vue';
 
+const { currencyCode } = useCurrency();
 const route = useRoute();
 const router = useRouter();
 const initial = parseCatalogQuery(route.query);
@@ -206,7 +208,7 @@ void loadAll();
                             link-base="/catalog"
                             :stock="stock.get(item.productVariantId)"
                             :price="basePrices.get(item.productVariantId)"
-                            currency="USD"
+                            :currency="currencyCode ?? undefined"
                             :show-favorite="false"
                             :show-actions="false"
                             :show-floor-price="floorPrices !== null"

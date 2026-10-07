@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import { adminApi } from '../api/client';
 import { DefaultCurrencyDocument } from '../api/generated/graphql';
 
@@ -17,8 +17,11 @@ function ensureLoaded(): void {
         });
 }
 
-function format(amount: number, code: string | null): string {
-    const options: Intl.NumberFormatOptions = { maximumFractionDigits: 0 };
+function format(amount: number, code: string | null, fractionDigits = 0): string {
+    const options: Intl.NumberFormatOptions = {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+    };
     if (code) Object.assign(options, { style: 'currency', currency: code });
     return new Intl.NumberFormat('ru-RU', options).format(amount);
 }
@@ -26,10 +29,14 @@ function format(amount: number, code: string | null): string {
 export function useCurrency(): {
     formatWhole: (amount: number) => string;
     formatMinor: (amount: number) => string;
+    formatMinorExact: (amount: number) => string;
+    currencyCode: Ref<string | null>;
 } {
     ensureLoaded();
     return {
         formatWhole: amount => format(amount, currencyCode.value),
         formatMinor: amount => format(amount / 100, currencyCode.value),
+        formatMinorExact: amount => format(amount / 100, currencyCode.value, 2),
+        currencyCode,
     };
 }

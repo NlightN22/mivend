@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useCurrency } from '../../composables/useCurrency';
 import type {
     ApprovalRequestDetail,
     OrderReference,
@@ -25,8 +26,7 @@ interface DetailRow {
     value: string;
 }
 
-const money = (cents: number): string =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+const { formatMinorExact: money } = useCurrency();
 
 const orderLine = computed(() => {
     if (props.request.requestType !== 'priceAdjustmentApproval') return null;
@@ -82,10 +82,7 @@ const rows = computed<DetailRow[]>(() => {
             ? [
                   {
                       label: 'Amount',
-                      value: new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                      }).format((p.requestedAmount as number) / 100),
+                      value: money(p.requestedAmount as number),
                   },
               ]
             : []),

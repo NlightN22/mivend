@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { MvAmountDisplay, MvStockBadge } from '@mivend/ui-kit';
 import type { PriceRow } from '../../api/productDetail';
+import { useCurrency } from '../../composables/useCurrency';
+
+const { currencyCode } = useCurrency();
 
 defineProps<{
     prices: PriceRow[];
@@ -25,7 +28,7 @@ defineProps<{
                     <MvAmountDisplay
                         v-if="row.price !== null"
                         :amount="row.price / 100"
-                        currency="USD"
+                        :currency="currencyCode ?? undefined"
                         size="sm"
                     />
                     <span v-else class="manager-product-info-panel__no-price">—</span>

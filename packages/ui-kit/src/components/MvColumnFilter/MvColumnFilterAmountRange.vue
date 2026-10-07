@@ -27,6 +27,7 @@ const MODES: { value: AmountRangeFilterValue['mode']; label: string }[] = [
 ];
 
 const currencySymbol = computed(() => {
+    if (!props.config.currencyCode) return '';
     const parts = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: props.config.currencyCode,

@@ -14,6 +14,7 @@ import {
     type MvDataTableColumn,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+import { useCurrency } from '../../composables/useCurrency';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import {
     DEFAULT_FILTERS,
@@ -272,6 +273,8 @@ const attentionItems = computed(
         })) ?? [],
 );
 
+const { formatMinor } = useCurrency();
+
 const operationalMetrics = computed(() => {
     if (!summary.value) return [];
     return [
@@ -280,20 +283,14 @@ const operationalMetrics = computed(() => {
         { label: 'Overdue', value: String(summary.value.overdueCount) },
         {
             label: 'Open orders amount',
-            value: new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: summary.value.currencyCode,
-            }).format(summary.value.totalAmount / 100),
+            value: formatMinor(summary.value.totalAmount),
         },
     ];
 });
 
 const todayAmountFormatted = computed(() => {
     if (!summary.value) return '';
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: summary.value.currencyCode,
-    }).format(summary.value.todayAmount / 100);
+    return formatMinor(summary.value.todayAmount);
 });
 </script>
 

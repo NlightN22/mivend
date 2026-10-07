@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useCurrency } from '../../composables/useCurrency';
 
 // Manager-only info that MvProductRow itself has no first-class concept of — additional
 // price-type columns beyond the single "base" price already shown by the row. Floor price
@@ -10,11 +11,7 @@ const props = defineProps<{
     extraPriceColumns: { priceTypeCode: string; label: string; prices: Map<string, number> }[];
 }>();
 
-function money(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-        amount / 100,
-    );
-}
+const { formatMinorExact: money } = useCurrency();
 
 const rows = computed(() => {
     const out: { label: string; value: string }[] = [];
