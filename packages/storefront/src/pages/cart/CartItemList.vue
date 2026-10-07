@@ -90,6 +90,12 @@ function cancelClear(): void {
         </div>
 
         <div class="item-list__items">
+            <div class="item-list__columns" aria-hidden="true">
+                <span>Product</span>
+                <span>Price</span>
+                <span>Quantity</span>
+                <span>Total</span>
+            </div>
             <CartItem
                 v-for="line in cartStore.lines"
                 :key="line.id"
@@ -246,5 +252,24 @@ function cancelClear(): void {
     display: flex;
     align-items: flex-start;
     gap: 10px;
+}
+
+.item-list__columns {
+    display: grid;
+    grid-template-columns: 28px 96px minmax(0, 1fr) 112px 150px 120px;
+    gap: 14px;
+    padding: 10px 0 0;
+    color: #66736e;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.item-list__columns span:nth-child(1) {
+    grid-column: 3;
+}
+@media (max-width: 900px) {
+    .item-list__columns {
+        display: none;
+    }
 }
 </style>

@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
 import { useCartStore, type CartLine } from '../../stores/cart';
+import CartLinePrice from '../../components/CartLinePrice.vue';
 import { brandOf } from '../../utils/brand';
 import { formatTierValue } from '../../utils/discount';
 import { discountLineReason, discountTierReachedReason } from '../../utils/discountMessages';
@@ -102,32 +103,24 @@ function cancelRemove(): void {
             </div>
         </div>
 
-        <div class="cart-item__price-block">
+        <div class="cart-item__unit">
             <MvTooltip v-if="discountPercent && discountReason" placement="bottom">
                 <template #trigger>
                     <button type="button" class="cart-item__price-trigger">
-                        <MvAmountDisplay
-                            :amount="line.linePriceWithTax / 100"
-                            currency="RUB"
-                            size="sm"
-                            class="cart-item__price"
-                        />
-                        <MvAmountDisplay
-                            :amount="(line.compareAtPrice! * line.quantity) / 100"
-                            currency="RUB"
-                            size="sm"
-                            class="cart-item__old-price"
+                        <CartLinePrice
+                            :line="line"
+                            :currency="line.productVariant.currencyCode"
+                            kind="unit"
                         />
                     </button>
                 </template>
                 <div>{{ discountReason }}</div>
             </MvTooltip>
-            <MvAmountDisplay
+            <CartLinePrice
                 v-else
-                :amount="line.linePriceWithTax / 100"
-                currency="RUB"
-                size="sm"
-                class="cart-item__price"
+                :line="line"
+                :currency="line.productVariant.currencyCode"
+                kind="unit"
             />
         </div>
 
@@ -149,13 +142,17 @@ function cancelRemove(): void {
                 @update:model-value="onQtyChange"
             />
         </div>
+
+        <div class="cart-item__total">
+            <CartLinePrice :line="line" :currency="line.productVariant.currencyCode" kind="total" />
+        </div>
     </article>
 </template>
 
 <style scoped>
 .cart-item {
     display: grid;
-    grid-template-columns: 28px 96px minmax(0, 1fr) 138px 160px;
+    grid-template-columns: 28px 96px minmax(0, 1fr) 112px 150px 120px;
     gap: 14px;
     align-items: center;
     padding: 18px 0;
@@ -247,22 +244,10 @@ function cancelRemove(): void {
     color: #008a64;
 }
 
-.cart-item__price-block {
-    text-align: left;
+.cart-item__unit,
+.cart-item__total {
     white-space: nowrap;
 }
-.cart-item__price {
-    font-size: 19px !important;
-    font-weight: 950 !important;
-    color: #008a64 !important;
-}
-.cart-item__old-price {
-    display: block;
-    font-size: 12px !important;
-    color: #a8b8b2 !important;
-    text-decoration: line-through;
-}
-
 .cart-item__price-trigger {
     border: none;
     background: transparent;
@@ -272,8 +257,6 @@ function cancelRemove(): void {
     text-align: left;
     font-family: inherit;
     display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
 }
 
 .cart-item__remove-confirm {
@@ -314,5 +297,30 @@ function cancelRemove(): void {
 .cart-item__remove-confirm-no:hover {
     background: #e2f8ef;
     color: #008a64;
+}
+
+@media (max-width: 900px) {
+    .cart-item {
+        grid-template-columns: 28px 72px minmax(0, 1fr) auto;
+        row-gap: 10px;
+    }
+    .cart-item__img {
+        width: 72px;
+        height: 72px;
+    }
+    .cart-item__info {
+        grid-column: 3 / -1;
+    }
+    .cart-item__unit {
+        grid-column: 3;
+        grid-row: 2;
+    }
+    .cart-item__total {
+        grid-column: 4;
+        grid-row: 2;
+    }
+    .cart-item__qty {
+        grid-column: 1 / -1;
+    }
 }
 </style>

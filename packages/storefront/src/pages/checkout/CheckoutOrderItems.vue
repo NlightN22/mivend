@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import CartLinePrice from '../../components/CartLinePrice.vue';
 import { brandOf } from '../../utils/brand';
 import { useCartStore, type CartLine } from '../../stores/cart';
 
@@ -7,10 +8,6 @@ const cartStore = useCartStore();
 
 function getBrand(line: CartLine): string {
     return brandOf(line.productVariant.product.manufacturer);
-}
-
-function formatPrice(kobo: number): string {
-    return new Intl.NumberFormat('ru-RU').format(kobo / 100) + ' ₽';
 }
 
 const lineCount = computed(() => cartStore.lines.length);
@@ -37,7 +34,18 @@ const totalQty = computed(() => cartStore.totalQuantity);
                         {{ line.productVariant.sku }}
                     </div>
                 </div>
-                <div class="checkout-items__sum">{{ formatPrice(line.linePriceWithTax) }}</div>
+                <div class="checkout-items__prices">
+                    <CartLinePrice
+                        :line="line"
+                        :currency="line.productVariant.currencyCode"
+                        kind="unit"
+                    />
+                    <CartLinePrice
+                        :line="line"
+                        :currency="line.productVariant.currencyCode"
+                        kind="total"
+                    />
+                </div>
             </div>
         </div>
     </article>
@@ -127,17 +135,16 @@ const totalQty = computed(() => cartStore.totalQuantity);
     font-weight: 700;
 }
 
-.checkout-items__sum {
-    font-weight: 800;
-    white-space: nowrap;
-    font-size: 14px;
+.checkout-items__prices {
+    display: flex;
+    gap: 20px;
 }
 
 @media (max-width: 900px) {
     .checkout-items__row {
         grid-template-columns: 52px minmax(0, 1fr);
     }
-    .checkout-items__sum {
+    .checkout-items__prices {
         grid-column: 2;
     }
 }
