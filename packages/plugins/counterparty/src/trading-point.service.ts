@@ -375,15 +375,27 @@ export class TradingPointService {
             .findOne({ where: { id: String(id) }, relations: ['contacts'] });
     }
 
+    // Self-heals: a missing/inactive/hidden preferred point is replaced by the counterparty's
+    // first active one, so customers never have to pick a point by hand.
     async getPreferredForCustomer(
         ctx: RequestContext,
         customerId: ID,
     ): Promise<TradingPoint | null> {
         const rows = await this.connection.rawConnection.query(
-            `SELECT cu."customFieldsPreferredtradingpointid" AS tpid FROM customer cu WHERE cu.id = $1`,
+            `UPDATE customer cu SET "customFieldsPreferredtradingpointid" = COALESCE(
+                 (SELECT tp.id::text FROM trading_point tp
+                  WHERE tp.id::text = cu."customFieldsPreferredtradingpointid"
+                    AND tp."isActive" AND tp."customerStatus" = 'active'),
+                 (SELECT tp.id::text FROM trading_point tp
+                  WHERE tp."counterpartyId"::text = cu."customFieldsCounterpartyid"::text
+                    AND tp."isActive" AND tp."customerStatus" = 'active'
+                  ORDER BY tp.name, tp.id LIMIT 1),
+                 cu."customFieldsPreferredtradingpointid")
+             WHERE cu.id = $1
+             RETURNING cu."customFieldsPreferredtradingpointid" AS tpid`,
             [customerId],
         );
-        const tpId: string | undefined = rows[0]?.tpid;
+        const tpId: string | undefined = rows[0]?.[0]?.tpid;
         if (!tpId) return null;
         return this.findById(ctx, tpId);
     }
