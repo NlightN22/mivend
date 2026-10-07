@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { IconPackage } from '@tabler/icons-vue';
 import CartLinePrice from '../../components/CartLinePrice.vue';
+import { assetUrl } from '../../composables/assetUrl';
 import { brandOf } from '../../utils/brand';
 import { useCartStore, type CartLine } from '../../stores/cart';
 
@@ -21,12 +23,20 @@ const totalQty = computed(() => cartStore.totalQuantity);
                 <h2 class="checkout-items__title">Your order</h2>
                 <p class="checkout-items__subtitle">{{ lineCount }} items · {{ totalQty }} pcs.</p>
             </div>
-            <button class="checkout-items__edit-btn" type="button">Edit</button>
+            <RouterLink class="checkout-items__edit-btn" to="/cart">Edit</RouterLink>
         </div>
 
         <div class="checkout-items__list">
             <div v-for="line in cartStore.lines" :key="line.id" class="checkout-items__row">
-                <div class="checkout-items__img">🔧</div>
+                <div class="checkout-items__img">
+                    <img
+                        v-if="line.featuredAsset"
+                        :src="assetUrl(line.featuredAsset.preview, 'thumb')"
+                        :alt="line.productVariant.product.name"
+                        loading="lazy"
+                    />
+                    <IconPackage v-else :size="24" stroke-width="1.6" aria-hidden="true" />
+                </div>
                 <div class="checkout-items__info">
                     <div class="checkout-items__name">{{ line.productVariant.product.name }}</div>
                     <div class="checkout-items__meta">
@@ -92,6 +102,9 @@ const totalQty = computed(() => cartStore.totalQuantity);
     white-space: nowrap;
     font: inherit;
     flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
 }
 
 .checkout-items__list {
@@ -119,7 +132,14 @@ const totalQty = computed(() => cartStore.totalQuantity);
     place-items: center;
     background: #fff;
     border: 1px solid #edf2ef;
-    font-size: 25px;
+    color: #66736e;
+    overflow: hidden;
+}
+
+.checkout-items__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .checkout-items__name {

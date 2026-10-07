@@ -7,6 +7,9 @@ query ActiveOrder {
         lines {
             id
             quantity
+            featuredAsset {
+                preview
+            }
             linePrice
             linePriceWithTax
             unitPrice

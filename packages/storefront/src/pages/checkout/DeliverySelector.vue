@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { IconBuildingStore, IconCheck, IconTruckDelivery } from '@tabler/icons-vue';
 import { MvModal } from '@mivend/ui-kit';
 import { useCheckoutStore } from '../../stores/checkout';
 import { useAuthStore } from '../../stores/auth';
@@ -74,7 +75,9 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                 :disabled="!courierAvailable"
                 @click="checkoutStore.setDelivery('courier')"
             >
-                <div class="delivery-selector__card-title"><span>🚚</span> Courier</div>
+                <div class="delivery-selector__card-title">
+                    <IconTruckDelivery :size="20" stroke-width="1.7" aria-hidden="true" /> Courier
+                </div>
                 <p v-if="!courierAvailable" class="delivery-selector__card-note">
                     Courier delivery needs a trading point.
                     <RouterLink to="/account/trading-points">Add trading point</RouterLink>
@@ -93,7 +96,10 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                 :disabled="!pickupAvailable"
                 @click="checkoutStore.setDelivery('pickup')"
             >
-                <div class="delivery-selector__card-title"><span>🏬</span> Self-pickup</div>
+                <div class="delivery-selector__card-title">
+                    <IconBuildingStore :size="20" stroke-width="1.7" aria-hidden="true" />
+                    Self-pickup
+                </div>
                 <p class="delivery-selector__card-note">Available after assembly confirmation.</p>
             </button>
         </div>
@@ -120,7 +126,12 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                 @click="selectPoint(pt.id)"
             >
                 <div class="ds-point-item__check">
-                    <span v-if="pt.id === currentId">✓</span>
+                    <IconCheck
+                        v-if="pt.id === currentId"
+                        :size="14"
+                        stroke-width="3"
+                        aria-hidden="true"
+                    />
                 </div>
                 <div>
                     <div class="ds-point-item__name">{{ pt.name }}</div>

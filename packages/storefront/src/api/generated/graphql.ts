@@ -4902,6 +4902,7 @@ export type ActiveOrderQuery = {
             linePriceWithTax: any;
             unitPrice: any;
             compareAtPrice?: number | null;
+            featuredAsset?: { preview: string } | null;
             tierProgress?: {
                 facetName: string;
                 metric: TierMetric;
@@ -5993,6 +5994,9 @@ export const ActiveOrderDocument = new TypedDocumentString(`
     lines {
       id
       quantity
+      featuredAsset {
+        preview
+      }
       linePrice
       linePriceWithTax
       unitPrice

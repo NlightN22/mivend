@@ -1303,6 +1303,9 @@ importers:
             '@mivend/ui-kit':
                 specifier: workspace:*
                 version: link:../ui-kit
+            '@tabler/icons-vue':
+                specifier: ^3.45.0
+                version: 3.45.0(vue@3.5.39(typescript@5.9.3))
             element-plus:
                 specifier: ^2.9.0
                 version: 2.14.2(vue@3.5.39(typescript@5.9.3))

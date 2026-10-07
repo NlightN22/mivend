@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { IconBuildingBank, IconCalendarTime, IconCreditCard } from '@tabler/icons-vue';
 import { MvSkeleton } from '@mivend/ui-kit';
 import { useCheckoutStore } from '../../stores/checkout';
 import { useAuthStore } from '../../stores/auth';
@@ -10,7 +11,7 @@ const authStore = useAuthStore();
 const methodCards = computed(() => [
     {
         id: 'online' as const,
-        icon: '💳',
+        icon: IconCreditCard,
         title: 'Online payment',
         note: 'Card, SBP or other method via bank/acquiring.',
         badge: 'Quick confirmation',
@@ -18,7 +19,7 @@ const methodCards = computed(() => [
     },
     {
         id: 'invoice' as const,
-        icon: '🏦',
+        icon: IconBuildingBank,
         title: 'Bank invoice',
         note: 'Generate PDF invoice and pay via bank.',
         badge: 'Status after receipt',
@@ -26,7 +27,7 @@ const methodCards = computed(() => [
     },
     {
         id: 'deferred' as const,
-        icon: '⏱',
+        icon: IconCalendarTime,
         title: 'Deferred payment',
         note:
             (authStore.counterparty?.paymentDelayDays ?? 0) > 0
@@ -70,7 +71,14 @@ const methods = computed(() =>
                 @click="checkoutStore.setPayment(method.id)"
             >
                 <div class="payment-selector__card-top">
-                    <div class="payment-selector__icon">{{ method.icon }}</div>
+                    <div class="payment-selector__icon">
+                        <component
+                            :is="method.icon"
+                            :size="22"
+                            stroke-width="1.7"
+                            aria-hidden="true"
+                        />
+                    </div>
                     <div class="payment-selector__radio"></div>
                 </div>
                 <div>
@@ -163,6 +171,7 @@ const methods = computed(() =>
 
 .payment-selector__card--active .payment-selector__icon {
     background: #00a878;
+    color: #fff;
 }
 
 .payment-selector__radio {
