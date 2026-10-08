@@ -104,6 +104,7 @@ export class ReservationWriteOffSyncService {
         const wasRejected = order.customFields.erpStatus === 'REJECTED';
         const wasPending =
             order.customFields.erpStatus == null || order.customFields.erpStatus === 'PENDING';
+        const missingErpOrderId = !order.customFields.erpOrderId && !!input.orderEntityId;
 
         // Purely informational for staff — never read by the release/quantity-match logic below.
         const customFields: typeof order.customFields = {
@@ -127,7 +128,7 @@ export class ReservationWriteOffSyncService {
         // directly here, same separation as ErpCallbackController's own order-status path.
         if (input.rejected) {
             this.eventBus.publish(new ErpOrderStatusEvent(ctx, order.code, 'REJECTED'));
-        } else if (wasRejected || wasPending) {
+        } else if (wasRejected || wasPending || missingErpOrderId) {
             // Carries orderEntityId so ErpOrderService.updateStatus stores erpOrderId, the key later
             // order-changed events correlate on; nothing else sets it in this flow.
             this.eventBus.publish(

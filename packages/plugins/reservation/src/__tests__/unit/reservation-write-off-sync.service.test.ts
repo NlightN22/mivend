@@ -632,6 +632,31 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         );
     });
 
+    it('still stores a missing erpOrderId when the order is already SENT_TO_ERP', async () => {
+        orderRepo.findOne.mockResolvedValue({
+            id: 'order-1',
+            code: 'order-1',
+            customFields: { erpStatus: 'SENT_TO_ERP' },
+        });
+
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            requestEntityId: 'req-1',
+            localOrderId: 'order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: 'ЗК-00006',
+            status: 'Проведён',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        expect(eventBus.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'SENT_TO_ERP', erpOrderId: 'erp-order-1' }),
+        );
+    });
+
     it('publishes SENT_TO_ERP without an erpOrderId when the result carries no orderEntityId', async () => {
         orderRepo.findOne.mockResolvedValue({
             id: 'order-1',
