@@ -211,5 +211,9 @@ export const adminApiExtensions: DocumentNode = gql`
         runErpReconciliation: ErpReconciliationRunResult!
         "Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved."
         resolveErpReconciliationIssue(id: ID!, resolution: String!): ErpReconciliationIssue!
+        "Returns outbox rows that gave up publishing (status failed) to pending so the next sweep retries them. Returns how many moved (issue #200)."
+        requeueFailedIntegrationOutbox(ids: [ID!]!): Int!
+        "Rebuilds the event of a skipped outbox row from its source data. Returns queued, still-skipped (reason updated) or already-sent (issue #200)."
+        rebuildSkippedIntegrationOutbox(id: ID!): String!
     }
 `;

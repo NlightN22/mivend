@@ -1,19 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeInboxRetryBackoffMs, shouldDeadLetter } from '../../retry-policy';
+import { computeInboxRetryBackoffMs, decideOutboxFailure } from '../../retry-policy';
 
-describe('shouldDeadLetter', () => {
-    it('does not dead-letter while attempts remain below the limit', () => {
-        expect(shouldDeadLetter(1, 5)).toBe(false);
-        expect(shouldDeadLetter(4, 5)).toBe(false);
+describe('decideOutboxFailure', () => {
+    const now = new Date('2026-01-02T00:00:00Z');
+
+    it('backs the retry off while inside the wall-clock budget, however many attempts', () => {
+        const decision = decideOutboxFailure(now, new Date(now.getTime() - 60_000), 200, () => 0.5);
+        expect(decision).toEqual({
+            status: 'pending',
+            nextRetryAt: new Date(now.getTime() + 30 * 60_000),
+        });
     });
 
-    it('dead-letters once attempts reach the limit', () => {
-        expect(shouldDeadLetter(5, 5)).toBe(true);
+    it('dead-letters once the budget since the first failure is spent', () => {
+        const first = new Date(now.getTime() - 24 * 60 * 60 * 1000 - 1);
+        expect(decideOutboxFailure(now, first, 3)).toEqual({ status: 'failed' });
     });
 
-    it('dead-letters if somehow already past the limit (no infinite retry)', () => {
-        expect(shouldDeadLetter(6, 5)).toBe(true);
+    it('does not dead-letter exactly at the budget boundary', () => {
+        const first = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        expect(decideOutboxFailure(now, first, 3).status).toBe('pending');
     });
 });
 

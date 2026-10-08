@@ -11,7 +11,6 @@ import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-ent
 import { IntegrationOutboxProcessorService } from '../../../integration-outbox-processor.service';
 import { IntegrationOutboxService } from '../../../integration-outbox.service';
 import { OutboundGateway, outboundSend, outboundSkip } from '../../../outbound-gateway';
-import type { ErpIntegrationPluginOptions } from '../../../types';
 
 // Silent-drop pattern (docs/testing-patterns.md): every enqueue ends as pending rows or one
 // skipped row with a reason, atomically, and a skipped row is never published.
@@ -65,11 +64,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
             lastError: 'line 1 has no organizationId',
         });
 
-        const processor = new IntegrationOutboxProcessorService(
-            dataSource,
-            { publish } as never,
-            { maxRetry: 3 } as ErpIntegrationPluginOptions,
-        );
+        const processor = new IntegrationOutboxProcessorService(dataSource, { publish } as never);
         await processor.processPendingBatch();
         expect(publish).not.toHaveBeenCalled();
     });

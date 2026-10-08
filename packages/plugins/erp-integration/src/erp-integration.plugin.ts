@@ -116,6 +116,8 @@ import { IntegrationStreamHealthResolver } from './integration-stream-health.res
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import { ContractVersionClient } from './contract-version.client';
 import { OutboundGateway } from './outbound-gateway';
+import { IntegrationOutboxRecoveryService } from './integration-outbox-recovery.service';
+import { IntegrationOutboxRecoveryResolver } from './integration-outbox-recovery.resolver';
 import { OrderSubmittedBuilder } from './order-submitted.builder';
 
 // Central-hub-only, per the external-integration-rules skill ("Branches never call the ERP [or Integration
@@ -226,6 +228,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         IntegrationOutboxHealthService,
         ContractVersionClient,
         OutboundGateway,
+        IntegrationOutboxRecoveryService,
         OrderSubmittedBuilder,
         ReconciliationLocalCountsService,
         ReconciliationService,
@@ -243,6 +246,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
             ReconciliationResolver,
             KafkaLagResolver,
             IntegrationStreamHealthResolver,
+            IntegrationOutboxRecoveryResolver,
             ProductPhotoResolver,
         ],
     },

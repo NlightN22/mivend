@@ -225,7 +225,6 @@ export interface ErpIntegrationPluginOptions {
     kafka: KafkaConfig;
     kafkaConsumer: KafkaConsumerConfig;
     schemaRegistry: SchemaRegistryConfig;
-    maxRetry?: number;
     outboxPollIntervalMs?: number;
     inboxPollIntervalMs?: number;
     // How often the retention lane sweeps `processed` rows (#147). Defaults to
@@ -378,7 +377,6 @@ export const VAT_PLACEHOLDER_RATE_VALUE = 0;
 // used to look up the *stable* zone name below, not stored as a key itself — a name is the only
 // stable, human-visible handle Vendure's Zone entity offers).
 export const DEFAULT_TAX_ZONE_NAME = 'Russia';
-export const MAX_RETRY_DEFAULT = 5;
 export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_CRITICAL_BATCH_SIZE_DEFAULT = 20;
@@ -394,6 +392,8 @@ export const INBOX_RETRY_BASE_MS = 30_000;
 export const INBOX_RETRY_MAX_MS = 30 * 60_000;
 export const INBOX_RETRY_JITTER_RATIO = 0.2;
 export const INBOX_RETRY_WALL_CLOCK_BUDGET_MS = 24 * 60 * 60 * 1000;
+// Outbox publishing uses the same backoff and budget as the inbox (#200).
+export const OUTBOX_RETRY_WALL_CLOCK_BUDGET_MS = INBOX_RETRY_WALL_CLOCK_BUDGET_MS;
 // Once every 10 minutes — a housekeeping sweep, not latency-sensitive like the claim lanes above
 // (#147).
 export const INBOX_RETENTION_INTERVAL_DEFAULT = 10 * 60_000;

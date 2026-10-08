@@ -1,11 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { DataSource, IsNull, LessThanOrEqual } from 'typeorm';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { KafkaProducerService } from './kafka-producer.service';
-import { ERP_INTEGRATION_PLUGIN_OPTIONS, MAX_RETRY_DEFAULT } from './types';
-import type { ErpIntegrationPluginOptions } from './types';
-import { shouldDeadLetter } from './retry-policy';
+import { decideOutboxFailure } from './retry-policy';
 
 // Split from the BullMQ scheduling wiring (integration-outbox.worker.ts) so tests can invoke
 // `processPendingBatch` directly — never waiting on a real scheduler interval, per
@@ -15,14 +13,15 @@ export class IntegrationOutboxProcessorService {
     constructor(
         private readonly dataSource: DataSource,
         private readonly kafkaProducer: KafkaProducerService,
-        @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
-        private readonly options: ErpIntegrationPluginOptions,
     ) {}
 
     async processPendingBatch(): Promise<void> {
         const repo = this.dataSource.getRepository(IntegrationOutboxEntry);
         const pending = await repo.find({
-            where: { status: 'pending' },
+            where: [
+                { status: 'pending', nextRetryAt: IsNull() },
+                { status: 'pending', nextRetryAt: LessThanOrEqual(new Date()) },
+            ],
             order: { createdAt: 'ASC' },
             take: 50,
         });
@@ -40,18 +39,16 @@ export class IntegrationOutboxProcessorService {
             entry.publishedAt = new Date();
             await repo.save(entry);
         } catch (err) {
-            const maxRetry = this.options.maxRetry ?? MAX_RETRY_DEFAULT;
+            const now = new Date();
             entry.retryCount += 1;
             entry.lastError = err instanceof Error ? err.message : String(err);
-            entry.lastErrorAt = new Date();
-            // Dead-letter after the bounded attempt count is exhausted (the external-integration-rules skill's no-silent-drops/async-inbox rules) —
-            // a 'failed' row is terminal and is never picked up by processPendingBatch again
-            // (its `where: { status: 'pending' }` excludes it). Below the limit, the row simply
-            // stays 'pending' and the next sweep resumes it automatically — no bespoke recovery
-            // path, same shape as PaymentInboxWorker/OutboxWorker.
-            if (shouldDeadLetter(entry.retryCount, maxRetry)) {
-                entry.status = 'failed';
-            }
+            entry.lastErrorAt = now;
+            entry.firstFailedAt ??= now;
+            // Backoff over hours; a 'failed' row is terminal until requeued
+            // (IntegrationOutboxRecoveryService), and processPendingBatch never picks it up.
+            const decision = decideOutboxFailure(now, entry.firstFailedAt, entry.retryCount);
+            entry.status = decision.status;
+            entry.nextRetryAt = decision.status === 'pending' ? decision.nextRetryAt : null;
             await repo.save(entry);
         }
     }

@@ -37,4 +37,10 @@ export class IntegrationOutboxEntry {
 
     @Column({ type: 'timestamptz', name: 'last_error_at', nullable: true })
     lastErrorAt!: Date | null;
+
+    @Column({ type: 'timestamptz', name: 'first_failed_at', nullable: true })
+    firstFailedAt!: Date | null;
+
+    @Column({ type: 'timestamptz', name: 'next_retry_at', nullable: true })
+    nextRetryAt!: Date | null;
 }

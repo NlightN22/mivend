@@ -10,59 +10,12 @@ import {
 
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
 import { IntegrationOutboxProcessorService } from '../../../integration-outbox-processor.service';
-import type { ErpIntegrationPluginOptions } from '../../../types';
 
 // Component chain: pending row -> sweep -> publish -> published / retry / dead-letter. Invoked
 // directly (processPendingBatch), never waiting on a real BullMQ scheduler interval, per
 // docs/testing-strategy.md's "Worker testing". KafkaProducerService.publish is mocked — this
 // suite proves the outbox lifecycle transitions, not real Kafka connectivity (see this plugin's
 // test plan's "Deliberate omissions": no live broker in this repo's test infra).
-const OPTIONS: ErpIntegrationPluginOptions = {
-    instanceType: 'central',
-    kafka: { brokers: ['localhost:9092'], clientId: 'test', topic: 'mivend.erp-integration' },
-    kafkaConsumer: {
-        brokers: ['localhost:9092'],
-        clientId: 'test-consumer',
-        groupId: 'test-group',
-        topics: {
-            category: 't-category',
-            organization: 't-organization',
-            warehouse: 't-warehouse',
-            'price-type': 't-price-type',
-            product: 't-product',
-            offer: 't-offer',
-            price: 't-price',
-            stock: 't-stock',
-            'storage-location': 't-storage-location',
-            'stock-organization': 't-stock-organization',
-            unit: 't-unit',
-            manufacturer: 't-manufacturer',
-            region: 'region',
-            'legal-form': 'legal-form',
-            bank: 'bank',
-            'bank-account': 'bank-account',
-            'product-photo': 't-product-photo',
-            'order-registration-result': 't-order-registration-result',
-            'order-changed': 'oc',
-            department: 't-department',
-            counterparty: 'cp',
-            'counterparty-credit-balance': 'cpcb',
-            user: 'usr',
-            'promo-rule': 'pr2',
-            'vat-rate': 'vr2',
-            'point-of-sale': 'pos2',
-            contract: 'contract2',
-            'discount-rule': 'dr2',
-            'granted-discount': 'gd2',
-            'retro-bonus-rule': 'rbr2',
-            'granted-retro-bonus': 'grb2',
-            position: 'pos3',
-        },
-    },
-    schemaRegistry: { url: 'http://localhost:8081' },
-    maxRetry: 3,
-};
-
 let dataSource: DataSource;
 const publish = vi.fn();
 
@@ -92,7 +45,7 @@ afterAll(async () => {
 });
 
 function makeProcessor(): IntegrationOutboxProcessorService {
-    return new IntegrationOutboxProcessorService(dataSource, { publish } as never, OPTIONS);
+    return new IntegrationOutboxProcessorService(dataSource, { publish } as never);
 }
 
 async function insertPending(
@@ -127,7 +80,7 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
         });
     });
 
-    it('a publish failure keeps the row pending and records the error, incrementing retryCount', async () => {
+    it('a publish failure keeps the row pending, records the error and schedules a backed-off retry', async () => {
         publish.mockRejectedValueOnce(new Error('broker unreachable'));
         const entry = await insertPending();
 
@@ -139,11 +92,42 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
         expect(reloaded.status).toBe('pending');
         expect(reloaded.retryCount).toBe(1);
         expect(reloaded.lastError).toContain('broker unreachable');
+        expect(reloaded.firstFailedAt).not.toBeNull();
+        expect(reloaded.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
     });
 
-    it('a row already at maxRetry-1 becomes failed (dead-lettered) on the next failure, not retried again', async () => {
+    it('does not retry a row before its nextRetryAt, and retries it once due', async () => {
+        publish.mockResolvedValue(undefined);
+        const entry = await insertPending({ nextRetryAt: new Date(Date.now() + 60_000) });
+
+        await makeProcessor().processPendingBatch();
+        expect(publish).not.toHaveBeenCalled();
+
+        await dataSource
+            .getRepository(IntegrationOutboxEntry)
+            .update(entry.id, { nextRetryAt: new Date(Date.now() - 1000) });
+        await makeProcessor().processPendingBatch();
+        expect(publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('survives many failures inside the wall-clock budget: a broker outage never dead-letters', async () => {
+        publish.mockRejectedValue(new Error('broker down'));
+        const entry = await insertPending({ retryCount: 50, firstFailedAt: new Date() });
+
+        await makeProcessor().processPendingBatch();
+
+        const reloaded = await dataSource.getRepository(IntegrationOutboxEntry).findOneOrFail({
+            where: { id: entry.id },
+        });
+        expect(reloaded.status).toBe('pending');
+    });
+
+    it('dead-letters (failed) once the wall-clock budget since the first failure is spent, and never retries it again', async () => {
         publish.mockRejectedValueOnce(new Error('still down'));
-        const entry = await insertPending({ retryCount: OPTIONS.maxRetry! - 1 });
+        const entry = await insertPending({
+            retryCount: 9,
+            firstFailedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+        });
 
         await makeProcessor().processPendingBatch();
 
@@ -151,10 +135,8 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
             where: { id: entry.id },
         });
         expect(reloaded.status).toBe('failed');
-        expect(reloaded.retryCount).toBe(OPTIONS.maxRetry);
+        expect(reloaded.nextRetryAt).toBeNull();
 
-        // A second sweep must not touch the now-'failed' row at all — it's excluded by the
-        // `where: { status: 'pending' }` query, not re-evaluated and re-failed.
         publish.mockClear();
         await makeProcessor().processPendingBatch();
         expect(publish).not.toHaveBeenCalled();
