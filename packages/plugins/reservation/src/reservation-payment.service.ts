@@ -7,7 +7,8 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
-import { InsufficientStockError, OrderNotEligibleError } from './reservation-errors';
+import { isExpectedReservationError } from './reservation-failure';
+import { ReservationFailureService } from './reservation-failure.service';
 import { ReservationService } from './reservation.service';
 import { DEFAULT_PREPAID_RESERVATION_TTL_DAYS, DEFAULT_RESERVATION_DAYS, loggerCtx } from './types';
 
@@ -20,6 +21,7 @@ export class ReservationPaymentService {
         private connection: TransactionalConnection,
         private reservationService: ReservationService,
         private globalSettingsService: GlobalSettingsService,
+        private failureService: ReservationFailureService,
     ) {}
 
     // Called from an OrderPlacedEvent subscriber (reservation.plugin.ts). Prepaid orders are
@@ -76,9 +78,10 @@ export class ReservationPaymentService {
                 'auto-trust-rule',
             );
         } catch (error) {
-            if (error instanceof InsufficientStockError || error instanceof OrderNotEligibleError) {
+            await this.failureService.record(ctx, order.id, error);
+            if (isExpectedReservationError(error)) {
                 Logger.warn(
-                    `Auto-reserve on placement failed for order ${String(order.id)}: ${error.message}`,
+                    `Auto-reserve on placement failed for order ${String(order.id)}: ${(error as Error).message}`,
                     loggerCtx,
                 );
                 return;
@@ -117,9 +120,10 @@ export class ReservationPaymentService {
         try {
             await this.reservationService.reserveOrder(ctx, fullOrder.id, ttlDays, 'auto-prepaid');
         } catch (error) {
-            if (error instanceof InsufficientStockError || error instanceof OrderNotEligibleError) {
+            await this.failureService.record(ctx, fullOrder.id, error);
+            if (isExpectedReservationError(error)) {
                 Logger.warn(
-                    `Auto-reserve failed for prepaid order ${String(fullOrder.id)}: ${error.message}`,
+                    `Auto-reserve failed for prepaid order ${String(fullOrder.id)}: ${(error as Error).message}`,
                     loggerCtx,
                 );
                 return;

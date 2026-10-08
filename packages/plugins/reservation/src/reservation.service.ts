@@ -30,6 +30,12 @@ import {
 import { OrderReservationState, ReservationCreationMethod } from './types';
 import { withAggregateLock } from 'shared';
 
+const CLEARED_FAILURE = {
+    reservationFailureReason: null,
+    reservationFailureDetail: null,
+    reservationFailedAt: null,
+} as const;
+
 @Injectable()
 export class ReservationService {
     constructor(
@@ -378,9 +384,12 @@ export class ReservationService {
         // 'NOT_REQUIRED'` with no error visible anywhere until a temporary debug log surfaced
         // this exact GraphQLError.
         const repo = this.connection.getRepository(ctx, Order);
-        await repo.update(order.id, {
-            customFields: { ...order.customFields, reservationState: state },
-        });
+        const stateFields = {
+            ...order.customFields,
+            reservationState: state,
+            ...(state === 'RESERVED' ? CLEARED_FAILURE : {}),
+        };
+        await repo.update(order.id, { customFields: stateFields });
 
         // Second real bug found live 2026-07-15, alongside the one above: when this method is
         // called from the auto-prepaid path (an OrderStateTransitionEvent subscriber, see
@@ -405,9 +414,7 @@ export class ReservationService {
             // reloaded row.
             const current = await repo.findOne({ where: { id: order.id } });
             if (current?.customFields?.reservationState === state) return;
-            await repo.update(order.id, {
-                customFields: { ...order.customFields, reservationState: state },
-            });
+            await repo.update(order.id, { customFields: stateFields });
         }
     }
 

@@ -2,6 +2,10 @@ declare module '@vendure/core' {
     interface CustomOrderFields {
         reservationDays?: number | null;
         reservationState?: OrderReservationState;
+        // Why the last automatic reserve failed; cleared by any successful reserve (#199).
+        reservationFailureReason?: ReservationFailureReason | null;
+        reservationFailureDetail?: string | null;
+        reservationFailedAt?: Date | null;
         // Owned by @mivend/plugin-erp-order (declaration merging) — reserveOrder() reads this to
         // denormalize onto Reservation.branchId without taking a package dependency on
         // erp-order, see docs/access-control.md's branch-scope axis.
@@ -79,6 +83,14 @@ export type OrderReservationState =
     | 'FAILED';
 
 export const DEFAULT_ORDER_RESERVATION_STATE: OrderReservationState = 'NOT_REQUIRED';
+
+// Order.customFields.reservationFailureReason — technical enum fixed by app logic, same exception
+// as OrderReservationState: it maps 1:1 onto the error classes reserveOrder() throws.
+export type ReservationFailureReason =
+    | 'INSUFFICIENT_STOCK'
+    | 'ERP_EXPORT_DATA_MISSING'
+    | 'NOT_ELIGIBLE'
+    | 'UNEXPECTED';
 
 // PaymentMethod.customFields.paymentClassification — same exception as OrderReservationState
 // above: a fixed, small set of internal technical classes that drive the reservation trigger

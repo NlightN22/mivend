@@ -30,6 +30,7 @@ import { ReservationExpiryService } from './reservation-expiry.service';
 import { createReservationExpiryTask } from './reservation-expiry.scheduled-task';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
 import { ReservationExtensionService } from './reservation-extension.service';
+import { ReservationFailureService } from './reservation-failure.service';
 import { ReservationPaymentService } from './reservation-payment.service';
 import { ReservationReconciliationIssueService } from './reservation-reconciliation-issue.service';
 import { ReservationResolver } from './reservation.resolver';
@@ -140,6 +141,7 @@ const adminApiSchema = gql`
     providers: [
         OrderContractService,
         ReservationService,
+        ReservationFailureService,
         ReservationPaymentService,
         ReservationExtensionService,
         ReservationErpSyncService,
@@ -195,6 +197,33 @@ const adminApiSchema = gql`
                         value: 'NOT_REQUIRED | AWAITING_CONFIRMATION | RESERVED | EXPIRED | RELEASED | FAILED — see docs/order-flow.md.',
                     },
                 ],
+            },
+            {
+                name: 'reservationFailureReason',
+                type: 'string' as const,
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Reservation failure reason' }],
+                description: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value: 'Why the last automatic reserve failed (INSUFFICIENT_STOCK | ERP_EXPORT_DATA_MISSING | NOT_ELIGIBLE | UNEXPECTED); cleared by a successful reserve.',
+                    },
+                ],
+            },
+            {
+                name: 'reservationFailureDetail',
+                type: 'text' as const,
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Reservation failure detail' }],
+            },
+            {
+                name: 'reservationFailedAt',
+                type: 'datetime' as const,
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Reservation failed at' }],
             },
         ];
         config.customFields.GlobalSettings = [

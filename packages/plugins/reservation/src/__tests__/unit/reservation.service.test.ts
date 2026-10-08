@@ -201,12 +201,41 @@ describe('ReservationService', () => {
             expect(orderRepo.update).toHaveBeenCalledWith(
                 order.id,
                 expect.objectContaining({
-                    customFields: { branchId: 'branch-1', reservationState: 'RESERVED' },
+                    customFields: {
+                        branchId: 'branch-1',
+                        reservationState: 'RESERVED',
+                        reservationFailureReason: null,
+                        reservationFailureDetail: null,
+                        reservationFailedAt: null,
+                    },
                 }),
             );
             expect(eventBus.publish).toHaveBeenCalledTimes(3);
             expect(eventBus.publish.mock.calls[0][0]).toBeInstanceOf(ReservationConfirmedEvent);
             expect(eventBus.publish.mock.calls[2][0]).toBeInstanceOf(OrderReservedEvent);
+        });
+
+        it('clears a failure left by an earlier failed automatic reserve when the reserve succeeds', async () => {
+            orderRepo.findOne.mockResolvedValue({
+                ...order,
+                customFields: {
+                    ...order.customFields,
+                    reservationFailureReason: 'INSUFFICIENT_STOCK',
+                    reservationFailureDetail: 'SKU 1: need 1, available 0',
+                    reservationFailedAt: new Date(),
+                },
+            });
+
+            await service.confirmOrder(ctx, 'order-1', 3);
+
+            const [, { customFields }] = orderRepo.update.mock.calls.at(-1) as [
+                unknown,
+                { customFields: Record<string, unknown> },
+            ];
+            expect(customFields.reservationState).toBe('RESERVED');
+            expect(customFields.reservationFailureReason).toBeNull();
+            expect(customFields.reservationFailureDetail).toBeNull();
+            expect(customFields.reservationFailedAt).toBeNull();
         });
 
         it('is idempotent — a second call while an active reservation already exists is a no-op', async () => {

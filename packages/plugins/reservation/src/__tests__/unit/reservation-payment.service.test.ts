@@ -3,7 +3,8 @@ import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ReservationPaymentService } from '../../reservation-payment.service';
 import { ReservationService } from '../../reservation.service';
-import { InsufficientStockError } from '../../reservation-errors';
+import { ReservationFailureService } from '../../reservation-failure.service';
+import { ErpExportDataMissingError, InsufficientStockError } from '../../reservation-errors';
 
 function createMockOrderRepo(order: unknown): { findOne: ReturnType<typeof vi.fn> } {
     return { findOne: vi.fn(async () => order) };
@@ -21,6 +22,7 @@ describe('ReservationPaymentService', () => {
         reserveOrder: ReturnType<typeof vi.fn>;
         setOrderReservationState: ReturnType<typeof vi.fn>;
     };
+    let failureService: { record: ReturnType<typeof vi.fn> };
     let service: ReservationPaymentService;
     const ctx = {} as unknown as RequestContext;
     let autoReserveOnPlacement = false;
@@ -38,10 +40,12 @@ describe('ReservationPaymentService', () => {
             reserveOrder: vi.fn(async () => []),
             setOrderReservationState: vi.fn(async () => undefined),
         };
+        failureService = { record: vi.fn(async () => undefined) };
         service = new ReservationPaymentService(
             connection as unknown as TransactionalConnection,
             reservationService as unknown as ReservationService,
             { getSettings: async () => ({ customFields: { autoReserveOnPlacement } }) } as never,
+            failureService as unknown as ReservationFailureService,
         );
     });
 
@@ -79,6 +83,42 @@ describe('ReservationPaymentService', () => {
                 expect.anything(),
                 'AWAITING_CONFIRMATION',
             );
+        });
+
+        it('records why the reserve failed so staff can see it', async () => {
+            autoReserveOnPlacement = true;
+            const error = new InsufficientStockError([
+                { orderLineId: '1', productVariantId: '9', required: 2, available: 0 },
+            ]);
+            reservationService.reserveOrder.mockRejectedValue(error);
+            await service.handleOrderPlaced(ctx, placed() as never);
+            expect(failureService.record).toHaveBeenCalledWith(ctx, 'order-1', error);
+        });
+
+        it('treats missing ERP-export data as an expected failure: recorded, not thrown', async () => {
+            autoReserveOnPlacement = true;
+            const error = new ErpExportDataMissingError(false, [], true);
+            reservationService.reserveOrder.mockRejectedValue(error);
+            await expect(
+                service.handleOrderPlaced(ctx, placed() as never),
+            ).resolves.toBeUndefined();
+            expect(failureService.record).toHaveBeenCalledWith(ctx, 'order-1', error);
+        });
+
+        it('does not record anything when the reserve succeeds', async () => {
+            autoReserveOnPlacement = true;
+            await service.handleOrderPlaced(ctx, placed() as never);
+            expect(failureService.record).not.toHaveBeenCalled();
+        });
+
+        it('records an unexpected error and still rethrows it', async () => {
+            autoReserveOnPlacement = true;
+            const error = new Error('db down');
+            reservationService.reserveOrder.mockRejectedValue(error);
+            await expect(service.handleOrderPlaced(ctx, placed() as never)).rejects.toThrow(
+                'db down',
+            );
+            expect(failureService.record).toHaveBeenCalledWith(ctx, 'order-1', error);
         });
 
         it('rethrows unexpected errors instead of swallowing them', async () => {
@@ -205,6 +245,23 @@ describe('ReservationPaymentService', () => {
             await service.handlePaymentStateReached(ctx, placedOrder as never);
 
             expect(reservationService.reserveOrder).not.toHaveBeenCalled();
+        });
+
+        it('records the failure for a prepaid order whose reserve fails', async () => {
+            paymentMethodRepo.findOne.mockResolvedValue({
+                customFields: { paymentClassification: 'PREPAID' },
+            });
+            const error = new InsufficientStockError([]);
+            reservationService.reserveOrder.mockRejectedValue(error);
+            const placedOrder = {
+                id: 'order-1',
+                customFields: {},
+                payments: [{ method: 'online-stub' }],
+            };
+
+            await service.handlePaymentStateReached(ctx, placedOrder as never);
+
+            expect(failureService.record).toHaveBeenCalledWith(ctx, 'order-1', error);
         });
 
         it('swallows InsufficientStockError instead of throwing', async () => {
