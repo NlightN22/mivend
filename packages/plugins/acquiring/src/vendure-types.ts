@@ -7,6 +7,9 @@ declare module '@vendure/core' {
     interface CustomProductVariantFields {
         organizationId?: number | null;
     }
+    interface CustomOrderLineFields {
+        organizationId?: number | null;
+    }
 }
 
 export {};

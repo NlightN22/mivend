@@ -108,13 +108,15 @@ describe('ReservationService', () => {
                 id: 'line-1',
                 productVariantId: 'variant-1',
                 quantity: 2,
-                productVariant: { productId: 'product-1', customFields: { organizationId: 1 } },
+                customFields: { organizationId: 1 },
+                productVariant: { productId: 'product-1' },
             },
             {
                 id: 'line-2',
                 productVariantId: 'variant-2',
                 quantity: 5,
-                productVariant: { productId: 'product-2', customFields: { organizationId: 1 } },
+                customFields: { organizationId: 1 },
+                productVariant: { productId: 'product-2' },
             },
         ],
     };
@@ -289,9 +291,10 @@ describe('ReservationService', () => {
                         id: 'line-1',
                         productVariantId: 'variant-1',
                         quantity: 3,
+                        customFields: { organizationId: 1 },
                         productVariant: {
                             productId: 'product-1',
-                            customFields: { multiplicity: -1, organizationId: 1 },
+                            customFields: { multiplicity: -1 },
                         },
                     },
                 ],
@@ -372,7 +375,8 @@ describe('ReservationService', () => {
                     order.lines[0],
                     {
                         ...order.lines[1],
-                        productVariant: { productId: 'product-2', customFields: {} },
+                        customFields: {},
+                        productVariant: { productId: 'product-2' },
                     },
                 ],
             });

@@ -9,10 +9,8 @@ import type { OutboundBuildResult } from '../../outbound-gateway';
 interface TestLine {
     id: string;
     quantity: number;
-    productVariant: {
-        productId?: string | null;
-        customFields?: { organizationId?: number | null };
-    } | null;
+    customFields?: { organizationId?: number | null };
+    productVariant: { productId?: string | null } | null;
 }
 
 function makeOrder(lines: TestLine[]): {
@@ -48,6 +46,9 @@ function makeBuilder(options: {
                     }),
                     where: vi.fn().mockReturnThis(),
                     getRawMany: vi.fn(async function (this: typeof qb) {
+                        if (qb.__from === 'organization_requisites') {
+                            return [1, 2].map(id => ({ id, erpId: `org-erp-${id}` }));
+                        }
                         if (qb.__from === 'stock_location') {
                             return Object.entries(options.warehouseErpIdByLocationId).map(
                                 ([id, warehouseErpId]) => ({ id, warehouseErpId }),
@@ -108,15 +109,14 @@ describe('OrderSubmittedBuilder', () => {
         const goodLine: TestLine = {
             id: 'line-1',
             quantity: 2,
-            productVariant: { productId: 'variant-product-1', customFields: { organizationId: 1 } },
+            customFields: { organizationId: 1 },
+            productVariant: { productId: 'variant-product-1' },
         };
         const missingOrgLine: TestLine = {
             id: 'line-2',
             quantity: 1,
-            productVariant: {
-                productId: 'variant-product-2',
-                customFields: { organizationId: null },
-            },
+            customFields: { organizationId: null },
+            productVariant: { productId: 'variant-product-2' },
         };
         const order = makeOrder([goodLine, missingOrgLine]);
         const builder = makeBuilder({
@@ -138,7 +138,7 @@ describe('OrderSubmittedBuilder', () => {
 
         expect(result).toEqual({
             kind: 'skip',
-            reason: expect.stringContaining('line line-2 (organizationId=null'),
+            reason: expect.stringContaining('line line-2 (organizationId=undefined'),
         });
     });
 
@@ -146,7 +146,8 @@ describe('OrderSubmittedBuilder', () => {
         const line: TestLine = {
             id: 'line-1',
             quantity: 2,
-            productVariant: { productId: 'variant-product-1', customFields: { organizationId: 1 } },
+            customFields: { organizationId: 1 },
+            productVariant: { productId: 'variant-product-1' },
         };
         const builder = makeBuilder({
             order: makeOrder([line]),
@@ -170,7 +171,7 @@ describe('OrderSubmittedBuilder', () => {
             lines: unknown[];
         };
         expect(payload).toMatchObject({
-            organizationId: '1',
+            organizationId: 'org-erp-1',
             warehouseId: 'wh-1',
             customerId: 'counterparty-1',
         });
@@ -183,7 +184,8 @@ describe('OrderSubmittedBuilder', () => {
         const line: TestLine = {
             id: 'line-1',
             quantity: 2,
-            productVariant: { productId: 'variant-1', customFields: { organizationId: 1 } },
+            customFields: { organizationId: 1 },
+            productVariant: { productId: 'variant-1' },
         };
         const order = makeOrder([line]);
         const builder = makeBuilder({
@@ -209,17 +211,20 @@ describe('OrderSubmittedBuilder', () => {
         const lineOrgAWhA: TestLine = {
             id: 'line-1',
             quantity: 1,
-            productVariant: { productId: 'variant-1', customFields: { organizationId: 1 } },
+            customFields: { organizationId: 1 },
+            productVariant: { productId: 'variant-1' },
         };
         const lineOrgAWhB: TestLine = {
             id: 'line-2',
             quantity: 3,
-            productVariant: { productId: 'variant-2', customFields: { organizationId: 1 } },
+            customFields: { organizationId: 1 },
+            productVariant: { productId: 'variant-2' },
         };
         const lineOrgB: TestLine = {
             id: 'line-3',
             quantity: 2,
-            productVariant: { productId: 'variant-3', customFields: { organizationId: 2 } },
+            customFields: { organizationId: 2 },
+            productVariant: { productId: 'variant-3' },
         };
         const order = makeOrder([lineOrgAWhA, lineOrgAWhB, lineOrgB]);
         const builder = makeBuilder({
@@ -247,7 +252,7 @@ describe('OrderSubmittedBuilder', () => {
             .map(e => e.payload as { organizationId: string; warehouseId: string })
             .map(p => `${p.organizationId}:${p.warehouseId}`)
             .sort();
-        expect(keys).toEqual(['1:wh-A', '1:wh-B', '2:wh-A']);
+        expect(keys).toEqual(['org-erp-1:wh-A', 'org-erp-1:wh-B', 'org-erp-2:wh-A']);
     });
 
     it('skips an order that cannot be found', async () => {

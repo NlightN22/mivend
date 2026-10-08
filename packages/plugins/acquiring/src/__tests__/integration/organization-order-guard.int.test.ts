@@ -50,10 +50,16 @@ beforeAll(async () => {
     await run(`CREATE TABLE product_variant (
         id serial PRIMARY KEY, sku varchar, "customFieldsOrganizationid" int)`);
     await run(`CREATE TABLE order_line (
-        id serial PRIMARY KEY, "orderId" int, "productVariantId" int)`);
+        id serial PRIMARY KEY, "orderId" int, "productVariantId" int,
+        "customFieldsOrganizationid" int)`);
     const injector = {
         get: (token: unknown) =>
-            token === TransactionalConnection ? { rawConnection: dataSource } : undefined,
+            token === TransactionalConnection
+                ? {
+                      rawConnection: dataSource,
+                      getRepository: () => ({ query: run }),
+                  }
+                : undefined,
     } as unknown as Injector;
     void organizationOrderGuard.init?.(injector);
 });
@@ -66,6 +72,20 @@ afterAll(async () => {
     await dataSource.destroy();
     await dropTestSchema(schema);
 });
+
+const stamp = (orderId: number) =>
+    organizationOrderGuard.onTransitionEnd?.('AddingItems', 'ArrangingPayment', {
+        ctx: {} as RequestContext,
+        order: { id: orderId } as unknown as Order,
+    });
+
+const lineOrganizations = async (orderId: number) =>
+    (
+        await run(
+            `SELECT "customFieldsOrganizationid" AS org FROM order_line WHERE "orderId" = $1 ORDER BY id`,
+            [orderId],
+        )
+    ).map(row => row.org);
 
 describe('organizationOrderGuard (real SQL)', () => {
     it('names only the lines of this order whose variant has no organization', async () => {
@@ -82,5 +102,37 @@ describe('organizationOrderGuard (real SQL)', () => {
         await addLine(2, 'NO-ORG-OTHER-ORDER', null);
 
         expect(await checkout(1)).toBeUndefined();
+    });
+
+    it('stamps each line of this order with its variant organization, leaving other orders alone', async () => {
+        await addLine(1, 'A', 7);
+        await addLine(1, 'B', 8);
+        await addLine(2, 'OTHER', 9);
+
+        await stamp(1);
+
+        expect(await lineOrganizations(1)).toEqual([7, 8]);
+        expect(await lineOrganizations(2)).toEqual([null]);
+    });
+
+    it('re-stamps on re-entry, so a changed variant organization is picked up', async () => {
+        await addLine(1, 'A', 7);
+        await stamp(1);
+        await run(`UPDATE product_variant SET "customFieldsOrganizationid" = 11`);
+
+        await stamp(1);
+
+        expect(await lineOrganizations(1)).toEqual([11]);
+    });
+
+    it('does not stamp on other transitions', async () => {
+        await addLine(1, 'A', 7);
+
+        await organizationOrderGuard.onTransitionEnd?.('ArrangingPayment', 'PaymentAuthorized', {
+            ctx: {} as RequestContext,
+            order: { id: 1 } as unknown as Order,
+        });
+
+        expect(await lineOrganizations(1)).toEqual([null]);
     });
 });

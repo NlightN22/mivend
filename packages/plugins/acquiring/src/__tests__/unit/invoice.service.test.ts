@@ -38,10 +38,8 @@ function makeOrder(
         lines: lines.map((line, i) => ({
             id: `line-${i}`,
             linePriceWithTax: line.linePriceWithTax,
-            productVariant: {
-                sku: line.sku ?? `sku-${i}`,
-                customFields: { organizationId: line.organizationId },
-            },
+            customFields: { organizationId: line.organizationId },
+            productVariant: { sku: line.sku ?? `sku-${i}` },
         })),
     } as unknown as Order;
 }

@@ -178,7 +178,7 @@ export class ReservationService {
                             : false;
                         if (!hasProductId) missing.push('productId');
                         if (candidateLocations.length === 0) missing.push('warehouseId');
-                        if (line.productVariant?.customFields?.organizationId == null) {
+                        if (line.customFields?.organizationId == null) {
                             missing.push('organizationId');
                         }
                         if (missing.length > 0) {

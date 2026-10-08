@@ -17,6 +17,7 @@ export const ORDER_SUBMITTED_SCHEMA = {
         eventId: { type: 'string', format: 'uuid' },
         orderId: { type: 'string' },
         orderCode: { type: 'string' },
+        // OrganizationRequisites.erpId of the seller organization, not the local row id.
         organizationId: { type: 'string' },
         submittedAt: { type: 'string', format: 'date-time' },
         totalWithTax: { type: 'integer' },

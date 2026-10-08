@@ -54,6 +54,10 @@ class TestOrderLine {
     @Column({ type: 'int' }) quantity!: number;
     @Column({ type: 'varchar' }) orderId!: string;
     @Column({ type: 'varchar', nullable: true }) productVariantEntityId!: string | null;
+    @Column({ type: 'jsonb', default: { organizationId: 1 } }) customFields!: Record<
+        string,
+        unknown
+    >;
     @ManyToOne(() => TestOrder, order => order.lines)
     @JoinColumn({ name: 'orderId' })
     order!: TestOrder;

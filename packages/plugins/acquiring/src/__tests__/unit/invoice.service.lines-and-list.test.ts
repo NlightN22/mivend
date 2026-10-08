@@ -54,8 +54,8 @@ describe('InvoiceService.getLinesForInvoice', () => {
         const order = {
             id: 5,
             lines: [
-                { id: 'l1', productVariant: { customFields: { organizationId: 1 } } },
-                { id: 'l2', productVariant: { customFields: { organizationId: 2 } } },
+                { id: 'l1', customFields: { organizationId: 1 }, productVariant: {} },
+                { id: 'l2', customFields: { organizationId: 2 }, productVariant: {} },
             ],
         } as unknown as Order;
         mockQb.getOne.mockResolvedValue(order);
@@ -68,10 +68,10 @@ describe('InvoiceService.getLinesForInvoice', () => {
     });
 
     it('translates each line productVariant (name requires translations, unlike sku/customFields)', async () => {
-        const variant = { customFields: { organizationId: 1 } };
+        const variant = {};
         const order = {
             id: 5,
-            lines: [{ id: 'l1', productVariant: variant }],
+            lines: [{ id: 'l1', customFields: { organizationId: 1 }, productVariant: variant }],
         } as unknown as Order;
         mockQb.getOne.mockResolvedValue(order);
         const invoice = { id: 10, orderId: 5, organizationId: 1 } as Invoice;

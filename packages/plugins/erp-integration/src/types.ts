@@ -7,6 +7,11 @@ declare module '@vendure/core' {
         manufacturer?: import('./entities/manufacturer.entity').Manufacturer | null;
     }
 
+    // Owned by @mivend/plugin-acquiring's declaration; stamped at checkout from the variant.
+    interface CustomOrderLineFields {
+        organizationId?: number | null;
+    }
+
     interface CustomProductVariantFields {
         // Owned by apps/server/src/vendure-config.ts's customFields config (ERP-sourced storage-
         // location assignment, see the external-integration-rules skill and

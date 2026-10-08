@@ -12,6 +12,10 @@ declare module '@vendure/core' {
         stockTierMediumMax?: number | null;
         autoReserveOnPlacement?: boolean | null;
     }
+    // Owned by @mivend/plugin-acquiring's declaration; stamped at checkout, read by reserveOrder().
+    interface CustomOrderLineFields {
+        organizationId?: number | null;
+    }
     interface CustomPaymentMethodFields {
         paymentClassification?: string | null;
         reservationTtlDays?: number | null;

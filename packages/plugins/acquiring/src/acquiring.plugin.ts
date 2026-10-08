@@ -1,4 +1,10 @@
-import { PluginCommonModule, RuntimeVendureConfig, Type, VendurePlugin } from '@vendure/core';
+import {
+    LanguageCode,
+    PluginCommonModule,
+    RuntimeVendureConfig,
+    Type,
+    VendurePlugin,
+} from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
@@ -123,6 +129,22 @@ import type { AcquiringPluginOptions } from './types';
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             createPaymentInboxTask(AcquiringPlugin.options),
+        ];
+        config.customFields.OrderLine = [
+            ...(config.customFields.OrderLine ?? []),
+            {
+                name: 'organizationId',
+                type: 'int' as const,
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Organization' }],
+                description: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value: 'Seller organization, stamped from the variant when checkout starts.',
+                    },
+                ],
+            },
         ];
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),

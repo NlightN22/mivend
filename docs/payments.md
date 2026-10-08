@@ -376,8 +376,10 @@ async ERP acknowledgement is not compatible with this.
   data) is imported into the platform as **catalog master data**, the same way `PriceEntry` is
   (the external-integration-rules skill — ERP is master; the platform holds a local read replica so checkout
   doesn't need a synchronous round-trip to the ERP): `ProductVariant.customFields.organizationId`, set
-  by `erp-import`'s product record. `OrderLine.customFields.organizationId` is derived from it at
-  add-to-cart time.
+  by `erp-import`'s product record. `OrderLine.customFields.organizationId` is stamped from it
+  each time the order enters `ArrangingPayment` (`organizationOrderGuard.onTransitionEnd`); invoice
+  split, reservation gate and the `order.submitted` builder read the line, never the variant. The
+  `order.submitted` `organizationId` is the organization's ERP id (`OrganizationRequisites.erpId`).
 - **Split mechanism (decided): lightweight `customFields`, not Vendure's full `Seller`/`Channel`
   marketplace machinery.** Vendure's own multi-vendor primitives (`Seller`, one `Channel` per
   seller, `OrderSellerStrategy.setOrderLineSellerChannel()`/`.splitOrder()` — see

@@ -51,15 +51,22 @@ export class OrderSubmittedBuilder {
             order.lines.map(line => line.productVariant?.productId),
         );
 
+        const organizationErpIdById = await this.loadOrganizationErpIds(
+            order.lines.map(line => line.customFields?.organizationId),
+        );
+
         const unbuildable: string[] = [];
         const groups = new Map<string, OrderSubmittedGroup>();
         for (const line of order.lines) {
-            const organizationId = line.productVariant?.customFields?.organizationId;
+            const organizationId =
+                line.customFields?.organizationId != null
+                    ? organizationErpIdById.get(line.customFields.organizationId)
+                    : undefined;
             const warehouseId = warehouseIdByLineId.get(String(line.id));
             const productId = line.productVariant?.productId
                 ? productExternalIdByProductId.get(String(line.productVariant.productId))
                 : undefined;
-            if (organizationId == null || !warehouseId || !productId) {
+            if (!organizationId || !warehouseId || !productId) {
                 unbuildable.push(
                     `line ${String(line.id)} (organizationId=${String(organizationId)}, ` +
                         `warehouseId=${String(warehouseId)}, productId=${String(productId)})`,
@@ -69,7 +76,7 @@ export class OrderSubmittedBuilder {
             const key = `${organizationId}:${warehouseId}`;
             let group = groups.get(key);
             if (!group) {
-                group = { organizationId: String(organizationId), warehouseId, lines: [] };
+                group = { organizationId, warehouseId, lines: [] };
                 groups.set(key, group);
             }
             group.lines.push({ productId, quantity: line.quantity, priceTypeId });
@@ -135,6 +142,24 @@ export class OrderSubmittedBuilder {
 
     // Product.customFields.externalId is not visible on the typed entity from this plugin's TS
     // project, so it is read via the raw column like every other handler in this plugin.
+    private async loadOrganizationErpIds(
+        organizationIds: Array<number | null | undefined>,
+    ): Promise<Map<number, string>> {
+        const ids = [...new Set(organizationIds.filter((id): id is number => id != null))];
+        const result = new Map<number, string>();
+        if (ids.length === 0) return result;
+
+        const rows = await this.connection.rawConnection
+            .createQueryBuilder()
+            .select('o.id', 'id')
+            .addSelect('o."erpId"', 'erpId')
+            .from('organization_requisites', 'o')
+            .where('o.id IN (:...ids)', { ids })
+            .getRawMany<{ id: number; erpId: string }>();
+        for (const row of rows) result.set(Number(row.id), row.erpId);
+        return result;
+    }
+
     private async loadProductExternalIds(
         productIds: Array<ID | null | undefined>,
     ): Promise<Map<string, string>> {

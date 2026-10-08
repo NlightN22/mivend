@@ -30,9 +30,8 @@ export interface InvoiceListOptions {
 // Splits one aggregate storefront Order into one Invoice per organization it touches — decided
 // direction in docs/payments.md "Organizations": the split must be known *before* an online
 // payment is requested (a split-payment acquirer needs the full recipient/amount breakdown
-// upfront), so this runs at checkout time, not from an async ERP callback. organizationId comes
-// from ProductVariant.customFields.organizationId (ERP-imported catalog master data, mirroring
-// PriceEntry) — not yet backed by a real ERP export, see docs/payments.md.
+// upfront), so this runs at checkout time, not from an async ERP callback. organizationId is read
+// from OrderLine.customFields.organizationId, stamped by organizationOrderGuard.
 @Injectable()
 export class InvoiceService {
     constructor(
@@ -48,7 +47,7 @@ export class InvoiceService {
 
         const totalsByOrganization = new Map<number, number>();
         for (const line of order.lines) {
-            const organizationId = line.productVariant.customFields?.organizationId;
+            const organizationId = line.customFields?.organizationId;
             if (organizationId == null) {
                 throw new Error(
                     `OrderLine ${line.id} (variant ${line.productVariant.sku}) has no ` +
@@ -195,7 +194,7 @@ export class InvoiceService {
             throw new Error(`Order ${invoice.orderId} not found for invoice ${invoice.id}`);
         }
         const lines = order.lines.filter(
-            line => line.productVariant.customFields?.organizationId === invoice.organizationId,
+            line => line.customFields?.organizationId === invoice.organizationId,
         );
         for (const line of lines) {
             line.productVariant = this.translator.translate(line.productVariant, ctx);
