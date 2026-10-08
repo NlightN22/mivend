@@ -5,6 +5,7 @@ import { DataSource, In } from 'typeorm';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { OrderSubmittedBuilder } from './order-submitted.builder';
+import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
 import type { OutboundBuildResult } from './outbound-gateway';
 
@@ -45,7 +46,8 @@ export class IntegrationOutboxRecoveryService {
     }
 
     async rebuildSkipped(ctx: RequestContext, id: number): Promise<RebuildOutcome> {
-        return this.dataSource.transaction(async em => {
+        let buildFailure: Error | undefined;
+        const outcome = await this.dataSource.transaction(async em => {
             const row = await em
                 .getRepository(IntegrationOutboxEntry)
                 .createQueryBuilder('e')
@@ -54,21 +56,34 @@ export class IntegrationOutboxRecoveryService {
                 .getOne();
             if (!row) throw new Error(`Outbox row ${id} is not a skipped row`);
 
+            const eventType = row.eventType as OutboundEventType;
+            const subjectKey = OUTBOUND_EVENT_TYPES[eventType].subjectKey;
             const alreadySent = await em.query(
                 `SELECT 1 FROM integration_outbox
-                 WHERE event_type = $1 AND status IN ('pending', 'published') AND payload @> $2::jsonb
+                 WHERE event_type = $1 AND status IN ('pending', 'published')
+                   AND payload ->> $2 = $3
                  LIMIT 1`,
-                [row.eventType, JSON.stringify(row.payload)],
+                [row.eventType, subjectKey, String(row.payload[subjectKey])],
             );
             if (alreadySent.length > 0) {
                 row.status = 'resolved';
                 row.lastError = 'already sent by another outbox row';
                 await em.save(row);
-                return 'already-sent';
+                return 'already-sent' as const;
             }
 
-            const rebuild = this.rebuilders[row.eventType as OutboundEventType];
-            const result = await rebuild(ctx, row.payload);
+            // The builder reads committed data on its own connection; holding this row lock does
+            // not block it. A throw is recorded on the row (and rethrown after commit), not lost.
+            let result: OutboundBuildResult;
+            try {
+                result = await this.rebuilders[eventType](ctx, row.payload);
+            } catch (error) {
+                buildFailure = error instanceof Error ? error : new Error(String(error));
+                row.lastError = `rebuild failed: ${buildFailure.message}`;
+                row.lastErrorAt = new Date();
+                await em.save(row);
+                return 'still-skipped' as const;
+            }
             if (result.kind === 'send' && result.events.length > 0) {
                 for (const event of result.events) {
                     await this.outbox.writeToOutbox(em, {
@@ -79,13 +94,15 @@ export class IntegrationOutboxRecoveryService {
                 }
                 row.status = 'resolved';
                 await em.save(row);
-                return 'queued';
+                return 'queued' as const;
             }
 
             row.lastError = result.kind === 'skip' ? result.reason : 'builder returned no events';
             row.lastErrorAt = new Date();
             await em.save(row);
-            return 'still-skipped';
+            return 'still-skipped' as const;
         });
+        if (buildFailure) throw buildFailure;
+        return outcome;
     }
 }

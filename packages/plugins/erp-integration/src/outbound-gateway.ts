@@ -52,7 +52,9 @@ export class OutboundGateway {
             result = await input.build();
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            await this.recordSkipped(input, `build failed: ${message}`, em);
+            // Own connection, not the caller's: the caller rolls back on the rethrow below, and the
+            // record of the failure must survive that.
+            await this.recordSkipped(input, `build failed: ${message}`);
             throw error;
         }
 

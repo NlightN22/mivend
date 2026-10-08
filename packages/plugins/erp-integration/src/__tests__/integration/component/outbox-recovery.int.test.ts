@@ -13,7 +13,9 @@ import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-ent
 import { IntegrationOutboxProcessorService } from '../../../integration-outbox-processor.service';
 import { IntegrationOutboxRecoveryService } from '../../../integration-outbox-recovery.service';
 import { IntegrationOutboxService } from '../../../integration-outbox.service';
+import { OUTBOUND_EVENT_TYPES } from '../../../outbound-event-types';
 import { outboundSend, outboundSkip } from '../../../outbound-gateway';
+import type { OrderSubmittedPayload } from '../../../schemas/order-submitted.schema';
 import type { OutboundBuildResult } from '../../../outbound-gateway';
 
 // Recovery of the two non-success outbox states on real Postgres: requeue of `failed`, rebuild of
@@ -136,6 +138,56 @@ describe('rebuildSkipped', () => {
 
         expect(build).not.toHaveBeenCalled();
         expect((await repo().findOneByOrFail({ id: skipped.id })).status).toBe('resolved');
+    });
+
+    it('matches an already-sent event by the registry subject key against the real payload shape', async () => {
+        const subjectKey: keyof OrderSubmittedPayload =
+            OUTBOUND_EVENT_TYPES['order.submitted'].subjectKey;
+        const realPayload: OrderSubmittedPayload = {
+            eventId: randomUUID(),
+            orderId: 'order-1',
+            orderCode: 'ORD-1',
+            organizationId: 'org-1',
+            customerId: 'cp-1',
+            warehouseId: 'wh-1',
+            lines: [{ productId: 'p-1', quantity: 2, priceTypeId: null }],
+            submittedAt: new Date().toISOString(),
+            totalWithTax: 100,
+            currencyCode: 'USD',
+        };
+        expect(realPayload[subjectKey]).toBe(subject.orderId);
+        const skipped = await insertRow({ status: 'skipped' });
+        await insertRow({
+            status: 'published',
+            payload: realPayload as unknown as Record<string, unknown>,
+        });
+
+        expect(await recovery.rebuildSkipped(ctx, skipped.id)).toBe('already-sent');
+    });
+
+    it("does not treat another order's event as already sent", async () => {
+        const skipped = await insertRow({ status: 'skipped' });
+        await insertRow({
+            status: 'published',
+            payload: { orderId: 'order-2', orderCode: 'ORD-2' },
+        });
+        build.mockResolvedValue(outboundSend([{ payload: { orderId: 'order-1' } }]));
+
+        expect(await recovery.rebuildSkipped(ctx, skipped.id)).toBe('queued');
+    });
+
+    it('records a builder failure on the skipped row and rethrows it', async () => {
+        const skipped = await insertRow({ status: 'skipped', lastError: 'old reason' });
+        build.mockRejectedValue(new Error('order lookup failed'));
+
+        await expect(recovery.rebuildSkipped(ctx, skipped.id)).rejects.toThrow(
+            'order lookup failed',
+        );
+
+        expect(await repo().findOneByOrFail({ id: skipped.id })).toMatchObject({
+            status: 'skipped',
+            lastError: 'rebuild failed: order lookup failed',
+        });
     });
 
     it('rejects a row that is not skipped', async () => {

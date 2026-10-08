@@ -132,4 +132,28 @@ describe('OutboundGateway (integration, real Postgres)', () => {
             lastError: 'build failed: lookup failed',
         });
     });
+
+    it('keeps the skipped row of a builder failure even when the caller transaction rolls back', async () => {
+        await expect(
+            dataSource.transaction(async em => {
+                await gateway.enqueue(
+                    {
+                        eventType: 'order.submitted',
+                        subject,
+                        build: async () => {
+                            throw new Error('lookup failed');
+                        },
+                    },
+                    em,
+                );
+            }),
+        ).rejects.toThrow('lookup failed');
+
+        const rows = await repo().find();
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({
+            status: 'skipped',
+            lastError: 'build failed: lookup failed',
+        });
+    });
 });
