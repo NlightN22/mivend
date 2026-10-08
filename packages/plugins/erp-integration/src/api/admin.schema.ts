@@ -258,6 +258,8 @@ export const adminApiExtensions: DocumentNode = gql`
         lastError: String
         lastErrorAt: DateTime
         lastSkipReason: String
+        "contract = schema from the shared contract package, local = this plugin's own copy."
+        schemaSource: String
     }
 
     type IntegrationStreamHealthReport {

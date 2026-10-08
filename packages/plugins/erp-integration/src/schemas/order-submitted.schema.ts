@@ -3,16 +3,22 @@
 // existing field is never renamed or repurposed, a removed field's name is never reused for
 // something else.
 //
-// customerId/warehouseId/lines are kept optional here (mivend#85) even though the listener only
-// ever emits an event once all three are actually resolved for at least one line (see
-// order-submitted.listener.ts) — an event that fails to resolve them is simply never published
-// for that order/group, per the schema's own additive-only rule (a field a not-yet-updated
-// consumer doesn't know about must stay optional, never silently required).
+// Mirrors ORDER_SUBMITTED_JSON_SCHEMA in @nlightn22/event-contracts (the consumer requires
+// customerId/warehouseId/lines); delete this file once the installed package carries it (#203).
 export const ORDER_SUBMITTED_SCHEMA = {
     $schema: 'http://json-schema.org/draft-07/schema#',
     title: 'OrderSubmitted',
     type: 'object',
-    required: ['eventId', 'orderId', 'orderCode', 'organizationId', 'submittedAt'],
+    required: [
+        'eventId',
+        'orderId',
+        'orderCode',
+        'organizationId',
+        'customerId',
+        'warehouseId',
+        'lines',
+        'submittedAt',
+    ],
     properties: {
         eventId: { type: 'string', format: 'uuid' },
         orderId: { type: 'string' },
@@ -22,6 +28,7 @@ export const ORDER_SUBMITTED_SCHEMA = {
         submittedAt: { type: 'string', format: 'date-time' },
         totalWithTax: { type: 'integer' },
         currencyCode: { type: 'string' },
+        departmentId: { type: ['string', 'null'] },
         // Counterparty.erpId for the order's customer — see CounterpartyService.getForCustomer.
         customerId: { type: 'string' },
         // The ERP warehouse (StockLocation.customFields.warehouseErpId) this payload's lines were
@@ -29,12 +36,13 @@ export const ORDER_SUBMITTED_SCHEMA = {
         warehouseId: { type: 'string' },
         lines: {
             type: 'array',
+            minItems: 1,
             items: {
                 type: 'object',
                 required: ['productId', 'quantity'],
                 properties: {
                     productId: { type: 'string' },
-                    quantity: { type: 'number' },
+                    quantity: { type: 'number', exclusiveMinimum: 0 },
                     priceTypeId: { type: ['string', 'null'] },
                 },
                 additionalProperties: true,
