@@ -9,6 +9,7 @@ import { ReservationReconciliationIssue } from './entities/reservation-reconcili
 import { OrderContractOption, OrderContractService } from './order-contract.service';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
+import { ReservationFailureService } from './reservation-failure.service';
 import { ReservationExtensionService } from './reservation-extension.service';
 import {
     OpenReservationReconciliationIssueListOptions,
@@ -25,6 +26,7 @@ export class ReservationResolver {
         private extensionLimitService: ReservationExtensionLimitService,
         private reconciliationIssueService: ReservationReconciliationIssueService,
         private orderContractService: OrderContractService,
+        private failureService: ReservationFailureService,
     ) {}
 
     @Query()
@@ -82,7 +84,15 @@ export class ReservationResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: ID; reservationDays: number },
     ): Promise<Reservation[]> {
-        return this.reservationService.confirmOrder(ctx, args.orderId, args.reservationDays);
+        try {
+            return await this.reservationService.confirmOrder(
+                ctx,
+                args.orderId,
+                args.reservationDays,
+            );
+        } catch (error) {
+            throw await this.failureService.toStaffError(ctx, error);
+        }
     }
 
     @Transaction()

@@ -76,3 +76,11 @@ export function describeReservationFailure(
     }
     return { ...failure, detail: failure.detail.slice(0, MAX_DETAIL_LENGTH) };
 }
+
+// Staff-facing wording for the reason codes (the manager portal keeps its own copy of the labels).
+export const REASON_LABEL: Record<ReservationFailureReason, string> = {
+    INSUFFICIENT_STOCK: 'Not enough stock',
+    ERP_EXPORT_DATA_MISSING: 'Missing data for the ERP',
+    NOT_ELIGIBLE: 'The order cannot be reserved',
+    UNEXPECTED: 'Unexpected error',
+};

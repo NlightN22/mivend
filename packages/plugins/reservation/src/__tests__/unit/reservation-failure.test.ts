@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import {
     ErpExportDataMissingError,
@@ -6,6 +7,7 @@ import {
     InvalidMultiplicityError,
     OrderNotEligibleError,
 } from '../../reservation-errors';
+import { ReservationFailureService } from '../../reservation-failure.service';
 import {
     describeReservationFailure,
     isExpectedReservationError,
@@ -94,5 +96,27 @@ describe('isExpectedReservationError / variantIdsOf', () => {
         ]);
         expect(variantIdsOf(error)).toEqual(['9']);
         expect(variantIdsOf(new Error('x'))).toEqual([]);
+    });
+});
+
+describe('ReservationFailureService.toStaffError', () => {
+    const ctx = {} as unknown as RequestContext;
+    const service = new ReservationFailureService({
+        getRepository: () => ({ find: vi.fn(async () => [{ id: 9, sku: '574726' }]) }),
+    } as unknown as TransactionalConnection);
+
+    it('gives the manager the same reason and SKU lines as the order page', async () => {
+        const error = new InsufficientStockError([
+            { orderLineId: '1', productVariantId: '9', required: 2, available: 0 },
+        ]);
+
+        const staffError = await service.toStaffError(ctx, error);
+
+        expect(staffError.message).toBe('Not enough stock: SKU 574726: need 2, available 0');
+    });
+
+    it('hands any other error back untouched', async () => {
+        const error = new Error('db down');
+        expect(await service.toStaffError(ctx, error)).toBe(error);
     });
 });

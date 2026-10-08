@@ -136,6 +136,7 @@ describe('setOrderContract through the resolver', () => {
             {} as never,
             {} as never,
             service,
+            {} as never,
         );
 
         const options = await resolver.setOrderContract(ctx, { orderId: 7, contractId: 'picked' });
