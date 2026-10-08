@@ -386,11 +386,11 @@ export const INBOX_CRITICAL_BATCH_SIZE_DEFAULT = 20;
 // own named constant, not a reused reference, so the two lanes can be tuned independently later
 // without one change silently affecting the other.
 export const INBOX_USER_BATCH_SIZE_DEFAULT = 20;
-// One retry policy for every inbox failure (#96, unified): exponential backoff 30s -> 30min cap,
-// ±20% jitter, dead-lettered only after 24h wall-clock since the row was created.
-export const INBOX_RETRY_BASE_MS = 30_000;
-export const INBOX_RETRY_MAX_MS = 30 * 60_000;
-export const INBOX_RETRY_JITTER_RATIO = 0.2;
+// One retry policy for inbox and outbox failures (#96, #200): exponential backoff 30s -> 30min
+// cap, ±20% jitter, dead-lettered only after 24h wall-clock since the first failure.
+export const RETRY_BACKOFF_BASE_MS = 30_000;
+export const RETRY_BACKOFF_MAX_MS = 30 * 60_000;
+export const RETRY_BACKOFF_JITTER_RATIO = 0.2;
 export const INBOX_RETRY_WALL_CLOCK_BUDGET_MS = 24 * 60 * 60 * 1000;
 // Outbox publishing uses the same backoff and budget as the inbox (#200).
 export const OUTBOX_RETRY_WALL_CLOCK_BUDGET_MS = INBOX_RETRY_WALL_CLOCK_BUDGET_MS;

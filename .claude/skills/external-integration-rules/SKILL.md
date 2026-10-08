@@ -250,17 +250,21 @@ a loss, as long as it leaves a record that can be retried. So:
   `pending` -> `published`, `failed` (publish gave up), or `skipped` (could not be built, with a
   reason). A producer that logs and `return`s without writing a row is a defect, the same class as
   the inbound "missing reference silently skipped" incident below.
-- **Inbound**: every consumed message ends `processed`, retrying, or `failed`; a deliberate no-op
-  (`DeferredStreamHandler`, a superseded version) is an explicit, reasoned outcome, never a bare
-  `return`.
+- **Inbound**: every consumed message ends `processed`, retrying, or `failed`; a message that can
+  never be processed (no value, undecodable, no identity) is dead-lettered into the inbox as a
+  `failed` row before the offset is committed. A deliberate no-op (`DeferredStreamHandler`, a
+  tombstone for an unknown row, a skipped part of a message) is an explicit, reasoned outcome,
+  never a bare `return`.
 - Every recorded non-success state must be retryable and must be visible on the Integration
   health page; any non-zero `failed`/`skipped` is alertable.
 - Architecture (issue #200, `docs/integration-health.md`): outbound producers call
   `OutboundGateway.enqueue({ eventType, subject, build })` and never touch `IntegrationOutboxService`
   or `KafkaProducerService` (lint rule `outbound/no-direct-outbound`); `build` returns
   `outboundSend(...)` or `outboundSkip(reason)`; a new event type goes into
-  `outbound-event-types.ts` and needs a schema and a rebuilder. Inbound handlers return
-  `inboundNoop(reason)` for a deliberate no-op instead of a bare `return`. Every new producer or
+  `outbound-event-types.ts` and needs a schema and a rebuilder. Inbound handlers
+  return `inboundApplied()` or `inboundNoop(reason)` on every path (`apply()` returns
+  `Promise<InboundOutcome>`, so a bare `return` does not compile). Write actions on outbox rows
+  (requeue, rebuild) need the `RecoverIntegrationEvents` permission, not `ManageErpIntegration`. Every new producer or
   skip path gets the "Silent drop" test (`docs/testing-patterns.md`).
 - Auditor's side: for any producer/handler change, find every early `return`/`continue` and
   confirm it records an outcome.

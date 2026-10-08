@@ -14,8 +14,8 @@ lag poller, so a quiet stream still shows with zeros.
 | Contract / Consumed              | Stream exists in the contract / mivend consumes it (`Ignored` = deliberately not consumed, reason as tooltip) |
 | Kafka lag                        | Broker-side lag at the last scheduled poll (every minute). Dash = no poll data yet, `0` = caught up. Click to expand partitions. Over 1000 is red |
 | Pending / Processing             | Inbox rows already read from Kafka and committed, waiting for / being handled by the mivend worker              |
-| Failed                           | Dead-lettered inbox rows (see "Failed rows" below)                                                              |
-| No-op (24h)                      | Messages a handler deliberately did nothing for in the last 24 h (reason as tooltip): processed with `outcome = noop`, not dropped silently |
+| Failed                           | Dead-lettered inbox rows, including unprocessable Kafka messages (see "Failed rows" below)                       |
+| No-op (24h)                      | Messages a handler deliberately did nothing for, or applied only in part, in the last 24 h (reason as tooltip): processed with `outcome = noop`, not dropped silently |
 | Oldest                           | Age of the oldest pending inbox row; growing means the worker is not keeping up                                 |
 
 Kafka lag and inbox backlog are different numbers and are expected to disagree.
@@ -51,7 +51,9 @@ production, not a personal one. Without it the page still works and shows "could
 
 Events mivend wrote to its outbox for Integration Service, one row per registered event type
 (`outbound-event-types.ts`, so a type with no events still shows, with zeros): pending, failed,
-skipped, age of the oldest pending, last publish time, last publish error or skip reason.
+skipped, age of the oldest pending, last publish time, last publish error or skip reason. The
+`published` and `resolved` statuses are not shown as columns (a published row is the healthy end
+state; `resolved` is a skipped row that was rebuilt).
 
 Two dashboard alerts fire on any non-zero `failed` and any non-zero `skipped`.
 
@@ -76,11 +78,25 @@ Two dashboard alerts fire on any non-zero `failed` and any non-zero `skipped`.
   recovery; other streams need the API called by hand.
 - Sysadmin: do not edit the table. Report stream, entity id and `last_error` to a developer.
 
-### Inbound no-ops (`outcome = noop`)
+### Unprocessable Kafka messages
 
-A handler that deliberately does nothing (missing required field, inactive/deleted entity, no
-target mapping yet) returns `inboundNoop(reason)`; the processor stores `outcome` and
-`outcome_reason` on the processed row (also `applied`, and `superseded` for a stale version).
+A message with no value, undecodable bytes, or no `entityId`/`eventId` cannot be retried into
+validity. The consumer writes it to the inbox as a `failed` row (reason in `last_error`, raw
+payload kept, synthetic ids `rejected@<partition>:<offset>` so a redelivery of the same offset is a
+no-op) and then commits the offset. It shows in the Failed count and is never claimed for
+processing. If the write itself fails the consumer rethrows, the offset is not committed and the
+message is redelivered, so nothing is lost silently. Triage like any other failed row; there is
+usually nothing to replay, the fix is on the producer side.
+
+### Inbound outcomes (`outcome`, `outcome_reason`)
+
+Every handler returns an outcome on every path (`apply()` returns `Promise<InboundOutcome>`; a bare
+`return` does not compile). `inboundApplied()` is stored as `applied`; `inboundNoop(reason)` as
+`noop`. `noop` covers two cases, always with a reason: nothing was applied (a tombstone for a row
+mivend never had, a missing required field, no target mapping yet), or the message was applied
+except for a deliberately skipped part (for example order lines without a `productId`). A row
+whose version is older than one already processed is stored as `superseded`. Rows processed before
+the column existed have `outcome = null`.
 A stream with a high No-op (24h) count is dropping data and needs a look at the reason.
 Escalating "missing required field" no-ops to `failed` (dead-letter) is a per-stream decision
 left open.
@@ -91,18 +107,25 @@ Statuses: `pending`, `published`, `failed` (publish gave up), `skipped` (event c
 built), `resolved` (a skipped row whose event was rebuilt).
 
 
-- Publish failures retry with the inbox's policy: exponential backoff (30 s base, 30 min cap,
-  +-20% jitter), dead-lettered (`failed`) only 24 h after the first failure, so a broker outage
-  does not drop events. `failed` is terminal until requeued.
-- Requeue: admin mutation `requeueFailedIntegrationOutbox(ids)` (needs `ManageErpIntegration`)
-  returns failed rows to `pending` with a fresh retry state. Safe only if the receiver
+- Publish failures retry with the same policy as the inbox (`computeRetryBackoffMs`,
+  `RETRY_BACKOFF_*` constants): exponential backoff (30 s base, 30 min cap, +-20% jitter),
+  dead-lettered (`failed`) only 24 h after the first failure, so a broker outage does not drop
+  events. `failed` is terminal until requeued. The old `maxRetry` option (5 attempts) no longer
+  exists.
+- The sweep takes each due row under `FOR UPDATE SKIP LOCKED` in its own short transaction and
+  publishes while holding that lock on purpose (serialized per row): two sweeps never publish the
+  same row, and a requeue waits for the sweep instead of being overwritten.
+- Requeue: admin mutation `requeueFailedIntegrationOutbox(ids)` (1 to 500 numeric ids; needs
+  `RecoverIntegrationEvents`) returns failed rows to `pending` with a fresh retry state. Safe only if the receiver
   deduplicates by `event_id` (the producer is idempotent and keys by `event_id`; Integration
   Service's own dedup is to be confirmed).
 - Skipped: the event could not be built (for example a line has no `organizationId`); the row
   holds the subject (`orderId`, `orderCode`) and the reason. After fixing the cause, call
-  `rebuildSkippedIntegrationOutbox(id)`: it rebuilds from the order, queues the event and marks
-  the skipped row `resolved`; `still-skipped` updates the reason, `already-sent` resolves it when
-  another row already carries the order.
+  `rebuildSkippedIntegrationOutbox(id)` (needs `RecoverIntegrationEvents`): it rebuilds from the
+  order, queues the event and marks the skipped row `resolved`. Result enum `RebuildSkippedOutcome`:
+  `QUEUED`; `STILL_SKIPPED` (reason updated, also when the builder threw: the error is recorded on
+  the row and rethrown); `ALREADY_SENT` (a pending/published row already carries the same subject,
+  matched by the registry's `subjectKey`, `orderId` for `order.submitted`).
 - Sysadmin: the alerts fire on any `failed` or `skipped`; report event type and reason to a
   developer.
 
@@ -114,14 +137,16 @@ built), `resolved` (a skipped row whose event was rebuilt).
    (`pending`/`skipped`), (b) publishing it (`published`/`failed`). A skip happens in (a) and
    leaves a `skipped` row; a `failed` row happens in (b) after 24 h of retries.
 3. **No silent drops.** Every event ends in a recorded state with a reason: outbound
-   `pending | published | failed | skipped`; inbound `processed | retrying | failed`, plus an
-   explicit, reasoned no-op for deliberate skips. A bare `return` that only logs is a defect.
+   `pending | published | failed | skipped`; inbound `processed` (outcome `applied`, `noop` with a
+   reason, or `superseded`), `retrying` or `failed` (including unprocessable Kafka messages). A bare
+   `return` that only logs is a defect; for inbound handlers it does not compile.
 4. **Every non-success state is retryable.** `failed` returns to `pending`; `skipped` is rebuilt
    from the source data once the cause is fixed. Retrying is safe only if the receiver
    deduplicates by `event_id` (to be confirmed with Integration Service).
 5. **Everything is visible.** The Integration health page shows all states; a non-zero `failed` or
    `skipped` is alertable.
-6. **Enforced by structure, not by discipline.** Outbound gateway and inbound outcome recording own all recording; a type registry feeds the page; a lint rule forbids direct outbox
+6. **Enforced by structure, not by discipline.** The outbound gateway and the typed inbound
+   outcome own all recording; a type registry feeds the page; a lint rule forbids direct outbox
    writes and direct Kafka publishing outside the gateway; a test per skip path proves a record is
    left. Guidance lives in the `external-integration-rules` skill and `docs/testing-patterns.md`
    ("Silent drop").
@@ -131,16 +156,25 @@ built), `resolved` (a skipped row whose event was rebuilt).
 - **Outbound gateway** (`outbound-gateway.ts`): the only place outbound events are recorded. A
   producer calls `enqueue({ eventType, subject, build })`; `build` returns `outboundSend(events)`
   or `outboundSkip(reason)` (nothing-to-send is not expressible). Pending rows are written in one
-  transaction; a skip or a builder error leaves a `skipped` row with the reason.
+  transaction; a skip leaves a `skipped` row with the reason. A skip recorded inside a caller's
+  transaction commits or rolls back with it (the business write it describes goes the same way). A
+  builder error is recorded on its own connection, so the `skipped` row survives the caller's
+  rollback, and is then rethrown.
   `order.submitted` is the first producer (`order-submitted.builder.ts`); an order is sent whole
   or skipped whole.
 - **Registry** (`outbound-event-types.ts`): every outbound type; `Record<OutboundEventType, ...>`
   maps (schemas, rebuilders) fail to compile until a new type is filled in.
-- **Lint** (`eslint-rules/no-direct-outbound.js`, namespace `outbound/`): importing
-  `IntegrationOutboxService`/`KafkaProducerService` outside the gateway, the outbox services and
-  the plugin module is an error.
-- **Inbound**: the inbox row is the record; handlers return `inboundNoop(reason)` instead of a
-  bare return, the processor stores the outcome.
+- **Lint** (`eslint-rules/no-direct-outbound.js`, namespace `outbound/`, tests in
+  `eslint-rules/__tests__`): an error to reference `IntegrationOutboxService`,
+  `KafkaProducerService` or `IntegrationOutboxEntry` (named, default or namespace import, re-export,
+  dynamic `import()`, `require`, by file path or through `@mivend/plugin-erp-integration`), or to
+  write `INSERT INTO` / `UPDATE` / `DELETE FROM integration_outbox` in a string. Exempt: the
+  gateway, the outbox services, the plugin module, tests and migrations. Not covered: a table name
+  assembled at runtime. The three classes are no longer exported from the package index.
+- **Inbound**: the inbox row is the record; `apply()` returns an `InboundOutcome` on every path and
+  the processor stores it (see "Inbound outcomes"). Early returns in `onApplicationBootstrap`
+  guards (`instanceType !== 'central'`, Kafka disabled) are configuration, not event drops, and are
+  exempt from the "every early return records an outcome" audit rule.
 - **Tests**: "Silent drop" pattern in `docs/testing-patterns.md`; examples
   `outbound-gateway.int.test.ts`, `outbox-recovery.int.test.ts`,
   `integration-inbox-processor.int.test.ts`.

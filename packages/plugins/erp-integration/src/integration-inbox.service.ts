@@ -6,7 +6,7 @@ import { DataSource, EntityManager, In } from 'typeorm';
 const loggerCtx = 'IntegrationInboxService';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
-import { computeInboxRetryBackoffMs } from './retry-policy';
+import { computeRetryBackoffMs } from './retry-policy';
 import { INBOX_RETRY_WALL_CLOCK_BUDGET_MS } from './types';
 import type { InboundStream } from './types';
 import { insertRejectedInboxRow } from './integration-inbox-rejected';
@@ -212,7 +212,7 @@ export class IntegrationInboxService {
             );
             return;
         }
-        const nextRetryAt = new Date(Date.now() + computeInboxRetryBackoffMs(attempts, random));
+        const nextRetryAt = new Date(Date.now() + computeRetryBackoffMs(attempts, random));
         await repo.update(
             { id },
             {
