@@ -229,6 +229,7 @@ export default [
             'packages/plugins/erp-integration/src/integration-outbox-recovery.service.ts',
             'packages/plugins/erp-integration/src/kafka-producer.service.ts',
             'packages/plugins/erp-integration/src/erp-integration.plugin.ts',
+            'apps/server/src/migrations/**',
         ],
         languageOptions: { parser: tsParser },
         plugins: { outbound: { rules: { 'no-direct-outbound': noDirectOutbound } } },

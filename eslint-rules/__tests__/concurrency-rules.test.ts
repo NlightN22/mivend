@@ -44,6 +44,9 @@ tester.run('no-direct-outbound', noDirectOutbound, {
     valid: [
         "import { OutboundGateway } from './outbound-gateway';",
         "import { EventBus } from '@vendure/core';",
+        "import { ErpIntegrationPlugin } from '@mivend/plugin-erp-integration';",
+        "q('SELECT * FROM integration_outbox');",
+        "q('UPDATE other_table SET a = 1');",
     ],
     invalid: [
         {
@@ -55,5 +58,22 @@ tester.run('no-direct-outbound', noDirectOutbound, {
             code: "import { IntegrationOutboxService as S } from '@mivend/plugin-erp-integration';",
             errors: 1,
         },
+        {
+            code: "import { IntegrationOutboxEntry } from '@mivend/plugin-erp-integration';",
+            errors: 1,
+        },
+        { code: "import * as outbox from './integration-outbox.service';", errors: 1 },
+        { code: "import * as erp from '@mivend/plugin-erp-integration';", errors: 1 },
+        { code: "import Entry from './entities/integration-outbox-entry.entity';", errors: 1 },
+        {
+            code: "export { IntegrationOutboxService } from './integration-outbox.service';",
+            errors: 1,
+        },
+        { code: "export * from './kafka-producer.service';", errors: 1 },
+        { code: "const m = await import('./integration-outbox.service');", errors: 1 },
+        { code: "const m = require('./kafka-producer.service');", errors: 1 },
+        { code: "q('INSERT INTO integration_outbox (event_id) VALUES ($1)');", errors: 1 },
+        { code: 'q(`UPDATE "integration_outbox" SET status = $1`);', errors: 1 },
+        { code: "q('delete from integration_outbox');", errors: 1 },
     ],
 });

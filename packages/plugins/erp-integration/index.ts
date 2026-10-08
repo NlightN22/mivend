@@ -4,7 +4,6 @@ export { IntegrationInboxService } from './src/integration-inbox.service';
 export { IntegrationInboxProcessorService } from './src/integration-inbox-processor.service';
 export { KafkaConsumerService } from './src/kafka-consumer.service';
 export { SchemaRegistryClient } from './src/schema-registry.client';
-export { IntegrationOutboxEntry } from './src/entities/integration-outbox-entry.entity';
 export { IntegrationInboxEvent } from './src/entities/integration-inbox-event.entity';
 export { Manufacturer } from './src/entities/manufacturer.entity';
 export type { IntegrationInboxEventStatus } from './src/entities/integration-inbox-event.entity';
