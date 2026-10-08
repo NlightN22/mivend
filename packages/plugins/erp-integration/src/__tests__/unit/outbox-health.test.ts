@@ -23,7 +23,7 @@ const row = (
 describe('mergeOutboxHealth', () => {
     it('lists a registered type with zeros when the outbox has no rows for it', () => {
         expect(mergeOutboxHealth([], ['order.submitted'])).toEqual([
-            row('order.submitted', { schemaSource: 'local' }),
+            row('order.submitted', { schemaSource: 'contract' }),
         ]);
     });
 
@@ -32,7 +32,7 @@ describe('mergeOutboxHealth', () => {
             [row('order.submitted', { skipped: 2 })],
             ['order.submitted'],
         );
-        expect(merged).toEqual([row('order.submitted', { skipped: 2, schemaSource: 'local' })]);
+        expect(merged).toEqual([row('order.submitted', { skipped: 2, schemaSource: 'contract' })]);
     });
 
     it('keeps a type that is in the outbox but no longer registered', () => {
