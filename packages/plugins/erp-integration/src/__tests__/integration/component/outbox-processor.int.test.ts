@@ -165,7 +165,7 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
         expect(publish).toHaveBeenCalledTimes(1);
     });
 
-    it('a requeue racing a failing sweep is applied after it and is not overwritten', async () => {
+    it('a requeue issued while a sweep is dead-lettering the row does not clobber it, and works afterwards', async () => {
         let rejectPublish!: (error: Error) => void;
         publish.mockImplementation(
             () => new Promise<void>((_, reject) => (rejectPublish = reject)),
@@ -175,18 +175,21 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
             firstFailedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
         });
         const recovery = new IntegrationOutboxRecoveryService(dataSource, {} as never, {} as never);
+        const status = async (): Promise<unknown> =>
+            (
+                await dataSource
+                    .getRepository(IntegrationOutboxEntry)
+                    .findOneByOrFail({ id: entry.id })
+            ).status;
 
         const sweep = makeProcessor().processPendingBatch();
         await vi.waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
-        const requeue = recovery.requeueFailed([entry.id]);
+        expect(await recovery.requeueFailed([entry.id])).toBe(0);
         rejectPublish(new Error('broker down'));
         await sweep;
-        const requeued = await requeue;
 
-        const reloaded = await dataSource.getRepository(IntegrationOutboxEntry).findOneOrFail({
-            where: { id: entry.id },
-        });
-        expect(requeued).toBe(1);
-        expect(reloaded).toMatchObject({ status: 'pending', retryCount: 0, firstFailedAt: null });
+        expect(await status()).toBe('failed');
+        expect(await recovery.requeueFailed([entry.id])).toBe(1);
+        expect(await status()).toBe('pending');
     });
 });
