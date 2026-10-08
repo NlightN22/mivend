@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { BankRecord } from '../entities/bank-record.entity';
-import { loggerCtx } from '../types';
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies the `bank` stream (BankChanged); absent isActive means false, a tombstone keeps the row.
 @Injectable()
@@ -14,12 +14,11 @@ export class BankStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const name = String(payload.name ?? '');
         const bik = String(payload.bik ?? '');
         if (!name || !bik) {
-            Logger.warn(`bank ${entityId}: missing name/bik, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`bank ${entityId}: missing name/bik, skipping`);
         }
         const fields = {
             name,

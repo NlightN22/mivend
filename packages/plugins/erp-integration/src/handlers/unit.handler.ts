@@ -3,7 +3,8 @@ import { ProductVariant, RequestContext, TransactionalConnection } from '@vendur
 
 import { UnitRecord } from '../entities/unit-record.entity';
 import { loggerCtx } from '../types';
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies the `unit` stream into UnitRecord, then refreshes matching variants — field-by-field
 // accounting: docs/ai/erp-streams-map.md's `unit` row.
@@ -15,12 +16,11 @@ export class UnitStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const code = String(payload.code ?? '');
         const name = String(payload.name ?? '');
         if (!code || !name) {
-            Logger.warn(`unit ${entityId}: missing code/name, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`unit ${entityId}: missing code/name, skipping`);
         }
 
         const ownerId =

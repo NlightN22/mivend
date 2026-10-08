@@ -1,7 +1,8 @@
 import { Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationDeferredStreamHandler';
 
@@ -20,10 +21,9 @@ const loggerCtx = 'IntegrationDeferredStreamHandler';
 export class DeferredStreamHandler implements InboundStreamHandler {
     constructor(private readonly stream: string) {}
 
-    async apply(_ctx: RequestContext, entityId: string): Promise<void> {
-        Logger.verbose(
-            `${this.stream} ${entityId}: no target mapping yet (deferred per issue #62 design point 5) — recorded, not applied`,
-            loggerCtx,
-        );
+    async apply(_ctx: RequestContext, entityId: string): Promise<InboundOutcome> {
+        const reason = `${this.stream} ${entityId}: no target mapping yet (deferred per issue #62 design point 5) — recorded, not applied`;
+        Logger.verbose(reason, loggerCtx);
+        return inboundNoop(reason);
     }
 }

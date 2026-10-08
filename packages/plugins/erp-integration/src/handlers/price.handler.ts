@@ -3,7 +3,8 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { PriceEntryService } from '@mivend/plugin-price-entry';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
 
 const loggerCtx = 'IntegrationPriceHandler';
@@ -23,7 +24,7 @@ export class PriceStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const productId = String(payload.productId ?? '');
         const priceTypeId = String(payload.priceTypeId ?? '');
         const value = Number.parseFloat(String(payload.value ?? ''));
@@ -33,15 +34,10 @@ export class PriceStreamHandler implements InboundStreamHandler {
         const isDeleted = payload.isDeleted === true;
 
         if (!productId || !priceTypeId || Number.isNaN(value)) {
-            Logger.warn(
-                `price ${entityId}: missing productId/priceTypeId/value, skipping`,
-                loggerCtx,
-            );
-            return;
+            return inboundNoop(`price ${entityId}: missing productId/priceTypeId/value, skipping`);
         }
         if (!isActive || isDeleted) {
-            Logger.verbose(`price ${entityId}: inactive/deleted, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`price ${entityId}: inactive/deleted, skipping`);
         }
 
         // Out-of-order stream delivery: the price-type event for this GUID may not have been

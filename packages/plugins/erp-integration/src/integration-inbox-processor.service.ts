@@ -184,16 +184,24 @@ export class IntegrationInboxProcessorService {
             // is not itself invalid — a later duplicate/replay of stale data is expected, not an
             // error) if a newer version for this (stream, entityId) was already processed.
             const isStale = await this.isSupersededByNewerVersion(row);
-            if (!isStale) {
-                const handler = this.handlers[row.stream];
-                await handler.apply(ctx, row.entityId, row.payload);
-            } else {
+            if (isStale) {
                 Logger.verbose(
                     `Skipping stale ${row.stream} entityId=${row.entityId} version=${row.version} (newer version already processed)`,
                     loggerCtx,
                 );
+                await this.inbox.markProcessed(
+                    row.id,
+                    'superseded',
+                    'a newer version was already processed',
+                );
+                return true;
             }
-            await this.inbox.markProcessed(row.id);
+            const result = await this.handlers[row.stream].apply(ctx, row.entityId, row.payload);
+            if (result && result.kind === 'noop') {
+                await this.inbox.markProcessed(row.id, 'noop', result.reason);
+            } else {
+                await this.inbox.markProcessed(row.id);
+            }
             return true;
         } catch (err) {
             const error = err instanceof Error ? err : new Error(String(err));

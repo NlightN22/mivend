@@ -5,7 +5,8 @@ import { TaxCategoryAutoCreateService } from '../tax-category-auto-create.servic
 import { TaxZoneService } from '../tax-zone.service';
 import { toErpVatCode } from '../vat-code-resolver';
 import { loggerCtx } from '../types';
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies Integration Service's `vat-rate` stream (VatRateChanged, issue #141) — a small,
 // low-cardinality reference feed (code -> zone -> percent), never product-keyed. Upserts
@@ -43,30 +44,25 @@ export class VatRateStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const rawCode = String(payload.code ?? '');
         if (!rawCode) {
-            Logger.warn(`vat-rate ${entityId}: missing code, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`vat-rate ${entityId}: missing code, skipping`);
         }
 
         if (payload.isDeleted === true) {
-            Logger.warn(
+            return inboundNoop(
                 `vat-rate ${entityId}: code '${rawCode}' marked deleted upstream — NOT deleting the` +
                     ' TaxRate/TaxCategory, review manually if this VAT code is genuinely retired',
-                loggerCtx,
             );
-            return;
         }
 
         const percent = typeof payload.percent === 'number' ? payload.percent : undefined;
         if (percent === undefined) {
-            Logger.log(
+            return inboundNoop(
                 `vat-rate ${entityId}: code '${rawCode}' has no percent yet (auto-registered, not` +
                     ' confirmed), skipping TaxRate value upsert',
-                loggerCtx,
             );
-            return;
         }
 
         const erpVatCode = toErpVatCode(rawCode);

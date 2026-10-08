@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationPriceTypeHandler';
 
@@ -19,11 +20,10 @@ export class PriceTypeStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const name = String(payload.name ?? '');
         if (!name) {
-            Logger.warn(`price-type ${entityId}: missing name, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`price-type ${entityId}: missing name, skipping`);
         }
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
         // zero-value omission).

@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
 
 const loggerCtx = 'IntegrationOrderChangedHandler';
@@ -43,7 +44,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         // This stream reports current state, not a diff — a deleted order is a legitimate "no
         // work to do" case here, not a missing-dependency retry case. isDeleted was a plain
         // (non-optional) proto3 bool through 0.15.0; @nlightn22/event-contracts@0.38.0 changed it
@@ -53,8 +54,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         // no behavior change was needed, only this comment (verified against the 0.38.0 .d.ts;
         // see the external-integration-rules skill's "always check the current contract" rule).
         if (payload.isDeleted === true) {
-            Logger.verbose(`order-changed ${entityId}: deleted, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`order-changed ${entityId}: deleted, skipping`);
         }
 
         // status is a plain (non-optional) proto3 string — absent means '' (the zero value),

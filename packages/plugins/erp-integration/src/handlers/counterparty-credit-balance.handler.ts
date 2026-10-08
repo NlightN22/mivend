@@ -1,10 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
-
-const loggerCtx = 'IntegrationCounterpartyCreditBalanceHandler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies Integration Service's `counterparty-credit-balance` stream
 // (CounterpartyCreditBalanceChanged, search-platform#129) — a register-driven stream
@@ -20,33 +19,27 @@ export class CounterpartyCreditBalanceStreamHandler implements InboundStreamHand
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const counterpartyId = payload.counterpartyId ? String(payload.counterpartyId) : null;
         if (!counterpartyId) {
-            Logger.warn(
+            return inboundNoop(
                 `counterparty-credit-balance ${entityId}: missing counterpartyId, skipping`,
-                loggerCtx,
             );
-            return;
         }
         // A deleted register entry is not the same as "balance is now zero" — the ERP's own retraction
         // of a settlement entry doesn't imply the counterparty's real balance became zero, so this
         // stays a logged no-op rather than fabricating a zero balance.
         if (payload.isDeleted === true) {
-            Logger.verbose(
+            return inboundNoop(
                 `counterparty-credit-balance ${entityId}: deleted register entry, skipping`,
-                loggerCtx,
             );
-            return;
         }
         const rawBalance =
             typeof payload.balance === 'number' ? payload.balance : Number(payload.balance);
         if (!Number.isFinite(rawBalance)) {
-            Logger.warn(
+            return inboundNoop(
                 `counterparty-credit-balance ${entityId}: missing/invalid balance, skipping`,
-                loggerCtx,
             );
-            return;
         }
         // Counterparty.creditBalance/creditLimit are both `bigint` columns storing whole rubles,
         // not fractional minor units (see Counterparty.creditLimit's own GraphQL `Int` type and

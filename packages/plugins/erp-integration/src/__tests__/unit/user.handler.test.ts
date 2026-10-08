@@ -84,8 +84,9 @@ describe('UserStreamHandler', () => {
         };
         const handler = new UserStreamHandler(userEnrichmentService as never);
 
-        await expect(
-            handler.apply(ctx, 'user-unknown', { fullName: 'Nobody' }),
-        ).resolves.toBeUndefined();
+        await expect(handler.apply(ctx, 'user-unknown', { fullName: 'Nobody' })).resolves.toEqual({
+            kind: 'noop',
+            reason: expect.any(String),
+        });
     });
 });

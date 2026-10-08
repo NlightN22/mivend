@@ -1,10 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { PositionService } from '@mivend/plugin-access-control';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
-
-const loggerCtx = 'IntegrationPositionHandler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies the `position` stream (PositionChanged, company.customers.events.v1.position-changed).
 // Absent isActive means false (proto3 zero-value omission), same as DepartmentStreamHandler.
@@ -16,7 +15,7 @@ export class PositionStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const isActive = payload.isActive === true && payload.isDeleted !== true;
         const name = payload.name ? String(payload.name) : null;
         if (!name) {
@@ -25,13 +24,9 @@ export class PositionStreamHandler implements InboundStreamHandler {
                 entityId,
                 isActive,
             );
-            if (!updated) {
-                Logger.warn(
-                    `position ${entityId}: missing name and no existing row, skipping`,
-                    loggerCtx,
-                );
-            }
-            return;
+            return updated
+                ? undefined
+                : inboundNoop(`position ${entityId}: missing name and no existing row, skipping`);
         }
         const parentErpId = payload.parentId ? String(payload.parentId) : null;
         await this.positionService.upsert(ctx, { erpId: entityId, name, parentErpId, isActive });

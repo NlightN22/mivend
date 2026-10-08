@@ -38,6 +38,12 @@ export interface FailedInboxEventListOptions {
     skip?: number;
 }
 
+export interface IntegrationInboxNoopByStream {
+    stream: string;
+    count: number;
+    lastReason: string | null;
+}
+
 export interface IntegrationInboxBacklogByStream {
     stream: InboundStream;
     pending: number;
@@ -180,10 +186,17 @@ export class IntegrationInboxService {
         return rows.map(row => row.id);
     }
 
-    async markProcessed(id: number): Promise<void> {
+    async markProcessed(
+        id: number,
+        outcome: 'applied' | 'superseded' | 'noop' = 'applied',
+        outcomeReason: string | null = null,
+    ): Promise<void> {
         await this.dataSource
             .getRepository(IntegrationInboxEvent)
-            .update({ id }, { status: 'processed', processedAt: new Date() });
+            .update(
+                { id },
+                { status: 'processed', processedAt: new Date(), outcome, outcomeReason },
+            );
     }
 
     // Releases a deadline-stopped batch's unprocessed rows back to 'pending' (#149).
@@ -288,6 +301,20 @@ export class IntegrationInboxService {
             byStream.set(row.stream, entry);
         }
         return [...byStream.values()];
+    }
+
+    // Messages a handler deliberately did nothing for in the last 24 h, per stream (#200) — a
+    // different question from backlog: these are processed rows, counted so a stream that drops
+    // everything it receives is visible.
+    async getNoopSummaryByStream(): Promise<IntegrationInboxNoopByStream[]> {
+        return this.dataSource.query(`
+            SELECT stream,
+                   COUNT(*)::int AS count,
+                   (ARRAY_AGG(outcome_reason ORDER BY processed_at DESC))[1] AS "lastReason"
+            FROM integration_inbox_event
+            WHERE outcome = 'noop' AND processed_at > now() - interval '24 hours'
+            GROUP BY stream
+        `);
     }
 
     // Retention (#147): only the latest processed version per (stream, entityId) is read

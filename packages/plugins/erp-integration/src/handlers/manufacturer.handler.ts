@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
 
 import { ManufacturerService } from '../manufacturer.service';
-import { loggerCtx } from '../types';
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies the `manufacturer` stream: the authoritative name source for Manufacturer (issue #164).
 // Deleted/inactive rows keep their name so products that still reference them stay labelled.
@@ -15,11 +15,10 @@ export class ManufacturerStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const name = typeof payload.name === 'string' ? payload.name.trim() : '';
         if (!name) {
-            Logger.warn(`manufacturer ${entityId}: empty name, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`manufacturer ${entityId}: empty name, skipping`);
         }
         await this.manufacturerService.upsert(ctx, entityId, name);
     }

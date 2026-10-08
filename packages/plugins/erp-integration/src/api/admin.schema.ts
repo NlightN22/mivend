@@ -108,6 +108,9 @@ export const adminApiExtensions: DocumentNode = gql`
         processing: Int!
         failed: Int!
         oldestPendingAt: DateTime
+        "Messages the handler deliberately did nothing for in the last 24 h (issue #200)."
+        noop24h: Int!
+        lastNoopReason: String
     }
 
     type ContractVersionDrift {

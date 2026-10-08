@@ -43,6 +43,8 @@ export type IntegrationInboxEventStatus = 'pending' | 'processing' | 'processed'
 })
 // Per-row superseded-version check (processor); without it each check seq-scans the table (#146).
 @Index('integration_inbox_event_entity', ['stream', 'entityId', 'status'])
+// Serves the per-stream no-op summary on the integration-health page (#200).
+@Index('integration_inbox_event_noop', ['stream', 'processedAt'], { where: `"outcome" = 'noop'` })
 export class IntegrationInboxEvent {
     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
     id!: number;
@@ -92,6 +94,14 @@ export class IntegrationInboxEvent {
 
     @Column({ type: 'timestamptz', name: 'processed_at', nullable: true })
     processedAt!: Date | null;
+
+    // How a processed row ended: applied, superseded by a newer version, or a deliberate no-op
+    // with its reason (#200). Null on rows processed before this column existed.
+    @Column({ type: 'varchar', name: 'outcome', nullable: true })
+    outcome!: 'applied' | 'superseded' | 'noop' | null;
+
+    @Column({ type: 'text', name: 'outcome_reason', nullable: true })
+    outcomeReason!: string | null;
 
     // Backoff gate for `claimBatch`, set by IntegrationInboxService.markFailed; null means
     // immediately eligible.

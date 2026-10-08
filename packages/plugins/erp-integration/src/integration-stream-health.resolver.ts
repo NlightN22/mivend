@@ -39,9 +39,10 @@ export class IntegrationStreamHealthResolver {
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
     async integrationStreamHealth(): Promise<IntegrationStreamHealthReport> {
-        const [lagRows, backlog] = await Promise.all([
+        const [lagRows, backlog, noops] = await Promise.all([
             this.dataSource.getRepository(KafkaConsumerLagEntry).find(),
             this.inbox.getBacklogByStream(),
+            this.inbox.getNoopSummaryByStream(),
         ]);
         const latest = await this.contractVersions.getLatestVersion();
         const topics: Record<string, string> = this.options.kafkaConsumer.topics;
@@ -55,6 +56,7 @@ export class IntegrationStreamHealthResolver {
                 topics,
                 lagByStream: new Map(groupLagRowsByTopic(lagRows).map(l => [l.stream, l])),
                 backlogByStream: new Map(backlog.map(b => [b.stream, b])),
+                noopByStream: new Map(noops.map(n => [n.stream, n])),
             }),
         };
     }

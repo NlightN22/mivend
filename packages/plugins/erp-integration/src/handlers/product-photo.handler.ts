@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ProductPhoto } from '../entities/product-photo.entity';
 import { ProductPhotoSyncService } from '../product-photo-sync.service';
-import { loggerCtx, MissingDependencyError } from '../types';
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { MissingDependencyError } from '../types';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Stores `product-photo` metadata only; ProductPhotoSyncService fetches the binary.
 // position is a plain int32 (absent = 0, the main photo); every field is consumed except envelope ids.
@@ -19,12 +20,14 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const repo = this.connection.getRepository(ctx, ProductPhoto);
         const existing = await repo.findOne({ where: { externalId: entityId } });
 
         if (payload.isDeleted === true) {
-            if (!existing) return;
+            if (!existing) {
+                return inboundNoop(`product-photo ${entityId}: deleted, no stored row`);
+            }
             await repo.update(existing.id, { isDeleted: true });
             await this.syncService.enqueue(existing.productExternalId);
             return;
@@ -35,8 +38,7 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
         const mimeType = String(payload.mimeType ?? '');
         const downloadUrl = String(payload.downloadUrl ?? '');
         if (!productExternalId || !contentHash || !mimeType) {
-            Logger.warn(`product-photo ${entityId}: incomplete payload, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`product-photo ${entityId}: incomplete payload, skipping`);
         }
         if (!(await this.productExists(productExternalId))) {
             throw new MissingDependencyError(`product ${productExternalId} not imported yet`);

@@ -19,6 +19,11 @@ export interface StreamHealthBacklog {
     oldestPendingAt: Date | null;
 }
 
+export interface StreamHealthNoop {
+    count: number;
+    lastReason: string | null;
+}
+
 export interface StreamHealthInput {
     contractStreams: readonly string[];
     consumedStreams: readonly string[];
@@ -26,6 +31,7 @@ export interface StreamHealthInput {
     topics: Readonly<Record<string, string>>;
     lagByStream: ReadonlyMap<string, StreamHealthLag>;
     backlogByStream: ReadonlyMap<string, StreamHealthBacklog>;
+    noopByStream: ReadonlyMap<string, StreamHealthNoop>;
 }
 
 export interface StreamHealthRow {
@@ -40,6 +46,8 @@ export interface StreamHealthRow {
     processing: number;
     failed: number;
     oldestPendingAt: Date | null;
+    noop24h: number;
+    lastNoopReason: string | null;
 }
 
 function driftOf(
@@ -85,6 +93,8 @@ export function buildStreamHealthRows(input: StreamHealthInput): StreamHealthRow
             processing: backlog?.processing ?? 0,
             failed: backlog?.failed ?? 0,
             oldestPendingAt: backlog?.oldestPendingAt ?? null,
+            noop24h: input.noopByStream.get(stream)?.count ?? 0,
+            lastNoopReason: input.noopByStream.get(stream)?.lastReason ?? null,
         };
     });
 }

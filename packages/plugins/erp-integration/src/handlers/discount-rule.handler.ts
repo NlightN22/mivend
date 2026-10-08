@@ -6,7 +6,8 @@ import {
     DiscountRuleRecipientType,
 } from '@mivend/plugin-price-entry';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationDiscountRuleHandler';
 
@@ -27,7 +28,7 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         // Tombstone (search-platform#145) — deactivate, never skip. version is stored too: see
         // docs/ai/erp-streams-map.md's "Discount rules" section for the reactivation-race reasoning.
         if (payload.isDeleted === true) {
@@ -43,26 +44,21 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
             return;
         }
         if (payload.isActive !== true) {
-            Logger.verbose(`discount-rule ${entityId}: inactive, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`discount-rule ${entityId}: inactive, skipping`);
         }
 
         const recipientType = String(payload.recipientType ?? '') as DiscountRuleRecipientType;
         if (!VALID_RECIPIENT_TYPES.includes(recipientType)) {
-            Logger.warn(
+            return inboundNoop(
                 `discount-rule ${entityId}: unrecognized recipientType "${String(payload.recipientType)}", skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         const condition = String(payload.condition ?? '') as DiscountRuleCondition;
         if (!VALID_CONDITIONS.includes(condition)) {
-            Logger.warn(
+            return inboundNoop(
                 `discount-rule ${entityId}: unrecognized condition "${String(payload.condition)}", skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         const recipientErpId = String(payload.recipientId ?? '');
@@ -82,12 +78,10 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
             !effectiveFrom ||
             (effectiveToPresent && !effectiveTo)
         ) {
-            Logger.warn(
+            return inboundNoop(
                 `discount-rule ${entityId}: missing/invalid recipientId/version/conditionValue/` +
                     `percent/effectiveFrom/effectiveTo, skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         const productErpId = payload.productId != null ? String(payload.productId) : null;

@@ -95,7 +95,7 @@ describe('StockStreamHandler', () => {
                 warehouseId: 'wh-1',
                 quantity: 5,
             }),
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({ kind: 'noop', reason: expect.any(String) });
         expect(stockLevelService.getStockLevel).not.toHaveBeenCalled();
     });
 

@@ -11,6 +11,7 @@ function input(overrides: Partial<StreamHealthInput>): StreamHealthInput {
         topics: {},
         lagByStream: new Map(),
         backlogByStream: new Map(),
+        noopByStream: new Map(),
         ...overrides,
     };
 }
@@ -67,5 +68,18 @@ describe('buildStreamHealthRows', () => {
         const lag = { topic: 't', totalLag: '3', polledAt: new Date(0), partitions: [] };
         const rows = buildStreamHealthRows(input({ lagByStream: new Map([['lag-only', lag]]) }));
         expect(find(rows, 'lag-only').drift).toBe('UNKNOWN_STREAM');
+    });
+
+    it('carries the 24 h no-op count and last reason onto the stream row', () => {
+        const rows = buildStreamHealthRows(
+            input({
+                consumedStreams: ['bank'],
+                noopByStream: new Map([['bank', { count: 4, lastReason: 'missing name/bik' }]]),
+            }),
+        );
+        expect(find(rows, 'bank')).toMatchObject({
+            noop24h: 4,
+            lastNoopReason: 'missing name/bik',
+        });
     });
 });

@@ -39,6 +39,8 @@ const streamHealthDocument = graphql(`
                 processing
                 failed
                 oldestPendingAt
+                noop24h
+                lastNoopReason
                 lag {
                     totalLag
                     polledAt
@@ -120,6 +122,9 @@ export function InboundTab() {
                                 <TableHead>Pending</TableHead>
                                 <TableHead>Processing</TableHead>
                                 <TableHead>Failed</TableHead>
+                                <TableHead title="Messages the handler deliberately did nothing for in the last 24 hours">
+                                    No-op (24h)
+                                </TableHead>
                                 <TableHead title="Age of the oldest pending inbox row">
                                     Oldest
                                 </TableHead>
@@ -183,6 +188,9 @@ export function InboundTab() {
                                             0
                                         )}
                                     </TableCell>
+                                    <TableCell title={s.lastNoopReason ?? undefined}>
+                                        {s.noop24h}
+                                    </TableCell>
                                     <TableCell>{formatAge(s.oldestPendingAt, now)}</TableCell>
                                 </TableRow>,
                                 s.drift && (
@@ -190,14 +198,14 @@ export function InboundTab() {
                                         key={`${s.stream}-drift`}
                                         className="bg-destructive/5"
                                     >
-                                        <TableCell colSpan={8} className="text-destructive">
+                                        <TableCell colSpan={9} className="text-destructive">
                                             {DRIFT_MESSAGES[s.drift] ?? s.drift}
                                         </TableCell>
                                     </TableRow>
                                 ),
                                 expanded === s.stream && s.lag && (
                                     <TableRow key={`${s.stream}-parts`}>
-                                        <TableCell colSpan={8} className="text-muted-foreground">
+                                        <TableCell colSpan={9} className="text-muted-foreground">
                                             {s.lag.partitions.map(p => (
                                                 <div key={p.partition}>
                                                     partition {p.partition}: committed{' '}

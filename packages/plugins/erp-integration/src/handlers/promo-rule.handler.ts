@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { PromoDiscountRuleService, DiscountRuleOperationKind } from '@mivend/plugin-price-entry';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationPromoRuleHandler';
 
@@ -81,22 +82,19 @@ export class PromoRuleStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const isActive = payload.isActive === true;
         const isDeleted = payload.isDeleted === true;
         if (!isActive || isDeleted) {
-            Logger.verbose(`promo-rule ${entityId}: inactive/deleted, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`promo-rule ${entityId}: inactive/deleted, skipping`);
         }
 
         const rawOperationKind = String(payload.operationKind ?? '');
         const operationKind = RAW_OPERATION_KIND_TO_KIND[rawOperationKind];
         if (!operationKind) {
-            Logger.warn(
+            return inboundNoop(
                 `promo-rule ${entityId}: unrecognized operationKind "${rawOperationKind}", skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         const triggerProductErpId = String(payload.triggerProductId ?? '');
@@ -104,22 +102,18 @@ export class PromoRuleStreamHandler implements InboundStreamHandler {
         const effectiveFrom = parseTimestamp(payload.effectiveFrom);
         const effectiveTo = parseTimestamp(payload.effectiveTo);
         if (!triggerProductErpId || triggerQuantity <= 0 || !effectiveFrom || !effectiveTo) {
-            Logger.warn(
+            return inboundNoop(
                 `promo-rule ${entityId}: missing triggerProductId/triggerQuantity/effectiveFrom/effectiveTo, skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         const gift = isGiftKind(operationKind);
         const giftProductErpId = gift ? String(payload.giftProductId ?? '') || null : null;
         const giftQuantity = gift ? Number(payload.giftQuantity ?? 0) : null;
         if (gift && (!giftProductErpId || !giftQuantity || giftQuantity <= 0)) {
-            Logger.warn(
+            return inboundNoop(
                 `promo-rule ${entityId}: gift-type rule missing giftProductId/giftQuantity, skipping`,
-                loggerCtx,
             );
-            return;
         }
         const percent = gift ? GIFT_TYPE_PERCENT : Number(payload.percent ?? 0);
 

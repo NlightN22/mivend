@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ProductVariantService, RequestContext, TransactionalConnection } from '@vendure/core';
 import { DocumentsService } from '@mivend/plugin-documents';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
 
 const loggerCtx = 'IntegrationStorageLocationHandler';
@@ -41,7 +42,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const productId = String(payload.productId ?? '');
         const organizationErpId =
             payload.organizationId != null ? String(payload.organizationId) : '';
@@ -55,22 +56,18 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         const isDeleted = payload.isDeleted === true;
 
         if (!productId) {
-            Logger.warn(`storage-location ${entityId}: missing productId, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`storage-location ${entityId}: missing productId, skipping`);
         }
 
         if (isDeleted) {
-            await this.handleDeletion(ctx, entityId, productId);
-            return;
+            return this.handleDeletion(ctx, entityId, productId);
         }
         if (!organizationErpId) {
             // Address-only row (the ~99.99% case) — nothing to apply for the organization
             // dimension. Address fields are out of scope (see class doc comment).
-            Logger.verbose(
+            return inboundNoop(
                 `storage-location ${entityId}: no organization assignment, skipping`,
-                loggerCtx,
             );
-            return;
         }
         const variantId = await this.findVariantId(productId);
         if (!variantId) {
@@ -93,13 +90,11 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
 
         const current = await this.getCurrentAssignment(variantId);
         if (current && !this.beatsCurrentWinner(priority, entityId, current)) {
-            Logger.verbose(
+            return inboundNoop(
                 `storage-location ${entityId}: priority ${priority} does not beat current winner ` +
                     `${current.organizationSourceEntityId} (priority=${current.organizationPriority}) ` +
                     `for productId=${productId}, skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         await this.productVariantService.update(ctx, [
@@ -138,9 +133,11 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         productId: string,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const variantId = await this.findVariantId(productId);
-        if (!variantId) return;
+        if (!variantId) {
+            return inboundNoop(`storage-location ${entityId}: deleted, product variant not found`);
+        }
 
         const current = await this.getCurrentAssignment(variantId);
         if (current?.organizationSourceEntityId !== entityId) {
@@ -148,11 +145,9 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
             // the earlier version of this handler skipped ALL deletions unconditionally, which
             // silently left a stale organizationId pinned to a deleted row when it WAS the
             // winner).
-            Logger.verbose(
+            return inboundNoop(
                 `storage-location ${entityId}: deleted, not the current winner, skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         await this.productVariantService.update(ctx, [

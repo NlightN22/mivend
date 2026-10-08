@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { UserEnrichmentService } from '@mivend/plugin-access-control';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationUserHandler';
 
@@ -24,7 +25,7 @@ export class UserStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         // These are real optional-scalar fields — `undefined` (key absent) means "leave
         // unchanged", `null`/empty is a real value ERP explicitly sent.
         const email = 'email' in payload ? ((payload.email as string | null) ?? null) : undefined;
@@ -49,8 +50,7 @@ export class UserStreamHandler implements InboundStreamHandler {
             isActive,
         });
         if (!admin) {
-            Logger.verbose(`user ${entityId}: no linked Administrator (skipped)`, loggerCtx);
-            return;
+            return inboundNoop(`user ${entityId}: no linked Administrator (skipped)`);
         }
         Logger.verbose(`Enriched administrator erpId=${entityId}`, loggerCtx);
     }

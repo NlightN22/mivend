@@ -6,5 +6,19 @@ import type { RequestContext } from '@vendure/core';
 // (stream, entityId, version) history as the ledger of what was already applied — a handler only
 // ever sees calls it should actually apply, in increasing version order per entityId.
 export interface InboundStreamHandler {
-    apply(ctx: RequestContext, entityId: string, payload: Record<string, unknown>): Promise<void>;
+    apply(
+        ctx: RequestContext,
+        entityId: string,
+        payload: Record<string, unknown>,
+    ): Promise<InboundOutcome | void>;
 }
+
+// A handler that deliberately does nothing for a message must say so and why (issue #200): the
+// reason is stored on the inbox row and counted on the integration-health page. A bare `return`
+// that only logs is the silent drop the external-integration-rules skill forbids.
+export interface InboundOutcome {
+    kind: 'noop';
+    reason: string;
+}
+
+export const inboundNoop = (reason: string): InboundOutcome => ({ kind: 'noop', reason });

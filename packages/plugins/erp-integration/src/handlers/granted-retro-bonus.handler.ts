@@ -1,10 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { GrantedRetroBonusService } from '@mivend/plugin-retro-bonus';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
-
-const loggerCtx = 'IntegrationGrantedRetroBonusHandler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const optionalString = (value: unknown): string | null => (value != null ? String(value) : null);
 
@@ -18,15 +17,13 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         if (payload.isDeleted === true) {
             const tombstoneVersion = String(payload.version ?? '');
             if (!tombstoneVersion) {
-                Logger.warn(
+                return inboundNoop(
                     `granted-retro-bonus ${entityId}: tombstone without version, skipping`,
-                    loggerCtx,
                 );
-                return;
             }
             await this.grantedRetroBonusService.remove(ctx, entityId, tombstoneVersion);
             return;
@@ -51,11 +48,9 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
             !Number.isFinite(quantity) ||
             !Number.isFinite(amount)
         ) {
-            Logger.warn(
+            return inboundNoop(
                 `granted-retro-bonus ${entityId}: missing/invalid required field, skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         await this.grantedRetroBonusService.upsert(ctx, {

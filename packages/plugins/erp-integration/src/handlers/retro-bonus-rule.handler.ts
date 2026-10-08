@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { RetroBonusAccrualKind, RetroBonusRuleService } from '@mivend/plugin-retro-bonus';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationRetroBonusRuleHandler';
 
@@ -25,14 +26,12 @@ export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const accrualKind = String(payload.accrualKind ?? '') as RetroBonusAccrualKind;
         if (!VALID_ACCRUAL_KINDS.includes(accrualKind)) {
-            Logger.warn(
+            return inboundNoop(
                 `retro-bonus-rule ${entityId}: unrecognized accrualKind "${String(payload.accrualKind)}", skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         const version = String(payload.version ?? '');
@@ -52,12 +51,10 @@ export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
             !effectiveFrom ||
             (effectiveToPresent && !effectiveTo)
         ) {
-            Logger.warn(
+            return inboundNoop(
                 `retro-bonus-rule ${entityId}: missing/invalid entityId/version/productId/` +
                     `counterpartyId/percent/effectiveFrom/effectiveTo, skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         const recipientContractErpId =

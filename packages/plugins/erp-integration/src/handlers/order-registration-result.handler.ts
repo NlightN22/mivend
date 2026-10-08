@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
 
 const loggerCtx = 'IntegrationOrderRegistrationResultHandler';
@@ -24,10 +25,9 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         if (payload.isDeleted === true) {
-            Logger.verbose(`order-registration-result ${entityId}: deleted, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`order-registration-result ${entityId}: deleted, skipping`);
         }
 
         const orderEntityId = payload.orderEntityId != null ? String(payload.orderEntityId) : null;

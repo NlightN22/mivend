@@ -28,7 +28,8 @@ import {
 import { mapProductCharacteristics } from '../product-characteristics-mapper';
 import { MissingDependencyError } from '../types';
 import { UnitLookupService } from '../unit-lookup.service';
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationProductHandler';
 
@@ -88,12 +89,11 @@ export class ProductStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const sku = String(payload.sku ?? '');
         const name = String(payload.name ?? '');
         if (!sku || !name) {
-            Logger.warn(`product ${entityId}: missing sku/name, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`product ${entityId}: missing sku/name, skipping`);
         }
 
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3

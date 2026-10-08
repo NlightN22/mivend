@@ -96,6 +96,25 @@ describe('integrationStreamHealth', () => {
         expect(bank.lag).toMatchObject({ topic: 'topic-bank', totalLag: '4' });
     });
 
+    it('counts a handler no-op of the last 24 h on the stream row, with its reason', async () => {
+        const row = await inbox.enqueue({
+            stream: 'bank',
+            entityId: 'b-noop',
+            version: '1',
+            sourceEventId: 'evt-noop',
+            payload: {},
+        });
+        await inbox.markProcessed(row.id, 'noop', 'bank b-noop: missing name/bik, skipping');
+
+        const { streams } = await resolver.integrationStreamHealth();
+
+        expect(streams.find(st => st.stream === 'bank')).toMatchObject({
+            noop24h: 1,
+            lastNoopReason: 'bank b-noop: missing name/bik, skipping',
+            pending: 0,
+        });
+    });
+
     it('flags inbox rows for a stream unknown to contract and config', async () => {
         await dataSource.query(
             `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status)

@@ -7,7 +7,8 @@ import {
 } from '@vendure/core';
 import { WarehouseService } from '@mivend/plugin-access-control';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
 import { isWarehouseTombstoned } from './warehouse-tombstone.query';
 
@@ -27,29 +28,25 @@ export class StockStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const productId = String(payload.productId ?? '');
         const warehouseId = String(payload.warehouseId ?? '');
         const quantity = Number(payload.quantity ?? 0);
         const availableQuantity = Number(payload.availableQuantity ?? 0);
         const isDeleted = payload.isDeleted === true;
         if (!productId || !warehouseId) {
-            Logger.warn(`stock ${entityId}: missing productId/warehouseId, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`stock ${entityId}: missing productId/warehouseId, skipping`);
         }
         if (isDeleted) {
-            Logger.verbose(`stock ${entityId}: deleted, skipping`, loggerCtx);
-            return;
+            return inboundNoop(`stock ${entityId}: deleted, skipping`);
         }
 
         const warehouse = await this.warehouseService.findByErpId(ctx, warehouseId);
         if (!warehouse) {
             if (await isWarehouseTombstoned(this.connection.rawConnection, warehouseId)) {
-                Logger.verbose(
+                return inboundNoop(
                     `stock ${entityId}: warehouse ${warehouseId} is deleted upstream, ignoring`,
-                    loggerCtx,
                 );
-                return;
             }
             // Ordering race: the warehouse event is not consumed yet (#96), so retry.
             throw new MissingDependencyError(

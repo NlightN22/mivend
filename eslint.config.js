@@ -231,9 +231,9 @@ export default [
             'packages/plugins/erp-integration/src/erp-integration.plugin.ts',
         ],
         languageOptions: { parser: tsParser },
-        plugins: { local: { rules: { 'no-direct-outbound': noDirectOutbound } } },
+        plugins: { outbound: { rules: { 'no-direct-outbound': noDirectOutbound } } },
         rules: {
-            'local/no-direct-outbound': 'error',
+            'outbound/no-direct-outbound': 'error',
         },
     },
     // mivend.issue.84.88 (2026-09-15): stock.handler.ts read `payload.availableQuantity != null`

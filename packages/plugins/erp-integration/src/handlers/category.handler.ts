@@ -18,7 +18,8 @@ import {
     RequestContext,
 } from '@vendure/core';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationCategoryHandler';
 
@@ -47,7 +48,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         // A deletion tombstone carries no name; it still hides a known category, but never creates one.
         const name = payload.name ? String(payload.name) : null;
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
@@ -65,11 +66,9 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         const facetValues = await this.facetValueService.findByFacetId(ctx, facet.id);
         const existingFacetValue = facetValues.find(v => v.code === entityId);
         if (!existingFacetValue && !name) {
-            Logger.warn(
+            return inboundNoop(
                 `category ${entityId}: missing name and no existing facet value, skipping`,
-                loggerCtx,
             );
-            return;
         }
         const facetValue = await this.ensureFacetValue(
             ctx,
@@ -80,7 +79,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         );
         const facetValueIdByCode = new Map(facetValues.map(v => [v.code, String(v.id)]));
         facetValueIdByCode.set(entityId, String(facetValue.id));
-        await this.ensureCollection(ctx, {
+        return this.ensureCollection(ctx, {
             entityId,
             name,
             facetValueId: String(facetValue.id),
@@ -130,16 +129,17 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         });
     }
 
-    private async ensureCollection(ctx: RequestContext, input: CollectionInput): Promise<void> {
+    private async ensureCollection(
+        ctx: RequestContext,
+        input: CollectionInput,
+    ): Promise<InboundOutcome | void> {
         const { entityId, name, facetValueId, feedHidden, parentErpId, reparent } = input;
         const slug = categorySlug(entityId);
         const existing = await this.collectionService.findOneBySlug(ctx, slug);
         if (!existing && !name) {
-            Logger.warn(
+            return inboundNoop(
                 `category ${entityId}: missing name and no existing collection, skipping`,
-                loggerCtx,
             );
-            return;
         }
         const resolvedName = name ?? existing!.name;
         const translations = [

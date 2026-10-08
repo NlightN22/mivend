@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, StockLocationService, TransactionalConnection } from '@vendure/core';
 import { WarehouseService } from '@mivend/plugin-access-control';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationWarehouseHandler';
 
@@ -33,7 +34,7 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
         // zero-value omission).
         const isActive = payload.isActive === true;
@@ -43,8 +44,7 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         // already covers the organizational grouping need, so folders are skipped entirely.
         const isFolder = payload.isFolder === true;
         if (isFolder) {
-            Logger.verbose(`Skipping folder warehouse node erpId=${entityId}`, loggerCtx);
-            return;
+            return inboundNoop(`Skipping folder warehouse node erpId=${entityId}`);
         }
 
         const name = payload.name ? String(payload.name) : null;
@@ -58,13 +58,9 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
                 entityId,
                 isActive && !isDeleted,
             );
-            if (!updated) {
-                Logger.warn(
-                    `warehouse ${entityId}: missing name and no existing row, skipping`,
-                    loggerCtx,
-                );
-            }
-            return;
+            return updated
+                ? undefined
+                : inboundNoop(`warehouse ${entityId}: missing name and no existing row, skipping`);
         }
 
         // An empty/missing departmentId (malformed payload) is handled the same as an unresolvable
@@ -87,7 +83,7 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         warehouseErpId: string,
         name: string,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         const existing = await this.connection.rawConnection
             .createQueryBuilder()
             .select('sl.id', 'id')

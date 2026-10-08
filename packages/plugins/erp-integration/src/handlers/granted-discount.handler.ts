@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { GrantedDiscountService } from '@mivend/plugin-price-entry';
 
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationGrantedDiscountHandler';
 
@@ -16,15 +17,13 @@ export class GrantedDiscountStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome | void> {
         if (payload.isDeleted === true) {
             const tombstoneVersion = String(payload.version ?? '');
             if (!tombstoneVersion) {
-                Logger.warn(
+                return inboundNoop(
                     `granted-discount ${entityId}: tombstone without version, skipping`,
-                    loggerCtx,
                 );
-                return;
             }
             await this.grantedDiscountService.remove(ctx, entityId, tombstoneVersion);
             Logger.verbose(`Removed granted discount erpId=${entityId}`, loggerCtx);
@@ -43,12 +42,10 @@ export class GrantedDiscountStreamHandler implements InboundStreamHandler {
             !version ||
             !Number.isFinite(discountAmount)
         ) {
-            Logger.warn(
+            return inboundNoop(
                 `granted-discount ${entityId}: missing/invalid sourceDocumentId/` +
                     `sourceCounterpartyId/productId/version/discountAmount, skipping`,
-                loggerCtx,
             );
-            return;
         }
 
         await this.grantedDiscountService.upsert(ctx, {
