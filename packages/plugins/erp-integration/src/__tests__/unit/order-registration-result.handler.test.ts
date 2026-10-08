@@ -47,7 +47,7 @@ describe('OrderRegistrationResultHandler', () => {
             syncService as never,
         );
 
-        await handler.apply(ctx, 'orr-1', {
+        const outcome = await handler.apply(ctx, 'orr-1', {
             orderEntityId: 'erp-order-1',
             businessRejectionReason: { code: 'X', message: 'nope' },
             reservedLines: [],
@@ -60,6 +60,14 @@ describe('OrderRegistrationResultHandler', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: 'X',
+            rejectionReasonText: 'nope',
+        });
+        // Issue #204: a business rejection must not count as a silent `applied` — it is visible
+        // on the Integration health page's No-op column, with the reason as its tooltip.
+        expect(outcome).toEqual({
+            kind: 'noop',
+            reason: expect.stringContaining('rejected by the ERP'),
         });
     });
 
@@ -82,6 +90,8 @@ describe('OrderRegistrationResultHandler', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
     });
 
@@ -129,6 +139,8 @@ describe('OrderRegistrationResultHandler', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
     });
 
@@ -151,6 +163,8 @@ describe('OrderRegistrationResultHandler', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
     });
 
@@ -172,7 +186,30 @@ describe('OrderRegistrationResultHandler', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: 'X',
+            rejectionReasonText: 'no order created',
         });
+    });
+
+    // BusinessRejectionReason.code/message are both plain proto3 strings — an absent key within
+    // the object means '' (zero-value-omission rule), not null, same as top-level status.
+    it('treats an absent code/message on businessRejectionReason as empty strings, not null', async () => {
+        const syncService = { handleOrderRegistrationResult: vi.fn() };
+        const handler = new OrderRegistrationResultHandler(
+            createConnection([]) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'orr-1', {
+            orderEntityId: 'erp-order-1',
+            businessRejectionReason: {},
+            reservedLines: [],
+        });
+
+        expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ rejectionReasonCode: '', rejectionReasonText: '' }),
+        );
     });
 
     // documentNumber is a real proto `optional string` (null when genuinely absent); status is a
@@ -197,6 +234,8 @@ describe('OrderRegistrationResultHandler', () => {
             unresolvedProductIds: [],
             documentNumber: 'ЗК-00001',
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
     });
 
@@ -220,6 +259,8 @@ describe('OrderRegistrationResultHandler', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: 'Проведён',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
     });
 });

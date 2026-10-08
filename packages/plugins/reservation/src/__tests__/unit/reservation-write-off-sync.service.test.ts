@@ -22,12 +22,13 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         reportQuantityMismatch: ReturnType<typeof vi.fn>;
         reportUnresolvedProductMapping: ReturnType<typeof vi.fn>;
     };
+    let eventBus: { publish: ReturnType<typeof vi.fn> };
     let service: ReservationWriteOffSyncService;
     const ctx = {} as unknown as RequestContext;
 
     beforeEach(() => {
         orderRepo = {
-            findOne: vi.fn(async () => ({ id: 'order-1', customFields: {} })),
+            findOne: vi.fn(async () => ({ id: 'order-1', code: 'order-1', customFields: {} })),
             save: vi.fn(async (x: unknown) => x),
         };
         reservationRepo = {
@@ -47,10 +48,12 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             reportQuantityMismatch: vi.fn(async () => undefined),
             reportUnresolvedProductMapping: vi.fn(async () => undefined),
         };
+        eventBus = { publish: vi.fn() };
         service = new ReservationWriteOffSyncService(
             connection as unknown as TransactionalConnection,
             reservationService as unknown as ReservationService,
             reconciliationIssueService as unknown as ReservationReconciliationIssueService,
+            eventBus as never,
         );
     });
 
@@ -62,6 +65,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
         expect(rawQuery).not.toHaveBeenCalled();
         expect(reservationRepo.find).not.toHaveBeenCalled();
@@ -80,6 +85,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
                 unresolvedProductIds: [],
                 documentNumber: null,
                 status: '',
+                rejectionReasonCode: null,
+                rejectionReasonText: null,
             }),
         ).rejects.toThrow(/no Order found/);
         expect(reservationRepo.find).not.toHaveBeenCalled();
@@ -93,6 +100,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
         expect(reservationRepo.find).not.toHaveBeenCalled();
         expect(reservationRepo.save).not.toHaveBeenCalled();
@@ -109,6 +118,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: ['unknown-prod-1'],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(reconciliationIssueService.reportUnresolvedProductMapping).toHaveBeenCalledWith(
@@ -130,6 +141,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: ['unknown-prod-1'],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(reconciliationIssueService.reportUnresolvedProductMapping).toHaveBeenCalledTimes(1);
@@ -154,6 +167,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -188,6 +203,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
@@ -222,6 +239,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
@@ -254,6 +273,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -279,6 +300,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -295,6 +318,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: 'ЗК-00001',
             status: 'Отклонён',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(orderRepo.save).toHaveBeenCalledWith(
@@ -318,6 +343,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: 'ЗК-00002',
             status: 'Проведён',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(orderRepo.save).toHaveBeenCalledWith(
@@ -340,10 +367,97 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             unresolvedProductIds: [],
             documentNumber: null,
             status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
         expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
+    });
+
+    // Issue #204: the reason code/text get persisted and a REJECTED transition is published —
+    // never written directly as erpStatus here, same separation as the ERP callback's own path.
+    it('persists the rejection reason and publishes ErpOrderStatusEvent(REJECTED)', async () => {
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: true,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
+            rejectionReasonCode: 'STOCK_SHORTAGE',
+            rejectionReasonText: 'not enough stock',
+        });
+
+        expect(orderRepo.save).toHaveBeenCalledWith(
+            expect.objectContaining({
+                customFields: expect.objectContaining({
+                    erpRejectionReasonCode: 'STOCK_SHORTAGE',
+                    erpRejectionReasonText: 'not enough stock',
+                }),
+            }),
+        );
+        expect(eventBus.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ orderCode: 'order-1', status: 'REJECTED' }),
+        );
+    });
+
+    // Non-terminal (issue #204): a later, non-rejected result for the same order must clear both
+    // the reason fields and the REJECTED status back to SENT_TO_ERP.
+    it('clears the rejection reason and erpStatus when a later result is not rejected', async () => {
+        orderRepo.findOne.mockResolvedValue({
+            id: 'order-1',
+            code: 'order-1',
+            customFields: {
+                erpStatus: 'REJECTED',
+                erpRejectionReasonCode: 'STOCK_SHORTAGE',
+                erpRejectionReasonText: 'not enough stock',
+            },
+        });
+
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: 'ЗК-00003',
+            status: 'Проведён',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        expect(orderRepo.save).toHaveBeenCalledWith(
+            expect.objectContaining({
+                customFields: expect.objectContaining({
+                    erpRejectionReasonCode: null,
+                    erpRejectionReasonText: null,
+                }),
+            }),
+        );
+        expect(eventBus.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ orderCode: 'order-1', status: 'SENT_TO_ERP' }),
+        );
+    });
+
+    // Out-of-order/stale-event guard: a result that is NOT rejected, arriving while the order is
+    // NOT currently REJECTED, must never touch the reason fields or publish a status event — a
+    // repeat/stale non-reject result is a safe no-op on this axis, same idempotency rule as the
+    // release-matching logic above.
+    it('does not touch the rejection reason or publish a status event when the order was never rejected', async () => {
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: 'Проведён',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        expect(eventBus.publish).not.toHaveBeenCalled();
+        const [saved] = orderRepo.save.mock.calls[0];
+        expect(saved.customFields.erpRejectionReasonCode).toBeUndefined();
     });
 });
 
@@ -393,6 +507,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             connection as unknown as TransactionalConnection,
             reservationService as unknown as ReservationService,
             reconciliationIssueService as unknown as ReservationReconciliationIssueService,
+            { publish: vi.fn() } as never,
         );
     });
 

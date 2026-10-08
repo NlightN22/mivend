@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
+import { EventBus, Order, RequestContext, TransactionalConnection } from '@vendure/core';
+import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
 
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssueService } from './reservation-reconciliation-issue.service';
@@ -24,6 +25,9 @@ export interface OrderRegistrationResultInput {
     // zero-value-omission rule — see external-integration-rules skill).
     documentNumber: string | null;
     status: string;
+    // BusinessRejectionReason.code/message (issue #204), non-null only when `rejected` is true.
+    rejectionReasonCode: string | null;
+    rejectionReasonText: string | null;
 }
 
 // Bridges company.orders.events.v1.order-changed (issue #110/#72) — the order's ongoing,
@@ -63,6 +67,7 @@ export class ReservationWriteOffSyncService {
         private connection: TransactionalConnection,
         private reservationService: ReservationService,
         private reconciliationIssueService: ReservationReconciliationIssueService,
+        private eventBus: EventBus,
     ) {}
 
     async handleOrderRegistrationResult(
@@ -99,7 +104,26 @@ export class ReservationWriteOffSyncService {
         // release/quantity-match logic that follows.
         order.customFields.erpRegistrationDocumentNumber = input.documentNumber;
         order.customFields.erpRegistrationStatus = input.status;
+
+        // REJECTED is non-terminal (issue #204): captured here so a later, non-rejected result
+        // for the same order can clear both the reason fields and erpStatus back to SENT_TO_ERP.
+        const wasRejected = order.customFields.erpStatus === 'REJECTED';
+        if (input.rejected) {
+            order.customFields.erpRejectionReasonCode = input.rejectionReasonCode;
+            order.customFields.erpRejectionReasonText = input.rejectionReasonText;
+        } else if (wasRejected) {
+            order.customFields.erpRejectionReasonCode = null;
+            order.customFields.erpRejectionReasonText = null;
+        }
         await this.connection.getRepository(ctx, Order).save(order);
+
+        // erpStatus is owned by plugin-erp-order's ErpOrderService.updateStatus — never written
+        // directly here, same separation as ErpCallbackController's own order-status path.
+        if (input.rejected) {
+            this.eventBus.publish(new ErpOrderStatusEvent(ctx, order.code, 'REJECTED'));
+        } else if (wasRejected) {
+            this.eventBus.publish(new ErpOrderStatusEvent(ctx, order.code, 'SENT_TO_ERP'));
+        }
 
         if (input.unresolvedProductIds.length > 0) {
             for (const externalProductId of input.unresolvedProductIds) {

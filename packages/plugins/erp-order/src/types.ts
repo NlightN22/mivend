@@ -27,6 +27,10 @@ declare module '@vendure/core' {
         // OrderChanged.contract_id (issue #110) — a flat GUID ref to an ERP contract, real optional
         // presence. Purely informational until a Contract entity exists (#50/#105).
         erpContractId?: string | null;
+        // ERP's BusinessRejectionReason.code/message (issue #204); cleared when erpStatus
+        // leaves REJECTED. See ReservationWriteOffSyncService.handleOrderRegistrationResult.
+        erpRejectionReasonCode?: string | null;
+        erpRejectionReasonText?: string | null;
     }
 }
 
@@ -39,6 +43,9 @@ export const ERP_ORDER_STATUSES = [
     'SHIPPED',
     'DELIVERED',
     'CANCELLED',
+    // ERP refused to register the order (issue #204). Non-terminal — a later non-rejected
+    // result clears it back to SENT_TO_ERP.
+    'REJECTED',
 ] as const;
 
 export type ErpOrderStatus = (typeof ERP_ORDER_STATUSES)[number];

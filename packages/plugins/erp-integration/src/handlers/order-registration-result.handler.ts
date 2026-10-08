@@ -31,7 +31,17 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         }
 
         const orderEntityId = payload.orderEntityId != null ? String(payload.orderEntityId) : null;
-        const rejected = payload.businessRejectionReason != null;
+        const businessRejectionReason = payload.businessRejectionReason as
+            | Record<string, unknown>
+            | undefined
+            | null;
+        const rejected = businessRejectionReason != null;
+        // BusinessRejectionReason.code/message are both plain (non-optional) proto3 strings — an
+        // absent key means '' (zero-value-omission rule), not null.
+        const rejectionReasonCode =
+            businessRejectionReason != null ? String(businessRejectionReason.code ?? '') : null;
+        const rejectionReasonText =
+            businessRejectionReason != null ? String(businessRejectionReason.message ?? '') : null;
         // document_number is a real proto `optional string` — absent genuinely means "not
         // assigned yet" (e.g. a rejected result), not a zero-value-omission case.
         const documentNumber =
@@ -88,7 +98,18 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
             unresolvedProductIds: [],
             documentNumber,
             status,
+            rejectionReasonCode,
+            rejectionReasonText,
         });
+
+        if (rejected) {
+            // Issue #204: a business rejection is a recorded, reasoned outcome, never silent —
+            // visible on the health page's No-op column, reason as its tooltip.
+            return inboundNoop(
+                `order-registration-result ${entityId}: rejected by the ERP ` +
+                    `(code=${rejectionReasonCode ?? ''}, message=${rejectionReasonText ?? ''})`,
+            );
+        }
         return linesWithoutProductId > 0
             ? inboundNoop(
                   `order-registration-result ${entityId}: applied without ${linesWithoutProductId} line(s) lacking a productId`,

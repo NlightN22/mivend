@@ -346,6 +346,21 @@ export const config: VendureConfig = {
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Contract ID' }],
             },
+            {
+                // BusinessRejectionReason.code (issue #204), set alongside erpStatus=REJECTED.
+                // See plugin-reservation's ReservationWriteOffSyncService.
+                name: 'erpRejectionReasonCode',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP Rejection Reason Code' }],
+            },
+            {
+                // BusinessRejectionReason.message, same lifecycle as erpRejectionReasonCode above.
+                name: 'erpRejectionReasonText',
+                type: 'string',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP Rejection Reason Text' }],
+            },
         ],
         Product: [
             {
