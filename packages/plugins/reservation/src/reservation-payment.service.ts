@@ -49,7 +49,13 @@ export class ReservationPaymentService {
             return;
         }
 
-        if (fullOrder.customFields?.reservationState !== 'NOT_REQUIRED') {
+        // The event's own Order object can be stale (a repeat, or a manual confirm that won the
+        // race); the stored state decides. Falls back to the event's copy while the row is not
+        // visible yet to this fresh context.
+        const stored = await this.connection
+            .getRepository(ctx, Order)
+            .findOne({ where: { id: fullOrder.id } });
+        if ((stored ?? fullOrder).customFields?.reservationState !== 'NOT_REQUIRED') {
             return;
         }
         await this.reservationService.setOrderReservationState(

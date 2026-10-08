@@ -85,6 +85,40 @@ describe('ReservationPaymentService', () => {
             );
         });
 
+        // Scenario 6 of #199: the switch is read per placement event, never retroactively.
+        it('reads the switch at placement: only orders placed while it is on are auto-reserved', async () => {
+            const placedAs = (id: string) => ({ ...placed(), id });
+
+            autoReserveOnPlacement = false;
+            await service.handleOrderPlaced(ctx, placedAs('order-off') as never);
+            autoReserveOnPlacement = true;
+            await service.handleOrderPlaced(ctx, placedAs('order-on') as never);
+            autoReserveOnPlacement = false;
+            await service.handleOrderPlaced(ctx, placedAs('order-off-again') as never);
+
+            expect(reservationService.reserveOrder).toHaveBeenCalledTimes(1);
+            expect(reservationService.reserveOrder).toHaveBeenCalledWith(
+                ctx,
+                'order-on',
+                expect.any(Number),
+                'auto-trust-rule',
+            );
+        });
+
+        it('does not auto-reserve an order placed while the switch was off when its event is replayed after the switch is turned on', async () => {
+            autoReserveOnPlacement = false;
+            await service.handleOrderPlaced(ctx, placed() as never);
+            autoReserveOnPlacement = true;
+
+            // The replay sees the state the first delivery wrote: AWAITING_CONFIRMATION.
+            await service.handleOrderPlaced(ctx, {
+                ...placed(),
+                customFields: { reservationState: 'AWAITING_CONFIRMATION' },
+            } as never);
+
+            expect(reservationService.reserveOrder).not.toHaveBeenCalled();
+        });
+
         it('records why the reserve failed so staff can see it', async () => {
             autoReserveOnPlacement = true;
             const error = new InsufficientStockError([
@@ -148,6 +182,23 @@ describe('ReservationPaymentService', () => {
                 placedOrder,
                 'AWAITING_CONFIRMATION',
             );
+        });
+
+        it('trusts the stored reservation state over a stale copy on the event', async () => {
+            autoReserveOnPlacement = true;
+            orderRepo.findOne.mockResolvedValue({
+                id: 'order-1',
+                customFields: { reservationState: 'RESERVED' },
+            });
+
+            await service.handleOrderPlaced(ctx, {
+                id: 'order-1',
+                customFields: { reservationState: 'NOT_REQUIRED' },
+                payments: [{ method: 'deferred-payment' }],
+            } as never);
+
+            expect(reservationService.setOrderReservationState).not.toHaveBeenCalled();
+            expect(reservationService.reserveOrder).not.toHaveBeenCalled();
         });
 
         it('is a no-op for PREPAID orders', async () => {
