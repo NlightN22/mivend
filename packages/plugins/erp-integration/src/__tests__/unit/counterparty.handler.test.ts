@@ -345,7 +345,7 @@ describe('CounterpartyStreamHandler', () => {
 
         // Soft link: an ERP user that never arrived must not hold the counterparty (staging: 4
         // counterparties and the contracts behind them stuck on one missing manager).
-        it('saves the counterparty with managerErpId and no manager, with a reasoned outcome, when the ERP user was never received', async () => {
+        it('saves the counterparty with managerErpId and no manager, with a reasoned outcome, when the manager id is not a known ERP user', async () => {
             const findManagerLink = vi.fn().mockResolvedValue({ found: false });
             const { handler, counterpartyService } = makeHandler(undefined, findManagerLink);
 
@@ -365,7 +365,9 @@ describe('CounterpartyStreamHandler', () => {
             );
             expect(outcome).toEqual({
                 kind: 'noop',
-                reason: expect.stringContaining('ERP user user-erp-unknown not received yet'),
+                reason: expect.stringContaining(
+                    'manager reference user-erp-unknown is not a known ERP user',
+                ),
             });
         });
 

@@ -4,6 +4,16 @@ import type { RequestContext } from '@vendure/core';
 import { ProductStreamHandler } from '../../handlers/product.handler';
 import { MissingDependencyError } from '../../types';
 
+const lockKeys = vi.hoisted(() => [] as string[]);
+vi.mock('shared', async importOriginal => ({
+    ...(await importOriginal<typeof import('shared')>()),
+    // The lock protocol itself is covered by unit-product-backfill.int.test.ts (real Postgres).
+    withAggregateLock: (_c: unknown, ctx: unknown, key: unknown, work: (c: unknown) => unknown) => {
+        lockKeys.push(String(key));
+        return work(ctx);
+    },
+}));
+
 function makeConnection(existingId: string | undefined): {
     rawConnection: { createQueryBuilder: ReturnType<typeof vi.fn> };
 } {
@@ -820,17 +830,32 @@ describe('ProductStreamHandler', () => {
             ]);
         });
 
-        it('throws MissingDependencyError (retryable) when defaultSalesUnitId is set but not yet synced', async () => {
+        // Soft link: the product must not wait for its unit; UnitStreamHandler fills the fields later.
+        it('saves the product with the unit id and null unit fields when the unit is not received yet', async () => {
             const unitLookupService = { findByEntityId: vi.fn().mockResolvedValue(null) };
-            const { handler } = makeHandler({ unitLookupService });
+            const { handler, productVariantService } = makeHandler({ unitLookupService });
 
-            await expect(
-                handler.apply(ctx, 'p-1', {
-                    sku: 'SKU-1',
-                    name: 'Widget',
-                    defaultSalesUnitId: 'unit-not-yet-synced',
+            const outcome = await handler.apply(ctx, 'p-1', {
+                sku: 'SKU-1',
+                name: 'Widget',
+                defaultSalesUnitId: 'unit-not-yet-synced',
+            });
+
+            expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
+                expect.objectContaining({
+                    customFields: {
+                        defaultSalesUnitId: 'unit-not-yet-synced',
+                        unitRatioToBase: null,
+                        unitWeightKg: null,
+                        unitVolumeM3: null,
+                    },
                 }),
-            ).rejects.toThrow(MissingDependencyError);
+            ]);
+            expect(lockKeys).toContain('unit:unit-not-yet-synced');
+            expect(outcome).toEqual({
+                kind: 'noop',
+                reason: expect.stringContaining('unit unit-not-yet-synced not received yet'),
+            });
         });
 
         it('re-resolves unit fields on update, same as create', async () => {

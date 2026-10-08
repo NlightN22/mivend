@@ -331,23 +331,26 @@ retry-with-backoff, treated as an ordinary eventual-consistency problem, never s
 
 **Hard dependency vs soft reference — decide per reference, write the decision in the handler.**
 
-- **Hard (structural)**: the entity cannot exist or be applied correctly without the target, so
-  a missing target throws `MissingDependencyError` and retries. Known: `contract` -> `counterparty`,
-  `point-of-sale` -> `counterparty`, `price` -> `PriceType`/variant, `stock` ->
-  warehouse/stock location/variant, `storage-location` -> variant, `order-changed`/
-  `order-registration-result` -> variant, `product-photo` -> product.
-- **Soft (descriptive/optional link)**: a reference id that only describes or enriches the owning
-  entity. Store the id as-is (no FK), never block or retry the owner, resolve the target later at
-  read time or by a back-fill when it arrives ("target may arrive later or never"). Blocking the
-  owner on a soft link makes unrelated entities pile up behind one absent record: a manager's ERP
-  user that never arrived held counterparties, and through them the contracts, for days. Known soft
-  links: `counterparty` -> `managerId` (stored as `managerErpId`; `assignedManagerId` stays null
-  and is back-filled by `AdministratorLinkedListener` when the ERP user links to an Administrator;
-  the outcome is a `noop` with the reason, the rest of the counterparty is applied),
-  `counterparty` -> department, region, legal form, main bank account, main contract (stored as
-  ids), `user` -> position (`positionId`, name resolved on read), price type via the main contract.
-- A soft link that is missing must still leave a trace: log at verbose level and return
-  `inboundNoop(reason)` when the reference part was skipped.
+| Kind | Rule | References |
+| --- | --- | --- |
+| **Hard** (structural: the entity cannot exist or be applied without the target) | missing target throws `MissingDependencyError` and retries | `contract` -> `counterparty`; `point-of-sale` -> `counterparty`; `price` -> `PriceType`, variant; `stock` -> warehouse, stock location, variant; `product-photo` -> product; `storage-location` -> variant, organization; `order-changed` / `order-registration-result` lines -> variant (the whole message waits, no partial apply) |
+| **Soft** (descriptive or optional link) | store the id as-is (no FK), never block or retry the owner, resolve later at read time or by a back-fill; a skipped part returns `inboundNoop(reason)` | `counterparty` -> manager, department, region, legal form, main bank account, main contract; `product` -> default sales unit; `user` -> position (`positionId`); price type via the main contract |
+| **Config case** (a missing setting, not a missing record) | keep the retry; the fix is configuration, so surface it (alert) rather than waiting | `product` VAT code that needs a default tax category |
+
+- Blocking an owner on a soft link makes unrelated entities pile up behind one absent record: a
+  manager id that never arrived held counterparties and, through them, contracts for days.
+  The manager id can even reference a **user group** of the ERP's users catalog; groups are never
+  published on the `user` stream, so "not yet received" can be permanent. `assignedManagerId` stays
+  null, `managerErpId` is stored, and `AdministratorLinkedListener` back-fills it only if a user
+  with that id links to an Administrator.
+- `product` -> `defaultSalesUnitId`: the variant is saved with the id and null
+  `unitRatioToBase/unitWeightKg/unitVolumeM3`; `UnitStreamHandler` refreshes every variant with that
+  unit id when the unit arrives. Both handlers take the lock `unit:<unitId>` (`withAggregateLock`) so a
+  unit arriving between the product's lookup and its variant write cannot be missed. While the unit
+  is missing, MoQ does not enforce packaging (null ratio = sold in pieces) and nothing is blocked;
+  the Inbound tab shows "N of M variants reference a unit that has not arrived".
+- A soft link that is missing must still leave a trace: verbose log and `inboundNoop(reason)`;
+  never a bare `return`.
 
 **When adding or reviewing any stream handler that does a foreign lookup into data owned by
 another stream, check: does a failed lookup throw, or does it swallow the failure and return?** A

@@ -156,9 +156,9 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         const resolution = await this.userEnrichmentService.findManagerLink(ctx, managerErpId);
         if (!resolution.found) {
             // Soft link: the manager is a descriptive reference, never a reason to hold the
-            // counterparty (and the contracts waiting for it). managerErpId is stored; assignedManagerId
-            // is back-filled when the ERP user links to an Administrator (AdministratorLinkedListener).
-            const reason = `counterparty ${entityId} saved without a manager: ERP user ${managerErpId} not received yet (soft link, assigned once the user links to an Administrator)`;
+            // counterparty (and the contracts waiting for it). The id may even be a user group that
+            // never arrives; assignedManagerId is back-filled if a user links (AdministratorLinkedListener).
+            const reason = `counterparty ${entityId} saved without a manager: manager reference ${managerErpId} is not a known ERP user (it may be a user group, which is never published); assigned only if a user with this id links to an Administrator`;
             Logger.verbose(reason, loggerCtx);
             return { assignedManagerId: null, managerErpId, unresolvedReason: reason };
         }

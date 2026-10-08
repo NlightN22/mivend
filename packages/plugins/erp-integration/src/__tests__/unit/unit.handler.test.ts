@@ -3,6 +3,16 @@ import { ProductVariant, type RequestContext } from '@vendure/core';
 
 import { UnitStreamHandler } from '../../handlers/unit.handler';
 
+const lockKeys = vi.hoisted(() => [] as string[]);
+vi.mock('shared', async importOriginal => ({
+    ...(await importOriginal<typeof import('shared')>()),
+    // The lock protocol itself is covered by unit-product-backfill.int.test.ts (real Postgres).
+    withAggregateLock: (_c: unknown, ctx: unknown, key: unknown, work: (c: unknown) => unknown) => {
+        lockKeys.push(String(key));
+        return work(ctx);
+    },
+}));
+
 function makeConnection(
     existing: Record<string, unknown> | null,
     affected = 0,
@@ -76,6 +86,7 @@ describe('UnitStreamHandler', () => {
             }),
         );
         expect(repo.save).toHaveBeenCalled();
+        expect(lockKeys).toContain('unit:unit-1');
     });
 
     it('stores real weight/volume/owner when present, and updates an existing row in place', async () => {

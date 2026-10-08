@@ -233,6 +233,13 @@ export const adminApiExtensions: DocumentNode = gql`
         message: String
     }
 
+    type VariantUnitHealth {
+        "Variants that name a default sales unit."
+        total: Int!
+        "Of those, variants whose unit has not arrived on the unit stream (unit fields stay empty until it does)."
+        unitMissing: Int!
+    }
+
     type ContractVersionDrift {
         installed: String!
         latest: String
@@ -328,6 +335,8 @@ export const adminApiExtensions: DocumentNode = gql`
         integrationStreamHealth: IntegrationStreamHealthReport!
         "Outbound events written to the outbox per event type: not yet published, dead-lettered, oldest pending age, last error."
         integrationOutboxHealth: [IntegrationOutboxHealth!]!
+        "How many variants reference a unit that has not arrived (soft link, issue #200)."
+        variantUnitHealth: VariantUnitHealth!
         "Failed and no-op inbox rows, newest first, server-side filtered/sorted/paginated (issue #200)."
         integrationInboxIssues(
             options: IntegrationInboxIssueListOptions

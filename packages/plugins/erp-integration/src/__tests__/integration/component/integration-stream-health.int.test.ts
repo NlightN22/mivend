@@ -12,6 +12,7 @@ import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event
 import type { KafkaConsumerLagEntry } from '../../../entities/kafka-consumer-lag.entity';
 import { IntegrationInboxHealthService } from '../../../integration-inbox-health.service';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
+import { VariantUnitHealthService } from '../../../variant-unit-health.service';
 import { IntegrationOutboxHealthService } from '../../../integration-outbox-health.service';
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
 import type { ContractVersionClient } from '../../../contract-version.client';
@@ -45,6 +46,7 @@ beforeAll(async () => {
         new IntegrationInboxHealthService(dataSource),
         new IntegrationOutboxHealthService(dataSource),
         { getLatestVersion: async () => '99.0.0' } as unknown as ContractVersionClient,
+        new VariantUnitHealthService(dataSource),
     );
 });
 
@@ -204,5 +206,31 @@ describe('integrationOutboxHealth', () => {
             lastSkipReason: 'line 1 has no organizationId',
             lastError: null,
         });
+    });
+});
+
+describe('variantUnitHealth', () => {
+    beforeAll(async () => {
+        await dataSource.query(`CREATE TABLE IF NOT EXISTS product_variant (
+            id serial PRIMARY KEY, "deletedAt" timestamp, "customFieldsDefaultsalesunitid" varchar)`);
+        await dataSource.query(
+            `CREATE TABLE IF NOT EXISTS unit_record (id serial PRIMARY KEY, "entityId" varchar)`,
+        );
+    });
+
+    afterEach(async () => {
+        await dataSource.query('TRUNCATE product_variant, unit_record');
+    });
+
+    it('counts variants naming a unit and those whose unit has not arrived; ignores deleted and unit-less variants', async () => {
+        await dataSource.query(`INSERT INTO unit_record ("entityId") VALUES ('u-known')`);
+        await dataSource.query(`INSERT INTO product_variant ("customFieldsDefaultsalesunitid", "deletedAt") VALUES
+            ('u-known', NULL), ('u-missing', NULL), ('u-missing', NULL), (NULL, NULL), ('u-missing', now())`);
+
+        expect(await resolver.variantUnitHealth()).toEqual({ total: 3, unitMissing: 2 });
+    });
+
+    it('is zero/zero when no variant names a unit', async () => {
+        expect(await resolver.variantUnitHealth()).toEqual({ total: 0, unitMissing: 0 });
     });
 });

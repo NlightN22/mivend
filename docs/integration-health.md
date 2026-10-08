@@ -132,8 +132,10 @@ except for a deliberately skipped part (for example order lines without a `produ
 whose version is older than one already processed is stored as `superseded`. Rows processed before
 the column existed have `outcome = null`.
 A stream with a high No-op (24h) count is dropping data and needs a look at the reason. A
-`counterparty` no-op saying the manager's ERP user was not received is not data loss: the manager is a
-soft link, the counterparty itself was applied and the assignment is back-filled once the user links.
+`counterparty` no-op about the manager and a `product` no-op about its unit are not data loss: both are
+soft links, the entity itself was applied. The manager id may reference a user group that is never
+published (assignment stays empty); a missing unit is filled in when the unit arrives. The Inbound
+tab shows "N of M variants reference a unit that has not arrived" (`variantUnitHealth`).
 Escalating "missing required field" no-ops to `failed` (dead-letter) is a per-stream decision
 left open.
 

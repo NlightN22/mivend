@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { withAggregateLock } from 'shared';
 import type { ID } from '@vendure/common/lib/shared-types';
 import {
     FacetService,
@@ -85,7 +86,21 @@ export class ProductStreamHandler implements InboundStreamHandler {
         expiresAt: number;
     };
 
+    // Serialized per unit with UnitStreamHandler: a unit that arrives between this product's unit
+    // lookup and its variant write would otherwise refresh no variant and leave the new one unfilled.
     async apply(
+        ctx: RequestContext,
+        entityId: string,
+        payload: Record<string, unknown>,
+    ): Promise<InboundOutcome> {
+        const unitId = extractDefaultSalesUnitId(payload);
+        if (!unitId) return this.applyProduct(ctx, entityId, payload);
+        return withAggregateLock(this.connection, ctx, `unit:${unitId}`, txCtx =>
+            this.applyProduct(txCtx, entityId, payload),
+        );
+    }
+
+    private async applyProduct(
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
@@ -131,7 +146,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
 
         // Issue #103: packaging/weight/volume fields, keyed off defaultSalesUnitId — see
         // resolveUnitFields and docs/ai/erp-streams-map.md's `unit` row.
-        const unitFields = await this.resolveUnitFields(ctx, entityId, payload);
+        const unitFields = await this.resolveUnitFields(ctx, payload);
 
         const characteristicRows = mapProductCharacteristics(payload);
         const manufacturerCodeRows = extractManufacturerCodes(payload);
@@ -238,6 +253,11 @@ export class ProductStreamHandler implements InboundStreamHandler {
             productId,
             manufacturerCodeRows,
         );
+        if (unitFields?.unitMissing) {
+            const reason = `product ${entityId} saved without unit fields: unit ${unitFields.defaultSalesUnitId} not received yet (soft link, filled when the unit arrives)`;
+            Logger.verbose(reason, loggerCtx);
+            return inboundNoop(reason);
+        }
         return inboundApplied();
     }
 
@@ -468,28 +488,27 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return String(variant.id);
     }
 
-    // Null when defaultSalesUnitId is absent or the ERP's empty reference (base/piece unit). Throws MissingDependencyError
-    // when it's set but not yet synced — see docs/ai/erp-streams-map.md's `unit` row.
+    // Soft link: null when defaultSalesUnitId is absent or the ERP's empty reference. When the unit
+    // has not arrived yet the id is kept as the join key with null unit fields; UnitStreamHandler
+    // fills them when the unit arrives (docs/ai/erp-streams-map.md's `unit` row).
     private async resolveUnitFields(
         ctx: RequestContext,
-        entityId: string,
         payload: Record<string, unknown>,
     ): Promise<ResolvedUnitFields | null> {
-        const defaultSalesUnitId =
-            typeof payload.defaultSalesUnitId === 'string' &&
-            payload.defaultSalesUnitId !== '' &&
-            payload.defaultSalesUnitId !== EMPTY_ERP_REF
-                ? payload.defaultSalesUnitId
-                : undefined;
+        const defaultSalesUnitId = extractDefaultSalesUnitId(payload);
         if (!defaultSalesUnitId) {
             return null;
         }
 
         const unit = await this.unitLookupService.findByEntityId(ctx, defaultSalesUnitId);
         if (!unit) {
-            throw new MissingDependencyError(
-                `product ${entityId}: defaultSalesUnitId '${defaultSalesUnitId}' has no UnitRecord yet — retrying`,
-            );
+            return {
+                defaultSalesUnitId,
+                unitRatioToBase: null,
+                unitWeightKg: null,
+                unitVolumeM3: null,
+                unitMissing: true,
+            };
         }
 
         return {
@@ -497,13 +516,20 @@ export class ProductStreamHandler implements InboundStreamHandler {
             unitRatioToBase: unit.ratioToBase,
             unitWeightKg: unit.weightKg,
             unitVolumeM3: unit.volumeM3,
+            unitMissing: false,
         };
     }
 }
 
+function extractDefaultSalesUnitId(payload: Record<string, unknown>): string | undefined {
+    const id = payload.defaultSalesUnitId;
+    return typeof id === 'string' && id !== '' && id !== EMPTY_ERP_REF ? id : undefined;
+}
+
 interface ResolvedUnitFields {
     defaultSalesUnitId: string;
-    unitRatioToBase: number;
+    unitMissing: boolean;
+    unitRatioToBase: number | null;
     unitWeightKg: number | null;
     unitVolumeM3: number | null;
 }

@@ -10,6 +10,8 @@ import { ContractVersionClient } from './contract-version.client';
 import { CONTRACT_VERSION, listContractStreams } from './contract-streams';
 import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
 import { IGNORED_CONTRACT_STREAMS } from './ignored-contract-streams';
+import { VariantUnitHealthService } from './variant-unit-health.service';
+import type { VariantUnitHealth } from './variant-unit-health.service';
 import { IntegrationInboxHealthService } from './integration-inbox-health.service';
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import type { OutboxHealthByEventType } from './outbox-health';
@@ -34,6 +36,7 @@ export class IntegrationStreamHealthResolver {
         private readonly inbox: IntegrationInboxHealthService,
         private readonly outboxHealth: IntegrationOutboxHealthService,
         private readonly contractVersions: ContractVersionClient,
+        private readonly variantUnits: VariantUnitHealthService,
     ) {}
 
     @Query()
@@ -65,5 +68,11 @@ export class IntegrationStreamHealthResolver {
     @Allow(CustomPermission.ManageErpIntegration.Permission)
     async integrationOutboxHealth(): Promise<OutboxHealthByEventType[]> {
         return this.outboxHealth.getHealthByEventType();
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async variantUnitHealth(): Promise<VariantUnitHealth> {
+        return this.variantUnits.getHealth();
     }
 }

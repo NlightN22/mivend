@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { withAggregateLock } from 'shared';
 import { ProductVariant, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { UnitRecord } from '../entities/unit-record.entity';
@@ -12,7 +13,19 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 export class UnitStreamHandler implements InboundStreamHandler {
     constructor(private readonly connection: TransactionalConnection) {}
 
+    // Same per-unit lock as ProductStreamHandler: the unit write and the variant refresh are atomic
+    // against a product that is being imported with this unit as its default sales unit.
     async apply(
+        ctx: RequestContext,
+        entityId: string,
+        payload: Record<string, unknown>,
+    ): Promise<InboundOutcome> {
+        return withAggregateLock(this.connection, ctx, `unit:${entityId}`, txCtx =>
+            this.applyUnit(txCtx, entityId, payload),
+        );
+    }
+
+    private async applyUnit(
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,

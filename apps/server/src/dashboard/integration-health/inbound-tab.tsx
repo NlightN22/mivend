@@ -20,10 +20,11 @@ import { VERSION_DRIFT_MESSAGES } from './stream-health-view.js';
 import { CountLink } from './count-link.js';
 import { inboxIssuesLink } from './issue-links.js';
 import { RefreshIconButton } from './refresh-button.js';
-import type { VariantOrganizationHealth } from './stream-health-view.js';
+import type { VariantOrganizationHealth, VariantUnitHealth } from './stream-health-view.js';
 import {
     DRIFT_MESSAGES,
     formatVariantOrganizationLine,
+    formatVariantUnitLine,
     formatAge,
     isLagOverThreshold,
 } from './stream-health-view.js';
@@ -66,6 +67,15 @@ const streamHealthDocument = graphql(`
     }
 `);
 
+const variantUnitDocument = graphql(`
+    query VariantUnitHealthForDashboard {
+        variantUnitHealth {
+            total
+            unitMissing
+        }
+    }
+`);
+
 const variantOrganizationDocument = graphql(`
     query VariantOrganizationHealthForDashboard {
         variantOrganizationHealth {
@@ -76,6 +86,15 @@ const variantOrganizationDocument = graphql(`
 `);
 
 type StreamHealthReport = ResultOf<typeof streamHealthDocument>['integrationStreamHealth'];
+
+function VariantUnitAlert({ health }: Readonly<{ health: VariantUnitHealth }>) {
+    const line = formatVariantUnitLine(health);
+    return (
+        <Alert variant={line.problem ? 'destructive' : 'default'} className="mb-3">
+            <AlertDescription>{line.text}</AlertDescription>
+        </Alert>
+    );
+}
 
 function VariantOrganizationAlert({ health }: Readonly<{ health: VariantOrganizationHealth }>) {
     const line = formatVariantOrganizationLine(health);
@@ -104,6 +123,7 @@ export function InboundTab() {
     const [expanded, setExpanded] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [unitHealth, setUnitHealth] = useState<VariantUnitHealth | null>(null);
     const [variantHealth, setVariantHealth] = useState<VariantOrganizationHealth | null>(null);
 
     const load = useCallback(async (): Promise<void> => {
@@ -112,6 +132,9 @@ export function InboundTab() {
             const data = await api.query(streamHealthDocument);
             setReport(data.integrationStreamHealth);
             setError('');
+            api.query(variantUnitDocument)
+                .then(r => setUnitHealth(r.variantUnitHealth))
+                .catch(() => setUnitHealth(null));
             api.query(variantOrganizationDocument)
                 .then(r => setVariantHealth(r.variantOrganizationHealth))
                 .catch(() => setVariantHealth(null));
@@ -140,6 +163,7 @@ export function InboundTab() {
                 </p>
                 {error && <p className="text-destructive mb-3">{error}</p>}
                 {variantHealth && <VariantOrganizationAlert health={variantHealth} />}
+                {unitHealth && <VariantUnitAlert health={unitHealth} />}
                 {report && <VersionDriftAlert drift={report.versionDrift} />}
                 <div className="flex justify-end mb-2">
                     <RefreshIconButton loading={loading} onRefresh={() => void load()} />

@@ -118,6 +118,7 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
 import { IntegrationStreamHealthResolver } from './integration-stream-health.resolver';
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import { ContractVersionClient } from './contract-version.client';
+import { VariantUnitHealthService } from './variant-unit-health.service';
 import { IntegrationEventListResolver } from './integration-event-list.resolver';
 import { IntegrationInboxIssueResolver } from './integration-inbox-issue.resolver';
 import { IntegrationEventListService } from './integration-event-list.service';
@@ -237,6 +238,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         ReconciliationSummaryClient,
         IntegrationOutboxHealthService,
         ContractVersionClient,
+        VariantUnitHealthService,
         IntegrationEventListService,
         IntegrationInboxReplayService,
         IntegrationInboxReplayStateService,

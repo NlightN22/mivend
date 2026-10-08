@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     formatAge,
     formatVariantOrganizationLine,
+    formatVariantUnitLine,
     isLagOverThreshold,
     outboundTypesWith,
 } from '../../stream-health-view';
@@ -59,5 +60,15 @@ describe('formatVariantOrganizationLine', () => {
         expect(formatVariantOrganizationLine({ total: 120, withoutOrganization: 0 }).problem).toBe(
             false,
         );
+    });
+});
+
+describe('formatVariantUnitLine', () => {
+    it('warns when some variants wait for their unit and is neutral at zero', () => {
+        expect(formatVariantUnitLine({ total: 400, unitMissing: 3 })).toEqual({
+            text: '3 of 400 variants reference a unit that has not arrived',
+            problem: true,
+        });
+        expect(formatVariantUnitLine({ total: 400, unitMissing: 0 }).problem).toBe(false);
     });
 });

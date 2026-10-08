@@ -59,3 +59,18 @@ export function formatVariantOrganizationLine(health: VariantOrganizationHealth)
         problem: health.withoutOrganization > 0,
     };
 }
+
+export interface VariantUnitHealth {
+    total: number;
+    unitMissing: number;
+}
+
+export function formatVariantUnitLine(health: VariantUnitHealth): {
+    text: string;
+    problem: boolean;
+} {
+    return {
+        text: `${health.unitMissing} of ${health.total} variants reference a unit that has not arrived`,
+        problem: health.unitMissing > 0,
+    };
+}
