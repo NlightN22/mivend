@@ -406,6 +406,8 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
 
 ### Order contract (mivend#205)
 
+All contract and organization decisions are collected in `docs/order-contracts.md`.
+
 - The ERP registers an order under one contract of the customer; the contract's organization is the
   document header organization and the ERP distributes line organizations itself (this later splits
   the order into separate sales documents and settlements). So `order.submitted` carries
