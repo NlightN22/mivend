@@ -339,6 +339,8 @@ export const adminApiExtensions: DocumentNode = gql`
         integrationOutboxHealth: [IntegrationOutboxHealth!]!
         "How many variants reference a unit that has not arrived (soft link, issue #200)."
         variantUnitHealth: VariantUnitHealth!
+        "Orders currently refused by the ERP (Order.customFields.erpStatus = REJECTED), issue #204."
+        rejectedOrderCount: Int!
         "Failed and no-op inbox rows, newest first, server-side filtered/sorted/paginated (issue #200)."
         integrationInboxIssues(
             options: IntegrationInboxIssueListOptions

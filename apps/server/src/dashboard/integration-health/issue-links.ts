@@ -34,6 +34,17 @@ export interface IssueLinkTarget {
     filters: { id: string; value: unknown }[];
 }
 
+// Manager portal's port is the dashboard's own port minus 1 in every contour (docs/environments.md);
+// it syncs filters to plain query params, not this file's ListPage `filters` scheme.
+export function managerRejectedOrdersLink(origin: string): string {
+    const url = new URL(origin);
+    const port = Number(url.port);
+    url.port = Number.isFinite(port) ? String(port - 1) : url.port;
+    url.pathname = '/orders';
+    url.search = '?erpStatus=REJECTED';
+    return url.toString();
+}
+
 // ListPage with a pageId reads column filters from user settings, not from the URL.
 export function parseIssueLink(href: string): IssueLinkTarget {
     const url = new URL(href, 'http://local');

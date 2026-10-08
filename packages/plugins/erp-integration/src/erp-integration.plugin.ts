@@ -119,6 +119,7 @@ import { IntegrationStreamHealthResolver } from './integration-stream-health.res
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import { ContractVersionClient } from './contract-version.client';
 import { VariantUnitHealthService } from './variant-unit-health.service';
+import { RejectedOrderHealthService } from './rejected-order-health.service';
 import { IntegrationEventListResolver } from './integration-event-list.resolver';
 import { IntegrationInboxIssueResolver } from './integration-inbox-issue.resolver';
 import { IntegrationEventListService } from './integration-event-list.service';
@@ -239,6 +240,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         IntegrationOutboxHealthService,
         ContractVersionClient,
         VariantUnitHealthService,
+        RejectedOrderHealthService,
         IntegrationEventListService,
         IntegrationInboxReplayService,
         IntegrationInboxReplayStateService,

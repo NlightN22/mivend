@@ -13,6 +13,7 @@ import type { KafkaConsumerLagEntry } from '../../../entities/kafka-consumer-lag
 import { IntegrationInboxHealthService } from '../../../integration-inbox-health.service';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { VariantUnitHealthService } from '../../../variant-unit-health.service';
+import { RejectedOrderHealthService } from '../../../rejected-order-health.service';
 import { IntegrationOutboxHealthService } from '../../../integration-outbox-health.service';
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
 import type { ContractVersionClient } from '../../../contract-version.client';
@@ -47,6 +48,7 @@ beforeAll(async () => {
         new IntegrationOutboxHealthService(dataSource),
         { getLatestVersion: async () => '99.0.0' } as unknown as ContractVersionClient,
         new VariantUnitHealthService(dataSource),
+        new RejectedOrderHealthService(dataSource),
     );
 });
 
@@ -232,5 +234,27 @@ describe('variantUnitHealth', () => {
 
     it('is zero/zero when no variant names a unit', async () => {
         expect(await resolver.variantUnitHealth()).toEqual({ total: 0, unitMissing: 0 });
+    });
+});
+
+describe('rejectedOrderCount', () => {
+    beforeAll(async () => {
+        await dataSource.query(`CREATE TABLE IF NOT EXISTS "order" (
+            id serial PRIMARY KEY, "customFieldsErpstatus" varchar)`);
+    });
+
+    afterEach(async () => {
+        await dataSource.query('TRUNCATE "order"');
+    });
+
+    it('counts only orders currently rejected by the ERP', async () => {
+        await dataSource.query(`INSERT INTO "order" ("customFieldsErpstatus") VALUES
+            ('REJECTED'), ('REJECTED'), ('SENT_TO_ERP'), (NULL)`);
+
+        expect(await resolver.rejectedOrderCount()).toBe(2);
+    });
+
+    it('is zero when no order is rejected', async () => {
+        expect(await resolver.rejectedOrderCount()).toBe(0);
     });
 });

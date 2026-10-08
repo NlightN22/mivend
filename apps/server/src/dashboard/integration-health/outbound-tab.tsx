@@ -13,7 +13,7 @@ import {
 } from '@vendure/dashboard';
 
 import { CountLink } from './count-link.js';
-import { outboundProblemsLink } from './issue-links.js';
+import { managerRejectedOrdersLink, outboundProblemsLink } from './issue-links.js';
 import { RefreshIconButton } from './refresh-button.js';
 import { formatAge, schemaSourceBadge } from './stream-health-view.js';
 
@@ -31,6 +31,7 @@ const outboxHealthDocument = graphql(`
             lastSkipReason
             schemaSource
         }
+        rejectedOrderCount
     }
 `);
 
@@ -38,6 +39,7 @@ type OutboxRows = ResultOf<typeof outboxHealthDocument>['integrationOutboxHealth
 
 export function OutboundTab() {
     const [rows, setRows] = useState<OutboxRows>([]);
+    const [rejectedOrderCount, setRejectedOrderCount] = useState(0);
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -47,6 +49,7 @@ export function OutboundTab() {
         try {
             const data = await api.query(outboxHealthDocument);
             setRows(data.integrationOutboxHealth);
+            setRejectedOrderCount(data.rejectedOrderCount);
             setError('');
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Could not load outbox health data');
@@ -148,6 +151,15 @@ export function OutboundTab() {
                         ))}
                     </TableBody>
                 </Table>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+                <span className="text-muted-foreground">Orders rejected by the ERP:</span>
+                <CountLink
+                    count={rejectedOrderCount}
+                    href={managerRejectedOrdersLink(window.location.origin)}
+                    destructive
+                    title="Open the Rejected by ERP order queue in the manager portal"
+                />
             </div>
         </div>
     );

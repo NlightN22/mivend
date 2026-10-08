@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { inboxIssuesLink, outboundProblemsLink, parseIssueLink } from '../../issue-links';
+import {
+    inboxIssuesLink,
+    managerRejectedOrdersLink,
+    outboundProblemsLink,
+    parseIssueLink,
+} from '../../issue-links';
 
 function decodedFilters(link: string): unknown {
     const raw = new URL(link, 'http://x').searchParams.get('filters');
@@ -47,6 +52,17 @@ describe('issue links', () => {
         });
         expect(parseIssueLink(outboundProblemsLink({})).pageId).toBe(
             'integration-outbound-problems-list',
+        );
+    });
+});
+
+describe('managerRejectedOrdersLink', () => {
+    it('targets the manager portal one port below the dashboard, filtered by erpStatus', () => {
+        expect(managerRejectedOrdersLink('http://localhost:5175')).toBe(
+            'http://localhost:5174/orders?erpStatus=REJECTED',
+        );
+        expect(managerRejectedOrdersLink('https://devof.komponent-m.ru:8016')).toBe(
+            'https://devof.komponent-m.ru:8015/orders?erpStatus=REJECTED',
         );
     });
 });

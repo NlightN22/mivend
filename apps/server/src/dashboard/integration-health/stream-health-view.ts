@@ -75,6 +75,12 @@ export function formatVariantUnitLine(health: VariantUnitHealth): {
     };
 }
 
+// Alert threshold for issue #204's "orders rejected by ERP" counter — any non-zero value is
+// surfaced, same as the outbox failed/skipped alerts.
+export function isRejectedOrderCountOverThreshold(count: number): boolean {
+    return count > 0;
+}
+
 export interface SchemaSourceBadge {
     label: string;
     variant: 'secondary' | 'outline';

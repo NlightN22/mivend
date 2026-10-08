@@ -6,6 +6,7 @@ import {
     formatVariantOrganizationLine,
     formatVariantUnitLine,
     isLagOverThreshold,
+    isRejectedOrderCountOverThreshold,
     outboundTypesWith,
 } from '../../stream-health-view';
 
@@ -19,6 +20,14 @@ describe('isLagOverThreshold', () => {
     it('is true above the threshold, including values beyond Number precision', () => {
         expect(isLagOverThreshold('1001')).toBe(true);
         expect(isLagOverThreshold('9007199254740993')).toBe(true);
+    });
+});
+
+describe('isRejectedOrderCountOverThreshold', () => {
+    it('is false at zero, true on any positive count', () => {
+        expect(isRejectedOrderCountOverThreshold(0)).toBe(false);
+        expect(isRejectedOrderCountOverThreshold(1)).toBe(true);
+        expect(isRejectedOrderCountOverThreshold(42)).toBe(true);
     });
 });
 

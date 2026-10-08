@@ -9,7 +9,11 @@ import { InboxIssuesPage } from './inbox-issues-page.js';
 import { IntegrationHealthPage } from './integration-health-page.js';
 import { INBOX_ISSUES_PATH, OUTBOUND_PROBLEMS_PATH } from './issue-links.js';
 import { OutboundProblemsPage } from './outbound-problems-page.js';
-import { isLagOverThreshold, outboundTypesWith } from './stream-health-view.js';
+import {
+    isLagOverThreshold,
+    isRejectedOrderCountOverThreshold,
+    outboundTypesWith,
+} from './stream-health-view.js';
 
 // Lives under apps/server/src, not packages/plugins/*: see ../system-health/index.ts.
 const kafkaLagAlertDocument = graphql(`
@@ -32,6 +36,12 @@ const outboxAlertDocument = graphql(`
             failed
             skipped
         }
+    }
+`);
+
+const rejectedOrderAlertDocument = graphql(`
+    query RejectedOrderCountForAlert {
+        rejectedOrderCount
     }
 `);
 
@@ -110,8 +120,35 @@ export const kafkaLagAlert: DashboardAlertDefinition<string[]> = {
     recheckInterval: 60_000,
 };
 
+export const rejectedOrdersAlert: DashboardAlertDefinition<number> = {
+    id: 'erp-rejected-orders',
+    check: async () => {
+        try {
+            const data = await api.query(rejectedOrderAlertDocument);
+            return data.rejectedOrderCount;
+        } catch {
+            // Same fail-closed guard as the other checks above: never crash the shell.
+            return 0;
+        }
+    },
+    shouldShow: count => isRejectedOrderCountOverThreshold(count ?? 0),
+    severity: 'error',
+    title: count => `${count ?? 0} order(s) rejected by the ERP`,
+    description: () => 'See the Rejected by ERP queue in the manager portal for the reasons.',
+    actions: [
+        {
+            label: 'View integration health',
+            onClick: ({ dismiss }) => {
+                dismiss();
+                window.location.href = '/integration-health';
+            },
+        },
+    ],
+    recheckInterval: 60_000,
+};
+
 defineDashboardExtension({
-    alerts: [kafkaLagAlert, outboxFailedAlert, outboxSkippedAlert],
+    alerts: [kafkaLagAlert, outboxFailedAlert, outboxSkippedAlert, rejectedOrdersAlert],
     routes: [
         {
             path: INBOX_ISSUES_PATH,
