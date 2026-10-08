@@ -9,7 +9,13 @@ import { ReservationService } from './reservation.service';
 import { loggerCtx } from './types';
 
 export interface OrderRegistrationResultInput {
+    // ERP-side order id — absent on a rejected result. Fallback correlation key only.
     orderEntityId: string | null;
+    // Original order.submitted request id, echoed back by the ERP — kept for error/log context.
+    requestEntityId: string | null;
+    // Local Order id, resolved by the caller from requestEntityId via integration_outbox
+    // (issue #204 follow-up). Preferred over orderEntityId whenever present.
+    localOrderId: string | null;
     rejected: boolean;
     // Already resolved from the ERP's productId to a Vendure ProductVariant id by the caller
     // (erp-integration's OrderRegistrationResultHandler) — this service stays free of the
@@ -74,28 +80,22 @@ export class ReservationWriteOffSyncService {
         ctx: RequestContext,
         input: OrderRegistrationResultInput,
     ): Promise<void> {
-        if (!input.orderEntityId) {
-            // A rejected result may carry no order_entity_id at all (no order was ever created) —
-            // nothing to correlate to, not an error.
-            Logger.verbose('order-registration-result: no orderEntityId, skipping', loggerCtx);
-            return;
-        }
-
-        const orderId = await this.findOrderIdByErpId(input.orderEntityId);
+        // localOrderId (via requestEntityId) first; orderEntityId only as a fallback — see
+        // OrderRegistrationResultInput's own doc comments.
+        const orderId = input.localOrderId
+            ? input.localOrderId
+            : input.orderEntityId
+              ? await this.findOrderIdByErpId(input.orderEntityId)
+              : null;
         const order = orderId
             ? await this.connection.getRepository(ctx, Order).findOne({ where: { id: orderId } })
             : null;
         if (!orderId || !order) {
-            // mivend.audit.72's LOW finding: never a silent, permanent skip — this order-
-            // registration-result event is a one-shot fact (unlike the catalog streams, it never
-            // arrives again at a higher version for the same entityId), so if Order.customFields
-            // .erpOrderId simply hasn't been set yet (a plausible race between this Kafka event
-            // and the order-status REST callback that sets it), swallowing it here would lose the
-            // release trigger for this order forever. Throwing lets the existing inbox
-            // retry/backoff (IntegrationInboxService.markFailed) retry on the next sweep, and
-            // dead-letter (visible, not silent) only once genuinely exhausted.
+            // mivend.audit.72 + issue #204 follow-up: never a silent, permanent skip — both
+            // correlation keys can race ahead of local state, so throw and let the inbox retry.
             throw new Error(
-                `order-registration-result: no Order found for orderEntityId=${input.orderEntityId}`,
+                `order-registration-result: no Order found via requestEntityId=` +
+                    `${input.requestEntityId ?? ''} or orderEntityId=${input.orderEntityId ?? ''}`,
             );
         }
 
@@ -130,11 +130,13 @@ export class ReservationWriteOffSyncService {
                 await this.reconciliationIssueService.reportUnresolvedProductMapping(ctx, {
                     orderId,
                     externalProductId,
-                    orderEntityId: input.orderEntityId,
+                    // orderEntityId is absent on a rejected result; '' is purely informational
+                    // here, never a correlation key (that already happened above).
+                    orderEntityId: input.orderEntityId ?? '',
                 });
             }
             Logger.error(
-                `order-registration-result: order ${orderId} (erp ${input.orderEntityId}) — ` +
+                `order-registration-result: order ${orderId} (erp ${input.orderEntityId ?? ''}) — ` +
                     `${input.unresolvedProductIds.length} productId(s) could not be resolved to a ` +
                     'ProductVariant, reported for staff follow-up',
                 loggerCtx,
@@ -146,7 +148,7 @@ export class ReservationWriteOffSyncService {
             // resolve the underlying document one way or the other (re-post, manual correction,
             // or a genuine CANCELLED, which ReservationErpSyncService already handles).
             Logger.warn(
-                `order-registration-result: order ${orderId} (erp ${input.orderEntityId}) was ` +
+                `order-registration-result: order ${orderId} (erp ${input.orderEntityId ?? ''}) was ` +
                     'rejected by the ERP — leaving reservations active',
                 loggerCtx,
             );
@@ -158,7 +160,7 @@ export class ReservationWriteOffSyncService {
             orderId,
             order,
             input.reservedLines,
-            input.orderEntityId,
+            input.orderEntityId ?? '',
             'order-registration-result',
         );
     }

@@ -57,9 +57,34 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         );
     });
 
-    it('is a no-op when orderEntityId is missing (e.g. a rejected result with no order created)', async () => {
+    // Issue #204 follow-up: neither key resolving must be a visible, retried failure — never the
+    // old silent "no-op when orderEntityId is missing" behavior.
+    it('throws when neither orderEntityId nor localOrderId resolve (e.g. a rejected result with no correlatable order)', async () => {
+        await expect(
+            service.handleOrderRegistrationResult(ctx, {
+                orderEntityId: null,
+                requestEntityId: 'req-1',
+                localOrderId: null,
+                rejected: true,
+                reservedLines: [],
+                unresolvedProductIds: [],
+                documentNumber: null,
+                status: '',
+                rejectionReasonCode: null,
+                rejectionReasonText: null,
+            }),
+        ).rejects.toThrow(/no Order found/);
+        expect(rawQuery).not.toHaveBeenCalled();
+        expect(reservationRepo.find).not.toHaveBeenCalled();
+    });
+
+    // Primary correlation path (issue #204 follow-up): localOrderId resolves the order directly,
+    // findOrderIdByErpId (rawQuery) never invoked.
+    it('resolves the order via localOrderId when orderEntityId is absent (rejected result)', async () => {
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: null,
+            requestEntityId: 'req-1',
+            localOrderId: 'order-1',
             rejected: true,
             reservedLines: [],
             unresolvedProductIds: [],
@@ -69,7 +94,61 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejectionReasonText: null,
         });
         expect(rawQuery).not.toHaveBeenCalled();
-        expect(reservationRepo.find).not.toHaveBeenCalled();
+        expect(orderRepo.findOne).toHaveBeenCalledWith({ where: { id: 'order-1' } });
+    });
+
+    // Same gap also affects "registered" results (peer report, mivend.issue.199) — localOrderId
+    // must resolve the order here too, proceeding to normal release-matching.
+    it('resolves the order via localOrderId when orderEntityId is absent (registered result)', async () => {
+        reservationRepo.find.mockResolvedValue([
+            {
+                id: 'res-1',
+                orderId: 'order-1',
+                productVariantId: 'v-1',
+                quantity: 5,
+                status: 'active',
+            },
+        ]);
+        reservationRepo.count.mockResolvedValue(0);
+
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: null,
+            requestEntityId: 'req-2',
+            localOrderId: 'order-1',
+            rejected: false,
+            reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
+            unresolvedProductIds: [],
+            documentNumber: 'ЦБАО0000001',
+            status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        expect(rawQuery).not.toHaveBeenCalled();
+        expect(reservationRepo.save).toHaveBeenCalledTimes(1);
+        expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
+            expect.objectContaining({ status: 'released' }),
+        );
+    });
+
+    // Regression: orderEntityId alone (localOrderId not resolved by the caller) must still work,
+    // same as before this change — the fallback path.
+    it('falls back to orderEntityId via findOrderIdByErpId when localOrderId is absent', async () => {
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
+            rejected: true,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+        expect(rawQuery).toHaveBeenCalledWith(expect.stringContaining('customFieldsErporderid'), [
+            'erp-order-1',
+        ]);
     });
 
     // mivend.audit.72's LOW finding: previously this silently swallowed a plausible race (the
@@ -80,6 +159,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         await expect(
             service.handleOrderRegistrationResult(ctx, {
                 orderEntityId: 'erp-order-1',
+                requestEntityId: null,
+                localOrderId: null,
                 rejected: false,
                 reservedLines: [],
                 unresolvedProductIds: [],
@@ -95,6 +176,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     it('never releases on a rejected result, leaving reservations active', async () => {
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: true,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
@@ -113,6 +196,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     it('reports an unresolved product mapping as its own discrepancy, distinct from a mismatch', async () => {
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [],
             unresolvedProductIds: ['unknown-prod-1'],
@@ -136,6 +221,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     it('reports an unresolved product mapping even on a rejected result', async () => {
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: true,
             reservedLines: [],
             unresolvedProductIds: ['unknown-prod-1'],
@@ -162,6 +249,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
@@ -198,6 +287,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 3 }],
             unresolvedProductIds: [],
@@ -234,6 +325,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [],
             unresolvedProductIds: [],
@@ -268,6 +361,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
@@ -295,6 +390,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
@@ -313,6 +410,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     it('persists documentNumber/status onto Order.customFields, even on a rejected result', async () => {
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: true,
             reservedLines: [],
             unresolvedProductIds: [],
@@ -338,6 +437,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [],
             unresolvedProductIds: [],
@@ -362,6 +463,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             unresolvedProductIds: [],
@@ -380,6 +483,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     it('persists the rejection reason and publishes ErpOrderStatusEvent(REJECTED)', async () => {
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: true,
             reservedLines: [],
             unresolvedProductIds: [],
@@ -417,6 +522,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [],
             unresolvedProductIds: [],
@@ -446,6 +553,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     it('does not touch the rejection reason or publish a status event when the order was never rejected', async () => {
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
             rejected: false,
             reservedLines: [],
             unresolvedProductIds: [],

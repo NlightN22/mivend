@@ -10,9 +10,10 @@ const loggerCtx = 'IntegrationOrderRegistrationResultHandler';
 
 // Applies Integration Service's company.orders.events.v1.order-registration-result stream
 // (issue #75, the real reservation-release trigger issue #72's release-on-status attempts
-// deferred to). Only decodes the payload shape and resolves reservedLines' ERP productId to a
-// Vendure ProductVariant id (same join StockStreamHandler already uses) — the actual
-// order-correlation, release, and discrepancy decision live in
+// deferred to). Only decodes the payload shape, resolves reservedLines' ERP productId to a
+// Vendure ProductVariant id (same join StockStreamHandler already uses), and resolves
+// requestEntityId to a local orderId via integration_outbox — the actual order-correlation
+// decision (which key to trust), release, and discrepancy logic live in
 // ReservationWriteOffSyncService, kept plugin-reservation's own concern.
 @Injectable()
 export class OrderRegistrationResultHandler implements InboundStreamHandler {
@@ -31,6 +32,15 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         }
 
         const orderEntityId = payload.orderEntityId != null ? String(payload.orderEntityId) : null;
+        // Issue #204 follow-up: a rejected result carries no orderEntityId — correlate via
+        // requestEntityId instead, see findLocalOrderIdByRequestEntityId below.
+        const requestEntityId =
+            payload.requestEntityId != null && payload.requestEntityId !== ''
+                ? String(payload.requestEntityId)
+                : null;
+        const localOrderId = requestEntityId
+            ? await this.findLocalOrderIdByRequestEntityId(requestEntityId)
+            : null;
         const businessRejectionReason = payload.businessRejectionReason as
             | Record<string, unknown>
             | undefined
@@ -88,6 +98,8 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
 
         await this.reservationWriteOffSyncService.handleOrderRegistrationResult(ctx, {
             orderEntityId,
+            requestEntityId,
+            localOrderId,
             rejected,
             reservedLines,
             // Issue #96: an unresolved variant now throws MissingDependencyError above instead of
@@ -115,6 +127,20 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
                   `order-registration-result ${entityId}: applied without ${linesWithoutProductId} line(s) lacking a productId`,
               )
             : inboundApplied();
+    }
+
+    // integration_outbox.payload (order-submitted.builder.ts) stores the local Vendure orderId
+    // under the eventId this result's requestEntityId echoes back.
+    private async findLocalOrderIdByRequestEntityId(
+        requestEntityId: string,
+    ): Promise<string | null> {
+        const row = await this.connection.rawConnection
+            .createQueryBuilder()
+            .select("outbox.payload->>'orderId'", 'orderId')
+            .from('integration_outbox', 'outbox')
+            .where('outbox.event_id = :requestEntityId', { requestEntityId })
+            .getRawOne<{ orderId: string | null }>();
+        return row?.orderId ?? null;
     }
 
     private async findVariantId(productId: string): Promise<string | undefined> {
