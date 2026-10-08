@@ -14,6 +14,11 @@ import gql from 'graphql-tag';
 import { ExternalSearchPlugin } from './external-search.plugin';
 import { SearchCapabilitiesResolver } from './search-capabilities';
 import { SearchResultResolver } from './search.resolver';
+import {
+    HAS_ORGANIZATION_FIELD,
+    hasOrganizationMapping,
+    restrictToSellable,
+} from './sellable-filter';
 import { SearchService } from './search.service';
 import { getSearchBackend } from './types';
 
@@ -72,6 +77,12 @@ function buildElasticsearchPlugin(): Type<unknown> {
             'product-oemCodes': {
                 type: 'keyword',
             },
+            [HAS_ORGANIZATION_FIELD]: {
+                type: 'boolean',
+            },
+        },
+        customProductVariantMappings: {
+            hasOrganization: hasOrganizationMapping,
         },
         customProductMappings: {
             fullName: {
@@ -89,7 +100,8 @@ function buildElasticsearchPlugin(): Type<unknown> {
             },
         },
         searchConfig: {
-            mapQuery: (query, input) => {
+            mapQuery: (query, input, _searchConfig, _channelId, enabledOnly) => {
+                restrictToSellable(query, enabledOnly);
                 if (!input.term) return query;
                 query.bool.must = [
                     {

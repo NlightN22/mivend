@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ProductLookupService } from '../../product-lookup.service';
+import { variantExistsSql } from '../../variant-exists-sql';
 
 function makeService(products: unknown[]): {
     service: ProductLookupService;
@@ -26,6 +27,16 @@ describe('ProductLookupService.findByExternalIds', () => {
         await service.findByExternalIds(ctx, ['ext-001']);
         expect(andWhere).toHaveBeenCalledWith('product.deletedAt IS NULL');
         expect(andWhere).toHaveBeenCalledWith('product.enabled = true');
+    });
+
+    it('requires a sellable variant (with an organization) for the shop view only', async () => {
+        const shop = makeService([]);
+        await shop.service.findByExternalIds(ctx, ['ext-001']);
+        expect(shop.andWhere).toHaveBeenCalledWith(variantExistsSql(true));
+
+        const staff = makeService([]);
+        await staff.service.findByExternalIds(ctx, ['ext-001'], true);
+        expect(staff.andWhere).not.toHaveBeenCalledWith(variantExistsSql(true));
     });
 
     it('still excludes soft-deleted but keeps disabled products when includeDisabled', async () => {

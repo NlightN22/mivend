@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Product, RequestContext, TransactionalConnection } from '@vendure/core';
 import { andProductInStock } from '@mivend/plugin-reservation';
 
+import { variantExistsSql } from './variant-exists-sql';
+
 // Resolves a search-service partOrProductId back to a Vendure Product + its single/default
 // variant, mirroring erp-integration's product/price handler productId->variant join pattern
 // (Product.customFields.externalId, single-variant-per-product assumption) via Vendure's own
@@ -33,7 +35,9 @@ export class ProductLookupService {
             })
             .where('product.customFields.externalId IN (:...externalIds)', { externalIds })
             .andWhere('product.deletedAt IS NULL');
-        if (!includeDisabled) query.andWhere('product.enabled = true');
+        if (!includeDisabled) {
+            query.andWhere('product.enabled = true').andWhere(variantExistsSql(true));
+        }
         const products = await query.getMany();
 
         for (const product of products) {
@@ -63,9 +67,7 @@ export class ProductLookupService {
                 channelId: ctx.channelId,
             })
             .where('product.deletedAt IS NULL')
-            .andWhere(
-                'EXISTS (SELECT 1 FROM product_variant v WHERE v."productId" = product.id AND v."deletedAt" IS NULL AND v.enabled = true)',
-            );
+            .andWhere(variantExistsSql(!includeDisabled));
         if (!includeDisabled) pageQuery.andWhere('product.enabled = true');
         if (options.inStockWarehouseErpIds) {
             andProductInStock(pageQuery, options.inStockWarehouseErpIds);
