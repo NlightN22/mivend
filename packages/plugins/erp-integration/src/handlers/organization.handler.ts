@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { DocumentsService } from '@mivend/plugin-documents';
-
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationOrganizationHandler';
 
@@ -25,7 +25,7 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome> {
         // A deletion tombstone (isDeleted:true) never carries a name — confirmed against real
         // staging-integration payloads (mivend.issue.84.88 follow-up). Previously a missing name
         // skipped the event entirely, which meant an org already known locally could never be
@@ -43,15 +43,18 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
         // for categories via isPrivate).
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 
-        await this.documentsService.upsertActiveState(ctx, entityId, name, isActive);
+        const stored = await this.documentsService.upsertActiveState(ctx, entityId, name, isActive);
         if (!name) {
             Logger.verbose(
                 `organization ${entityId}: no name (deletion tombstone) — updated active ` +
                     `state only if a row already existed, never created one`,
                 loggerCtx,
             );
-            return;
+            return stored
+                ? inboundApplied()
+                : inboundNoop(`organization ${entityId}: nameless tombstone for an unknown row`);
         }
         Logger.verbose(`Upserted organization erpId=${entityId}`, loggerCtx);
+        return inboundApplied();
     }
 }

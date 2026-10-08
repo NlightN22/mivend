@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { LegalFormRecord } from '../entities/legal-form-record.entity';
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies the `legal-form` stream (LegalFormChanged); a tombstone keeps the row with isDeleted set.
@@ -14,7 +14,7 @@ export class LegalFormStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const name = String(payload.name ?? '');
         const code = String(payload.code ?? '');
         if (!name || !code) {
@@ -35,5 +35,6 @@ export class LegalFormStreamHandler implements InboundStreamHandler {
         await repo.save(
             existing ? { ...existing, ...fields } : repo.create({ entityId, ...fields }),
         );
+        return inboundApplied();
     }
 }

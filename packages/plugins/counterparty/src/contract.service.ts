@@ -94,11 +94,12 @@ export class ContractService {
 
     // A tombstone never carries a counterpartyId either — deactivate by erpId only, never look up
     // or overwrite other fields (same class of bug as the point-of-sale #100 tombstone fix).
-    async deactivateTombstone(ctx: RequestContext, erpId: string): Promise<void> {
+    async deactivateTombstone(ctx: RequestContext, erpId: string): Promise<boolean> {
         const repo = this.connection.getRepository(ctx, Contract);
         const entity = await repo.findOne({ where: { erpId } });
-        if (!entity) return;
+        if (!entity) return false;
         entity.isActive = false;
         await repo.save(entity);
+        return true;
     }
 }

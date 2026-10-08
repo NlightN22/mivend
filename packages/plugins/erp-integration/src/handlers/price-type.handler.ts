@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationPriceTypeHandler';
@@ -20,7 +19,7 @@ export class PriceTypeStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const name = String(payload.name ?? '');
         if (!name) {
             return inboundNoop(`price-type ${entityId}: missing name, skipping`);
@@ -35,5 +34,6 @@ export class PriceTypeStreamHandler implements InboundStreamHandler {
             isActive,
         );
         Logger.verbose(`Upserted price type externalId=${entityId}`, loggerCtx);
+        return inboundApplied();
     }
 }

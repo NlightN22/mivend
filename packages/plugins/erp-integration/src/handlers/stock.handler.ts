@@ -7,10 +7,10 @@ import {
 } from '@vendure/core';
 import { WarehouseService } from '@mivend/plugin-access-control';
 
-import { inboundNoop } from './inbound-stream-handler';
-import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
 import { isWarehouseTombstoned } from './warehouse-tombstone.query';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationStockHandler';
 
@@ -28,7 +28,7 @@ export class StockStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const productId = String(payload.productId ?? '');
         const warehouseId = String(payload.warehouseId ?? '');
         const quantity = Number(payload.quantity ?? 0);
@@ -94,6 +94,7 @@ export class StockStreamHandler implements InboundStreamHandler {
                 `erpAvailable=${availableQuantity}`,
             loggerCtx,
         );
+        return inboundApplied();
     }
 
     private async findVariantId(productId: string): Promise<string | undefined> {

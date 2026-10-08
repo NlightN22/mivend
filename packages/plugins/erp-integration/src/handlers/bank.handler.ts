@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { BankRecord } from '../entities/bank-record.entity';
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies the `bank` stream (BankChanged); absent isActive means false, a tombstone keeps the row.
@@ -14,7 +14,7 @@ export class BankStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const name = String(payload.name ?? '');
         const bik = String(payload.bik ?? '');
         if (!name || !bik) {
@@ -35,5 +35,6 @@ export class BankStreamHandler implements InboundStreamHandler {
         await repo.save(
             existing ? { ...existing, ...fields } : repo.create({ entityId, ...fields }),
         );
+        return inboundApplied();
     }
 }

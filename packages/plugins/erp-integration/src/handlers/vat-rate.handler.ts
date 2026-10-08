@@ -5,7 +5,7 @@ import { TaxCategoryAutoCreateService } from '../tax-category-auto-create.servic
 import { TaxZoneService } from '../tax-zone.service';
 import { toErpVatCode } from '../vat-code-resolver';
 import { loggerCtx } from '../types';
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies Integration Service's `vat-rate` stream (VatRateChanged, issue #141) — a small,
@@ -44,7 +44,7 @@ export class VatRateStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const rawCode = String(payload.code ?? '');
         if (!rawCode) {
             return inboundNoop(`vat-rate ${entityId}: missing code, skipping`);
@@ -97,5 +97,6 @@ export class VatRateStreamHandler implements InboundStreamHandler {
             `Upserted TaxRate for erpVatCode=${erpVatCode} zone=${zone.name} value=${percent}`,
             loggerCtx,
         );
+        return inboundApplied();
     }
 }

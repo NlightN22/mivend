@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 
-import { inboundNoop } from './inbound-stream-handler';
-import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationOrderChangedHandler';
 
@@ -44,7 +44,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         // This stream reports current state, not a diff — a deleted order is a legitimate "no
         // work to do" case here, not a missing-dependency retry case. isDeleted was a plain
         // (non-optional) proto3 bool through 0.15.0; @nlightn22/event-contracts@0.38.0 changed it
@@ -66,6 +66,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
 
         const rawLines = Array.isArray(payload.lines) ? payload.lines : [];
         const reservedLines: Array<{ productVariantId: string; reservedQuantity: number }> = [];
+        let linesWithoutProductId = 0;
         for (const rawLine of rawLines) {
             const line = rawLine as Record<string, unknown>;
             const productId = line.productId != null ? String(line.productId) : '';
@@ -78,6 +79,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                     `order-changed ${entityId}: skipping line with missing productId`,
                     loggerCtx,
                 );
+                linesWithoutProductId += 1;
                 continue;
             }
 
@@ -103,6 +105,11 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             reservedLines,
             contractId,
         });
+        return linesWithoutProductId > 0
+            ? inboundNoop(
+                  `order-changed ${entityId}: applied without ${linesWithoutProductId} line(s) lacking a productId`,
+              )
+            : inboundApplied();
     }
 
     private async findVariantId(productId: string): Promise<string | undefined> {

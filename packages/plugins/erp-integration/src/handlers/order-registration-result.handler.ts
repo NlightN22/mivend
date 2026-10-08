@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 
-import { inboundNoop } from './inbound-stream-handler';
-import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationOrderRegistrationResultHandler';
 
@@ -25,7 +25,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         if (payload.isDeleted === true) {
             return inboundNoop(`order-registration-result ${entityId}: deleted, skipping`);
         }
@@ -42,6 +42,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
 
         const rawLines = Array.isArray(payload.reservedLines) ? payload.reservedLines : [];
         const reservedLines: Array<{ productVariantId: string; reservedQuantity: number }> = [];
+        let linesWithoutProductId = 0;
         for (const rawLine of rawLines) {
             const line = rawLine as Record<string, unknown>;
             const productId = line.productId != null ? String(line.productId) : '';
@@ -57,6 +58,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
                     `order-registration-result ${entityId}: skipping line with missing productId`,
                     loggerCtx,
                 );
+                linesWithoutProductId += 1;
                 continue;
             }
 
@@ -87,6 +89,11 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
             documentNumber,
             status,
         });
+        return linesWithoutProductId > 0
+            ? inboundNoop(
+                  `order-registration-result ${entityId}: applied without ${linesWithoutProductId} line(s) lacking a productId`,
+              )
+            : inboundApplied();
     }
 
     private async findVariantId(productId: string): Promise<string | undefined> {

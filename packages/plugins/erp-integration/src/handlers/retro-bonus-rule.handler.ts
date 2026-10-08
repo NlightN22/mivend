@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { RetroBonusAccrualKind, RetroBonusRuleService } from '@mivend/plugin-retro-bonus';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationRetroBonusRuleHandler';
@@ -26,7 +25,7 @@ export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const accrualKind = String(payload.accrualKind ?? '') as RetroBonusAccrualKind;
         if (!VALID_ACCRUAL_KINDS.includes(accrualKind)) {
             return inboundNoop(
@@ -93,6 +92,7 @@ export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
                 `product=${productErpId} accrualKind=${accrualKind}`,
             loggerCtx,
         );
+        return inboundApplied();
     }
 }
 

@@ -17,8 +17,7 @@ import {
     LanguageCode,
     RequestContext,
 } from '@vendure/core';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationCategoryHandler';
@@ -48,7 +47,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         // A deletion tombstone carries no name; it still hides a known category, but never creates one.
         const name = payload.name ? String(payload.name) : null;
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
@@ -132,7 +131,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
     private async ensureCollection(
         ctx: RequestContext,
         input: CollectionInput,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const { entityId, name, facetValueId, feedHidden, parentErpId, reparent } = input;
         const slug = categorySlug(entityId);
         const existing = await this.collectionService.findOneBySlug(ctx, slug);
@@ -168,7 +167,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
                 filters: buildCategoryFacetFilter([facetValueId]),
                 customFields,
             });
-            return;
+            return inboundApplied();
         }
 
         const descendants = await this.collectionService.getDescendants(ctx, existing.id);
@@ -187,5 +186,6 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         if (reparent) {
             await moveCategoryIfParentChanged(ctx, this.collectionService, existing, parentId);
         }
+        return inboundApplied();
     }
 }

@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { PromoDiscountRuleService, DiscountRuleOperationKind } from '@mivend/plugin-price-entry';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationPromoRuleHandler';
@@ -82,7 +81,7 @@ export class PromoRuleStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const isActive = payload.isActive === true;
         const isDeleted = payload.isDeleted === true;
         if (!isActive || isDeleted) {
@@ -132,6 +131,7 @@ export class PromoRuleStreamHandler implements InboundStreamHandler {
             `Upserted promo rule erpId=${entityId} kind=${operationKind} triggerProductErpId=${triggerProductErpId}`,
             loggerCtx,
         );
+        return inboundApplied();
     }
 }
 

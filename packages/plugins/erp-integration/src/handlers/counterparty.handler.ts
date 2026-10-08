@@ -5,7 +5,8 @@ import { UserEnrichmentService } from '@mivend/plugin-access-control';
 
 import { MissingDependencyError } from '../types';
 import { optionalErpDetails } from './counterparty-erp-details';
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 interface ManagerResolution {
     assignedManagerId: string | null | undefined;
@@ -52,7 +53,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome> {
         // A deletion tombstone never carries a name — same convention confirmed for organization/
         // department. `name: null` here still lets upsertActiveState update isActive on an
         // existing row; it only refuses to fabricate a brand-new row with a blank name.
@@ -70,7 +71,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
             payload,
         );
 
-        await this.counterpartyService.upsertActiveState(ctx, entityId, {
+        const stored = await this.counterpartyService.upsertActiveState(ctx, entityId, {
             name,
             isActive,
             // These are real optional-scalar fields (undefined = "the ERP didn't send this", distinct
@@ -111,9 +112,12 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                     `state only if a row already existed, never created one`,
                 loggerCtx,
             );
-            return;
+            return stored
+                ? inboundApplied()
+                : inboundNoop(`counterparty ${entityId}: nameless tombstone for an unknown row`);
         }
         Logger.verbose(`Upserted counterparty erpId=${entityId}`, loggerCtx);
+        return inboundApplied();
     }
 
     // Primary manager_id wins; else the first entry of manager_ids; else `undefined` (leave

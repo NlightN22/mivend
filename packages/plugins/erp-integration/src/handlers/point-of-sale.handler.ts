@@ -3,7 +3,8 @@ import type { RequestContext } from '@vendure/core';
 import { TradingPointService } from '@mivend/plugin-counterparty';
 
 import { MissingDependencyError } from '../types';
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationPointOfSaleHandler';
 
@@ -17,20 +18,22 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome> {
         const name = payload.name ? String(payload.name) : null;
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 
         if (!name) {
             // A tombstone deactivates an already-known point but never looks up a counterparty
             // (it likely has none) — deactivate() is a safe no-op when no row exists yet.
-            await this.tradingPointService.deactivate(ctx, entityId);
+            const matched = await this.tradingPointService.deactivate(ctx, entityId);
             Logger.verbose(
                 `point-of-sale ${entityId}: no name (deletion tombstone) — deactivated if an ` +
                     'existing row matched, never created one',
                 loggerCtx,
             );
-            return;
+            return matched
+                ? inboundApplied()
+                : inboundNoop(`point-of-sale ${entityId}: tombstone for an unknown point`);
         }
 
         const counterpartyErpId = String(payload.counterpartyId ?? '');
@@ -57,5 +60,6 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
         });
 
         Logger.verbose(`Upserted trading point erpId=${entityId}`, loggerCtx);
+        return inboundApplied();
     }
 }

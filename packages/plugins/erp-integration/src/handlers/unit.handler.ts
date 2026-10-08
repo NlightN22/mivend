@@ -3,7 +3,7 @@ import { ProductVariant, RequestContext, TransactionalConnection } from '@vendur
 
 import { UnitRecord } from '../entities/unit-record.entity';
 import { loggerCtx } from '../types';
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies the `unit` stream into UnitRecord, then refreshes matching variants — field-by-field
@@ -16,7 +16,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const code = String(payload.code ?? '');
         const name = String(payload.name ?? '');
         if (!code || !name) {
@@ -66,6 +66,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
         );
 
         await this.refreshVariants(ctx, entityId, ratioToBase, weightKg, volumeM3);
+        return inboundApplied();
     }
 
     // Bounded, values-changed-only UPDATE (see docs/ai/erp-streams-map.md's `unit` row) — via the

@@ -148,13 +148,18 @@ export class CounterpartyDiscountRuleService {
     // convention ContractService.deactivateTombstone/PointOfSaleService use for their own streams.
     // Cancellation always wins regardless of version; stores it for upsertCounterpartyRule's own
     // reactivation guard above — see docs/ai/erp-streams-map.md.
-    async deactivateTombstone(ctx: RequestContext, erpId: string, version: string): Promise<void> {
+    async deactivateTombstone(
+        ctx: RequestContext,
+        erpId: string,
+        version: string,
+    ): Promise<boolean> {
         const repo = this.connection.getRepository(ctx, DiscountRule);
         const entity = await repo.findOne({ where: { erpId } });
-        if (!entity) return;
+        if (!entity) return false;
         entity.active = false;
         if (version) entity.sourceVersion = version;
         await repo.save(entity);
+        return true;
     }
 
     private async findActiveConflicts(

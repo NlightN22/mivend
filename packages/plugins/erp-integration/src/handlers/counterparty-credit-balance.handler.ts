@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Applies Integration Service's `counterparty-credit-balance` stream
@@ -19,7 +18,7 @@ export class CounterpartyCreditBalanceStreamHandler implements InboundStreamHand
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const counterpartyId = payload.counterpartyId ? String(payload.counterpartyId) : null;
         if (!counterpartyId) {
             return inboundNoop(
@@ -52,5 +51,6 @@ export class CounterpartyCreditBalanceStreamHandler implements InboundStreamHand
         // different 100.
         const balance = Math.round(rawBalance);
         await this.counterpartyService.updateCreditBalance(ctx, counterpartyId, balance);
+        return inboundApplied();
     }
 }

@@ -204,17 +204,18 @@ export class DocumentsService {
         erpId: string,
         name: string | null,
         isActive: boolean,
-    ): Promise<void> {
+    ): Promise<boolean> {
         const repo = this.connection.getRepository(ctx, OrganizationRequisites);
         const entity = await repo.findOne({ where: { erpId } });
         if (entity) {
             if (name) entity.legalName = name;
             entity.isActive = isActive;
             await repo.save(entity);
-            return;
+            return true;
         }
-        if (!name) return;
+        if (!name) return false;
         await repo.save(repo.create({ erpId, legalName: name, isActive }));
+        return true;
     }
 
     // PdfGeneratorService's guard before rendering any document against a given

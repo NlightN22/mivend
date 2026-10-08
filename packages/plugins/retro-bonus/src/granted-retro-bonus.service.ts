@@ -54,11 +54,12 @@ export class GrantedRetroBonusService {
 
     // A tombstone wins a version tie (update + cancel can share one 1C timestamp); upsert's
     // strictly-newer guard then keeps the row removed against a same-version delayed upsert.
-    async remove(ctx: RequestContext, erpId: string, version: string): Promise<void> {
+    async remove(ctx: RequestContext, erpId: string, version: string): Promise<boolean> {
         const repo = this.connection.getRepository(ctx, GrantedRetroBonus);
         const existing = await repo.findOne({ where: { erpId } });
-        if (!existing || isVersionNewer(existing.sourceVersion, version)) return;
+        if (!existing || isVersionNewer(existing.sourceVersion, version)) return false;
         await repo.save(Object.assign(existing, { isDeleted: true, sourceVersion: version }));
+        return true;
     }
 
     findForRecipient(

@@ -4,7 +4,7 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ProductPhoto } from '../entities/product-photo.entity';
 import { ProductPhotoSyncService } from '../product-photo-sync.service';
 import { MissingDependencyError } from '../types';
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 // Stores `product-photo` metadata only; ProductPhotoSyncService fetches the binary.
@@ -20,7 +20,7 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const repo = this.connection.getRepository(ctx, ProductPhoto);
         const existing = await repo.findOne({ where: { externalId: entityId } });
 
@@ -30,7 +30,7 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
             }
             await repo.update(existing.id, { isDeleted: true });
             await this.syncService.enqueue(existing.productExternalId);
-            return;
+            return inboundApplied();
         }
 
         const productExternalId = String(payload.productId ?? '');
@@ -70,6 +70,7 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
             }),
         );
         if (downloadUrl) await this.syncService.enqueue(productExternalId);
+        return inboundApplied();
     }
 
     private async productExists(externalId: string): Promise<boolean> {

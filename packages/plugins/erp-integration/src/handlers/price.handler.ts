@@ -3,9 +3,9 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { PriceEntryService } from '@mivend/plugin-price-entry';
 
-import { inboundNoop } from './inbound-stream-handler';
-import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationPriceHandler';
 
@@ -24,7 +24,7 @@ export class PriceStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const productId = String(payload.productId ?? '');
         const priceTypeId = String(payload.priceTypeId ?? '');
         const value = Number.parseFloat(String(payload.value ?? ''));
@@ -74,5 +74,6 @@ export class PriceStreamHandler implements InboundStreamHandler {
             `Upserted price productId=${productId} priceType=${priceType.code} value=${value}`,
             loggerCtx,
         );
+        return inboundApplied();
     }
 }

@@ -3,7 +3,8 @@ import type { RequestContext } from '@vendure/core';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { MissingDependencyError } from '../types';
-import type { InboundStreamHandler } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationContractHandler';
 
@@ -20,18 +21,20 @@ export class ContractStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<InboundOutcome> {
         const name = payload.name ? String(payload.name) : null;
 
         // Tombstone: no name, no reliable counterpartyId — deactivate-only, no lookup or field
         // write (docs/ai/erp-streams-map.md's `contract` field accounting).
         if (!name) {
-            await this.contractService.deactivateTombstone(ctx, entityId);
+            const matched = await this.contractService.deactivateTombstone(ctx, entityId);
             Logger.verbose(
                 `contract ${entityId}: tombstone — deactivated if a row existed`,
                 loggerCtx,
             );
-            return;
+            return matched
+                ? inboundApplied()
+                : inboundNoop(`contract ${entityId}: tombstone for an unknown contract`);
         }
 
         const isActive = payload.isActive === true && payload.isDeleted !== true;
@@ -79,5 +82,6 @@ export class ContractStreamHandler implements InboundStreamHandler {
                     : undefined,
         });
         Logger.verbose(`Upserted contract erpId=${entityId}`, loggerCtx);
+        return inboundApplied();
     }
 }

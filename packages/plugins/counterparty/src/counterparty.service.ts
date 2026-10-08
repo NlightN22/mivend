@@ -97,7 +97,7 @@ export class CounterpartyService {
             phone?: string | null;
             officialEmail?: string | null;
         } & CounterpartyErpDetails,
-    ): Promise<void> {
+    ): Promise<boolean> {
         const repo = this.connection.getRepository(ctx, Counterparty);
         const entity = await repo.findOne({ where: { erpId } });
         if (entity) {
@@ -121,9 +121,9 @@ export class CounterpartyService {
             if (fields.officialEmail !== undefined) entity.officialEmail = fields.officialEmail;
             Object.assign(entity, definedErpDetails(fields));
             await repo.save(entity);
-            return;
+            return true;
         }
-        if (!fields.name) return;
+        if (!fields.name) return false;
         await repo.save(
             repo.create({
                 erpId,
@@ -143,6 +143,7 @@ export class CounterpartyService {
             }),
         );
         Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);
+        return true;
     }
 
     // mivend.audit.common (2026-09-20): called from AdministratorLinkedListener once an erpId

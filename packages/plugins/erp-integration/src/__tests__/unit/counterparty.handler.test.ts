@@ -114,9 +114,9 @@ describe('CounterpartyStreamHandler', () => {
     it('creates a row (issue #104) when no matching Counterparty exists yet', async () => {
         const { handler, counterpartyService } = makeHandler();
 
-        await expect(
-            handler.apply(ctx, 'cp-unknown', { name: 'Not yet synced' }),
-        ).resolves.toBeUndefined();
+        await expect(handler.apply(ctx, 'cp-unknown', { name: 'Not yet synced' })).resolves.toEqual(
+            { kind: 'applied' },
+        );
         expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
             ctx,
             'cp-unknown',
@@ -377,7 +377,7 @@ describe('CounterpartyStreamHandler', () => {
                     isActive: true,
                     managerId: 'user-erp-unlinked',
                 }),
-            ).resolves.toBeUndefined();
+            ).resolves.toEqual({ kind: 'applied' });
             expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
                 ctx,
                 'cp-1',

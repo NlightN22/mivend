@@ -95,7 +95,7 @@ describe('OrganizationStreamHandler', () => {
 
         await expect(
             handler.apply(ctx, 'org-unknown', { name: 'Not yet synced' }),
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({ kind: 'applied' });
         expect(documentsService.upsertActiveState).toHaveBeenCalledWith(
             ctx,
             'org-unknown',

@@ -350,11 +350,12 @@ export class TradingPointService {
         Logger.verbose(`Upserted trading point erpId=${erpId} from Kafka stream`, loggerCtx);
     }
 
-    async deactivate(ctx: RequestContext, erpId: string): Promise<void> {
-        await this.connection
+    async deactivate(ctx: RequestContext, erpId: string): Promise<boolean> {
+        const result = await this.connection
             .getRepository(ctx, TradingPoint)
             .update({ erpId }, { isActive: false });
         Logger.verbose(`Deactivated trading point erpId=${erpId}`, loggerCtx);
+        return (result.affected ?? 0) > 0;
     }
 
     // Shop API callers (customer self-service) must never see a trading point staff deactivated

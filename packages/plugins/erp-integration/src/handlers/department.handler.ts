@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { DepartmentService } from '@mivend/plugin-access-control';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationDepartmentHandler';
@@ -22,7 +21,7 @@ export class DepartmentStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
         // bool zero-value omission). isDeleted folds in the same way every sibling handler does
         // (mivend.issue.88 follow-up, 2026-09-15) — this handler previously never read either
@@ -41,12 +40,13 @@ export class DepartmentStreamHandler implements InboundStreamHandler {
                 isActive,
             );
             return updated
-                ? undefined
+                ? inboundApplied()
                 : inboundNoop(`department ${entityId}: missing name and no existing row, skipping`);
         }
         const parentErpId = payload.parentId ? String(payload.parentId) : null;
 
         await this.departmentService.upsert(ctx, { erpId: entityId, name, parentErpId, isActive });
         Logger.verbose(`Upserted department erpId=${entityId}`, loggerCtx);
+        return inboundApplied();
     }
 }

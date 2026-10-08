@@ -5,8 +5,7 @@ import {
     DiscountRuleCondition,
     DiscountRuleRecipientType,
 } from '@mivend/plugin-price-entry';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationDiscountRuleHandler';
@@ -28,11 +27,11 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         // Tombstone (search-platform#145) — deactivate, never skip. version is stored too: see
         // docs/ai/erp-streams-map.md's "Discount rules" section for the reactivation-race reasoning.
         if (payload.isDeleted === true) {
-            await this.counterpartyDiscountRuleService.deactivateTombstone(
+            const matched = await this.counterpartyDiscountRuleService.deactivateTombstone(
                 ctx,
                 entityId,
                 String(payload.version ?? ''),
@@ -41,7 +40,9 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
                 `discount-rule ${entityId}: tombstone — deactivated if a row existed`,
                 loggerCtx,
             );
-            return;
+            return matched
+                ? inboundApplied()
+                : inboundNoop(`discount-rule ${entityId}: tombstone for an unknown rule`);
         }
         if (payload.isActive !== true) {
             return inboundNoop(`discount-rule ${entityId}: inactive, skipping`);
@@ -105,6 +106,7 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
                 `product=${productErpId ?? 'all'}`,
             loggerCtx,
         );
+        return inboundApplied();
     }
 }
 

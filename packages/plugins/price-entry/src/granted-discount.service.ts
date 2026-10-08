@@ -22,11 +22,12 @@ export class GrantedDiscountService {
     constructor(private connection: TransactionalConnection) {}
 
     // A tombstone wins a version tie (update + cancel can share one 1C timestamp).
-    async remove(ctx: RequestContext, erpId: string, version: string): Promise<void> {
+    async remove(ctx: RequestContext, erpId: string, version: string): Promise<boolean> {
         const repo = this.connection.getRepository(ctx, GrantedDiscount);
         const existing = await repo.findOne({ where: { erpId } });
-        if (!existing || isVersionNewer(existing.sourceVersion, version)) return;
+        if (!existing || isVersionNewer(existing.sourceVersion, version)) return false;
         await repo.save(Object.assign(existing, { isDeleted: true, sourceVersion: version }));
+        return true;
     }
 
     // Out-of-order protection against live rows is the inbox's own version guard; a deleted row is

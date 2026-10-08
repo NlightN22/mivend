@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { GrantedDiscountService } from '@mivend/plugin-price-entry';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationGrantedDiscountHandler';
@@ -17,7 +16,7 @@ export class GrantedDiscountStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         if (payload.isDeleted === true) {
             const tombstoneVersion = String(payload.version ?? '');
             if (!tombstoneVersion) {
@@ -25,9 +24,17 @@ export class GrantedDiscountStreamHandler implements InboundStreamHandler {
                     `granted-discount ${entityId}: tombstone without version, skipping`,
                 );
             }
-            await this.grantedDiscountService.remove(ctx, entityId, tombstoneVersion);
+            const removed = await this.grantedDiscountService.remove(
+                ctx,
+                entityId,
+                tombstoneVersion,
+            );
             Logger.verbose(`Removed granted discount erpId=${entityId}`, loggerCtx);
-            return;
+            return removed
+                ? inboundApplied()
+                : inboundNoop(
+                      `granted-discount ${entityId}: tombstone for an unknown row or older than the stored version`,
+                  );
         }
         const sourceDocumentId = String(payload.sourceDocumentId ?? '');
         const counterpartyErpId = String(payload.sourceCounterpartyId ?? '');
@@ -62,5 +69,6 @@ export class GrantedDiscountStreamHandler implements InboundStreamHandler {
             sourceVersion: version,
         });
         Logger.verbose(`Upserted granted discount erpId=${entityId}`, loggerCtx);
+        return inboundApplied();
     }
 }

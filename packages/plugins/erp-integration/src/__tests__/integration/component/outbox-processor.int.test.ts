@@ -9,6 +9,7 @@ import {
 } from 'shared';
 
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
+import { IntegrationOutboxRecoveryService } from '../../../integration-outbox-recovery.service';
 import { IntegrationOutboxProcessorService } from '../../../integration-outbox-processor.service';
 
 // Component chain: pending row -> sweep -> publish -> published / retry / dead-letter. Invoked
@@ -148,5 +149,44 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
         await makeProcessor().processPendingBatch();
 
         expect(publish).not.toHaveBeenCalled();
+    });
+
+    it('two concurrent sweeps publish a pending row exactly once', async () => {
+        let release!: () => void;
+        publish.mockImplementation(() => new Promise<void>(resolve => (release = resolve)));
+        await insertPending();
+
+        const first = makeProcessor().processPendingBatch();
+        await vi.waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
+        await makeProcessor().processPendingBatch();
+        release();
+        await first;
+
+        expect(publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('a requeue racing a failing sweep is applied after it and is not overwritten', async () => {
+        let rejectPublish!: (error: Error) => void;
+        publish.mockImplementation(
+            () => new Promise<void>((_, reject) => (rejectPublish = reject)),
+        );
+        const entry = await insertPending({
+            retryCount: 9,
+            firstFailedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+        });
+        const recovery = new IntegrationOutboxRecoveryService(dataSource, {} as never, {} as never);
+
+        const sweep = makeProcessor().processPendingBatch();
+        await vi.waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
+        const requeue = recovery.requeueFailed([entry.id]);
+        rejectPublish(new Error('broker down'));
+        await sweep;
+        const requeued = await requeue;
+
+        const reloaded = await dataSource.getRepository(IntegrationOutboxEntry).findOneOrFail({
+            where: { id: entry.id },
+        });
+        expect(requeued).toBe(1);
+        expect(reloaded).toMatchObject({ status: 'pending', retryCount: 0, firstFailedAt: null });
     });
 });

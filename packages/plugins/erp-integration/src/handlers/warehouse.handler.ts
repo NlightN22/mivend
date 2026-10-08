@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, StockLocationService, TransactionalConnection } from '@vendure/core';
 import { WarehouseService } from '@mivend/plugin-access-control';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationWarehouseHandler';
@@ -34,7 +33,7 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
         // zero-value omission).
         const isActive = payload.isActive === true;
@@ -59,7 +58,7 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
                 isActive && !isDeleted,
             );
             return updated
-                ? undefined
+                ? inboundApplied()
                 : inboundNoop(`warehouse ${entityId}: missing name and no existing row, skipping`);
         }
 
@@ -77,6 +76,7 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
 
         await this.ensureStockLocation(ctx, entityId, name);
         Logger.verbose(`Upserted warehouse erpId=${entityId}`, loggerCtx);
+        return inboundApplied();
     }
 
     private async ensureStockLocation(

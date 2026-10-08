@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, IsNull, LessThanOrEqual } from 'typeorm';
+import { DataSource } from 'typeorm';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { KafkaProducerService } from './kafka-producer.service';
 import { decideOutboxFailure } from './retry-policy';
+
+const BATCH_SIZE = 50;
 
 // Split from the BullMQ scheduling wiring (integration-outbox.worker.ts) so tests can invoke
 // `processPendingBatch` directly — never waiting on a real scheduler interval, per
@@ -16,40 +18,58 @@ export class IntegrationOutboxProcessorService {
     ) {}
 
     async processPendingBatch(): Promise<void> {
-        const repo = this.dataSource.getRepository(IntegrationOutboxEntry);
-        const pending = await repo.find({
-            where: [
-                { status: 'pending', nextRetryAt: IsNull() },
-                { status: 'pending', nextRetryAt: LessThanOrEqual(new Date()) },
-            ],
-            order: { createdAt: 'ASC' },
-            take: 50,
-        });
-
-        for (const entry of pending) {
-            await this.processOne(entry);
+        const due = await this.dataSource.query<Array<{ id: string }>>(
+            `SELECT id FROM integration_outbox
+             WHERE status = 'pending' AND (next_retry_at IS NULL OR next_retry_at <= now())
+             ORDER BY created_at ASC, id ASC LIMIT $1`,
+            [BATCH_SIZE],
+        );
+        for (const { id } of due) {
+            await this.processOne(Number(id));
         }
     }
 
-    private async processOne(entry: IntegrationOutboxEntry): Promise<void> {
-        const repo = this.dataSource.getRepository(IntegrationOutboxEntry);
-        try {
-            await this.kafkaProducer.publish(entry.eventId, entry.eventType, entry.payload);
-            entry.status = 'published';
-            entry.publishedAt = new Date();
-            await repo.save(entry);
-        } catch (err) {
-            const now = new Date();
-            entry.retryCount += 1;
-            entry.lastError = err instanceof Error ? err.message : String(err);
-            entry.lastErrorAt = now;
-            entry.firstFailedAt ??= now;
-            // Backoff over hours; a 'failed' row is terminal until requeued
-            // (IntegrationOutboxRecoveryService), and processPendingBatch never picks it up.
-            const decision = decideOutboxFailure(now, entry.firstFailedAt, entry.retryCount);
-            entry.status = decision.status;
-            entry.nextRetryAt = decision.status === 'pending' ? decision.nextRetryAt : null;
-            await repo.save(entry);
-        }
+    // One short transaction per row. The row lock is held across the publish on purpose
+    // (deliberately serialized per row, docs/concurrency.md rule g): a concurrent sweep skips the
+    // locked row, so it is published once, and a concurrent requeue (UPDATE ... WHERE status =
+    // 'failed') waits for the commit instead of being overwritten.
+    private async processOne(id: number): Promise<void> {
+        await this.dataSource.transaction(async em => {
+            const entry = await em
+                .getRepository(IntegrationOutboxEntry)
+                .createQueryBuilder('e')
+                .setLock('pessimistic_write')
+                .setOnLocked('skip_locked')
+                .where(
+                    `e.id = :id AND e.status = 'pending'
+                     AND (e.nextRetryAt IS NULL OR e.nextRetryAt <= now())`,
+                    { id },
+                )
+                .getOne();
+            if (!entry) return;
+
+            try {
+                await this.kafkaProducer.publish(entry.eventId, entry.eventType, entry.payload);
+                await em.update(IntegrationOutboxEntry, entry.id, {
+                    status: 'published',
+                    publishedAt: new Date(),
+                });
+            } catch (err) {
+                const now = new Date();
+                const firstFailedAt = entry.firstFailedAt ?? now;
+                const retryCount = entry.retryCount + 1;
+                // Backoff over hours; a 'failed' row is terminal until requeued
+                // (IntegrationOutboxRecoveryService), and the sweep never picks it up again.
+                const decision = decideOutboxFailure(now, firstFailedAt, retryCount);
+                await em.update(IntegrationOutboxEntry, entry.id, {
+                    retryCount,
+                    firstFailedAt,
+                    lastError: err instanceof Error ? err.message : String(err),
+                    lastErrorAt: now,
+                    status: decision.status,
+                    nextRetryAt: decision.status === 'pending' ? decision.nextRetryAt : null,
+                });
+            }
+        });
     }
 }

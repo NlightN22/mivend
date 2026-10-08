@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { GrantedRetroBonusService } from '@mivend/plugin-retro-bonus';
-
-import { inboundNoop } from './inbound-stream-handler';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const optionalString = (value: unknown): string | null => (value != null ? String(value) : null);
@@ -17,7 +16,7 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         if (payload.isDeleted === true) {
             const tombstoneVersion = String(payload.version ?? '');
             if (!tombstoneVersion) {
@@ -25,8 +24,16 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
                     `granted-retro-bonus ${entityId}: tombstone without version, skipping`,
                 );
             }
-            await this.grantedRetroBonusService.remove(ctx, entityId, tombstoneVersion);
-            return;
+            const removed = await this.grantedRetroBonusService.remove(
+                ctx,
+                entityId,
+                tombstoneVersion,
+            );
+            return removed
+                ? inboundApplied()
+                : inboundNoop(
+                      `granted-retro-bonus ${entityId}: tombstone for an unknown row or older than the stored version`,
+                  );
         }
         const version = String(payload.version ?? '');
         const sourceDocumentErpId = String(payload.sourceDocumentId ?? '');
@@ -68,5 +75,6 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
             orderErpId: optionalString(payload.orderEntityId),
             sourceVersion: version,
         });
+        return inboundApplied();
     }
 }

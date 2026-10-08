@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ProductVariantService, RequestContext, TransactionalConnection } from '@vendure/core';
 import { DocumentsService } from '@mivend/plugin-documents';
 
-import { inboundNoop } from './inbound-stream-handler';
-import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { MissingDependencyError } from '../types';
+import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
 const loggerCtx = 'IntegrationStorageLocationHandler';
 
@@ -42,7 +42,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         payload: Record<string, unknown>,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const productId = String(payload.productId ?? '');
         const organizationErpId =
             payload.organizationId != null ? String(payload.organizationId) : '';
@@ -111,6 +111,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
             `Set organizationId=${organizationId} (priority=${priority}, source=${entityId}) for productId=${productId}`,
             loggerCtx,
         );
+        return inboundApplied();
     }
 
     // Lower priority wins; on an equal priority from two different entities, the lower entityId
@@ -133,7 +134,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         entityId: string,
         productId: string,
-    ): Promise<InboundOutcome | void> {
+    ): Promise<InboundOutcome> {
         const variantId = await this.findVariantId(productId);
         if (!variantId) {
             return inboundNoop(`storage-location ${entityId}: deleted, product variant not found`);
@@ -164,6 +165,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
             `Cleared organization assignment for productId=${productId} (winning storage-location ${entityId} deleted)`,
             loggerCtx,
         );
+        return inboundApplied();
     }
 
     private async findVariantId(productId: string): Promise<string | undefined> {
