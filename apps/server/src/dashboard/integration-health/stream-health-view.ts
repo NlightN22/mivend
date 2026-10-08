@@ -74,3 +74,27 @@ export function formatVariantUnitLine(health: VariantUnitHealth): {
         problem: health.unitMissing > 0,
     };
 }
+
+export interface SchemaSourceBadge {
+    label: string;
+    variant: 'secondary' | 'outline';
+    title: string;
+}
+
+export function schemaSourceBadge(source: string | null | undefined): SchemaSourceBadge | null {
+    if (source === 'contract') {
+        return {
+            label: 'Contract',
+            variant: 'secondary',
+            title: 'Schema comes from the shared event-contracts package',
+        };
+    }
+    if (source === 'local') {
+        return {
+            label: 'Local copy',
+            variant: 'outline',
+            title: 'Not yet from the shared contract package',
+        };
+    }
+    return null;
+}

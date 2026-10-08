@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     formatAge,
+    schemaSourceBadge,
     formatVariantOrganizationLine,
     formatVariantUnitLine,
     isLagOverThreshold,
@@ -70,5 +71,20 @@ describe('formatVariantUnitLine', () => {
             problem: true,
         });
         expect(formatVariantUnitLine({ total: 400, unitMissing: 0 }).problem).toBe(false);
+    });
+});
+
+describe('schemaSourceBadge', () => {
+    it('is neutral for the contract package and outlined for the local copy', () => {
+        expect(schemaSourceBadge('contract')?.variant).toBe('secondary');
+        expect(schemaSourceBadge('local')).toMatchObject({
+            label: 'Local copy',
+            variant: 'outline',
+        });
+    });
+
+    it('shows nothing when the source is unknown', () => {
+        expect(schemaSourceBadge(null)).toBeNull();
+        expect(schemaSourceBadge(undefined)).toBeNull();
     });
 });

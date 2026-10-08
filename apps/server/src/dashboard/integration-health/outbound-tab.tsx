@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+    Badge,
     ResultOf,
     Table,
     TableBody,
@@ -14,7 +15,7 @@ import {
 import { CountLink } from './count-link.js';
 import { outboundProblemsLink } from './issue-links.js';
 import { RefreshIconButton } from './refresh-button.js';
-import { formatAge } from './stream-health-view.js';
+import { formatAge, schemaSourceBadge } from './stream-health-view.js';
 
 const outboxHealthDocument = graphql(`
     query IntegrationOutboxHealthForDashboard {
@@ -28,6 +29,7 @@ const outboxHealthDocument = graphql(`
             lastError
             lastErrorAt
             lastSkipReason
+            schemaSource
         }
     }
 `);
@@ -76,6 +78,7 @@ export function OutboundTab() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Event type</TableHead>
+                            <TableHead>Schema</TableHead>
                             <TableHead>Pending</TableHead>
                             <TableHead>Failed</TableHead>
                             <TableHead title="Events that could not be built and were never published">
@@ -91,7 +94,7 @@ export function OutboundTab() {
                     <TableBody>
                         {loaded && rows.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-muted-foreground">
+                                <TableCell colSpan={8} className="text-muted-foreground">
                                     No outbound events yet.
                                 </TableCell>
                             </TableRow>
@@ -99,6 +102,18 @@ export function OutboundTab() {
                         {rows.map(r => (
                             <TableRow key={r.eventType}>
                                 <TableCell className="font-medium">{r.eventType}</TableCell>
+                                <TableCell>
+                                    {(() => {
+                                        const badge = schemaSourceBadge(r.schemaSource);
+                                        return badge ? (
+                                            <Badge variant={badge.variant} title={badge.title}>
+                                                {badge.label}
+                                            </Badge>
+                                        ) : (
+                                            '—'
+                                        );
+                                    })()}
+                                </TableCell>
                                 <TableCell>{r.pending}</TableCell>
                                 <TableCell>
                                     <CountLink
