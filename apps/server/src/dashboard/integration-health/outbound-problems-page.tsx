@@ -52,6 +52,7 @@ export function OutboundProblemsPage({ route }: Readonly<{ route: AnyRoute }>) {
 
     return (
         <ListPage
+            pageId="integration-outbound-problems-list"
             title="Integration outbound problems"
             listQuery={outboundProblemsDocument}
             route={route}

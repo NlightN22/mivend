@@ -53,6 +53,7 @@ export function InboxIssuesPage({ route }: Readonly<{ route: AnyRoute }>) {
 
     return (
         <ListPage
+            pageId="integration-inbox-issues-list"
             title="Integration inbox issues"
             listQuery={inboxIssuesDocument}
             route={route}
