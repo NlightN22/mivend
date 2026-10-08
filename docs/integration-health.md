@@ -58,6 +58,29 @@ state; `resolved` is a skipped row that was rebuilt). Inbox rows have their own 
 
 Two dashboard alerts fire on any non-zero `failed` and any non-zero `skipped`.
 
+### Outbound schemas (issue #203)
+
+`order.submitted` is currently the only outbound event. It is owned by mivend: mivend writes and
+changes its schema and submits it to the shared package repository, and the receiving side reviews
+and releases it. One shared package, `@nlightn22/event-contracts`, carries both directions
+(producer-owned events). Compatible changes (a new optional field, a new event type) are made by
+the owner alone; breaking changes need the consumer's agreement and a version bump.
+
+- **Where the schema comes from.** If the installed package exports `ORDER_SUBMITTED_JSON_SCHEMA`,
+  mivend reads it from the package; otherwise it uses the local copy
+  (`erp-integration/src/schemas/order-submitted.schema.ts`). The Outbound tab's **Schema** column
+  shows which: `Contract` (package) or `Local copy` (not yet from the shared package). The local
+  file is deleted once the package version that contains the schema is released and installed.
+  State at the time of writing: the schema is prepared in the package repository but not released
+  (planned 0.53.0), so the column shows `Local copy`.
+- **Registry compatibility.** The subject `order.submitted-value` is explicitly `FORWARD`. The
+  registry default (`BACKWARD`) rejected every publish with a 409 once an optional field was added.
+- **The wire format is part of the contract:** Confluent wire format (magic byte, schema id, JSON
+  payload). A receiver that parses plain JSON drops such messages; the receiving side fixes this
+  (and keeps unparsable messages durably). Until that fix is deployed, a successful publish on
+  mivend's side does not prove the receiver processed the event.
+- The Schema column is the only schema-drift indicator planned for this page.
+
 ## Failed rows: what they are and what to do
 
 ### Inbound (`integration_inbox_event`, status `failed`)
