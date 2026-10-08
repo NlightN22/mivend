@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 import { Badge, useUserSettings } from '@vendure/dashboard';
 
 import { parseIssueLink } from './issue-links.js';
@@ -7,10 +8,22 @@ export function CountLink({
     count,
     href,
     destructive = false,
-}: Readonly<{ count: number; href: string; destructive?: boolean }>) {
+    muted = false,
+    title = 'Show these rows',
+    icon,
+    hideZero = false,
+}: Readonly<{
+    count: number;
+    href: string;
+    destructive?: boolean;
+    muted?: boolean;
+    title?: string;
+    icon?: ReactNode;
+    hideZero?: boolean;
+}>) {
     const navigate = useNavigate();
     const { setTableSettings } = useUserSettings();
-    if (count === 0) return <>0</>;
+    if (count === 0) return hideZero ? null : <>0</>;
 
     function open(event: React.MouseEvent): void {
         const target = parseIssueLink(href);
@@ -21,8 +34,11 @@ export function CountLink({
     }
 
     return (
-        <a href={href} title="Show these rows" onClick={open}>
-            <Badge variant={destructive ? 'destructive' : 'secondary'}>{count}</Badge>
+        <a href={href} title={title} onClick={open}>
+            <Badge variant={destructive ? 'destructive' : muted ? 'outline' : 'secondary'}>
+                {icon}
+                {count}
+            </Badge>
         </a>
     );
 }

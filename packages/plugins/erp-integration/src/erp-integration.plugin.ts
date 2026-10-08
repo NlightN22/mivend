@@ -43,6 +43,7 @@ import { IntegrationInboxProcessorService } from './integration-inbox-processor.
 import {
     createIntegrationInboxBulkTask,
     createIntegrationInboxCriticalTask,
+    createIntegrationInboxReplaySweepTask,
     createIntegrationInboxRetentionTask,
     createIntegrationInboxUserTask,
 } from './integration-inbox.scheduled-task';
@@ -120,6 +121,7 @@ import { ContractVersionClient } from './contract-version.client';
 import { IntegrationEventListResolver } from './integration-event-list.resolver';
 import { IntegrationInboxIssueResolver } from './integration-inbox-issue.resolver';
 import { IntegrationEventListService } from './integration-event-list.service';
+import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
 import { IntegrationInboxReplayService } from './integration-inbox-replay.service';
 import { OutboundGateway } from './outbound-gateway';
 import { IntegrationOutboxRecoveryService } from './integration-outbox-recovery.service';
@@ -237,6 +239,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         ContractVersionClient,
         IntegrationEventListService,
         IntegrationInboxReplayService,
+        IntegrationInboxReplayStateService,
         OutboundGateway,
         IntegrationOutboxRecoveryService,
         OrderSubmittedBuilder,
@@ -279,6 +282,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
                 createIntegrationInboxUserTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxBulkTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxRetentionTask(ErpIntegrationPlugin.options),
+                createIntegrationInboxReplaySweepTask(ErpIntegrationPlugin.options),
                 createIntegrationOutboxTask(ErpIntegrationPlugin.options),
                 createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
                 createCategoryTreeRecomputeTask(ErpIntegrationPlugin.options),

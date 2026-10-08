@@ -53,7 +53,8 @@ Events mivend wrote to its outbox for Integration Service, one row per registere
 (`outbound-event-types.ts`, so a type with no events still shows, with zeros): pending, failed,
 skipped, age of the oldest pending, last publish time, last publish error or skip reason. The
 `published` and `resolved` statuses are not shown as columns (a published row is the healthy end
-state; `resolved` is a skipped row that was rebuilt).
+state; `resolved` is a skipped row that was rebuilt). Inbox rows have their own `replay_requested` and
+`resolved` statuses, see "Replay lifecycle".
 
 Two dashboard alerts fire on any non-zero `failed` and any non-zero `skipped`.
 
@@ -78,12 +79,38 @@ Two dashboard alerts fire on any non-zero `failed` and any non-zero `skipped`.
   - external resource (for example an expired photo download link): replay.
 - Recovery is a replay through Integration Service (`POST /api/resync/v1/replay`, see
   `docs/ai/erp-streams-map.md`); the entity arrives as a new event. The **Replay** button on the
-  Inbox issues page (needs `RecoverIntegrationEvents`) does it for one row and marks the row
-  `resolved`; it is shown only for streams that map onto an Integration Service aggregate type
+  Inbox issues page (needs `RecoverIntegrationEvents`) does it for one row and moves it to
+  `replay_requested` (see "Replay lifecycle" below); it is shown only for streams that map onto an Integration Service aggregate type
   (`stream-aggregate-type.ts`; `vat-rate` is excluded: Integration Service generates it itself).
-  `NOT_FOUND` means Integration Service no longer knows the entity (the row stays failed).
+  `NOT_FOUND` or a failed call means Integration Service did not accept the replay: the row stays
+  `failed` with `replay did not resolve: ...` in `last_error`.
   Photos also have a built-in automatic recovery.
 - Sysadmin: do not edit the table. Report stream, entity id and `last_error` to a developer.
+
+#### Replay lifecycle (`failed` -> `replay_requested` -> `resolved`)
+
+Accepting a replay request proves nothing about the data, so the row is not closed by it:
+
+1. **Replay** claims the row atomically (`failed` -> `replay_requested`, `replay_requested_at` set)
+   and only then asks Integration Service, so two clicks ask once. If the request is not accepted
+   the row goes back to `failed`. A `replay_requested` row cannot be replayed again.
+2. The replayed entity arrives as a new inbox row. In the same SQL statement that marks that row
+   `processed` (`IntegrationInboxService.markProcessed`), every `replay_requested` row of the same
+   stream and entity requested before the new row was created becomes `resolved`. Any recorded
+   processed outcome closes it: `applied`, `superseded`, and a reasoned `noop` (a noop is a
+   deliberate, documented result for the replayed event, for example a tombstone for a row mivend
+   never had; a retrying event is not processed yet and does not close it).
+3. The row goes back to `failed` (annotated `replay did not resolve: <reason>`) when the replayed
+   event is dead-lettered (same hook in `markFailed`), or via the sweep task
+   `erp-integration-inbox-replay-sweep` (every 5 min) when the newer event already ended `failed`,
+   or when no newer event is pending/processing after `REPLAY_WAIT_TIMEOUT_MS` (1 h). While the new
+   event is still retrying the row keeps waiting.
+4. Every transition is one conditional UPDATE on `status = 'replay_requested'`, so the sweep and the
+   processor racing for a row produce exactly one terminal state.
+
+The Inbound table shows the red Failed badge for open failed rows and, next to it, a muted badge
+with a refresh icon for `replay_requested` rows (tooltip "replay requested, waiting for the entity
+to be processed"); both link to the Inbox issues list filtered by that status.
 
 ### Unprocessable Kafka messages
 

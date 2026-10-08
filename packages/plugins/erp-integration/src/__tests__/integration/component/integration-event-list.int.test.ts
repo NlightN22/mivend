@@ -62,7 +62,7 @@ async function seedInbox(
 }
 
 describe('listInboxIssues', () => {
-    it('lists only failed and no-op rows; pending, applied and resolved rows stay out', async () => {
+    it('lists failed, replay_requested and no-op rows; pending, applied and resolved rows stay out', async () => {
         await seedInbox('bank', 'b-failed', { status: 'failed', lastError: 'boom', attempts: 3 });
         await seedInbox('bank', 'b-noop', {
             status: 'processed',
@@ -72,11 +72,12 @@ describe('listInboxIssues', () => {
         await seedInbox('bank', 'b-pending', {});
         await seedInbox('bank', 'b-applied', { status: 'processed', outcome: 'applied' });
         await seedInbox('bank', 'b-resolved', { status: 'resolved' });
+        await seedInbox('bank', 'b-replay', { status: 'replay_requested' });
 
         const { items, totalItems } = await lists.listInboxIssues();
 
-        expect(totalItems).toBe(2);
-        expect(items.map(i => i.entityId).sort()).toEqual(['b-failed', 'b-noop']);
+        expect(totalItems).toBe(3);
+        expect(items.map(i => i.entityId).sort()).toEqual(['b-failed', 'b-noop', 'b-replay']);
         expect(items.every(i => !('payload' in i) || i.payload === undefined)).toBe(true);
     });
 

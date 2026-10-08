@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { summarizeRebuild, summarizeReplay, summarizeRequeue } from '../../issue-actions';
+import {
+    statusBadge,
+    summarizeRebuild,
+    summarizeReplay,
+    summarizeRequeue,
+} from '../../issue-actions';
 
 describe('summarizeReplay', () => {
     it('is ok only when every row was replayed', () => {
@@ -27,5 +32,26 @@ describe('summarizeRequeue / summarizeRebuild', () => {
         expect(summarizeRebuild('STILL_SKIPPED').ok).toBe(false);
         expect(summarizeRebuild('ALREADY_SENT').ok).toBe(false);
         expect(summarizeRebuild('WHATEVER').message).toContain('WHATEVER');
+    });
+});
+
+describe('statusBadge', () => {
+    it('shows failed in red, replay_requested neutral and noop rows by outcome', () => {
+        expect(statusBadge({ status: 'failed' })).toEqual({
+            label: 'failed',
+            variant: 'destructive',
+        });
+        expect(statusBadge({ status: 'replay_requested' })).toEqual({
+            label: 'replay requested',
+            variant: 'outline',
+        });
+        expect(statusBadge({ status: 'processed', outcome: 'noop' })).toEqual({
+            label: 'noop',
+            variant: 'secondary',
+        });
+    });
+
+    it('tells the user the row stays open after a replay request', () => {
+        expect(summarizeReplay([{ outcome: 'REPLAYED' }]).message).toContain('stays open');
     });
 });

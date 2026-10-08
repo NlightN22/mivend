@@ -6,6 +6,7 @@ import { DataSource, EntityManager, In } from 'typeorm';
 const loggerCtx = 'IntegrationInboxService';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
+import { replayDidNotResolve } from './inbox-replay-lifecycle';
 import { computeRetryBackoffMs } from './retry-policy';
 import { INBOX_RETRY_WALL_CLOCK_BUDGET_MS } from './types';
 import type { InboundStream } from './types';
@@ -177,17 +178,25 @@ export class IntegrationInboxService {
         return rows.map(row => row.id);
     }
 
+    // One statement: marks the row processed and closes any replay_requested row of the same entity
+    // that was requested before this event arrived (any recorded outcome closes it, noop included).
     async markProcessed(
         id: number,
         outcome: 'applied' | 'superseded' | 'noop' = 'applied',
         outcomeReason: string | null = null,
     ): Promise<void> {
-        await this.dataSource
-            .getRepository(IntegrationInboxEvent)
-            .update(
-                { id },
-                { status: 'processed', processedAt: new Date(), outcome, outcomeReason },
-            );
+        await this.dataSource.query(
+            `WITH done AS (
+                UPDATE integration_inbox_event
+                   SET status = 'processed', processed_at = now(), outcome = $2, outcome_reason = $3
+                 WHERE id = $1
+             RETURNING stream, entity_id, created_at)
+             UPDATE integration_inbox_event r SET status = 'resolved'
+               FROM done
+              WHERE r.stream = done.stream AND r.entity_id = done.entity_id
+                AND r.status = 'replay_requested' AND r.replay_requested_at <= done.created_at`,
+            [id, outcome, outcomeReason],
+        );
     }
 
     // Releases a deadline-stopped batch's unprocessed rows back to 'pending' (#149).
@@ -209,6 +218,14 @@ export class IntegrationInboxService {
             await repo.update(
                 { id },
                 { attempts, lastError: error.message, status: 'failed', nextRetryAt: null },
+            );
+            await this.dataSource.query(
+                `UPDATE integration_inbox_event r
+                    SET status = 'failed', replay_requested_at = NULL, last_error = $2
+                   FROM integration_inbox_event n
+                  WHERE n.id = $1 AND r.stream = n.stream AND r.entity_id = n.entity_id
+                    AND r.status = 'replay_requested' AND r.replay_requested_at <= n.created_at`,
+                [id, replayDidNotResolve(`the replayed event failed: ${error.message}`)],
             );
             return;
         }

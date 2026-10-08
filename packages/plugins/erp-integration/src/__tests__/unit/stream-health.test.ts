@@ -54,7 +54,16 @@ describe('buildStreamHealthRows', () => {
 
     it('flags inbox rows for a stream that is neither in contract nor configured', () => {
         const backlogByStream = new Map([
-            ['ghost', { pending: 2, processing: 0, failed: 1, oldestPendingAt: new Date(0) }],
+            [
+                'ghost',
+                {
+                    pending: 2,
+                    processing: 0,
+                    failed: 1,
+                    replayPending: 0,
+                    oldestPendingAt: new Date(0),
+                },
+            ],
         ]);
         const rows = buildStreamHealthRows(input({ backlogByStream }));
         expect(find(rows, 'ghost')).toMatchObject({

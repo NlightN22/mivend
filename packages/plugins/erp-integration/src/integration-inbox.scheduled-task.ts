@@ -2,6 +2,7 @@ import { Logger, ScheduledTask } from '@vendure/core';
 import { cronEveryMs } from 'shared';
 
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
+import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
 import { IntegrationInboxService } from './integration-inbox.service';
 import {
     INBOX_BULK_BATCH_SIZE_DEFAULT,
@@ -184,6 +185,27 @@ export function createIntegrationInboxRetentionTask(
                 );
             }
             return { tombstoned: totalTombstoned };
+        },
+    });
+}
+
+const REPLAY_SWEEP_INTERVAL_MS = 5 * 60_000;
+
+export function createIntegrationInboxReplaySweepTask(
+    options: ErpIntegrationPluginOptions,
+): ScheduledTask {
+    return new ScheduledTask({
+        id: 'erp-integration-inbox-replay-sweep',
+        description:
+            'Returns replay_requested inbox rows to failed when the replayed event failed or never arrived (central hub only).',
+        schedule: cronEveryMs(REPLAY_SWEEP_INTERVAL_MS),
+        execute: async ({ injector }) => {
+            if (options.instanceType !== 'central') return { skipped: true };
+            const expired = await injector.get(IntegrationInboxReplayStateService).expireStale();
+            if (expired > 0) {
+                Logger.verbose(`Inbox replay sweep: ${expired} row(s) back to failed`, loggerCtx);
+            }
+            return { expired };
         },
     });
 }

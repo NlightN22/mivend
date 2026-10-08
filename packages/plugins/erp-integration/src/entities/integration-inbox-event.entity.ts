@@ -9,12 +9,14 @@ import {
 
 import type { InboundStream } from '../types';
 
-// resolved: a failed row whose entity was replayed through Integration Service.
+// replay_requested: a failed row whose entity was replayed, waiting for the new event to be
+// processed; resolved: that event was processed (docs/integration-health.md).
 export type IntegrationInboxEventStatus =
     | 'pending'
     | 'processing'
     | 'processed'
     | 'failed'
+    | 'replay_requested'
     | 'resolved';
 
 // Durable inbox for the inbound half of the Kafka exchange with Integration Service (issue #62
@@ -105,6 +107,9 @@ export class IntegrationInboxEvent {
     // with its reason (#200). Null on rows processed before this column existed.
     @Column({ type: 'varchar', name: 'outcome', nullable: true })
     outcome!: 'applied' | 'superseded' | 'noop' | null;
+
+    @Column({ type: 'timestamptz', name: 'replay_requested_at', nullable: true })
+    replayRequestedAt!: Date | null;
 
     @Column({ type: 'text', name: 'outcome_reason', nullable: true })
     outcomeReason!: string | null;

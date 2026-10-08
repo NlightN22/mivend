@@ -145,7 +145,13 @@ export class IntegrationEventListService {
                 'e.outcome',
                 'e.outcomeReason',
             ])
-            .where(new Brackets(b => b.where(`e.status = 'failed'`).orWhere(`e.outcome = 'noop'`)));
+            .where(
+                new Brackets(b =>
+                    b
+                        .where(`e.status IN ('failed', 'replay_requested')`)
+                        .orWhere(`e.outcome = 'noop'`),
+                ),
+            );
         applyList(qb, options, INBOX_FILTER_FIELDS, INBOX_SORT_FIELDS, {
             column: 'e.updatedAt',
             direction: 'DESC',

@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { Badge, Button, ListPage, PermissionGuard, api, graphql, toast } from '@vendure/dashboard';
 
 import { CopyIdButton } from './copy-id-button.js';
-import { summarizeReplay } from './issue-actions.js';
+import { statusBadge, summarizeReplay } from './issue-actions.js';
 
 const inboxIssuesDocument = graphql(`
     query IntegrationInboxIssuesForDashboard($options: IntegrationInboxIssueListOptions) {
@@ -86,15 +86,20 @@ export function InboxIssuesPage({ route }: Readonly<{ route: AnyRoute }>) {
                 'updatedAt',
                 'actions',
             ]}
+            facetedFilters={{
+                status: {
+                    title: 'Status',
+                    options: [
+                        { label: 'failed', value: 'failed' },
+                        { label: 'replay requested', value: 'replay_requested' },
+                    ],
+                },
+            }}
             customizeColumns={{
                 status: {
                     cell: ({ row }) => (
-                        <Badge
-                            variant={row.original.status === 'failed' ? 'destructive' : 'secondary'}
-                        >
-                            {row.original.status === 'failed'
-                                ? 'failed'
-                                : (row.original.outcome ?? row.original.status)}
+                        <Badge variant={statusBadge(row.original).variant}>
+                            {statusBadge(row.original).label}
                         </Badge>
                     ),
                 },

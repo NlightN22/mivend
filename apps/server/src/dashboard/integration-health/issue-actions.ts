@@ -11,7 +11,7 @@ export function summarizeReplay(results: readonly ReplayResultLike[]): {
     if (replayed === results.length && replayed > 0) {
         return {
             ok: true,
-            message: `Replay requested for ${replayed} row(s); the entity will arrive again shortly.`,
+            message: `Replay requested for ${replayed} row(s). The row stays open (replay requested) until the entity is processed again.`,
         };
     }
     const first = results.find(r => r.outcome !== 'REPLAYED');
@@ -41,4 +41,18 @@ const REBUILD_MESSAGES: Record<string, { ok: boolean; message: string }> = {
 
 export function summarizeRebuild(outcome: string): { ok: boolean; message: string } {
     return REBUILD_MESSAGES[outcome] ?? { ok: false, message: `Unexpected result: ${outcome}` };
+}
+
+export interface InboxIssueStatusInput {
+    status: string;
+    outcome?: string | null;
+}
+
+export function statusBadge(row: InboxIssueStatusInput): {
+    label: string;
+    variant: 'destructive' | 'outline' | 'secondary';
+} {
+    if (row.status === 'failed') return { label: 'failed', variant: 'destructive' };
+    if (row.status === 'replay_requested') return { label: 'replay requested', variant: 'outline' };
+    return { label: row.outcome ?? row.status, variant: 'secondary' };
 }

@@ -107,6 +107,8 @@ export const adminApiExtensions: DocumentNode = gql`
         pending: Int!
         processing: Int!
         failed: Int!
+        "Failed rows whose replay was requested and that wait for the replayed event to be processed."
+        replayPending: Int!
         oldestPendingAt: DateTime
         "Messages the handler deliberately did nothing for in the last 24 h (issue #200)."
         noop24h: Int!

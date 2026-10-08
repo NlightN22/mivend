@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import {
     Badge,
@@ -46,6 +47,7 @@ const streamHealthDocument = graphql(`
                 pending
                 processing
                 failed
+                replayPending
                 oldestPendingAt
                 noop24h
                 lastNoopReason
@@ -212,7 +214,7 @@ export function InboundTab() {
                                     </TableCell>
                                     <TableCell>{s.pending}</TableCell>
                                     <TableCell>{s.processing}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="space-x-1">
                                         <CountLink
                                             count={s.failed}
                                             href={inboxIssuesLink({
@@ -220,6 +222,17 @@ export function InboundTab() {
                                                 status: 'failed',
                                             })}
                                             destructive
+                                        />
+                                        <CountLink
+                                            count={s.replayPending}
+                                            href={inboxIssuesLink({
+                                                stream: s.stream,
+                                                status: 'replay_requested',
+                                            })}
+                                            muted
+                                            hideZero
+                                            icon={<RefreshCw className="size-3" />}
+                                            title="replay requested, waiting for the entity to be processed"
                                         />
                                     </TableCell>
                                     <TableCell title={s.lastNoopReason ?? undefined}>

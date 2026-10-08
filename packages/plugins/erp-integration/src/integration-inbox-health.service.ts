@@ -16,6 +16,7 @@ export interface IntegrationInboxBacklogByStream {
     pending: number;
     processing: number;
     failed: number;
+    replayPending: number;
     oldestPendingAt: Date | null;
 }
 
@@ -39,7 +40,7 @@ export class IntegrationInboxHealthService {
                 'oldestPending',
             )
             .where('event.status IN (:...statuses)', {
-                statuses: ['pending', 'processing', 'failed'],
+                statuses: ['pending', 'processing', 'failed', 'replay_requested'],
             })
             .groupBy('event.stream')
             .addGroupBy('event.status')
@@ -57,10 +58,12 @@ export class IntegrationInboxHealthService {
                 pending: 0,
                 processing: 0,
                 failed: 0,
+                replayPending: 0,
                 oldestPendingAt: null,
             };
             if (row.oldestPending) entry.oldestPendingAt = new Date(row.oldestPending);
-            entry[row.status as 'pending' | 'processing' | 'failed'] = Number(row.count);
+            if (row.status === 'replay_requested') entry.replayPending = Number(row.count);
+            else entry[row.status as 'pending' | 'processing' | 'failed'] = Number(row.count);
             byStream.set(row.stream, entry);
         }
         return [...byStream.values()];
