@@ -394,8 +394,10 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
 ### Seller organization on the order (mivend#201, #202)
 
 - Entering `ArrangingPayment` stamps `OrderLine.customFields.organizationId` from the variant
-  (single `UPDATE` inside the transition transaction, repeated on every re-entry). A variant without
-  an organization blocks that transition for everyone.
+  (single statement inside the transition transaction, repeated on every re-entry). A variant without
+  an organization blocks that transition for everyone, and the stamp itself re-checks it: it writes
+  only organizations read in that statement and fails the transition if a variant lost its
+  organization after the first check.
 - Invoice split (one `Invoice` per organization, created under a per-order advisory lock so a double
   submit yields one set), the `reserveOrder()` gate and the `order.submitted` builder read the line,
   never the variant. `order.submitted` is a different thing (see "Order contract" below).

@@ -125,6 +125,26 @@ describe('organizationOrderGuard (real SQL)', () => {
         expect(await lineOrganizations(1)).toEqual([11]);
     });
 
+    it('fails the transition when a variant organization is cleared after the check passed', async () => {
+        await addLine(1, 'KEEPS', 7);
+        await addLine(1, 'CLEARED', 8);
+        expect(await checkout(1)).toBeUndefined();
+        await run(
+            `UPDATE product_variant SET "customFieldsOrganizationid" = NULL WHERE sku = 'CLEARED'`,
+        );
+
+        await expect(stamp(1)).rejects.toThrow(`${ORGANIZATION_MISSING_MESSAGE}CLEARED`);
+    });
+
+    it('never stamps an organization the variant no longer has', async () => {
+        await addLine(1, 'A', 7);
+        await stamp(1);
+        await run(`UPDATE product_variant SET "customFieldsOrganizationid" = NULL`);
+
+        await expect(stamp(1)).rejects.toThrow();
+        expect(await lineOrganizations(1)).toEqual([7]);
+    });
+
     it('does not stamp on other transitions', async () => {
         await addLine(1, 'A', 7);
 
