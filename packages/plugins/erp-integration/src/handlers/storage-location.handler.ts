@@ -1,35 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ProductVariantService, RequestContext, TransactionalConnection } from '@vendure/core';
 import { DocumentsService } from '@mivend/plugin-documents';
+import { withAggregateLock } from 'shared';
 
-import { MissingDependencyError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
+import { StorageLocationAssignment } from '../entities/storage-location-assignment.entity';
+import { MissingDependencyError } from '../types';
 
 const loggerCtx = 'IntegrationStorageLocationHandler';
 
-interface CurrentAssignment {
+interface VariantOrganization {
+    id: string;
+    organizationId: number | null;
     organizationPriority: number | null;
     organizationSourceEntityId: string | null;
 }
 
 // Applies Integration Service's `storage-location` stream (StorageLocationChanged, the ERP's
-// МестаХраненияНоменклатуры register) — the real source for ProductVariant.customFields
-// .organizationId (docs/payments.md "Organizations": one storage location = one product = one
-// organization). Only ~4/30142 rows carry organization_id (see the proto's own doc comment) — a
-// row without one is a normal address-only assignment, not an error, and must never blank a
-// previously-set organizationId. The physical address fields (sector/floor/row/rack/shelf/cell)
-// have no target entity yet and are deliberately not modeled by this handler.
+// storage-location register) — the real source for ProductVariant.customFields.organizationId
+// (docs/payments.md "Organizations": one storage location = one product = one organization).
+// Address-only rows (no organization_id, the common case) carry nothing to apply; the physical
+// address fields have no target entity and are not modeled.
 //
-// A product can have several storage-location rows, each its OWN Kafka entity (entityId =
-// storage_location_id) with its own independent version history — the inbox's per-entityId
-// ordering guard doesn't pick a winner across them. The contract's own rule is "lowest priority
-// wins"; organizationSourceEntityId + organizationPriority (persisted alongside organizationId)
-// let a later-arriving row compare against the current winner instead of last-message-wins, tie
-// deterministically on equal priority (mivend.audit.71), and recognize a delete of the current
-// winner so it can be cleared instead of staying pinned to a now-deleted row (mivend.audit.71 —
-// this does NOT re-elect the next-best remaining row, since no per-location table is kept here;
-// clearing to "unassigned" is the safe minimum until another row's event arrives).
+// A product can have several storage-location rows, each its own Kafka entity with its own
+// version history, so each organization-bearing row is persisted (StorageLocationAssignment) and
+// the winner — lowest priority, then lowest entityId — is recomputed from all of them under a
+// per-product lock. A deleted or organization-less row simply leaves the set, so the next best
+// row takes over instead of the product being cleared.
 @Injectable()
 export class StorageLocationStreamHandler implements InboundStreamHandler {
     constructor(
@@ -44,148 +42,102 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
         const productId = String(payload.productId ?? '');
-        const organizationErpId =
-            payload.organizationId != null ? String(payload.organizationId) : '';
-        // `priority` is a plain (non-optional) proto3 int32 — same zero-value-omission shape as
-        // stock.handler.ts's quantity/availableQuantity (mivend.issue.84.88, external-integration-
-        // rules skill's "Non-optional proto3 scalar fields"). An absent key means priority=0,
-        // which per this handler's own "lowest priority wins" rule is very plausibly the WINNING
-        // row, not a malformed one — the prior `?? NaN` + isNaN-skip silently dropped exactly the
-        // case most likely to matter.
-        const priority = Number(payload.priority ?? 0);
-        const isDeleted = payload.isDeleted === true;
-
         if (!productId) {
             return inboundNoop(`storage-location ${entityId}: missing productId, skipping`);
         }
+        const organizationErpId =
+            payload.organizationId != null ? String(payload.organizationId) : '';
+        // `priority` is a plain proto3 int32: an absent key means 0, the most preferred value.
+        const priority = Number(payload.priority ?? 0);
+        const hasOrganization = payload.isDeleted !== true && organizationErpId !== '';
 
-        if (isDeleted) {
-            return this.handleDeletion(ctx, entityId, productId);
-        }
-        if (!organizationErpId) {
-            // Address-only row (the ~99.99% case) — nothing to apply for the organization
-            // dimension. Address fields are out of scope (see class doc comment).
-            return inboundNoop(
-                `storage-location ${entityId}: no organization assignment, skipping`,
-            );
-        }
-        const variantId = await this.findVariantId(productId);
-        if (!variantId) {
-            // Issue #96: ordinary eventual-consistency race (product stream not consumed yet) —
-            // retry via MissingDependencyError instead of dropping.
-            throw new MissingDependencyError(
-                `storage-location ${entityId}: variant not found for productId=${productId}`,
-            );
-        }
-
-        const organizationId = await this.documentsService.findRequisitesIdByErpId(
+        return withAggregateLock(
+            this.connection,
             ctx,
-            organizationErpId,
+            `storage-location-product:${productId}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, StorageLocationAssignment);
+                if (hasOrganization) {
+                    await repo.upsert({ entityId, productId, organizationErpId, priority }, [
+                        'entityId',
+                    ]);
+                } else {
+                    const { affected } = await repo.delete({ entityId, productId });
+                    if (!affected) {
+                        return inboundNoop(
+                            `storage-location ${entityId}: no organization assignment, skipping`,
+                        );
+                    }
+                }
+                await this.applyWinner(txCtx, productId);
+                return inboundApplied();
+            },
         );
-        if (organizationId == null) {
+    }
+
+    private async applyWinner(ctx: RequestContext, productId: string): Promise<void> {
+        const winner = await this.connection
+            .getRepository(ctx, StorageLocationAssignment)
+            .createQueryBuilder('a')
+            .where('a.productId = :productId', { productId })
+            .orderBy('a.priority', 'ASC')
+            .addOrderBy('a.entityId', 'ASC')
+            .getOne();
+        const variant = await this.findVariant(productId);
+        if (!variant) {
+            if (!winner) return;
+            // Ordinary eventual-consistency race (product stream not consumed yet): retry.
             throw new MissingDependencyError(
-                `storage-location ${entityId}: no OrganizationRequisites found for organizationId=${organizationErpId}`,
+                `storage-location ${winner.entityId}: variant not found for productId=${productId}`,
             );
         }
 
-        const current = await this.getCurrentAssignment(variantId);
-        if (current && !this.beatsCurrentWinner(priority, entityId, current)) {
-            return inboundNoop(
-                `storage-location ${entityId}: priority ${priority} does not beat current winner ` +
-                    `${current.organizationSourceEntityId} (priority=${current.organizationPriority}) ` +
-                    `for productId=${productId}, skipping`,
+        let organizationId: number | null = null;
+        if (winner) {
+            organizationId = await this.documentsService.findRequisitesIdByErpId(
+                ctx,
+                winner.organizationErpId,
             );
+            if (organizationId == null) {
+                throw new MissingDependencyError(
+                    `storage-location ${winner.entityId}: no OrganizationRequisites found for ` +
+                        `organizationId=${winner.organizationErpId}`,
+                );
+            }
+        }
+        const organizationPriority = winner?.priority ?? null;
+        const organizationSourceEntityId = winner?.entityId ?? null;
+        if (
+            variant.organizationId === organizationId &&
+            variant.organizationPriority === organizationPriority &&
+            variant.organizationSourceEntityId === organizationSourceEntityId
+        ) {
+            return;
         }
 
         await this.productVariantService.update(ctx, [
             {
-                id: variantId,
-                customFields: {
-                    organizationId,
-                    organizationPriority: priority,
-                    organizationSourceEntityId: entityId,
-                },
+                id: variant.id,
+                customFields: { organizationId, organizationPriority, organizationSourceEntityId },
             },
         ]);
         Logger.verbose(
-            `Set organizationId=${organizationId} (priority=${priority}, source=${entityId}) for productId=${productId}`,
+            `Set organizationId=${String(organizationId)} (source=${String(organizationSourceEntityId)}) for productId=${productId}`,
             loggerCtx,
         );
-        return inboundApplied();
     }
 
-    // Lower priority wins; on an equal priority from two different entities, the lower entityId
-    // wins — a fixed, arrival-order-independent tiebreak (mivend.audit.71: an arbitrary "last
-    // message wins" tie was non-deterministic across redelivery/replay).
-    private beatsCurrentWinner(
-        priority: number,
-        entityId: string,
-        current: CurrentAssignment,
-    ): boolean {
-        if (current.organizationPriority == null) return true;
-        if (priority !== current.organizationPriority) {
-            return priority < current.organizationPriority;
-        }
-        if (!current.organizationSourceEntityId) return true;
-        return entityId < current.organizationSourceEntityId;
-    }
-
-    private async handleDeletion(
-        ctx: RequestContext,
-        entityId: string,
-        productId: string,
-    ): Promise<InboundOutcome> {
-        const variantId = await this.findVariantId(productId);
-        if (!variantId) {
-            return inboundNoop(`storage-location ${entityId}: deleted, product variant not found`);
-        }
-
-        const current = await this.getCurrentAssignment(variantId);
-        if (current?.organizationSourceEntityId !== entityId) {
-            // Not the row currently backing organizationId — nothing to clear (mivend.audit.71:
-            // the earlier version of this handler skipped ALL deletions unconditionally, which
-            // silently left a stale organizationId pinned to a deleted row when it WAS the
-            // winner).
-            return inboundNoop(
-                `storage-location ${entityId}: deleted, not the current winner, skipping`,
-            );
-        }
-
-        await this.productVariantService.update(ctx, [
-            {
-                id: variantId,
-                customFields: {
-                    organizationId: null,
-                    organizationPriority: null,
-                    organizationSourceEntityId: null,
-                },
-            },
-        ]);
-        Logger.verbose(
-            `Cleared organization assignment for productId=${productId} (winning storage-location ${entityId} deleted)`,
-            loggerCtx,
-        );
-        return inboundApplied();
-    }
-
-    private async findVariantId(productId: string): Promise<string | undefined> {
+    private async findVariant(productId: string): Promise<VariantOrganization | undefined> {
         const row = await this.connection.rawConnection
             .createQueryBuilder()
             .select('pv.id', 'id')
+            .addSelect('pv."customFieldsOrganizationid"', 'organizationId')
+            .addSelect('pv."customFieldsOrganizationpriority"', 'organizationPriority')
+            .addSelect('pv."customFieldsOrganizationsourceentityid"', 'organizationSourceEntityId')
             .from('product_variant', 'pv')
             .innerJoin('product', 'p', 'p.id = pv."productId"')
             .where('p."customFieldsExternalid" = :productId', { productId })
-            .getRawOne<{ id: string }>();
-        return row?.id;
-    }
-
-    private async getCurrentAssignment(variantId: string): Promise<CurrentAssignment | undefined> {
-        return this.connection.rawConnection
-            .createQueryBuilder()
-            .select('pv."customFieldsOrganizationpriority"', 'organizationPriority')
-            .addSelect('pv."customFieldsOrganizationsourceentityid"', 'organizationSourceEntityId')
-            .from('product_variant', 'pv')
-            .where('pv.id = :variantId', { variantId })
-            .getRawOne<CurrentAssignment>();
+            .getRawOne<VariantOrganization>();
+        return row;
     }
 }

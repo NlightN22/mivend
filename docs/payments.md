@@ -399,6 +399,13 @@ async ERP acknowledgement is not compatible with this.
   (`OrganizationRequisites` via `make seed`) and `erp-import`'s product record carries an
   `organizationId` field now, so the real split can be built and exercised end-to-end today. Swap
   in the real ERP export later without changing the platform-side contract shape.
+- **Several storage locations per product**: each organization-bearing `storage-location` row is
+  stored (`storage_location_assignment`) and `ProductVariant.organizationId` is recomputed from all
+  of them under a per-product lock: lowest priority wins, then lowest `entityId`. A deleted row,
+  or a row that loses its organization, leaves the set and the next best row takes over; the
+  variant is cleared only when none is left. Known gap: a location that moves to another product
+  keeps its old row until it is deleted. The migration seeds the table from the current winners;
+  a contour that uses `synchronize` needs the same seed (or a topic replay) once.
 - **Enforcement (decided): a variant with no organization (seller of record) is not sellable, for
   anyone.** Missing organizations are an expected data condition (storage-location rows can arrive
   late or without one), so the gate sits where the order is built, not only at import:

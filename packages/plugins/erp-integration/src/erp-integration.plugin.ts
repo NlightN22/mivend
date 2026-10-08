@@ -65,6 +65,7 @@ import { PositionStreamHandler } from './handlers/position.handler';
 import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
 import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-credit-balance.handler';
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
+import { StorageLocationAssignment } from './entities/storage-location-assignment.entity';
 import { UserStreamHandler } from './handlers/user.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
@@ -155,6 +156,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         NotificationPlugin,
     ],
     entities: [
+        StorageLocationAssignment,
         IntegrationOutboxEntry,
         IntegrationInboxEvent,
         KafkaConsumerStatus,
