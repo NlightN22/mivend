@@ -65,7 +65,10 @@ Two dashboard alerts fire on any non-zero `failed` and any non-zero `skipped`.
   A row is dead-lettered (`failed`) only when 24 h have passed since its first failure.
 - A `failed` row is never retried automatically and is never purged: it stays until someone acts.
   Only superseded `processed` rows are tombstoned by retention.
-- Look at them: `SELECT stream, entity_id, attempts, first_failed_at, last_error FROM
+- Look at them on the page **System -> Inbox issues** (also reached by clicking the Failed or No-op
+  number in the Inbound table, which opens the list pre-filtered by stream): stream, entity id with
+  a copy button, attempts, first failure, last error, plus search and sorting. Payloads are never
+  shown. SQL fallback: `SELECT stream, entity_id, attempts, first_failed_at, last_error FROM
   integration_inbox_event WHERE status = 'failed' ORDER BY updated_at DESC`, or the admin GraphQL
   query `failedIntegrationInboxEvents` (needs `ManageAccessControl`).
 - Triage by `last_error`:
@@ -74,8 +77,12 @@ Two dashboard alerts fire on any non-zero `failed` and any non-zero `skipped`.
   - handler bug or contract mismatch: needs a developer fix, then replay;
   - external resource (for example an expired photo download link): replay.
 - Recovery is a replay through Integration Service (`POST /api/resync/v1/replay`, see
-  `docs/ai/erp-streams-map.md`); the entity arrives as a new event. Photos have a built-in
-  recovery; other streams need the API called by hand.
+  `docs/ai/erp-streams-map.md`); the entity arrives as a new event. The **Replay** button on the
+  Inbox issues page (needs `RecoverIntegrationEvents`) does it for one row and marks the row
+  `resolved`; it is shown only for streams that map onto an Integration Service aggregate type
+  (`stream-aggregate-type.ts`; `vat-rate` is excluded: Integration Service generates it itself).
+  `NOT_FOUND` means Integration Service no longer knows the entity (the row stays failed).
+  Photos also have a built-in automatic recovery.
 - Sysadmin: do not edit the table. Report stream, entity id and `last_error` to a developer.
 
 ### Unprocessable Kafka messages
@@ -126,6 +133,10 @@ built), `resolved` (a skipped row whose event was rebuilt).
   `QUEUED`; `STILL_SKIPPED` (reason updated, also when the builder threw: the error is recorded on
   the row and rethrown); `ALREADY_SENT` (a pending/published row already carries the same subject,
   matched by the registry's `subjectKey`, `orderId` for `order.submitted`).
+- **System -> Outbound problems** lists failed and skipped outbox rows (event type, subject id such
+  as the order id, status, retries, last error); the Failed and Skipped numbers of the Outbound tab
+  link to it pre-filtered. **Requeue** (failed rows) and **Rebuild** (skipped rows) call the
+  mutations above and are shown only with `RecoverIntegrationEvents`. Raw payloads are never shown.
 - Sysadmin: the alerts fire on any `failed` or `skipped`; report event type and reason to a
   developer.
 

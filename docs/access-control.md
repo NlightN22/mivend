@@ -497,3 +497,11 @@ is not done until all of the following exist:**
 - Do not ship a `requiresPermission`-protected field or a new approval gate without the tests in
   "Testing requirements" above — these are as mandatory as the AGENTS.md plugin "definition of
   done".
+
+### Integration health drill-down lists (issue #200)
+
+`integrationInboxIssues` and `integrationOutboxProblems` (paginated, filter/sort whitelisted
+server-side, payloads never selected) need `ManageErpIntegration`, like the rest of the health
+page. `replayFailedIntegrationInbox` (1 to 100 row ids), `requeueFailedIntegrationOutbox` and
+`rebuildSkippedIntegrationOutbox` need `RecoverIntegrationEvents`; the dashboard shows their buttons
+only to holders of it.
