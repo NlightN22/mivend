@@ -37,6 +37,7 @@ import { ProductTaxCodeFlagResolver } from './product-tax-code-flag.resolver';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
 import { createIntegrationOutboxTask } from './integration-outbox.scheduled-task';
+import { IntegrationInboxHealthService } from './integration-inbox-health.service';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
 import {
@@ -173,6 +174,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         IntegrationOutboxService,
         IntegrationOutboxProcessorService,
         IntegrationInboxService,
+        IntegrationInboxHealthService,
         IntegrationInboxProcessorService,
         KafkaConsumerService,
         KafkaConsumerBootstrapService,

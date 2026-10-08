@@ -10,7 +10,7 @@ import { ContractVersionClient } from './contract-version.client';
 import { CONTRACT_VERSION, listContractStreams } from './contract-streams';
 import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
 import { IGNORED_CONTRACT_STREAMS } from './ignored-contract-streams';
-import { IntegrationInboxService } from './integration-inbox.service';
+import { IntegrationInboxHealthService } from './integration-inbox-health.service';
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import type { OutboxHealthByEventType } from './outbox-health';
 import { groupLagRowsByTopic } from './kafka-lag.resolver';
@@ -31,7 +31,7 @@ export class IntegrationStreamHealthResolver {
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
         private readonly dataSource: DataSource,
-        private readonly inbox: IntegrationInboxService,
+        private readonly inbox: IntegrationInboxHealthService,
         private readonly outboxHealth: IntegrationOutboxHealthService,
         private readonly contractVersions: ContractVersionClient,
     ) {}

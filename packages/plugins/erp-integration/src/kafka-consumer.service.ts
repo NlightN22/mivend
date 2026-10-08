@@ -277,13 +277,35 @@ export class KafkaConsumerService implements OnModuleDestroy {
         }, delay);
     }
 
-    // A decode failure is logged and skipped (it cannot be retried into validity); an enqueue
-    // failure rethrows so kafkajs does not commit the offset and the message is redelivered.
+    // A message that can never be processed (no value, undecodable, no identity) is dead-lettered
+    // into the inbox as a `failed` row with the reason, then its offset is committed: retrying it
+    // cannot fix it, and the durable row makes it visible. If recording fails this rethrows, so the
+    // offset is not committed and the message is redelivered. An enqueue failure rethrows too.
     private async handleMessage(
         stream: InboundStream,
-        { message }: EachMessagePayload,
+        { message, partition }: EachMessagePayload,
     ): Promise<void> {
-        if (!message.value) return;
+        const reject = (
+            reason: string,
+            payload: Record<string, unknown>,
+            ids: { entityId?: string; sourceEventId?: string } = {},
+        ): Promise<void> => {
+            Logger.error(
+                `Rejected ${stream} message (offset=${message.offset}): ${reason}`,
+                loggerCtx,
+            );
+            return this.inbox.enqueueRejected({
+                stream,
+                partition: partition ?? 0,
+                offset: message.offset,
+                reason,
+                payload,
+                ...ids,
+            });
+        };
+
+        if (!message.value)
+            return reject('message has no value', { key: message.key?.toString() ?? null });
         const schema = SCHEMA_BY_STREAM[stream];
         if (!schema) throw new Error(`No schema registered for stream ${stream}`);
         let record: Record<string, unknown>;
@@ -291,13 +313,8 @@ export class KafkaConsumerService implements OnModuleDestroy {
             const decoded = fromBinary(schema, new Uint8Array(message.value));
             record = toJson(schema, decoded) as Record<string, unknown>;
         } catch (err) {
-            Logger.error(
-                `Failed to decode ${stream} message (offset=${message.offset}): ${
-                    err instanceof Error ? err.message : String(err)
-                }`,
-                loggerCtx,
-            );
-            return;
+            const reason = `decode failed: ${err instanceof Error ? err.message : String(err)}`;
+            return reject(reason, { rawBase64: message.value.toString('base64') });
         }
 
         const entityId = String(record.entityId ?? '');
@@ -305,11 +322,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
         const sourceEventId = String(record.eventId ?? message.key?.toString() ?? '');
 
         if (!entityId || !sourceEventId) {
-            Logger.error(
-                `Dropping ${stream} message with missing entityId/eventId (offset=${message.offset})`,
-                loggerCtx,
-            );
-            return;
+            return reject('missing entityId/eventId', record, { entityId, sourceEventId });
         }
 
         await this.inbox.enqueue({ stream, entityId, version, sourceEventId, payload: record });

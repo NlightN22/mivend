@@ -10,6 +10,7 @@ import {
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import type { KafkaConsumerLagEntry } from '../../../entities/kafka-consumer-lag.entity';
+import { IntegrationInboxHealthService } from '../../../integration-inbox-health.service';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { IntegrationOutboxHealthService } from '../../../integration-outbox-health.service';
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
@@ -41,7 +42,7 @@ beforeAll(async () => {
     resolver = new IntegrationStreamHealthResolver(
         { kafkaConsumer: { topics } } as unknown as ErpIntegrationPluginOptions,
         { getRepository: () => ({ find: async () => lagRows }) } as unknown as DataSource,
-        inbox,
+        new IntegrationInboxHealthService(dataSource),
         new IntegrationOutboxHealthService(dataSource),
         { getLatestVersion: async () => '99.0.0' } as unknown as ContractVersionClient,
     );

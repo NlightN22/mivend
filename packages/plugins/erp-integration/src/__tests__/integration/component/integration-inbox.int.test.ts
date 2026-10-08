@@ -8,6 +8,7 @@ import {
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
+import { IntegrationInboxHealthService } from '../../../integration-inbox-health.service';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 
 // Inbox idempotency/concurrency pattern (docs/testing-patterns.md, the external-integration-rules skill) — mirrors
@@ -16,6 +17,7 @@ import { IntegrationInboxService } from '../../../integration-inbox.service';
 // SELECT ... FOR UPDATE SKIP LOCKED semantics only exist at the DB level.
 let dataSource: DataSource;
 let inboxService: IntegrationInboxService;
+let inboxHealth: IntegrationInboxHealthService;
 
 const { schema, extra } = testSchemaOptions('erp_integration_inbox');
 
@@ -31,6 +33,7 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     inboxService = new IntegrationInboxService(dataSource);
+    inboxHealth = new IntegrationInboxHealthService(dataSource);
 });
 
 afterEach(async () => {
@@ -545,7 +548,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 .getRepository(IntegrationInboxEvent)
                 .update(failed.id, { status: 'failed' });
 
-            const backlog = await inboxService.getBacklogByStream();
+            const backlog = await inboxHealth.getBacklogByStream();
             const byStream = Object.fromEntries(backlog.map(b => [b.stream, b]));
 
             expect(byStream.product).toEqual({
@@ -565,7 +568,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         });
 
         it('returns an empty array when there is no backlog at all', async () => {
-            const backlog = await inboxService.getBacklogByStream();
+            const backlog = await inboxHealth.getBacklogByStream();
             expect(backlog).toEqual([]);
         });
     });
