@@ -576,7 +576,12 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     // NOT currently REJECTED, must never touch the reason fields or publish a status event — a
     // repeat/stale non-reject result is a safe no-op on this axis, same idempotency rule as the
     // release-matching logic above.
-    it('does not touch the rejection reason or publish a status event when the order was never rejected', async () => {
+    it('does not touch the rejection reason or publish a status event when the order is already SENT_TO_ERP', async () => {
+        orderRepo.findOne.mockResolvedValue({
+            id: 'order-1',
+            code: 'order-1',
+            customFields: { erpStatus: 'SENT_TO_ERP', erpOrderId: 'erp-order-1' },
+        });
         await service.handleOrderRegistrationResult(ctx, {
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
@@ -593,6 +598,89 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         expect(eventBus.publish).not.toHaveBeenCalled();
         const [, { customFields }] = orderRepo.update.mock.calls[0];
         expect(customFields.erpRejectionReasonCode).toBeUndefined();
+    });
+
+    // Live finding (#204 verification): a registered result never stored erpOrderId, so every later
+    // order-changed failed with "no Order found" and the order stayed PENDING.
+    it('sends the order from PENDING to SENT_TO_ERP carrying orderEntityId so erpOrderId is stored', async () => {
+        orderRepo.findOne.mockResolvedValue({
+            id: 'order-1',
+            code: 'order-1',
+            customFields: { erpStatus: 'PENDING' },
+        });
+
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: 'erp-order-1',
+            requestEntityId: 'req-1',
+            localOrderId: 'order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: 'ЗК-00004',
+            status: 'Проведён',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        expect(eventBus.publish).toHaveBeenCalledTimes(1);
+        expect(eventBus.publish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                orderCode: 'order-1',
+                status: 'SENT_TO_ERP',
+                erpOrderId: 'erp-order-1',
+            }),
+        );
+    });
+
+    it('publishes SENT_TO_ERP without an erpOrderId when the result carries no orderEntityId', async () => {
+        orderRepo.findOne.mockResolvedValue({
+            id: 'order-1',
+            code: 'order-1',
+            customFields: { erpStatus: 'PENDING' },
+        });
+
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: null,
+            requestEntityId: 'req-1',
+            localOrderId: 'order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: 'ЗК-00005',
+            status: 'Проведён',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        const event = eventBus.publish.mock.calls[0][0] as { status: string; erpOrderId?: string };
+        expect(event.status).toBe('SENT_TO_ERP');
+        expect(event.erpOrderId).toBeUndefined();
+    });
+
+    it('publishes REJECTED, never SENT_TO_ERP, for a rejected result on a PENDING order', async () => {
+        orderRepo.findOne.mockResolvedValue({
+            id: 'order-1',
+            code: 'order-1',
+            customFields: { erpStatus: 'PENDING' },
+        });
+
+        await service.handleOrderRegistrationResult(ctx, {
+            orderEntityId: null,
+            requestEntityId: 'req-1',
+            localOrderId: 'order-1',
+            rejected: true,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
+            rejectionReasonCode: 'PROCESSING_ERROR',
+            rejectionReasonText: 'organization mismatch',
+        });
+
+        expect(eventBus.publish).toHaveBeenCalledTimes(1);
+        expect(eventBus.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ orderCode: 'order-1', status: 'REJECTED' }),
+        );
     });
 
     // Regression (live failure, #204): `orderRepo.save` here reproduces the real throw on an

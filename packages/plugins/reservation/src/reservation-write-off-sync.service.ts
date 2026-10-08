@@ -102,6 +102,8 @@ export class ReservationWriteOffSyncService {
         // REJECTED is non-terminal (issue #204): captured here so a later, non-rejected result
         // for the same order can clear both the reason fields and erpStatus back to SENT_TO_ERP.
         const wasRejected = order.customFields.erpStatus === 'REJECTED';
+        const wasPending =
+            order.customFields.erpStatus == null || order.customFields.erpStatus === 'PENDING';
 
         // Purely informational for staff — never read by the release/quantity-match logic below.
         const customFields: typeof order.customFields = {
@@ -125,8 +127,17 @@ export class ReservationWriteOffSyncService {
         // directly here, same separation as ErpCallbackController's own order-status path.
         if (input.rejected) {
             this.eventBus.publish(new ErpOrderStatusEvent(ctx, order.code, 'REJECTED'));
-        } else if (wasRejected) {
-            this.eventBus.publish(new ErpOrderStatusEvent(ctx, order.code, 'SENT_TO_ERP'));
+        } else if (wasRejected || wasPending) {
+            // Carries orderEntityId so ErpOrderService.updateStatus stores erpOrderId, the key later
+            // order-changed events correlate on; nothing else sets it in this flow.
+            this.eventBus.publish(
+                new ErpOrderStatusEvent(
+                    ctx,
+                    order.code,
+                    'SENT_TO_ERP',
+                    input.orderEntityId ?? undefined,
+                ),
+            );
         }
 
         if (input.unresolvedProductIds.length > 0) {
