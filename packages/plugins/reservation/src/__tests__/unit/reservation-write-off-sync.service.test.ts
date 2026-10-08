@@ -1,12 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Order } from '@vendure/core';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ReservationWriteOffSyncService } from '../../reservation-write-off-sync.service';
 import { ReservationReconciliationIssueService } from '../../reservation-reconciliation-issue.service';
 import { ReservationService } from '../../reservation.service';
 
+// Real calculated getters installed, same technique as order-contract.service.test.ts's
+// loadedOrder (#205, 2ab4301) — a plain mock object never exercises this and misses this bug class.
+function loadedOrder(id: string, customFields: Record<string, unknown>): Order {
+    const entity = new Order({ id } as never);
+    (entity as unknown as { customFields: unknown }).customFields = customFields;
+    const names = (
+        Order.prototype as unknown as { __calculatedProperties__: Array<{ name: string }> }
+    ).__calculatedProperties__.map(p => p.name);
+    for (const name of names) {
+        const descriptor = Object.getOwnPropertyDescriptor(Order.prototype, name);
+        if (descriptor?.get) {
+            Object.defineProperty(entity, name, { get: descriptor.get, enumerable: true });
+        }
+    }
+    return entity;
+}
+
 describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
-    let orderRepo: { findOne: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
+    let orderRepo: {
+        findOne: ReturnType<typeof vi.fn>;
+        save: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+    };
     let reservationRepo: {
         find: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
@@ -30,6 +52,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         orderRepo = {
             findOne: vi.fn(async () => ({ id: 'order-1', code: 'order-1', customFields: {} })),
             save: vi.fn(async (x: unknown) => x),
+            update: vi.fn(async () => undefined),
         };
         reservationRepo = {
             find: vi.fn(async () => []),
@@ -421,9 +444,9 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejectionReasonText: null,
         });
 
-        expect(orderRepo.save).toHaveBeenCalledWith(
+        expect(orderRepo.update).toHaveBeenCalledWith(
+            'order-1',
             expect.objectContaining({
-                id: 'order-1',
                 customFields: expect.objectContaining({
                     erpRegistrationDocumentNumber: 'ЗК-00001',
                     erpRegistrationStatus: 'Отклонён',
@@ -448,7 +471,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejectionReasonText: null,
         });
 
-        expect(orderRepo.save).toHaveBeenCalledWith(
+        expect(orderRepo.update).toHaveBeenCalledWith(
+            'order-1',
             expect.objectContaining({
                 customFields: expect.objectContaining({
                     erpRegistrationDocumentNumber: 'ЗК-00002',
@@ -494,7 +518,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejectionReasonText: 'not enough stock',
         });
 
-        expect(orderRepo.save).toHaveBeenCalledWith(
+        expect(orderRepo.update).toHaveBeenCalledWith(
+            'order-1',
             expect.objectContaining({
                 customFields: expect.objectContaining({
                     erpRejectionReasonCode: 'STOCK_SHORTAGE',
@@ -533,7 +558,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejectionReasonText: null,
         });
 
-        expect(orderRepo.save).toHaveBeenCalledWith(
+        expect(orderRepo.update).toHaveBeenCalledWith(
+            'order-1',
             expect.objectContaining({
                 customFields: expect.objectContaining({
                     erpRejectionReasonCode: null,
@@ -565,13 +591,52 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         });
 
         expect(eventBus.publish).not.toHaveBeenCalled();
-        const [saved] = orderRepo.save.mock.calls[0];
-        expect(saved.customFields.erpRejectionReasonCode).toBeUndefined();
+        const [, { customFields }] = orderRepo.update.mock.calls[0];
+        expect(customFields.erpRejectionReasonCode).toBeUndefined();
+    });
+
+    // Regression (live failure, #204): `orderRepo.save` here reproduces the real throw on an
+    // unhydrated Order's calculated getters, so this fails if `.update()` reverts to `.save(order)`.
+    it('persists customFields on a real, unhydrated Order entity without touching the calculated-getter save path', async () => {
+        const order = loadedOrder('order-1', {});
+        (order as unknown as { code: string }).code = 'order-1';
+        orderRepo.findOne.mockResolvedValue(order);
+        orderRepo.save.mockImplementation(async (o: unknown) => ({ ...(o as object) }));
+
+        await expect(
+            service.handleOrderRegistrationResult(ctx, {
+                orderEntityId: 'erp-order-1',
+                requestEntityId: null,
+                localOrderId: null,
+                rejected: false,
+                reservedLines: [],
+                unresolvedProductIds: [],
+                documentNumber: 'ЗК-00004',
+                status: 'Проведён',
+                rejectionReasonCode: null,
+                rejectionReasonText: null,
+            }),
+        ).resolves.toBeUndefined();
+
+        expect(orderRepo.save).not.toHaveBeenCalled();
+        expect(orderRepo.update).toHaveBeenCalledWith(
+            'order-1',
+            expect.objectContaining({
+                customFields: expect.objectContaining({
+                    erpRegistrationDocumentNumber: 'ЗК-00004',
+                    erpRegistrationStatus: 'Проведён',
+                }),
+            }),
+        );
     });
 });
 
 describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
-    let orderRepo: { findOne: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
+    let orderRepo: {
+        findOne: ReturnType<typeof vi.fn>;
+        save: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+    };
     let reservationRepo: {
         find: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
@@ -594,6 +659,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         orderRepo = {
             findOne: vi.fn(async () => ({ id: 'order-1', customFields: {} })),
             save: vi.fn(async (x: unknown) => x),
+            update: vi.fn(async () => undefined),
         };
         reservationRepo = {
             find: vi.fn(async () => []),
@@ -644,13 +710,14 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             contractId: null,
         });
 
-        expect(orderRepo.save).toHaveBeenCalledWith(
+        expect(orderRepo.update).toHaveBeenCalledWith(
+            'order-1',
             expect.objectContaining({
                 customFields: expect.objectContaining({ erpOrderStatus: 'В обработке' }),
             }),
         );
-        const [saved] = orderRepo.save.mock.calls[0];
-        expect(saved.customFields.erpRegistrationStatus).toBeUndefined();
+        const [, { customFields }] = orderRepo.update.mock.calls[0];
+        expect(customFields.erpRegistrationStatus).toBeUndefined();
     });
 
     it('persists contractId when present', async () => {
@@ -661,7 +728,8 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             contractId: 'contract-guid-1',
         });
 
-        expect(orderRepo.save).toHaveBeenCalledWith(
+        expect(orderRepo.update).toHaveBeenCalledWith(
+            'order-1',
             expect.objectContaining({
                 customFields: expect.objectContaining({ erpContractId: 'contract-guid-1' }),
             }),
@@ -683,8 +751,8 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             contractId: null,
         });
 
-        const [saved] = orderRepo.save.mock.calls[0];
-        expect(saved.customFields.erpContractId).toBe('contract-guid-1');
+        const [, { customFields }] = orderRepo.update.mock.calls[0];
+        expect(customFields.erpContractId).toBe('contract-guid-1');
     });
 
     it('releases a reservation whose quantity matches the reported reservedQuantity', async () => {
@@ -762,5 +830,33 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
         expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
+    });
+
+    // Same regression as handleOrderRegistrationResult's own test above — handleOrderChanged
+    // loads the Order the same unhydrated way and must use `.update()`, never `.save(order)`.
+    it('persists customFields on a real, unhydrated Order entity without touching the calculated-getter save path', async () => {
+        const order = loadedOrder('order-1', {});
+        orderRepo.findOne.mockResolvedValue(order);
+        orderRepo.save.mockImplementation(async (o: unknown) => ({ ...(o as object) }));
+
+        await expect(
+            service.handleOrderChanged(ctx, {
+                orderEntityId: 'erp-order-1',
+                status: 'В обработке',
+                reservedLines: [],
+                contractId: 'contract-guid-1',
+            }),
+        ).resolves.toBeUndefined();
+
+        expect(orderRepo.save).not.toHaveBeenCalled();
+        expect(orderRepo.update).toHaveBeenCalledWith(
+            'order-1',
+            expect.objectContaining({
+                customFields: expect.objectContaining({
+                    erpOrderStatus: 'В обработке',
+                    erpContractId: 'contract-guid-1',
+                }),
+            }),
+        );
     });
 });

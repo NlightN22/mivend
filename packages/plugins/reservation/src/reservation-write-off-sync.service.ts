@@ -99,23 +99,27 @@ export class ReservationWriteOffSyncService {
             );
         }
 
-        // Always persist the latest known document number/status, regardless of rejected/
-        // released/no-op below — purely informational for staff, never read by the
-        // release/quantity-match logic that follows.
-        order.customFields.erpRegistrationDocumentNumber = input.documentNumber;
-        order.customFields.erpRegistrationStatus = input.status;
-
         // REJECTED is non-terminal (issue #204): captured here so a later, non-rejected result
         // for the same order can clear both the reason fields and erpStatus back to SENT_TO_ERP.
         const wasRejected = order.customFields.erpStatus === 'REJECTED';
+
+        // Purely informational for staff — never read by the release/quantity-match logic below.
+        const customFields: typeof order.customFields = {
+            ...order.customFields,
+            erpRegistrationDocumentNumber: input.documentNumber,
+            erpRegistrationStatus: input.status,
+        };
         if (input.rejected) {
-            order.customFields.erpRejectionReasonCode = input.rejectionReasonCode;
-            order.customFields.erpRejectionReasonText = input.rejectionReasonText;
+            customFields.erpRejectionReasonCode = input.rejectionReasonCode;
+            customFields.erpRejectionReasonText = input.rejectionReasonText;
         } else if (wasRejected) {
-            order.customFields.erpRejectionReasonCode = null;
-            order.customFields.erpRejectionReasonText = null;
+            customFields.erpRejectionReasonCode = null;
+            customFields.erpRejectionReasonText = null;
         }
-        await this.connection.getRepository(ctx, Order).save(order);
+        // `repo.update()`, not `.save(order)` — see docs/concurrency.md; same gotcha as
+        // ReservationService.setOrderReservationState (unhydrated Order, calculated getters throw).
+        await this.connection.getRepository(ctx, Order).update(order.id, { customFields });
+        order.customFields = customFields;
 
         // erpStatus is owned by plugin-erp-order's ErpOrderService.updateStatus — never written
         // directly here, same separation as ErpCallbackController's own order-status path.
@@ -184,13 +188,19 @@ export class ReservationWriteOffSyncService {
             );
         }
 
-        order.customFields.erpOrderStatus = input.status;
+        const customFields: typeof order.customFields = {
+            ...order.customFields,
+            erpOrderStatus: input.status,
+        };
         if (input.contractId !== null) {
             // Real optional presence: an absent contractId on a later event does not mean the
             // order lost its contract — never overwrite an already-known value with null.
-            order.customFields.erpContractId = input.contractId;
+            customFields.erpContractId = input.contractId;
         }
-        await this.connection.getRepository(ctx, Order).save(order);
+        // `repo.update()`, not `.save(order)` — same calculated-getter gotcha as
+        // handleOrderRegistrationResult above.
+        await this.connection.getRepository(ctx, Order).update(order.id, { customFields });
+        order.customFields = customFields;
 
         await this.releaseMatchingReservations(
             ctx,
