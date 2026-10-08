@@ -3,6 +3,8 @@ export interface SelectableContract {
     counterpartyId: string;
     organizationId: string;
     isActive: boolean;
+    priceTypeId?: string;
+    createdAt?: Date;
 }
 
 export function isSelectableContract(
@@ -17,14 +19,26 @@ export function isSelectableContract(
     );
 }
 
-// The contract an order is registered under: the one already chosen if it is still valid, else the
-// counterparty's main contract. null means the order cannot be registered in the ERP.
+// Order: the stored selection if still valid, else the main contract, else another active contract
+// of the counterparty (same price type first, then newest, then lowest erpId), else null (block).
 export function chooseOrderContract<T extends SelectableContract>(
     counterpartyId: string,
     selected: T | null | undefined,
     main: T | null | undefined,
+    candidates: readonly T[] = [],
+    preferredPriceTypeId?: string | null,
 ): T | null {
     if (isSelectableContract(selected, counterpartyId)) return selected;
     if (isSelectableContract(main, counterpartyId)) return main;
-    return null;
+    const matches = (c: T): boolean =>
+        !!preferredPriceTypeId && c.priceTypeId === preferredPriceTypeId;
+    const ranked = candidates
+        .filter(c => isSelectableContract(c, counterpartyId))
+        .sort(
+            (a, b) =>
+                Number(matches(b)) - Number(matches(a)) ||
+                (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0) ||
+                a.erpId.localeCompare(b.erpId),
+        );
+    return ranked[0] ?? null;
 }

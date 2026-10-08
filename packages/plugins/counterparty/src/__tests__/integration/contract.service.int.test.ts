@@ -225,11 +225,17 @@ describe('ContractService order contract lookup (real Postgres)', () => {
         expect(none?.erpId).toBe('c-main');
     });
 
-    it('returns null when the main contract is inactive and nothing else was selected', async () => {
+    it('falls back to another active contract when the main one is inactive, else null', async () => {
         await seed('c-main', 'cp-1', false);
+        const counterparty = { id: 'cp-1', mainContractId: 'c-main' };
 
-        expect(
-            await service.resolveOrderContract(ctx, { id: 'cp-1', mainContractId: 'c-main' }, null),
-        ).toBeNull();
+        expect(await service.resolveOrderContract(ctx, counterparty, null)).toBeNull();
+
+        await seed('c-zeta', 'cp-1');
+        await seed('c-alpha', 'cp-1');
+        const picked = await service.resolveOrderContract(ctx, counterparty, null);
+
+        expect(['c-alpha', 'c-zeta']).toContain(picked?.erpId);
+        expect(await service.resolveOrderContract(ctx, counterparty, null)).toEqual(picked);
     });
 });

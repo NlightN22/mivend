@@ -147,6 +147,7 @@ export class ReservationService {
                                 txCtx,
                                 counterparty,
                                 order.customFields?.selectedContractId,
+                                order.customerId,
                             );
                             missingContract = !contract;
                         }

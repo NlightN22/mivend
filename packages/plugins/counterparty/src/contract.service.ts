@@ -104,12 +104,30 @@ export class ContractService {
         ctx: RequestContext,
         counterparty: { id: ID; mainContractId: string | null },
         selectedErpId: string | null | undefined,
+        customerId?: ID | null,
     ): Promise<Contract | null> {
         const [selected, main] = await Promise.all([
             selectedErpId ? this.findByErpId(ctx, selectedErpId) : null,
             counterparty.mainContractId ? this.findByErpId(ctx, counterparty.mainContractId) : null,
         ]);
-        return chooseOrderContract(String(counterparty.id), selected, main);
+        const counterpartyId = String(counterparty.id);
+        const settled = chooseOrderContract(counterpartyId, selected, main);
+        if (settled) return settled;
+        const candidates = await this.findActiveForCounterparty(ctx, counterparty.id);
+        const priceTypeId = customerId ? await this.customerPriceTypeId(customerId) : null;
+        return chooseOrderContract(counterpartyId, null, null, candidates, priceTypeId);
+    }
+
+    // Customer-pricing's explicit price type (customer_price_type), as the ERP price type id.
+    private async customerPriceTypeId(customerId: ID): Promise<string | null> {
+        const rows: Array<{ externalId: string | null }> =
+            await this.connection.rawConnection.query(
+                `SELECT pt."externalId" FROM customer_price_type cpt
+                 JOIN price_type pt ON pt.id = cpt."priceTypeId"
+                 WHERE cpt."customerId"::text = $1 LIMIT 1`,
+                [String(customerId)],
+            );
+        return rows[0]?.externalId ?? null;
     }
 
     // A tombstone never carries a counterpartyId either — deactivate by erpId only, never look up

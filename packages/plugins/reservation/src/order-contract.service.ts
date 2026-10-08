@@ -108,7 +108,12 @@ export class OrderContractService {
         if (!counterparty) return [];
         const [contracts, current] = await Promise.all([
             this.contractService.findActiveForCounterparty(ctx, counterparty.id),
-            this.contractService.resolveOrderContract(ctx, counterparty, selectedContractId),
+            this.contractService.resolveOrderContract(
+                ctx,
+                counterparty,
+                selectedContractId,
+                customerId,
+            ),
         ]);
         const names = await this.organizationNames(contracts);
         return contracts

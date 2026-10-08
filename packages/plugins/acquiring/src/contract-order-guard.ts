@@ -18,6 +18,7 @@ async function resolveContract(ctx: RequestContext, order: Order): Promise<Contr
         ctx,
         counterparty,
         order.customFields?.selectedContractId,
+        order.customerId,
     );
 }
 

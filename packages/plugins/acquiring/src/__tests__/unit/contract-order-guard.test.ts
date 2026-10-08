@@ -54,6 +54,7 @@ describe('contractOrderGuard', () => {
             expect.anything(),
             { id: 5, mainContractId: 'main' },
             'picked',
+            1,
         );
     });
 

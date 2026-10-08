@@ -411,9 +411,14 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   organizations, and fans out per warehouse only. Our own split (invoices, payment split,
   reservations) stays on the line organization.
 - `Order.customFields.selectedContractId` is set when the order enters `ArrangingPayment`
-  (`contractOrderGuard`, plugin-acquiring): the stored selection if still valid (active, same
-  counterparty, with an organization), else the counterparty's main contract. No usable contract
-  blocks that transition with a clear message; `reserveOrder()` and the builder re-check it.
+  (`contractOrderGuard`, plugin-acquiring). Selection order: (1) the stored selection if still valid
+  (active, same counterparty, with an organization); (2) the counterparty's main contract if active;
+  (3) any other active contract of the counterparty: same price type as the customer's price type
+  first, then the most recently created, then the lowest `erpId` (deterministic); (4) none: that
+  transition is blocked with a clear message. `isActive` mirrors the ERP deletion mark and only a
+  minority of counterparties have an active main contract, hence (3). `reserveOrder()` and the
+  builder re-check with the same rule. Out of scope for now: contracts with dedicated limits and
+  per-brand/per-position contracts.
 - Staff change it with `setOrderContract` (permission `ConfirmOrder`, order scope as for the order
   list, history note). Allowed only while the order has no active reservation and the ERP does not
   have it yet; it takes the same advisory lock as `reserveOrder()`, so a change cannot interleave

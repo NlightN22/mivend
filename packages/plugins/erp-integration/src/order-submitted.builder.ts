@@ -45,6 +45,7 @@ export class OrderSubmittedBuilder {
             ctx,
             counterparty,
             order.customFields?.selectedContractId,
+            order.customerId,
         );
         if (!contract) {
             return outboundSkip(`no active contract for counterparty ${counterparty.erpId}`);
