@@ -264,9 +264,9 @@ export class ReservationWriteOffSyncService {
                 // Not confirmed in this result — leave active, may arrive in a later document.
                 continue;
             }
-            if (erpQuantity === localQuantity) {
-                toRelease.push(...active.filter(r => r.productVariantId === variantId));
-            } else {
+            if (erpQuantity !== localQuantity) {
+                // The ERP is the source of truth (#199): it holds whatever it reserved, so our hold
+                // is released like a matching one; the difference is only recorded for staff.
                 await this.reconciliationIssueService.reportQuantityMismatch(ctx, {
                     orderId,
                     productVariantId: variantId,
@@ -274,13 +274,14 @@ export class ReservationWriteOffSyncService {
                     erpQuantity,
                     orderEntityId,
                 });
-                Logger.error(
+                Logger.warn(
                     `${source}: quantity mismatch for order ${orderId} variant ` +
-                        `${variantId} (local=${localQuantity}, erp=${erpQuantity}) — reported, ` +
-                        'reservation left active',
+                        `${variantId} (local=${localQuantity}, erp=${erpQuantity}) — ERP wins, ` +
+                        'local reservation released, difference reported',
                     loggerCtx,
                 );
             }
+            toRelease.push(...active.filter(r => r.productVariantId === variantId));
         }
 
         if (toRelease.length === 0) {
@@ -296,7 +297,7 @@ export class ReservationWriteOffSyncService {
         await reservationRepo.save(toRelease);
         Logger.log(
             `${source}: released ${toRelease.length} reservation(s) for order ` +
-                `${orderId} — confirmed write-off matched (no outbound event, ERP-driven)`,
+                `${orderId} — the ERP holds the stock now (no outbound event, ERP-driven)`,
             loggerCtx,
         );
 
