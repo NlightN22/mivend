@@ -13,9 +13,8 @@ export interface InboundStreamHandler {
     ): Promise<InboundOutcome>;
 }
 
-// A handler that deliberately does nothing for a message must say so and why (issue #200): the
-// reason is stored on the inbox row and counted on the integration-health page. A bare `return`
-// that only logs is the silent drop the external-integration-rules skill forbids.
+// A deliberate no-op must say why (issue #200): the reason is stored on the inbox row and counted
+// on the integration-health page.
 export type InboundOutcome = { kind: 'applied' } | { kind: 'noop'; reason: string };
 
 // apply() must return one of these on every path, so a bare `return` does not compile.

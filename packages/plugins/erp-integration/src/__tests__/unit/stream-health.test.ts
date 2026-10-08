@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildStreamHealthRows } from '../../stream-health';
-import type { StreamHealthInput } from '../../stream-health';
+import type { StreamHealthInput, StreamHealthRow } from '../../stream-health';
 
 function input(overrides: Partial<StreamHealthInput>): StreamHealthInput {
     return {
@@ -16,7 +16,7 @@ function input(overrides: Partial<StreamHealthInput>): StreamHealthInput {
     };
 }
 
-const find = (rows: ReturnType<typeof buildStreamHealthRows>, s: string) =>
+const find = (rows: ReturnType<typeof buildStreamHealthRows>, s: string): StreamHealthRow =>
     rows.find(r => r.stream === s)!;
 
 describe('buildStreamHealthRows', () => {

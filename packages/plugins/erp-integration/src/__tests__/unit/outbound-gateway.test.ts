@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { OutboundGateway, outboundSend, outboundSkip } from '../../outbound-gateway';
 
-function makeGateway() {
+function makeGateway(): {
+    gateway: OutboundGateway;
+    outbox: { writeToOutbox: Mock; writeSkipped: Mock };
+} {
     const outbox = {
         writeToOutbox: vi.fn().mockResolvedValue(undefined),
         writeSkipped: vi.fn().mockResolvedValue(undefined),

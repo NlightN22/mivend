@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
+import type { Repository } from 'typeorm';
 import type { RequestContext } from '@vendure/core';
 import {
     createTestSchema,
@@ -28,7 +29,8 @@ const ctx = {} as RequestContext;
 const subject = { orderId: 'order-1', orderCode: 'ORD-1' };
 
 const { schema, extra } = testSchemaOptions('erp_integration_outbox_recovery');
-const repo = () => dataSource.getRepository(IntegrationOutboxEntry);
+const repo = (): Repository<IntegrationOutboxEntry> =>
+    dataSource.getRepository(IntegrationOutboxEntry);
 
 beforeAll(async () => {
     await createTestSchema(schema);

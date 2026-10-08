@@ -25,12 +25,8 @@ export interface IntegrationInboxBacklogByStream {
 export class IntegrationInboxHealthService {
     constructor(private readonly dataSource: DataSource) {}
 
-    // Dashboard read model (issue #91's "integration health" page) — how many rows per stream are
-    // sitting unprocessed right now. Deliberately a different question from Kafka lag: these rows
-    // were already consumed from Kafka and had their offset committed — this is Postgres-side
-    // processing backlog, not broker-side lag, and the two numbers are expected to disagree (a
-    // consumer can be fully caught up with Kafka while a huge inbox backlog waits on a slow/backed
-    // up processor, or vice versa during a burst).
+    // Unprocessed inbox rows per stream: Postgres-side backlog, deliberately a different number
+    // from Kafka lag (docs/integration-health.md).
     async getBacklogByStream(): Promise<IntegrationInboxBacklogByStream[]> {
         const rows = await this.dataSource
             .getRepository(IntegrationInboxEvent)
@@ -70,9 +66,7 @@ export class IntegrationInboxHealthService {
         return [...byStream.values()];
     }
 
-    // Messages a handler deliberately did nothing for in the last 24 h, per stream (#200) — a
-    // different question from backlog: these are processed rows, counted so a stream that drops
-    // everything it receives is visible.
+    // Processed rows whose handler recorded a no-op in the last 24 h, per stream (#200).
     async getNoopSummaryByStream(): Promise<IntegrationInboxNoopByStream[]> {
         return this.dataSource.query(`
             SELECT stream,

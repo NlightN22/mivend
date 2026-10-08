@@ -16,11 +16,8 @@ interface OrderSubmittedGroup {
     lines: OrderSubmittedLine[];
 }
 
-// Builds the order.submitted payloads for one order, or a skip with the reason. Triggered off
-// plugin-reservation's OrderReservedEvent (see OrderSubmittedListener), since the real per-line
-// warehouse fact is the custom Reservation entity (docs/order-flow.md's two-stage reservation
-// model). An order is sent whole or not at all: a partial order registered in the ERP cannot be
-// completed later, a skipped one can be rebuilt once the cause is fixed.
+// Builds the order.submitted payloads for one order, or a skip with the reason. Sent whole or not
+// at all: a partial order cannot be completed in the ERP later, a skipped one can be rebuilt.
 @Injectable()
 export class OrderSubmittedBuilder {
     constructor(

@@ -8,7 +8,7 @@ import {
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
-import { IntegrationInboxProcessorService } from '../../../integration-inbox-processor.service';
+import { makeInboxProcessor } from './inbox-processor-helpers';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { MissingDependencyError } from '../../../types';
 
@@ -19,6 +19,8 @@ import { MissingDependencyError } from '../../../types';
 // handlers deliberately mirror).
 let dataSource: DataSource;
 let inboxService: IntegrationInboxService;
+const makeProcessor = (apply: ReturnType<typeof vi.fn>): ReturnType<typeof makeInboxProcessor> =>
+    makeInboxProcessor(dataSource, inboxService, apply);
 
 const { schema, extra } = testSchemaOptions('erp_integration_inbox_processor');
 
@@ -45,46 +47,6 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-function makeProcessor(apply: ReturnType<typeof vi.fn>): IntegrationInboxProcessorService {
-    const stubHandler = { apply };
-    const requestContextService = { create: vi.fn().mockResolvedValue({}) };
-    return new IntegrationInboxProcessorService(
-        dataSource,
-        inboxService,
-        requestContextService as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-        stubHandler as never,
-    );
-}
-
 describe('IntegrationInboxProcessorService.processPendingBatch (component)', () => {
     it('applies a pending row and marks it processed', async () => {
         const apply = vi.fn().mockResolvedValue(undefined);
@@ -103,95 +65,6 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
 
         const rows = await dataSource.getRepository(IntegrationInboxEvent).find();
         expect(rows[0].status).toBe('processed');
-    });
-
-    // Silent-drop pattern (#200): every processed row says how it ended.
-    it('records outcome applied when the handler returns nothing', async () => {
-        await inboxService.enqueue({
-            stream: 'product',
-            entityId: 'p-ok',
-            version: '1',
-            sourceEventId: 'evt-ok',
-            payload: {},
-        });
-
-        await makeProcessor(vi.fn().mockResolvedValue(undefined)).processPendingBatch();
-
-        const [row] = await dataSource.getRepository(IntegrationInboxEvent).find();
-        expect(row).toMatchObject({ status: 'processed', outcome: 'applied', outcomeReason: null });
-    });
-
-    it('records outcome noop with the handler reason, never a bare processed', async () => {
-        await inboxService.enqueue({
-            stream: 'product',
-            entityId: 'p-noop',
-            version: '1',
-            sourceEventId: 'evt-noop',
-            payload: {},
-        });
-        const apply = vi.fn().mockResolvedValue({ kind: 'noop', reason: 'missing sku, skipping' });
-
-        await makeProcessor(apply).processPendingBatch();
-
-        const [row] = await dataSource.getRepository(IntegrationInboxEvent).find();
-        expect(row).toMatchObject({
-            status: 'processed',
-            outcome: 'noop',
-            outcomeReason: 'missing sku, skipping',
-        });
-    });
-
-    it('records outcome superseded, without calling the handler, for a stale version', async () => {
-        const repo = dataSource.getRepository(IntegrationInboxEvent);
-        await inboxService.enqueue({
-            stream: 'product',
-            entityId: 'p-stale',
-            version: '5',
-            sourceEventId: 'evt-new',
-            payload: {},
-        });
-        await repo.update({ sourceEventId: 'evt-new' }, { status: 'processed' });
-        await inboxService.enqueue({
-            stream: 'product',
-            entityId: 'p-stale',
-            version: '2',
-            sourceEventId: 'evt-old',
-            payload: {},
-        });
-        const apply = vi.fn().mockResolvedValue(undefined);
-
-        await makeProcessor(apply).processPendingBatch();
-
-        expect(apply).not.toHaveBeenCalled();
-        expect(await repo.findOneByOrFail({ sourceEventId: 'evt-old' })).toMatchObject({
-            status: 'processed',
-            outcome: 'superseded',
-        });
-    });
-
-    // One retry policy for every failure: a plain handler error and a MissingDependencyError
-    // both schedule a backoff retry instead of dead-lettering on the first attempts.
-    it.each([
-        ['a plain handler error', new Error('handler exploded')],
-        ['a MissingDependencyError', new MissingDependencyError('warehouse not found yet')],
-    ])('schedules a backoff retry (not a dead-letter) on %s', async (_label, thrown) => {
-        const apply = vi.fn().mockRejectedValue(thrown);
-        const row = await inboxService.enqueue({
-            stream: 'product',
-            entityId: 'p-retry',
-            version: '1',
-            sourceEventId: 'evt-retry',
-            payload: { sku: 'SKU-R' },
-        });
-
-        await makeProcessor(apply).processPendingBatch();
-
-        const updated = await dataSource
-            .getRepository(IntegrationInboxEvent)
-            .findOneOrFail({ where: { id: row.id } });
-        expect(updated.status).toBe('pending');
-        expect(updated.attempts).toBe(1);
-        expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
     });
 
     it('does not reclaim a MissingDependencyError row before its nextRetryAt', async () => {
@@ -439,5 +312,30 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         const rows = await dataSource.getRepository(IntegrationInboxEvent).find();
         const statuses = rows.map(row => row.status).sort();
         expect(statuses).toEqual(['pending', 'processed', 'processed']);
+    });
+
+    // One retry policy for every failure: a plain handler error and a MissingDependencyError
+    // both schedule a backoff retry instead of dead-lettering on the first attempts.
+    it.each([
+        ['a plain handler error', new Error('handler exploded')],
+        ['a MissingDependencyError', new MissingDependencyError('warehouse not found yet')],
+    ])('schedules a backoff retry (not a dead-letter) on %s', async (_label, thrown) => {
+        const apply = vi.fn().mockRejectedValue(thrown);
+        const row = await inboxService.enqueue({
+            stream: 'product',
+            entityId: 'p-retry',
+            version: '1',
+            sourceEventId: 'evt-retry',
+            payload: { sku: 'SKU-R' },
+        });
+
+        await makeProcessor(apply).processPendingBatch();
+
+        const updated = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .findOneOrFail({ where: { id: row.id } });
+        expect(updated.status).toBe('pending');
+        expect(updated.attempts).toBe(1);
+        expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
     });
 });

@@ -13,9 +13,8 @@ export interface RejectedInboxMessage {
     payload: Record<string, unknown>;
 }
 
-// A message that can never be processed (no value, undecodable, no identity) is dead-lettered
-// straight into the inbox as a `failed` row, so it is counted on the integration-health page and
-// never retried. The synthetic ids make redelivery of the same offset a no-op (dedup key).
+// Dead-letters a message that can never be processed as a `failed` inbox row; the synthetic ids
+// make a redelivery of the same offset a no-op (docs/integration-health.md).
 export async function insertRejectedInboxRow(
     dataSource: DataSource,
     message: RejectedInboxMessage,

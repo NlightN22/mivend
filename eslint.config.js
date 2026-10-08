@@ -3,7 +3,7 @@ import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import prettierConfig from 'eslint-config-prettier';
 import noRawGraphql from './eslint-rules/no-raw-graphql.js';
-import noDirectOutbound from './eslint-rules/no-direct-outbound.js';
+import outboundConfig from './eslint-rules/outbound-config.js';
 import noSyncPaymentProcessing from './eslint-rules/no-sync-payment-processing.js';
 import noNullCheckOnPlainProtoScalar from './eslint-rules/no-null-check-on-plain-proto-scalar.js';
 import maxCommentLines from './eslint-rules/max-comment-lines.js';
@@ -215,28 +215,7 @@ export default [
             'local/no-sync-payment-processing': 'error',
         },
     },
-    // Issue #200: outbound integration events go through OutboundGateway only; see
-    // eslint-rules/no-direct-outbound.js. The gateway, the outbox/producer services, the
-    // publisher/recovery services and the plugin module legitimately use the forbidden classes.
-    {
-        files: ['packages/plugins/**/*.ts', 'apps/**/*.ts'],
-        ignores: [
-            '**/*.test.ts',
-            '**/__tests__/**',
-            'packages/plugins/erp-integration/src/outbound-gateway.ts',
-            'packages/plugins/erp-integration/src/integration-outbox.service.ts',
-            'packages/plugins/erp-integration/src/integration-outbox-processor.service.ts',
-            'packages/plugins/erp-integration/src/integration-outbox-recovery.service.ts',
-            'packages/plugins/erp-integration/src/kafka-producer.service.ts',
-            'packages/plugins/erp-integration/src/erp-integration.plugin.ts',
-            'apps/server/src/migrations/**',
-        ],
-        languageOptions: { parser: tsParser },
-        plugins: { outbound: { rules: { 'no-direct-outbound': noDirectOutbound } } },
-        rules: {
-            'outbound/no-direct-outbound': 'error',
-        },
-    },
+    outboundConfig,
     // mivend.issue.84.88 (2026-09-15): stock.handler.ts read `payload.availableQuantity != null`
     // and treated an absent key as "no data" instead of "explicit 0" — Integration Service's
     // contract declares available_quantity as a plain (non-optional) proto3 double, whose

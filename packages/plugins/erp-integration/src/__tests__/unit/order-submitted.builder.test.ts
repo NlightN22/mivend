@@ -81,12 +81,8 @@ function makeBuilder(options: {
 const build = (builder: OrderSubmittedBuilder): Promise<OutboundBuildResult> =>
     builder.build(ctx, 'order-1', 'ORD-001');
 
-// order-submitted.listener.ts (mivend#85) sources warehouseId from plugin-reservation's
-// Reservation entity (via ReservationService.findForOrder), not Vendure's native Allocation —
-// see the listener's own doc comment. Product.customFields.externalId and
-// StockLocation.customFields.warehouseErpId are both read via raw SQL (same as every other
-// cross-plugin customField read in this codebase), mocked via rawConnection.createQueryBuilder
-// above, dispatching on the queried table name.
+// warehouseId comes from plugin-reservation's Reservation entity (mivend#85); the two customField
+// reads go through raw SQL, mocked via rawConnection.createQueryBuilder by table name.
 
 describe('OrderSubmittedBuilder', () => {
     it('skips the whole order when no Counterparty resolves for the customer', async () => {

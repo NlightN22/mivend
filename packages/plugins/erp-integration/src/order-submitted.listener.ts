@@ -8,9 +8,8 @@ import { OutboundGateway } from './outbound-gateway';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
-// Reacts to plugin-reservation's OrderReservedEvent (the reservation is already committed, so the
-// outbox write cannot join its transaction — an accepted gap, see docs/integration-health.md).
-// Every outcome, including a skip, is recorded by the gateway.
+// Reacts to OrderReservedEvent, after the reservation committed, so the outbox write cannot join
+// its transaction (known gap, docs/integration-health.md). The gateway records every outcome.
 @Injectable()
 export class OrderSubmittedListener implements OnApplicationBootstrap {
     constructor(

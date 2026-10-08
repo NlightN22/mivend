@@ -1,6 +1,5 @@
-// One entry per outbound event type. Adding a type here makes every Record<OutboundEventType, ...>
-// below (rebuilders) a compile error until it is filled in. `subjectKey` is the payload key that
-// identifies what the event is about; recovery uses it to see whether an event was already sent.
+// One entry per outbound event type; a new type breaks every Record<OutboundEventType, ...> until
+// filled in. `subjectKey` is the payload key recovery uses to detect an already-sent event.
 export const OUTBOUND_EVENT_TYPES = {
     'order.submitted': { subjectKey: 'orderId' },
 } as const;

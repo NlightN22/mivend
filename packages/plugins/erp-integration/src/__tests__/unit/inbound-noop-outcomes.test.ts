@@ -11,9 +11,8 @@ import { OrderRegistrationResultHandler } from '../../handlers/order-registratio
 import { OrganizationStreamHandler } from '../../handlers/organization.handler';
 import { PointOfSaleStreamHandler } from '../../handlers/point-of-sale.handler';
 
-// Every handler path that does nothing for a message must say so (issue #200): a tombstone that
-// matched no row, or part of a message that was skipped, is a noop outcome with a reason — never a
-// bare return recorded as applied. The matching "row existed" case must stay `applied`.
+// Issue #200: a tombstone matching no row, or a skipped part of a message, is a noop with a
+// reason, never a bare return recorded as applied; the "row existed" case stays `applied`.
 const ctx = {} as RequestContext;
 
 function orderConnection(variantId: string): never {

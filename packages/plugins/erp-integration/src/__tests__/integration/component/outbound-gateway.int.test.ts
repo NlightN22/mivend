@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DataSource } from 'typeorm';
+import type { Repository } from 'typeorm';
 import {
     createTestSchema,
     dropTestSchema,
@@ -20,7 +21,8 @@ const publish = vi.fn();
 
 const { schema, extra } = testSchemaOptions('erp_integration_outbound_gateway');
 const subject = { orderId: 'order-1', orderCode: 'ORD-1' };
-const repo = () => dataSource.getRepository(IntegrationOutboxEntry);
+const repo = (): Repository<IntegrationOutboxEntry> =>
+    dataSource.getRepository(IntegrationOutboxEntry);
 
 beforeAll(async () => {
     await createTestSchema(schema);

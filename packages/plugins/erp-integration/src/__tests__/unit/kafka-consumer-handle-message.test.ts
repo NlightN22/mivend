@@ -7,7 +7,7 @@ import { KafkaConsumerService } from '../../kafka-consumer.service';
 function setup(
     enqueue: ReturnType<typeof vi.fn>,
     enqueueRejected: ReturnType<typeof vi.fn> = vi.fn().mockResolvedValue(undefined),
-) {
+): (value: Uint8Array | null) => Promise<void> {
     const service = new KafkaConsumerService(
         {} as never,
         { enqueue, enqueueRejected } as never,

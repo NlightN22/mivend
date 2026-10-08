@@ -29,10 +29,8 @@ export class IntegrationOutboxProcessorService {
         }
     }
 
-    // One short transaction per row. The row lock is held across the publish on purpose
-    // (deliberately serialized per row, docs/concurrency.md rule g): a concurrent sweep skips the
-    // locked row, so it is published once, and a concurrent requeue (UPDATE ... WHERE status =
-    // 'failed') waits for the commit instead of being overwritten.
+    // The row lock is held across the publish on purpose (serialized per row, concurrency.md rule
+    // g): a concurrent sweep skips it and a concurrent requeue waits for the commit.
     private async processOne(id: number): Promise<void> {
         await this.dataSource.transaction(async em => {
             const entry = await em

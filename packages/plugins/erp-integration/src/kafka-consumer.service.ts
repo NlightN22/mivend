@@ -1,4 +1,4 @@
-import { fromBinary, toJson } from '@bufbuild/protobuf';
+import type { fromBinary } from '@bufbuild/protobuf';
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Logger } from '@vendure/core';
 import { DataSource } from 'typeorm';
@@ -41,6 +41,7 @@ import type { EachMessagePayload, SASLOptions } from 'kafkajs';
 
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 import { IntegrationInboxService } from './integration-inbox.service';
+import { classifyInboundMessage } from './kafka-inbound-message';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions, InboundStream } from './types';
 
@@ -277,55 +278,25 @@ export class KafkaConsumerService implements OnModuleDestroy {
         }, delay);
     }
 
-    // A message that can never be processed (no value, undecodable, no identity) is dead-lettered
-    // into the inbox as a `failed` row with the reason, then its offset is committed: retrying it
-    // cannot fix it, and the durable row makes it visible. If recording fails this rethrows, so the
-    // offset is not committed and the message is redelivered. An enqueue failure rethrows too.
+    // Unprocessable messages are dead-lettered into the inbox, then committed; if recording or
+    // enqueueing fails this rethrows, so the offset is not committed (docs/integration-health.md).
     private async handleMessage(
         stream: InboundStream,
         { message, partition }: EachMessagePayload,
     ): Promise<void> {
-        const reject = (
-            reason: string,
-            payload: Record<string, unknown>,
-            ids: { entityId?: string; sourceEventId?: string } = {},
-        ): Promise<void> => {
+        const schema = SCHEMA_BY_STREAM[stream];
+        if (!schema) throw new Error(`No schema registered for stream ${stream}`);
+        const classified = classifyInboundMessage(stream, schema, message, partition ?? 0);
+        if (classified.kind === 'rejected') {
+            const { reason } = classified.rejected;
             Logger.error(
                 `Rejected ${stream} message (offset=${message.offset}): ${reason}`,
                 loggerCtx,
             );
-            return this.inbox.enqueueRejected({
-                stream,
-                partition: partition ?? 0,
-                offset: message.offset,
-                reason,
-                payload,
-                ...ids,
-            });
-        };
-
-        if (!message.value)
-            return reject('message has no value', { key: message.key?.toString() ?? null });
-        const schema = SCHEMA_BY_STREAM[stream];
-        if (!schema) throw new Error(`No schema registered for stream ${stream}`);
-        let record: Record<string, unknown>;
-        try {
-            const decoded = fromBinary(schema, new Uint8Array(message.value));
-            record = toJson(schema, decoded) as Record<string, unknown>;
-        } catch (err) {
-            const reason = `decode failed: ${err instanceof Error ? err.message : String(err)}`;
-            return reject(reason, { rawBase64: message.value.toString('base64') });
+            await this.inbox.enqueueRejected(classified.rejected);
+            return;
         }
-
-        const entityId = String(record.entityId ?? '');
-        const version = String(record.version ?? '');
-        const sourceEventId = String(record.eventId ?? message.key?.toString() ?? '');
-
-        if (!entityId || !sourceEventId) {
-            return reject('missing entityId/eventId', record, { entityId, sourceEventId });
-        }
-
-        await this.inbox.enqueue({ stream, entityId, version, sourceEventId, payload: record });
+        await this.inbox.enqueue(classified.input);
     }
 
     private async connectWithBackoff(): Promise<void> {
