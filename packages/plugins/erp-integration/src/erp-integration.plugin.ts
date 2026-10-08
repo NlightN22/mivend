@@ -116,6 +116,9 @@ import { KafkaLagResolver } from './kafka-lag.resolver';
 import { IntegrationStreamHealthResolver } from './integration-stream-health.resolver';
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import { ContractVersionClient } from './contract-version.client';
+import { IntegrationEventListResolver } from './integration-event-list.resolver';
+import { IntegrationEventListService } from './integration-event-list.service';
+import { IntegrationInboxReplayService } from './integration-inbox-replay.service';
 import { OutboundGateway } from './outbound-gateway';
 import { IntegrationOutboxRecoveryService } from './integration-outbox-recovery.service';
 import { IntegrationOutboxRecoveryResolver } from './integration-outbox-recovery.resolver';
@@ -229,6 +232,8 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         ReconciliationSummaryClient,
         IntegrationOutboxHealthService,
         ContractVersionClient,
+        IntegrationEventListService,
+        IntegrationInboxReplayService,
         OutboundGateway,
         IntegrationOutboxRecoveryService,
         OrderSubmittedBuilder,
@@ -248,6 +253,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
             ReconciliationResolver,
             KafkaLagResolver,
             IntegrationStreamHealthResolver,
+            IntegrationEventListResolver,
             IntegrationOutboxRecoveryResolver,
             ProductPhotoResolver,
         ],

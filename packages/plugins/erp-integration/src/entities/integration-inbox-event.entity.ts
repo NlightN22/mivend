@@ -9,7 +9,13 @@ import {
 
 import type { InboundStream } from '../types';
 
-export type IntegrationInboxEventStatus = 'pending' | 'processing' | 'processed' | 'failed';
+// resolved: a failed row whose entity was replayed through Integration Service.
+export type IntegrationInboxEventStatus =
+    | 'pending'
+    | 'processing'
+    | 'processed'
+    | 'failed'
+    | 'resolved';
 
 // Durable inbox for the inbound half of the Kafka exchange with Integration Service (issue #62
 // Milestone 1, the external-integration-rules skill). The Kafka consumer only ever writes a row here — never

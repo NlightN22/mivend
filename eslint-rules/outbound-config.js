@@ -14,6 +14,8 @@ export default {
         'packages/plugins/erp-integration/src/integration-outbox-processor.service.ts',
         'packages/plugins/erp-integration/src/integration-outbox-recovery.service.ts',
         'packages/plugins/erp-integration/src/kafka-producer.service.ts',
+        // Read-only list model for the health pages: selects rows, never writes or publishes.
+        'packages/plugins/erp-integration/src/integration-event-list.service.ts',
         'packages/plugins/erp-integration/src/erp-integration.plugin.ts',
         'apps/server/src/migrations/**',
     ],

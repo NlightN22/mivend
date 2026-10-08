@@ -120,6 +120,115 @@ export const adminApiExtensions: DocumentNode = gql`
         ALREADY_SENT
     }
 
+    "Inbox row that needs attention: dead-lettered (failed) or recorded as a no-op. Never carries the payload."
+    type IntegrationInboxIssue {
+        id: ID!
+        stream: String!
+        entityId: String!
+        status: String!
+        attempts: Int!
+        firstFailedAt: DateTime
+        lastError: String
+        updatedAt: DateTime!
+        outcome: String
+        outcomeReason: String
+    }
+
+    type IntegrationInboxIssueList implements PaginatedList {
+        items: [IntegrationInboxIssue!]!
+        totalItems: Int!
+    }
+
+    input IntegrationInboxIssueFilterParameter {
+        stream: StringOperators
+        entityId: StringOperators
+        status: StringOperators
+        outcome: StringOperators
+        lastError: StringOperators
+        outcomeReason: StringOperators
+        _and: [IntegrationInboxIssueFilterParameter!]
+        _or: [IntegrationInboxIssueFilterParameter!]
+    }
+
+    input IntegrationInboxIssueSortParameter {
+        stream: SortOrder
+        entityId: SortOrder
+        status: SortOrder
+        attempts: SortOrder
+        firstFailedAt: SortOrder
+        updatedAt: SortOrder
+    }
+
+    input IntegrationInboxIssueListOptions {
+        skip: Int
+        take: Int
+        sort: IntegrationInboxIssueSortParameter
+        filter: IntegrationInboxIssueFilterParameter
+        filterOperator: LogicalOperator
+    }
+
+    "Outbox row that needs attention: failed (publish gave up) or skipped (event could not be built). Never carries the payload."
+    type IntegrationOutboxProblem {
+        id: ID!
+        eventId: String!
+        eventType: String!
+        status: String!
+        retryCount: Int!
+        lastError: String
+        lastErrorAt: DateTime
+        firstFailedAt: DateTime
+        nextRetryAt: DateTime
+        createdAt: DateTime!
+        "Identifier of what the event is about (the order id for order.submitted)."
+        subjectId: String
+    }
+
+    type IntegrationOutboxProblemList implements PaginatedList {
+        items: [IntegrationOutboxProblem!]!
+        totalItems: Int!
+    }
+
+    input IntegrationOutboxProblemFilterParameter {
+        eventType: StringOperators
+        eventId: StringOperators
+        status: StringOperators
+        lastError: StringOperators
+        _and: [IntegrationOutboxProblemFilterParameter!]
+        _or: [IntegrationOutboxProblemFilterParameter!]
+    }
+
+    input IntegrationOutboxProblemSortParameter {
+        eventType: SortOrder
+        status: SortOrder
+        retryCount: SortOrder
+        lastErrorAt: SortOrder
+        createdAt: SortOrder
+    }
+
+    input IntegrationOutboxProblemListOptions {
+        skip: Int
+        take: Int
+        sort: IntegrationOutboxProblemSortParameter
+        filter: IntegrationOutboxProblemFilterParameter
+        filterOperator: LogicalOperator
+    }
+
+    enum InboxReplayOutcome {
+        REPLAYED
+        NOT_FOUND
+        UNSUPPORTED
+        NOT_FAILED
+        FAILED
+    }
+
+    type IntegrationInboxReplayResult {
+        id: ID!
+        stream: String!
+        entityId: String!
+        outcome: InboxReplayOutcome!
+        message: String
+    }
+
     type ContractVersionDrift {
         installed: String!
         latest: String
@@ -215,9 +324,19 @@ export const adminApiExtensions: DocumentNode = gql`
         integrationStreamHealth: IntegrationStreamHealthReport!
         "Outbound events written to the outbox per event type: not yet published, dead-lettered, oldest pending age, last error."
         integrationOutboxHealth: [IntegrationOutboxHealth!]!
+        "Failed and no-op inbox rows, newest first, server-side filtered/sorted/paginated (issue #200)."
+        integrationInboxIssues(
+            options: IntegrationInboxIssueListOptions
+        ): IntegrationInboxIssueList!
+        "Failed and skipped outbox rows, newest first, server-side filtered/sorted/paginated (issue #200)."
+        integrationOutboxProblems(
+            options: IntegrationOutboxProblemListOptions
+        ): IntegrationOutboxProblemList!
     }
 
     extend type Mutation {
+        "Asks Integration Service to re-publish dead-lettered inbox entities (1 to 100 row ids); replayed rows become resolved. Needs RecoverIntegrationEvents."
+        replayFailedIntegrationInbox(ids: [ID!]!): [IntegrationInboxReplayResult!]!
         "Asks Integration Service to re-publish one photo (fresh download link) and resets its attempt counter (issue #181)."
         replayProductPhoto(id: ID!): ProductPhoto!
         "Manually runs the reconciliation comparison against Integration Service immediately, instead of waiting for the daily ScheduledTask (issue #84) — same ReconciliationService.runComparison the scheduled run uses, recorded with triggeredBy='manual' and the calling administrator's id."
