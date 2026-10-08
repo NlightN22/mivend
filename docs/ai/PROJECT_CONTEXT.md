@@ -1,6 +1,14 @@
 # Project Context
 
-Updated: 2026-10-07 20:40
+Updated: 2026-10-08 06:40
+
+## #198 order branch fallback + auto-reserve switch (2026-10-08, shipped/audited; pushed)
+
+- **Branch of an order/invoice** = `TradingPointService.resolveServicingBranchId`: point `servicingBranchId` -> `Counterparty.branchId` -> global default branch (`GlobalSettings.defaultBranchId`), resolved at read time (no backfill of ~8000 points). Used by `ErpOrderService.onOrderPlaced`, `InvoiceService`, `MultiplicityOrderInterceptor`. Counterparty auto-assignment stays in #65. If the default branch has no warehouse, payment fails loudly ("no branch-scoped StockLocation").
+- **A cart stuck in `ArrangingPayment` keeps its old `customFields.branchId`** (recomputed only on leaving `AddingItems`); the storefront resumes to `AddingItems` first, scripts must do the same.
+- **Auto-reserve switch** `GlobalSettings.autoReserveOnPlacement` (default off, edit in Dashboard > Settings > Global Settings; ON on local and staging): `ReservationPaymentService.handleOrderPlaced` reserves non-prepaid orders at placement (`creationMethod` `auto-trust-rule`), so `order.submitted` is published without manager confirmation; a failed reserve keeps `AWAITING_CONFIRMATION`. `reserveOrder` now runs under `withAggregateLock('reserve-order:<id>')` (test verified to fail without it).
+- **Checkout** shows a generic toast on a thrown error (detail goes to `console.error`). Reservation scenarios (auto-reserve failure, 1C-returned reservations, expiry) are tracked in #199.
+- **Facts**: `order.submitted` has no order code (only eventId/orderId); Integration Service looked up by raw payload text. Starting `make dev` and `make dev-staging-integration` at the same time OOM-killed the staging server (exit 137): start the contours one at a time. `make test-int` restarts shared Postgres and knocks both contours over. Known flaky/not ours: `sync-cycle` retry test, `integration-inbox getBacklogByStream` (other session's stream-health work).
 
 ## #188 credit control MVP (2026-10-07, shipped/audited/closed; pushed up to ccadbe9, `make ci` green)
 
@@ -13,8 +21,8 @@ Updated: 2026-10-07 20:40
 - **Cart totals bug fixed (lost update)**: `TierRebalanceService` refresh now loads `surcharges`, locks the order row, keeps going when a sibling line vanished; `ActiveOrderSettleInterceptor` resolves the session by token and makes `activeOrder` wait for an in-flight rebalance. 40 fresh carts consistent; `make e2e-cart` group (11 tests) green. Redesign = #196. **Run `make e2e-cart` about every 10 commits** (last run 2026-10-07).
 - **Concurrency rules** now in `docs/concurrency.md`, skill `concurrency-audit`, `withAggregateLock` (shared), 2 lint warning rules; audit `docs/ai/concurrency-audit-2026-10.md` -> 6 high findings in #197.
 - **Local seed**: `contract` record type in erp-import, seed run id v11 (credit-limited buyer has limit 100000/14 days, prepay buyer none). Local server :3000, storefront :5173; staging-integration :3010/:5183/:5184 (never seed it).
-- **OPEN PROBLEM (issue #198)**: placing a deferred order on staging fails silently (order stays `ArrangingPayment`, no payment row); likely the preferred trading point has no `servicingBranchId` (0 of 4346 on staging; ~8000 points in prod). Owner: inherit the counterparty's `branchId` by default, override only in the manager portal; `Counterparty.branchId` is also empty. Retry with the server log visible after `make dev-staging-integration` (staging log file went stale at 16:30 UTC). Also: the storefront showed no error (toast path).
-- **Left after closing #188**: #198 first (checkout fails silently, see above); live check of the manager "Credit limit exceeded" badge with a real exceeded order (local contour; never place orders on staging). Price filter/sort with `priceTypeId` works (owner confirmed). Final audit passed (doc notes applied in 29c95dd). Follow-ups: #192 (notify managers: price type unresolved), #193 (fill fullName by tax id), #194 (order TTL cancel + ERP), #196 (one-pass tier promotion), #197 (6 concurrency findings), #198 (branch inheritance).
+- **#198 (resolved, see the section above)**: deferred orders failed silently because trading points/counterparties had no branch.
+- **Left after closing #188**: live check of the manager "Credit limit exceeded" badge with a real exceeded order (local contour; never place orders on staging). Price filter/sort with `priceTypeId` works (owner confirmed). Final audit passed (doc notes applied in 29c95dd). Follow-ups: #192 (notify managers: price type unresolved), #193 (fill fullName by tax id), #194 (order TTL cancel + ERP), #196 (one-pass tier promotion), #197 (6 concurrency findings).
 - **Lessons**: unit tests miss Nest DI import cycles (server failed to boot, fixed by moving the code constant to `constants.ts`); verify live after every server-side fix (a "fix" that swallowed its own error stayed green for hours); `make dev-staging-integration` restarts are allowed; never place orders on staging (real Kafka); the 1C card debt can differ from the `balance` stream.
 
 ## Recent changes (2026-10-06 — #180 checkout payment methods + credit control, shipped/audited/closed; pushed to f905bcb..81ec017)
