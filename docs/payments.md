@@ -397,19 +397,26 @@ async ERP acknowledgement is not compatible with this.
   (`OrganizationRequisites` via `make seed`) and `erp-import`'s product record carries an
   `organizationId` field now, so the real split can be built and exercised end-to-end today. Swap
   in the real ERP export later without changing the platform-side contract shape.
-- **Enforcement (decided): a hard requirement gated by an admin-controlled toggle, not a silent
-  fallback.** `GlobalSettings.customFields.organizationSplitEnabled` (boolean, defaults `true`,
-  shows up automatically in Admin UI's Settings screen since it's a `GlobalSettings` customField)
-  — while on: `erp-import`'s `ProductHandler` **rejects** any product record with no
-  `organizationId` (a real import error, not `null`); `onlineStubPaymentHandler` (the
-  stand-in payment handler used until Robokassa is integrated) **fails the payment** if the split
-  can't be computed, rather than silently falling back to a single unsplit payment. There is no
-  "grandfathered" exemption — every product must carry a real organization once the toggle is on.
-  `make seed` explicitly turns the toggle on (`ensureOrganizationSplitEnabled` in
-  `seed-erp.mjs`) before seeding any products. **Known gap**: `packages/e2e/fixtures/seed.ts`'s
-  product fixtures don't carry `organizationId` yet — e2e runs against the same dev stack `make
-seed` configures, so those fixtures will now fail import unless updated; not yet fixed, flagged
-  here rather than silently left broken.
+- **Enforcement (decided): a variant with no organization (seller of record) is not sellable, for
+  anyone.** Missing organizations are an expected data condition (storage-location rows can arrive
+  late or without one), so the gate sits where the order is built, not only at import:
+    - **Customer catalog and search** hide the variant (external lookup requires an enabled variant
+      with an organization; the internal index carries `variant-hasOrganization`, so a reindex is
+      needed once). Staff views (manager portal, Admin API) show it, marked "No organization"
+      (`SearchResult.availableForOrder` on the Admin API).
+    - **Cart** marks the line "Not available for order" (`ProductVariant.availableForOrder`) and
+      disables checkout until it is removed.
+    - **Hard gate**: `organizationOrderGuard` (`plugin-acquiring`) refuses the transition to
+      `ArrangingPayment`, which every payment method needs, naming the SKUs. Safety nets: payment
+      handlers still decline an unsplittable order, `reserveOrder()` rejects the order as
+      ERP-export data missing (`organizationId`), and a skipped `order.submitted` is recorded as a
+      `skipped` outbox row (see docs/integration-health.md).
+    - Integration health shows how many enabled variants have no organization
+      (`variantOrganizationHealth`).
+    - `GlobalSettings.customFields.organizationSplitEnabled` (default `true`) still makes
+      `erp-import`'s `ProductHandler` reject a product record without `organizationId` and fails an
+      online payment whose split cannot be computed. `make seed` turns it on; e2e fixtures get
+      organizations assigned in `global-setup.ts`.
 
 **Counterparty-side note (does not need modeling yet):** a counterparty can itself belong to a
 "holding" grouping in the ERP, but that's purely an analytical tag — one `Counterparty` is always

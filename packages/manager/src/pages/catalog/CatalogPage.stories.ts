@@ -21,6 +21,7 @@ const PRODUCTS = [
         sku: 'SKU-001',
         slug: 'brake-pad-set',
         facetValueIds: ['brand-bosch', 'category-brakes'],
+        availableForOrder: true,
         productAsset: null,
     },
     {
@@ -30,6 +31,7 @@ const PRODUCTS = [
         sku: 'SKU-002',
         slug: 'oil-filter',
         facetValueIds: ['brand-mann', 'category-filters'],
+        availableForOrder: true,
         productAsset: null,
     },
     {
@@ -39,6 +41,7 @@ const PRODUCTS = [
         sku: 'SKU-003',
         slug: 'brake-disc',
         facetValueIds: ['brand-bosch', 'category-brakes'],
+        availableForOrder: true,
         productAsset: null,
     },
     {
@@ -48,6 +51,7 @@ const PRODUCTS = [
         sku: 'SKU-004',
         slug: 'air-filter',
         facetValueIds: ['brand-mann', 'category-filters'],
+        availableForOrder: true,
         productAsset: null,
     },
     {
@@ -57,6 +61,7 @@ const PRODUCTS = [
         sku: 'SKU-005',
         slug: 'spark-plug',
         facetValueIds: ['brand-ngk', 'category-ignition'],
+        availableForOrder: false,
         productAsset: null,
     },
 ];

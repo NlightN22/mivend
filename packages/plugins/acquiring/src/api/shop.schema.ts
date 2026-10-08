@@ -2,6 +2,11 @@ import { gql } from 'graphql-tag';
 import type { DocumentNode } from 'graphql';
 
 export const shopApiExtensions: DocumentNode = gql`
+    extend type ProductVariant {
+        "False when the variant has no organization (seller of record) and cannot be ordered."
+        availableForOrder: Boolean!
+    }
+
     type InvoiceLineProductVariant {
         name: String!
         sku: String!

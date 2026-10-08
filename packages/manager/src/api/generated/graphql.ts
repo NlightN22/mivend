@@ -826,6 +826,13 @@ export type ContactPersonInput = {
     phone?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type ContractVersionDrift = {
+    installed: Scalars['String']['output'];
+    latest: Maybe<Scalars['String']['output']>;
+    /** UP_TO_DATE | BEHIND | AHEAD | UNKNOWN (latest version could not be looked up). */
+    status: Scalars['String']['output'];
+};
+
 export type Coordinate = {
     x: Scalars['Float']['output'];
     y: Scalars['Float']['output'];
@@ -2736,6 +2743,7 @@ export type GlobalSettings = {
 };
 
 export type GlobalSettingsCustomFields = {
+    autoReserveOnPlacement: Maybe<Scalars['Boolean']['output']>;
     defaultBranchId: Maybe<Scalars['String']['output']>;
     deferredOrderMaxAgeDays: Maybe<Scalars['Int']['output']>;
     organizationSplitEnabled: Maybe<Scalars['Boolean']['output']>;
@@ -2921,6 +2929,8 @@ export type ImportInfo = {
     processed: Scalars['Int']['output'];
 };
 
+export type InboxReplayOutcome = 'FAILED' | 'NOT_FAILED' | 'NOT_FOUND' | 'REPLAYED' | 'UNSUPPORTED';
+
 /** Returned when attempting to set a ShippingMethod for which the Order is not eligible */
 export type IneligibleShippingMethodError = ErrorResult & {
     errorCode: ErrorCode;
@@ -2982,6 +2992,171 @@ export type IntegrationInboxBacklogByStream = {
     pending: Scalars['Int']['output'];
     processing: Scalars['Int']['output'];
     stream: Scalars['String']['output'];
+};
+
+/** Inbox row that needs attention: dead-lettered (failed) or recorded as a no-op. Never carries the payload. */
+export type IntegrationInboxIssue = Node & {
+    attempts: Scalars['Int']['output'];
+    entityId: Scalars['String']['output'];
+    firstFailedAt: Maybe<Scalars['DateTime']['output']>;
+    id: Scalars['ID']['output'];
+    lastError: Maybe<Scalars['String']['output']>;
+    outcome: Maybe<Scalars['String']['output']>;
+    outcomeReason: Maybe<Scalars['String']['output']>;
+    /** True when the row is failed and Integration Service can replay its entity. */
+    replayable: Scalars['Boolean']['output'];
+    status: Scalars['String']['output'];
+    stream: Scalars['String']['output'];
+    updatedAt: Scalars['DateTime']['output'];
+};
+
+export type IntegrationInboxIssueFilterParameter = {
+    _and?: InputMaybe<Array<IntegrationInboxIssueFilterParameter>>;
+    _or?: InputMaybe<Array<IntegrationInboxIssueFilterParameter>>;
+    attempts?: InputMaybe<NumberOperators>;
+    entityId?: InputMaybe<StringOperators>;
+    firstFailedAt?: InputMaybe<DateOperators>;
+    id?: InputMaybe<IdOperators>;
+    lastError?: InputMaybe<StringOperators>;
+    outcome?: InputMaybe<StringOperators>;
+    outcomeReason?: InputMaybe<StringOperators>;
+    /** True when the row is failed and Integration Service can replay its entity. */
+    replayable?: InputMaybe<BooleanOperators>;
+    status?: InputMaybe<StringOperators>;
+    stream?: InputMaybe<StringOperators>;
+    updatedAt?: InputMaybe<DateOperators>;
+};
+
+export type IntegrationInboxIssueList = PaginatedList & {
+    items: Array<IntegrationInboxIssue>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type IntegrationInboxIssueListOptions = {
+    filter?: InputMaybe<IntegrationInboxIssueFilterParameter>;
+    filterOperator?: InputMaybe<LogicalOperator>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<IntegrationInboxIssueSortParameter>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type IntegrationInboxIssueSortParameter = {
+    attempts?: InputMaybe<SortOrder>;
+    entityId?: InputMaybe<SortOrder>;
+    firstFailedAt?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    lastError?: InputMaybe<SortOrder>;
+    outcome?: InputMaybe<SortOrder>;
+    outcomeReason?: InputMaybe<SortOrder>;
+    status?: InputMaybe<SortOrder>;
+    stream?: InputMaybe<SortOrder>;
+    updatedAt?: InputMaybe<SortOrder>;
+};
+
+export type IntegrationInboxReplayResult = {
+    entityId: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    message: Maybe<Scalars['String']['output']>;
+    outcome: InboxReplayOutcome;
+    stream: Scalars['String']['output'];
+};
+
+export type IntegrationOutboxHealth = {
+    eventType: Scalars['String']['output'];
+    failed: Scalars['Int']['output'];
+    lastError: Maybe<Scalars['String']['output']>;
+    lastErrorAt: Maybe<Scalars['DateTime']['output']>;
+    lastPublishedAt: Maybe<Scalars['DateTime']['output']>;
+    lastSkipReason: Maybe<Scalars['String']['output']>;
+    oldestPendingAt: Maybe<Scalars['DateTime']['output']>;
+    pending: Scalars['Int']['output'];
+    /** Events that could not be built and were never published (issue #200). */
+    skipped: Scalars['Int']['output'];
+};
+
+/** Outbox row that needs attention: failed (publish gave up) or skipped (event could not be built). Never carries the payload. */
+export type IntegrationOutboxProblem = Node & {
+    createdAt: Scalars['DateTime']['output'];
+    eventId: Scalars['String']['output'];
+    eventType: Scalars['String']['output'];
+    firstFailedAt: Maybe<Scalars['DateTime']['output']>;
+    id: Scalars['ID']['output'];
+    lastError: Maybe<Scalars['String']['output']>;
+    lastErrorAt: Maybe<Scalars['DateTime']['output']>;
+    nextRetryAt: Maybe<Scalars['DateTime']['output']>;
+    retryCount: Scalars['Int']['output'];
+    status: Scalars['String']['output'];
+    /** Identifier of what the event is about (the order id for order.submitted). */
+    subjectId: Maybe<Scalars['String']['output']>;
+};
+
+export type IntegrationOutboxProblemFilterParameter = {
+    _and?: InputMaybe<Array<IntegrationOutboxProblemFilterParameter>>;
+    _or?: InputMaybe<Array<IntegrationOutboxProblemFilterParameter>>;
+    createdAt?: InputMaybe<DateOperators>;
+    eventId?: InputMaybe<StringOperators>;
+    eventType?: InputMaybe<StringOperators>;
+    firstFailedAt?: InputMaybe<DateOperators>;
+    id?: InputMaybe<IdOperators>;
+    lastError?: InputMaybe<StringOperators>;
+    lastErrorAt?: InputMaybe<DateOperators>;
+    nextRetryAt?: InputMaybe<DateOperators>;
+    retryCount?: InputMaybe<NumberOperators>;
+    status?: InputMaybe<StringOperators>;
+    /** Identifier of what the event is about (the order id for order.submitted). */
+    subjectId?: InputMaybe<StringOperators>;
+};
+
+export type IntegrationOutboxProblemList = PaginatedList & {
+    items: Array<IntegrationOutboxProblem>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type IntegrationOutboxProblemListOptions = {
+    filter?: InputMaybe<IntegrationOutboxProblemFilterParameter>;
+    filterOperator?: InputMaybe<LogicalOperator>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    sort?: InputMaybe<IntegrationOutboxProblemSortParameter>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type IntegrationOutboxProblemSortParameter = {
+    createdAt?: InputMaybe<SortOrder>;
+    eventId?: InputMaybe<SortOrder>;
+    eventType?: InputMaybe<SortOrder>;
+    firstFailedAt?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    lastError?: InputMaybe<SortOrder>;
+    lastErrorAt?: InputMaybe<SortOrder>;
+    nextRetryAt?: InputMaybe<SortOrder>;
+    retryCount?: InputMaybe<SortOrder>;
+    status?: InputMaybe<SortOrder>;
+    /** Identifier of what the event is about (the order id for order.submitted). */
+    subjectId?: InputMaybe<SortOrder>;
+};
+
+export type IntegrationStreamHealth = {
+    consumed: Scalars['Boolean']['output'];
+    /** NOT_CONSUMED | NOT_IN_CONTRACT | UNKNOWN_STREAM, null when the stream is consistent. */
+    drift: Maybe<Scalars['String']['output']>;
+    failed: Scalars['Int']['output'];
+    ignoredReason: Maybe<Scalars['String']['output']>;
+    inContract: Scalars['Boolean']['output'];
+    lag: Maybe<KafkaTopicLag>;
+    lastNoopReason: Maybe<Scalars['String']['output']>;
+    /** Messages the handler deliberately did nothing for in the last 24 h (issue #200). */
+    noop24h: Scalars['Int']['output'];
+    oldestPendingAt: Maybe<Scalars['DateTime']['output']>;
+    pending: Scalars['Int']['output'];
+    processing: Scalars['Int']['output'];
+    stream: Scalars['String']['output'];
+    topic: Maybe<Scalars['String']['output']>;
+};
+
+export type IntegrationStreamHealthReport = {
+    contractVersion: Scalars['String']['output'];
+    streams: Array<IntegrationStreamHealth>;
+    versionDrift: ContractVersionDrift;
 };
 
 /** Returned if the user authentication credentials are not valid */
@@ -3851,6 +4026,8 @@ export type Mutation = {
     moveCollection: Collection;
     reassignCounterpartyManager: Counterparty;
     reassignCounterpartyManagerByFilter: Scalars['Int']['output'];
+    /** Rebuilds the event of a skipped outbox row from its source data (issue #200). */
+    rebuildSkippedIntegrationOutbox: RebuildSkippedOutcome;
     /** Records a real Dispute/chargeback row for a payment — its own lifecycle, never folded into PaymentAttempt.paymentStatus. */
     recordPaymentDispute: Dispute;
     /** Records a real PaymentRefund row (the external-integration-rules skill: a refund is its own entity, never a negative payment record), modeled on Robokassa's RefundOperation API — providerRefundId mirrors Robokassa's OpKey. */
@@ -3895,11 +4072,15 @@ export type Mutation = {
     removeShippingMethodsFromChannel: Array<ShippingMethod>;
     /** Removes StockLocations from the specified Channel */
     removeStockLocationsFromChannel: Array<StockLocation>;
+    /** Asks Integration Service to re-publish dead-lettered inbox entities (1 to 100 row ids); replayed rows become resolved. Needs RecoverIntegrationEvents. */
+    replayFailedIntegrationInbox: Array<IntegrationInboxReplayResult>;
     /** Asks Integration Service to re-publish one photo (fresh download link) and resets its attempt counter (issue #181). */
     replayProductPhoto: ProductPhoto;
     requestCreditTermExtension: ApprovalRequest;
     requestDiscountGrant: ApprovalRequest;
     requestPriceAdjustment: PriceAdjustmentResult;
+    /** Returns outbox rows that gave up publishing (status failed) to pending so the next sweep retries them. Returns how many moved (issue #200). */
+    requeueFailedIntegrationOutbox: Scalars['Int']['output'];
     resendAdministratorPasswordReset: Scalars['Boolean']['output'];
     resetAdministratorPassword: ResetAdministratorPasswordResult;
     /** Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved. */
@@ -4583,6 +4764,10 @@ export type MutationReassignCounterpartyManagerByFilterArgs = {
     filter: CounterpartyListFilter;
 };
 
+export type MutationRebuildSkippedIntegrationOutboxArgs = {
+    id: Scalars['ID']['input'];
+};
+
 export type MutationRecordPaymentDisputeArgs = {
     amount: Scalars['Int']['input'];
     paymentId: Scalars['ID']['input'];
@@ -4688,6 +4873,10 @@ export type MutationRemoveStockLocationsFromChannelArgs = {
     input: RemoveStockLocationsFromChannelInput;
 };
 
+export type MutationReplayFailedIntegrationInboxArgs = {
+    ids: Array<Scalars['ID']['input']>;
+};
+
 export type MutationReplayProductPhotoArgs = {
     id: Scalars['ID']['input'];
 };
@@ -4705,6 +4894,10 @@ export type MutationRequestPriceAdjustmentArgs = {
     orderId: Scalars['ID']['input'];
     orderLineId: Scalars['ID']['input'];
     requestedPrice: Scalars['Int']['input'];
+};
+
+export type MutationRequeueFailedIntegrationOutboxArgs = {
+    ids: Array<Scalars['ID']['input']>;
 };
 
 export type MutationResendAdministratorPasswordResetArgs = {
@@ -5982,6 +6175,8 @@ export type Permission =
     | 'ReadZone'
     /** Change a counterparty's assignedManagerId — department-head only within their own department, portal-admin unrestricted (see manager-portal-concept.md §3.3) */
     | 'ReassignCounterpartyManager'
+    /** Requeue failed and rebuild skipped outbound integration events (issue #200); a write action, separate from the read-only ManageErpIntegration health views */
+    | 'RecoverIntegrationEvents'
     /** Create a credit-term approval request (layer 5) */
     | 'RequestCreditTermApproval'
     /** Create/renew a standing discount grant approval request (layer 5) */
@@ -6803,6 +6998,14 @@ export type Query = {
     highUsageCounterparties: Array<Counterparty>;
     /** Live count of not-yet-fully-processed IntegrationInboxEvent rows per stream (pending/processing/failed) — a different number from Kafka lag: these rows were already consumed and committed, this is Postgres-side processing backlog. */
     integrationInboxBacklog: Array<IntegrationInboxBacklogByStream>;
+    /** Failed and no-op inbox rows, newest first, server-side filtered/sorted/paginated (issue #200). */
+    integrationInboxIssues: IntegrationInboxIssueList;
+    /** Outbound events written to the outbox per event type: not yet published, dead-lettered, oldest pending age, last error. */
+    integrationOutboxHealth: Array<IntegrationOutboxHealth>;
+    /** Failed and skipped outbox rows, newest first, server-side filtered/sorted/paginated (issue #200). */
+    integrationOutboxProblems: IntegrationOutboxProblemList;
+    /** One row per stream: union of the event contract, configured topics and inbox rows, with Kafka lag, inbox backlog and drift (issue #195). */
+    integrationStreamHealth: IntegrationStreamHealthReport;
     /** Sum of a counterparty's unpaid (pending/issued) invoices, scoped the same way visibleInvoices is. Null if the counterparty has no unpaid invoices, not zero-with-a-currency. */
     invoiceOutstandingBalance: Maybe<MoneyAmount>;
     invoicesForOrder: Array<Invoice>;
@@ -6905,6 +7108,8 @@ export type Query = {
     testShippingMethod: TestShippingMethodResult;
     tradingPoint: Maybe<TradingPoint>;
     unassignedCounterpartyCount: Scalars['Int']['output'];
+    /** Enabled variants and how many have no organization (cannot be ordered). Integration health. */
+    variantOrganizationHealth: VariantOrganizationHealth;
     /** Manager-portal invoice list, branch-scoped via AccessScopeService.resolveInvoiceScope — see AdminInvoiceVisibilityResolver / docs/access-control.md. */
     visibleInvoices: InvoiceList;
     visibleOrders: OrderList;
@@ -7111,6 +7316,14 @@ export type QueryGrantedRetroBonusesArgs = {
 
 export type QueryHighUsageCounterpartiesArgs = {
     limit: Scalars['Int']['input'];
+};
+
+export type QueryIntegrationInboxIssuesArgs = {
+    options?: InputMaybe<IntegrationInboxIssueListOptions>;
+};
+
+export type QueryIntegrationOutboxProblemsArgs = {
+    options?: InputMaybe<IntegrationOutboxProblemListOptions>;
 };
 
 export type QueryInvoiceOutstandingBalanceArgs = {
@@ -7398,6 +7611,9 @@ export type QueryZoneArgs = {
 export type QueryZonesArgs = {
     options?: InputMaybe<ZoneListOptions>;
 };
+
+/** Result of rebuilding a skipped outbox row: event queued, still skipped (reason updated) or already sent. */
+export type RebuildSkippedOutcome = 'ALREADY_SENT' | 'QUEUED' | 'STILL_SKIPPED';
 
 export type Refund = Node & {
     adjustment: Scalars['Money']['output'];
@@ -7790,6 +8006,8 @@ export type SearchResponsePriceData = {
 };
 
 export type SearchResult = {
+    /** False when the variant has no organization (seller of record) and cannot be ordered. */
+    availableForOrder: Scalars['Boolean']['output'];
     /** An array of ids of the Channels in which this result appears */
     channelIds: Array<Scalars['ID']['output']>;
     /** An array of ids of the Collections in which this result appears */
@@ -8710,6 +8928,7 @@ export type UpdateFacetValueInput = {
 };
 
 export type UpdateGlobalSettingsCustomFieldsInput = {
+    autoReserveOnPlacement?: InputMaybe<Scalars['Boolean']['input']>;
     defaultBranchId?: InputMaybe<Scalars['String']['input']>;
     deferredOrderMaxAgeDays?: InputMaybe<Scalars['Int']['input']>;
     organizationSplitEnabled?: InputMaybe<Scalars['Boolean']['input']>;
@@ -8978,6 +9197,11 @@ export type User = Node & {
     roles: Array<Role>;
     updatedAt: Scalars['DateTime']['output'];
     verified: Scalars['Boolean']['output'];
+};
+
+export type VariantOrganizationHealth = {
+    total: Scalars['Int']['output'];
+    withoutOrganization: Scalars['Int']['output'];
 };
 
 export type VariantPriceEntry = {
@@ -9482,6 +9706,7 @@ export type CatalogPageQuery = {
             sku: string;
             slug: string;
             facetValueIds: Array<string>;
+            availableForOrder: boolean;
             productAsset: { preview: string } | null;
         }>;
     };
@@ -11988,6 +12213,7 @@ export const CatalogPageDocument = new TypedDocumentString(`
       sku
       slug
       facetValueIds
+      availableForOrder
       productAsset {
         preview
       }

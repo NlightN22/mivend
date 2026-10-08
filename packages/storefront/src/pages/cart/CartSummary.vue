@@ -25,14 +25,25 @@ const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.tot
 
 const totalQty = computed(() => cartStore.totalQuantity);
 const lineCount = computed(() => cartStore.lines.length);
+const unavailableCount = computed(
+    () => cartStore.lines.filter(l => l.productVariant.availableForOrder === false).length,
+);
 </script>
 
 <template>
     <aside class="cart-summary">
         <section class="cart-summary__card">
-            <button class="cart-summary__checkout" type="button" @click="router.push('/checkout')">
+            <button
+                class="cart-summary__checkout"
+                type="button"
+                :disabled="unavailableCount > 0"
+                @click="router.push('/checkout')"
+            >
                 Proceed to checkout
             </button>
+            <p v-if="unavailableCount > 0" class="cart-summary__blocked">
+                Remove the items marked "Not available for order" to continue.
+            </p>
 
             <p class="cart-summary__help">
                 Delivery method and order comment are selected at the next step.
@@ -103,6 +114,17 @@ const lineCount = computed(() => cartStore.lines.length);
 }
 .cart-summary__checkout:hover {
     background: #008a64;
+}
+.cart-summary__checkout:disabled {
+    background: #c5cdc9;
+    cursor: not-allowed;
+}
+
+.cart-summary__blocked {
+    margin: -4px 0 16px;
+    color: #991b1b;
+    font-size: 13px;
+    line-height: 1.45;
 }
 
 .cart-summary__help {

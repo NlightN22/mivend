@@ -13,6 +13,7 @@ import gql from 'graphql-tag';
 
 import { ExternalSearchPlugin } from './external-search.plugin';
 import { SearchCapabilitiesResolver } from './search-capabilities';
+import { SearchResultAvailabilityResolver } from './search-result-availability.resolver';
 import { SearchResultResolver } from './search.resolver';
 import {
     HAS_ORGANIZATION_FIELD,
@@ -21,6 +22,13 @@ import {
 } from './sellable-filter';
 import { SearchService } from './search.service';
 import { getSearchBackend } from './types';
+
+const adminApiSchema = gql`
+    extend type SearchResult {
+        "False when the variant has no organization (seller of record) and cannot be ordered."
+        availableForOrder: Boolean!
+    }
+`;
 
 const shopApiSchema = gql`
     type SearchCapabilities {
@@ -131,6 +139,10 @@ function buildElasticsearchPlugin(): Type<unknown> {
     shopApiExtensions: {
         schema: shopApiSchema,
         resolvers: [SearchResultResolver, SearchCapabilitiesResolver],
+    },
+    adminApiExtensions: {
+        schema: adminApiSchema,
+        resolvers: [SearchResultAvailabilityResolver],
     },
     providers: [SearchService],
     configuration: (config: RuntimeVendureConfig) => {

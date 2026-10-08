@@ -29,6 +29,7 @@ query ActiveOrder {
                 price
                 currencyCode
                 stockLevel
+                availableForOrder
                 customFields {
                     weight
                     unitRatioToBase

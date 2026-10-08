@@ -128,7 +128,14 @@ export const adminApiExtensions: DocumentNode = gql`
         capturedAmount: Int!
     }
 
+    type VariantOrganizationHealth {
+        total: Int!
+        withoutOrganization: Int!
+    }
+
     extend type Query {
+        "Enabled variants and how many have no organization (cannot be ordered). Integration health."
+        variantOrganizationHealth: VariantOrganizationHealth!
         invoicesForOrder(orderId: ID!): [Invoice!]!
         "Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (backend-plugin-rules skill's Dev seed rules exception, see seed-payment-refunds.mjs)."
         capturedOnlinePayments(take: Int): [PaymentAttempt!]!

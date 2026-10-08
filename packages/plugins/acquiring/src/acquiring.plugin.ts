@@ -41,6 +41,9 @@ import { AdminOrderPaymentViewResolver } from './admin-order-payment-view.resolv
 import { PaymentReconciliationIssueResolver } from './payment-reconciliation-issue.resolver';
 import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
+import { VariantOrganizationHealthResolver } from './variant-organization-health.resolver';
+import { VariantOrganizationHealthService } from './variant-organization-health.service';
+import { ProductVariantAvailabilityResolver } from './variant-availability.resolver';
 import { ACQUIRING_PLUGIN_OPTIONS } from './types';
 import type { AcquiringPluginOptions } from './types';
 
@@ -77,6 +80,7 @@ import type { AcquiringPluginOptions } from './types';
         InvoiceVisibilityService,
         PaymentVisibilityService,
         OfflineTermsBootstrapService,
+        VariantOrganizationHealthService,
         {
             provide: ACQUIRING_PLUGIN_OPTIONS,
             useFactory: (): AcquiringPluginOptions => AcquiringPlugin.options,
@@ -98,6 +102,7 @@ import type { AcquiringPluginOptions } from './types';
             AdminPaymentVisibilityResolver,
             AdminOrderPaymentViewResolver,
             PaymentReconciliationIssueResolver,
+            VariantOrganizationHealthResolver,
             // Field resolver for Invoice.order (admin.schema.ts) — previously only registered
             // for shopApiExtensions, so the admin API's Invoice.order was a dead schema field
             // with no resolver wired to it at all (see admin.schema.ts's comment on Invoice.order).
@@ -111,6 +116,7 @@ import type { AcquiringPluginOptions } from './types';
             InvoiceFieldResolver,
             PaymentShopResolver,
             PaymentFieldResolver,
+            ProductVariantAvailabilityResolver,
         ],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {

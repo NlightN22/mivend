@@ -226,6 +226,7 @@ void loadAll();
                         </MvProductRow>
                         <CatalogRowExtras
                             :variant-id="item.productVariantId"
+                            :available-for-order="item.availableForOrder"
                             :extra-price-columns="extraPriceColumns"
                         />
                     </div>

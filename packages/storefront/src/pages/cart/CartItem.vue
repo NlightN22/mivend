@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
+import { MvStatusBadge, MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
 import { useCartStore, type CartLine } from '../../stores/cart';
 import CartLinePrice from '../../components/CartLinePrice.vue';
 import { brandOf } from '../../utils/brand';
@@ -96,6 +96,12 @@ function cancelRemove(): void {
             </div>
             <div class="cart-item__pills">
                 <MvStockBadge :variant="stockVariant" />
+                <MvStatusBadge
+                    v-if="line.productVariant.availableForOrder === false"
+                    variant="danger"
+                >
+                    Not available for order
+                </MvStatusBadge>
             </div>
             <div class="cart-item__links">
                 <button type="button">Favorites</button>

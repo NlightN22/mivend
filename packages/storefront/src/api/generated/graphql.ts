@@ -2999,6 +2999,8 @@ export enum Permission {
     ReadZone = 'ReadZone',
     /** Change a counterparty's assignedManagerId — department-head only within their own department, portal-admin unrestricted (see manager-portal-concept.md §3.3) */
     ReassignCounterpartyManager = 'ReassignCounterpartyManager',
+    /** Requeue failed and rebuild skipped outbound integration events (issue #200); a write action, separate from the read-only ManageErpIntegration health views */
+    RecoverIntegrationEvents = 'RecoverIntegrationEvents',
     /** Create a credit-term approval request (layer 5) */
     RequestCreditTermApproval = 'RequestCreditTermApproval',
     /** Create/renew a standing discount grant approval request (layer 5) */
@@ -3217,6 +3219,8 @@ export type ProductTranslation = {
 
 export type ProductVariant = Node & {
     assets: Array<Asset>;
+    /** False when the variant has no organization (seller of record) and cannot be ordered. */
+    availableForOrder: Scalars['Boolean']['output'];
     compareAtPrice?: Maybe<Scalars['Int']['output']>;
     createdAt: Scalars['DateTime']['output'];
     currencyCode: CurrencyCode;
@@ -3253,6 +3257,8 @@ export type ProductVariantCustomFields = {
 export type ProductVariantFilterParameter = {
     _and?: InputMaybe<Array<ProductVariantFilterParameter>>;
     _or?: InputMaybe<Array<ProductVariantFilterParameter>>;
+    /** False when the variant has no organization (seller of record) and cannot be ordered. */
+    availableForOrder?: InputMaybe<BooleanOperators>;
     compareAtPrice?: InputMaybe<NumberOperators>;
     createdAt?: InputMaybe<DateOperators>;
     currencyCode?: InputMaybe<StringOperators>;
@@ -4918,6 +4924,7 @@ export type ActiveOrderQuery = {
                 price: any;
                 currencyCode: CurrencyCode;
                 stockLevel: string;
+                availableForOrder: boolean;
                 customFields?: {
                     weight?: number | null;
                     unitRatioToBase?: number | null;
@@ -6016,6 +6023,7 @@ export const ActiveOrderDocument = new TypedDocumentString(`
         price
         currencyCode
         stockLevel
+        availableForOrder
         customFields {
           weight
           unitRatioToBase

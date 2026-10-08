@@ -57,6 +57,7 @@ query CatalogPage(
             sku
             slug
             facetValueIds
+            availableForOrder
             productAsset {
                 preview
             }

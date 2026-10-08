@@ -69,6 +69,7 @@ export interface CatalogListItem {
     sku: string;
     slug: string;
     facetValueIds: string[];
+    availableForOrder: boolean;
     imagePreview: string | null;
 }
 

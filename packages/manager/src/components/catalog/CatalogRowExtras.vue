@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { MvStatusBadge } from '@mivend/ui-kit';
 import { useCurrency } from '../../composables/useCurrency';
 
 // Manager-only info that MvProductRow itself has no first-class concept of — additional
@@ -8,6 +9,7 @@ import { useCurrency } from '../../composables/useCurrency';
 // here — see CatalogPage.vue.
 const props = defineProps<{
     variantId: string;
+    availableForOrder: boolean;
     extraPriceColumns: { priceTypeCode: string; label: string; prices: Map<string, number> }[];
 }>();
 
@@ -24,7 +26,10 @@ const rows = computed(() => {
 </script>
 
 <template>
-    <div v-if="rows.length" class="catalog-row-extras">
+    <div v-if="rows.length || !availableForOrder" class="catalog-row-extras">
+        <MvStatusBadge v-if="!availableForOrder" variant="danger">
+            No organization — hidden from customers
+        </MvStatusBadge>
         <span v-for="row in rows" :key="row.label" class="catalog-row-extras__item">
             {{ row.label }}: <strong>{{ row.value }}</strong>
         </span>
