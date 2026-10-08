@@ -12,7 +12,7 @@ import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
 import { IGNORED_CONTRACT_STREAMS } from './ignored-contract-streams';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
-import type { OutboxHealthByEventType } from './integration-outbox-health.service';
+import type { OutboxHealthByEventType } from './outbox-health';
 import { groupLagRowsByTopic } from './kafka-lag.resolver';
 import { buildStreamHealthRows } from './stream-health';
 import type { StreamHealthRow } from './stream-health';

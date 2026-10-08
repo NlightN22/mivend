@@ -121,10 +121,13 @@ export const adminApiExtensions: DocumentNode = gql`
         eventType: String!
         pending: Int!
         failed: Int!
+        "Events that could not be built and were never published (issue #200)."
+        skipped: Int!
         oldestPendingAt: DateTime
         lastPublishedAt: DateTime
         lastError: String
         lastErrorAt: DateTime
+        lastSkipReason: String
     }
 
     type IntegrationStreamHealthReport {

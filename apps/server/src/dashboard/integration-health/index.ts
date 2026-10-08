@@ -6,7 +6,7 @@ import {
 } from '@vendure/dashboard';
 
 import { IntegrationHealthPage } from './integration-health-page.js';
-import { isLagOverThreshold } from './stream-health-view.js';
+import { isLagOverThreshold, outboundTypesWith } from './stream-health-view.js';
 
 // Lives under apps/server/src, not packages/plugins/*: see ../system-health/index.ts.
 const kafkaLagAlertDocument = graphql(`
@@ -21,6 +21,61 @@ const kafkaLagAlertDocument = graphql(`
         }
     }
 `);
+
+const outboxAlertDocument = graphql(`
+    query IntegrationOutboxForAlert {
+        integrationOutboxHealth {
+            eventType
+            failed
+            skipped
+        }
+    }
+`);
+
+function outboxAlert(
+    key: 'failed' | 'skipped',
+    id: string,
+    title: (n: number) => string,
+): DashboardAlertDefinition<string[]> {
+    return {
+        id,
+        check: async () => {
+            try {
+                const data = await api.query(outboxAlertDocument);
+                return outboundTypesWith(data.integrationOutboxHealth, key);
+            } catch {
+                // Same fail-closed guard as kafkaLagAlert: never crash the shell for other extensions.
+                return [];
+            }
+        },
+        shouldShow: types => (types?.length ?? 0) > 0,
+        severity: 'error',
+        title: types => title((types ?? []).length),
+        description: types => (types ?? []).join(', '),
+        actions: [
+            {
+                label: 'View integration health',
+                onClick: ({ dismiss }) => {
+                    dismiss();
+                    window.location.href = '/integration-health';
+                },
+            },
+        ],
+        recheckInterval: 60_000,
+    };
+}
+
+export const outboxFailedAlert = outboxAlert(
+    'failed',
+    'integration-outbox-failed',
+    n => `Outbound events gave up publishing (${n} event type(s))`,
+);
+
+export const outboxSkippedAlert = outboxAlert(
+    'skipped',
+    'integration-outbox-skipped',
+    n => `Outbound events were skipped, never sent (${n} event type(s))`,
+);
 
 export const kafkaLagAlert: DashboardAlertDefinition<string[]> = {
     id: 'kafka-consumer-lag-high',
@@ -53,7 +108,7 @@ export const kafkaLagAlert: DashboardAlertDefinition<string[]> = {
 };
 
 defineDashboardExtension({
-    alerts: [kafkaLagAlert],
+    alerts: [kafkaLagAlert, outboxFailedAlert, outboxSkippedAlert],
     routes: [
         {
             path: '/integration-health',

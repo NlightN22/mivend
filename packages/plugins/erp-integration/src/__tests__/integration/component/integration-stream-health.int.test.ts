@@ -151,7 +151,38 @@ describe('integrationOutboxHealth', () => {
         expect(byType['order.cancelled']).toMatchObject({ pending: 0, failed: 0, lastError: null });
     });
 
-    it('returns no rows for an empty outbox', async () => {
-        expect(await resolver.integrationOutboxHealth()).toEqual([]);
+    it('lists every registered outbound type with zeros for an empty outbox', async () => {
+        const rows = await resolver.integrationOutboxHealth();
+
+        expect(rows).toEqual([
+            expect.objectContaining({
+                eventType: 'order.submitted',
+                pending: 0,
+                failed: 0,
+                skipped: 0,
+            }),
+        ]);
+    });
+
+    it('counts skipped rows separately and reports the last skip reason, not as a publish error', async () => {
+        await dataSource.getRepository(IntegrationOutboxEntry).save({
+            eventId: randomUUID(),
+            eventType: 'order.submitted',
+            payload: { orderId: 'o-1' },
+            status: 'skipped',
+            lastError: 'line 1 has no organizationId',
+            lastErrorAt: new Date(),
+        });
+
+        const row = (await resolver.integrationOutboxHealth()).find(
+            r => r.eventType === 'order.submitted',
+        )!;
+
+        expect(row).toMatchObject({
+            skipped: 1,
+            pending: 0,
+            lastSkipReason: 'line 1 has no organizationId',
+            lastError: null,
+        });
     });
 });

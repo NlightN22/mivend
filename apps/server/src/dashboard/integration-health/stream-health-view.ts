@@ -38,6 +38,9 @@ export const VERSION_DRIFT_MESSAGES: Record<
     },
 };
 
-export function outboxNeedsAttention(row: { failed: number }): boolean {
-    return row.failed > 0;
+export function outboundTypesWith(
+    rows: ReadonlyArray<{ eventType: string; failed: number; skipped: number }>,
+    key: 'failed' | 'skipped',
+): string[] {
+    return rows.filter(r => r[key] > 0).map(r => r.eventType);
 }

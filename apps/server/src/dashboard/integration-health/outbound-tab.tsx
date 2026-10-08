@@ -21,10 +21,12 @@ const outboxHealthDocument = graphql(`
             eventType
             pending
             failed
+            skipped
             oldestPendingAt
             lastPublishedAt
             lastError
             lastErrorAt
+            lastSkipReason
         }
     }
 `);
@@ -61,8 +63,8 @@ export function OutboundTab() {
         <div className="pt-4 pb-6">
             <p className="text-muted-foreground mb-4">
                 Events mivend wrote to its outbox for Integration Service, per event type. Pending
-                rows are waiting to be published to Kafka; failed rows exhausted their retries and
-                are not retried again.
+                rows are waiting to be published (failed attempts are retried with backoff for 24
+                h); failed rows gave up; skipped rows could not be built and were never sent.
             </p>
             {error && <p className="text-destructive mb-3">{error}</p>}
             <div className="flex justify-end mb-2">
@@ -75,17 +77,20 @@ export function OutboundTab() {
                             <TableHead>Event type</TableHead>
                             <TableHead>Pending</TableHead>
                             <TableHead>Failed</TableHead>
+                            <TableHead title="Events that could not be built and were never published">
+                                Skipped
+                            </TableHead>
                             <TableHead title="Age of the oldest pending outbox row">
                                 Oldest
                             </TableHead>
                             <TableHead>Last published</TableHead>
-                            <TableHead>Last error</TableHead>
+                            <TableHead>Last error / skip reason</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loaded && rows.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-muted-foreground">
+                                <TableCell colSpan={7} className="text-muted-foreground">
                                     No outbound events yet.
                                 </TableCell>
                             </TableRow>
@@ -101,6 +106,13 @@ export function OutboundTab() {
                                         0
                                     )}
                                 </TableCell>
+                                <TableCell>
+                                    {r.skipped > 0 ? (
+                                        <Badge variant="destructive">{r.skipped}</Badge>
+                                    ) : (
+                                        0
+                                    )}
+                                </TableCell>
                                 <TableCell>{formatAge(r.oldestPendingAt, now)}</TableCell>
                                 <TableCell>
                                     {r.lastPublishedAt
@@ -108,7 +120,7 @@ export function OutboundTab() {
                                         : '—'}
                                 </TableCell>
                                 <TableCell className="max-w-80 whitespace-normal break-words text-destructive">
-                                    {r.lastError ?? ''}
+                                    {r.lastError ?? r.lastSkipReason ?? ''}
                                 </TableCell>
                             </TableRow>
                         ))}

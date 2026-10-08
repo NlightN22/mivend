@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatAge, isLagOverThreshold } from '../../stream-health-view';
+import { formatAge, isLagOverThreshold, outboundTypesWith } from '../../stream-health-view';
 
 describe('isLagOverThreshold', () => {
     it('is false for unknown, at-threshold and small lag', () => {
@@ -26,5 +26,18 @@ describe('formatAge', () => {
 
     it('renders a dash when there is no pending row', () => {
         expect(formatAge(null, now)).toBe('—');
+    });
+});
+
+describe('outboundTypesWith', () => {
+    const rows = [
+        { eventType: 'a', failed: 1, skipped: 0 },
+        { eventType: 'b', failed: 0, skipped: 2 },
+        { eventType: 'c', failed: 0, skipped: 0 },
+    ];
+
+    it('lists the event types with a non-zero count for the given key', () => {
+        expect(outboundTypesWith(rows, 'failed')).toEqual(['a']);
+        expect(outboundTypesWith(rows, 'skipped')).toEqual(['b']);
     });
 });
