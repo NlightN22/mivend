@@ -113,6 +113,8 @@ import { KafkaLagPollerService } from './kafka-lag-poller.service';
 import { createKafkaLagPollTask } from './kafka-lag-poll.scheduled-task';
 import { KafkaLagResolver } from './kafka-lag.resolver';
 import { IntegrationStreamHealthResolver } from './integration-stream-health.resolver';
+import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
+import { ContractVersionClient } from './contract-version.client';
 
 // Central-hub-only, per the external-integration-rules skill ("Branches never call the ERP [or Integration
 // Service]"). The guard can't live in the providers array itself: @VendurePlugin's decorator body
@@ -219,6 +221,8 @@ import { IntegrationStreamHealthResolver } from './integration-stream-health.res
         CharacteristicFacetService,
         ProductAncillaryDataService,
         ReconciliationSummaryClient,
+        IntegrationOutboxHealthService,
+        ContractVersionClient,
         ReconciliationLocalCountsService,
         ReconciliationService,
         KafkaLagPollerService,

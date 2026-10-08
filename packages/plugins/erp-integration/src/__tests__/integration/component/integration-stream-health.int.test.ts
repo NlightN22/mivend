@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
 import {
@@ -10,6 +11,9 @@ import {
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import type { KafkaConsumerLagEntry } from '../../../entities/kafka-consumer-lag.entity';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
+import { IntegrationOutboxHealthService } from '../../../integration-outbox-health.service';
+import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
+import type { ContractVersionClient } from '../../../contract-version.client';
 import { IntegrationStreamHealthResolver } from '../../../integration-stream-health.resolver';
 import { ALL_INBOUND_STREAMS } from '../../../types';
 import type { ErpIntegrationPluginOptions } from '../../../types';
@@ -28,7 +32,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [IntegrationInboxEvent],
+        entities: [IntegrationInboxEvent, IntegrationOutboxEntry],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -38,12 +42,15 @@ beforeAll(async () => {
         { kafkaConsumer: { topics } } as unknown as ErpIntegrationPluginOptions,
         { getRepository: () => ({ find: async () => lagRows }) } as unknown as DataSource,
         inbox,
+        new IntegrationOutboxHealthService(dataSource),
+        { getLatestVersion: async () => '99.0.0' } as unknown as ContractVersionClient,
     );
 });
 
 afterEach(async () => {
     await dataSource.getRepository(IntegrationInboxEvent).clear();
     lagRows = [];
+    await dataSource.getRepository(IntegrationOutboxEntry).clear();
 });
 
 afterAll(async () => {
@@ -101,5 +108,50 @@ describe('integrationStreamHealth', () => {
             drift: 'UNKNOWN_STREAM',
             pending: 1,
         });
+    });
+
+    it('reports contract version drift against the latest published version', async () => {
+        const { versionDrift } = await resolver.integrationStreamHealth();
+        expect(versionDrift).toMatchObject({ latest: '99.0.0', status: 'BEHIND' });
+    });
+});
+
+describe('integrationOutboxHealth', () => {
+    it('groups outbox rows per event type with pending, failed, oldest pending and last error', async () => {
+        const repo = dataSource.getRepository(IntegrationOutboxEntry);
+        await repo.save([
+            { eventId: randomUUID(), eventType: 'order.submitted', payload: {}, status: 'pending' },
+            {
+                eventId: randomUUID(),
+                eventType: 'order.submitted',
+                payload: {},
+                status: 'failed',
+                retryCount: 5,
+                lastError: 'broker down',
+                lastErrorAt: new Date(),
+            },
+            {
+                eventId: randomUUID(),
+                eventType: 'order.cancelled',
+                payload: {},
+                status: 'published',
+                publishedAt: new Date(),
+            },
+        ]);
+
+        const rows = await resolver.integrationOutboxHealth();
+        const byType = Object.fromEntries(rows.map(r => [r.eventType, r]));
+
+        expect(byType['order.submitted']).toMatchObject({
+            pending: 1,
+            failed: 1,
+            lastError: 'broker down',
+        });
+        expect(byType['order.submitted'].oldestPendingAt).toBeInstanceOf(Date);
+        expect(byType['order.cancelled']).toMatchObject({ pending: 0, failed: 0, lastError: null });
+    });
+
+    it('returns no rows for an empty outbox', async () => {
+        expect(await resolver.integrationOutboxHealth()).toEqual([]);
     });
 });

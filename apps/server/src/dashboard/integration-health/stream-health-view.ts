@@ -17,3 +17,27 @@ export function formatAge(from: string | null, now: number): string {
     if (minutes < 1440) return `${Math.round(minutes / 60)} h`;
     return `${Math.round(minutes / 1440)} d`;
 }
+
+export const VERSION_DRIFT_MESSAGES: Record<
+    string,
+    { title: string; text: (installed: string, latest: string | null) => string } | undefined
+> = {
+    BEHIND: {
+        title: 'is outdated',
+        text: (i, l) =>
+            `mivend uses v${i}, the latest published version is v${l}. Streams or fields may be missing.`,
+    },
+    AHEAD: {
+        title: 'is newer than the published latest',
+        text: (i, l) => `mivend uses v${i}, the registry reports v${l}.`,
+    },
+    UNKNOWN: {
+        title: 'version could not be checked',
+        text: i =>
+            `mivend uses v${i}. The latest published version is unknown (registry token not configured or registry unreachable).`,
+    },
+};
+
+export function outboxNeedsAttention(row: { failed: number }): boolean {
+    return row.failed > 0;
+}

@@ -110,8 +110,26 @@ export const adminApiExtensions: DocumentNode = gql`
         oldestPendingAt: DateTime
     }
 
+    type ContractVersionDrift {
+        installed: String!
+        latest: String
+        "UP_TO_DATE | BEHIND | AHEAD | UNKNOWN (latest version could not be looked up)."
+        status: String!
+    }
+
+    type IntegrationOutboxHealth {
+        eventType: String!
+        pending: Int!
+        failed: Int!
+        oldestPendingAt: DateTime
+        lastPublishedAt: DateTime
+        lastError: String
+        lastErrorAt: DateTime
+    }
+
     type IntegrationStreamHealthReport {
         contractVersion: String!
+        versionDrift: ContractVersionDrift!
         streams: [IntegrationStreamHealth!]!
     }
 
@@ -182,6 +200,8 @@ export const adminApiExtensions: DocumentNode = gql`
         integrationInboxBacklog: [IntegrationInboxBacklogByStream!]!
         "One row per stream: union of the event contract, configured topics and inbox rows, with Kafka lag, inbox backlog and drift (issue #195)."
         integrationStreamHealth: IntegrationStreamHealthReport!
+        "Outbound events written to the outbox per event type: not yet published, dead-lettered, oldest pending age, last error."
+        integrationOutboxHealth: [IntegrationOutboxHealth!]!
     }
 
     extend type Mutation {
