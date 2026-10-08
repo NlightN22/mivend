@@ -255,11 +255,13 @@ a loss, as long as it leaves a record that can be retried. So:
   `return`.
 - Every recorded non-success state must be retryable and must be visible on the Integration
   health page; any non-zero `failed`/`skipped` is alertable.
-- Target architecture (issue tracked in `docs/integration-health.md`): one outbound gateway and one
-  inbound gateway own recording; producers/handlers never write the outbox or publish to Kafka
-  directly, and a lint rule enforces it. Until the gateways exist, new producers must still follow
-  the states above and add the "skip path leaves a record" test (`docs/testing-patterns.md`,
-  "Silent drop").
+- Architecture (issue #200, `docs/integration-health.md`): outbound producers call
+  `OutboundGateway.enqueue({ eventType, subject, build })` and never touch `IntegrationOutboxService`
+  or `KafkaProducerService` (lint rule `outbound/no-direct-outbound`); `build` returns
+  `outboundSend(...)` or `outboundSkip(reason)`; a new event type goes into
+  `outbound-event-types.ts` and needs a schema and a rebuilder. Inbound handlers return
+  `inboundNoop(reason)` for a deliberate no-op instead of a bare `return`. Every new producer or
+  skip path gets the "Silent drop" test (`docs/testing-patterns.md`).
 - Auditor's side: for any producer/handler change, find every early `return`/`continue` and
   confirm it records an outcome.
 

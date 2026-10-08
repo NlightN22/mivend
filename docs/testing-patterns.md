@@ -150,8 +150,9 @@ the cause is fixed produces the event exactly once.
 **Common false positive**: asserting only that the handler returned without throwing, or that a
 warning was logged.
 
-**mivend example**: none yet (issue tracked in `docs/integration-health.md`); motivating case:
-`order.submitted` skipped when a line has no `organizationId`.
+**mivend example**: `outbound-gateway.int.test.ts` and `outbox-recovery.int.test.ts` (outbound),
+`integration-inbox-processor.int.test.ts` (inbound outcomes); motivating case: `order.submitted`
+skipped when a line has no `organizationId`.
 
 **Exceptions**: none.
 

@@ -7,7 +7,8 @@ Updated: 2026-10-08 06:40
 - Dashboard System -> Integration health: Inbound tab (stream x contract x Kafka lag x inbox backlog, drift rows, contract version banner) and Outbound tab (outbox per event type). Full description and failed-rows runbook: `docs/integration-health.md`.
 - Unconsumed contract streams are listed with reasons in `erp-integration/src/ignored-contract-streams.ts` (counterparty-contact/-group, order-change-result, product-group, point-of-sale-type); a unit test fails CI on a new unhandled contract stream.
 - Version lookup needs `EVENT_CONTRACTS_REGISTRY_TOKEN` in the contour env file (not in repo); without it the banner says "could not be checked".
-- Known risk, not fixed: outbox rows dead-letter after 5 attempts at a 5 s sweep (~30 s broker outage) and have no requeue path. `make lint` currently fails on untracked foreign scratch files in `packages/e2e`.
+- #200 (implemented, pending audit/push): `OutboundGateway` + outbound type registry, `skipped`/`resolved` outbox statuses, outbox retry with backoff over 24 h, `requeueFailedIntegrationOutbox`/`rebuildSkippedIntegrationOutbox` mutations, lint rule `outbound/no-direct-outbound`, inbound `inboundNoop` outcomes (`outcome`/`outcome_reason` columns, migrations 1791000000013/14), Outbound tab Skipped column + failed/skipped alerts. Left open: crash-gap sweep, inbound dead-letter for malformed payloads, drill-down pages, Integration Service dedup by event_id unconfirmed.
+- Earlier known risk (now fixed by #200): outbox rows dead-lettered after 5 attempts at a 5 s sweep. `make lint` currently fails on untracked foreign scratch files in `packages/e2e`.
 
 ## #198 order branch fallback + auto-reserve switch (2026-10-08, shipped/audited; pushed)
 
