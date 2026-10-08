@@ -170,7 +170,7 @@ export class ReservationService {
 
                     const erpExportMissingLines: ErpExportDataMissingLine[] = [];
                     for (const line of order.lines) {
-                        const missing: Array<'productId' | 'warehouseId'> = [];
+                        const missing: ErpExportDataMissingLine['missing'] = [];
                         const hasProductId = line.productVariant?.productId
                             ? productExternalIdByProductId.has(
                                   String(line.productVariant.productId),
@@ -178,6 +178,9 @@ export class ReservationService {
                             : false;
                         if (!hasProductId) missing.push('productId');
                         if (candidateLocations.length === 0) missing.push('warehouseId');
+                        if (line.productVariant?.customFields?.organizationId == null) {
+                            missing.push('organizationId');
+                        }
                         if (missing.length > 0) {
                             erpExportMissingLines.push({
                                 orderLineId: String(line.id),

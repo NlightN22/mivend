@@ -199,7 +199,9 @@ let productVariant: TestProductVariant;
 
 beforeAll(async () => {
     location = await dataSource.getRepository(TestStockLocation).save({});
-    productVariant = await dataSource.getRepository(TestProductVariant).save({});
+    productVariant = await dataSource
+        .getRepository(TestProductVariant)
+        .save({ customFields: { organizationId: 1 } });
 });
 
 beforeEach(async () => {

@@ -21,6 +21,8 @@ declare module '@vendure/core' {
     // docs/order-flow.md "Pack-size / MOQ".
     interface CustomProductVariantFields {
         multiplicity?: number | null;
+        // Owned by @mivend/plugin-acquiring's declaration; reserveOrder() gates on it being set.
+        organizationId?: number | null;
     }
     // Owned by @mivend/plugin-erp-integration (declaration merging) — ReservationAvailabilityService
     // reads this to resolve a branch's Warehouses to their StockLocations without taking a

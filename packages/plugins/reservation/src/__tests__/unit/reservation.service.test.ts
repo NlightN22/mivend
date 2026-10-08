@@ -108,13 +108,13 @@ describe('ReservationService', () => {
                 id: 'line-1',
                 productVariantId: 'variant-1',
                 quantity: 2,
-                productVariant: { productId: 'product-1', customFields: {} },
+                productVariant: { productId: 'product-1', customFields: { organizationId: 1 } },
             },
             {
                 id: 'line-2',
                 productVariantId: 'variant-2',
                 quantity: 5,
-                productVariant: { productId: 'product-2', customFields: {} },
+                productVariant: { productId: 'product-2', customFields: { organizationId: 1 } },
             },
         ],
     };
@@ -291,7 +291,7 @@ describe('ReservationService', () => {
                         quantity: 3,
                         productVariant: {
                             productId: 'product-1',
-                            customFields: { multiplicity: -1 },
+                            customFields: { multiplicity: -1, organizationId: 1 },
                         },
                     },
                 ],
@@ -363,6 +363,33 @@ describe('ReservationService', () => {
             expect((error as ErpExportDataMissingError).lines).toEqual([
                 { orderLineId: 'line-2', productVariantId: 'variant-2', missing: ['productId'] },
             ]);
+        });
+
+        it('rejects only the line whose variant has no organization', async () => {
+            orderRepo.findOne.mockResolvedValue({
+                ...order,
+                lines: [
+                    order.lines[0],
+                    {
+                        ...order.lines[1],
+                        productVariant: { productId: 'product-2', customFields: {} },
+                    },
+                ],
+            });
+
+            const error = await service
+                .confirmOrder(ctx, 'order-1', 3)
+                .catch((e: unknown) => e as ErpExportDataMissingError);
+
+            expect(error).toBeInstanceOf(ErpExportDataMissingError);
+            expect((error as ErpExportDataMissingError).lines).toEqual([
+                {
+                    orderLineId: 'line-2',
+                    productVariantId: 'variant-2',
+                    missing: ['organizationId'],
+                },
+            ]);
+            expect(reservationRepo.save).not.toHaveBeenCalled();
         });
 
         it('picks the candidate StockLocation with the most available stock per line', async () => {

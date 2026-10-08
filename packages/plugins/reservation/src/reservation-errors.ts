@@ -23,7 +23,7 @@ export class OrderNotEligibleError extends Error {
 export interface ErpExportDataMissingLine {
     orderLineId: string;
     productVariantId: string;
-    missing: Array<'productId' | 'warehouseId'>;
+    missing: Array<'productId' | 'warehouseId' | 'organizationId'>;
 }
 
 // mivend#85: reserveOrder() is the actual commit point for "which warehouse does this order's
