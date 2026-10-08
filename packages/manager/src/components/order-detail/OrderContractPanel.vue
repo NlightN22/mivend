@@ -2,7 +2,11 @@
 import { computed, ref, watch } from 'vue';
 import { MvNotice, MvSelect, MvStatusBadge } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import { fetchOrderContracts, setOrderContract, type OrderContractOption } from '../../api/reservation';
+import {
+    fetchOrderContracts,
+    setOrderContract,
+    type OrderContractOption,
+} from '../../api/reservation';
 
 const props = defineProps<{ orderId: string; locked: boolean }>();
 const emit = defineEmits<{ changed: [] }>();
