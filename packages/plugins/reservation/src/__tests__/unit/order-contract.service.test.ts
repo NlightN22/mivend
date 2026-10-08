@@ -1,7 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Order } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
 import { OrderContractService } from '../../order-contract.service';
+import { ReservationResolver } from '../../reservation.resolver';
+
+// What Vendure's CalculatedPropertySubscriber does on load: calculated getters (taxSummary needs
+// the surcharges relation) become own enumerable properties, so spreading the entity evaluates them.
+function loadedOrder(customFields: Record<string, unknown>): Order {
+    const entity = new Order({ id: 7, customerId: 1 } as never);
+    (entity as unknown as { customFields: unknown }).customFields = customFields;
+    const names = (
+        Order.prototype as unknown as { __calculatedProperties__: Array<{ name: string }> }
+    ).__calculatedProperties__.map(p => p.name);
+    for (const name of names) {
+        const descriptor = Object.getOwnPropertyDescriptor(Order.prototype, name);
+        if (descriptor?.get) {
+            Object.defineProperty(entity, name, { get: descriptor.get, enumerable: true });
+        }
+    }
+    return entity;
+}
 
 const ctx = {} as RequestContext;
 const counterparty = { id: 5, mainContractId: 'main' };
@@ -16,7 +35,7 @@ const contract = (erpId: string, over: Record<string, unknown> = {}) => ({
 });
 
 let queries: Array<{ sql: string; params: unknown[] }>;
-let order: Record<string, unknown>;
+let order: Order;
 let reservations: Array<{ status: string }>;
 let contractService: {
     findByErpId: ReturnType<typeof vi.fn>;
@@ -28,7 +47,7 @@ let service: OrderContractService;
 
 beforeEach(() => {
     queries = [];
-    order = { id: 7, customerId: 1, customFields: { selectedContractId: 'main', erpStatus: null } };
+    order = loadedOrder({ selectedContractId: 'main', erpStatus: null });
     reservations = [];
     const repo = {
         query: vi.fn(async (sql: string, params: unknown[] = []) => {
@@ -97,7 +116,7 @@ describe('OrderContractService.set', () => {
     });
 
     it('rejects the change once the ERP has the order', async () => {
-        order = { ...order, customFields: { erpStatus: 'SENT_TO_ERP' } };
+        order = loadedOrder({ erpStatus: 'SENT_TO_ERP' });
         await expect(service.set(ctx, 7, 'picked')).rejects.toThrow('already registered');
     });
 
@@ -105,6 +124,25 @@ describe('OrderContractService.set', () => {
         await service.set(ctx, 7, 'main');
         expect(queries.filter(q => q.sql.includes('UPDATE'))).toHaveLength(0);
         expect(history.createHistoryEntryForOrder).not.toHaveBeenCalled();
+    });
+});
+
+describe('setOrderContract through the resolver', () => {
+    it('answers with the contract options for a real Order entity and persists the change', async () => {
+        const resolver = new ReservationResolver(
+            {} as never,
+            {} as never,
+            {} as never,
+            {} as never,
+            {} as never,
+            service,
+        );
+
+        const options = await resolver.setOrderContract(ctx, { orderId: 7, contractId: 'picked' });
+
+        expect(options.map(o => o.erpId)).toEqual(['main', 'picked']);
+        expect(queries.some(q => q.sql.includes('UPDATE') && q.params[1] === 'picked')).toBe(true);
+        expect(history.createHistoryEntryForOrder).toHaveBeenCalled();
     });
 });
 

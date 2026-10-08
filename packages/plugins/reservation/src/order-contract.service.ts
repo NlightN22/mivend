@@ -46,7 +46,7 @@ export class OrderContractService {
 
     async list(ctx: RequestContext, orderId: ID): Promise<OrderContractOption[]> {
         const order = await this.findVisibleOrder(ctx, orderId);
-        return this.options(ctx, order);
+        return this.options(ctx, order.customerId, order.customFields?.selectedContractId);
     }
 
     async set(
@@ -91,25 +91,24 @@ export class OrderContractService {
                     false,
                 );
             }
-            return this.options(txCtx, {
-                ...order,
-                customFields: { ...order.customFields, selectedContractId: contract.erpId },
-            } as Order);
+            // Never copy the Order entity: spreading it evaluates Vendure's calculated getters
+            // (taxSummary needs relations this query does not load).
+            return this.options(txCtx, order.customerId, contract.erpId);
         });
     }
 
-    private async options(ctx: RequestContext, order: Order): Promise<OrderContractOption[]> {
-        const counterparty = order.customerId
-            ? await this.counterpartyService.getForCustomer(ctx, order.customerId)
+    private async options(
+        ctx: RequestContext,
+        customerId: ID | undefined,
+        selectedContractId: string | null | undefined,
+    ): Promise<OrderContractOption[]> {
+        const counterparty = customerId
+            ? await this.counterpartyService.getForCustomer(ctx, customerId)
             : null;
         if (!counterparty) return [];
         const [contracts, current] = await Promise.all([
             this.contractService.findActiveForCounterparty(ctx, counterparty.id),
-            this.contractService.resolveOrderContract(
-                ctx,
-                counterparty,
-                order.customFields?.selectedContractId,
-            ),
+            this.contractService.resolveOrderContract(ctx, counterparty, selectedContractId),
         ]);
         const names = await this.organizationNames(contracts);
         return contracts
