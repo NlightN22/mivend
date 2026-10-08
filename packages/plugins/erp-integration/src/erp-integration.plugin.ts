@@ -117,6 +117,7 @@ import { IntegrationStreamHealthResolver } from './integration-stream-health.res
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import { ContractVersionClient } from './contract-version.client';
 import { IntegrationEventListResolver } from './integration-event-list.resolver';
+import { IntegrationInboxIssueResolver } from './integration-inbox-issue.resolver';
 import { IntegrationEventListService } from './integration-event-list.service';
 import { IntegrationInboxReplayService } from './integration-inbox-replay.service';
 import { OutboundGateway } from './outbound-gateway';
@@ -254,6 +255,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
             KafkaLagResolver,
             IntegrationStreamHealthResolver,
             IntegrationEventListResolver,
+            IntegrationInboxIssueResolver,
             IntegrationOutboxRecoveryResolver,
             ProductPhotoResolver,
         ],

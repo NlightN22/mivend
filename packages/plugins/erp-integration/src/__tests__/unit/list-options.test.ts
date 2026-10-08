@@ -32,18 +32,35 @@ describe('parseFilter', () => {
         });
     });
 
-    it('honours filterOperator OR and nested _and groups (the dashboard sends _and)', () => {
+    it('ORs only the plain fields; _and groups stay ANDed (dashboard column filters + search term)', () => {
         const node = parseFilter(
             {
                 filterOperator: 'OR',
-                filter: { _and: [{ stream: { eq: 'a' } }], lastError: { contains: 'b' } },
+                filter: {
+                    _and: [{ stream: { eq: 'a' } }],
+                    lastError: { contains: 'b' },
+                    entityId: undefined,
+                },
             },
-            FIELDS,
+            { ...FIELDS, entityId: 'e.entity_id' },
         );
-        expect(node).toMatchObject({ kind: 'group', operator: 'OR' });
-        expect(node && node.kind === 'group' && node.children[0]).toMatchObject({
+        expect(node).toEqual({
             kind: 'group',
             operator: 'AND',
+            children: [
+                {
+                    kind: 'group',
+                    operator: 'AND',
+                    children: [
+                        {
+                            kind: 'group',
+                            operator: 'AND',
+                            children: [{ kind: 'cond', column: 'e.stream', op: 'eq', value: 'a' }],
+                        },
+                    ],
+                },
+                { kind: 'cond', column: 'e.last_error', op: 'like', value: 'b' },
+            ],
         });
     });
 

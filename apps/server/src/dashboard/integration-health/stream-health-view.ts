@@ -44,3 +44,18 @@ export function outboundTypesWith(
 ): string[] {
     return rows.filter(r => r[key] > 0).map(r => r.eventType);
 }
+
+export interface VariantOrganizationHealth {
+    total: number;
+    withoutOrganization: number;
+}
+
+export function formatVariantOrganizationLine(health: VariantOrganizationHealth): {
+    text: string;
+    problem: boolean;
+} {
+    return {
+        text: `${health.withoutOrganization} of ${health.total} enabled variants have no organization and cannot be ordered`,
+        problem: health.withoutOrganization > 0,
+    };
+}

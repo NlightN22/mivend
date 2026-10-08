@@ -59,33 +59,38 @@ function parseFieldCondition(field: string, column: string, spec: unknown): Filt
     return nodes;
 }
 
+// Explicit _and/_or groups (the dashboard puts its column filters there) always AND with the
+// plain field conditions, so a search term joined by filterOperator OR cannot widen them.
 function parseGroup(
     filter: Record<string, unknown>,
     operator: 'AND' | 'OR',
     fields: FieldMap,
 ): FilterNode | null {
-    const children: FilterNode[] = [];
+    const fieldNodes: FilterNode[] = [];
+    const nested: FilterNode[] = [];
     for (const [key, value] of Object.entries(filter)) {
         if (value === undefined || value === null) continue;
         if (key === '_and' || key === '_or') {
             if (!Array.isArray(value)) throw new InvalidListOptionsError(`"${key}" must be a list`);
-            const nested = value
+            const children = value
                 .map(item => parseGroup(item as Record<string, unknown>, 'AND', fields))
                 .filter((n): n is FilterNode => n !== null);
-            if (nested.length > 0) {
-                children.push({
-                    kind: 'group',
-                    operator: key === '_and' ? 'AND' : 'OR',
-                    children: nested,
-                });
+            if (children.length > 0) {
+                nested.push({ kind: 'group', operator: key === '_and' ? 'AND' : 'OR', children });
             }
             continue;
         }
         const column = fields[key];
         if (!column) throw new InvalidListOptionsError(`Cannot filter on "${key}"`);
-        children.push(...parseFieldCondition(key, column, value));
+        fieldNodes.push(...parseFieldCondition(key, column, value));
     }
-    return children.length > 0 ? { kind: 'group', operator, children } : null;
+    const nodes = [...nested];
+    if (operator === 'OR' && fieldNodes.length > 1) {
+        nodes.push({ kind: 'group', operator: 'OR', children: fieldNodes });
+    } else {
+        nodes.push(...fieldNodes);
+    }
+    return nodes.length > 0 ? { kind: 'group', operator: 'AND', children: nodes } : null;
 }
 
 export function parseFilter(options: ListOptionsInput, fields: FieldMap): FilterNode | null {

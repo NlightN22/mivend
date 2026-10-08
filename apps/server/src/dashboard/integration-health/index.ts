@@ -5,7 +5,10 @@ import {
     graphql,
 } from '@vendure/dashboard';
 
+import { InboxIssuesPage } from './inbox-issues-page.js';
 import { IntegrationHealthPage } from './integration-health-page.js';
+import { INBOX_ISSUES_PATH, OUTBOUND_PROBLEMS_PATH } from './issue-links.js';
+import { OutboundProblemsPage } from './outbound-problems-page.js';
 import { isLagOverThreshold, outboundTypesWith } from './stream-health-view.js';
 
 // Lives under apps/server/src, not packages/plugins/*: see ../system-health/index.ts.
@@ -110,6 +113,28 @@ export const kafkaLagAlert: DashboardAlertDefinition<string[]> = {
 defineDashboardExtension({
     alerts: [kafkaLagAlert, outboxFailedAlert, outboxSkippedAlert],
     routes: [
+        {
+            path: INBOX_ISSUES_PATH,
+            component: route => InboxIssuesPage({ route }),
+            navMenuItem: {
+                sectionId: 'system',
+                id: 'integration-inbox-issues',
+                title: 'Inbox issues',
+                url: INBOX_ISSUES_PATH,
+                requiresPermission: 'ManageErpIntegration',
+            },
+        },
+        {
+            path: OUTBOUND_PROBLEMS_PATH,
+            component: route => OutboundProblemsPage({ route }),
+            navMenuItem: {
+                sectionId: 'system',
+                id: 'integration-outbound-problems',
+                title: 'Outbound problems',
+                url: OUTBOUND_PROBLEMS_PATH,
+                requiresPermission: 'ManageErpIntegration',
+            },
+        },
         {
             path: '/integration-health',
             component: IntegrationHealthPage,

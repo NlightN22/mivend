@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-    Badge,
     ResultOf,
     Table,
     TableBody,
@@ -12,6 +11,8 @@ import {
     graphql,
 } from '@vendure/dashboard';
 
+import { CountLink } from './count-link.js';
+import { outboundProblemsLink } from './issue-links.js';
 import { RefreshIconButton } from './refresh-button.js';
 import { formatAge } from './stream-health-view.js';
 
@@ -100,18 +101,24 @@ export function OutboundTab() {
                                 <TableCell className="font-medium">{r.eventType}</TableCell>
                                 <TableCell>{r.pending}</TableCell>
                                 <TableCell>
-                                    {r.failed > 0 ? (
-                                        <Badge variant="destructive">{r.failed}</Badge>
-                                    ) : (
-                                        0
-                                    )}
+                                    <CountLink
+                                        count={r.failed}
+                                        href={outboundProblemsLink({
+                                            eventType: r.eventType,
+                                            status: 'failed',
+                                        })}
+                                        destructive
+                                    />
                                 </TableCell>
                                 <TableCell>
-                                    {r.skipped > 0 ? (
-                                        <Badge variant="destructive">{r.skipped}</Badge>
-                                    ) : (
-                                        0
-                                    )}
+                                    <CountLink
+                                        count={r.skipped}
+                                        href={outboundProblemsLink({
+                                            eventType: r.eventType,
+                                            status: 'skipped',
+                                        })}
+                                        destructive
+                                    />
                                 </TableCell>
                                 <TableCell>{formatAge(r.oldestPendingAt, now)}</TableCell>
                                 <TableCell>

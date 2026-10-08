@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatAge, isLagOverThreshold, outboundTypesWith } from '../../stream-health-view';
+import {
+    formatAge,
+    formatVariantOrganizationLine,
+    isLagOverThreshold,
+    outboundTypesWith,
+} from '../../stream-health-view';
 
 describe('isLagOverThreshold', () => {
     it('is false for unknown, at-threshold and small lag', () => {
@@ -39,5 +44,20 @@ describe('outboundTypesWith', () => {
     it('lists the event types with a non-zero count for the given key', () => {
         expect(outboundTypesWith(rows, 'failed')).toEqual(['a']);
         expect(outboundTypesWith(rows, 'skipped')).toEqual(['b']);
+    });
+});
+
+describe('formatVariantOrganizationLine', () => {
+    it('is a problem when some variants have no organization', () => {
+        expect(formatVariantOrganizationLine({ total: 120, withoutOrganization: 7 })).toEqual({
+            text: '7 of 120 enabled variants have no organization and cannot be ordered',
+            problem: true,
+        });
+    });
+
+    it('is neutral at zero', () => {
+        expect(formatVariantOrganizationLine({ total: 120, withoutOrganization: 0 }).problem).toBe(
+            false,
+        );
     });
 });

@@ -108,6 +108,22 @@ describe('listInboxIssues', () => {
         expect(items.map(i => i.entityId).sort()).toEqual(['needle-id', 'other']);
     });
 
+    it('keeps dashboard column filters (_and) ANDed when a search term arrives with filterOperator OR', async () => {
+        await seedInbox('bank', 'needle-bank', { status: 'failed', lastError: 'a' });
+        await seedInbox('unit', 'needle-unit', { status: 'failed', lastError: 'a' });
+
+        const { items } = await lists.listInboxIssues({
+            filterOperator: 'OR',
+            filter: {
+                _and: [{ stream: { eq: 'bank' } }],
+                entityId: { contains: 'needle' },
+                lastError: { contains: 'needle' },
+            },
+        });
+
+        expect(items.map(i => i.entityId)).toEqual(['needle-bank']);
+    });
+
     it('paginates server-side and reports the real total', async () => {
         for (let n = 0; n < 5; n++) await seedInbox('bank', `p${n}`, { status: 'failed' });
 

@@ -121,7 +121,7 @@ export const adminApiExtensions: DocumentNode = gql`
     }
 
     "Inbox row that needs attention: dead-lettered (failed) or recorded as a no-op. Never carries the payload."
-    type IntegrationInboxIssue {
+    type IntegrationInboxIssue implements Node {
         id: ID!
         stream: String!
         entityId: String!
@@ -132,6 +132,8 @@ export const adminApiExtensions: DocumentNode = gql`
         updatedAt: DateTime!
         outcome: String
         outcomeReason: String
+        "True when the row is failed and Integration Service can replay its entity."
+        replayable: Boolean!
     }
 
     type IntegrationInboxIssueList implements PaginatedList {
@@ -168,7 +170,7 @@ export const adminApiExtensions: DocumentNode = gql`
     }
 
     "Outbox row that needs attention: failed (publish gave up) or skipped (event could not be built). Never carries the payload."
-    type IntegrationOutboxProblem {
+    type IntegrationOutboxProblem implements Node {
         id: ID!
         eventId: String!
         eventType: String!

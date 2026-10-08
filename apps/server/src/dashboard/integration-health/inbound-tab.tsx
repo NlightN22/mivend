@@ -16,8 +16,16 @@ import {
 } from '@vendure/dashboard';
 
 import { VERSION_DRIFT_MESSAGES } from './stream-health-view.js';
+import { CountLink } from './count-link.js';
+import { inboxIssuesLink } from './issue-links.js';
 import { RefreshIconButton } from './refresh-button.js';
-import { DRIFT_MESSAGES, formatAge, isLagOverThreshold } from './stream-health-view.js';
+import type { VariantOrganizationHealth } from './stream-health-view.js';
+import {
+    DRIFT_MESSAGES,
+    formatVariantOrganizationLine,
+    formatAge,
+    isLagOverThreshold,
+} from './stream-health-view.js';
 
 const streamHealthDocument = graphql(`
     query IntegrationStreamHealthForDashboard {
@@ -56,7 +64,25 @@ const streamHealthDocument = graphql(`
     }
 `);
 
+const variantOrganizationDocument = graphql(`
+    query VariantOrganizationHealthForDashboard {
+        variantOrganizationHealth {
+            total
+            withoutOrganization
+        }
+    }
+`);
+
 type StreamHealthReport = ResultOf<typeof streamHealthDocument>['integrationStreamHealth'];
+
+function VariantOrganizationAlert({ health }: Readonly<{ health: VariantOrganizationHealth }>) {
+    const line = formatVariantOrganizationLine(health);
+    return (
+        <Alert variant={line.problem ? 'destructive' : 'default'} className="mb-3">
+            <AlertDescription>{line.text}</AlertDescription>
+        </Alert>
+    );
+}
 
 function VersionDriftAlert({
     drift,
@@ -76,6 +102,7 @@ export function InboundTab() {
     const [expanded, setExpanded] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [variantHealth, setVariantHealth] = useState<VariantOrganizationHealth | null>(null);
 
     const load = useCallback(async (): Promise<void> => {
         setLoading(true);
@@ -83,6 +110,9 @@ export function InboundTab() {
             const data = await api.query(streamHealthDocument);
             setReport(data.integrationStreamHealth);
             setError('');
+            api.query(variantOrganizationDocument)
+                .then(r => setVariantHealth(r.variantOrganizationHealth))
+                .catch(() => setVariantHealth(null));
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Could not load integration health data');
         } finally {
@@ -107,6 +137,7 @@ export function InboundTab() {
                     different things and are expected to disagree.
                 </p>
                 {error && <p className="text-destructive mb-3">{error}</p>}
+                {variantHealth && <VariantOrganizationAlert health={variantHealth} />}
                 {report && <VersionDriftAlert drift={report.versionDrift} />}
                 <div className="flex justify-end mb-2">
                     <RefreshIconButton loading={loading} onRefresh={() => void load()} />
@@ -182,14 +213,23 @@ export function InboundTab() {
                                     <TableCell>{s.pending}</TableCell>
                                     <TableCell>{s.processing}</TableCell>
                                     <TableCell>
-                                        {s.failed > 0 ? (
-                                            <Badge variant="destructive">{s.failed}</Badge>
-                                        ) : (
-                                            0
-                                        )}
+                                        <CountLink
+                                            count={s.failed}
+                                            href={inboxIssuesLink({
+                                                stream: s.stream,
+                                                status: 'failed',
+                                            })}
+                                            destructive
+                                        />
                                     </TableCell>
                                     <TableCell title={s.lastNoopReason ?? undefined}>
-                                        {s.noop24h}
+                                        <CountLink
+                                            count={s.noop24h}
+                                            href={inboxIssuesLink({
+                                                stream: s.stream,
+                                                outcome: 'noop',
+                                            })}
+                                        />
                                     </TableCell>
                                     <TableCell>{formatAge(s.oldestPendingAt, now)}</TableCell>
                                 </TableRow>,
