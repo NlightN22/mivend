@@ -74,7 +74,10 @@ export class ExternalSearchService {
         const priceTypeId = hasPriceCriteria(input)
             ? await this.priceTypes.resolveExternalId(ctx)
             : null;
-        const request = mapSearchInputToResolveQueryRequest(input, resolved, priceTypeId);
+        const request = {
+            ...mapSearchInputToResolveQueryRequest(input, resolved, priceTypeId),
+            ...(includeDisabled ? {} : { requireOrganization: true }),
+        };
         const empty = { items: [], totalItems: 0, facetValues: [], collections: [] };
         if (resolved.unsatisfiable) return empty;
         if (!hasBrowseCriteria(request)) {

@@ -120,6 +120,28 @@ describe('ExternalSearchService.search', () => {
         expect(lookup.findByExternalIds).toHaveBeenNthCalledWith(2, ctx, ['ext-001'], true);
     });
 
+    it('asks search-service for organization-backed products only in the shop view', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+            noPriceType as never,
+        );
+
+        await service.search(ctx, { term: 'oil' } as SearchInput);
+        await service.search(ctx, { term: 'oil' } as SearchInput, true);
+
+        expect(client.resolveQuery).toHaveBeenNthCalledWith(
+            1,
+            expect.objectContaining({ requireOrganization: true }),
+        );
+        expect(client.resolveQuery.mock.calls[1][0]).not.toHaveProperty('requireOrganization');
+    });
+
     it('uses search-service total and keeps its ranking order with one batched lookup', async () => {
         const client = {
             resolveQuery: vi.fn().mockResolvedValue({

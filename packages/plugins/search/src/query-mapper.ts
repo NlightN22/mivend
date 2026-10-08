@@ -17,6 +17,7 @@ export interface ResolveQueryRequest {
     limit?: number;
     offset?: number;
     availableOnly?: boolean;
+    requireOrganization?: boolean;
 }
 
 export function hasPriceCriteria(input: ShopSearchInput): boolean {
