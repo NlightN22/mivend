@@ -189,3 +189,47 @@ describe('ContractService.deactivateTombstone (real Postgres)', () => {
         expect(row).toBeNull();
     });
 });
+
+describe('ContractService order contract lookup (real Postgres)', () => {
+    const seed = (erpId: string, counterpartyId: string, isActive = true) =>
+        service.upsertActiveState(ctx, erpId, {
+            ...baseFields,
+            name: erpId,
+            counterpartyId,
+            isActive,
+        });
+
+    it('lists only the active contracts of the given counterparty', async () => {
+        await seed('c-b', 'cp-1');
+        await seed('c-a', 'cp-1');
+        await seed('c-off', 'cp-1', false);
+        await seed('c-other', 'cp-2');
+
+        const found = await service.findActiveForCounterparty(ctx, 'cp-1');
+
+        expect(found.map(c => c.erpId)).toEqual(['c-a', 'c-b']);
+    });
+
+    it('uses the selected contract, falls back to the main one, never crosses counterparties', async () => {
+        await seed('c-main', 'cp-1');
+        await seed('c-picked', 'cp-1');
+        await seed('c-foreign', 'cp-2');
+        const counterparty = { id: 'cp-1', mainContractId: 'c-main' };
+
+        const picked = await service.resolveOrderContract(ctx, counterparty, 'c-picked');
+        const foreign = await service.resolveOrderContract(ctx, counterparty, 'c-foreign');
+        const none = await service.resolveOrderContract(ctx, counterparty, null);
+
+        expect(picked?.erpId).toBe('c-picked');
+        expect(foreign?.erpId).toBe('c-main');
+        expect(none?.erpId).toBe('c-main');
+    });
+
+    it('returns null when the main contract is inactive and nothing else was selected', async () => {
+        await seed('c-main', 'cp-1', false);
+
+        expect(
+            await service.resolveOrderContract(ctx, { id: 'cp-1', mainContractId: 'c-main' }, null),
+        ).toBeNull();
+    });
+});

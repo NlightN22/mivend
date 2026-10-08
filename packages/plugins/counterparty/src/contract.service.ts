@@ -3,6 +3,7 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { Contract } from './entities/contract.entity';
+import { chooseOrderContract } from './order-contract-rule';
 import { loggerCtx } from './types';
 
 // Fields from the `contract` Kafka stream (ContractChanged, issue #105) — `undefined` means "not
@@ -90,6 +91,25 @@ export class ContractService {
     // No visibility filter — callers must constrain results by an already-visible Counterparty.
     async findById(ctx: RequestContext, id: ID): Promise<Contract | null> {
         return this.connection.getRepository(ctx, Contract).findOne({ where: { id } });
+    }
+
+    async findActiveForCounterparty(ctx: RequestContext, counterpartyId: ID): Promise<Contract[]> {
+        return this.connection.getRepository(ctx, Contract).find({
+            where: { counterpartyId: String(counterpartyId), isActive: true },
+            order: { name: 'ASC', erpId: 'ASC' },
+        });
+    }
+
+    async resolveOrderContract(
+        ctx: RequestContext,
+        counterparty: { id: ID; mainContractId: string | null },
+        selectedErpId: string | null | undefined,
+    ): Promise<Contract | null> {
+        const [selected, main] = await Promise.all([
+            selectedErpId ? this.findByErpId(ctx, selectedErpId) : null,
+            counterparty.mainContractId ? this.findByErpId(ctx, counterparty.mainContractId) : null,
+        ]);
+        return chooseOrderContract(String(counterparty.id), selected, main);
     }
 
     // A tombstone never carries a counterpartyId either — deactivate by erpId only, never look up

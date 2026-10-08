@@ -40,6 +40,7 @@ export class ErpExportDataMissingError extends Error {
     constructor(
         public readonly missingCustomerId: boolean,
         public readonly lines: ErpExportDataMissingLine[],
+        public readonly missingContract = false,
     ) {
         super('Order is missing ERP-export data required before it can be reserved');
     }

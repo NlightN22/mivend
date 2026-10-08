@@ -15,38 +15,30 @@ describe('order.submitted contract', () => {
         orderId: 'order-1',
         orderCode: 'ORD-001',
         organizationId: 'org-1',
-        submittedAt: '2026-08-12T00:00:00.000Z',
-        totalWithTax: 10000,
-        currencyCode: 'RUB',
-    };
-
-    // mivend#85: customerId/warehouseId/lines, confirmed with search-platform's
-    // OrderRegistrationRequestDto/OrderLineDto — additive, so a fixture without them (above)
-    // must still validate against the schema's required list unchanged.
-    const FIXTURE_WITH_LINES: OrderSubmittedPayload = {
-        ...FIXTURE,
+        contractId: 'contract-1',
         customerId: 'counterparty-1',
         warehouseId: 'warehouse-1',
         lines: [
             { productId: 'product-1', quantity: 2, priceTypeId: 'price-type-wholesale' },
             { productId: 'product-2', quantity: 1, priceTypeId: null },
         ],
+        submittedAt: '2026-08-12T00:00:00.000Z',
+        totalWithTax: 10000,
+        currencyCode: 'RUB',
     };
 
-    it('declares every currently-required field', () => {
+    it('declares every currently-required field, the consumer needs all of them (#203, #205)', () => {
         expect(ORDER_SUBMITTED_SCHEMA.required).toEqual([
             'eventId',
             'orderId',
             'orderCode',
             'organizationId',
+            'contractId',
+            'customerId',
+            'warehouseId',
+            'lines',
             'submittedAt',
         ]);
-    });
-
-    it('keeps customerId/warehouseId/lines optional (additive evolution, mivend#85)', () => {
-        expect(ORDER_SUBMITTED_SCHEMA.required).not.toEqual(
-            expect.arrayContaining(['customerId', 'warehouseId', 'lines']),
-        );
     });
 
     it('tolerates unknown extra fields (forward compatibility)', () => {
@@ -61,6 +53,7 @@ describe('order.submitted contract', () => {
                 'orderId',
                 'orderCode',
                 'organizationId',
+                'contractId',
                 'submittedAt',
                 'totalWithTax',
                 'currencyCode',
@@ -76,14 +69,6 @@ describe('order.submitted contract', () => {
             'productId',
             'quantity',
         ]);
-    });
-
-    it('encodes a fixture payload with customerId/warehouseId/lines with the same envelope', () => {
-        const encoded = encodeConfluentMessage(7, FIXTURE_WITH_LINES);
-
-        expect(encoded.readUInt8(0)).toBe(0);
-        expect(encoded.readUInt32BE(1)).toBe(7);
-        expect(JSON.parse(encoded.subarray(5).toString('utf-8'))).toEqual(FIXTURE_WITH_LINES);
     });
 
     it('encodes a fixed fixture payload with the Confluent wire-format envelope header', () => {

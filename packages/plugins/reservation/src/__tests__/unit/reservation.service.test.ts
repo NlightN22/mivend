@@ -95,6 +95,7 @@ describe('ReservationService', () => {
     let eventBus: { publish: ReturnType<typeof vi.fn> };
     let warehouseService: { findActiveStockLocationsForBranch: ReturnType<typeof vi.fn> };
     let counterpartyService: { getForCustomer: ReturnType<typeof vi.fn> };
+    let contractService: { resolveOrderContract: ReturnType<typeof vi.fn> };
     let service: ReservationService;
     const ctx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
@@ -132,6 +133,9 @@ describe('ReservationService', () => {
         counterpartyService = {
             getForCustomer: vi.fn(async () => ({ erpId: 'counterparty-erp-1' })),
         };
+        contractService = {
+            resolveOrderContract: vi.fn(async () => ({ erpId: 'contract-erp-1' })),
+        };
         connection = {
             getRepository: vi.fn((_ctx: unknown, entity: { name?: string } | string) => {
                 if (typeof entity === 'string') return { query: vi.fn(async () => []) };
@@ -168,6 +172,7 @@ describe('ReservationService', () => {
             eventBus as unknown as EventBus,
             warehouseService as never,
             counterpartyService as never,
+            contractService as never,
         );
     });
 
@@ -324,6 +329,18 @@ describe('ReservationService', () => {
                     customFields: { branchId: 'branch-1', reservationState: 'FAILED' },
                 }),
             );
+        });
+
+        it('rejects the whole order when no active contract can register it', async () => {
+            contractService.resolveOrderContract.mockResolvedValue(null);
+
+            const error = await service
+                .confirmOrder(ctx, 'order-1', 3)
+                .catch((e: unknown) => e as ErpExportDataMissingError);
+
+            expect(error).toBeInstanceOf(ErpExportDataMissingError);
+            expect((error as ErpExportDataMissingError).missingContract).toBe(true);
+            expect(reservationRepo.save).not.toHaveBeenCalled();
         });
 
         it('rejects the whole order when the order has no customer at all', async () => {

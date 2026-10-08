@@ -347,6 +347,15 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Contract ID' }],
             },
             {
+                // Contract.erpId the order is registered under in the ERP (#205): defaulted from the
+                // counterparty's main contract at checkout, changeable by staff before submission.
+                name: 'selectedContractId',
+                type: 'string',
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Selected contract ID' }],
+            },
+            {
                 // BusinessRejectionReason.code (issue #204), set alongside erpStatus=REJECTED.
                 // See plugin-reservation's ReservationWriteOffSyncService.
                 name: 'erpRejectionReasonCode',

@@ -10,7 +10,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { WarehouseService } from '@mivend/plugin-access-control';
-import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { Reservation } from './entities/reservation.entity';
 import {
@@ -37,6 +37,7 @@ export class ReservationService {
         private eventBus: EventBus,
         private warehouseService: WarehouseService,
         private counterpartyService: CounterpartyService,
+        private contractService: ContractService,
     ) {}
 
     // Thin wrapper over reserveOrder() for the manual-confirm mutation (see docs/order-flow.md
@@ -131,6 +132,7 @@ export class ReservationService {
                         : [];
 
                     let missingCustomerId = false;
+                    let missingContract = false;
                     if (!order.customerId) {
                         missingCustomerId = true;
                     } else {
@@ -138,7 +140,16 @@ export class ReservationService {
                             txCtx,
                             order.customerId,
                         );
-                        if (!counterparty) missingCustomerId = true;
+                        if (!counterparty) {
+                            missingCustomerId = true;
+                        } else {
+                            const contract = await this.contractService.resolveOrderContract(
+                                txCtx,
+                                counterparty,
+                                order.customFields?.selectedContractId,
+                            );
+                            missingContract = !contract;
+                        }
                     }
 
                     // Product.customFields.externalId isn't visible on the typed entity from this
@@ -189,10 +200,11 @@ export class ReservationService {
                             });
                         }
                     }
-                    if (missingCustomerId || erpExportMissingLines.length > 0) {
+                    if (missingCustomerId || missingContract || erpExportMissingLines.length > 0) {
                         throw new ErpExportDataMissingError(
                             missingCustomerId,
                             erpExportMissingLines,
+                            missingContract,
                         );
                     }
 

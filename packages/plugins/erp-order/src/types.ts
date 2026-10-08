@@ -27,6 +27,8 @@ declare module '@vendure/core' {
         // OrderChanged.contract_id (issue #110) — a flat GUID ref to an ERP contract, real optional
         // presence. Purely informational until a Contract entity exists (#50/#105).
         erpContractId?: string | null;
+        // Contract.erpId the order is registered under (#205), see vendure-config.ts.
+        selectedContractId?: string | null;
         // ERP's BusinessRejectionReason.code/message (issue #204); cleared when erpStatus
         // leaves REJECTED. See ReservationWriteOffSyncService.handleOrderRegistrationResult.
         erpRejectionReasonCode?: string | null;

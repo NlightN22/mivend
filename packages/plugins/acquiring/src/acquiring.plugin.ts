@@ -25,6 +25,7 @@ import { InboxService } from './inbox.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentAttemptService } from './payment-attempt.service';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
+import { contractOrderGuard } from './contract-order-guard';
 import { organizationOrderGuard } from './organization-order-guard';
 import { createPaymentInboxTask } from './payment-inbox.scheduled-task';
 import { PaymentEventListener } from './payment-event.listener';
@@ -149,6 +150,7 @@ import type { AcquiringPluginOptions } from './types';
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),
             organizationOrderGuard,
+            contractOrderGuard,
         ];
         return config;
     },

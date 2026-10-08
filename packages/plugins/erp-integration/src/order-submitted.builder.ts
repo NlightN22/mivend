@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { ID } from '@vendure/common/lib/shared-types';
 import { ReservationService } from '@mivend/plugin-reservation';
-import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 
 import { outboundSend, outboundSkip } from './outbound-gateway';
@@ -11,7 +11,6 @@ import type { OutboundBuildResult } from './outbound-gateway';
 import type { OrderSubmittedLine, OrderSubmittedPayload } from './schemas/order-submitted.schema';
 
 interface OrderSubmittedGroup {
-    organizationId: string;
     warehouseId: string;
     lines: OrderSubmittedLine[];
 }
@@ -23,6 +22,7 @@ export class OrderSubmittedBuilder {
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly counterpartyService: CounterpartyService,
+        private readonly contractService: ContractService,
         private readonly customerPricingService: CustomerPricingService,
         private readonly reservationService: ReservationService,
     ) {}
@@ -41,6 +41,15 @@ export class OrderSubmittedBuilder {
             return outboundSkip(`no Counterparty for customer ${String(order.customerId)}`);
         }
 
+        const contract = await this.contractService.resolveOrderContract(
+            ctx,
+            counterparty,
+            order.customFields?.selectedContractId,
+        );
+        if (!contract) {
+            return outboundSkip(`no active contract for counterparty ${counterparty.erpId}`);
+        }
+
         const priceType = await this.customerPricingService.getCustomerPriceType(
             ctx,
             order.customerId,
@@ -51,33 +60,24 @@ export class OrderSubmittedBuilder {
             order.lines.map(line => line.productVariant?.productId),
         );
 
-        const organizationErpIdById = await this.loadOrganizationErpIds(
-            order.lines.map(line => line.customFields?.organizationId),
-        );
-
         const unbuildable: string[] = [];
         const groups = new Map<string, OrderSubmittedGroup>();
         for (const line of order.lines) {
-            const organizationId =
-                line.customFields?.organizationId != null
-                    ? organizationErpIdById.get(line.customFields.organizationId)
-                    : undefined;
             const warehouseId = warehouseIdByLineId.get(String(line.id));
             const productId = line.productVariant?.productId
                 ? productExternalIdByProductId.get(String(line.productVariant.productId))
                 : undefined;
-            if (!organizationId || !warehouseId || !productId) {
+            if (!warehouseId || !productId) {
                 unbuildable.push(
-                    `line ${String(line.id)} (organizationId=${String(organizationId)}, ` +
-                        `warehouseId=${String(warehouseId)}, productId=${String(productId)})`,
+                    `line ${String(line.id)} (warehouseId=${String(warehouseId)}, ` +
+                        `productId=${String(productId)})`,
                 );
                 continue;
             }
-            const key = `${organizationId}:${warehouseId}`;
-            let group = groups.get(key);
+            let group = groups.get(warehouseId);
             if (!group) {
-                group = { organizationId, warehouseId, lines: [] };
-                groups.set(key, group);
+                group = { warehouseId, lines: [] };
+                groups.set(warehouseId, group);
             }
             group.lines.push({ productId, quantity: line.quantity, priceTypeId });
         }
@@ -85,15 +85,16 @@ export class OrderSubmittedBuilder {
             return outboundSkip(`cannot build order lines: ${unbuildable.join('; ')}`);
         }
 
-        // One payload per distinct (organizationId, warehouseId): the command takes a single
-        // organizationId and warehouseId, so an order spanning several fans out.
+        // One payload per warehouse; the header organization is the contract's and the ERP
+        // distributes line organizations itself.
         return outboundSend(
             [...groups.values()].map(group => {
                 const payload: OrderSubmittedPayload = {
                     eventId: randomUUID(),
                     orderId: String(orderId),
                     orderCode,
-                    organizationId: group.organizationId,
+                    organizationId: contract.organizationId,
+                    contractId: contract.erpId,
                     customerId: counterparty.erpId,
                     warehouseId: group.warehouseId,
                     lines: group.lines,
@@ -142,24 +143,6 @@ export class OrderSubmittedBuilder {
 
     // Product.customFields.externalId is not visible on the typed entity from this plugin's TS
     // project, so it is read via the raw column like every other handler in this plugin.
-    private async loadOrganizationErpIds(
-        organizationIds: Array<number | null | undefined>,
-    ): Promise<Map<number, string>> {
-        const ids = [...new Set(organizationIds.filter((id): id is number => id != null))];
-        const result = new Map<number, string>();
-        if (ids.length === 0) return result;
-
-        const rows = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('o.id', 'id')
-            .addSelect('o."erpId"', 'erpId')
-            .from('organization_requisites', 'o')
-            .where('o.id IN (:...ids)', { ids })
-            .getRawMany<{ id: number; erpId: string }>();
-        for (const row of rows) result.set(Number(row.id), row.erpId);
-        return result;
-    }
-
     private async loadProductExternalIds(
         productIds: Array<ID | null | undefined>,
     ): Promise<Map<string, string>> {

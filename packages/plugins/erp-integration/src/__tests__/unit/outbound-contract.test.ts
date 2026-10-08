@@ -40,6 +40,7 @@ const BUILDER_PAYLOAD = {
     orderId: '7',
     orderCode: 'ORD-001',
     organizationId: 'org-erp-1',
+    contractId: 'contract-1',
     customerId: 'counterparty-1',
     warehouseId: 'wh-1',
     lines: [{ productId: 'product-1', quantity: 2, priceTypeId: 'price-type-wholesale' }],
@@ -61,6 +62,14 @@ describe('order.submitted outbound contract', () => {
         expect(violations(withoutWarehouse, schema as JsonSchemaNode, '$')).toContain(
             '$.warehouseId: required but missing',
         );
+    });
+
+    it('requires the contract the order is registered under (local copy, package from 0.54.0)', () => {
+        const withoutContract: Record<string, unknown> = { ...BUILDER_PAYLOAD };
+        delete withoutContract.contractId;
+        expect(
+            violations(withoutContract, ORDER_SUBMITTED_SCHEMA as unknown as JsonSchemaNode, '$'),
+        ).toContain('$.contractId: required but missing');
     });
 
     it('takes the schema from the contract package when it carries one, else the local copy', () => {

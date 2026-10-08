@@ -188,6 +188,7 @@ beforeAll(async () => {
         eventBus,
         warehouseServiceShim,
         counterpartyServiceShim,
+        { resolveOrderContract: async () => ({ erpId: 'contract-x' }) } as never,
     );
 });
 

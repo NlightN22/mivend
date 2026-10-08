@@ -3,8 +3,8 @@
 // existing field is never renamed or repurposed, a removed field's name is never reused for
 // something else.
 //
-// Mirrors ORDER_SUBMITTED_JSON_SCHEMA in @nlightn22/event-contracts (the consumer requires
-// customerId/warehouseId/lines); delete this file once the installed package carries it (#203).
+// Mirrors ORDER_SUBMITTED_JSON_SCHEMA in @nlightn22/event-contracts 0.54.0 (organizationId is the
+// contract's organization, contractId is required); the package wins once it carries it (#203).
 export const ORDER_SUBMITTED_SCHEMA = {
     $schema: 'http://json-schema.org/draft-07/schema#',
     title: 'OrderSubmitted',
@@ -14,6 +14,7 @@ export const ORDER_SUBMITTED_SCHEMA = {
         'orderId',
         'orderCode',
         'organizationId',
+        'contractId',
         'customerId',
         'warehouseId',
         'lines',
@@ -23,8 +24,10 @@ export const ORDER_SUBMITTED_SCHEMA = {
         eventId: { type: 'string', format: 'uuid' },
         orderId: { type: 'string' },
         orderCode: { type: 'string' },
-        // OrganizationRequisites.erpId of the seller organization, not the local row id.
+        // Organization (ERP GUID) of the order's contract, the document header organization.
         organizationId: { type: 'string' },
+        // Contract.erpId the order is registered under.
+        contractId: { type: 'string' },
         submittedAt: { type: 'string', format: 'date-time' },
         totalWithTax: { type: 'integer' },
         currencyCode: { type: 'string' },
@@ -32,7 +35,7 @@ export const ORDER_SUBMITTED_SCHEMA = {
         // Counterparty.erpId for the order's customer — see CounterpartyService.getForCustomer.
         customerId: { type: 'string' },
         // The ERP warehouse (StockLocation.customFields.warehouseErpId) this payload's lines were
-        // allocated against — one payload per distinct (organizationId, warehouseId) combination.
+        // allocated against — one payload per distinct warehouse.
         warehouseId: { type: 'string' },
         lines: {
             type: 'array',
@@ -63,10 +66,11 @@ export interface OrderSubmittedPayload {
     orderId: string;
     orderCode: string;
     organizationId: string;
+    contractId: string;
     submittedAt: string;
     totalWithTax?: number;
     currencyCode?: string;
-    customerId?: string;
-    warehouseId?: string;
-    lines?: OrderSubmittedLine[];
+    customerId: string;
+    warehouseId: string;
+    lines: OrderSubmittedLine[];
 }

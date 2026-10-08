@@ -150,6 +150,7 @@ describe('rebuildSkipped', () => {
             orderId: 'order-1',
             orderCode: 'ORD-1',
             organizationId: 'org-1',
+            contractId: 'ctr-1',
             customerId: 'cp-1',
             warehouseId: 'wh-1',
             lines: [{ productId: 'p-1', quantity: 2, priceTypeId: null }],

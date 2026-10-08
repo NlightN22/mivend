@@ -1107,10 +1107,16 @@ async function main() {
             erpGroupLabel: 'Accounting',
         },
     ];
+    // Every seeded counterparty gets a main contract with a seeded organization: checkout is
+    // blocked without one (#205).
+    const withMainContract = counterparties.map(c => ({
+        ...c,
+        mainContractErpId: c.mainContractErpId ?? `ctr-${c.erpId}`,
+    }));
     console.log(`Sending ${counterparties.length} counterparties...`);
     const counterpartyResult = await postBatch(
         `seed-counterparties-${run}`,
-        counterparties.map(data => ({ type: 'counterparty', data })),
+        withMainContract.map(data => ({ type: 'counterparty', data })),
     );
     console.log(
         `  → status=${counterpartyResult.status} processed=${counterpartyResult.processed} failed=${counterpartyResult.failed}`,
@@ -1119,11 +1125,12 @@ async function main() {
         for (const e of counterpartyResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
-    const contracts = [
+    const explicitContracts = [
         {
             erpId: 'ctr-credit-limited',
             counterpartyErpId: 'cnt-credit-limited',
             name: 'Credit limited main contract',
+            organizationId: 'org-001',
             priceTypeId: 'WHOLESALE',
             creditLimit: '100000',
             debtDaysLimit: 14,
@@ -1133,10 +1140,27 @@ async function main() {
             erpId: 'ctr-prepay',
             counterpartyErpId: 'cnt-prepay',
             name: 'Prepay main contract',
+            organizationId: 'org-001',
             priceTypeId: 'WHOLESALE',
             debtDaysLimit: 0,
             isActive: true,
         },
+    ];
+    const explicitIds = new Set(explicitContracts.map(c => c.erpId));
+    const contracts = [
+        ...explicitContracts,
+        ...withMainContract
+            .filter(c => !explicitIds.has(c.mainContractErpId))
+            .map(c => ({
+                erpId: c.mainContractErpId,
+                counterpartyErpId: c.erpId,
+                name: `${c.shortName} main contract`,
+                organizationId: 'org-001',
+                priceTypeId: c.priceType ?? 'WHOLESALE',
+                creditLimit: c.creditLimit != null ? String(c.creditLimit) : undefined,
+                debtDaysLimit: c.paymentDelayDays ?? 0,
+                isActive: true,
+            })),
     ];
     console.log(`Sending ${contracts.length} contracts...`);
     const contractResult = await postBatch(
