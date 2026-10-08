@@ -3070,6 +3070,8 @@ export type IntegrationOutboxHealth = {
     lastSkipReason: Maybe<Scalars['String']['output']>;
     oldestPendingAt: Maybe<Scalars['DateTime']['output']>;
     pending: Scalars['Int']['output'];
+    /** contract = schema from the shared contract package, local = this plugin's own copy. */
+    schemaSource: Maybe<Scalars['String']['output']>;
     /** Events that could not be built and were never published (issue #200). */
     skipped: Scalars['Int']['output'];
 };
@@ -3149,6 +3151,8 @@ export type IntegrationStreamHealth = {
     oldestPendingAt: Maybe<Scalars['DateTime']['output']>;
     pending: Scalars['Int']['output'];
     processing: Scalars['Int']['output'];
+    /** Failed rows whose replay was requested and that wait for the replayed event to be processed. */
+    replayPending: Scalars['Int']['output'];
     stream: Scalars['String']['output'];
     topic: Maybe<Scalars['String']['output']>;
 };
@@ -4109,6 +4113,8 @@ export type Mutation = {
     setDraftOrderShippingAddress: Order;
     /** Sets the shipping method by id, which can be obtained with the `eligibleShippingMethodsForDraftOrder` query */
     setDraftOrderShippingMethod: SetOrderShippingMethodResult;
+    /** Change the contract the order is registered under; only before it is reserved (#205). */
+    setOrderContract: Array<OrderContractOption>;
     setOrderCustomFields: Maybe<Order>;
     /** Allows a different Customer to be assigned to an Order. Added in v2.2.0. */
     setOrderCustomer: Maybe<Order>;
@@ -4980,6 +4986,11 @@ export type MutationSetDraftOrderShippingMethodArgs = {
     shippingMethodId: Scalars['ID']['input'];
 };
 
+export type MutationSetOrderContractArgs = {
+    contractId: Scalars['String']['input'];
+    orderId: Scalars['ID']['input'];
+};
+
 export type MutationSetOrderCustomFieldsArgs = {
     input: UpdateOrderInput;
 };
@@ -5446,6 +5457,16 @@ export type OrderAddress = {
     streetLine2: Maybe<Scalars['String']['output']>;
 };
 
+export type OrderContractOption = {
+    erpId: Scalars['String']['output'];
+    isMain: Scalars['Boolean']['output'];
+    isSelected: Scalars['Boolean']['output'];
+    name: Maybe<Scalars['String']['output']>;
+    organizationId: Scalars['String']['output'];
+    organizationName: Maybe<Scalars['String']['output']>;
+    paymentKind: Maybe<Scalars['String']['output']>;
+};
+
 export type OrderCustomFields = {
     branchId: Maybe<Scalars['String']['output']>;
     erpContractId: Maybe<Scalars['String']['output']>;
@@ -5453,6 +5474,8 @@ export type OrderCustomFields = {
     erpOrderStatus: Maybe<Scalars['String']['output']>;
     erpRegistrationDocumentNumber: Maybe<Scalars['String']['output']>;
     erpRegistrationStatus: Maybe<Scalars['String']['output']>;
+    erpRejectionReasonCode: Maybe<Scalars['String']['output']>;
+    erpRejectionReasonText: Maybe<Scalars['String']['output']>;
     erpStatus: Maybe<Scalars['String']['output']>;
     erpStatusAt: Maybe<Scalars['DateTime']['output']>;
     latestFulfillmentState: Maybe<Scalars['String']['output']>;
@@ -5460,6 +5483,7 @@ export type OrderCustomFields = {
     placedByAdministratorId: Maybe<Scalars['String']['output']>;
     reservationDays: Maybe<Scalars['Int']['output']>;
     reservationState: Maybe<Scalars['String']['output']>;
+    selectedContractId: Maybe<Scalars['String']['output']>;
     sourceOrderId: Maybe<Scalars['String']['output']>;
     tradingPointId: Maybe<Scalars['String']['output']>;
 };
@@ -5482,6 +5506,8 @@ export type OrderFilterParameter = {
     erpOrderStatus?: InputMaybe<StringOperators>;
     erpRegistrationDocumentNumber?: InputMaybe<StringOperators>;
     erpRegistrationStatus?: InputMaybe<StringOperators>;
+    erpRejectionReasonCode?: InputMaybe<StringOperators>;
+    erpRejectionReasonText?: InputMaybe<StringOperators>;
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
     id?: InputMaybe<IdOperators>;
@@ -5495,6 +5521,7 @@ export type OrderFilterParameter = {
     placedByAdministratorId?: InputMaybe<StringOperators>;
     reservationDays?: InputMaybe<NumberOperators>;
     reservationState?: InputMaybe<StringOperators>;
+    selectedContractId?: InputMaybe<StringOperators>;
     shipping?: InputMaybe<NumberOperators>;
     shippingWithTax?: InputMaybe<NumberOperators>;
     sourceOrderId?: InputMaybe<StringOperators>;
@@ -5599,11 +5626,13 @@ export type OrderLine = Node & {
 export type OrderLineCustomFields = {
     manualPriceReason: Maybe<Scalars['String']['output']>;
     manualUnitPrice: Maybe<Scalars['Int']['output']>;
+    organizationId: Maybe<Scalars['Int']['output']>;
 };
 
 export type OrderLineCustomFieldsInput = {
     manualPriceReason?: InputMaybe<Scalars['String']['input']>;
     manualUnitPrice?: InputMaybe<Scalars['Int']['input']>;
+    organizationId?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type OrderLineInput = {
@@ -5686,6 +5715,8 @@ export type OrderSortParameter = {
     erpOrderStatus?: InputMaybe<SortOrder>;
     erpRegistrationDocumentNumber?: InputMaybe<SortOrder>;
     erpRegistrationStatus?: InputMaybe<SortOrder>;
+    erpRejectionReasonCode?: InputMaybe<SortOrder>;
+    erpRejectionReasonText?: InputMaybe<SortOrder>;
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
@@ -5699,6 +5730,7 @@ export type OrderSortParameter = {
     placedByAdministratorId?: InputMaybe<SortOrder>;
     reservationDays?: InputMaybe<SortOrder>;
     reservationState?: InputMaybe<SortOrder>;
+    selectedContractId?: InputMaybe<SortOrder>;
     shipping?: InputMaybe<SortOrder>;
     shippingWithTax?: InputMaybe<SortOrder>;
     sourceOrderId?: InputMaybe<SortOrder>;
@@ -7030,6 +7062,8 @@ export type Query = {
     /** Open reservation/ERP drift issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76). */
     openReservationReconciliationIssues: ReservationReconciliationIssueList;
     order: Maybe<Order>;
+    /** Active contracts of the order's counterparty; the one the order is registered under is marked (#205). */
+    orderContracts: Array<OrderContractOption>;
     /** Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet. */
     orderPaymentSummaries: Array<OrderPaymentSummary>;
     orderReservations: Array<Reservation>;
@@ -7110,6 +7144,8 @@ export type Query = {
     unassignedCounterpartyCount: Scalars['Int']['output'];
     /** Enabled variants and how many have no organization (cannot be ordered). Integration health. */
     variantOrganizationHealth: VariantOrganizationHealth;
+    /** How many variants reference a unit that has not arrived (soft link, issue #200). */
+    variantUnitHealth: VariantUnitHealth;
     /** Manager-portal invoice list, branch-scoped via AccessScopeService.resolveInvoiceScope — see AdminInvoiceVisibilityResolver / docs/access-control.md. */
     visibleInvoices: InvoiceList;
     visibleOrders: OrderList;
@@ -7381,6 +7417,10 @@ export type QueryOpenReservationReconciliationIssuesArgs = {
 
 export type QueryOrderArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryOrderContractsArgs = {
+    orderId: Scalars['ID']['input'];
 };
 
 export type QueryOrderPaymentSummariesArgs = {
@@ -8964,6 +9004,8 @@ export type UpdateOrderCustomFieldsInput = {
     erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
     erpRegistrationDocumentNumber?: InputMaybe<Scalars['String']['input']>;
     erpRegistrationStatus?: InputMaybe<Scalars['String']['input']>;
+    erpRejectionReasonCode?: InputMaybe<Scalars['String']['input']>;
+    erpRejectionReasonText?: InputMaybe<Scalars['String']['input']>;
     erpStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
     latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;
@@ -8971,6 +9013,7 @@ export type UpdateOrderCustomFieldsInput = {
     placedByAdministratorId?: InputMaybe<Scalars['String']['input']>;
     reservationDays?: InputMaybe<Scalars['Int']['input']>;
     reservationState?: InputMaybe<Scalars['String']['input']>;
+    selectedContractId?: InputMaybe<Scalars['String']['input']>;
     sourceOrderId?: InputMaybe<Scalars['String']['input']>;
     tradingPointId?: InputMaybe<Scalars['String']['input']>;
 };
@@ -9207,6 +9250,13 @@ export type VariantOrganizationHealth = {
 export type VariantPriceEntry = {
     price: Scalars['Int']['output'];
     variantId: Scalars['ID']['output'];
+};
+
+export type VariantUnitHealth = {
+    /** Variants that name a default sales unit. */
+    total: Scalars['Int']['output'];
+    /** Of those, variants whose unit has not arrived on the unit stream (unit fields stay empty until it does). */
+    unitMissing: Scalars['Int']['output'];
 };
 
 export type Warehouse = {
@@ -10824,7 +10874,12 @@ export type OrderDetailQuery = {
             subTotalWithTax: any;
             shippingWithTax: any;
             totalWithTax: any;
-            customFields: { reservationDays: number | null } | null;
+            customFields: {
+                reservationDays: number | null;
+                erpStatus: string | null;
+                erpRejectionReasonCode: string | null;
+                erpRejectionReasonText: string | null;
+            } | null;
             lines: Array<{
                 id: string;
                 quantity: number;
@@ -10901,7 +10956,7 @@ export type OrderListItemFieldsFragment = {
     orderPlacedAt: any | null;
     createdAt: any;
     creditLimitExceeded: boolean;
-    customFields: { reservationState: string | null } | null;
+    customFields: { reservationState: string | null; erpStatus: string | null } | null;
     customer: {
         firstName: string;
         lastName: string;
@@ -10933,7 +10988,7 @@ export type OrdersPageQuery = {
             orderPlacedAt: any | null;
             createdAt: any;
             creditLimitExceeded: boolean;
-            customFields: { reservationState: string | null } | null;
+            customFields: { reservationState: string | null; erpStatus: string | null } | null;
             customer: {
                 firstName: string;
                 lastName: string;
@@ -11172,6 +11227,38 @@ export type ReleaseOrderReservationMutationVariables = Exact<{
 
 export type ReleaseOrderReservationMutation = { releaseOrderReservation: number };
 
+export type ExtendOrderReservationMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    additionalDays: Scalars['Int']['input'];
+}>;
+
+export type ExtendOrderReservationMutation = {
+    extendOrderReservation: Array<{
+        id: string;
+        orderLineId: string;
+        productVariantId: string;
+        quantity: number;
+        status: string;
+        reservedAt: any;
+        expiresAt: any;
+        releasedAt: any | null;
+    }>;
+};
+
+export type ReservationExtensionLimitQueryVariables = Exact<{
+    roleCode: Scalars['String']['input'];
+}>;
+
+export type ReservationExtensionLimitQuery = {
+    reservationExtensionLimit: { roleCode: string; maxExtraDays: number } | null;
+};
+
+export type AvailableStockQueryVariables = Exact<{
+    productVariantId: Scalars['ID']['input'];
+}>;
+
+export type AvailableStockQuery = { availableStock: number };
+
 export type OrderContractOptionFieldsFragment = {
     erpId: string;
     name: string | null;
@@ -11214,38 +11301,6 @@ export type SetOrderContractMutation = {
         isSelected: boolean;
     }>;
 };
-
-export type ExtendOrderReservationMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-    additionalDays: Scalars['Int']['input'];
-}>;
-
-export type ExtendOrderReservationMutation = {
-    extendOrderReservation: Array<{
-        id: string;
-        orderLineId: string;
-        productVariantId: string;
-        quantity: number;
-        status: string;
-        reservedAt: any;
-        expiresAt: any;
-        releasedAt: any | null;
-    }>;
-};
-
-export type ReservationExtensionLimitQueryVariables = Exact<{
-    roleCode: Scalars['String']['input'];
-}>;
-
-export type ReservationExtensionLimitQuery = {
-    reservationExtensionLimit: { roleCode: string; maxExtraDays: number } | null;
-};
-
-export type AvailableStockQueryVariables = Exact<{
-    productVariantId: Scalars['ID']['input'];
-}>;
-
-export type AvailableStockQuery = { availableStock: number };
 
 export type MySessionsQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -11801,6 +11856,7 @@ export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
   creditLimitExceeded
   customFields {
     reservationState
+    erpStatus
   }
   customer {
     firstName
@@ -11873,6 +11929,20 @@ export const OrderReservationFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'OrderReservationFields' },
 ) as unknown as TypedDocumentString<OrderReservationFieldsFragment, unknown>;
+export const OrderContractOptionFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment OrderContractOptionFields on OrderContractOption {
+  erpId
+  name
+  organizationId
+  organizationName
+  paymentKind
+  isMain
+  isSelected
+}
+    `,
+    { fragmentName: 'OrderContractOptionFields' },
+) as unknown as TypedDocumentString<OrderContractOptionFieldsFragment, unknown>;
 export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     mutation ChangeOwnPassword($password: String!) {
   updateActiveAdministrator(input: {password: $password}) {
@@ -13532,6 +13602,9 @@ export const OrderDetailDocument = new TypedDocumentString(`
       totalWithTax
       customFields {
         reservationDays
+        erpStatus
+        erpRejectionReasonCode
+        erpRejectionReasonText
       }
       lines {
         id
@@ -13617,6 +13690,7 @@ export const OrdersPageDocument = new TypedDocumentString(`
   creditLimitExceeded
   customFields {
     reservationState
+    erpStatus
   }
   customer {
     firstName
@@ -13874,36 +13948,6 @@ export const ReleaseOrderReservationDocument = new TypedDocumentString(`
     ReleaseOrderReservationMutation,
     ReleaseOrderReservationMutationVariables
 >;
-export const OrderContractsDocument = new TypedDocumentString(`
-    query OrderContracts($orderId: ID!) {
-  orderContracts(orderId: $orderId) {
-    ...OrderContractOptionFields
-  }
-}
-    fragment OrderContractOptionFields on OrderContractOption {
-  erpId
-  name
-  organizationId
-  organizationName
-  paymentKind
-  isMain
-  isSelected
-}`) as unknown as TypedDocumentString<OrderContractsQuery, OrderContractsQueryVariables>;
-export const SetOrderContractDocument = new TypedDocumentString(`
-    mutation SetOrderContract($orderId: ID!, $contractId: String!) {
-  setOrderContract(orderId: $orderId, contractId: $contractId) {
-    ...OrderContractOptionFields
-  }
-}
-    fragment OrderContractOptionFields on OrderContractOption {
-  erpId
-  name
-  organizationId
-  organizationName
-  paymentKind
-  isMain
-  isSelected
-}`) as unknown as TypedDocumentString<SetOrderContractMutation, SetOrderContractMutationVariables>;
 export const ExtendOrderReservationDocument = new TypedDocumentString(`
     mutation ExtendOrderReservation($orderId: ID!, $additionalDays: Int!) {
   extendOrderReservation(orderId: $orderId, additionalDays: $additionalDays) {
@@ -13939,6 +13983,36 @@ export const AvailableStockDocument = new TypedDocumentString(`
   availableStock(productVariantId: $productVariantId)
 }
     `) as unknown as TypedDocumentString<AvailableStockQuery, AvailableStockQueryVariables>;
+export const OrderContractsDocument = new TypedDocumentString(`
+    query OrderContracts($orderId: ID!) {
+  orderContracts(orderId: $orderId) {
+    ...OrderContractOptionFields
+  }
+}
+    fragment OrderContractOptionFields on OrderContractOption {
+  erpId
+  name
+  organizationId
+  organizationName
+  paymentKind
+  isMain
+  isSelected
+}`) as unknown as TypedDocumentString<OrderContractsQuery, OrderContractsQueryVariables>;
+export const SetOrderContractDocument = new TypedDocumentString(`
+    mutation SetOrderContract($orderId: ID!, $contractId: String!) {
+  setOrderContract(orderId: $orderId, contractId: $contractId) {
+    ...OrderContractOptionFields
+  }
+}
+    fragment OrderContractOptionFields on OrderContractOption {
+  erpId
+  name
+  organizationId
+  organizationName
+  paymentKind
+  isMain
+  isSelected
+}`) as unknown as TypedDocumentString<SetOrderContractMutation, SetOrderContractMutationVariables>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {

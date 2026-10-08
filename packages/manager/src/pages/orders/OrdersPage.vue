@@ -25,6 +25,7 @@ import {
     ORDER_STATE_OPTIONS,
     ORDER_RESERVATION_STATE_OPTIONS,
     DATE_RANGE_OPTIONS,
+    ERP_REJECTED_STATUS,
     type OrdersFilters,
     type OrderListItem,
     type OrdersSummary,
@@ -62,6 +63,7 @@ const CHIPS: FilterChip[] = [
     { key: 'processing', label: 'Processing' },
     { key: 'awaiting-shipment', label: 'Awaiting shipment' },
     { key: 'awaiting-confirmation', label: 'Awaiting confirmation' },
+    { key: 'rejected-by-erp', label: 'Rejected by ERP' },
     { key: 'overdue', label: 'Overdue' },
 ];
 const activeChip = ref('all');
@@ -152,6 +154,7 @@ function applyChip(key: string): void {
               ? 'PaymentSettled'
               : '';
     filters.reservationState = key === 'awaiting-confirmation' ? 'AWAITING_CONFIRMATION' : '';
+    filters.erpStatus = key === 'rejected-by-erp' ? ERP_REJECTED_STATUS : '';
     page.value = 1;
 }
 
@@ -161,6 +164,7 @@ function applyChip(key: string): void {
 // so it can't be round-tripped and always falls back to 'all'.
 function chipFromFilters(f: OrdersFilters): string {
     if (f.reservationState === 'AWAITING_CONFIRMATION') return 'awaiting-confirmation';
+    if (f.erpStatus === ERP_REJECTED_STATUS) return 'rejected-by-erp';
     if (f.state === 'PaymentAuthorized') return 'processing';
     if (f.state === 'PaymentSettled') return 'awaiting-shipment';
     return 'all';

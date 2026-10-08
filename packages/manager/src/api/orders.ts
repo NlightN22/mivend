@@ -23,6 +23,7 @@ export interface OrdersFilters {
     dateRange: string;
     managerId: string;
     reservationState: string;
+    erpStatus: string;
 }
 
 export const DEFAULT_FILTERS: OrdersFilters = {
@@ -31,6 +32,7 @@ export const DEFAULT_FILTERS: OrdersFilters = {
     dateRange: '',
     managerId: '',
     reservationState: '',
+    erpStatus: '',
 };
 
 // Order.customFields.reservationState — an internal technical enum fixed by app logic (see
@@ -53,6 +55,11 @@ export const ORDER_RESERVATION_STATE_BADGE_VARIANT: Record<string, StatusBadgeVa
     RELEASED: 'neutral',
     FAILED: 'danger',
 };
+
+// Order.customFields.erpStatus (see plugin-erp-order's ERP_ORDER_STATUSES) — only the one value
+// the manager portal needs a badge/filter for today (issue #204); other statuses are
+// customer-facing only (see storefront's useOrders.ts) and have no manager-side filter yet.
+export const ERP_REJECTED_STATUS = 'REJECTED';
 
 // Order states are Vendure's own OrderProcess state machine — fixed by application logic, not
 // ERP-sourced business data, so a const list is the documented carve-out in the backend-plugin-rules skill ("internal
@@ -105,6 +112,9 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
         // api/customers.ts's identical fix (same bug, same root cause: `filter.customFields`
         // isn't a valid `OrderFilterParameter` shape, so this silently matched nothing).
         filter.reservationState = { eq: filters.reservationState };
+    }
+    if (filters.erpStatus) {
+        filter.erpStatus = { eq: filters.erpStatus };
     }
     return filter;
 }

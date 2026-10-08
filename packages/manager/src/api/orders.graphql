@@ -9,6 +9,7 @@ fragment OrderListItemFields on Order {
     creditLimitExceeded
     customFields {
         reservationState
+        erpStatus
     }
     customer {
         firstName

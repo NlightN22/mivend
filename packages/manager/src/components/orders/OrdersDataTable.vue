@@ -75,6 +75,7 @@ interface OrderRow {
     state: string;
     stateVariant: StatusBadgeVariant;
     creditExceeded: boolean;
+    erpRejected: boolean;
     total: string;
     date: string;
     branch: string;
@@ -96,6 +97,7 @@ const rows = computed<OrderRow[]>(() =>
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
             stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
             creditExceeded: order.creditLimitExceeded,
+            erpRejected: order.customFields?.erpStatus === 'REJECTED',
             total: new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: order.currencyCode,
@@ -400,6 +402,9 @@ function resetLayout(): void {
                     }}</MvStatusBadge>
                     <MvStatusBadge v-if="(data as OrderRow).creditExceeded" variant="warning"
                         >Credit limit exceeded</MvStatusBadge
+                    >
+                    <MvStatusBadge v-if="(data as OrderRow).erpRejected" variant="danger"
+                        >Rejected by ERP</MvStatusBadge
                     >
                 </template>
                 <template v-if="col.field === 'state'" #filter>

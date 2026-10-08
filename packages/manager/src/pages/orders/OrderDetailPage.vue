@@ -155,6 +155,26 @@ watch(() => route.params.code, load);
             </div>
 
             <aside class="order-detail__right-stack">
+                <MvPanel v-if="order.customFields.erpStatus === 'REJECTED'" title="Rejected by ERP">
+                    <div class="order-detail__rejection">
+                        <MvStatusBadge variant="danger">Rejected by ERP</MvStatusBadge>
+                        <div
+                            v-if="order.customFields.erpRejectionReasonCode"
+                            class="order-detail__rejection-row"
+                        >
+                            <span class="order-detail__rejection-label">Reason code</span>
+                            <span>{{ order.customFields.erpRejectionReasonCode }}</span>
+                        </div>
+                        <div
+                            v-if="order.customFields.erpRejectionReasonText"
+                            class="order-detail__rejection-row"
+                        >
+                            <span class="order-detail__rejection-label">Reason</span>
+                            <span>{{ order.customFields.erpRejectionReasonText }}</span>
+                        </div>
+                    </div>
+                </MvPanel>
+
                 <MvPanel title="Reservation">
                     <ReservationPanel
                         :order-id="order.id"
@@ -246,6 +266,24 @@ watch(() => route.params.code, load);
     gap: 20px;
     margin-top: 14px;
     font-size: 13px;
+}
+
+.order-detail__rejection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.order-detail__rejection-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+}
+
+.order-detail__rejection-label {
+    color: var(--el-text-color-secondary, #6b7280);
+    font-size: 12px;
 }
 
 .order-detail__not-found {

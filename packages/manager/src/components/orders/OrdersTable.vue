@@ -68,11 +68,17 @@ const columns = computed<Column<TableRow>[]>(() => {
             width: 160,
             cellRenderer: ({ rowData }) => {
                 const row = rowData as TableRow;
-                return h(
-                    MvStatusBadge,
-                    { variant: row.stateVariant as StatusBadgeVariant },
-                    () => row.state as string,
-                );
+                const badges = [
+                    h(
+                        MvStatusBadge,
+                        { variant: row.stateVariant as StatusBadgeVariant },
+                        () => row.state as string,
+                    ),
+                ];
+                if (row.erpRejected) {
+                    badges.push(h(MvStatusBadge, { variant: 'danger' }, () => 'Rejected by ERP'));
+                }
+                return h('div', { class: 'orders-table__state-cell' }, badges);
             },
             mobile: { badge: true },
         },
@@ -136,6 +142,7 @@ const rows = computed<TableRow[]>(() =>
             manager: managerName(order.customer?.counterparty?.assignedManagerId),
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
             stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
+            erpRejected: order.customFields?.erpStatus === 'REJECTED',
             total: new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: order.currencyCode,
@@ -177,5 +184,12 @@ const rows = computed<TableRow[]>(() =>
 .orders-table__customer-meta {
     font-size: 12px;
     color: var(--el-text-color-secondary, #6b7280);
+}
+
+.orders-table__state-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
 }
 </style>

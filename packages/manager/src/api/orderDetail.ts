@@ -27,7 +27,12 @@ export type OrderDetail = Omit<RawOrderDetail, 'customFields' | 'lines'> & {
 function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
     return {
         ...order,
-        customFields: order.customFields ?? { reservationDays: null },
+        customFields: order.customFields ?? {
+            reservationDays: null,
+            erpStatus: null,
+            erpRejectionReasonCode: null,
+            erpRejectionReasonText: null,
+        },
         lines: order.lines.map(line => ({
             ...line,
             customFields: line.customFields ?? { manualUnitPrice: null, manualPriceReason: null },
