@@ -1,6 +1,7 @@
 import { RuleTester } from 'eslint';
 import { describe, it } from 'vitest';
 
+import noDirectOutbound from '../no-direct-outbound.js';
 import noRawAdvisoryLock from '../no-raw-advisory-lock.js';
 import noSwallowedHandlerError from '../no-swallowed-handler-error.js';
 
@@ -36,5 +37,23 @@ tester.run('no-raw-advisory-lock', noRawAdvisoryLock, {
         { code: "q('select pg_advisory_xact_lock(1)');", errors: 1 },
         { code: 'q(`select pg_advisory_lock(${id})`);', errors: 1 },
         { code: "q('select pg_try_advisory_xact_lock(1)');", errors: 1 },
+    ],
+});
+
+tester.run('no-direct-outbound', noDirectOutbound, {
+    valid: [
+        "import { OutboundGateway } from './outbound-gateway';",
+        "import { EventBus } from '@vendure/core';",
+    ],
+    invalid: [
+        {
+            code: "import { IntegrationOutboxService } from './integration-outbox.service';",
+            errors: 1,
+        },
+        { code: "import { KafkaProducerService } from './kafka-producer.service';", errors: 1 },
+        {
+            code: "import { IntegrationOutboxService as S } from '@mivend/plugin-erp-integration';",
+            errors: 1,
+        },
     ],
 });
