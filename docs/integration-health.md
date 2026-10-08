@@ -81,3 +81,29 @@ failed, age of the oldest pending, last publish time, last error.
   (`UPDATE integration_outbox SET status = 'pending', retry_count = 0 WHERE status = 'failed'`);
   confirm with Integration Service that duplicates by `event_id` are safe before doing it.
 - Sysadmin: alert on any non-zero Failed in the Outbound tab, check the broker, report to a developer.
+
+## Principles (apply to every inbound and outbound integration flow)
+
+1. **mivend data is the source of truth.** A failure to deliver an event to the external system is
+   a delay, not a data loss: the order, reservation or payload stays in mivend.
+2. **Two stages, two failure kinds.** Outbound: (a) building and recording the event
+   (`pending`/`skipped`), (b) publishing it (`published`/`failed`). A skip happens in (a) and today
+   leaves no trace except a log line; a `failed` row happens in (b) and is terminal (see above).
+3. **No silent drops.** Every event ends in a recorded state with a reason: outbound
+   `pending | published | failed | skipped`; inbound `processed | retrying | failed`, plus an
+   explicit, reasoned no-op for deliberate skips. A bare `return` that only logs is a defect.
+4. **Every non-success state is retryable.** `failed` returns to `pending`; `skipped` is rebuilt
+   from the source data once the cause is fixed. Retrying is safe only if the receiver
+   deduplicates by `event_id` (to be confirmed with Integration Service).
+5. **Everything is visible.** The Integration health page shows all states; a non-zero `failed` or
+   `skipped` is alertable.
+6. **Enforced by structure, not by discipline.** Target: one outbound gateway and one inbound
+   gateway own all recording; a type registry feeds the page; a lint rule forbids direct outbox
+   writes and direct Kafka publishing outside the gateway; a test per skip path proves a record is
+   left. Guidance lives in the `external-integration-rules` skill and `docs/testing-patterns.md`
+   ("Silent drop").
+
+Known gaps today: `OrderSubmittedListener` returns without a row when a line cannot be built
+(for example no `organizationId`); the outbox event is written on `OrderReservedEvent`, not in the
+order's own transaction; outbox `failed` rows are never retried (about 30 s of broker downtime is
+enough). These are the scope of the gateway issue.

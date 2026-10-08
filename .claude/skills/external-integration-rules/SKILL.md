@@ -240,6 +240,29 @@ real-world payment that doesn't map 1:1 to that order. Any mismatch between syst
 looks right. Full design, including the three-level idempotency requirement (command idempotency,
 inbound event dedup, business-level uniqueness): `docs/payments.md`.
 
+## Every integration event leaves a record — no silent drops, inbound or outbound
+
+Principle (full text: `docs/integration-health.md`, "Principles"). mivend's own data (the order,
+the reservation) is the source of truth; a failure to tell the external system is a **delay**, not
+a loss, as long as it leaves a record that can be retried. So:
+
+- **Outbound**: every event an outbound producer should send ends in exactly one recorded state:
+  `pending` -> `published`, `failed` (publish gave up), or `skipped` (could not be built, with a
+  reason). A producer that logs and `return`s without writing a row is a defect, the same class as
+  the inbound "missing reference silently skipped" incident below.
+- **Inbound**: every consumed message ends `processed`, retrying, or `failed`; a deliberate no-op
+  (`DeferredStreamHandler`, a superseded version) is an explicit, reasoned outcome, never a bare
+  `return`.
+- Every recorded non-success state must be retryable and must be visible on the Integration
+  health page; any non-zero `failed`/`skipped` is alertable.
+- Target architecture (issue tracked in `docs/integration-health.md`): one outbound gateway and one
+  inbound gateway own recording; producers/handlers never write the outbox or publish to Kafka
+  directly, and a lint rule enforces it. Until the gateways exist, new producers must still follow
+  the states above and add the "skip path leaves a record" test (`docs/testing-patterns.md`,
+  "Silent drop").
+- Auditor's side: for any producer/handler change, find every early `return`/`continue` and
+  confirm it records an outcome.
+
 ## Never process a risky inbound event synchronously
 
 A webhook, an ERP/ERP exchange callback, or any other external/unreliable integration entry point

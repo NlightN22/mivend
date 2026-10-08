@@ -129,6 +129,32 @@ prove the pair is atomic, not just usually-together.
 
 **Exceptions**: none — mandatory per the outbox-pattern messaging invariant.
 
+## Silent drop
+
+**Applies to**: any outbound producer or inbound handler with an early `return`/`continue`/skip
+path (event cannot be built, reference missing, version superseded, feature switched off).
+
+**Risk**: the event is dropped and nothing but a log line shows it; the external system never
+learns of it, and no retry or alert is possible.
+
+**Minimum scenarios**: for every skip path, force it and assert a durable record exists (outbound:
+a `skipped`/`failed` outbox row with the reason; inbound: a retrying/`failed` row or an explicit
+reasoned no-op outcome); the record is visible to the integration-health read model; a retry after
+the cause is fixed produces the event exactly once.
+
+**Preferred level**: integration (real Postgres) for the record, unit for the skip decision.
+
+**Required assertions**: record exists AND carries the reason; the happy path still creates no
+`skipped` row.
+
+**Common false positive**: asserting only that the handler returned without throwing, or that a
+warning was logged.
+
+**mivend example**: none yet (issue tracked in `docs/integration-health.md`); motivating case:
+`order.submitted` skipped when a line has no `organizationId`.
+
+**Exceptions**: none.
+
 ## Ordering and versions
 
 **Applies to**: any event stream with more than one producer or possible redelivery/reordering.
