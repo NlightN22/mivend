@@ -49,7 +49,9 @@ export class KafkaProducerService implements OnModuleDestroy {
     }
 
     private resolveSchema(eventType: string): OutboundEventSchema {
-        const entry = OUTBOUND_EVENT_SCHEMAS[eventType];
+        const entry = (OUTBOUND_EVENT_SCHEMAS as Record<string, OutboundEventSchema | undefined>)[
+            eventType
+        ];
         if (!entry) {
             throw new Error(`No registered outbound schema for event type "${eventType}"`);
         }

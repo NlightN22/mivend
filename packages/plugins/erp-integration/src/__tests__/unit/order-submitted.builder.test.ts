@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
-import { OrderSubmittedListener } from '../../order-submitted.listener';
+const ctx = {} as RequestContext;
+
+import { OrderSubmittedBuilder } from '../../order-submitted.builder';
+import type { OutboundBuildResult } from '../../outbound-gateway';
 
 interface TestLine {
     id: string;
@@ -22,18 +25,14 @@ function makeOrder(lines: TestLine[]): {
     return { id: 'order-1', customerId: 'cust-1', totalWithTax: 10000, currencyCode: 'RUB', lines };
 }
 
-function makeListener(options: {
+function makeBuilder(options: {
     order: ReturnType<typeof makeOrder> | null;
     reservations: Array<{ orderLineId: string; stockLocationId: string; status: string }>;
     warehouseErpIdByLocationId: Record<string, string>;
     productExternalIds: Record<string, string>;
     counterparty: { erpId: string } | null;
     priceType: { externalId: string | null } | null;
-}): {
-    listener: OrderSubmittedListener;
-    writeToOutbox: ReturnType<typeof vi.fn>;
-    dataSource: { transaction: ReturnType<typeof vi.fn> };
-} {
+}): OrderSubmittedBuilder {
     const orderRepo = { findOne: vi.fn().mockResolvedValue(options.order) };
     const connection = {
         getRepository: vi.fn(() => orderRepo),
@@ -63,11 +62,6 @@ function makeListener(options: {
             }),
         },
     };
-    const writeToOutbox = vi.fn().mockResolvedValue(undefined);
-    const outboxService = { writeToOutbox };
-    const dataSource = {
-        transaction: vi.fn(async (cb: (em: unknown) => Promise<void>) => cb({})),
-    };
     const counterpartyService = { getForCustomer: vi.fn().mockResolvedValue(options.counterparty) };
     const customerPricingService = {
         getCustomerPriceType: vi.fn().mockResolvedValue(options.priceType),
@@ -75,21 +69,17 @@ function makeListener(options: {
     const reservationService = {
         findForOrder: vi.fn().mockResolvedValue(options.reservations),
     };
-    const eventBus = { ofType: vi.fn(() => ({ subscribe: vi.fn() })) };
 
-    const listener = new OrderSubmittedListener(
-        eventBus as never,
-        dataSource as never,
+    return new OrderSubmittedBuilder(
         connection as never,
-        outboxService as never,
         counterpartyService as never,
         customerPricingService as never,
         reservationService as never,
-        { instanceType: 'central' } as never,
     );
-
-    return { listener, writeToOutbox, dataSource };
 }
+
+const build = (builder: OrderSubmittedBuilder): Promise<OutboundBuildResult> =>
+    builder.build(ctx, 'order-1', 'ORD-001');
 
 // order-submitted.listener.ts (mivend#85) sources warehouseId from plugin-reservation's
 // Reservation entity (via ReservationService.findForOrder), not Vendure's native Allocation —
@@ -97,13 +87,11 @@ function makeListener(options: {
 // StockLocation.customFields.warehouseErpId are both read via raw SQL (same as every other
 // cross-plugin customField read in this codebase), mocked via rawConnection.createQueryBuilder
 // above, dispatching on the queried table name.
-const ctx = {} as RequestContext;
-const event = { ctx, orderId: 'order-1', orderCode: 'ORD-001' };
 
-describe('OrderSubmittedListener', () => {
+describe('OrderSubmittedBuilder', () => {
     it('skips the whole order when no Counterparty resolves for the customer', async () => {
-        const order = makeOrder([]);
-        const { listener, writeToOutbox } = makeListener({
+        const order = makeOrder([{ id: 'line-1', quantity: 1, productVariant: null }]);
+        const builder = makeBuilder({
             order,
             reservations: [],
             warehouseErpIdByLocationId: {},
@@ -112,12 +100,15 @@ describe('OrderSubmittedListener', () => {
             priceType: null,
         });
 
-        await (listener as unknown as { handle: (e: typeof event) => Promise<void> }).handle(event);
+        const result = await build(builder);
 
-        expect(writeToOutbox).not.toHaveBeenCalled();
+        expect(result).toEqual({
+            kind: 'skip',
+            reason: expect.stringContaining('no Counterparty'),
+        });
     });
 
-    it('skips a line missing organizationId, warehouseId, or productId, and reports the rest', async () => {
+    it('skips the whole order, naming the line, when one line misses organizationId', async () => {
         const goodLine: TestLine = {
             id: 'line-1',
             quantity: 2,
@@ -132,7 +123,7 @@ describe('OrderSubmittedListener', () => {
             },
         };
         const order = makeOrder([goodLine, missingOrgLine]);
-        const { listener, writeToOutbox } = makeListener({
+        const builder = makeBuilder({
             order,
             reservations: [
                 { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
@@ -147,18 +138,46 @@ describe('OrderSubmittedListener', () => {
             priceType: { externalId: 'price-type-wholesale' },
         });
 
-        await (listener as unknown as { handle: (e: typeof event) => Promise<void> }).handle(event);
+        const result = await build(builder);
 
-        expect(writeToOutbox).toHaveBeenCalledTimes(1);
-        const payload = writeToOutbox.mock.calls[0][1].payload as {
+        expect(result).toEqual({
+            kind: 'skip',
+            reason: expect.stringContaining('line line-2 (organizationId=null'),
+        });
+    });
+
+    it('builds a send result when every line resolves', async () => {
+        const line: TestLine = {
+            id: 'line-1',
+            quantity: 2,
+            productVariant: { productId: 'variant-product-1', customFields: { organizationId: 1 } },
+        };
+        const builder = makeBuilder({
+            order: makeOrder([line]),
+            reservations: [
+                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+            ],
+            warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
+            productExternalIds: { 'variant-product-1': 'product-1' },
+            counterparty: { erpId: 'counterparty-1' },
+            priceType: { externalId: 'price-type-wholesale' },
+        });
+
+        const result = await build(builder);
+
+        expect(result.kind).toBe('send');
+        const payload = (result as Extract<OutboundBuildResult, { kind: 'send' }>).events[0]
+            .payload as {
             organizationId: string;
             warehouseId: string;
             customerId: string;
-            lines: Array<{ productId: string; quantity: number; priceTypeId: string | null }>;
+            lines: unknown[];
         };
-        expect(payload.organizationId).toBe('1');
-        expect(payload.warehouseId).toBe('wh-1');
-        expect(payload.customerId).toBe('counterparty-1');
+        expect(payload).toMatchObject({
+            organizationId: '1',
+            warehouseId: 'wh-1',
+            customerId: 'counterparty-1',
+        });
         expect(payload.lines).toEqual([
             { productId: 'product-1', quantity: 2, priceTypeId: 'price-type-wholesale' },
         ]);
@@ -171,7 +190,7 @@ describe('OrderSubmittedListener', () => {
             productVariant: { productId: 'variant-1', customFields: { organizationId: 1 } },
         };
         const order = makeOrder([line]);
-        const { listener, writeToOutbox } = makeListener({
+        const builder = makeBuilder({
             order,
             reservations: [
                 { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'released' },
@@ -182,9 +201,12 @@ describe('OrderSubmittedListener', () => {
             priceType: null,
         });
 
-        await (listener as unknown as { handle: (e: typeof event) => Promise<void> }).handle(event);
+        const result = await build(builder);
 
-        expect(writeToOutbox).not.toHaveBeenCalled();
+        expect(result).toEqual({
+            kind: 'skip',
+            reason: expect.stringContaining('warehouseId=undefined'),
+        });
     });
 
     it('fans out into one payload per distinct (organizationId, warehouseId) combination', async () => {
@@ -204,7 +226,7 @@ describe('OrderSubmittedListener', () => {
             productVariant: { productId: 'variant-3', customFields: { organizationId: 2 } },
         };
         const order = makeOrder([lineOrgAWhA, lineOrgAWhB, lineOrgB]);
-        const { listener, writeToOutbox } = makeListener({
+        const builder = makeBuilder({
             order,
             reservations: [
                 { orderLineId: 'line-1', stockLocationId: 'location-A', status: 'active' },
@@ -221,13 +243,30 @@ describe('OrderSubmittedListener', () => {
             priceType: null,
         });
 
-        await (listener as unknown as { handle: (e: typeof event) => Promise<void> }).handle(event);
+        const result = await build(builder);
 
-        expect(writeToOutbox).toHaveBeenCalledTimes(3);
-        const keys = writeToOutbox.mock.calls
-            .map(call => call[1].payload as { organizationId: string; warehouseId: string })
+        expect(result.kind).toBe('send');
+        const events = (result as Extract<OutboundBuildResult, { kind: 'send' }>).events;
+        const keys = events
+            .map(e => e.payload as { organizationId: string; warehouseId: string })
             .map(p => `${p.organizationId}:${p.warehouseId}`)
             .sort();
         expect(keys).toEqual(['1:wh-A', '1:wh-B', '2:wh-A']);
+    });
+
+    it('skips an order that cannot be found', async () => {
+        const builder = makeBuilder({
+            order: null,
+            reservations: [],
+            warehouseErpIdByLocationId: {},
+            productExternalIds: {},
+            counterparty: { erpId: 'counterparty-1' },
+            priceType: null,
+        });
+
+        expect(await build(builder)).toEqual({
+            kind: 'skip',
+            reason: expect.stringContaining('not found'),
+        });
     });
 });

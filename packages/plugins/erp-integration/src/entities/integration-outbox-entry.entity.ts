@@ -1,5 +1,9 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
+// skipped: the event could not be built (never published, rebuilt later); resolved: a skipped row
+// whose event was rebuilt and queued.
+export type IntegrationOutboxStatus = 'pending' | 'published' | 'failed' | 'skipped' | 'resolved';
+
 @Entity('integration_outbox')
 @Index('integration_outbox_pending', ['createdAt'], { where: '"status" = \'pending\'' })
 export class IntegrationOutboxEntry {
@@ -17,7 +21,7 @@ export class IntegrationOutboxEntry {
     payload!: Record<string, unknown>;
 
     @Column({ type: 'varchar', default: 'pending' })
-    status!: 'pending' | 'published' | 'failed';
+    status!: IntegrationOutboxStatus;
 
     @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
     createdAt!: Date;
