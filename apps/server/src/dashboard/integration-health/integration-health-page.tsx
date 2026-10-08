@@ -1,5 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ResultOf, api, graphql } from '@vendure/dashboard';
+import {
+    Badge,
+    Button,
+    Page,
+    PageActionBar,
+    PageActionBarRight,
+    PageBlock,
+    PageLayout,
+    PageTitle,
+    ResultOf,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+    api,
+    graphql,
+} from '@vendure/dashboard';
 
 import { DRIFT_MESSAGES, formatAge, isLagOverThreshold } from './stream-health-view.js';
 
@@ -35,8 +53,6 @@ const streamHealthDocument = graphql(`
 
 type StreamHealthReport = ResultOf<typeof streamHealthDocument>['integrationStreamHealth'];
 
-const cell = { padding: '4px 8px', whiteSpace: 'nowrap' as const };
-
 export function IntegrationHealthPage() {
     const [report, setReport] = useState<StreamHealthReport | null>(null);
     const [expanded, setExpanded] = useState<string | null>(null);
@@ -64,67 +80,74 @@ export function IntegrationHealthPage() {
     const now = Date.now();
 
     return (
-        <div style={{ padding: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>
-                    Integration health
-                </h1>
-                <button type="button" disabled={loading} onClick={() => void load()}>
-                    {loading ? 'Refreshing…' : 'Refresh'}
-                </button>
-            </div>
-            <p style={{ color: '#666', marginBottom: 16 }}>
-                One row per stream (central hub only): the event contract
-                {report ? ` (v${report.contractVersion})` : ''}, the Kafka consumer lag as of the
-                last scheduled poll, and mivend's own inbox backlog. Lag and backlog measure
-                different things and are expected to disagree.
-            </p>
-
-            {error && <div style={{ color: '#b91c1c', marginBottom: 12 }}>{error}</div>}
-
-            <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead>
-                        <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-                            <th style={cell}>Stream</th>
-                            <th style={cell}>Topic</th>
-                            <th style={cell}>Contract</th>
-                            <th style={cell}>Consumed</th>
-                            <th style={cell}>Kafka lag</th>
-                            <th style={cell}>Pending</th>
-                            <th style={cell}>Processing</th>
-                            <th style={cell}>Failed</th>
-                            <th style={cell}>Oldest pending</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {streams.map(s => {
-                            const lagHigh = isLagOverThreshold(s.lag?.totalLag ?? null);
-                            return [
-                                <tr
+        <Page pageId="integration-health">
+            <PageTitle>Integration health</PageTitle>
+            <PageActionBar>
+                <PageActionBarRight>
+                    <Button variant="outline" disabled={loading} onClick={() => void load()}>
+                        {loading ? 'Refreshing…' : 'Refresh'}
+                    </Button>
+                </PageActionBarRight>
+            </PageActionBar>
+            <PageLayout>
+                <PageBlock column="full" blockId="streams">
+                    <p className="text-muted-foreground mb-4">
+                        One row per stream (central hub only): the event contract
+                        {report ? ` (v${report.contractVersion})` : ''}, Kafka consumer lag as of
+                        the last scheduled poll, and mivend's own inbox backlog. Lag and backlog
+                        measure different things and are expected to disagree.
+                    </p>
+                    {error && <p className="text-destructive mb-3">{error}</p>}
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Stream</TableHead>
+                                <TableHead>Topic</TableHead>
+                                <TableHead>Contract</TableHead>
+                                <TableHead>Consumed</TableHead>
+                                <TableHead>Kafka lag</TableHead>
+                                <TableHead>Pending</TableHead>
+                                <TableHead>Processing</TableHead>
+                                <TableHead>Failed</TableHead>
+                                <TableHead title="Age of the oldest pending inbox row">
+                                    Oldest
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {streams.flatMap(s => [
+                                <TableRow
                                     key={s.stream}
-                                    style={{
-                                        borderBottom: '1px solid #f3f4f6',
-                                        background: s.drift ? '#fef2f2' : undefined,
-                                    }}
+                                    className={s.drift ? 'bg-destructive/5' : ''}
                                 >
-                                    <td style={cell}>{s.stream}</td>
-                                    <td style={{ ...cell, color: '#6b7280' }}>{s.topic ?? '—'}</td>
-                                    <td style={cell}>{s.inContract ? 'yes' : 'no'}</td>
-                                    <td style={cell} title={s.ignoredReason ?? undefined}>
-                                        {s.consumed ? 'yes' : s.ignoredReason ? 'ignored' : 'no'}
-                                    </td>
-                                    <td
-                                        style={{
-                                            ...cell,
-                                            fontWeight: lagHigh ? 600 : 400,
-                                            color: lagHigh ? '#b91c1c' : undefined,
-                                        }}
+                                    <TableCell className="font-medium">{s.stream}</TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {s.topic ?? '—'}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={s.inContract ? 'secondary' : 'outline'}>
+                                            {s.inContract ? 'Yes' : 'No'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell title={s.ignoredReason ?? undefined}>
+                                        <Badge variant={s.consumed ? 'secondary' : 'outline'}>
+                                            {s.consumed
+                                                ? 'Yes'
+                                                : s.ignoredReason
+                                                  ? 'Ignored'
+                                                  : 'No'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell
+                                        className={
+                                            isLagOverThreshold(s.lag?.totalLag ?? null)
+                                                ? 'font-semibold text-destructive'
+                                                : ''
+                                        }
                                     >
                                         {s.lag ? (
                                             <button
                                                 type="button"
-                                                style={{ all: 'unset', cursor: 'pointer' }}
                                                 title={`polled ${new Date(s.lag.polledAt).toLocaleString()}`}
                                                 onClick={() =>
                                                     setExpanded(
@@ -137,30 +160,31 @@ export function IntegrationHealthPage() {
                                         ) : (
                                             '—'
                                         )}
-                                    </td>
-                                    <td style={cell}>{s.pending}</td>
-                                    <td style={cell}>{s.processing}</td>
-                                    <td
-                                        style={{
-                                            ...cell,
-                                            fontWeight: s.failed > 0 ? 600 : 400,
-                                            color: s.failed > 0 ? '#b91c1c' : undefined,
-                                        }}
-                                    >
-                                        {s.failed}
-                                    </td>
-                                    <td style={cell}>{formatAge(s.oldestPendingAt, now)}</td>
-                                </tr>,
+                                    </TableCell>
+                                    <TableCell>{s.pending}</TableCell>
+                                    <TableCell>{s.processing}</TableCell>
+                                    <TableCell>
+                                        {s.failed > 0 ? (
+                                            <Badge variant="destructive">{s.failed}</Badge>
+                                        ) : (
+                                            0
+                                        )}
+                                    </TableCell>
+                                    <TableCell>{formatAge(s.oldestPendingAt, now)}</TableCell>
+                                </TableRow>,
                                 s.drift && (
-                                    <tr key={`${s.stream}-drift`} style={{ background: '#fef2f2' }}>
-                                        <td colSpan={9} style={{ ...cell, color: '#b91c1c' }}>
+                                    <TableRow
+                                        key={`${s.stream}-drift`}
+                                        className="bg-destructive/5"
+                                    >
+                                        <TableCell colSpan={9} className="text-destructive">
                                             {DRIFT_MESSAGES[s.drift] ?? s.drift}
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ),
                                 expanded === s.stream && s.lag && (
-                                    <tr key={`${s.stream}-parts`}>
-                                        <td colSpan={9} style={{ ...cell, color: '#6b7280' }}>
+                                    <TableRow key={`${s.stream}-parts`}>
+                                        <TableCell colSpan={9} className="text-muted-foreground">
                                             {s.lag.partitions.map(p => (
                                                 <div key={p.partition}>
                                                     partition {p.partition}: committed{' '}
@@ -168,14 +192,14 @@ export function IntegrationHealthPage() {
                                                     {p.endOffset} / lag {p.lag ?? 'unknown'}
                                                 </div>
                                             ))}
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ),
-                            ];
-                        })}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                            ])}
+                        </TableBody>
+                    </Table>
+                </PageBlock>
+            </PageLayout>
+        </Page>
     );
 }
