@@ -9,7 +9,7 @@ import {
     TransactionalConnection,
     TranslatorService,
 } from '@vendure/core';
-import { generateDocumentCode } from 'shared';
+import { generateDocumentCode, withAggregateLock } from 'shared';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 
 import { Invoice, InvoiceStatus } from './entities/invoice.entity';
@@ -65,8 +65,15 @@ export class InvoiceService {
     }
 
     // Idempotent: a retry (e.g. the customer reloads the payment page) returns the
-    // already-created invoices instead of creating duplicates.
+    // already-created invoices instead of creating duplicates; the per-order lock makes two
+    // concurrent calls (a double submit) agree on one set.
     async createInvoicesForOrder(ctx: RequestContext, order: Order): Promise<Invoice[]> {
+        return withAggregateLock(this.connection, ctx, `invoices-for-order:${order.id}`, txCtx =>
+            this.createUnderLock(txCtx, order),
+        );
+    }
+
+    private async createUnderLock(ctx: RequestContext, order: Order): Promise<Invoice[]> {
         const repo = this.connection.getRepository(ctx, Invoice);
         const existing = await repo.find({ where: { orderId: Number(order.id) } });
         if (existing.length > 0) {

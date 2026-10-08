@@ -9,10 +9,14 @@ const mockRepo = {
     find: vi.fn(),
     create: vi.fn((input: Partial<Invoice>) => ({ ...input }) as Invoice),
     save: vi.fn(async (entities: Invoice[]) => entities),
+    query: vi.fn(),
 };
 
 const mockConnection = {
     getRepository: vi.fn(() => mockRepo),
+    withTransaction: vi.fn(async (ctx: RequestContext, work: (c: RequestContext) => unknown) =>
+        work(ctx),
+    ),
 } as unknown as TransactionalConnection;
 
 const mockEntityHydrator = { hydrate: vi.fn() };

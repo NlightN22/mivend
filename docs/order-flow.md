@@ -391,6 +391,18 @@ Not needed for this: per-branch catalog duplication, Vendure `ProductOption`/mul
 selection, a shared-stock-across-variants strategy — all avoided by keeping a single variant in
 base units and treating packaging as an order-time constraint, not a catalog-time one.
 
+### Seller organization on the order (mivend#201, #202)
+
+- Entering `ArrangingPayment` stamps `OrderLine.customFields.organizationId` from the variant
+  (single `UPDATE` inside the transition transaction, repeated on every re-entry). A variant without
+  an organization blocks that transition for everyone.
+- Invoice split (one `Invoice` per organization, created under a per-order advisory lock so a double
+  submit yields one set), the `reserveOrder()` gate and the `order.submitted` builder read the line,
+  never the variant. `order.submitted` fans out per `(organization, warehouse)` and carries the
+  organization's ERP id.
+- Not modeled: a per-warehouse organization check. Reservation picks the warehouse by branch stock,
+  the organization comes from the product's storage location; they are not cross-checked.
+
 ### Permissions
 
 A `ConfirmOrder` permission (covers confirm + release — one staff action from the operator's
