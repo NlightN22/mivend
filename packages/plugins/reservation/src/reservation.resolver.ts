@@ -6,6 +6,7 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
+import { OrderContractOption, OrderContractService } from './order-contract.service';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
 import { ReservationExtensionService } from './reservation-extension.service';
@@ -23,6 +24,7 @@ export class ReservationResolver {
         private extensionService: ReservationExtensionService,
         private extensionLimitService: ReservationExtensionLimitService,
         private reconciliationIssueService: ReservationReconciliationIssueService,
+        private orderContractService: OrderContractService,
     ) {}
 
     @Query()
@@ -32,6 +34,15 @@ export class ReservationResolver {
         @Args() args: { orderId: ID },
     ): Promise<Reservation[]> {
         return this.reservationService.findForOrder(ctx, args.orderId);
+    }
+
+    @Query()
+    @Allow(Permission.ReadOrder)
+    async orderContracts(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { orderId: ID },
+    ): Promise<OrderContractOption[]> {
+        return this.orderContractService.list(ctx, args.orderId);
     }
 
     @Query()
@@ -82,6 +93,16 @@ export class ReservationResolver {
         @Args() args: { orderId: ID },
     ): Promise<number> {
         return this.reservationService.releaseReservations(ctx, args.orderId);
+    }
+
+    @Transaction()
+    @Mutation()
+    @Allow(CustomPermission.ConfirmOrder.Permission)
+    async setOrderContract(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { orderId: ID; contractId: string },
+    ): Promise<OrderContractOption[]> {
+        return this.orderContractService.set(ctx, args.orderId, args.contractId);
     }
 
     @Transaction()

@@ -41,3 +41,25 @@ query ReservationExtensionLimit($roleCode: String!) {
 query AvailableStock($productVariantId: ID!) {
     availableStock(productVariantId: $productVariantId)
 }
+
+fragment OrderContractOptionFields on OrderContractOption {
+    erpId
+    name
+    organizationId
+    organizationName
+    paymentKind
+    isMain
+    isSelected
+}
+
+query OrderContracts($orderId: ID!) {
+    orderContracts(orderId: $orderId) {
+        ...OrderContractOptionFields
+    }
+}
+
+mutation SetOrderContract($orderId: ID!, $contractId: String!) {
+    setOrderContract(orderId: $orderId, contractId: $contractId) {
+        ...OrderContractOptionFields
+    }
+}

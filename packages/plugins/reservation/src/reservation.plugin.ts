@@ -14,12 +14,13 @@ import gql from 'graphql-tag';
 import { subscribeAndLog } from 'shared';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
-import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
+import { ErpOrderPlugin, ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
 import { NotificationPlugin } from '@mivend/plugin-notification';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
+import { OrderContractService } from './order-contract.service';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { DEFAULT_STOCK_TIER_LOW_MAX, DEFAULT_STOCK_TIER_MEDIUM_MAX } from './stock-tier';
 import { ProductVariantStockResolver } from './product-variant-stock.resolver';
@@ -92,7 +93,19 @@ const adminApiSchema = gql`
         skip: Int
     }
 
+    type OrderContractOption {
+        erpId: String!
+        name: String
+        organizationId: String!
+        organizationName: String
+        paymentKind: String
+        isMain: Boolean!
+        isSelected: Boolean!
+    }
+
     extend type Query {
+        "Active contracts of the order's counterparty; the one the order is registered under is marked (#205)."
+        orderContracts(orderId: ID!): [OrderContractOption!]!
         orderReservations(orderId: ID!): [Reservation!]!
         availableStock(productVariantId: ID!): Int!
         reservationExtensionLimit(roleCode: String!): ReservationExtensionLimit
@@ -105,6 +118,8 @@ const adminApiSchema = gql`
     extend type Mutation {
         confirmOrder(orderId: ID!, reservationDays: Int!): [Reservation!]!
         releaseOrderReservation(orderId: ID!): Int!
+        "Change the contract the order is registered under; only before it is reserved (#205)."
+        setOrderContract(orderId: ID!, contractId: String!): [OrderContractOption!]!
         extendOrderReservation(orderId: ID!, additionalDays: Int!): [Reservation!]!
         setReservationExtensionLimit(
             roleCode: String!
@@ -114,9 +129,16 @@ const adminApiSchema = gql`
 `;
 
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin, NotificationPlugin],
+    imports: [
+        PluginCommonModule,
+        AccessControlPlugin,
+        CounterpartyPlugin,
+        ErpOrderPlugin,
+        NotificationPlugin,
+    ],
     entities: [Reservation, ReservationExtensionLimit, ReservationReconciliationIssue],
     providers: [
+        OrderContractService,
         ReservationService,
         ReservationPaymentService,
         ReservationExtensionService,

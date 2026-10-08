@@ -11172,6 +11172,49 @@ export type ReleaseOrderReservationMutationVariables = Exact<{
 
 export type ReleaseOrderReservationMutation = { releaseOrderReservation: number };
 
+export type OrderContractOptionFieldsFragment = {
+    erpId: string;
+    name: string | null;
+    organizationId: string;
+    organizationName: string | null;
+    paymentKind: string | null;
+    isMain: boolean;
+    isSelected: boolean;
+};
+
+export type OrderContractsQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type OrderContractsQuery = {
+    orderContracts: Array<{
+        erpId: string;
+        name: string | null;
+        organizationId: string;
+        organizationName: string | null;
+        paymentKind: string | null;
+        isMain: boolean;
+        isSelected: boolean;
+    }>;
+};
+
+export type SetOrderContractMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    contractId: Scalars['String']['input'];
+}>;
+
+export type SetOrderContractMutation = {
+    setOrderContract: Array<{
+        erpId: string;
+        name: string | null;
+        organizationId: string;
+        organizationName: string | null;
+        paymentKind: string | null;
+        isMain: boolean;
+        isSelected: boolean;
+    }>;
+};
+
 export type ExtendOrderReservationMutationVariables = Exact<{
     orderId: Scalars['ID']['input'];
     additionalDays: Scalars['Int']['input'];
@@ -13831,6 +13874,36 @@ export const ReleaseOrderReservationDocument = new TypedDocumentString(`
     ReleaseOrderReservationMutation,
     ReleaseOrderReservationMutationVariables
 >;
+export const OrderContractsDocument = new TypedDocumentString(`
+    query OrderContracts($orderId: ID!) {
+  orderContracts(orderId: $orderId) {
+    ...OrderContractOptionFields
+  }
+}
+    fragment OrderContractOptionFields on OrderContractOption {
+  erpId
+  name
+  organizationId
+  organizationName
+  paymentKind
+  isMain
+  isSelected
+}`) as unknown as TypedDocumentString<OrderContractsQuery, OrderContractsQueryVariables>;
+export const SetOrderContractDocument = new TypedDocumentString(`
+    mutation SetOrderContract($orderId: ID!, $contractId: String!) {
+  setOrderContract(orderId: $orderId, contractId: $contractId) {
+    ...OrderContractOptionFields
+  }
+}
+    fragment OrderContractOptionFields on OrderContractOption {
+  erpId
+  name
+  organizationId
+  organizationName
+  paymentKind
+  isMain
+  isSelected
+}`) as unknown as TypedDocumentString<SetOrderContractMutation, SetOrderContractMutationVariables>;
 export const ExtendOrderReservationDocument = new TypedDocumentString(`
     mutation ExtendOrderReservation($orderId: ID!, $additionalDays: Int!) {
   extendOrderReservation(orderId: $orderId, additionalDays: $additionalDays) {

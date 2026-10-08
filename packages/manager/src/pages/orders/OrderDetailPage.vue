@@ -19,6 +19,7 @@ import OrderContextPanel from '../../components/order-detail/OrderContextPanel.v
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
+import OrderContractPanel from '../../components/order-detail/OrderContractPanel.vue';
 import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
 
 const route = useRoute();
@@ -159,6 +160,14 @@ watch(() => route.params.code, load);
                         :order-id="order.id"
                         :reservations="reservations"
                         :default-reservation-days="defaultReservationDays"
+                        @changed="reload"
+                    />
+                </MvPanel>
+
+                <MvPanel title="Contract">
+                    <OrderContractPanel
+                        :order-id="order.id"
+                        :locked="reservations.some(r => r.status === 'active')"
                         @changed="reload"
                     />
                 </MvPanel>

@@ -3,9 +3,12 @@ import {
     AvailableStockDocument,
     ConfirmOrderDocument,
     ExtendOrderReservationDocument,
+    OrderContractsDocument,
     OrderReservationsDocument,
+    SetOrderContractDocument,
     ReleaseOrderReservationDocument,
     ReservationExtensionLimitDocument,
+    type OrderContractOptionFieldsFragment,
     type OrderReservationFieldsFragment,
 } from './generated/graphql';
 
@@ -59,4 +62,19 @@ export async function fetchReservationExtensionLimit(
 export async function fetchAvailableStock(productVariantId: string): Promise<number> {
     const result = await adminApi(AvailableStockDocument, { productVariantId });
     return result.availableStock;
+}
+
+export type OrderContractOption = OrderContractOptionFieldsFragment;
+
+export async function fetchOrderContracts(orderId: string): Promise<OrderContractOption[]> {
+    const result = await adminApi(OrderContractsDocument, { orderId });
+    return result.orderContracts;
+}
+
+export async function setOrderContract(
+    orderId: string,
+    contractId: string,
+): Promise<OrderContractOption[]> {
+    const result = await adminApi(SetOrderContractDocument, { orderId, contractId });
+    return result.setOrderContract;
 }

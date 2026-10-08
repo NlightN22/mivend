@@ -379,7 +379,8 @@ async ERP acknowledgement is not compatible with this.
   by `erp-import`'s product record. `OrderLine.customFields.organizationId` is stamped from it
   each time the order enters `ArrangingPayment` (`organizationOrderGuard.onTransitionEnd`); invoice
   split, reservation gate and the `order.submitted` builder read the line, never the variant. The
-  `order.submitted` `organizationId` is the organization's ERP id (`OrganizationRequisites.erpId`).
+  `order.submitted` carries the organization of the order's contract instead (docs/order-flow.md
+  "Order contract").
 - **Split mechanism (decided): lightweight `customFields`, not Vendure's full `Seller`/`Channel`
   marketplace machinery.** Vendure's own multi-vendor primitives (`Seller`, one `Channel` per
   seller, `OrderSellerStrategy.setOrderLineSellerChannel()`/`.splitOrder()` — see

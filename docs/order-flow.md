@@ -398,10 +398,26 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   an organization blocks that transition for everyone.
 - Invoice split (one `Invoice` per organization, created under a per-order advisory lock so a double
   submit yields one set), the `reserveOrder()` gate and the `order.submitted` builder read the line,
-  never the variant. `order.submitted` fans out per `(organization, warehouse)` and carries the
-  organization's ERP id.
+  never the variant. `order.submitted` is a different thing (see "Order contract" below).
 - Not modeled: a per-warehouse organization check. Reservation picks the warehouse by branch stock,
   the organization comes from the product's storage location; they are not cross-checked.
+
+### Order contract (mivend#205)
+
+- The ERP registers an order under one contract of the customer; the contract's organization is the
+  document header organization and the ERP distributes line organizations itself (this later splits
+  the order into separate sales documents and settlements). So `order.submitted` carries
+  `organizationId` = the contract's organization and `contractId` = `Contract.erpId`, with no line
+  organizations, and fans out per warehouse only. Our own split (invoices, payment split,
+  reservations) stays on the line organization.
+- `Order.customFields.selectedContractId` is set when the order enters `ArrangingPayment`
+  (`contractOrderGuard`, plugin-acquiring): the stored selection if still valid (active, same
+  counterparty, with an organization), else the counterparty's main contract. No usable contract
+  blocks that transition with a clear message; `reserveOrder()` and the builder re-check it.
+- Staff change it with `setOrderContract` (permission `ConfirmOrder`, order scope as for the order
+  list, history note). Allowed only while the order has no active reservation and the ERP does not
+  have it yet; it takes the same advisory lock as `reserveOrder()`, so a change cannot interleave
+  with a reservation (and with it the `order.submitted` publish).
 
 ### Permissions
 
