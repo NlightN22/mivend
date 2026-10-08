@@ -102,7 +102,6 @@ export function IntegrationHealthPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Stream</TableHead>
-                                <TableHead>Topic</TableHead>
                                 <TableHead>Contract</TableHead>
                                 <TableHead>Consumed</TableHead>
                                 <TableHead>Kafka lag</TableHead>
@@ -120,9 +119,11 @@ export function IntegrationHealthPage() {
                                     key={s.stream}
                                     className={s.drift ? 'bg-destructive/5' : ''}
                                 >
-                                    <TableCell className="font-medium">{s.stream}</TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {s.topic ?? '—'}
+                                    <TableCell className="max-w-60 whitespace-normal break-all">
+                                        <div className="font-medium">{s.stream}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {s.topic ?? 'no topic'}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={s.inContract ? 'secondary' : 'outline'}>
@@ -177,14 +178,14 @@ export function IntegrationHealthPage() {
                                         key={`${s.stream}-drift`}
                                         className="bg-destructive/5"
                                     >
-                                        <TableCell colSpan={9} className="text-destructive">
+                                        <TableCell colSpan={8} className="text-destructive">
                                             {DRIFT_MESSAGES[s.drift] ?? s.drift}
                                         </TableCell>
                                     </TableRow>
                                 ),
                                 expanded === s.stream && s.lag && (
                                     <TableRow key={`${s.stream}-parts`}>
-                                        <TableCell colSpan={9} className="text-muted-foreground">
+                                        <TableCell colSpan={8} className="text-muted-foreground">
                                             {s.lag.partitions.map(p => (
                                                 <div key={p.partition}>
                                                     partition {p.partition}: committed{' '}
