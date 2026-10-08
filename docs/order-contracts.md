@@ -70,6 +70,17 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
   pushing to its `master`, bump the dependency here. See `docs/integration-health.md` for the
   contract drift indicator on the Outbound tab.
 
+## Invoices
+
+- Invoices (`Invoice`, one per distinct line organization) are created for the payment methods that
+  need them: pay-by-invoice and online payment. Orders on deferred terms get no automatic invoices:
+  the ERP holds the accounting documents (sales documents after its own distribution, settlements).
+- A customer who needs a document to pay against requests a **proforma payment invoice**: an
+  immutable snapshot (number, organization, lines, amounts), idempotent per order content, a new
+  version when the order changed, the older unpaid one marked superseded, a paid one never rewritten
+  (a later difference is shown on the order and settled through the ERP). Not an accounting document
+  and not synced to the ERP. Tracked in #206 together with the question of system-level versioning.
+
 ## Deliberately out of scope (open questions)
 
 - Contracts with dedicated sub-limits (amount, term) inside the total credit limit, and contracts
