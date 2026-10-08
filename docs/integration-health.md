@@ -131,7 +131,9 @@ mivend never had, a missing required field, no target mapping yet), or the messa
 except for a deliberately skipped part (for example order lines without a `productId`). A row
 whose version is older than one already processed is stored as `superseded`. Rows processed before
 the column existed have `outcome = null`.
-A stream with a high No-op (24h) count is dropping data and needs a look at the reason.
+A stream with a high No-op (24h) count is dropping data and needs a look at the reason. A
+`counterparty` no-op saying the manager's ERP user was not received is not data loss: the manager is a
+soft link, the counterparty itself was applied and the assignment is back-filled once the user links.
 Escalating "missing required field" no-ops to `failed` (dead-letter) is a per-stream decision
 left open.
 

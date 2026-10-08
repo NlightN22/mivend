@@ -301,7 +301,7 @@ same shape.
 still processes synchronously inline. Flagged, not refactored — don't copy this pattern into new
 code.
 
-## Cross-entity dependencies — a missing reference must retry, never silently skip
+## Cross-entity dependencies — hard dependencies retry, soft references never block, nothing is silently skipped
 
 Real incident (issue #95's investigation): several `plugin-erp-integration` stream handlers
 (`stock`, `price`, `storage-location`, `order-registration-result`, at least) resolve a foreign
@@ -323,11 +323,31 @@ retry-with-backoff, treated as an ordinary eventual-consistency problem, never s
    itself) — not retryable, no amount of waiting fixes it. Keep the existing pattern: log a
    warning and return normally; the inbox row is marked `processed` (there is nothing to retry
    toward).
-2. **Missing cross-entity dependency** (a foreign lookup — `Warehouse.findByErpId`, a
+2. **Missing HARD cross-entity dependency** (a foreign lookup — `Warehouse.findByErpId`, a
    `ProductVariant` by external id, a `PriceType`, etc. — returns nothing) — this is a **retryable
    condition**. The handler must `throw` (never warn-and-return) so `processOne()`'s existing
    `catch` block routes it through the inbox's retry/dead-letter path instead of marking it
    `processed`.
+
+**Hard dependency vs soft reference — decide per reference, write the decision in the handler.**
+
+- **Hard (structural)**: the entity cannot exist or be applied correctly without the target, so
+  a missing target throws `MissingDependencyError` and retries. Known: `contract` -> `counterparty`,
+  `point-of-sale` -> `counterparty`, `price` -> `PriceType`/variant, `stock` ->
+  warehouse/stock location/variant, `storage-location` -> variant, `order-changed`/
+  `order-registration-result` -> variant, `product-photo` -> product.
+- **Soft (descriptive/optional link)**: a reference id that only describes or enriches the owning
+  entity. Store the id as-is (no FK), never block or retry the owner, resolve the target later at
+  read time or by a back-fill when it arrives ("target may arrive later or never"). Blocking the
+  owner on a soft link makes unrelated entities pile up behind one absent record: a manager's ERP
+  user that never arrived held counterparties, and through them the contracts, for days. Known soft
+  links: `counterparty` -> `managerId` (stored as `managerErpId`; `assignedManagerId` stays null
+  and is back-filled by `AdministratorLinkedListener` when the ERP user links to an Administrator;
+  the outcome is a `noop` with the reason, the rest of the counterparty is applied),
+  `counterparty` -> department, region, legal form, main bank account, main contract (stored as
+  ids), `user` -> position (`positionId`, name resolved on read), price type via the main contract.
+- A soft link that is missing must still leave a trace: log at verbose level and return
+  `inboundNoop(reason)` when the reference part was skipped.
 
 **When adding or reviewing any stream handler that does a foreign lookup into data owned by
 another stream, check: does a failed lookup throw, or does it swallow the failure and return?** A

@@ -3,7 +3,6 @@ import type { RequestContext } from '@vendure/core';
 import type { ManagerLinkResolution } from '@mivend/plugin-access-control';
 
 import { CounterpartyStreamHandler } from '../../handlers/counterparty.handler';
-import { MissingDependencyError } from '../../types';
 
 function makeHandler(
     upsertActiveState = vi.fn().mockResolvedValue(undefined),
@@ -344,21 +343,30 @@ describe('CounterpartyStreamHandler', () => {
             expect(call.managerErpId).toBeUndefined();
         });
 
-        // Ordinary eventual-consistency race (the manager's own `user` event hasn't arrived yet,
-        // no ErpUser row at all for this erpId) — must be retryable via MissingDependencyError,
-        // never a silent skip that would permanently drop the manager assignment.
-        it('throws MissingDependencyError when the manager erpId has never been seen at all', async () => {
+        // Soft link: an ERP user that never arrived must not hold the counterparty (staging: 4
+        // counterparties and the contracts behind them stuck on one missing manager).
+        it('saves the counterparty with managerErpId and no manager, with a reasoned outcome, when the ERP user was never received', async () => {
             const findManagerLink = vi.fn().mockResolvedValue({ found: false });
             const { handler, counterpartyService } = makeHandler(undefined, findManagerLink);
 
-            await expect(
-                handler.apply(ctx, 'cp-1', {
-                    name: 'Acme Corp',
-                    isActive: true,
-                    managerId: 'user-erp-unknown',
+            const outcome = await handler.apply(ctx, 'cp-1', {
+                name: 'Acme Corp',
+                isActive: true,
+                managerId: 'user-erp-unknown',
+            });
+
+            expect(counterpartyService.upsertActiveState).toHaveBeenCalledWith(
+                ctx,
+                'cp-1',
+                expect.objectContaining({
+                    assignedManagerId: null,
+                    managerErpId: 'user-erp-unknown',
                 }),
-            ).rejects.toThrow(MissingDependencyError);
-            expect(counterpartyService.upsertActiveState).not.toHaveBeenCalled();
+            );
+            expect(outcome).toEqual({
+                kind: 'noop',
+                reason: expect.stringContaining('ERP user user-erp-unknown not received yet'),
+            });
         });
 
         // The actual bug this fix addresses: a manager erpId that's known but still unlinked

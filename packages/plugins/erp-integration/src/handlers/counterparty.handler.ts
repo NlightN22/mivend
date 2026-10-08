@@ -3,7 +3,6 @@ import type { RequestContext } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { UserEnrichmentService } from '@mivend/plugin-access-control';
 
-import { MissingDependencyError } from '../types';
 import { optionalErpDetails } from './counterparty-erp-details';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -11,6 +10,7 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 interface ManagerResolution {
     assignedManagerId: string | null | undefined;
     managerErpId: string | null | undefined;
+    unresolvedReason?: string;
 }
 
 const loggerCtx = 'IntegrationCounterpartyHandler';
@@ -65,11 +65,8 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         // handler does.
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 
-        const { assignedManagerId, managerErpId } = await this.resolveAssignedManagerId(
-            entityId,
-            ctx,
-            payload,
-        );
+        const { assignedManagerId, managerErpId, unresolvedReason } =
+            await this.resolveAssignedManagerId(entityId, ctx, payload);
 
         const stored = await this.counterpartyService.upsertActiveState(ctx, entityId, {
             name,
@@ -117,7 +114,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                 : inboundNoop(`counterparty ${entityId}: nameless tombstone for an unknown row`);
         }
         Logger.verbose(`Upserted counterparty erpId=${entityId}`, loggerCtx);
-        return inboundApplied();
+        return unresolvedReason ? inboundNoop(unresolvedReason) : inboundApplied();
     }
 
     // Primary manager_id wins; else the first entry of manager_ids; else `undefined` (leave
@@ -133,7 +130,8 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
     // MissingDependencyError retry backlog (65k+ pending rows in staging-integration) — a
     // manager erpId that a human simply hasn't decided on yet (can take days) was retried
     // identically to a genuine cross-stream ordering race (which resolves in seconds/minutes):
-    //   - `{ found: false }` — never seen this erpId at all: a real race, still retryable.
+    //   - `{ found: false }` — never seen this erpId: also a soft link, saved without a manager
+    //     (outcome noop with a reason), back-filled when the user arrives and links.
     //   - `{ found: true, administratorId: null }` — known, still unlinked: NOT a race. Do not
     //     retry; save with no manager (assignedManagerId: null) — AdministratorLinkedListener
     //     backfills it later if/when this erpId actually links.
@@ -157,14 +155,12 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
 
         const resolution = await this.userEnrichmentService.findManagerLink(ctx, managerErpId);
         if (!resolution.found) {
-            // Ordinary eventual-consistency race (the manager's own `user` event may simply not
-            // have arrived yet, Kafka gives no cross-topic ordering guarantee) — retryable, per
-            // external-integration-rules's "Cross-entity dependencies" section. Never silently
-            // skip: that would permanently drop the manager assignment the moment this event
-            // happens to arrive before the manager's own `user` event.
-            throw new MissingDependencyError(
-                `counterparty ${entityId}: manager erpId=${managerErpId} has no linked Administrator yet`,
-            );
+            // Soft link: the manager is a descriptive reference, never a reason to hold the
+            // counterparty (and the contracts waiting for it). managerErpId is stored; assignedManagerId
+            // is back-filled when the ERP user links to an Administrator (AdministratorLinkedListener).
+            const reason = `counterparty ${entityId} saved without a manager: ERP user ${managerErpId} not received yet (soft link, assigned once the user links to an Administrator)`;
+            Logger.verbose(reason, loggerCtx);
+            return { assignedManagerId: null, managerErpId, unresolvedReason: reason };
         }
         if (resolution.administratorId === null) {
             Logger.verbose(
