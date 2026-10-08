@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { inboxIssuesLink, outboundProblemsLink } from '../../issue-links';
+import { inboxIssuesLink, outboundProblemsLink, parseIssueLink } from '../../issue-links';
 
 function decodedFilters(link: string): unknown {
     const raw = new URL(link, 'http://x').searchParams.get('filters');
@@ -34,5 +34,19 @@ describe('issue links', () => {
             { id: 'eventType', value: { eq: 'order.submitted' } },
             { id: 'status', value: { eq: 'skipped' } },
         ]);
+    });
+
+    it('parses a link back into path, page id and filters', () => {
+        expect(parseIssueLink(inboxIssuesLink({ stream: 'unit', status: 'failed' }))).toEqual({
+            path: '/integration-inbox-issues',
+            pageId: 'integration-inbox-issues-list',
+            filters: [
+                { id: 'stream', value: { eq: 'unit' } },
+                { id: 'status', value: { eq: 'failed' } },
+            ],
+        });
+        expect(parseIssueLink(outboundProblemsLink({})).pageId).toBe(
+            'integration-outbound-problems-list',
+        );
     });
 });
