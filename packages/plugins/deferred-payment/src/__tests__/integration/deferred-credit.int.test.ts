@@ -250,6 +250,22 @@ describe('deferred credit check over open orders (real SQL + decide)', () => {
         expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(false);
     });
 
+    it('excludes an order rejected by the ERP from exposure, even though still open', async () => {
+        const buyer = await addBuyer(100_000);
+        await addOrder(buyer, 90_000, { erpStatus: 'REJECTED' });
+        expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
+    });
+
+    it('re-enters exposure once a rejected order is un-rejected back to SENT_TO_ERP', async () => {
+        const buyer = await addBuyer(100_000);
+        const orderId = await addOrder(buyer, 90_000, { erpStatus: 'REJECTED' });
+        expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
+        await run(`UPDATE "order" SET "customFieldsErpstatus" = 'SENT_TO_ERP' WHERE id = $1`, [
+            orderId,
+        ]);
+        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
+    });
+
     it('does not count another counterparty’s open orders (data isolation)', async () => {
         const buyer = await addBuyer(100_000);
         const other = await addBuyer(100_000);

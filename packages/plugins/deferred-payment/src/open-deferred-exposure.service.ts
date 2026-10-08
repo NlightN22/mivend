@@ -9,7 +9,8 @@ import {
 
 import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS, DEFERRED_PAYMENT_METHOD_CODE } from './constants';
 
-// Deferred orders neither confirmed by ERP nor reflected in its credit balance yet.
+// Deferred orders neither confirmed by ERP nor reflected in its credit balance yet. REJECTED is
+// deliberately excluded (#204) — its sum must stop blocking the customer's limit immediately.
 export const UNCONFIRMED_ERP_STATUSES = ['PENDING', 'SENT_TO_ERP', 'RESERVED'];
 
 @Injectable()
