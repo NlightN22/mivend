@@ -86,6 +86,13 @@ resolved entirely inside the service via layer 3.
 
 ---
 
+### Read vs. write permissions on operational tooling
+
+Health views are read-only (`ManageErpIntegration`); any action that changes integration state is a
+separate permission so viewing a page never implies being able to act on it. `RecoverIntegrationEvents`
+gates requeueing failed and rebuilding skipped outbound events (issue #200); it is granted explicitly
+to a role, nothing inherits it from `ManageErpIntegration`.
+
 ## Layer 3: `AccessScopeService` — one service, reused everywhere
 
 **Rule: row-level visibility filtering is a single, reusable service — never copy-pasted

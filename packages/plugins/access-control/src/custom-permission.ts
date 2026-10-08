@@ -88,6 +88,11 @@ export const CustomPermission = {
         description:
             'Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84)',
     }),
+    RecoverIntegrationEvents: new PermissionDefinition({
+        name: 'RecoverIntegrationEvents',
+        description:
+            'Requeue failed and rebuild skipped outbound integration events (issue #200); a write action, separate from the read-only ManageErpIntegration health views',
+    }),
     ManageAdministratorLifecycle: new PermissionDefinition({
         name: 'ManageAdministratorLifecycle',
         description:

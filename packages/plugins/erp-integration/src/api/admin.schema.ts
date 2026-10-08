@@ -113,6 +113,13 @@ export const adminApiExtensions: DocumentNode = gql`
         lastNoopReason: String
     }
 
+    "Result of rebuilding a skipped outbox row: event queued, still skipped (reason updated) or already sent."
+    enum RebuildSkippedOutcome {
+        QUEUED
+        STILL_SKIPPED
+        ALREADY_SENT
+    }
+
     type ContractVersionDrift {
         installed: String!
         latest: String
@@ -219,7 +226,7 @@ export const adminApiExtensions: DocumentNode = gql`
         resolveErpReconciliationIssue(id: ID!, resolution: String!): ErpReconciliationIssue!
         "Returns outbox rows that gave up publishing (status failed) to pending so the next sweep retries them. Returns how many moved (issue #200)."
         requeueFailedIntegrationOutbox(ids: [ID!]!): Int!
-        "Rebuilds the event of a skipped outbox row from its source data. Returns queued, still-skipped (reason updated) or already-sent (issue #200)."
-        rebuildSkippedIntegrationOutbox(id: ID!): String!
+        "Rebuilds the event of a skipped outbox row from its source data (issue #200)."
+        rebuildSkippedIntegrationOutbox(id: ID!): RebuildSkippedOutcome!
     }
 `;
