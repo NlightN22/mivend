@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useCartStore } from '../../stores/cart';
-import CartItem from './CartItem.vue';
+import CartLineGroup from './CartLineGroup.vue';
 
 const cartStore = useCartStore();
 const checkedIds = ref(new Set<string>());
@@ -27,6 +27,12 @@ function setChecked(id: string, value: boolean): void {
 }
 
 const hasSelection = computed(() => checkedIds.value.size > 0);
+const orderableLines = computed(() =>
+    cartStore.lines.filter(l => l.productVariant.availableForOrder !== false),
+);
+const blockedLines = computed(() =>
+    cartStore.lines.filter(l => l.productVariant.availableForOrder === false),
+);
 
 async function confirmClear(): Promise<void> {
     confirmingClear.value = false;
@@ -84,26 +90,24 @@ function cancelClear(): void {
 
         <div class="item-list__spacer" />
 
-        <div class="item-list__section-title">
-            <span>Available to order</span>
-            <small>{{ cartStore.lines.length }} items · stock reserved after confirmation</small>
-        </div>
+        <CartLineGroup
+            v-if="orderableLines.length > 0"
+            title="Available to order"
+            note="stock reserved after confirmation"
+            :lines="orderableLines"
+            :checked-ids="checkedIds"
+            @update:checked="setChecked"
+        />
 
-        <div class="item-list__items">
-            <div class="item-list__columns" aria-hidden="true">
-                <span>Product</span>
-                <span>Price</span>
-                <span>Quantity</span>
-                <span>Total</span>
-            </div>
-            <CartItem
-                v-for="line in cartStore.lines"
-                :key="line.id"
-                :line="line"
-                :checked="checkedIds.has(line.id)"
-                @update:checked="setChecked(line.id, $event)"
-            />
-        </div>
+        <CartLineGroup
+            v-if="blockedLines.length > 0"
+            blocked
+            title="Not available for order"
+            note="remove them to continue"
+            :lines="blockedLines"
+            :checked-ids="checkedIds"
+            @update:checked="setChecked"
+        />
 
         <div class="item-list__note">
             <span>ℹ</span>
@@ -219,28 +223,6 @@ function cancelClear(): void {
     height: 16px;
 }
 
-.item-list__section-title {
-    margin: 0 16px;
-    padding: 14px 16px;
-    border-radius: 18px;
-    background: #f6f9f8;
-    font-size: 17px;
-    font-weight: 950;
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: center;
-}
-.item-list__section-title small {
-    color: #66736e;
-    font-size: 13px;
-    font-weight: 800;
-}
-
-.item-list__items {
-    padding: 0 16px 4px;
-}
-
 .item-list__note {
     margin: 0 16px 18px;
     padding: 14px 16px;
@@ -252,24 +234,5 @@ function cancelClear(): void {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-}
-
-.item-list__columns {
-    display: grid;
-    grid-template-columns: 28px 96px minmax(0, 1fr) 112px 150px 120px;
-    gap: 14px;
-    padding: 10px 0 0;
-    color: #66736e;
-    font-size: 12px;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-.item-list__columns span:nth-child(1) {
-    grid-column: 3;
-}
-@media (max-width: 900px) {
-    .item-list__columns {
-        display: none;
-    }
 }
 </style>
