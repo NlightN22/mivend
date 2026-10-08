@@ -116,9 +116,9 @@ built), `resolved` (a skipped row whose event was rebuilt).
   publishes while holding that lock on purpose (serialized per row): two sweeps never publish the
   same row, and a requeue waits for the sweep instead of being overwritten.
 - Requeue: admin mutation `requeueFailedIntegrationOutbox(ids)` (1 to 500 numeric ids; needs
-  `RecoverIntegrationEvents`) returns failed rows to `pending` with a fresh retry state. Safe only if the receiver
-  deduplicates by `event_id` (the producer is idempotent and keys by `event_id`; Integration
-  Service's own dedup is to be confirmed).
+  `RecoverIntegrationEvents`) returns failed rows to `pending` with a fresh retry state. Safe: the receiver
+  deduplicates by `event_id` (see "Receiver deduplication" below); a requeued row keeps its
+  `event_id`.
 - Skipped: the event could not be built (for example a line has no `organizationId`); the row
   holds the subject (`orderId`, `orderCode`) and the reason. After fixing the cause, call
   `rebuildSkippedIntegrationOutbox(id)` (needs `RecoverIntegrationEvents`): it rebuilds from the
@@ -128,6 +128,22 @@ built), `resolved` (a skipped row whose event was rebuilt).
   matched by the registry's `subjectKey`, `orderId` for `order.submitted`).
 - Sysadmin: the alerts fire on any `failed` or `skipped`; report event type and reason to a
   developer.
+
+### Receiver deduplication (verified in the Integration Service source, read-only)
+
+- The order-submitted consumer inserts the message into its inbox with the unique key
+  (source system, entity type, `entityId` = mivend's `eventId` from the payload, constant version)
+  and `ON CONFLICT DO NOTHING`; the command built from it reuses the same `eventId` under a second
+  unique key. A redelivered or requeued event with the same `event_id` is a no-op on both layers.
+- It does not deduplicate by order: a new event id for the same order is a new command. This is why
+  rebuilding a `skipped` order checks for an existing event by `orderId` first and why a human must
+  never create a second event for an order that was already sent.
+- Producer side: the Kafka message key is the `event_id`, the producer is idempotent.
+- Not verified: only the repository source and a local build were read, not the deployed instance.
+  The consumer parses the raw message as JSON, while mivend sends the Confluent wire format (magic
+  byte + schema id + JSON); the source shows no step that strips that header. Check on the real
+  instance that `order.submitted` is actually accepted before relying on delivery (an unparsable
+  message is logged and skipped there without a record).
 
 ## Principles (apply to every inbound and outbound integration flow)
 
@@ -141,8 +157,9 @@ built), `resolved` (a skipped row whose event was rebuilt).
    reason, or `superseded`), `retrying` or `failed` (including unprocessable Kafka messages). A bare
    `return` that only logs is a defect; for inbound handlers it does not compile.
 4. **Every non-success state is retryable.** `failed` returns to `pending`; `skipped` is rebuilt
-   from the source data once the cause is fixed. Retrying is safe only if the receiver
-   deduplicates by `event_id` (to be confirmed with Integration Service).
+   from the source data once the cause is fixed. Retrying a `failed` row keeps its `event_id`, so
+   the receiver's dedup makes it safe; a rebuilt `skipped` order gets new event ids, so mivend
+   itself must refuse to rebuild an order that already has an event (`ALREADY_SENT`).
 5. **Everything is visible.** The Integration health page shows all states; a non-zero `failed` or
    `skipped` is alertable.
 6. **Enforced by structure, not by discipline.** The outbound gateway and the typed inbound
