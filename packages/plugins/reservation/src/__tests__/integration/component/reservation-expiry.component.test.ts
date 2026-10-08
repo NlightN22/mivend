@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, EntityManager, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { Order } from '@vendure/core';
 import {
@@ -36,10 +36,19 @@ import { ReservationExpiryService } from '../../../reservation-expiry.service';
 // `getRepository(Reservation|Order)` to hand-rolled tables mirroring production schema — the same
 // substitution idea `reserve-order.concurrency.test.ts`'s connectionShim uses, just applied at
 // the DataSource/EntityManager boundary instead of TransactionalConnection.
+
+// Embedded type (flattened columns), not jsonb — mirrors Vendure's own CustomOrderFields
+// storage, needed for the REJECTED-deadline query's `where: { customFields: { ... } }` below.
+class TestOrderCustomFields {
+    @Column({ type: 'varchar', nullable: true }) reservationState!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpStatus!: string | null;
+    @Column({ type: 'timestamp', nullable: true }) erpStatusAt!: Date | null;
+}
+
 @Entity('reservation_test_order')
 class TestOrder {
     @PrimaryGeneratedColumn('uuid') id!: string;
-    @Column({ type: 'jsonb', default: {} }) customFields!: Record<string, unknown>;
+    @Column(() => TestOrderCustomFields) customFields!: TestOrderCustomFields;
 }
 
 @Index('idx_reservation_expiry_test_active_line_location', ['orderLineId', 'stockLocationId'], {
@@ -69,6 +78,8 @@ class TestReservation {
 
 let realDataSource: DataSource;
 let service: ReservationExpiryService;
+let notificationServiceShim: { create: ReturnType<typeof vi.fn> };
+let eventBusShim: { publish: ReturnType<typeof vi.fn> };
 
 const { schema, extra } = testSchemaOptions('reservation_expiry_component');
 
@@ -104,17 +115,17 @@ beforeAll(async () => {
             realDataSource.transaction(manager => work(wrapManager(manager))),
     };
 
-    // RequestContextService/NotificationService are exercised by plugin-notification's own tests
-    // and by the reservation-expiry unit tests (mocked) — this component test is only about the
-    // real-Postgres transaction/concurrency behavior of the reservation/order tables, so both are
-    // stubbed here to no-ops.
+    // RequestContextService/NotificationService/EventBus are covered by their own plugins'
+    // tests — this file is only about the real-Postgres transaction/concurrency behavior.
     const requestContextServiceShim = { create: async () => ({}) };
-    const notificationServiceShim = { create: async () => ({}) };
+    notificationServiceShim = { create: vi.fn(async () => ({})) };
+    eventBusShim = { publish: vi.fn() };
 
     service = new ReservationExpiryService(
         dataSourceShim as never,
         requestContextServiceShim as never,
         notificationServiceShim as never,
+        eventBusShim as never,
     );
 });
 
@@ -127,10 +138,17 @@ beforeEach(async () => {
     await realDataSource.query(
         'TRUNCATE TABLE reservation_test_reservation, reservation_test_order CASCADE',
     );
+    notificationServiceShim.create.mockClear();
+    eventBusShim.publish.mockClear();
 });
 
-async function seedOrder(reservationState: string): Promise<TestOrder> {
-    return realDataSource.getRepository(TestOrder).save({ customFields: { reservationState } });
+async function seedOrder(
+    reservationState: string,
+    extra: Partial<TestOrderCustomFields> = {},
+): Promise<TestOrder> {
+    return realDataSource
+        .getRepository(TestOrder)
+        .save({ customFields: { reservationState, ...extra } });
 }
 
 function dueReservation(overrides: Partial<TestReservation>): Partial<TestReservation> {
@@ -167,7 +185,7 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
         const reloadedOrder = await realDataSource
             .getRepository(TestOrder)
             .findOneByOrFail({ id: order.id });
-        expect(reloadedOrder.customFields['reservationState']).toBe('AWAITING_CONFIRMATION');
+        expect(reloadedOrder.customFields.reservationState).toBe('AWAITING_CONFIRMATION');
     });
 
     it('leaves a not-yet-due reservation and its order untouched', async () => {
@@ -188,7 +206,7 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
         const reloadedOrder = await realDataSource
             .getRepository(TestOrder)
             .findOneByOrFail({ id: order.id });
-        expect(reloadedOrder.customFields['reservationState']).toBe('RESERVED');
+        expect(reloadedOrder.customFields.reservationState).toBe('RESERVED');
     });
 
     it('never auto-releases an auto-prepaid reservation — flags it once for manual intervention', async () => {
@@ -206,7 +224,7 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
         const orderAfterFirst = await realDataSource
             .getRepository(TestOrder)
             .findOneByOrFail({ id: order.id });
-        expect(orderAfterFirst.customFields['reservationState']).toBe('RESERVED');
+        expect(orderAfterFirst.customFields.reservationState).toBe('RESERVED');
 
         // Re-running the sweep on an already-flagged row is a safe no-op — mirrors the "safe
         // repeat sweep" requirement from docs/testing-patterns.md's Retry and recovery pattern.
@@ -235,6 +253,101 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
         const reloadedOrder = await realDataSource
             .getRepository(TestOrder)
             .findOneByOrFail({ id: order.id });
-        expect(reloadedOrder.customFields['reservationState']).toBe('AWAITING_CONFIRMATION');
+        expect(reloadedOrder.customFields.reservationState).toBe('AWAITING_CONFIRMATION');
+    });
+
+    // issue #204: the ERP-rejection timeout is independent of the reservation's own TTL —
+    // this reservation isn't due by expiresAt at all, only by its order's REJECTED deadline.
+    describe('REJECTED-order timeout (issue #204)', () => {
+        async function seedRejectedOrder(rejectedDaysAgo: number): Promise<TestOrder> {
+            return seedOrder('RESERVED', {
+                erpStatus: 'REJECTED',
+                erpStatusAt: new Date(Date.now() - rejectedDaysAgo * 24 * 60 * 60 * 1000),
+            });
+        }
+
+        it('notifies and releases a reservation once its order has been REJECTED past the deadline', async () => {
+            const order = await seedRejectedOrder(8);
+            await realDataSource.getRepository(TestReservation).save(
+                dueReservation({
+                    orderId: order.id,
+                    creationMethod: 'manual',
+                    expiresAt: new Date(Date.now() + 60_000),
+                }),
+            );
+
+            const count = await service.expireDueReservations();
+
+            expect(count).toBe(1);
+            expect(notificationServiceShim.create).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({ sourceType: 'reservation-rejected-release' }),
+            );
+            expect(eventBusShim.publish).toHaveBeenCalledTimes(1);
+            const reservation = await realDataSource.getRepository(TestReservation).find();
+            expect(reservation[0]?.status).toBe('released');
+            expect(reservation[0]?.releasedAt).not.toBeNull();
+            expect(reservation[0]?.erpReleaseOperationId).not.toBeNull();
+            const reloadedOrder = await realDataSource
+                .getRepository(TestOrder)
+                .findOneByOrFail({ id: order.id });
+            expect(reloadedOrder.customFields.reservationState).toBe('RELEASED');
+        });
+
+        it('leaves a REJECTED order alone before its own deadline', async () => {
+            const order = await seedRejectedOrder(1);
+            await realDataSource.getRepository(TestReservation).save(
+                dueReservation({
+                    orderId: order.id,
+                    creationMethod: 'manual',
+                    expiresAt: new Date(Date.now() + 60_000),
+                }),
+            );
+
+            const count = await service.expireDueReservations();
+
+            expect(count).toBe(0);
+            const reservation = await realDataSource.getRepository(TestReservation).find();
+            expect(reservation[0]?.status).toBe('active');
+        });
+
+        it('a reservation that is both TTL-due and REJECTED-due is released, never double-processed', async () => {
+            const order = await seedRejectedOrder(8);
+            await realDataSource
+                .getRepository(TestReservation)
+                .save(dueReservation({ orderId: order.id, creationMethod: 'manual' }));
+
+            const count = await service.expireDueReservations();
+
+            expect(count).toBe(1);
+            const reservation = await realDataSource.getRepository(TestReservation).find();
+            expect(reservation).toHaveLength(1);
+            expect(reservation[0]?.status).toBe('released');
+        });
+
+        it('two concurrent sweeps over the same REJECTED-due row release it exactly once', async () => {
+            const order = await seedRejectedOrder(8);
+            await realDataSource.getRepository(TestReservation).save(
+                dueReservation({
+                    orderId: order.id,
+                    creationMethod: 'manual',
+                    expiresAt: new Date(Date.now() + 60_000),
+                }),
+            );
+
+            const [countA, countB] = await Promise.all([
+                service.expireDueReservations(),
+                service.expireDueReservations(),
+            ]);
+
+            expect(countA + countB).toBeGreaterThanOrEqual(1);
+            const reservation = await realDataSource.getRepository(TestReservation).find();
+            expect(reservation).toHaveLength(1);
+            expect(reservation[0]?.status).toBe('released');
+            const reloadedOrder = await realDataSource
+                .getRepository(TestOrder)
+                .findOneByOrFail({ id: order.id });
+            expect(reloadedOrder.customFields.reservationState).toBe('RELEASED');
+        });
     });
 });

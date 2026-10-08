@@ -1,10 +1,12 @@
+import { randomUUID } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
-import { Order, RequestContextService } from '@vendure/core';
+import { EventBus, Order, RequestContextService } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
 import { DataSource, In, LessThanOrEqual } from 'typeorm';
 
 import { Reservation } from './entities/reservation.entity';
-import { loggerCtx } from './types';
+import { ReservationReleasedEvent } from './reservation.events';
+import { DEFAULT_RESERVATION_DAYS, loggerCtx } from './types';
 
 // Called by the reservation-expiry ScheduledTask on a timer — split out of ReservationService to keep that
 // file under AGENTS.md's ~300-line guideline. Runs outside any HTTP request, so it uses the raw
@@ -19,26 +21,45 @@ export class ReservationExpiryService {
         private dataSource: DataSource,
         private requestContextService: RequestContextService,
         private notificationService: NotificationService,
+        private eventBus: EventBus,
     ) {}
 
-    // Branches by creationMethod (see docs/order-flow.md "On expiry"):
-    //  - non-prepaid ('manual'/'auto-trust-rule'): expire the Reservation and return the order
-    //    to AWAITING_CONFIRMATION if it was RESERVED, in the same transaction as the status flip
-    //    so the two never drift apart.
-    //  - 'auto-prepaid': never silently release a paid customer's stock — the Reservation stays
-    //    active. Once per row (guarded by interventionFlaggedAt), log a warning for staff. A
-    //    real notification surface is tracked as a separate follow-up, not built here.
+    // Branches by creationMethod and REJECTED-order deadline — see docs/order-flow.md
+    // "On expiry" and issue #204's own notify-then-release timeout for ERP rejections.
     async expireDueReservations(): Promise<number> {
         return this.dataSource.transaction(async manager => {
             const dueRows = await manager.getRepository(Reservation).find({
                 where: { status: 'active', expiresAt: LessThanOrEqual(new Date()) },
             });
-            if (dueRows.length === 0) {
+
+            const rejectionCutoff = new Date(
+                Date.now() - DEFAULT_RESERVATION_DAYS * 24 * 60 * 60 * 1000,
+            );
+            const rejectedOrders = await manager.getRepository(Order).find({
+                where: {
+                    customFields: {
+                        erpStatus: 'REJECTED',
+                        erpStatusAt: LessThanOrEqual(rejectionCutoff),
+                    },
+                },
+            });
+            const rejectedOrderIds = rejectedOrders.map(order => String(order.id));
+            const rejectedDue = rejectedOrderIds.length
+                ? await manager.getRepository(Reservation).find({
+                      where: { status: 'active', orderId: In(rejectedOrderIds) },
+                  })
+                : [];
+            const rejectedDueIds = new Set(rejectedDue.map(row => row.id));
+            const expiryDueRows = dueRows.filter(row => !rejectedDueIds.has(row.id));
+
+            if (expiryDueRows.length === 0 && rejectedDue.length === 0) {
                 return 0;
             }
 
-            const nonPrepaidDue = dueRows.filter(row => row.creationMethod !== 'auto-prepaid');
-            const prepaidDue = dueRows.filter(
+            const nonPrepaidDue = expiryDueRows.filter(
+                row => row.creationMethod !== 'auto-prepaid',
+            );
+            const prepaidDue = expiryDueRows.filter(
                 row => row.creationMethod === 'auto-prepaid' && !row.interventionFlaggedAt,
             );
 
@@ -72,6 +93,13 @@ export class ReservationExpiryService {
                 }
             }
 
+            // issue #42/#87 Part 2: no signed-in administrator on this timer sweep — broadcast
+            // instead of guessing a recipient. Shared by both notification branches below.
+            const ctx =
+                prepaidDue.length > 0 || rejectedDue.length > 0
+                    ? await this.requestContextService.create({ apiType: 'admin' })
+                    : null;
+
             if (prepaidDue.length > 0) {
                 const flaggedAt = new Date();
                 await manager
@@ -86,14 +114,7 @@ export class ReservationExpiryService {
                             `${row.expiresAt.toISOString()} without release — needs manual intervention.`,
                         loggerCtx,
                     );
-                }
-
-                // issue #42/#87 Part 2: this sweep runs on a timer with no signed-in
-                // administrator and no per-reservation "owning admin" concept — broadcast to
-                // every administrator instead of guessing a recipient.
-                const ctx = await this.requestContextService.create({ apiType: 'admin' });
-                for (const row of prepaidDue) {
-                    await this.notificationService.create(ctx, {
+                    await this.notificationService.create(ctx!, {
                         recipientType: 'administrator-broadcast',
                         kind: 'error',
                         sourceType: 'reservation-intervention',
@@ -104,7 +125,46 @@ export class ReservationExpiryService {
                 }
             }
 
-            return nonPrepaidDue.length + prepaidDue.length;
+            if (rejectedDue.length > 0) {
+                const releasedAt = new Date();
+                const rejectedOrdersById = new Map(
+                    rejectedOrders.map(order => [String(order.id), order]),
+                );
+
+                for (const row of rejectedDue) {
+                    await this.notificationService.create(ctx!, {
+                        recipientType: 'administrator-broadcast',
+                        kind: 'error',
+                        sourceType: 'reservation-rejected-release',
+                        sourceId: String(row.id),
+                        title: 'Reservation released after ERP rejection timeout',
+                        message: `Reservation ${String(row.id)} (order ${row.orderId}) was released after its order stayed REJECTED by the ERP for over ${DEFAULT_RESERVATION_DAYS} day(s).`,
+                    });
+
+                    const erpReleaseOperationId = randomUUID();
+                    await manager
+                        .getRepository(Reservation)
+                        .update(row.id, { status: 'released', releasedAt, erpReleaseOperationId });
+
+                    const order = rejectedOrdersById.get(String(row.orderId));
+                    if (order) {
+                        // Same `repo.update()`-not-`.save()` gotcha as the non-prepaid branch above.
+                        await manager.getRepository(Order).update(order.id, {
+                            customFields: { ...order.customFields, reservationState: 'RELEASED' },
+                        });
+                    }
+
+                    this.eventBus.publish(
+                        new ReservationReleasedEvent(
+                            ctx!,
+                            { ...row, status: 'released', releasedAt, erpReleaseOperationId },
+                            String(row.orderId),
+                        ),
+                    );
+                }
+            }
+
+            return nonPrepaidDue.length + prepaidDue.length + rejectedDue.length;
         });
     }
 }
