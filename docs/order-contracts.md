@@ -81,6 +81,30 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
   (a later difference is shown on the order and settled through the ERP). Not an accounting document
   and not synced to the ERP. Tracked in #206 together with the question of system-level versioning.
 
+## Reservation end, expiry and cancellation (decided, planned in #194)
+
+Not implemented yet; recorded here so the decisions are not lost. Plan and open points are in #194.
+
+- The ERP order document has its own "reserve until" attribute (`РезервДо`), and the ERP releases reserves
+  by that date. The reserve register has no expiry and our current contract carries only the reserved
+  quantity, so the attribute is used and exchanged: mivend sends its own reservation end as `reserveUntil`
+  in `order.submitted`, and the ERP exports the date back on `order-changed` and on the registration result.
+- Before the ERP registers an order, mivend owns the deadline: at expiry it **cancels** the order (it no
+  longer returns it to the confirmation queue) and tells the ERP.
+- Cancellation is propagated to the ERP in both cases, for an order not yet registered and for one already
+  registered: mivend asks, the ERP decides and answers through `order-changed`; if the ERP refuses (for
+  example already shipped), mivend follows the ERP and the order stays. mivend never cancels a registered
+  order on its own authority.
+- Transport: a mivend-owned `order.cancelled` event in `@nlightn22/event-contracts` (same ownership procedure
+  as `order.submitted`), turned by the ERP integration into a narrow cancellation command. Not the
+  `order-change-requests` stream (it reconciles the state of an already registered order).
+- Race (a late `order.submitted` after our cancel): a still-pending outbox row is marked `skipped`, and the
+  ERP keeps a cancelled-`orderId` tombstone and rejects a late submit.
+- If the ERP reports a different reserved quantity than ours, the ERP wins (#199): our reservation follows it
+  and the difference is only recorded for staff.
+- Still to confirm with a 1C developer: what the scheduled release does at `РезервДо`, and the operation that
+  cancels a registered posted order.
+
 ## Deliberately out of scope (open questions)
 
 - Contracts with dedicated sub-limits (amount, term) inside the total credit limit, and contracts
