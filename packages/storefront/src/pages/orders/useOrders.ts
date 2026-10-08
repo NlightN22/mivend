@@ -10,7 +10,8 @@ export type ErpStatus =
     | 'ASSEMBLED'
     | 'SHIPPED'
     | 'DELIVERED'
-    | 'CANCELLED';
+    | 'CANCELLED'
+    | 'REJECTED';
 
 export type OrderSummary = MyOrdersQuery['myOrders']['items'][number];
 
@@ -30,6 +31,8 @@ export const STATUS_LABEL: Record<string, string> = {
     SHIPPED: 'Shipped',
     DELIVERED: 'Delivered',
     CANCELLED: 'Cancelled',
+    // Never show the internal ERP reason code/text here — customer-facing wording only (#204).
+    REJECTED: 'Order not accepted, please contact your manager',
 };
 
 export const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'muted' | 'error'> = {
@@ -41,6 +44,7 @@ export const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'muted' | 'e
     SHIPPED: 'default',
     DELIVERED: 'muted',
     CANCELLED: 'error',
+    REJECTED: 'error',
 };
 
 export function useOrders(): {
