@@ -102,8 +102,12 @@ Not implemented yet; recorded here so the decisions are not lost. Plan and open 
   ERP keeps a cancelled-`orderId` tombstone and rejects a late submit.
 - If the ERP reports a different reserved quantity than ours, the ERP wins (#199): our reservation follows it
   and the difference is only recorded for staff.
-- Still to confirm with a 1C developer: what the scheduled release does at `РезервДо`, and the operation that
-  cancels a registered posted order.
+- The ERP release is a scheduled job (`АвтоматическоеЗакрытиеЗаказовПокупателей`): it picks orders whose
+  `РезервДо` is earlier than yesterday and posts a "closing of customer orders" document, and posting it
+  releases the reserve in the register (the order itself is not changed). Our orders have an empty
+  `РезервДо` today, so the job never selects them: sending `reserveUntil` is what makes it work.
+- Cancelling a registered posted order is most likely the same closing document; a separate manual cancel
+  flow is still to be checked on the ERP side.
 
 ## Deliberately out of scope (open questions)
 
