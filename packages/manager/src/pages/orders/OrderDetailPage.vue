@@ -20,6 +20,7 @@ import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
 import OrderContractPanel from '../../components/order-detail/OrderContractPanel.vue';
+import ReservationFailurePanel from '../../components/order-detail/ReservationFailurePanel.vue';
 import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
 
 const route = useRoute();
@@ -173,6 +174,17 @@ watch(() => route.params.code, load);
                             <span>{{ order.customFields.erpRejectionReasonText }}</span>
                         </div>
                     </div>
+                </MvPanel>
+
+                <MvPanel
+                    v-if="order.customFields.reservationFailureReason"
+                    title="Reservation failed"
+                >
+                    <ReservationFailurePanel
+                        :reason="order.customFields.reservationFailureReason"
+                        :detail="order.customFields.reservationFailureDetail"
+                        :failed-at="order.customFields.reservationFailedAt"
+                    />
                 </MvPanel>
 
                 <MvPanel title="Reservation">

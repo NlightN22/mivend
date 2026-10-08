@@ -78,6 +78,9 @@ const columns = computed<Column<TableRow>[]>(() => {
                 if (row.erpRejected) {
                     badges.push(h(MvStatusBadge, { variant: 'danger' }, () => 'Rejected by ERP'));
                 }
+                if (row.reservationFailed) {
+                    badges.push(h(MvStatusBadge, { variant: 'warning' }, () => 'Reserve failed'));
+                }
                 return h('div', { class: 'orders-table__state-cell' }, badges);
             },
             mobile: { badge: true },
@@ -143,6 +146,7 @@ const rows = computed<TableRow[]>(() =>
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
             stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
             erpRejected: order.customFields?.erpStatus === 'REJECTED',
+            reservationFailed: Boolean(order.customFields?.reservationFailureReason),
             total: new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: order.currencyCode,

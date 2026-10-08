@@ -5482,6 +5482,9 @@ export type OrderCustomFields = {
     paymentStatus: Maybe<Scalars['String']['output']>;
     placedByAdministratorId: Maybe<Scalars['String']['output']>;
     reservationDays: Maybe<Scalars['Int']['output']>;
+    reservationFailedAt: Maybe<Scalars['DateTime']['output']>;
+    reservationFailureDetail: Maybe<Scalars['String']['output']>;
+    reservationFailureReason: Maybe<Scalars['String']['output']>;
     reservationState: Maybe<Scalars['String']['output']>;
     selectedContractId: Maybe<Scalars['String']['output']>;
     sourceOrderId: Maybe<Scalars['String']['output']>;
@@ -5520,6 +5523,9 @@ export type OrderFilterParameter = {
     paymentStatus?: InputMaybe<StringOperators>;
     placedByAdministratorId?: InputMaybe<StringOperators>;
     reservationDays?: InputMaybe<NumberOperators>;
+    reservationFailedAt?: InputMaybe<DateOperators>;
+    reservationFailureDetail?: InputMaybe<StringOperators>;
+    reservationFailureReason?: InputMaybe<StringOperators>;
     reservationState?: InputMaybe<StringOperators>;
     selectedContractId?: InputMaybe<StringOperators>;
     shipping?: InputMaybe<NumberOperators>;
@@ -5729,6 +5735,9 @@ export type OrderSortParameter = {
     paymentStatus?: InputMaybe<SortOrder>;
     placedByAdministratorId?: InputMaybe<SortOrder>;
     reservationDays?: InputMaybe<SortOrder>;
+    reservationFailedAt?: InputMaybe<SortOrder>;
+    reservationFailureDetail?: InputMaybe<SortOrder>;
+    reservationFailureReason?: InputMaybe<SortOrder>;
     reservationState?: InputMaybe<SortOrder>;
     selectedContractId?: InputMaybe<SortOrder>;
     shipping?: InputMaybe<SortOrder>;
@@ -7110,6 +7119,8 @@ export type Query = {
     provinces: ProvinceList;
     /** Non-blocking VAT-code review flags raised while importing products, newest first (issue #79). */
     recentProductTaxCodeFlags: ProductTaxCodeFlagList;
+    /** Orders currently refused by the ERP (Order.customFields.erpStatus = REJECTED), issue #204. */
+    rejectedOrderCount: Scalars['Int']['output'];
     reservationExtensionLimit: Maybe<ReservationExtensionLimit>;
     retroBonusRules: Array<RetroBonusRule>;
     role: Maybe<Role>;
@@ -9012,6 +9023,9 @@ export type UpdateOrderCustomFieldsInput = {
     paymentStatus?: InputMaybe<Scalars['String']['input']>;
     placedByAdministratorId?: InputMaybe<Scalars['String']['input']>;
     reservationDays?: InputMaybe<Scalars['Int']['input']>;
+    reservationFailedAt?: InputMaybe<Scalars['DateTime']['input']>;
+    reservationFailureDetail?: InputMaybe<Scalars['String']['input']>;
+    reservationFailureReason?: InputMaybe<Scalars['String']['input']>;
     reservationState?: InputMaybe<Scalars['String']['input']>;
     selectedContractId?: InputMaybe<Scalars['String']['input']>;
     sourceOrderId?: InputMaybe<Scalars['String']['input']>;
@@ -10876,6 +10890,9 @@ export type OrderDetailQuery = {
             totalWithTax: any;
             customFields: {
                 reservationDays: number | null;
+                reservationFailureReason: string | null;
+                reservationFailureDetail: string | null;
+                reservationFailedAt: any | null;
                 erpStatus: string | null;
                 erpRejectionReasonCode: string | null;
                 erpRejectionReasonText: string | null;
@@ -10956,7 +10973,11 @@ export type OrderListItemFieldsFragment = {
     orderPlacedAt: any | null;
     createdAt: any;
     creditLimitExceeded: boolean;
-    customFields: { reservationState: string | null; erpStatus: string | null } | null;
+    customFields: {
+        reservationState: string | null;
+        reservationFailureReason: string | null;
+        erpStatus: string | null;
+    } | null;
     customer: {
         firstName: string;
         lastName: string;
@@ -10988,7 +11009,11 @@ export type OrdersPageQuery = {
             orderPlacedAt: any | null;
             createdAt: any;
             creditLimitExceeded: boolean;
-            customFields: { reservationState: string | null; erpStatus: string | null } | null;
+            customFields: {
+                reservationState: string | null;
+                reservationFailureReason: string | null;
+                erpStatus: string | null;
+            } | null;
             customer: {
                 firstName: string;
                 lastName: string;
@@ -11856,6 +11881,7 @@ export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
   creditLimitExceeded
   customFields {
     reservationState
+    reservationFailureReason
     erpStatus
   }
   customer {
@@ -13602,6 +13628,9 @@ export const OrderDetailDocument = new TypedDocumentString(`
       totalWithTax
       customFields {
         reservationDays
+        reservationFailureReason
+        reservationFailureDetail
+        reservationFailedAt
         erpStatus
         erpRejectionReasonCode
         erpRejectionReasonText
@@ -13690,6 +13719,7 @@ export const OrdersPageDocument = new TypedDocumentString(`
   creditLimitExceeded
   customFields {
     reservationState
+    reservationFailureReason
     erpStatus
   }
   customer {

@@ -13,6 +13,9 @@ query OrderDetail($code: String!) {
             totalWithTax
             customFields {
                 reservationDays
+                reservationFailureReason
+                reservationFailureDetail
+                reservationFailedAt
                 erpStatus
                 erpRejectionReasonCode
                 erpRejectionReasonText

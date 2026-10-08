@@ -24,6 +24,7 @@ export interface OrdersFilters {
     managerId: string;
     reservationState: string;
     erpStatus: string;
+    reservationFailed: string;
 }
 
 export const DEFAULT_FILTERS: OrdersFilters = {
@@ -33,6 +34,7 @@ export const DEFAULT_FILTERS: OrdersFilters = {
     managerId: '',
     reservationState: '',
     erpStatus: '',
+    reservationFailed: '',
 };
 
 // Order.customFields.reservationState — an internal technical enum fixed by app logic (see
@@ -60,6 +62,15 @@ export const ORDER_RESERVATION_STATE_BADGE_VARIANT: Record<string, StatusBadgeVa
 // the manager portal needs a badge/filter for today (issue #204); other statuses are
 // customer-facing only (see storefront's useOrders.ts) and have no manager-side filter yet.
 export const ERP_REJECTED_STATUS = 'REJECTED';
+
+// Order.customFields.reservationFailureReason (plugin-reservation/src/types.ts) — why the last
+// automatic reserve failed; set means "needs staff attention", cleared by a successful reserve (#199).
+export const RESERVATION_FAILURE_LABEL: Record<string, string> = {
+    INSUFFICIENT_STOCK: 'Not enough stock',
+    ERP_EXPORT_DATA_MISSING: 'Missing data for the ERP',
+    NOT_ELIGIBLE: 'The order cannot be reserved',
+    UNEXPECTED: 'Unexpected error',
+};
 
 // Order states are Vendure's own OrderProcess state machine — fixed by application logic, not
 // ERP-sourced business data, so a const list is the documented carve-out in the backend-plugin-rules skill ("internal
@@ -115,6 +126,9 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
     }
     if (filters.erpStatus) {
         filter.erpStatus = { eq: filters.erpStatus };
+    }
+    if (filters.reservationFailed) {
+        filter.reservationFailureReason = { isNull: false };
     }
     return filter;
 }

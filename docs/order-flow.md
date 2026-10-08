@@ -404,6 +404,31 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
 - Not modeled: a per-warehouse organization check. Reservation picks the warehouse by branch stock,
   the organization comes from the product's storage location; they are not cross-checked.
 
+### Failed automatic reserve and the ERP's reserved quantity (#199)
+
+- **A failed automatic reserve is visible to staff.** Both auto paths (non-prepaid at placement,
+  prepaid at payment) store `Order.customFields.reservationFailureReason`
+  (`INSUFFICIENT_STOCK`, `ERP_EXPORT_DATA_MISSING`, `NOT_ELIGIBLE`, `UNEXPECTED`; a technical enum
+  like `reservationState`), `reservationFailureDetail` (SKUs with need/available, or the missing ERP
+  data such as "no active contract") and `reservationFailedAt`. A partial `customFields` update, never
+  `save()` of an unhydrated Order. Any successful reserve clears all three. The order itself stays
+  `AWAITING_CONFIRMATION`. Missing ERP-export data and pack-size violations are treated like short
+  stock (recorded, not thrown out of the placement handler); anything else is recorded as
+  `UNEXPECTED` and still rethrown.
+- **Manager portal:** a "Reservation failed" panel on the order page (reason and one line per SKU /
+  missing item), a "Reserve failed" badge and a "Reservation failed" chip/filter in the order list
+  (reason set; a successful reserve clears it). The manual confirm answers with the same reason and
+  lines. The customer sees nothing new.
+- **The placement handler decides on the stored state**, not on the event's Order copy: a repeated or
+  racing placement event cannot roll a `RESERVED` order back to `AWAITING_CONFIRMATION`.
+- **The ERP is the source of truth for quantities.** When an `order-registration-result` or
+  `order-changed` reports a reserved quantity that differs from ours (less, more, zero), the local
+  reservation for that variant is released like a matching one (the ERP holds the stock now) and the
+  difference is recorded as a reconciliation issue for staff. A variant the ERP does not mention keeps
+  its local reservation; a rejected result changes nothing here (see #204).
+- **Expiry and cancel of unconfirmed orders** is tracked in #194, not here: unregistered orders are
+  cancelled by mivend at the deadline and the ERP is told; registered ones follow the ERP.
+
 ### Order contract (mivend#205)
 
 All contract and organization decisions are collected in `docs/order-contracts.md`.
