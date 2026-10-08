@@ -215,7 +215,10 @@ fixtures — don't borrow real data from staging-integration to make a test pass
    `apps/server/.env.central.staging-integration` (gitignored — never commit real credentials).
 2. Fill in `INTEGRATION_KAFKA_SASL_USERNAME`/`INTEGRATION_KAFKA_SASL_PASSWORD` with the real
    staging credentials.
-3. Run `make dev-staging-integration`. It refuses to run if the env file is missing, kills any
+3. Optional: set `EVENT_CONTRACTS_REGISTRY_TOKEN` (read-only package-registry token) so the
+   Integration health page can show whether the event-contracts version is outdated — see
+   `docs/integration-health.md`.
+4. Run `make dev-staging-integration`. It refuses to run if the env file is missing, kills any
    stale staging-integration processes from a previous run first (safe to re-run — see
    `infrastructure/scripts/dev-kill-staging-integration.sh`), starts its own database
    (`mivend_central_staging_integration`), and never touches `make dev`'s local contour or

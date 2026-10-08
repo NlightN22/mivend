@@ -2,6 +2,13 @@
 
 Updated: 2026-10-08 06:40
 
+## #195 integration-health page (2026-10-08, implemented; audit done once, pending final audit/push)
+
+- Dashboard System -> Integration health: Inbound tab (stream x contract x Kafka lag x inbox backlog, drift rows, contract version banner) and Outbound tab (outbox per event type). Full description and failed-rows runbook: `docs/integration-health.md`.
+- Unconsumed contract streams are listed with reasons in `erp-integration/src/ignored-contract-streams.ts` (counterparty-contact/-group, order-change-result, product-group, point-of-sale-type); a unit test fails CI on a new unhandled contract stream.
+- Version lookup needs `EVENT_CONTRACTS_REGISTRY_TOKEN` in the contour env file (not in repo); without it the banner says "could not be checked".
+- Known risk, not fixed: outbox rows dead-letter after 5 attempts at a 5 s sweep (~30 s broker outage) and have no requeue path. `make lint` currently fails on untracked foreign scratch files in `packages/e2e`.
+
 ## #198 order branch fallback + auto-reserve switch (2026-10-08, shipped/audited; pushed)
 
 - **Branch of an order/invoice** = `TradingPointService.resolveServicingBranchId`: point `servicingBranchId` -> `Counterparty.branchId` -> global default branch (`GlobalSettings.defaultBranchId`), resolved at read time (no backfill of ~8000 points). Used by `ErpOrderService.onOrderPlaced`, `InvoiceService`, `MultiplicityOrderInterceptor`. Counterparty auto-assignment stays in #65. If the default branch has no warehouse, payment fails loudly ("no branch-scoped StockLocation").
