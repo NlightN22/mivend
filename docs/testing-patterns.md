@@ -49,7 +49,9 @@ apply, don't just omit the test.
 **Risk**: a repeat produces a duplicate side effect or a divergent result.
 
 **Minimum scenarios**: repeat the command; repeat the inbound event; repeat after success; repeat
-after partial failure; two different events with the same business key; the same external id in
+after partial failure; two different events with the same business key; the same entity published
+again under a new message id (re-confirm, release then confirm, expiry then confirm) producing one
+external effect, keyed by the entity `uuid` (AGENTS.md "Identifiers"); the same external id in
 different valid scopes; concurrent duplicate arrival; DB constraint as the last line of defense.
 
 **Preferred level**: three separate checks at their natural levels — command idempotency (unit or

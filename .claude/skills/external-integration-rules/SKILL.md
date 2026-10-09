@@ -168,6 +168,12 @@ pack`+extract to a scratch dir (or read the freshly-bumped `node_modules` copy) 
    instead of wrong about it. Don't rely on only one of the three; each serves a different reader
    who won't necessarily check the other two.
 
+5. **Identity and idempotency of every entity that crosses the boundary (AGENTS.md "Identifiers").** The entity has an
+   immutable `uuid` and, for a document, a numeric human number; the contract carries both; the integer database id is
+   never sent; the producer has a business-key guard keyed by the `uuid` (a second publish of the same entity must not
+   create a second external effect, `eventId` alone is not idempotency); a test publishes the same entity twice (including
+   re-confirm / release / re-submit paths) and asserts one external effect.
+
 ### Mandatory checklist — auditor's side
 
 A final audit of any stream-consumption change (`mivend.audit.*`'s own remit, AGENTS.md's "Final
@@ -181,6 +187,12 @@ is neither acting on nor has decided not to act on, an open question left open b
 audit does not pass with an unresolved field left as "probably fine, didn't flag it" — every field
 gets tracked down to either a real implementation or a real, written, reasoned deferral before the
 audit reports done.
+
+The same audit also checks item 5 above independently: for every entity the change sends to or
+references in an external system, find the `uuid`/number in the contract, find the guard that
+keys the producer on the `uuid`, and find the test that publishes twice. A boundary entity identified
+only by an integer id, an alphanumeric code or an `eventId` is a real finding (high severity): it is the
+duplicate-document defect waiting for the first re-confirm.
 
 ## Kafka consumer resilience patterns
 
