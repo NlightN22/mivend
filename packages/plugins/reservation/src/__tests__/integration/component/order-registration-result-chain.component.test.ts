@@ -144,6 +144,7 @@ function registrationResult(
     overrides: Partial<OrderRegistrationResultInput> = {},
 ): OrderRegistrationResultInput {
     return {
+        orderUuid: null,
         orderEntityId: ERP_ID,
         requestEntityId: 'request-1',
         localOrderId,
@@ -159,6 +160,7 @@ function registrationResult(
 }
 
 const orderChanged = {
+    orderUuid: null,
     orderEntityId: ERP_ID,
     status: 'IN_PROGRESS',
     reservedLines: [],
