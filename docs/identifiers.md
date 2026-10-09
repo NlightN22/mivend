@@ -44,6 +44,12 @@ and is never an idempotency key for a business entity.
 - **Payment documents:** our number always comes from the sequence; an external reference (acquirer id, receipt number,
   the ERP's event id) is stored and shown separately as the provider/bank reference and never replaces our number.
 - Shown everywhere people see a document and accepted by every search box (typing digits finds it).
+- **Display only:** storefront/manager UIs render a dash after the 3-digit instance code for readability
+  (`1000000012` → `100-0000012`; an Invoice's real `-NN` suffix is left alone, giving `100-0000012-01`) via
+  `@mivend/ui-kit`'s `formatDocumentNumber` — the stored value, sort, navigation and server-side search filters all
+  stay the plain digit string; nothing is ever reformatted before being sent back to the server. Every number search
+  box runs the search term through `shared`'s `documentNumberSearchTerm` first, which undoes that one display dash
+  (never a real `-NN` suffix) so a value copy-pasted straight off the screen still matches.
 
 ## Exchange
 
