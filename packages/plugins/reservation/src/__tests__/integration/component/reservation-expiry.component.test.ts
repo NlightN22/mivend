@@ -243,10 +243,9 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
             service.expireDueReservations(),
         ]);
 
-        // Exactly one row exists — whichever sweep's UPDATE landed second still matches the same
-        // row (WHERE id IN (...) has no status guard), so both counts can report success, but
-        // the end state must be consistent and the order must be flipped exactly once.
-        expect(countA + countB).toBeGreaterThanOrEqual(1);
+        // SKIP LOCKED on the initial read (reservation-expiry.service.ts) means the loser's
+        // transaction simply sees no due rows — exactly one sweep processes the row, not both.
+        expect([countA, countB].sort()).toEqual([0, 1]);
         const reservation = await realDataSource.getRepository(TestReservation).find();
         expect(reservation).toHaveLength(1);
         expect(reservation[0]?.status).toBe('expired');
@@ -325,7 +324,7 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
             expect(reservation[0]?.status).toBe('released');
         });
 
-        it('two concurrent sweeps over the same REJECTED-due row release it exactly once', async () => {
+        it('two concurrent sweeps over the same REJECTED-due row release it exactly once, with exactly one notification and one event', async () => {
             const order = await seedRejectedOrder(8);
             await realDataSource.getRepository(TestReservation).save(
                 dueReservation({
@@ -340,7 +339,9 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
                 service.expireDueReservations(),
             ]);
 
-            expect(countA + countB).toBeGreaterThanOrEqual(1);
+            // SKIP LOCKED means the loser sees no due rows at all, so its NotificationService.create
+            // and EventBus.publish calls below must never fire for this row — not just the end state.
+            expect([countA, countB].sort()).toEqual([0, 1]);
             const reservation = await realDataSource.getRepository(TestReservation).find();
             expect(reservation).toHaveLength(1);
             expect(reservation[0]?.status).toBe('released');
@@ -348,6 +349,12 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
                 .getRepository(TestOrder)
                 .findOneByOrFail({ id: order.id });
             expect(reloadedOrder.customFields.reservationState).toBe('RELEASED');
+            expect(notificationServiceShim.create).toHaveBeenCalledTimes(1);
+            expect(notificationServiceShim.create).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({ sourceType: 'reservation-rejected-release' }),
+            );
+            expect(eventBusShim.publish).toHaveBeenCalledTimes(1);
         });
     });
 });

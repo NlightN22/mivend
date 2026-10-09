@@ -28,9 +28,16 @@ export class ReservationExpiryService {
     // "On expiry" and issue #204's own notify-then-release timeout for ERP rejections.
     async expireDueReservations(): Promise<number> {
         return this.dataSource.transaction(async manager => {
-            const dueRows = await manager.getRepository(Reservation).find({
-                where: { status: 'active', expiresAt: LessThanOrEqual(new Date()) },
-            });
+            // SKIP LOCKED: a concurrent sweep must skip rows another sweep already holds, not
+            // block on or re-read them, or both fire the same notification/event side effects.
+            const dueRows = await manager
+                .getRepository(Reservation)
+                .createQueryBuilder('reservation')
+                .setLock('pessimistic_write')
+                .setOnLocked('skip_locked')
+                .where('reservation.status = :status', { status: 'active' })
+                .andWhere('reservation.expiresAt <= :now', { now: new Date() })
+                .getMany();
 
             const rejectionCutoff = new Date(
                 Date.now() - DEFAULT_RESERVATION_DAYS * 24 * 60 * 60 * 1000,
@@ -45,9 +52,16 @@ export class ReservationExpiryService {
             });
             const rejectedOrderIds = rejectedOrders.map(order => String(order.id));
             const rejectedDue = rejectedOrderIds.length
-                ? await manager.getRepository(Reservation).find({
-                      where: { status: 'active', orderId: In(rejectedOrderIds) },
-                  })
+                ? await manager
+                      .getRepository(Reservation)
+                      .createQueryBuilder('reservation')
+                      .setLock('pessimistic_write')
+                      .setOnLocked('skip_locked')
+                      .where('reservation.status = :status', { status: 'active' })
+                      .andWhere('reservation.orderId IN (:...orderIds)', {
+                          orderIds: rejectedOrderIds,
+                      })
+                      .getMany()
                 : [];
             const rejectedDueIds = new Set(rejectedDue.map(row => row.id));
             const expiryDueRows = dueRows.filter(row => !rejectedDueIds.has(row.id));

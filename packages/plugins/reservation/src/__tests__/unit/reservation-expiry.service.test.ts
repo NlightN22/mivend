@@ -11,19 +11,30 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         rejectedReservations: unknown[] = [],
     ): {
         service: ReservationExpiryService;
-        txReservationRepo: { find: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+        txReservationRepo: {
+            createQueryBuilder: ReturnType<typeof vi.fn>;
+            update: ReturnType<typeof vi.fn>;
+        };
         txOrderRepo: { find: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
         notificationService: { create: ReturnType<typeof vi.fn> };
         eventBus: { publish: ReturnType<typeof vi.fn> };
     } {
-        // expireDueReservations calls Reservation.find once for the TTL-due rows, then (only
-        // when REJECTED orders were found) once more for their active reservations.
-        let reservationFindCall = 0;
-        const txReservationRepo = {
-            find: vi.fn(async () => {
-                reservationFindCall += 1;
-                return reservationFindCall === 1 ? dueRows : rejectedReservations;
+        // expireDueReservations reads the TTL-due rows and (only when REJECTED orders were
+        // found) the REJECTED-due rows via createQueryBuilder().setLock(...).getMany() — see
+        // reservation-expiry.service.ts's SKIP LOCKED comment — not repo.find().
+        let reservationQueryCall = 0;
+        const reservationQueryBuilder = {
+            setLock: vi.fn().mockReturnThis(),
+            setOnLocked: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            andWhere: vi.fn().mockReturnThis(),
+            getMany: vi.fn(async () => {
+                reservationQueryCall += 1;
+                return reservationQueryCall === 1 ? dueRows : rejectedReservations;
             }),
+        };
+        const txReservationRepo = {
+            createQueryBuilder: vi.fn(() => reservationQueryBuilder),
             update: vi.fn(async () => ({ affected: dueRows.length })),
         };
         // Order.find is called once for REJECTED orders past the deadline, then (only when a
