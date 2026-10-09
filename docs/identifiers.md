@@ -93,10 +93,17 @@ and is never an idempotency key for a business entity.
     from the sequence", unlike Invoice which this doc explicitly calls out as `<order number>-NN`; `providerPaymentId`/
     `providerRefundId` already carry the acquirer/kassa reference separately. Revisit if this reading turns out wrong.
   - **DiscountGrant**: flat per-instance sequence — it has no `orderId`, so `<order number>-NN` does not apply.
+- Done: `order.submitted` carries `orderUuid`/`orderNumber`/`lineUuid` in mivend's own producer-side mirror
+  (`packages/plugins/erp-integration/src/schemas/order-submitted.schema.ts`, `OrderSubmittedBuilder.build()`).
+  `orderNumber` is `order.code` as-is (today's `ORD-YYYYMM-XXXXXXXX` format, see the deferred item below — not
+  affected by this change); `orderUuid`/`lineUuid` come from `Order.customFields.uuid`/`OrderLine.customFields.uuid`.
+  All three required, matching `contractId`'s own precedent. **Follow-up, not done here:** the canonical
+  `@nlightn22/event-contracts` npm package has the same three fields prepared but unpublished, on a
+  `/opt/search-platform-wt-order-uuid` worktree, branch `feat/order-submitted-uuid` — the npm bump into mivend's
+  dependency and the ERP/Integration-Service side's own consumption are separate, tracked follow-ups once that
+  branch is reviewed and released.
 - Deferred (tracked for follow-up, separate from this slice): replacing `DateStampedOrderCodeStrategy` with
   `NumberingService` and renumbering existing Order/Invoice/PaymentAttempt/DiscountGrant/PaymentRefund rows to the new
   format (the issue's own stretch goal — Order.code today is still the old `ORD-YYYYMM-XXXXXXXX` format, which the
   new `<order number>-NN` Invoice numbers are built on top of as-is); the Reservation uuid/`erpOperationId`
-  unification described above; wiring `orderUuid`/`orderNumber`/`lineUuid` into the `order.submitted` outbound
-  contract (needs the `@nlightn22/event-contracts` package bumped in a separate `/opt/search-platform` worktree,
-  tracked as its own piece of work); Swagger/API example updates; manager/storefront search-by-number UI.
+  unification described above; Swagger/API example updates; manager/storefront search-by-number UI.

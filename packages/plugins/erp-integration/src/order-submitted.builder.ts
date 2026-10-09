@@ -87,7 +87,12 @@ export class OrderSubmittedBuilder {
                 group = { warehouseId, lines: [] };
                 groups.set(warehouseId, group);
             }
-            group.lines.push({ productId, quantity: line.quantity, priceTypeId });
+            group.lines.push({
+                productId,
+                quantity: line.quantity,
+                priceTypeId,
+                lineUuid: line.customFields.uuid,
+            });
         }
         if (unbuildable.length > 0) {
             return outboundSkip(`cannot build order lines: ${unbuildable.join('; ')}`);
@@ -101,6 +106,8 @@ export class OrderSubmittedBuilder {
                     eventId: randomUUID(),
                     orderId: String(orderId),
                     orderCode,
+                    orderUuid: order.customFields.uuid,
+                    orderNumber: orderCode,
                     organizationId: contract.organizationId,
                     contractId: contract.erpId,
                     customerId: counterparty.erpId,

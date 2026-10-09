@@ -5,6 +5,9 @@
 //
 // Mirrors ORDER_SUBMITTED_JSON_SCHEMA in @nlightn22/event-contracts 0.54.0 (organizationId is the
 // contract's organization, contractId is required); the package wins once it carries it (#203).
+// mivend's own mirror is ahead of the currently-published npm version for orderUuid/orderNumber/
+// lineUuid (issue #207): prepared, unpublished on a /opt/search-platform-wt-order-uuid branch
+// (feat/order-submitted-uuid, 0.55.0), pending that side's review/release.
 export const ORDER_SUBMITTED_SCHEMA = {
     $schema: 'http://json-schema.org/draft-07/schema#',
     title: 'OrderSubmitted',
@@ -13,6 +16,8 @@ export const ORDER_SUBMITTED_SCHEMA = {
         'eventId',
         'orderId',
         'orderCode',
+        'orderUuid',
+        'orderNumber',
         'organizationId',
         'contractId',
         'customerId',
@@ -24,6 +29,12 @@ export const ORDER_SUBMITTED_SCHEMA = {
         eventId: { type: 'string', format: 'uuid' },
         orderId: { type: 'string' },
         orderCode: { type: 'string' },
+        // The order's own immutable uuid (docs/identifiers.md) — the ERP deduplicates
+        // registration by it.
+        orderUuid: { type: 'string', format: 'uuid' },
+        // The order's human-facing number (today still Order.code's old format — see
+        // docs/identifiers.md's deferred DateStampedOrderCodeStrategy replacement).
+        orderNumber: { type: 'string' },
         // Organization (ERP GUID) of the order's contract, the document header organization.
         organizationId: { type: 'string' },
         // Contract.erpId the order is registered under.
@@ -42,11 +53,13 @@ export const ORDER_SUBMITTED_SCHEMA = {
             minItems: 1,
             items: {
                 type: 'object',
-                required: ['productId', 'quantity'],
+                required: ['productId', 'quantity', 'lineUuid'],
                 properties: {
                     productId: { type: 'string' },
                     quantity: { type: 'number', exclusiveMinimum: 0 },
                     priceTypeId: { type: ['string', 'null'] },
+                    // The OrderLine's own immutable uuid, for per-line ERP deduplication.
+                    lineUuid: { type: 'string', format: 'uuid' },
                 },
                 additionalProperties: true,
             },
@@ -59,12 +72,15 @@ export interface OrderSubmittedLine {
     productId: string;
     quantity: number;
     priceTypeId: string | null;
+    lineUuid: string;
 }
 
 export interface OrderSubmittedPayload {
     eventId: string;
     orderId: string;
     orderCode: string;
+    orderUuid: string;
+    orderNumber: string;
     organizationId: string;
     contractId: string;
     submittedAt: string;

@@ -10,11 +10,16 @@ interface TestLine {
     id: string;
     quantity: number;
     productVariant: { productId?: string | null } | null;
+    customFields?: { uuid: string };
 }
 
 function makeOrder(
     lines: TestLine[],
-    customFields: { selectedContractId: string | null; erpStatus?: string | null } = {
+    customFields: {
+        selectedContractId: string | null;
+        erpStatus?: string | null;
+        uuid?: string;
+    } = {
         selectedContractId: 'contract-1',
     },
 ): {
@@ -22,7 +27,7 @@ function makeOrder(
     customerId: string;
     totalWithTax: number;
     currencyCode: string;
-    customFields: { selectedContractId: string | null; erpStatus?: string | null };
+    customFields: { selectedContractId: string | null; erpStatus?: string | null; uuid: string };
     lines: TestLine[];
 } {
     return {
@@ -30,8 +35,8 @@ function makeOrder(
         customerId: 'cust-1',
         totalWithTax: 10000,
         currencyCode: 'RUB',
-        customFields,
-        lines,
+        customFields: { uuid: 'order-uuid-1', ...customFields },
+        lines: lines.map(line => ({ customFields: { uuid: `${line.id}-uuid` }, ...line })),
     };
 }
 
@@ -214,6 +219,8 @@ describe('OrderSubmittedBuilder', () => {
             contractId: string;
             warehouseId: string;
             customerId: string;
+            orderUuid: string;
+            orderNumber: string;
             lines: unknown[];
         };
         expect(payload).toMatchObject({
@@ -221,9 +228,16 @@ describe('OrderSubmittedBuilder', () => {
             contractId: 'contract-1',
             warehouseId: 'wh-1',
             customerId: 'counterparty-1',
+            orderUuid: 'order-uuid-1',
+            orderNumber: 'ORD-001',
         });
         expect(payload.lines).toEqual([
-            { productId: 'product-1', quantity: 2, priceTypeId: 'price-type-wholesale' },
+            {
+                productId: 'product-1',
+                quantity: 2,
+                priceTypeId: 'price-type-wholesale',
+                lineUuid: 'line-1-uuid',
+            },
         ]);
     });
 

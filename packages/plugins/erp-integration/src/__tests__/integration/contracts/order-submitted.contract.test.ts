@@ -14,13 +14,25 @@ describe('order.submitted contract', () => {
         eventId: '11111111-1111-1111-1111-111111111111',
         orderId: 'order-1',
         orderCode: 'ORD-001',
+        orderUuid: '22222222-2222-2222-2222-222222222222',
+        orderNumber: 'ORD-001',
         organizationId: 'org-1',
         contractId: 'contract-1',
         customerId: 'counterparty-1',
         warehouseId: 'warehouse-1',
         lines: [
-            { productId: 'product-1', quantity: 2, priceTypeId: 'price-type-wholesale' },
-            { productId: 'product-2', quantity: 1, priceTypeId: null },
+            {
+                productId: 'product-1',
+                quantity: 2,
+                priceTypeId: 'price-type-wholesale',
+                lineUuid: '33333333-3333-3333-3333-333333333333',
+            },
+            {
+                productId: 'product-2',
+                quantity: 1,
+                priceTypeId: null,
+                lineUuid: '44444444-4444-4444-4444-444444444444',
+            },
         ],
         submittedAt: '2026-08-12T00:00:00.000Z',
         totalWithTax: 10000,
@@ -32,6 +44,8 @@ describe('order.submitted contract', () => {
             'eventId',
             'orderId',
             'orderCode',
+            'orderUuid',
+            'orderNumber',
             'organizationId',
             'contractId',
             'customerId',
@@ -52,6 +66,8 @@ describe('order.submitted contract', () => {
                 'eventId',
                 'orderId',
                 'orderCode',
+                'orderUuid',
+                'orderNumber',
                 'organizationId',
                 'contractId',
                 'submittedAt',
@@ -64,10 +80,11 @@ describe('order.submitted contract', () => {
         );
     });
 
-    it('declares productId/quantity as the only required OrderLineDto fields', () => {
+    it('declares productId/quantity/lineUuid as the required OrderLineDto fields', () => {
         expect(ORDER_SUBMITTED_SCHEMA.properties.lines.items.required).toEqual([
             'productId',
             'quantity',
+            'lineUuid',
         ]);
     });
 
