@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router';
 import { formatDocumentNumber } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import { useOrderDetail } from './useOrderDetail';
-import { STATUS_LABEL, STATUS_VARIANT } from './useOrders';
+import { STATUS_LABEL, STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
 
 const route = useRoute();
 const { order, loading, load } = useOrderDetail();
@@ -139,6 +139,15 @@ function formatDate(iso: string): string {
                             <div v-if="order.customFields?.erpOrderId" class="od-erp-row">
                                 <span>ERP ID</span>
                                 <span class="od-erp-val">{{ order.customFields?.erpOrderId }}</span>
+                            </div>
+                            <div
+                                v-if="erpDocumentStatusLabel(order.customFields?.erpOrderStatus)"
+                                class="od-erp-row"
+                            >
+                                <span>Document status</span>
+                                <span class="od-erp-val">{{
+                                    erpDocumentStatusLabel(order.customFields?.erpOrderStatus)
+                                }}</span>
                             </div>
                             <div v-if="order.customFields?.erpStatusAt" class="od-erp-row">
                                 <span>Updated</span>

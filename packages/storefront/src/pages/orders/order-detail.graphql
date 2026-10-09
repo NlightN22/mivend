@@ -35,6 +35,7 @@ query OrderDetail($id: ID!) {
             erpStatus
             erpOrderId
             erpStatusAt
+            erpOrderStatus
         }
     }
 }

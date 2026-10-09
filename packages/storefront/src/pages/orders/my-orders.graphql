@@ -30,6 +30,7 @@ query MyOrders($options: OrderListOptions, $search: String) {
                 erpStatus
                 erpOrderId
                 erpStatusAt
+                erpOrderStatus
             }
         }
         totalItems

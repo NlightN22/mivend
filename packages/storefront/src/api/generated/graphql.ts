@@ -829,11 +829,6 @@ export type CustomFieldConfig =
     | StructCustomFieldConfig
     | TextCustomFieldConfig;
 
-export type CustomProductMappings = {
-    fullName?: Maybe<Scalars['String']['output']>;
-    oemCodes?: Maybe<Array<Scalars['String']['output']>>;
-};
-
 export type Customer = Node & {
     addresses?: Maybe<Array<Address>>;
     counterparty?: Maybe<Counterparty>;
@@ -2376,6 +2371,8 @@ export type OrderCustomFields = {
     erpOrderStatus?: Maybe<Scalars['String']['output']>;
     erpRegistrationDocumentNumber?: Maybe<Scalars['String']['output']>;
     erpRegistrationStatus?: Maybe<Scalars['String']['output']>;
+    erpRejectionReasonCode?: Maybe<Scalars['String']['output']>;
+    erpRejectionReasonText?: Maybe<Scalars['String']['output']>;
     erpStatus?: Maybe<Scalars['String']['output']>;
     erpStatusAt?: Maybe<Scalars['DateTime']['output']>;
     latestFulfillmentState?: Maybe<Scalars['String']['output']>;
@@ -2383,6 +2380,7 @@ export type OrderCustomFields = {
     placedByAdministratorId?: Maybe<Scalars['String']['output']>;
     sourceOrderId?: Maybe<Scalars['String']['output']>;
     tradingPointId?: Maybe<Scalars['String']['output']>;
+    uuid?: Maybe<Scalars['String']['output']>;
 };
 
 export type OrderFilterParameter = {
@@ -2400,6 +2398,8 @@ export type OrderFilterParameter = {
     erpOrderStatus?: InputMaybe<StringOperators>;
     erpRegistrationDocumentNumber?: InputMaybe<StringOperators>;
     erpRegistrationStatus?: InputMaybe<StringOperators>;
+    erpRejectionReasonCode?: InputMaybe<StringOperators>;
+    erpRejectionReasonText?: InputMaybe<StringOperators>;
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
     id?: InputMaybe<IdOperators>;
@@ -2432,6 +2432,7 @@ export type OrderFilterParameter = {
     tradingPointId?: InputMaybe<StringOperators>;
     type?: InputMaybe<StringOperators>;
     updatedAt?: InputMaybe<DateOperators>;
+    uuid?: InputMaybe<StringOperators>;
 };
 
 /** Returned when an order operation is rejected by an OrderInterceptor method. */
@@ -2516,11 +2517,13 @@ export type OrderLine = Node & {
 export type OrderLineCustomFields = {
     manualPriceReason?: Maybe<Scalars['String']['output']>;
     manualUnitPrice?: Maybe<Scalars['Int']['output']>;
+    uuid?: Maybe<Scalars['String']['output']>;
 };
 
 export type OrderLineCustomFieldsInput = {
     manualPriceReason?: InputMaybe<Scalars['String']['input']>;
     manualUnitPrice?: InputMaybe<Scalars['Int']['input']>;
+    uuid?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type OrderList = PaginatedList & {
@@ -2563,6 +2566,8 @@ export type OrderSortParameter = {
     erpOrderStatus?: InputMaybe<SortOrder>;
     erpRegistrationDocumentNumber?: InputMaybe<SortOrder>;
     erpRegistrationStatus?: InputMaybe<SortOrder>;
+    erpRejectionReasonCode?: InputMaybe<SortOrder>;
+    erpRejectionReasonText?: InputMaybe<SortOrder>;
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
@@ -2594,6 +2599,7 @@ export type OrderSortParameter = {
     totalWithTax?: InputMaybe<SortOrder>;
     tradingPointId?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
+    uuid?: InputMaybe<SortOrder>;
 };
 
 /** Returned if there is an error in transitioning the Order state */
@@ -3065,11 +3071,6 @@ export enum Permission {
 export type PriceRange = {
     max: Scalars['Money']['output'];
     min: Scalars['Money']['output'];
-};
-
-export type PriceRangeBucket = {
-    count: Scalars['Int']['output'];
-    to: Scalars['Int']['output'];
 };
 
 export type PriceRangeInput = {
@@ -3675,9 +3676,7 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
-    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
-    priceRange?: InputMaybe<PriceRangeInput>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
@@ -3693,15 +3692,7 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
-    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
-};
-
-export type SearchResponsePriceData = {
-    buckets: Array<PriceRangeBucket>;
-    bucketsWithTax: Array<PriceRangeBucket>;
-    range: PriceRange;
-    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -3709,9 +3700,6 @@ export type SearchResult = {
     collectionIds: Array<Scalars['ID']['output']>;
     compareAtPrice?: Maybe<Scalars['Int']['output']>;
     currencyCode: CurrencyCode;
-    /** @deprecated Use customProductMappings or customProductVariantMappings */
-    customMappings: CustomProductMappings;
-    customProductMappings: CustomProductMappings;
     customerPrice?: Maybe<Scalars['Int']['output']>;
     description: Scalars['String']['output'];
     discountTiers: Array<DiscountTier>;
@@ -3719,7 +3707,6 @@ export type SearchResult = {
     facetValueIds: Array<Scalars['ID']['output']>;
     /** Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels. */
     galleryPreviews: Array<Scalars['String']['output']>;
-    inStock?: Maybe<Scalars['Boolean']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
@@ -4118,6 +4105,8 @@ export type UpdateOrderCustomFieldsInput = {
     erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
     erpRegistrationDocumentNumber?: InputMaybe<Scalars['String']['input']>;
     erpRegistrationStatus?: InputMaybe<Scalars['String']['input']>;
+    erpRejectionReasonCode?: InputMaybe<Scalars['String']['input']>;
+    erpRejectionReasonText?: InputMaybe<Scalars['String']['input']>;
     erpStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
     latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;
@@ -4125,6 +4114,7 @@ export type UpdateOrderCustomFieldsInput = {
     placedByAdministratorId?: InputMaybe<Scalars['String']['input']>;
     sourceOrderId?: InputMaybe<Scalars['String']['input']>;
     tradingPointId?: InputMaybe<Scalars['String']['input']>;
+    uuid?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateOrderInput = {
@@ -4723,6 +4713,7 @@ export type MyOrdersQuery = {
                 erpStatus?: string | null;
                 erpOrderId?: string | null;
                 erpStatusAt?: any | null;
+                erpOrderStatus?: string | null;
             } | null;
         }>;
     };
@@ -4766,6 +4757,7 @@ export type OrderDetailQuery = {
             erpStatus?: string | null;
             erpOrderId?: string | null;
             erpStatusAt?: any | null;
+            erpOrderStatus?: string | null;
         } | null;
     } | null;
 };
@@ -5798,6 +5790,7 @@ export const MyOrdersDocument = new TypedDocumentString(`
         erpStatus
         erpOrderId
         erpStatusAt
+        erpOrderStatus
       }
     }
     totalItems
@@ -5842,6 +5835,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
       erpStatus
       erpOrderId
       erpStatusAt
+      erpOrderStatus
     }
   }
 }

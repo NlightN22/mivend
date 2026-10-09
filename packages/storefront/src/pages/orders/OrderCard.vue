@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { formatDocumentNumber } from '@mivend/ui-kit';
 import type { OrderSummary } from './useOrders';
-import { STATUS_LABEL, STATUS_VARIANT } from './useOrders';
+import { STATUS_LABEL, STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
 
 const props = defineProps<{ order: OrderSummary }>();
 
@@ -29,7 +29,10 @@ const meta = computed(() => {
     });
     const addr = props.order.shippingAddress?.streetLine1 ?? '';
     const count = props.order.lines.length;
-    return [date, addr, `${count} item${count !== 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+    const documentStatus = erpDocumentStatusLabel(props.order.customFields?.erpOrderStatus);
+    return [date, addr, `${count} item${count !== 1 ? 's' : ''}`, documentStatus]
+        .filter(Boolean)
+        .join(' · ');
 });
 
 const preview = computed(() => {

@@ -47,6 +47,15 @@ export const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'muted' | 'e
     REJECTED: 'error',
 };
 
+// Raw ERP document statuses (order-changed) to customer wording; an unmapped value shows nothing.
+const ERP_DOCUMENT_STATUS_LABEL: Record<string, string> = {
+    НаСогласовании: 'Being approved',
+};
+
+export function erpDocumentStatusLabel(status: string | null | undefined): string | null {
+    return (status && ERP_DOCUMENT_STATUS_LABEL[status]) || null;
+}
+
 export function useOrders(): {
     orders: Ref<OrderSummary[]>;
     totalItems: Ref<number>;
