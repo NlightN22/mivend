@@ -234,4 +234,17 @@ describe('order-registration-result -> order-changed chain (component, real Post
         expect(second.erpRegistrationDocumentNumber).toBe('DOC-1');
         expect(second.erpStatusAt).toEqual(first.erpStatusAt);
     });
+
+    // An order already SENT_TO_ERP before this flow existed has no erpOrderId; a registered result fills it in.
+    it('fills a missing erpOrderId on an order that is already SENT_TO_ERP', async () => {
+        const order = await seedOrder('SENT_TO_ERP');
+
+        await sync.handleOrderRegistrationResult(ctx, registrationResult(order.id));
+        await flush();
+
+        const stored = await reload(order.id);
+        expect(stored.erpStatus).toBe('SENT_TO_ERP');
+        expect(stored.erpOrderId).toBe(ERP_ID);
+        await expect(sync.handleOrderChanged(ctx, orderChanged)).resolves.toBeUndefined();
+    });
 });

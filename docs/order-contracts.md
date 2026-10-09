@@ -106,8 +106,13 @@ Not implemented yet; recorded here so the decisions are not lost. Plan and open 
   `РезервДо` is earlier than yesterday and posts a "closing of customer orders" document, and posting it
   releases the reserve in the register (the order itself is not changed). Our orders have an empty
   `РезервДо` today, so the job never selects them: sending `reserveUntil` is what makes it work.
-- Cancelling a registered posted order is most likely the same closing document; a separate manual cancel
-  flow is still to be checked on the ERP side.
+- There is no separate manual cancel flow in 1C: cancelling a registered order is the same closing document,
+  created "based on" the order by a person or posted by the job, and the order looks the same afterwards.
+- Open risk (unverified, from code reading only): posting the closing document writes the reserve register
+  movement with the closing document as recorder and does not rewrite the order, so the exchange may export
+  **no `order-changed` at all** after a closure. Do not design on `order-changed` (or `reserved_quantity = 0`)
+  following a closure; an explicit closed-order signal from the ERP may be needed. A live test on a test order
+  is being run on the ERP side; until it is done, the "ERP release detection" in the plan stays open.
 
 ## Deliberately out of scope (open questions)
 
