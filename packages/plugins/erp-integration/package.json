@@ -25,7 +25,7 @@
         "@mivend/plugin-reservation": "workspace:*",
         "@mivend/plugin-retro-bonus": "workspace:*",
         "@nestjs/swagger": "^11.0.0",
-        "@nlightn22/event-contracts": "^0.54.0",
+        "@nlightn22/event-contracts": "^0.56.0",
         "dataloader": "2.2.3",
         "graphql-tag": "^2.12.6",
         "kafkajs": "^2.2.4",
