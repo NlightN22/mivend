@@ -6,8 +6,22 @@ import { ReservationService } from '../../reservation.service';
 import { ReservationFailureService } from '../../reservation-failure.service';
 import { ErpExportDataMissingError, InsufficientStockError } from '../../reservation-errors';
 
-function createMockOrderRepo(order: unknown): { findOne: ReturnType<typeof vi.fn> } {
-    return { findOne: vi.fn(async () => order) };
+function createMockOrderRepo(order: unknown): {
+    findOne: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    createQueryBuilder: ReturnType<typeof vi.fn>;
+} {
+    const locked = { id: 'order-1', customFields: { reservationState: 'NOT_REQUIRED' } };
+    const builder = {
+        setLock: () => builder,
+        where: () => builder,
+        getOne: async () => locked,
+    };
+    return {
+        findOne: vi.fn(async () => order),
+        update: vi.fn(async () => undefined),
+        createQueryBuilder: vi.fn(() => builder),
+    };
 }
 
 function createMockPaymentMethodRepo(): { findOne: ReturnType<typeof vi.fn> } {
@@ -17,7 +31,10 @@ function createMockPaymentMethodRepo(): { findOne: ReturnType<typeof vi.fn> } {
 describe('ReservationPaymentService', () => {
     let orderRepo: ReturnType<typeof createMockOrderRepo>;
     let paymentMethodRepo: ReturnType<typeof createMockPaymentMethodRepo>;
-    let connection: { getRepository: ReturnType<typeof vi.fn> };
+    let connection: {
+        getRepository: ReturnType<typeof vi.fn>;
+        withTransaction: ReturnType<typeof vi.fn>;
+    };
     let reservationService: {
         reserveOrder: ReturnType<typeof vi.fn>;
         setOrderReservationState: ReturnType<typeof vi.fn>;
@@ -34,6 +51,9 @@ describe('ReservationPaymentService', () => {
         connection = {
             getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
                 entity?.name === 'PaymentMethod' ? paymentMethodRepo : orderRepo,
+            ),
+            withTransaction: vi.fn(async (c: unknown, work: (txCtx: unknown) => Promise<void>) =>
+                work(c),
             ),
         };
         reservationService = {
@@ -78,10 +98,13 @@ describe('ReservationPaymentService', () => {
             await expect(
                 service.handleOrderPlaced(ctx, placed() as never),
             ).resolves.toBeUndefined();
-            expect(reservationService.setOrderReservationState).toHaveBeenCalledWith(
-                ctx,
-                expect.anything(),
-                'AWAITING_CONFIRMATION',
+            expect(orderRepo.update).toHaveBeenCalledWith(
+                'order-1',
+                expect.objectContaining({
+                    customFields: expect.objectContaining({
+                        reservationState: 'AWAITING_CONFIRMATION',
+                    }),
+                }),
             );
         });
 
@@ -177,10 +200,13 @@ describe('ReservationPaymentService', () => {
 
             await service.handleOrderPlaced(ctx, placedOrder as never);
 
-            expect(reservationService.setOrderReservationState).toHaveBeenCalledWith(
-                ctx,
-                placedOrder,
-                'AWAITING_CONFIRMATION',
+            expect(orderRepo.update).toHaveBeenCalledWith(
+                'order-1',
+                expect.objectContaining({
+                    customFields: expect.objectContaining({
+                        reservationState: 'AWAITING_CONFIRMATION',
+                    }),
+                }),
             );
         });
 
@@ -197,7 +223,7 @@ describe('ReservationPaymentService', () => {
                 payments: [{ method: 'deferred-payment' }],
             } as never);
 
-            expect(reservationService.setOrderReservationState).not.toHaveBeenCalled();
+            expect(orderRepo.update).not.toHaveBeenCalled();
             expect(reservationService.reserveOrder).not.toHaveBeenCalled();
         });
 
@@ -213,7 +239,7 @@ describe('ReservationPaymentService', () => {
 
             await service.handleOrderPlaced(ctx, placedOrder as never);
 
-            expect(reservationService.setOrderReservationState).not.toHaveBeenCalled();
+            expect(orderRepo.update).not.toHaveBeenCalled();
         });
 
         it('does not clobber a state other than NOT_REQUIRED', async () => {
@@ -225,7 +251,7 @@ describe('ReservationPaymentService', () => {
 
             await service.handleOrderPlaced(ctx, placedOrder as never);
 
-            expect(reservationService.setOrderReservationState).not.toHaveBeenCalled();
+            expect(orderRepo.update).not.toHaveBeenCalled();
         });
 
         it('treats an unset payment classification as non-prepaid', async () => {
@@ -238,7 +264,7 @@ describe('ReservationPaymentService', () => {
 
             await service.handleOrderPlaced(ctx, placedOrder as never);
 
-            expect(reservationService.setOrderReservationState).toHaveBeenCalled();
+            expect(orderRepo.update).toHaveBeenCalled();
         });
     });
 

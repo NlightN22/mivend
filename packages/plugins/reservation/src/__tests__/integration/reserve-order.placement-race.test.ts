@@ -59,6 +59,38 @@ describe('auto-reserve on placement vs manual confirm (real Postgres)', () => {
     const reservedEvents = (): number =>
         h.published.filter(e => e instanceof OrderReservedEvent).length;
 
+    // Audit finding (#199): the AWAITING_CONFIRMATION write used to be unconditional, so a confirm that
+    // finished between the handler's state read and its write was rolled back to AWAITING_CONFIRMATION.
+    it('does not roll an already RESERVED order back to AWAITING_CONFIRMATION when its state read was stale', async () => {
+        const { id, placed } = await placedOrder();
+        await h.dataSource
+            .getRepository(TestOrder)
+            .update(
+                { id },
+                { customFields: { branchId: 'branch-1', reservationState: 'RESERVED' } },
+            );
+
+        const service = paymentService() as unknown as {
+            markAwaitingConfirmation: (ctx: unknown, order: Order) => Promise<void>;
+        };
+        await service.markAwaitingConfirmation(mockCtx, placed);
+
+        const order = await h.dataSource.getRepository(TestOrder).findOneByOrFail({ id });
+        expect(order.customFields.reservationState).toBe('RESERVED');
+    });
+
+    it('moves a NOT_REQUIRED order to AWAITING_CONFIRMATION', async () => {
+        const { id, placed } = await placedOrder();
+
+        const service = paymentService() as unknown as {
+            markAwaitingConfirmation: (ctx: unknown, order: Order) => Promise<void>;
+        };
+        await service.markAwaitingConfirmation(mockCtx, placed);
+
+        const order = await h.dataSource.getRepository(TestOrder).findOneByOrFail({ id });
+        expect(order.customFields.reservationState).toBe('AWAITING_CONFIRMATION');
+    });
+
     it('a manual confirm racing with the placement auto-reserve yields one reservation set and a RESERVED order', async () => {
         failures.record.mockClear();
         const { id, placed } = await placedOrder();

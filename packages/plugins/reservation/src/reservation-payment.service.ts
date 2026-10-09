@@ -58,12 +58,39 @@ export class ReservationPaymentService {
         if ((stored ?? fullOrder).customFields?.reservationState !== 'NOT_REQUIRED') {
             return;
         }
-        await this.reservationService.setOrderReservationState(
-            ctx,
-            fullOrder,
-            'AWAITING_CONFIRMATION',
-        );
+        await this.markAwaitingConfirmation(ctx, fullOrder);
         await this.autoReserveIfEnabled(ctx, fullOrder, method, classification);
+    }
+
+    // Under a row lock and conditional on the stored NOT_REQUIRED, so a manual confirm that reaches
+    // RESERVED first is never rolled back (#199 audit); re-applied only if a trailing Vendure save puts
+    // NOT_REQUIRED back.
+    private async markAwaitingConfirmation(ctx: RequestContext, order: Order): Promise<void> {
+        const apply = (): Promise<void> =>
+            this.connection.withTransaction(ctx, async txCtx => {
+                const repo = this.connection.getRepository(txCtx, Order);
+                const current = await repo
+                    .createQueryBuilder('o')
+                    .setLock('pessimistic_write')
+                    .where('o.id = :id', { id: order.id })
+                    .getOne();
+                if (current?.customFields?.reservationState !== 'NOT_REQUIRED') return;
+                await repo.update(order.id, {
+                    customFields: {
+                        ...current.customFields,
+                        reservationState: 'AWAITING_CONFIRMATION',
+                    },
+                });
+            });
+        await apply();
+        for (let attempt = 0; attempt < 3; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const current = await this.connection
+                .getRepository(ctx, Order)
+                .findOne({ where: { id: order.id } });
+            if (current?.customFields?.reservationState !== 'NOT_REQUIRED') return;
+            await apply();
+        }
     }
 
     // Global switch (GlobalSettings.autoReserveOnPlacement) that skips the manual confirmation
