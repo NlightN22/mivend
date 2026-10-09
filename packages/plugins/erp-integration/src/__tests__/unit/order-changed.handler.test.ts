@@ -53,6 +53,7 @@ describe('OrderChangedStreamHandler', () => {
         });
 
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             status: 'Проведён',
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 3 }],
@@ -91,6 +92,7 @@ describe('OrderChangedStreamHandler', () => {
         });
 
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             status: '',
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 0 }],
@@ -110,6 +112,7 @@ describe('OrderChangedStreamHandler', () => {
         });
 
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             status: '',
             reservedLines: [],
@@ -164,6 +167,38 @@ describe('OrderChangedStreamHandler', () => {
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({ contractId: null }),
+        );
+    });
+
+    // mivend#207/search-platform#180: order_uuid is a real `optional string` on OrderChanged —
+    // present only for orders registered through our integration.
+    it('passes orderUuid through when present', async () => {
+        const syncService = { handleOrderChanged: vi.fn() };
+        const handler = new OrderChangedStreamHandler(
+            createConnection([]) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'erp-order-1', { lines: [], orderUuid: 'order-uuid-1' });
+
+        expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ orderUuid: 'order-uuid-1' }),
+        );
+    });
+
+    it('passes orderUuid as null when absent, for orders not registered through our integration', async () => {
+        const syncService = { handleOrderChanged: vi.fn() };
+        const handler = new OrderChangedStreamHandler(
+            createConnection([]) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'erp-order-1', { lines: [] });
+
+        expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ orderUuid: null }),
         );
     });
 });

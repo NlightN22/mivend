@@ -74,6 +74,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -106,6 +107,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -157,6 +159,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -183,6 +186,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -208,6 +212,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: null,
             requestEntityId: null,
             localOrderId: null,
@@ -258,6 +263,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -287,6 +293,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: null,
             requestEntityId: 'req-1',
             localOrderId: 'order-7',
@@ -316,6 +323,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: null,
             requestEntityId: 'req-2',
             localOrderId: 'order-7',
@@ -345,6 +353,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: 'req-3',
             localOrderId: 'order-7',
@@ -397,6 +406,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
 
         expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -408,5 +418,45 @@ describe('OrderRegistrationResultHandler', () => {
             rejectionReasonCode: null,
             rejectionReasonText: null,
         });
+    });
+
+    // mivend#207/search-platform#180: order_uuid is now live on OrderRegistrationResult.
+    it('extracts orderUuid and passes it through alongside the fallback keys', async () => {
+        const syncService = { handleOrderRegistrationResult: vi.fn() };
+        const handler = new OrderRegistrationResultHandler(
+            createConnection({}) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'orr-1', {
+            orderUuid: 'order-uuid-1',
+            orderEntityId: 'erp-order-1',
+            reservedLines: [],
+        });
+
+        expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ orderUuid: 'order-uuid-1' }),
+        );
+    });
+
+    // order_uuid is a plain (non-optional) proto3 string — an absent key decodes to '', which
+    // must be treated as "no correlation key", not a literal empty-string uuid.
+    it('treats an absent orderUuid as null, not an empty string, for results predating the field', async () => {
+        const syncService = { handleOrderRegistrationResult: vi.fn() };
+        const handler = new OrderRegistrationResultHandler(
+            createConnection({}) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'orr-1', {
+            orderEntityId: 'erp-order-1',
+            reservedLines: [],
+        });
+
+        expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ orderUuid: null }),
+        );
     });
 });

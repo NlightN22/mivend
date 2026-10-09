@@ -32,6 +32,10 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         }
 
         const orderEntityId = payload.orderEntityId != null ? String(payload.orderEntityId) : null;
+        // order_uuid (field 13, mivend#207) is a plain proto3 string — '' (zero-value-omission)
+        // means no correlation key, same as a result predating this field.
+        const rawOrderUuid = payload.orderUuid != null ? String(payload.orderUuid) : '';
+        const orderUuid = rawOrderUuid !== '' ? rawOrderUuid : null;
         // Issue #204 follow-up: a rejected result carries no orderEntityId — correlate via
         // requestEntityId instead, see findLocalOrderIdByRequestEntityId below.
         const requestEntityId =
@@ -97,6 +101,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         }
 
         await this.reservationWriteOffSyncService.handleOrderRegistrationResult(ctx, {
+            orderUuid,
             orderEntityId,
             requestEntityId,
             localOrderId,

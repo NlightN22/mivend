@@ -85,6 +85,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     it('throws when neither orderEntityId nor localOrderId resolve (e.g. a rejected result with no correlatable order)', async () => {
         await expect(
             service.handleOrderRegistrationResult(ctx, {
+                orderUuid: null,
                 orderEntityId: null,
                 requestEntityId: 'req-1',
                 localOrderId: null,
@@ -105,6 +106,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     // findOrderIdByErpId (rawQuery) never invoked.
     it('resolves the order via localOrderId when orderEntityId is absent (rejected result)', async () => {
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: null,
             requestEntityId: 'req-1',
             localOrderId: 'order-1',
@@ -135,6 +137,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         reservationRepo.count.mockResolvedValue(0);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: null,
             requestEntityId: 'req-2',
             localOrderId: 'order-1',
@@ -158,6 +161,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     // same as before this change — the fallback path.
     it('falls back to orderEntityId via findOrderIdByErpId when localOrderId is absent', async () => {
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -181,6 +185,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         rawQuery.mockResolvedValue([]);
         await expect(
             service.handleOrderRegistrationResult(ctx, {
+                orderUuid: null,
                 orderEntityId: 'erp-order-1',
                 requestEntityId: null,
                 localOrderId: null,
@@ -198,6 +203,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
     it('never releases on a rejected result, leaving reservations active', async () => {
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -218,6 +224,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     // forever with no escalation).
     it('reports an unresolved product mapping as its own discrepancy, distinct from a mismatch', async () => {
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -243,6 +250,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
     it('reports an unresolved product mapping even on a rejected result', async () => {
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -271,6 +279,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         reservationRepo.count.mockResolvedValue(0);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -309,6 +318,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         ]);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -354,6 +364,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         ]);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -387,6 +398,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         ]);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -427,6 +439,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         ]);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -462,6 +475,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         ]);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -498,6 +512,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         reservationRepo.count.mockResolvedValue(0);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -527,6 +542,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         reservationRepo.count.mockResolvedValue(1);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -547,6 +563,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     // purely informational, must never affect release/quantity-match logic below.
     it('persists documentNumber/status onto Order.customFields, even on a rejected result', async () => {
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -574,6 +591,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         reservationRepo.find.mockResolvedValue([]);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -601,6 +619,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         reservationRepo.find.mockResolvedValue([]);
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -621,6 +640,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     // never written directly as erpStatus here, same separation as the ERP callback's own path.
     it('persists the rejection reason and publishes ErpOrderStatusEvent(REJECTED)', async () => {
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -661,6 +681,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         });
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -698,6 +719,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             customFields: { erpStatus: 'SENT_TO_ERP', erpOrderId: 'erp-order-1' },
         });
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: null,
             localOrderId: null,
@@ -725,6 +747,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         });
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: 'req-1',
             localOrderId: 'order-1',
@@ -755,6 +778,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         });
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             requestEntityId: 'req-1',
             localOrderId: 'order-1',
@@ -780,6 +804,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         });
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: null,
             requestEntityId: 'req-1',
             localOrderId: 'order-1',
@@ -805,6 +830,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         });
 
         await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
             orderEntityId: null,
             requestEntityId: 'req-1',
             localOrderId: 'order-1',
@@ -833,6 +859,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
 
         await expect(
             service.handleOrderRegistrationResult(ctx, {
+                orderUuid: null,
                 orderEntityId: 'erp-order-1',
                 requestEntityId: null,
                 localOrderId: null,
@@ -856,6 +883,78 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
                 }),
             }),
         );
+    });
+
+    // mivend#207/search-platform#180: orderUuid is now live and takes precedence over
+    // localOrderId/orderEntityId — rawQuery (findOrderIdByErpId) must never be invoked when it
+    // resolves the order.
+    it('resolves the order via orderUuid, never touching findOrderIdByErpId', async () => {
+        await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: 'order-uuid-1',
+            orderEntityId: 'erp-order-1',
+            requestEntityId: 'req-1',
+            localOrderId: 'order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        expect(rawQuery).toHaveBeenCalledWith(expect.stringContaining('customFieldsUuid'), [
+            'order-uuid-1',
+        ]);
+        expect(rawQuery).not.toHaveBeenCalledWith(
+            expect.stringContaining('customFieldsErporderid'),
+            expect.anything(),
+        );
+        expect(orderRepo.findOne).toHaveBeenCalledWith({ where: { id: 'order-1' } });
+    });
+
+    // orderUuid present but unresolvable (bad/ stale data) must throw and retry, never silently
+    // fall back to localOrderId/orderEntityId — same "never a silent, permanent skip" rule as the
+    // existing correlation-failure test above.
+    it('throws when orderUuid is present but resolves to no Order, even if localOrderId would have worked', async () => {
+        rawQuery.mockResolvedValue([]);
+        await expect(
+            service.handleOrderRegistrationResult(ctx, {
+                orderUuid: 'unknown-order-uuid',
+                orderEntityId: null,
+                requestEntityId: 'req-1',
+                localOrderId: 'order-1',
+                rejected: false,
+                reservedLines: [],
+                unresolvedProductIds: [],
+                documentNumber: null,
+                status: '',
+                rejectionReasonCode: null,
+                rejectionReasonText: null,
+            }),
+        ).rejects.toThrow(/no Order found/);
+        expect(orderRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    // orderUuid absent (a result predating mivend#207) must still fall back to the existing
+    // localOrderId/orderEntityId path unchanged.
+    it('falls back to localOrderId when orderUuid is absent', async () => {
+        await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
+            orderEntityId: null,
+            requestEntityId: 'req-1',
+            localOrderId: 'order-1',
+            rejected: false,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        expect(rawQuery).not.toHaveBeenCalled();
+        expect(orderRepo.findOne).toHaveBeenCalledWith({ where: { id: 'order-1' } });
     });
 });
 
@@ -921,6 +1020,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         rawQuery.mockResolvedValue([]);
         await expect(
             service.handleOrderChanged(ctx, {
+                orderUuid: null,
                 orderEntityId: 'erp-order-1',
                 status: '',
                 reservedLines: [],
@@ -932,6 +1032,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
 
     it('persists status onto Order.customFields.erpOrderStatus, never erpRegistrationStatus', async () => {
         await service.handleOrderChanged(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             status: 'В обработке',
             reservedLines: [],
@@ -950,6 +1051,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
 
     it('persists contractId when present', async () => {
         await service.handleOrderChanged(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             status: '',
             reservedLines: [],
@@ -973,6 +1075,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         });
 
         await service.handleOrderChanged(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             status: '',
             reservedLines: [],
@@ -996,6 +1099,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         reservationRepo.count.mockResolvedValue(0);
 
         await service.handleOrderChanged(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             status: 'Проведён',
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
@@ -1024,6 +1128,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         ]);
 
         await service.handleOrderChanged(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             status: '',
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 3 }],
@@ -1053,6 +1158,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         reservationRepo.find.mockResolvedValue([]);
 
         await service.handleOrderChanged(ctx, {
+            orderUuid: null,
             orderEntityId: 'erp-order-1',
             status: 'Проведён',
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
@@ -1072,6 +1178,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
 
         await expect(
             service.handleOrderChanged(ctx, {
+                orderUuid: null,
                 orderEntityId: 'erp-order-1',
                 status: 'В обработке',
                 reservedLines: [],
@@ -1089,5 +1196,42 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
                 }),
             }),
         );
+    });
+
+    // mivend#207/search-platform#180: order_uuid is a real optional field on OrderChanged —
+    // present only for orders registered through our integration. Preferred correlation key,
+    // findOrderIdByErpId never invoked when it resolves the order.
+    it('resolves the order via orderUuid when present, never touching findOrderIdByErpId', async () => {
+        await service.handleOrderChanged(ctx, {
+            orderUuid: 'order-uuid-1',
+            orderEntityId: 'erp-order-1',
+            status: '',
+            reservedLines: [],
+            contractId: null,
+        });
+
+        expect(rawQuery).toHaveBeenCalledWith(expect.stringContaining('customFieldsUuid'), [
+            'order-uuid-1',
+        ]);
+        expect(rawQuery).not.toHaveBeenCalledWith(
+            expect.stringContaining('customFieldsErporderid'),
+            expect.anything(),
+        );
+    });
+
+    // orderUuid absent (an order not registered through our integration) must still fall back to
+    // the existing orderEntityId path unchanged.
+    it('falls back to orderEntityId when orderUuid is absent', async () => {
+        await service.handleOrderChanged(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            status: '',
+            reservedLines: [],
+            contractId: null,
+        });
+
+        expect(rawQuery).toHaveBeenCalledWith(expect.stringContaining('customFieldsErporderid'), [
+            'erp-order-1',
+        ]);
     });
 });

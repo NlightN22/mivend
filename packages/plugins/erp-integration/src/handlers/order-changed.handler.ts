@@ -63,6 +63,9 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         // contractId is a real proto `optional string` — absent genuinely means "not sent",
         // never a zero-value-omission case (external-integration-rules skill).
         const contractId = payload.contractId != null ? String(payload.contractId) : null;
+        // order_uuid (field 14, mivend#207) is a real `optional string` — absent genuinely means
+        // not registered through our integration, never a zero-value.
+        const orderUuid = payload.orderUuid != null ? String(payload.orderUuid) : null;
 
         const rawLines = Array.isArray(payload.lines) ? payload.lines : [];
         const reservedLines: Array<{ productVariantId: string; reservedQuantity: number }> = [];
@@ -100,6 +103,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         }
 
         await this.reservationWriteOffSyncService.handleOrderChanged(ctx, {
+            orderUuid,
             orderEntityId: entityId,
             status,
             reservedLines,

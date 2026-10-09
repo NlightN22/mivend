@@ -9,6 +9,9 @@ import { ReservationService } from './reservation.service';
 import { loggerCtx } from './types';
 
 export interface OrderRegistrationResultInput {
+    // MiVend's own order uuid (mivend#207), echoed back by the ERP. Preferred correlation key
+    // over localOrderId/orderEntityId below; null only for results predating this field.
+    orderUuid: string | null;
     // ERP-side order id — absent on a rejected result. Fallback correlation key only.
     orderEntityId: string | null;
     // Original order.submitted request id, echoed back by the ERP — kept for error/log context.
@@ -48,6 +51,9 @@ export interface OrderRegistrationResultInput {
 // order-registration-result does), so those are fixed at false/null for this caller rather than
 // exposed on this input shape.
 export interface OrderChangedInput {
+    // Real optional presence (mivend#207): absent for orders not registered through our
+    // integration. Preferred correlation key over orderEntityId below when present.
+    orderUuid: string | null;
     orderEntityId: string;
     // Plain proto3 string — '' means absent (zero-value-omission rule), passed through verbatim.
     status: string;
@@ -80,22 +86,24 @@ export class ReservationWriteOffSyncService {
         ctx: RequestContext,
         input: OrderRegistrationResultInput,
     ): Promise<void> {
-        // localOrderId (via requestEntityId) first; orderEntityId only as a fallback — see
-        // OrderRegistrationResultInput's own doc comments.
-        const orderId = input.localOrderId
-            ? input.localOrderId
-            : input.orderEntityId
-              ? await this.findOrderIdByErpId(input.orderEntityId)
-              : null;
+        // orderUuid first (mivend#207), then localOrderId, then orderEntityId as the last
+        // fallback for results that predate orderUuid.
+        const orderId = input.orderUuid
+            ? await this.findOrderIdByUuid(input.orderUuid)
+            : input.localOrderId
+              ? input.localOrderId
+              : input.orderEntityId
+                ? await this.findOrderIdByErpId(input.orderEntityId)
+                : null;
         const order = orderId
             ? await this.connection.getRepository(ctx, Order).findOne({ where: { id: orderId } })
             : null;
         if (!orderId || !order) {
-            // mivend.audit.72 + issue #204 follow-up: never a silent, permanent skip — both
+            // mivend.audit.72 + issue #204 follow-up: never a silent, permanent skip — all
             // correlation keys can race ahead of local state, so throw and let the inbox retry.
             throw new Error(
-                `order-registration-result: no Order found via requestEntityId=` +
-                    `${input.requestEntityId ?? ''} or orderEntityId=${input.orderEntityId ?? ''}`,
+                `order-registration-result: no Order found via orderUuid=${input.orderUuid ?? ''}, ` +
+                    `requestEntityId=${input.requestEntityId ?? ''} or orderEntityId=${input.orderEntityId ?? ''}`,
             );
         }
 
@@ -187,7 +195,11 @@ export class ReservationWriteOffSyncService {
     // release-matching logic is shared via releaseMatchingReservations, see OrderChangedInput's
     // own doc comment for why reuse is safe here.
     async handleOrderChanged(ctx: RequestContext, input: OrderChangedInput): Promise<void> {
-        const orderId = await this.findOrderIdByErpId(input.orderEntityId);
+        // orderUuid first (mivend#207/search-platform#180) when present; orderEntityId otherwise
+        // (orders not registered through our integration carry no orderUuid at all).
+        const orderId = input.orderUuid
+            ? await this.findOrderIdByUuid(input.orderUuid)
+            : await this.findOrderIdByErpId(input.orderEntityId);
         const order = orderId
             ? await this.connection.getRepository(ctx, Order).findOne({ where: { id: orderId } })
             : null;
@@ -196,7 +208,8 @@ export class ReservationWriteOffSyncService {
             // (external-integration-rules skill): an order-changed event can race ahead of local
             // order creation — never a silent, permanent skip.
             throw new Error(
-                `order-changed: no Order found for orderEntityId=${input.orderEntityId}`,
+                `order-changed: no Order found via orderUuid=${input.orderUuid ?? ''} or ` +
+                    `orderEntityId=${input.orderEntityId}`,
             );
         }
 
@@ -314,6 +327,16 @@ export class ReservationWriteOffSyncService {
         const result = await this.connection.rawConnection.query(
             `SELECT id FROM "order" WHERE "customFieldsErporderid" = $1 LIMIT 1`,
             [orderEntityId],
+        );
+        return result[0]?.id ? String(result[0].id) : null;
+    }
+
+    // Order.customFieldsUuid (mivend#207, unique-indexed) — same raw-SQL pattern as
+    // findOrderIdByErpId above, for the same module-augmentation-visibility reason.
+    private async findOrderIdByUuid(orderUuid: string): Promise<string | null> {
+        const result = await this.connection.rawConnection.query(
+            `SELECT id FROM "order" WHERE "customFieldsUuid" = $1 LIMIT 1`,
+            [orderUuid],
         );
         return result[0]?.id ? String(result[0].id) : null;
     }
