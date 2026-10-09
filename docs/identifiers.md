@@ -107,16 +107,36 @@ and is never an idempotency key for a business entity.
   and calls `NumberingService.next(ctx, 'order')` — `Order.code` is now a plain number in the
   format described above, wired in `apps/server/src/vendure-config.ts`'s
   `orderOptions.orderCodeStrategy`.
-- Done, but **not yet run**: the one-off renumbering of every existing Order/Invoice/
-  PaymentAttempt/PaymentRefund/DiscountGrant row onto the new format lives at
-  `infrastructure/scripts/renumber-documents-207.sql` — idempotent, re-runnable, verified against
-  a disposable `make test-int` schema (`packages/plugins/numbering/src/__tests__/integration/
-  renumber-documents-207.int.test.ts`). It has **not been executed against the real local
-  (`mivend_central`) or staging-integration databases** — that is the owning session's own next
-  step, after reviewing the script, and after setting `INSTANCE_NUMBER_CODE` in the real
-  `.env.local`/`apps/server/.env.central.staging-integration` (currently unset in both — only
-  commented out in `.env.local.example` — so the server will not even boot with the new
-  `NumberingOrderCodeStrategy` until it is set there).
+- Done: `INSTANCE_NUMBER_CODE=100` set in `apps/server/.env.central` and
+  `apps/server/.env.central.staging-integration` (both are the central-hub deployment identity, just two
+  different contours/databases — no collision risk, per docs/environments.md's "one code for the hub, one per
+  branch"); `INSTANCE_NUMBER_CODE=101` set in `apps/server/.env.branch`.
+- Done: the one-off renumbering (`infrastructure/scripts/renumber-documents-207.sql`) has been **run against
+  both real local (`mivend_central`) and staging-integration (`mivend_central_staging_integration`) databases**,
+  with `instance_code=100`. Verified: zero remaining `ORD-`/`INV-`/`PAY-`/`DSC-` rows in either database, all
+  renumbered values unique, a second run against the same database is a no-op (idempotency holds against real
+  data, not just the test schema).
+  - **Local/staging-integration run `synchronize: true`, so this project's own TypeORM migrations
+    (`1791460000000-order-uuid`, `1791470000000-numbering-sequences`, `1791480000000-plugin-entities-uuid`,
+    `1791481000000-payment-refund-number`) never actually executed against either real database** — `synchronize`
+    tried to add the new `uuid` columns as `NOT NULL` directly against tables with existing rows and failed
+    outright (`column "uuid" of relation "discount_grant" contains null values`), crash-looping the server. Fixed
+    by applying the exact same add-column/backfill/set-not-null/create-index sequence the migrations already
+    encode, by hand, directly against both databases, before restarting. This is a one-time catch-up specific to
+    the local/staging-integration contours never running production's migration path — nothing to redo for
+    future entities as long as new migrations keep following the same nullable-first-then-backfill-then-NOT-NULL
+    shape (never a single-step `ADD COLUMN ... NOT NULL` against a table that can already have rows).
+  - Both `make dev` (local) and `make dev-staging-integration` restarted cleanly afterward; `make
+    dev-staging-integration`'s separate native-Dashboard (`packages/dashboard`) process failed to boot
+    (`Cannot find module '@mivend/plugin-numbering'`, a Vite module-resolution quirk of how it loads
+    `vendure-config.ts` standalone — see issue #77) — this is the secondary/optional Dashboard UI, not the
+    Manager portal (which is healthy on both contours); not investigated further, flagged as a known gap.
+  - A `pnpm build:plugins`/`pnpm --filter server build` run (a real `tsc -b` project build, not `make test`'s
+    transpile-only/esbuild paths) caught two real type errors the prior slice's `make lint`/`make test`/
+    `make test-int` run did not: `NumberingOrderCodeStrategy.numberingService` needing a definite-assignment
+    assertion, and `order.customFields.uuid`/`line.customFields.uuid` being `string | null | undefined` at the
+    type level — fixed with explicit guards in `OrderSubmittedBuilder.build()` (skip the order/mark the line
+    unbuildable if missing) rather than a non-null assertion.
 - Checked, nothing to fix: manager/storefront search-by-number UI. Grepped both frontends for any
   parsing/validation tied to the old `ORD-`/`INV-`/`PAY-`/`DSC-` prefix format — every hit is
   Storybook fixture data or a hardcoded display prefix built from a Vendure entity id (e.g.
