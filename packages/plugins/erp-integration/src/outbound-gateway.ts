@@ -6,6 +6,7 @@ import type { EntityManager } from 'typeorm';
 import { IntegrationOutboxService } from './integration-outbox.service';
 import type { OutboundEventType } from './outbound-event-types';
 import { loggerCtx } from './types';
+import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 
 export interface OutboundEventDraft {
     eventId?: string;
@@ -74,6 +75,19 @@ export class OutboundGateway {
         const reason = result.kind === 'skip' ? result.reason : 'builder returned no events';
         await this.recordSkipped(input, reason, em);
         return 'skipped';
+    }
+
+    // Guard for a producer's duplicate-publish check (docs/identifiers.md's "Exchange" guard,
+    // issue #199): has this orderId already got a non-skipped, non-failed order.submitted entry?
+    async hasActiveEntryForOrder(eventType: OutboundEventType, orderId: string): Promise<boolean> {
+        const entries = await this.dataSource.getRepository(IntegrationOutboxEntry).find({
+            where: { eventType },
+        });
+        return entries.some(
+            entry =>
+                (entry.payload as { orderId?: string }).orderId === orderId &&
+                (entry.status === 'pending' || entry.status === 'published'),
+        );
     }
 
     private async recordSkipped(

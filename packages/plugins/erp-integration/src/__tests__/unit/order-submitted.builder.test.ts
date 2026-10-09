@@ -12,12 +12,17 @@ interface TestLine {
     productVariant: { productId?: string | null } | null;
 }
 
-function makeOrder(lines: TestLine[]): {
+function makeOrder(
+    lines: TestLine[],
+    customFields: { selectedContractId: string | null; erpStatus?: string | null } = {
+        selectedContractId: 'contract-1',
+    },
+): {
     id: string;
     customerId: string;
     totalWithTax: number;
     currencyCode: string;
-    customFields: { selectedContractId: string | null };
+    customFields: { selectedContractId: string | null; erpStatus?: string | null };
     lines: TestLine[];
 } {
     return {
@@ -25,7 +30,7 @@ function makeOrder(lines: TestLine[]): {
         customerId: 'cust-1',
         totalWithTax: 10000,
         currencyCode: 'RUB',
-        customFields: { selectedContractId: 'contract-1' },
+        customFields,
         lines,
     };
 }
@@ -38,6 +43,7 @@ function makeBuilder(options: {
     counterparty: { erpId: string } | null;
     priceType: { externalId: string | null } | null;
     contract?: { erpId: string; organizationId: string } | null;
+    priorOutboxEntries?: Array<{ payload: { orderId?: string }; status: string }>;
 }): OrderSubmittedBuilder {
     const orderRepo = { findOne: vi.fn().mockResolvedValue(options.order) };
     const connection = {
@@ -84,6 +90,16 @@ function makeBuilder(options: {
     const reservationService = {
         findForOrder: vi.fn().mockResolvedValue(options.reservations),
     };
+    const priorEntries = options.priorOutboxEntries ?? [];
+    const outboundGateway = {
+        hasActiveEntryForOrder: vi.fn(async (_eventType: string, orderId: string) =>
+            priorEntries.some(
+                entry =>
+                    entry.payload.orderId === orderId &&
+                    (entry.status === 'pending' || entry.status === 'published'),
+            ),
+        ),
+    };
 
     return new OrderSubmittedBuilder(
         connection as never,
@@ -91,6 +107,7 @@ function makeBuilder(options: {
         contractService as never,
         customerPricingService as never,
         reservationService as never,
+        outboundGateway as never,
     );
 }
 
@@ -269,6 +286,78 @@ describe('OrderSubmittedBuilder', () => {
         expect(payloads.map(p => p.warehouseId).sort()).toEqual(['wh-A', 'wh-B']);
         expect(payloads.every(p => p.organizationId === 'org-erp-1')).toBe(true);
         expect(payloads.find(p => p.warehouseId === 'wh-A')?.lines).toHaveLength(2);
+    });
+
+    it('skips a re-confirm (or release/expiry then reconfirm) of an already-queued order — issue #199', async () => {
+        const line: TestLine = {
+            id: 'line-1',
+            quantity: 2,
+            productVariant: { productId: 'variant-product-1' },
+        };
+        const builder = makeBuilder({
+            order: makeOrder([line]),
+            reservations: [
+                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+            ],
+            warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
+            productExternalIds: { 'variant-product-1': 'product-1' },
+            counterparty: { erpId: 'counterparty-1' },
+            priceType: { externalId: 'price-type-wholesale' },
+            priorOutboxEntries: [{ payload: { orderId: 'order-1' }, status: 'published' }],
+        });
+
+        const result = await build(builder);
+
+        expect(result).toEqual({
+            kind: 'skip',
+            reason: expect.stringContaining('already submitted'),
+        });
+    });
+
+    it('allows a re-submit once the ERP rejected the previous submission (decision 5)', async () => {
+        const line: TestLine = {
+            id: 'line-1',
+            quantity: 2,
+            productVariant: { productId: 'variant-product-1' },
+        };
+        const builder = makeBuilder({
+            order: makeOrder([line], { selectedContractId: 'contract-1', erpStatus: 'REJECTED' }),
+            reservations: [
+                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+            ],
+            warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
+            productExternalIds: { 'variant-product-1': 'product-1' },
+            counterparty: { erpId: 'counterparty-1' },
+            priceType: { externalId: 'price-type-wholesale' },
+            priorOutboxEntries: [{ payload: { orderId: 'order-1' }, status: 'published' }],
+        });
+
+        const result = await build(builder);
+
+        expect(result.kind).toBe('send');
+    });
+
+    it('does not block on a prior skipped entry for the same order', async () => {
+        const line: TestLine = {
+            id: 'line-1',
+            quantity: 2,
+            productVariant: { productId: 'variant-product-1' },
+        };
+        const builder = makeBuilder({
+            order: makeOrder([line]),
+            reservations: [
+                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+            ],
+            warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
+            productExternalIds: { 'variant-product-1': 'product-1' },
+            counterparty: { erpId: 'counterparty-1' },
+            priceType: { externalId: 'price-type-wholesale' },
+            priorOutboxEntries: [{ payload: { orderId: 'order-1' }, status: 'skipped' }],
+        });
+
+        const result = await build(builder);
+
+        expect(result.kind).toBe('send');
     });
 
     it('skips an order that cannot be found', async () => {

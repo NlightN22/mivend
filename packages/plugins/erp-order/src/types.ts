@@ -1,5 +1,8 @@
 declare module '@vendure/core' {
     interface CustomOrderFields {
+        // Immutable identity for idempotency/exchange, assigned at insert — see
+        // docs/identifiers.md and apps/server/src/order-uuid.subscriber.ts.
+        uuid?: string | null;
         erpOrderId?: string | null;
         erpStatus?: string | null;
         erpStatusAt?: Date | null;

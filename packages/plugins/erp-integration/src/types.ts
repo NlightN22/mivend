@@ -10,6 +10,9 @@ declare module '@vendure/core' {
     // Owned by @mivend/plugin-acquiring's declaration; stamped at checkout from the variant.
     interface CustomOrderLineFields {
         organizationId?: number | null;
+        // Immutable identity, assigned at insert — see docs/identifiers.md and
+        // apps/server/src/order-uuid.subscriber.ts.
+        uuid?: string | null;
     }
 
     interface CustomProductVariantFields {

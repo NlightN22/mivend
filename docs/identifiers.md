@@ -53,3 +53,21 @@ and is never an idempotency key for a business entity.
 - The ERP stores our `uuid` and `number` in the document it creates and registers idempotently by `uuid` (a repeated
   registration returns the existing document); replies refer to our entity by `uuid`.
 - Inbound events about our entities are matched by `uuid` first.
+
+## Implementation status (issue #207)
+
+- Done: `Order.customFields.uuid` / `OrderLine.customFields.uuid`, assigned synchronously at insert by
+  `apps/server/src/order-uuid.subscriber.ts` (a TypeORM `EntitySubscriber`, not an EventBus listener, so it is atomic
+  with the row's own insert); backfilled for existing rows by migration `1791460000000-order-uuid`.
+- Done: `order.submitted`'s duplicate-publish guard (issue #199), in `OrderSubmittedBuilder.build()` via
+  `OutboundGateway.hasActiveEntryForOrder`. **Known limitation:** there is no dedicated "ERP rejected this order" fact
+  recorded anywhere yet, so the guard's only rejection signal is `Order.customFields.erpStatus === 'REJECTED'` (set by
+  `ReservationWriteOffSyncService` from the ERP's registration result). Any other existing `pending`/`published`
+  `order.submitted` outbox entry for the order blocks a new one. If a case arises where a legitimate re-submit should
+  be allowed on some other signal, that needs its own design, not a workaround here.
+- Deferred (not done this pass — out of budget for this slice of #207, tracked for follow-up): the `NumberingService`
+  plugin and its PostgreSQL per-document-type sequences, `INSTANCE_NUMBER_CODE`, the `UuidEntity` shared base and its
+  rollout to Invoice/PaymentAttempt/Refund/SettlementEntry/DiscountGrant/Document/ErpReconciliationIssue/Reservation,
+  and replacing `DateStampedOrderCodeStrategy`/`generateDocumentCode` with the new numbering service. None of these
+  env vars, migrations or entities exist yet; nothing below this implementation-status section should be read as
+  already wired up.

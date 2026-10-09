@@ -6,7 +6,7 @@ import { ReservationService } from '@mivend/plugin-reservation';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 
-import { outboundSend, outboundSkip } from './outbound-gateway';
+import { outboundSend, outboundSkip, OutboundGateway } from './outbound-gateway';
 import type { OutboundBuildResult } from './outbound-gateway';
 import type { OrderSubmittedLine, OrderSubmittedPayload } from './schemas/order-submitted.schema';
 
@@ -25,6 +25,7 @@ export class OrderSubmittedBuilder {
         private readonly contractService: ContractService,
         private readonly customerPricingService: CustomerPricingService,
         private readonly reservationService: ReservationService,
+        private readonly outboundGateway: OutboundGateway,
     ) {}
 
     async build(ctx: RequestContext, orderId: ID, orderCode: string): Promise<OutboundBuildResult> {
@@ -35,6 +36,12 @@ export class OrderSubmittedBuilder {
         if (!order) return outboundSkip(`order ${String(orderId)} not found`);
         if (!order.customerId) return outboundSkip('order has no customer');
         if (order.lines.length === 0) return outboundSkip('order has no lines');
+
+        const alreadySubmitted = await this.wasAlreadySubmitted(orderId, order);
+        if (alreadySubmitted) {
+            const orderUuid = order.customFields?.uuid ?? String(orderId);
+            return outboundSkip(`order ${orderUuid} already submitted`);
+        }
 
         const counterparty = await this.counterpartyService.getForCustomer(ctx, order.customerId);
         if (!counterparty) {
@@ -109,6 +116,18 @@ export class OrderSubmittedBuilder {
                 };
             }),
         );
+    }
+
+    // Blocks a second external effect for the same order (re-confirm, release-then-reconfirm,
+    // expiry-then-reconfirm — issue #199/docs/identifiers.md's "Exchange" guard), unless the ERP
+    // rejected the previous submission (decision 5: a re-submit is then allowed). No dedicated
+    // "ERP rejected" signal exists on IntegrationOutboxEntry today, so this checks
+    // Order.customFields.erpStatus === 'REJECTED' (set by ReservationWriteOffSyncService from the
+    // ERP's own registration result) as the only known rejection fact; any other non-skipped,
+    // non-failed prior entry for this order blocks a new submit.
+    private async wasAlreadySubmitted(orderId: ID, order: Order): Promise<boolean> {
+        if (order.customFields?.erpStatus === 'REJECTED') return false;
+        return this.outboundGateway.hasActiveEntryForOrder('order.submitted', String(orderId));
     }
 
     // Only active reservations count; a released/expired one no longer reflects where the stock sits.

@@ -8,6 +8,7 @@ import {
     VendureConfig,
 } from '@vendure/core';
 import { DateStampedOrderCodeStrategy } from './order-code.strategy';
+import { OrderUuidSubscriber, OrderLineUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import {
     DeferredPaymentPlugin,
@@ -198,6 +199,7 @@ export const config: VendureConfig = {
         database: process.env.DB_NAME ?? 'mivend',
         // Production-only (synchronize:false there) — see docs/environments.md's "Migrations".
         migrations: [path.join(__dirname, 'migrations/*.+(js|ts)')],
+        subscribers: [OrderUuidSubscriber, OrderLineUuidSubscriber],
     },
     customFields: {
         TaxCategory: [
@@ -214,6 +216,15 @@ export const config: VendureConfig = {
             },
         ],
         Order: [
+            {
+                // Immutable identity for idempotency/exchange — see docs/identifiers.md. Assigned
+                // synchronously at insert by OrderUuidSubscriber, never left null after creation.
+                name: 'uuid',
+                type: 'string',
+                nullable: true,
+                unique: true,
+                label: [{ languageCode: LanguageCode.en, value: 'UUID' }],
+            },
             {
                 name: 'erpOrderId',
                 type: 'string',
@@ -369,6 +380,17 @@ export const config: VendureConfig = {
                 type: 'string',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Rejection Reason Text' }],
+            },
+        ],
+        OrderLine: [
+            {
+                // Immutable identity for idempotency/exchange — see docs/identifiers.md. Assigned
+                // synchronously at insert by OrderUuidSubscriber, never left null after creation.
+                name: 'uuid',
+                type: 'string',
+                nullable: true,
+                unique: true,
+                label: [{ languageCode: LanguageCode.en, value: 'UUID' }],
             },
         ],
         Product: [
