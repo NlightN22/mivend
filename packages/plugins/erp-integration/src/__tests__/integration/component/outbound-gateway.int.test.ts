@@ -200,12 +200,17 @@ describe('OutboundGateway (integration, real Postgres)', () => {
         'withTransaction' | 'getRepository'
     >;
 
+    const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Widens the check-then-insert window to something reliably reproducible (verified: removing
+    // the lock below makes this fail every run) — proves the lock, not scheduling luck, closes it.
     async function guardedSubmit(orderId: string): Promise<'queued' | 'skipped-already'> {
         const ctx = {} as RequestContext;
         return withAggregateLock(lockConnectionShim, ctx, `reserve-order:${orderId}`, async () => {
             if (await gateway.hasActiveEntryForOrder('order.submitted', orderId)) {
                 return 'skipped-already';
             }
+            await sleep(20);
             await gateway.enqueue({
                 eventType: 'order.submitted',
                 subject: { orderId },
