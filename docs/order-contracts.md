@@ -108,11 +108,12 @@ Not implemented yet; recorded here so the decisions are not lost. Plan and open 
   `РезервДо` today, so the job never selects them: sending `reserveUntil` is what makes it work.
 - There is no separate manual cancel flow in 1C: cancelling a registered order is the same closing document,
   created "based on" the order by a person or posted by the job, and the order looks the same afterwards.
-- Open risk (unverified, from code reading only): posting the closing document writes the reserve register
-  movement with the closing document as recorder and does not rewrite the order, so the exchange may export
-  **no `order-changed` at all** after a closure. Do not design on `order-changed` (or `reserved_quantity = 0`)
-  following a closure; an explicit closed-order signal from the ERP may be needed. A live test on a test order
-  is being run on the ERP side; until it is done, the "ERP release detection" in the plan stays open.
+- Confirmed by a live test on a test order (ERP side, search-platform#178): posting the closing document does
+  not touch the order object at all (its data version is identical before and after) and 1C accepts it even for
+  an order awaiting approval, so the exchange exports **no `order-changed`** after any closure, automatic or
+  manual. mivend must not wait passively for `order-changed` to learn that the ERP released or closed an order;
+  the ERP side has to send an explicit signal, for example a result/ack event published when it handles the
+  cancellation command (`order.cancelled`), and for the job-driven closure a dedicated closed-order event.
 
 ## Deliberately out of scope (open questions)
 
