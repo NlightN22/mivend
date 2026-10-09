@@ -66,6 +66,13 @@ describe('contractOrderGuard', () => {
         ]);
     });
 
+    it('mirrors the stamp onto the in-memory order so the transition save does not erase it', async () => {
+        resolveOrderContract.mockResolvedValue({ erpId: 'resolved' });
+        const o = order();
+        await end('ArrangingPayment', o);
+        expect(o.customFields.selectedContractId).toBe('resolved');
+    });
+
     it('does nothing for other transitions', async () => {
         expect(await start('PaymentAuthorized')).toBeUndefined();
         await end('PaymentAuthorized');

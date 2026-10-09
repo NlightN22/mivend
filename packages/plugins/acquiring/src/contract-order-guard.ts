@@ -43,5 +43,7 @@ export const contractOrderGuard: OrderProcess<OrderState> = {
              WHERE id = $1 AND "customFieldsSelectedcontractid" IS DISTINCT FROM $2`,
             [order.id, contract.erpId],
         );
+        // Vendure saves this in-memory order right after the hook and would erase the UPDATE above.
+        order.customFields = { ...order.customFields, selectedContractId: contract.erpId };
     },
 };
