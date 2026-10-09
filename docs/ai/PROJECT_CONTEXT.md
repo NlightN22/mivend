@@ -1,6 +1,16 @@
 # Project Context
 
-Updated: 2026-10-09 07:30
+Updated: 2026-10-09 18:10
+
+## #207 identifiers: uuid everywhere, numeric document numbers, idempotency by uuid (2026-10-09, shipped/audited twice/closed; pushed to 49aeccc)
+
+- **uuid**: `Order`/`OrderLine.customFields.uuid` via a TypeORM `EntitySubscriber` (`beforeInsert`, atomic with the row's own insert — not a post-commit EventBus listener); shared `UuidEntity` base (`packages/shared`) rolled out to Invoice/PaymentAttempt/PaymentRefund/SettlementEntry/DiscountGrant/Document/ErpReconciliationIssue/Reservation (additive only for Reservation — `erpOperationId`/`erpReleaseOperationId` untouched, the actual uuid/erpOperationId **unification** is still open).
+- **Numbers**: `NumberingService` (`packages/plugins/numbering`) — Postgres sequence per document type + 3-digit `INSTANCE_NUMBER_CODE` prefix (fail-fast validated at plugin init), e.g. `1000000012`. Replaced `generateDocumentCode`/`DateStampedOrderCodeStrategy` everywhere: Invoice is order-scoped `<order number>-NN` (ordinal computed inside the *existing* per-order `withAggregateLock` in `InvoiceService.createUnderLock`, concurrent-writer tested); PaymentAttempt/PaymentRefund/DiscountGrant are flat sequences.
+- **order.submitted duplicate guard (closes #199)**: `OrderSubmittedListener.handle()` wraps the whole check-then-enqueue sequence in `withAggregateLock('reserve-order:<id>')` (same key `reserveOrder` already uses) — the *first* version of this guard was a plain check-then-insert with no lock (real TOCTOU race, caught by the audit, not by the original "publish-twice" unit test which only proved the guard reads correctly, never the concurrent case); fixed, proven by a real `Promise.all` test against Postgres with a widened race window. `order.submitted` now also carries `orderUuid`/`orderNumber`/`lineUuid`; the matching `@nlightn22/event-contracts` contract change went through search-platform#180 review and is published (0.55.0 then 0.56.0, now the installed dependency).
+- **Real-database renumbering**: local/staging-integration run `synchronize:true`, so this project's own TypeORM migrations for uuid/number columns **never actually execute there** — had to apply the equivalent ALTER/backfill/index SQL by hand against both real databases (`mivend_central`, `mivend_central_staging_integration`) before the server would even boot (naive `ADD COLUMN uuid NOT NULL` against existing rows crash-loops `synchronize`). `infrastructure/scripts/renumber-documents-207.sql` is idempotent and was run against both real databases (verified: zero old-format rows left, re-run is a no-op).
+- **Display dash + search fix (follow-up, owner-requested)**: `@mivend/ui-kit`'s `formatDocumentNumber` shows `100-0000012` instead of the raw digits in both frontends (display only — raw value stays everywhere for sort/navigation/search, via a parallel `*Display` row field or a `#cell-<field>`/`#body` slot depending on the table component). Owner caught the obvious risk (pasting a dashed number into a search box) — fixed properly server-side: `shared`'s `documentNumberSearchTerm` undoes only that one display dash (never a real Invoice `-NN` suffix) before every number-search ILIKE, including the two multi-field OR searches (order code+phone/company/INN; order code+product name).
+- **Also fixed along the way**: the native Dashboard (`packages/dashboard`) failed to boot on either contour — missing `@mivend/plugin-*` workspace deps in its own `package.json` (pnpm's strict isolation never symlinked them), missing `dotenv -e` wrapping on its dev scripts (ran with an empty env), and `INTEGRATION_KAFKA_CA_PATH` being a relative path that broke once `__dirname` differed between the real server and the Dashboard's own temp-compiled copy of `vendure-config.ts`.
+- **Still open, tracked separately, not blocking this issue**: Reservation uuid/`erpOperationId` unification; consuming `OrderRegistrationResult`/`OrderChanged.order_uuid` (ERP-side dedup not live yet, 1C field-length fix pending); Swagger/API example updates for the old order-code format. Full spec + status: `docs/identifiers.md`.
 
 ## #204 ERP order rejection (2026-10-09, shipped/audited/closed; pushed to 6254524)
 
@@ -90,54 +100,9 @@ Over-limit deferred order is NOT rejected (flag `creditLimitExceeded`, manager c
 - Guests: API resolves default price (branch default `PriceType`); UI hides price AND stock tier. Default branch/price type/RUB currency bootstrapped from options (`BOOTSTRAP_BRANCH_NAMES`, `DEFAULT_PRICE_TYPE_CODE`, `DEFAULT_CURRENCY_CODE`); branch is mivend's own entity.
 - Stock tiers: `stockLevel` = tier of the viewer's branch ATP (none/low/medium/high, thresholds in GlobalSettings). Resolver-only override: never `extend type ProductVariant { stockLevel }` (crashes bootstrap). `inStock` filter (ERP stock) can briefly disagree with `stockLevel` (mivend ATP). #167: `stock.handler.ts` skips facts for tombstoned warehouses.
 - Staging test customer `test@komponent-m.ru` (creds: `STAGING_TEST_CUSTOMER_EMAIL`/`_PASSWORD` in the gitignored `.env.central.staging-integration`); KEEP it. Warehouses were assigned to branches by hand.
-## Recent changes (2026-10-04 — #160 ExternalSearchPlugin, unblocked part shipped/audited)
+## #160/#59/#158 search backend + category tree/hierarchy (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-03-04-160-59-158-full.md`)
 
-- `SEARCH_BACKEND=external`: `totalItems` = search-service `total` (hits not synced into our DB are
-  skipped; rare, index 45k vs 51.8k products). One batched, channel-scoped
-  `ProductLookupService.findByExternalIds` keeps search-service ranking order; excludes soft-deleted
-  products always and disabled ones on shop only.
-- Admin-api `search` + no-op `pendingSearchIndexUpdates`/`runPendingSearchIndexUpdates`/`reindex`
-  (no local index). Commits 42e43a0, 1f595d5.
-- Category browse, filters and facets: done in #164 (see the top section).
-
-## Recent changes (2026-10-04 — #59 category tree UI in both portals, shipped/audited/closed)
-
-- Tree: one paginated all-collections query (`fetchAllCollections`, parallel after page 1) + recursive
-  `buildCategoryTree` in `packages/shared/src/collectionTree.ts` (node attaches to nearest visible
-  ancestor; `buildCategoryPanel` = <=2 ancestors + one level of children-or-siblings;
-  `filterVisibleCrumbs` drops ancestors the Shop API cannot return). Never use a flat `take:100`.
-- Storefront: mega-menu (`MvCatalogDropdown`+`Group`, 3 levels, icons from `Collection.featuredAsset`
-  seeded via erp-import `iconFile`, More after 6, hidden on mobile), `MvCategoryNav` inside
-  `MvCatalogFacets` (drill-down, 7 rows + More), breadcrumbs+heading on catalog, real crumbs on ProductPage.
-  Colors are `--app-nav-*` tokens; labels via props + `t()`.
-- Manager catalog uses the same `MvCategoryNav` (flat category facet hidden), filters by admin-search
-  `collectionSlug`; hidden categories shown with a Hidden marker; visibility page shows level/parent/reason.
-- Manual `visibilityOverride` change recomputes the subtree at once (`category-override-recompute.listener.ts`,
-  central only, coalesced); clearing restores state.
-- erp-import has a `warehouse` record type; local seed `seed-erp.mjs` run is `v9` (bump on fixture change or
-  dedup skips it). `make e2e E2E_ARGS="--project=... path"` runs subsets (single worker, ~24 min per group).
-- Open: #159 (34 storefront e2e specs fail after the global-setup fix: invoices, documents, spend
-  discounts, stepper, trading points; manager projects not yet run). Staging products/facets blocked by #69.
-
-## Recent changes (2026-10-03 — #158 category hierarchy from CategoryChanged.parent_id, implemented)
-
-Kafka-fed categories now build the Collection tree (was flat under root). Design record:
-`docs/category-hierarchy.md` (read it before touching category code). Missing parent => private
-placeholder Collection (no `MissingDependencyError`/retry); changed parent => `CollectionService.move`;
-filter = `containsAny` over own + descendant FacetValues (Vendure `inheritFilters` ANDs, unusable);
-children hidden with a deleted/unsynced parent (user decision) via internal `Collection.feedHidden`
-custom field (migration `1791000000004`, initialised from `isPrivate`). Periodic
-`category-tree-recompute` task (hourly, central+Kafka) refreshes subtree filters and propagates hidden
-state; REST import recomputes after a batch with categories. Shared pure logic in
-`packages/shared/src/categoryCollectionFilter.ts`, Vendure part `recomputeCategoryTree.ts`.
-**Gotchas**: `CollectionService.update` without `translations` + native id INSERTs a new row (null
-`position` error) — always pass translations; `runScheduledTask` triggers are lost if the staging
-worker has not logged "Worker is ready" yet (ts-node-dev hang after shared/dist rebuild — restart via
-`make dev-staging-integration`); check contract version with `pnpm view`, not `npm view` (false 401).
-**Staging**: backfilled via search-platform bulk resync (518 events); 426 nested, 5 placeholders = categories
-deleted in the ERP that still have live children (hidden with them). **Open**: storefront/manager still load
-`collections(take:100)` flat, so only 1 of 26 top-level categories shows on real trees — handed to #59
-(mega-menu concept: left top-level list, right level-2 groups with level-3 links and "more").
+Kafka `CategoryChanged.parent_id` builds the real Collection tree (design: `docs/category-hierarchy.md`); both portals render it (mega-menu/drill-down, `packages/shared/src/collectionTree.ts`); `SEARCH_BACKEND=external` resolves `totalItems`/ranking via search-service. Open: #159 (34 storefront e2e specs), staging products/facets blocked by #69.
 
 ## #117 Position entity (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT.20261005-117-position.md`)
 `Position` (ERP master data) in `plugin-access-control`, fed by the `position` stream; `Administrator.customFields.positionId` = `Position.erpId` is a **soft link** (name resolved on read, no error if absent). erp-import `EmployeeRecord.position` -> `positionErpId`. Dev gotcha: ts-node-dev children can hang in `waitForFile` under load — free load, restart via `make dev`, never raw kill.
@@ -209,7 +174,9 @@ Administrator lifecycle) · `approval-workflow` · `reservation` · `moq` · `se
 `erp-integration` (Kafka consumer central-only; `freight-delivery` ShippingMethod bootstrap +
 `pricesIncludeTax`/tax auto-provisioning run on every instance) · `retro-bonus` (#102,
 `RetroBonusRule` — manager-portal-only read-only, upsert-only, runs on every instance like
-`price-entry`/`counterparty`; only erp-integration's handler, central-only, writes to it).
+`price-entry`/`counterparty`; only erp-integration's handler, central-only, writes to it) ·
+`numbering` (#207, `NumberingService` — Postgres sequence per document type + 3-digit
+`INSTANCE_NUMBER_CODE` prefix, runs on every instance).
 
 ## Database and data model
 
@@ -303,7 +270,9 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 `make dev` · `make dev-staging-integration` · `make dev-branch` · `make up` (never recreates
 running containers; `make up-rebuild` does — interrupts every contour) · `make seed-all` ·
-`make lint` · `make test` (182 files / 1439 tests as of 2026-10-03) · `make test-int` (never run
+`make lint` · `make test` (290 files / 2174 tests as of 2026-10-09) · `make ci` (full CI replay in
+a clean worktree — catches prettier/type issues `make lint`/`make test` miss, mandatory before any
+push) · `make test-int` (never run
 vitest directly) · `pnpm build:plugins` (mandatory alongside lint/test for any
 `packages/plugins/**` change) · `make preview-build`/`preview-up`/`preview-down`. `make dev-reset
 FORCE=1` wipes the **shared** Postgres volume for every contour — never run without checking
@@ -396,3 +365,14 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
   #205's `setOrderContract`/2ab4301, #204's `reservation-write-off-sync.service.ts`/
   `reservation-expiry.service.ts`). Always `repo.update(id, { customFields })` for an Order
   custom-fields patch instead.
+- **A new TypeORM migration adding a `NOT NULL` column against a table with existing rows will
+  crash-loop local/staging-integration's `synchronize:true` boot** (it tries one-step `ADD COLUMN
+  ... NOT NULL`, which fails outright) — and the migration file itself **never runs** on those
+  contours anyway (`synchronize:true` means TypeORM migrations are production-only). For a new
+  non-nullable column: let `synchronize` add it nullable, then by hand (or via a one-off SQL
+  script, #207's `infrastructure/scripts/renumber-documents-207.sql` is the reference) backfill
+  existing rows, THEN `ALTER COLUMN ... SET NOT NULL` — never ship a migration that assumes it will
+  actually execute against a real local/staging-integration database.
+- **Always run `make ci` before pushing**, not just `make lint`/`make test`/`pnpm build:plugins` —
+  it replays CI in a clean worktree with its own `prettier --check`, which caught real formatting
+  drift this session that the warm working copy's own lint-staged hook had missed.
