@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationBootstrap, Inject } from '@nestjs/common';
-import { EventBus } from '@vendure/core';
+import { EventBus, TransactionalConnection } from '@vendure/core';
 import { OrderReservedEvent } from '@mivend/plugin-reservation';
-import { subscribeAndLog } from 'shared';
+import { subscribeAndLog, withAggregateLock } from 'shared';
 
 import { OrderSubmittedBuilder } from './order-submitted.builder';
 import { OutboundGateway } from './outbound-gateway';
@@ -14,6 +14,7 @@ import type { ErpIntegrationPluginOptions } from './types';
 export class OrderSubmittedListener implements OnApplicationBootstrap {
     constructor(
         private readonly eventBus: EventBus,
+        private readonly connection: TransactionalConnection,
         private readonly gateway: OutboundGateway,
         private readonly builder: OrderSubmittedBuilder,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
@@ -31,11 +32,19 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
         );
     }
 
+    // Same `reserve-order:<id>` lock key as order-contract.service.ts's reserveOrder — closes the
+    // check-then-insert race a concurrent re-confirm/redelivery would otherwise hit (issue #199).
     private async handle(event: OrderReservedEvent): Promise<void> {
-        await this.gateway.enqueue({
-            eventType: 'order.submitted',
-            subject: { orderId: String(event.orderId), orderCode: event.orderCode },
-            build: () => this.builder.build(event.ctx, event.orderId, event.orderCode),
-        });
+        await withAggregateLock(
+            this.connection,
+            event.ctx,
+            `reserve-order:${String(event.orderId)}`,
+            txCtx =>
+                this.gateway.enqueue({
+                    eventType: 'order.submitted',
+                    subject: { orderId: String(event.orderId), orderCode: event.orderCode },
+                    build: () => this.builder.build(txCtx, event.orderId, event.orderCode),
+                }),
+        );
     }
 }

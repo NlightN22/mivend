@@ -77,17 +77,17 @@ export class OutboundGateway {
         return 'skipped';
     }
 
-    // Guard for a producer's duplicate-publish check (docs/identifiers.md's "Exchange" guard,
-    // issue #199): has this orderId already got a non-skipped, non-failed order.submitted entry?
+    // Guard for issue #199's duplicate-publish check. Filtered by payload->>'orderId' at the SQL
+    // level, not loaded into JS — this table is never pruned, so it would scale with order count.
     async hasActiveEntryForOrder(eventType: OutboundEventType, orderId: string): Promise<boolean> {
-        const entries = await this.dataSource.getRepository(IntegrationOutboxEntry).find({
-            where: { eventType },
-        });
-        return entries.some(
-            entry =>
-                (entry.payload as { orderId?: string }).orderId === orderId &&
-                (entry.status === 'pending' || entry.status === 'published'),
-        );
+        const count = await this.dataSource
+            .getRepository(IntegrationOutboxEntry)
+            .createQueryBuilder('outbox')
+            .where('outbox.event_type = :eventType', { eventType })
+            .andWhere("outbox.payload->>'orderId' = :orderId", { orderId })
+            .andWhere('outbox.status IN (:...statuses)', { statuses: ['pending', 'published'] })
+            .getCount();
+        return count > 0;
     }
 
     private async recordSkipped(

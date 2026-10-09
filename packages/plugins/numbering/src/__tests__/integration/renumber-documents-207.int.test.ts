@@ -102,13 +102,15 @@ describe('renumber-documents-207.sql', () => {
         );
         expect(grants[0].number).toBe('1000000001');
 
-        const beforeRerun: Array<{ code: string }> = await dataSource.query(
-            `SELECT code FROM "order" ORDER BY id`,
-        );
+        const snapshot = async (): Promise<Record<string, unknown[]>> => ({
+            orders: await dataSource.query(`SELECT code FROM "order" ORDER BY id`),
+            invoices: await dataSource.query(`SELECT number FROM invoice ORDER BY id`),
+            payments: await dataSource.query(`SELECT number FROM payment_attempt ORDER BY id`),
+            refunds: await dataSource.query(`SELECT number FROM payment_refund ORDER BY id`),
+            grants: await dataSource.query(`SELECT number FROM discount_grant ORDER BY id`),
+        });
+        const beforeRerun = await snapshot();
         await runScript();
-        const afterRerun: Array<{ code: string }> = await dataSource.query(
-            `SELECT code FROM "order" ORDER BY id`,
-        );
-        expect(afterRerun).toEqual(beforeRerun);
+        expect(await snapshot()).toEqual(beforeRerun);
     });
 });

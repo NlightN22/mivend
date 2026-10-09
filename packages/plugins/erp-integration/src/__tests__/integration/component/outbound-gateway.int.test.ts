@@ -1,11 +1,13 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import type { Repository } from 'typeorm';
+import type { RequestContext } from '@vendure/core';
 import {
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    withAggregateLock,
 } from 'shared';
 
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
@@ -157,5 +159,73 @@ describe('OutboundGateway (integration, real Postgres)', () => {
             status: 'skipped',
             lastError: 'build failed: lookup failed',
         });
+    });
+
+    it('hasActiveEntryForOrder matches only the given orderId and an active status', async () => {
+        await gateway.enqueue({
+            eventType: 'order.submitted',
+            subject: { orderId: 'order-active' },
+            build: async () => outboundSend([{ payload: { orderId: 'order-active' } }]),
+        });
+        const [row] = await repo().find();
+        await repo().update({ id: row.id }, { status: 'failed' });
+        await gateway.enqueue({
+            eventType: 'order.submitted',
+            subject: { orderId: 'order-other' },
+            build: async () => outboundSend([{ payload: { orderId: 'order-other' } }]),
+        });
+
+        expect(await gateway.hasActiveEntryForOrder('order.submitted', 'order-active')).toBe(false);
+        expect(await gateway.hasActiveEntryForOrder('order.submitted', 'order-other')).toBe(true);
+        expect(await gateway.hasActiveEntryForOrder('order.submitted', 'order-missing')).toBe(
+            false,
+        );
+    });
+
+    // Mirrors OrderSubmittedListener.handle()'s real guard shape (check then enqueue under the
+    // reserve-order:<id> lock) — proves the lock closes the race, not just the guard's read.
+    const withManager = (ctx: RequestContext, manager: EntityManager): RequestContext =>
+        ({ ...ctx, __manager: manager }) as unknown as RequestContext;
+    const lockConnectionShim = {
+        getRepository: (ctx: RequestContext) => {
+            const manager = (ctx as unknown as { __manager: EntityManager }).__manager;
+            return { query: (sql: string, params?: unknown[]) => manager.query(sql, params) };
+        },
+        withTransaction: async (
+            ctx: RequestContext,
+            work: (c: RequestContext) => Promise<unknown>,
+        ) => dataSource.transaction(manager => work(withManager(ctx, manager))),
+    } as unknown as Pick<
+        import('@vendure/core').TransactionalConnection,
+        'withTransaction' | 'getRepository'
+    >;
+
+    async function guardedSubmit(orderId: string): Promise<'queued' | 'skipped-already'> {
+        const ctx = {} as RequestContext;
+        return withAggregateLock(lockConnectionShim, ctx, `reserve-order:${orderId}`, async () => {
+            if (await gateway.hasActiveEntryForOrder('order.submitted', orderId)) {
+                return 'skipped-already';
+            }
+            await gateway.enqueue({
+                eventType: 'order.submitted',
+                subject: { orderId },
+                build: async () => outboundSend([{ payload: { orderId } }]),
+            });
+            return 'queued';
+        });
+    }
+
+    it('two concurrent submits for the same order under the real lock produce exactly one row', async () => {
+        const orderId = 'order-concurrent-1';
+
+        const outcomes = await Promise.all([guardedSubmit(orderId), guardedSubmit(orderId)]);
+
+        expect(outcomes.sort()).toEqual(['queued', 'skipped-already']);
+        const rows = await repo()
+            .createQueryBuilder('outbox')
+            .where("outbox.payload->>'orderId' = :orderId", { orderId })
+            .getMany();
+        expect(rows).toHaveLength(1);
+        expect(rows[0].status).toBe('pending');
     });
 });
