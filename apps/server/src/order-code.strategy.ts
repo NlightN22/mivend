@@ -2,7 +2,7 @@ import { Injector, OrderCodeStrategy, RequestContext } from '@vendure/core';
 import { NumberingService } from '@mivend/plugin-numbering';
 
 export class NumberingOrderCodeStrategy implements OrderCodeStrategy {
-    private numberingService: NumberingService;
+    private numberingService!: NumberingService;
 
     init(injector: Injector): void {
         this.numberingService = injector.get(NumberingService);

@@ -36,10 +36,11 @@ export class OrderSubmittedBuilder {
         if (!order) return outboundSkip(`order ${String(orderId)} not found`);
         if (!order.customerId) return outboundSkip('order has no customer');
         if (order.lines.length === 0) return outboundSkip('order has no lines');
+        const orderUuid = order.customFields?.uuid;
+        if (!orderUuid) return outboundSkip(`order ${String(orderId)} has no uuid`);
 
         const alreadySubmitted = await this.wasAlreadySubmitted(orderId, order);
         if (alreadySubmitted) {
-            const orderUuid = order.customFields?.uuid ?? String(orderId);
             return outboundSkip(`order ${orderUuid} already submitted`);
         }
 
@@ -75,10 +76,11 @@ export class OrderSubmittedBuilder {
             const productId = line.productVariant?.productId
                 ? productExternalIdByProductId.get(String(line.productVariant.productId))
                 : undefined;
-            if (!warehouseId || !productId) {
+            const lineUuid = line.customFields?.uuid;
+            if (!warehouseId || !productId || !lineUuid) {
                 unbuildable.push(
                     `line ${String(line.id)} (warehouseId=${String(warehouseId)}, ` +
-                        `productId=${String(productId)})`,
+                        `productId=${String(productId)}, lineUuid=${String(lineUuid)})`,
                 );
                 continue;
             }
@@ -91,7 +93,7 @@ export class OrderSubmittedBuilder {
                 productId,
                 quantity: line.quantity,
                 priceTypeId,
-                lineUuid: line.customFields.uuid,
+                lineUuid,
             });
         }
         if (unbuildable.length > 0) {
@@ -106,7 +108,7 @@ export class OrderSubmittedBuilder {
                     eventId: randomUUID(),
                     orderId: String(orderId),
                     orderCode,
-                    orderUuid: order.customFields.uuid,
+                    orderUuid,
                     orderNumber: orderCode,
                     organizationId: contract.organizationId,
                     contractId: contract.erpId,
