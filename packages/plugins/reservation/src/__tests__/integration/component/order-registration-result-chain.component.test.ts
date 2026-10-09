@@ -190,7 +190,7 @@ describe('order-registration-result -> order-changed chain (component, real Post
         await seedOrder();
 
         await expect(sync.handleOrderChanged(ctx, orderChanged)).rejects.toThrow(
-            `order-changed: no Order found for orderEntityId=${ERP_ID}`,
+            `order-changed: no Order found via orderUuid= or orderEntityId=${ERP_ID}`,
         );
     });
 

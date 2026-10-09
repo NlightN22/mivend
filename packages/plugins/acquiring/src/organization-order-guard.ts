@@ -33,6 +33,10 @@ export const organizationOrderGuard: OrderProcess<OrderState> = {
     // leaves its line unstamped and fails the transition (the invariant must hold at stamp time).
     async onTransitionEnd(_fromState, toState, { ctx, order }) {
         if (toState !== 'ArrangingPayment') return;
+        // Order row lock first: a tier-rebalance refresh holding stale lines must commit before this stamp.
+        await connection
+            .getRepository(ctx, OrderLine)
+            .query('SELECT id FROM "order" WHERE id = $1 FOR UPDATE', [order.id]);
         const rows: Array<{ missing: number }> = await connection
             .getRepository(ctx, OrderLine)
             .query(

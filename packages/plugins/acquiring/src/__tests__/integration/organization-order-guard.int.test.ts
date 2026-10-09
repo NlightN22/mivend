@@ -49,6 +49,7 @@ beforeAll(async () => {
     await dataSource.initialize();
     await run(`CREATE TABLE product_variant (
         id serial PRIMARY KEY, sku varchar, "customFieldsOrganizationid" int)`);
+    await run(`CREATE TABLE "order" (id serial PRIMARY KEY)`);
     await run(`CREATE TABLE order_line (
         id serial PRIMARY KEY, "orderId" int, "productVariantId" int,
         "customFieldsOrganizationid" int)`);
@@ -65,7 +66,8 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-    await run(`TRUNCATE order_line, product_variant RESTART IDENTITY`);
+    await run(`TRUNCATE order_line, product_variant, "order" RESTART IDENTITY`);
+    await run(`INSERT INTO "order" DEFAULT VALUES`);
 });
 
 afterAll(async () => {
@@ -142,6 +144,22 @@ describe('organizationOrderGuard (real SQL)', () => {
         await run(`UPDATE product_variant SET "customFieldsOrganizationid" = NULL`);
 
         await expect(stamp(1)).rejects.toThrow();
+        expect(await lineOrganizations(1)).toEqual([7]);
+    });
+
+    it('waits for a concurrent writer holding the order row, so its stale write cannot erase the stamp', async () => {
+        await addLine(1, 'A', 7);
+        const writer = dataSource.createQueryRunner();
+        await writer.startTransaction();
+        await writer.query(`SELECT id FROM "order" WHERE id = 1 FOR UPDATE`);
+
+        const stamping = stamp(1);
+        await new Promise(resolve => setTimeout(resolve, 150));
+        await writer.query(`UPDATE order_line SET "customFieldsOrganizationid" = NULL`);
+        await writer.commitTransaction();
+        await writer.release();
+        await stamping;
+
         expect(await lineOrganizations(1)).toEqual([7]);
     });
 
