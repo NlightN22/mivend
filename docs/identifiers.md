@@ -38,6 +38,11 @@ and is never an idempotency key for a business entity.
 - Documents that belong to an order are numbered `<order number>-NN` (`1000000012-01`, `-02`, ...), NN being the
   ordinal of the document within the order. Other document types (payment document, refund, discount grant) have
   their own sequence per instance.
+- **Proforma versions (#206):** every version is a new document with its own new number; the earlier version stays
+  under its old number and the new one links to it ("replaces"), so a number is never reused and `-NN` is only the
+  ordinal within the order; the organization is shown separately.
+- **Payment documents:** our number always comes from the sequence; an external reference (acquirer id, receipt number,
+  the ERP's event id) is stored and shown separately as the provider/bank reference and never replaces our number.
 - Shown everywhere people see a document and accepted by every search box (typing digits finds it).
 
 ## Exchange
