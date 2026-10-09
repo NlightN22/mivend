@@ -143,7 +143,8 @@ const refundedTotal = computed(() =>
                                                 >Invoice #{{ a.invoice?.id }}</router-link
                                             >
                                             <div class="pd-row-meta" v-if="a.invoice?.order">
-                                                Order {{ formatDocumentNumber(a.invoice.order.code) }}
+                                                Order
+                                                {{ formatDocumentNumber(a.invoice.order.code) }}
                                             </div>
                                         </td>
                                         <td class="pd-num">

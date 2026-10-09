@@ -116,7 +116,8 @@ watch(() => route.params.code, load);
     <div v-else-if="order" class="order-detail">
         <div class="order-detail__header">
             <div class="order-detail__breadcrumb">
-                <RouterLink to="/orders">Orders</RouterLink> / {{ formatDocumentNumber(order.code) }}
+                <RouterLink to="/orders">Orders</RouterLink> /
+                {{ formatDocumentNumber(order.code) }}
             </div>
             <h1 class="order-detail__title">
                 {{ formatDocumentNumber(order.code) }}

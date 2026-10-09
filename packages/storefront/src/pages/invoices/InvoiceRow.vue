@@ -34,7 +34,9 @@ const isPayable = props.invoice.status !== 'paid' && props.invoice.status !== 'c
     <article class="invoice-row">
         <div>
             <div class="invoice-row__name">Invoice #{{ invoice.id }}</div>
-            <div class="invoice-row__meta">Order {{ formatDocumentNumber(invoice.order.code) }}</div>
+            <div class="invoice-row__meta">
+                Order {{ formatDocumentNumber(invoice.order.code) }}
+            </div>
         </div>
 
         <div>

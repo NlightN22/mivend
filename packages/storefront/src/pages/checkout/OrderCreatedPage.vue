@@ -156,7 +156,8 @@ onMounted(load);
                     <h3 class="oc-card-title">Order details</h3>
                     <div class="oc-detail-list">
                         <div class="oc-detail">
-                            <span>Order number</span><strong>{{ formatDocumentNumber(order.code) }}</strong>
+                            <span>Order number</span
+                            ><strong>{{ formatDocumentNumber(order.code) }}</strong>
                         </div>
                         <div v-if="placedAt" class="oc-detail">
                             <span>Date</span><strong>{{ placedAt }}</strong>
