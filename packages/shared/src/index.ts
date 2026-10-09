@@ -58,3 +58,4 @@ export {
     characteristicFacetCode,
     characteristicKeyFromFacetCode,
 } from './characteristicFacet';
+export { UuidEntity } from './uuid-entity';

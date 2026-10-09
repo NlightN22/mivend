@@ -48,6 +48,7 @@ import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
 import { NotificationPlugin } from '@mivend/plugin-notification';
 import { MoqPlugin } from '@mivend/plugin-moq';
+import { NumberingPlugin } from '@mivend/plugin-numbering';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { AcquiringPlugin, offlineTermsPaymentHandler } from '@mivend/plugin-acquiring';
@@ -64,6 +65,7 @@ import { CounterpartyDashboardPlugin } from './counterparty-dashboard.plugin';
 import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
+const instanceNumberCode = process.env.INSTANCE_NUMBER_CODE ?? '';
 const defaultPriceTypeCode = process.env.DEFAULT_PRICE_TYPE_CODE ?? 'RETAIL';
 const defaultCurrencyCode = process.env.DEFAULT_CURRENCY_CODE ?? 'RUB';
 const branchNames = (process.env.BOOTSTRAP_BRANCH_NAMES ?? 'Main')
@@ -717,6 +719,7 @@ export const config: VendureConfig = {
         VersioningPlugin,
         CounterpartyPlugin,
         PriceEntryPlugin,
+        NumberingPlugin.init({ instanceNumberCode }),
         // Issue #102: Admin-API-only, runs on every instance like PriceEntryPlugin/CounterpartyPlugin
         // — only erp-integration's handler (central-only) ever writes to it.
         RetroBonusPlugin,

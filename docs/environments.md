@@ -17,6 +17,10 @@ Testing the hub↔branch RabbitMQ sync itself (`plugin-sync`) is a separate, not
 concern from what this document covers — it could in principle run against a local Kafka/RabbitMQ
 within the local-dev contour below, but that is out of scope for issue #68 and untested so far.
 
+`INSTANCE_NUMBER_CODE` (issue #207) is a related but separate axis: a fixed 3-digit code per
+deployment (one for the hub, one per branch) used only as the document-number prefix in
+`NumberingService` — it does not affect `INSTANCE_TYPE`/`INSTANCE_ID` routing.
+
 ## Axis 2: contour — where does the data come from
 
 Three contours, always for a **central** instance (branches never touch Integration Service):
