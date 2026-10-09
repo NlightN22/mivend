@@ -27,15 +27,18 @@ and is never an idempotency key for a business entity.
 
 ## Number format
 
-- A plain number, 8 digits, from a PostgreSQL sequence per document type, starting at 10000000 (never `MAX+1`, never a
-  random suffix). Gaps after a rolled-back transaction are acceptable: these are not accounting documents (the ERP holds
-  those); gapless numbering is a legal requirement for tax invoices only.
+- A plain number, digits only: a **3-digit instance code** (fixed per deployment: one code for the central hub, one for
+  each branch) followed by a **7-digit sequence** from a PostgreSQL sequence per document type on that instance, for
+  example `1000000012` (never `MAX+1`, never a random suffix). The code makes numbers unique across instances without
+  any coordination, so the number is issued **immediately** by the instance that creates the document, hub or branch,
+  with no wait for synchronization and no dependency on the hub being reachable.
+- Gaps after a rolled-back transaction are acceptable: these are not accounting documents (the ERP holds those);
+  gapless numbering is a legal requirement for tax invoices only.
 - `Order.code` is the order number (digits only).
-- Documents that belong to an order are numbered `<order number>-NN` (`10000012-01`, `-02`, ... one per organization
-  invoice). Other document types (payment document, refund, discount grant) have their own sequence.
+- Documents that belong to an order are numbered `<order number>-NN` (`1000000012-01`, `-02`, ...), NN being the
+  ordinal of the document within the order. Other document types (payment document, refund, discount grant) have
+  their own sequence per instance.
 - Shown everywhere people see a document and accepted by every search box (typing digits finds it).
-- Numbers are generated on the central hub; a branch instance never generates a document number (if a flow is found
-  that does, per-instance ranges are required before it ships).
 
 ## Exchange
 
