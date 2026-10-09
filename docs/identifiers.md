@@ -65,9 +65,21 @@ and is never an idempotency key for a business entity.
   `ReservationWriteOffSyncService` from the ERP's registration result). Any other existing `pending`/`published`
   `order.submitted` outbox entry for the order blocks a new one. If a case arises where a legitimate re-submit should
   be allowed on some other signal, that needs its own design, not a workaround here.
-- Deferred (not done this pass — out of budget for this slice of #207, tracked for follow-up): the `NumberingService`
-  plugin and its PostgreSQL per-document-type sequences, `INSTANCE_NUMBER_CODE`, the `UuidEntity` shared base and its
-  rollout to Invoice/PaymentAttempt/Refund/SettlementEntry/DiscountGrant/Document/ErpReconciliationIssue/Reservation,
-  and replacing `DateStampedOrderCodeStrategy`/`generateDocumentCode` with the new numbering service. None of these
-  env vars, migrations or entities exist yet; nothing below this implementation-status section should be read as
-  already wired up.
+- Done: `NumberingService` (`packages/plugins/numbering`) — `next(ctx, documentType)` against a fixed, hardcoded
+  Postgres sequence per `NumberingDocumentType` (`order`/`invoice`/`payment`/`refund`/`discount-grant`/`proforma`,
+  migration `1791470000000-numbering-sequences`), formats `<3-digit INSTANCE_NUMBER_CODE><7+-digit sequence value>`;
+  `formatOrderDocumentNumber(orderNumber, ordinal)` is the pure `<order number>-NN` helper. `INSTANCE_NUMBER_CODE` is
+  validated as exactly 3 digits at plugin init and documented in `.env.local.example`/`docs/environments.md`.
+- Done: shared `UuidEntity` base (`packages/shared/src/uuid-entity.ts`), assigned via `@BeforeInsert()` so it is
+  readable before the row's own insert commits.
+- Deferred (not done this pass — out of budget for this slice of #207, tracked for follow-up): applying `UuidEntity`
+  to Invoice/PaymentAttempt/Refund/SettlementEntry/DiscountGrant/Document/ErpReconciliationIssue/Reservation (no
+  entities changed, no backfill migrations written yet); the Reservation uuid/`erpOperationId` unification
+  (not investigated); replacing `generateDocumentCode`/`documentCode.ts` call sites in `DiscountGrantService`/
+  `PaymentAttemptService.payInvoice`/`InvoiceService.createInvoicesForOrder` with `NumberingService` (no order-scoping
+  decision made yet for PaymentAttempt/Refund/SettlementEntry — flat sequence vs. `<order number>-NN` — re-read this
+  doc's "Payment documents" paragraph above when making that call); the per-order `-NN` ordinal's required
+  lock/transaction per `docs/concurrency.md` and its concurrent-writer test; and replacing
+  `DateStampedOrderCodeStrategy`/renumbering existing Order/Invoice/PaymentAttempt/DiscountGrant codes (stretch goal,
+  not attempted). `generateDocumentCode` is still live and in use — do not delete it until every call site above is
+  migrated.
