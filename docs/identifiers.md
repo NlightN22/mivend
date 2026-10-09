@@ -143,5 +143,20 @@ and is never an idempotency key for a business entity.
   `PaymentRow.vue`'s `PAY-{{ payment.id }}`), never the `number`/`code` field itself, and no
   search box applies a format-specific regex; they already do a plain substring/ILIKE match,
   which works unchanged for a pure-digit number.
+- Done: the native Dashboard (`packages/dashboard`, standalone per issue #77) failed to boot on both
+  contours while bringing them back up — fixed three independent gaps (missing `@mivend/plugin-*`
+  dependencies in its own `package.json`, missing `dotenv -e` wrapping on its dev scripts, and
+  `INTEGRATION_KAFKA_CA_PATH` being a relative path that broke once `__dirname` differed between the
+  real server and the Dashboard's own temp-compiled copy of `vendure-config.ts`) — see the "fix: native
+  Dashboard couldn't load vendure-config.ts" commit. Verified running on both local (`:5175`) and
+  staging-integration (`:5185`), alongside a healthy Kafka consumer group join on staging-integration.
+- Done: `@nlightn22/event-contracts` bumped to `0.56.0` (the real published package now carries
+  `orderUuid`/`orderNumber`/`lineUuid` — `sp.issue.180`'s branch was merged and released as `0.55.0`,
+  `0.56.0` adds `OrderRegistrationResult.order_uuid`/optional `OrderChanged.order_uuid` on top).
+  `contract-schema.ts`'s `resolveOutboundSchema` now picks up the real package schema (its documented
+  #203 behavior: the package wins once it carries the fields), which surfaced a stale test fixture
+  (`outbound-contract.test.ts`'s `BUILDER_PAYLOAD`) — fixed.
 - Still open, separate from this slice: the Reservation uuid/`erpOperationId` unification
-  described above; Swagger/API example updates.
+  described above; Swagger/API example updates; consuming the new `order_uuid` field on
+  `OrderRegistrationResult`/`OrderChanged` (real ERP-side dedup is not live yet per `sp.issue.180` — 1C's
+  own field-length fix is still pending, so this has no urgency yet but is tracked).
