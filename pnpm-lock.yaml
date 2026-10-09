@@ -215,9 +215,90 @@ importers:
 
     packages/dashboard:
         dependencies:
+            '@mivend/plugin-access-control':
+                specifier: workspace:*
+                version: link:../plugins/access-control
+            '@mivend/plugin-acquiring':
+                specifier: workspace:*
+                version: link:../plugins/acquiring
+            '@mivend/plugin-approval-workflow':
+                specifier: workspace:*
+                version: link:../plugins/approval-workflow
+            '@mivend/plugin-counterparty':
+                specifier: workspace:*
+                version: link:../plugins/counterparty
+            '@mivend/plugin-cross-reference':
+                specifier: workspace:*
+                version: link:../plugins/cross-reference
+            '@mivend/plugin-customer-pricing':
+                specifier: workspace:*
+                version: link:../plugins/customer-pricing
+            '@mivend/plugin-deferred-payment':
+                specifier: workspace:*
+                version: link:../plugins/deferred-payment
+            '@mivend/plugin-documents':
+                specifier: workspace:*
+                version: link:../plugins/documents
+            '@mivend/plugin-erp-import':
+                specifier: workspace:*
+                version: link:../plugins/erp-import
+            '@mivend/plugin-erp-integration':
+                specifier: workspace:*
+                version: link:../plugins/erp-integration
+            '@mivend/plugin-erp-order':
+                specifier: workspace:*
+                version: link:../plugins/erp-order
+            '@mivend/plugin-freight-shipping':
+                specifier: workspace:*
+                version: link:../plugins/freight-shipping
+            '@mivend/plugin-moq':
+                specifier: workspace:*
+                version: link:../plugins/moq
+            '@mivend/plugin-notification':
+                specifier: workspace:*
+                version: link:../plugins/notification
+            '@mivend/plugin-numbering':
+                specifier: workspace:*
+                version: link:../plugins/numbering
+            '@mivend/plugin-online-payment':
+                specifier: workspace:*
+                version: link:../plugins/online-payment
+            '@mivend/plugin-pickup-shipping':
+                specifier: workspace:*
+                version: link:../plugins/pickup-shipping
+            '@mivend/plugin-popular-products':
+                specifier: workspace:*
+                version: link:../plugins/popular-products
+            '@mivend/plugin-price-entry':
+                specifier: workspace:*
+                version: link:../plugins/price-entry
+            '@mivend/plugin-reservation':
+                specifier: workspace:*
+                version: link:../plugins/reservation
+            '@mivend/plugin-retro-bonus':
+                specifier: workspace:*
+                version: link:../plugins/retro-bonus
+            '@mivend/plugin-saved-views':
+                specifier: workspace:*
+                version: link:../plugins/saved-views
+            '@mivend/plugin-search':
+                specifier: workspace:*
+                version: link:../plugins/search
+            '@mivend/plugin-session-management':
+                specifier: workspace:*
+                version: link:../plugins/session-management
+            '@mivend/plugin-sync':
+                specifier: workspace:*
+                version: link:../plugins/sync
+            '@mivend/plugin-versioning':
+                specifier: workspace:*
+                version: link:../plugins/versioning
             '@vendure/dashboard':
                 specifier: ^3.7.3
                 version: 3.7.3(@date-fns/tz@1.5.0)(@floating-ui/dom@1.8.0)(@sinclair/typebox@0.27.10)(@standard-schema/spec@1.1.0)(@tanstack/router-core@1.171.27)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/extensions@3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3))(@types/node@20.19.43)(ajv-formats@2.1.1(ajv@8.18.0))(ajv@8.18.0)(csstype@3.2.3)(esbuild@0.28.2)(eslint@9.39.4(jiti@2.7.0)(supports-color@8.1.1))(express@5.2.1(supports-color@8.1.1))(jiti@2.7.0)(lightningcss@1.32.0)(rolldown@1.1.3)(rollup@4.62.2)(supports-color@8.1.1)(typescript@5.9.3)(yaml@2.9.0)
+            shared:
+                specifier: workspace:*
+                version: link:../shared
         devDependencies:
             typescript:
                 specifier: ^5.4.0
@@ -734,8 +815,8 @@ importers:
                 specifier: ^11.0.0
                 version: 11.4.5(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(reflect-metadata@0.2.2)
             '@nlightn22/event-contracts':
-                specifier: ^0.54.0
-                version: 0.54.0
+                specifier: ^0.56.0
+                version: 0.56.0
             dataloader:
                 specifier: 2.2.3
                 version: 2.2.3
@@ -4704,11 +4785,11 @@ packages:
             rxjs: ^7.2.0
             typeorm: ^0.3.0 || ^1.0.0-dev
 
-    '@nlightn22/event-contracts@0.54.0':
+    '@nlightn22/event-contracts@0.56.0':
         resolution:
             {
-                integrity: sha512-eAoLVKj4j/vRXmxqPLSUFOP90n2fj5JK0Qjqu99Z8hKb0/zq+/LyOsu3XOlelRnyVekyrnQDp/50LjeNOoKZsA==,
-                tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.54.0/1294eb799cff86dacf62810419a3efc23847ce31,
+                integrity: sha512-NrIXVfJeTdYeYKu58+asOF1rXQqCVglVBZC85Pl/VhDDA8gua/TdH1VWF3az2sK3djzuTZ6rf7l8hzjhr3tuLQ==,
+                tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.56.0/f4976eb5818fe428bd339b449c674862f535b059,
             }
 
     '@nodelib/fs.scandir@2.1.5':
@@ -18218,7 +18299,7 @@ snapshots:
             rxjs: 7.8.2
             typeorm: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
 
-    '@nlightn22/event-contracts@0.54.0':
+    '@nlightn22/event-contracts@0.56.0':
         dependencies:
             '@bufbuild/protobuf': 2.13.0
 
