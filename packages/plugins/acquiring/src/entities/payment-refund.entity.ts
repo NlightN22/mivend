@@ -1,5 +1,5 @@
 import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 export type PaymentRefundStatus = 'pending' | 'succeeded' | 'failed';
@@ -9,10 +9,16 @@ export type PaymentRefundStatus = 'pending' | 'succeeded' | 'failed';
 // error.entity-name-conflict on bootstrap if two entities share a class name, regardless of
 // which module they come from.
 @Entity()
-export class PaymentRefund extends VendureEntity {
+export class PaymentRefund extends UuidEntity {
     constructor(input?: DeepPartial<PaymentRefund>) {
         super(input);
     }
+
+    // Flat per-instance sequence (NumberingService), same reasoning as PaymentAttempt.number —
+    // our own identity, distinct from providerRefundId (the acquirer's external reference).
+    @Index()
+    @Column({ type: 'varchar' })
+    number!: string;
 
     @Index()
     @Column({ type: 'int' })

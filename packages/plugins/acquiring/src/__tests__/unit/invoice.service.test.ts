@@ -59,6 +59,10 @@ describe('InvoiceService', () => {
             mockCounterpartyService as unknown as CounterpartyService,
             mockTradingPointService as unknown as TradingPointService,
             mockTranslator as never,
+            {
+                formatOrderDocumentNumber: (orderNumber: string, ordinal: number) =>
+                    `${orderNumber}-${String(ordinal).padStart(2, '0')}`,
+            } as never,
         );
     });
 
@@ -109,19 +113,19 @@ describe('InvoiceService', () => {
                         organizationId: 1,
                         amount: 1000,
                         counterpartyId: 42,
-                        number: expect.stringMatching(/^INV-\d{6}-[0-9A-F]{8}$/),
+                        number: `${order.code}-01`,
                     }),
                     expect.objectContaining({
                         organizationId: 2,
                         amount: 500,
                         counterpartyId: 42,
-                        number: expect.stringMatching(/^INV-\d{6}-[0-9A-F]{8}$/),
+                        number: `${order.code}-02`,
                     }),
                 ]),
             );
         });
 
-        it("generates each invoice's own distinct number — never Order.code reused as-is", async () => {
+        it("generates each invoice's own distinct number — <order number>-NN per docs/identifiers.md", async () => {
             mockRepo.find.mockResolvedValue([]);
             mockCounterpartyService.getForCustomer.mockResolvedValue({ id: '42' });
             const order = makeOrder([
@@ -134,8 +138,7 @@ describe('InvoiceService', () => {
             const numbers = invoices.map(i => i.number);
             expect(new Set(numbers).size).toBe(2);
             for (const number of numbers) {
-                expect(number).not.toContain(order.code);
-                expect(number).toMatch(/^INV-/);
+                expect(number).toMatch(new RegExp(`^${order.code}-\\d{2}$`));
             }
         });
 

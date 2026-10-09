@@ -24,7 +24,9 @@ describe('PaymentRefundService', () => {
         mockConnection = {
             getRepository: vi.fn(() => mockRepo),
         } as unknown as TransactionalConnection;
-        service = new PaymentRefundService(mockConnection);
+        service = new PaymentRefundService(mockConnection, {
+            next: vi.fn(async () => 'test-refund-number'),
+        } as never);
     });
 
     it('creates a refund defaulting to succeeded status, modeled on Robokassa OpKey as providerRefundId', async () => {

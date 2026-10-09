@@ -101,6 +101,7 @@ describe('DiscountGrantService', () => {
             approvalRequestService as unknown as ApprovalRequestService,
             connection as unknown as TransactionalConnection,
             discountRegistryService as unknown as DiscountRegistryService,
+            { next: vi.fn(async () => 'test-discount-number') } as never,
         );
     });
 

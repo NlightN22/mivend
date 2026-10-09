@@ -27,6 +27,7 @@
         "@mivend/plugin-approval-workflow": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-customer-pricing": "workspace:*",
+        "@mivend/plugin-numbering": "workspace:*",
         "shared": "workspace:*"
     }
 }

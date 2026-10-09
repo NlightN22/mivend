@@ -6,7 +6,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { generateDocumentCode } from 'shared';
+import { NumberingService } from '@mivend/plugin-numbering';
 
 import { Invoice } from './entities/invoice.entity';
 import { PaymentAttempt, PaymentChannel, PaymentStatus } from './entities/payment-attempt.entity';
@@ -96,6 +96,7 @@ export class PaymentAttemptService {
         private invoiceService: InvoiceService,
         private settlementEntryService: SettlementEntryService,
         private reconciliationIssueService: PaymentReconciliationIssueService,
+        private numberingService: NumberingService,
     ) {}
 
     // expectedOrganizationId is only ever passed by the inbox processor (an event-reported
@@ -168,7 +169,9 @@ export class PaymentAttemptService {
                 const repo = this.connection.getRepository(transactionCtx, PaymentAttempt);
                 const paymentAttempt = await repo.save(
                     repo.create({
-                        number: generateDocumentCode('PAY'),
+                        // Flat sequence, not order-scoped: per docs/identifiers.md, our number
+                        // always comes from the sequence; providerPaymentId is the external reference.
+                        number: await this.numberingService.next(transactionCtx, 'payment'),
                         channel,
                         invoiceId: Number(invoice.id),
                         orderId: invoice.orderId,

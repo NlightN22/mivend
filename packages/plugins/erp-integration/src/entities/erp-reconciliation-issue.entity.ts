@@ -1,5 +1,5 @@
 import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 export type ErpReconciliationIssueType = 'upstream-higher' | 'local-higher';
@@ -20,7 +20,7 @@ export type ErpReconciliationTrigger = 'scheduled' | 'manual';
 // point-lookup/replay API exists) and 'local-higher' (mivend has more than Integration Service —
 // flag for review, e.g. a stale/orphaned local record; never auto-deleted).
 @Entity()
-export class ErpReconciliationIssue extends VendureEntity {
+export class ErpReconciliationIssue extends UuidEntity {
     constructor(input?: DeepPartial<ErpReconciliationIssue>) {
         super(input);
     }

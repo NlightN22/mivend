@@ -1,5 +1,5 @@
 import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 export type PaymentChannel = 'online-acquiring' | 'branch-kassa' | 'bank-transfer-erp';
@@ -31,14 +31,13 @@ export type ErpPostingStatus =
 // for level 3's application-level check, which this index backs against a race).
 @Entity()
 @Index(['channel', 'providerPaymentId'], { unique: true })
-export class PaymentAttempt extends VendureEntity {
+export class PaymentAttempt extends UuidEntity {
     constructor(input?: DeepPartial<PaymentAttempt>) {
         super(input);
     }
 
-    // The payment's own internal, human-facing business number — generated at creation
-    // (PaymentAttemptService.payInvoice), same generation principle as Order.code/Invoice.number/
-    // DiscountGrant.number (shared/src/documentCode.ts's generateDocumentCode). Deliberately
+    // The payment's own internal, human-facing business number — a flat NumberingService
+    // sequence (PaymentAttemptService.payInvoice), not order-scoped. Deliberately
     // distinct from `providerPaymentId` below: per the external-integration-rules skill, an internally-generated
     // identity and an external system's own reference serve two different purposes (this
     // project's own document numbering vs. reconciling against the acquirer/kassa/ERP) and must

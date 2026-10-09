@@ -171,7 +171,11 @@ export class ReservationExpiryService {
                     this.eventBus.publish(
                         new ReservationReleasedEvent(
                             ctx!,
-                            { ...row, status: 'released', releasedAt, erpReleaseOperationId },
+                            Object.assign(new Reservation(), row, {
+                                status: 'released',
+                                releasedAt,
+                                erpReleaseOperationId,
+                            }),
                             String(row.orderId),
                         ),
                     );

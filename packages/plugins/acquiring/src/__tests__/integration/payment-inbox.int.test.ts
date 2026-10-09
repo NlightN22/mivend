@@ -232,12 +232,18 @@ beforeAll(async () => {
     await dataSource.initialize();
 
     const connectionShim = buildConnectionShim();
+    const numberingServiceShim = {
+        next: vi.fn(async () => `test-number-${Math.random()}`),
+        formatOrderDocumentNumber: (orderNumber: string, ordinal: number) =>
+            `${orderNumber}-${String(ordinal).padStart(2, '0')}`,
+    } as never;
     invoiceService = new InvoiceService(
         connectionShim,
         {} as never,
         {} as never,
         {} as never,
         {} as never,
+        numberingServiceShim,
     );
     settlementEntryService = new SettlementEntryService(connectionShim, invoiceService);
     reconciliationIssueService = createMockReconciliationIssueService();
@@ -246,6 +252,7 @@ beforeAll(async () => {
         invoiceService,
         settlementEntryService,
         reconciliationIssueService as never,
+        numberingServiceShim,
     );
     inboxService = new InboxService(connectionShim);
     processorService = new PaymentInboxProcessorService(inboxService, paymentAttemptService);

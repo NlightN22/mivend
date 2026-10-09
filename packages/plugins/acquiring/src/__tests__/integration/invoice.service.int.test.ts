@@ -55,6 +55,7 @@ beforeAll(async () => {
         {} as never,
         {} as never,
         {} as never,
+        { formatOrderDocumentNumber: () => 'ORD-7-01' } as never,
     );
 });
 

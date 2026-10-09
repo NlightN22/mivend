@@ -78,6 +78,10 @@ beforeAll(async () => {
             resolveServicingBranchId: async () => null,
         } as never,
         {} as never,
+        {
+            formatOrderDocumentNumber: (orderNumber: string, ordinal: number) =>
+                `${orderNumber}-${String(ordinal).padStart(2, '0')}`,
+        } as never,
     );
 });
 
@@ -108,6 +112,7 @@ describe('InvoiceService.createInvoicesForOrder under concurrent submits (real P
         for (const invoices of results) {
             expect(invoices).toHaveLength(2);
         }
+        expect(new Set(rows.map(row => row.number)).size).toBe(rows.length);
     });
 
     it('keeps orders independent: concurrent calls for different orders each get their own set', async () => {

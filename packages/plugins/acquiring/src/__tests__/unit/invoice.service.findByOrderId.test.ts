@@ -28,6 +28,7 @@ describe('InvoiceService.findByOrderId', () => {
             {} as never,
             {} as never,
             {} as never,
+            {} as never,
         );
 
         const result = await service.findByOrderId(mockCtx, 5);

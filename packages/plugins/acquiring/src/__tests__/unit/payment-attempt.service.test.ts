@@ -7,6 +7,7 @@ import { PaymentAttemptService } from '../../payment-attempt.service';
 import { SettlementEntryService } from '../../settlement-entry.service';
 
 const mockCtx = {} as unknown as RequestContext;
+const mockNumberingService = { next: vi.fn(async () => 'test-payment-number') };
 
 function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
     return {
@@ -73,6 +74,7 @@ describe('PaymentAttemptService.payInvoice', () => {
             mockInvoiceService as unknown as InvoiceService,
             mockSettlementEntryService as unknown as SettlementEntryService,
             mockReconciliationIssueService as never,
+            mockNumberingService as never,
         );
     });
 
@@ -322,6 +324,7 @@ describe('PaymentAttemptService queries', () => {
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
+            {} as never,
         );
 
         const result = await service.findForCounterparty(mockCtx, '5', { take: 10, skip: 0 });
@@ -343,6 +346,7 @@ describe('PaymentAttemptService queries', () => {
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
+            {} as never,
         );
 
         await service.findForCounterparty(mockCtx, '5', { status: 'captured' });
@@ -362,6 +366,7 @@ describe('PaymentAttemptService queries', () => {
             mockConnection,
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
+            {} as never,
             {} as never,
         );
 
@@ -383,6 +388,7 @@ describe('PaymentAttemptService queries', () => {
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
+            {} as never,
         );
 
         await service.findForCounterparty(mockCtx, '5', { search: 'RRN-123' });
@@ -401,6 +407,7 @@ describe('PaymentAttemptService queries', () => {
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
+            {} as never,
         );
 
         const owned = await service.belongsToCounterparty(mockCtx, { invoiceId: null } as never, 5);
@@ -417,6 +424,7 @@ describe('PaymentAttemptService queries', () => {
             mockConnection,
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
+            {} as never,
             {} as never,
         );
 
@@ -444,6 +452,7 @@ describe('PaymentAttemptService queries', () => {
             mockConnection,
             {} as unknown as InvoiceService,
             {} as unknown as SettlementEntryService,
+            {} as never,
             {} as never,
         );
 
@@ -482,6 +491,7 @@ describe('PaymentAttemptService queries', () => {
                 {} as unknown as InvoiceService,
                 {} as unknown as SettlementEntryService,
                 {} as never,
+                {} as never,
             );
 
             const result = await service.sumCapturedAmountsByOrderIds(mockCtx, []);
@@ -503,6 +513,7 @@ describe('PaymentAttemptService queries', () => {
                 mockConnection,
                 {} as unknown as InvoiceService,
                 {} as unknown as SettlementEntryService,
+                {} as never,
                 {} as never,
             );
 

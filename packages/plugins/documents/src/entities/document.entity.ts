@@ -1,11 +1,11 @@
 import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 @Entity()
 @Index(['counterpartyId', 'issueDate'])
 @Index('IDX_document_erp_id', ['erpId'], { unique: true, where: '"erpId" IS NOT NULL' })
-export class Document extends VendureEntity {
+export class Document extends UuidEntity {
     constructor(input?: DeepPartial<Document>) {
         super(input);
     }

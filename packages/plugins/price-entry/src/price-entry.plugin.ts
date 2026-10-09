@@ -8,6 +8,7 @@ import gql from 'graphql-tag';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
+import { NumberingPlugin } from '@mivend/plugin-numbering';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { DiscountRule } from './discount-rule.entity';
@@ -274,7 +275,13 @@ const adminApiSchema = gql`
 `;
 
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin, ApprovalWorkflowPlugin, CounterpartyPlugin],
+    imports: [
+        PluginCommonModule,
+        AccessControlPlugin,
+        ApprovalWorkflowPlugin,
+        CounterpartyPlugin,
+        NumberingPlugin,
+    ],
     entities: [
         ProductVariantPriceEntry,
         DiscountRule,

@@ -47,6 +47,7 @@ describe('InvoiceService.getLinesForInvoice', () => {
             {} as unknown as CounterpartyService,
             {} as never,
             mockTranslator as never,
+            {} as never,
         );
     });
 
@@ -102,6 +103,7 @@ describe('InvoiceService.findForCounterparty', () => {
             {} as unknown as CounterpartyService,
             {} as never,
             mockTranslator as never,
+            {} as never,
         );
     });
 
@@ -154,6 +156,7 @@ describe('InvoiceService.updateStatusForOrder', () => {
             {} as unknown as CounterpartyService,
             {} as never,
             mockTranslator as never,
+            {} as never,
         );
     });
 

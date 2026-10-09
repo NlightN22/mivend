@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { NumberingService } from '@mivend/plugin-numbering';
 
 import { PaymentRefund, PaymentRefundStatus } from './entities/payment-refund.entity';
 
@@ -9,7 +10,10 @@ import { PaymentRefund, PaymentRefundStatus } from './entities/payment-refund.en
 // realistically produce one today — see docs/payments.md's refund-feasibility note.
 @Injectable()
 export class PaymentRefundService {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private numberingService: NumberingService,
+    ) {}
 
     async findByPaymentId(ctx: RequestContext, paymentId: number): Promise<PaymentRefund[]> {
         return this.connection.getRepository(ctx, PaymentRefund).find({
@@ -31,6 +35,7 @@ export class PaymentRefundService {
         const repo = this.connection.getRepository(ctx, PaymentRefund);
         return repo.save(
             repo.create({
+                number: await this.numberingService.next(ctx, 'refund'),
                 paymentId: input.paymentId,
                 amount: input.amount,
                 reason: input.reason,

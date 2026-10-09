@@ -8,7 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { And, Brackets, In, LessThanOrEqual, MoreThan } from 'typeorm';
-import { generateDocumentCode } from 'shared';
+import { NumberingService } from '@mivend/plugin-numbering';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import {
     ApprovalRequest,
@@ -99,6 +99,7 @@ export class DiscountGrantService {
         private approvalRequestService: ApprovalRequestService,
         private connection: TransactionalConnection,
         private discountRegistryService: DiscountRegistryService,
+        private numberingService: NumberingService,
     ) {}
 
     async requestGrant(ctx: RequestContext, input: DiscountGrantInput): Promise<ApprovalRequest> {
@@ -189,7 +190,7 @@ export class DiscountGrantService {
 
             const grantRepo = this.connection.getRepository(ctx, DiscountGrant);
             const grant = grantRepo.create({
-                number: generateDocumentCode('DSC'),
+                number: await this.numberingService.next(ctx, 'discount-grant'),
                 discountRuleId: String(rule.id),
                 scopeType: counterparties.length ? 'customer' : 'all',
                 validTo: new Date(payload.validTo),

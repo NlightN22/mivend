@@ -63,7 +63,9 @@ beforeAll(async () => {
                 : dataSource.getRepository(TestDispute),
     } as unknown as TransactionalConnection;
 
-    refundService = new PaymentRefundService(connectionShim);
+    refundService = new PaymentRefundService(connectionShim, {
+        next: async () => `test-refund-${Math.random()}`,
+    } as never);
     disputeService = new DisputeService(connectionShim);
 });
 

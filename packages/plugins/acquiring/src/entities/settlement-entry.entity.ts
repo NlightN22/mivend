@@ -1,5 +1,5 @@
 import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 export type SettlementEntrySourceType =
@@ -10,7 +10,7 @@ export type SettlementEntrySourceType =
     | 'erp-reconciliation';
 
 @Entity()
-export class SettlementEntry extends VendureEntity {
+export class SettlementEntry extends UuidEntity {
     constructor(input?: DeepPartial<SettlementEntry>) {
         super(input);
     }

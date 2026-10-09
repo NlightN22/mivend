@@ -9,8 +9,9 @@ import {
     TransactionalConnection,
     TranslatorService,
 } from '@vendure/core';
-import { generateDocumentCode, withAggregateLock } from 'shared';
+import { withAggregateLock } from 'shared';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
+import { NumberingService } from '@mivend/plugin-numbering';
 
 import { Invoice, InvoiceStatus } from './entities/invoice.entity';
 
@@ -40,6 +41,7 @@ export class InvoiceService {
         private counterpartyService: CounterpartyService,
         private tradingPointService: TradingPointService,
         private translator: TranslatorService,
+        private numberingService: NumberingService,
     ) {}
 
     async computeSplit(ctx: RequestContext, order: Order): Promise<OrganizationTotal[]> {
@@ -103,7 +105,10 @@ export class InvoiceService {
             : null;
 
         const split = await this.computeSplit(ctx, order);
-        const invoices = split.map(({ organizationId, amount }) =>
+        // All invoices for this order are created together here, under the per-order lock
+        // (createUnderLock is only reached once existing.length === 0 above), so the ordinal is
+        // just the 1-based position within this split — no separate count query needed.
+        const invoices = split.map(({ organizationId, amount }, index) =>
             repo.create({
                 orderId: Number(order.id),
                 organizationId,
@@ -112,7 +117,7 @@ export class InvoiceService {
                 currencyCode: order.currencyCode,
                 status: 'pending',
                 branchId,
-                number: generateDocumentCode('INV'),
+                number: this.numberingService.formatOrderDocumentNumber(order.code, index + 1),
             }),
         );
         return repo.save(invoices);

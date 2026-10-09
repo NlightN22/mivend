@@ -1,5 +1,5 @@
 import { DeepPartial } from '@vendure/common/lib/shared-types';
-import { VendureEntity } from '@vendure/core';
+import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 import type { ReservationCreationMethod } from '../types';
@@ -27,7 +27,7 @@ export type ReservationStatus = 'active' | 'released' | 'expired';
     where: `"status" = 'active'`,
 })
 @Entity()
-export class Reservation extends VendureEntity {
+export class Reservation extends UuidEntity {
     constructor(input?: DeepPartial<Reservation>) {
         super(input);
     }
