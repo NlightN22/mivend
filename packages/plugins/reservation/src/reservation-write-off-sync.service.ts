@@ -115,8 +115,7 @@ export class ReservationWriteOffSyncService {
         const missingErpOrderId = !order.customFields.erpOrderId && !!input.orderEntityId;
 
         // Purely informational for staff — never read by the release/quantity-match logic below.
-        const customFields: typeof order.customFields = {
-            ...order.customFields,
+        const customFields: Partial<typeof order.customFields> = {
             erpRegistrationDocumentNumber: input.documentNumber,
             erpRegistrationStatus: input.status,
         };
@@ -129,8 +128,9 @@ export class ReservationWriteOffSyncService {
         }
         // `repo.update()`, not `.save(order)` — see docs/concurrency.md; same gotcha as
         // ReservationService.setOrderReservationState (unhydrated Order, calculated getters throw).
+        // Changed fields only: a full snapshot would erase a concurrent erpStatus/erpOrderId write.
         await this.connection.getRepository(ctx, Order).update(order.id, { customFields });
-        order.customFields = customFields;
+        order.customFields = { ...order.customFields, ...customFields };
 
         // erpStatus is owned by plugin-erp-order's ErpOrderService.updateStatus — never written
         // directly here, same separation as ErpCallbackController's own order-status path.
@@ -213,8 +213,7 @@ export class ReservationWriteOffSyncService {
             );
         }
 
-        const customFields: typeof order.customFields = {
-            ...order.customFields,
+        const customFields: Partial<typeof order.customFields> = {
             erpOrderStatus: input.status,
         };
         if (input.contractId !== null) {
@@ -225,7 +224,7 @@ export class ReservationWriteOffSyncService {
         // `repo.update()`, not `.save(order)` — same calculated-getter gotcha as
         // handleOrderRegistrationResult above.
         await this.connection.getRepository(ctx, Order).update(order.id, { customFields });
-        order.customFields = customFields;
+        order.customFields = { ...order.customFields, ...customFields };
 
         await this.releaseMatchingReservations(
             ctx,

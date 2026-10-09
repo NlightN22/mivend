@@ -202,7 +202,6 @@ describe('ReservationService', () => {
                 order.id,
                 expect.objectContaining({
                     customFields: {
-                        branchId: 'branch-1',
                         reservationState: 'RESERVED',
                         reservationFailureReason: null,
                         reservationFailureDetail: null,
@@ -279,7 +278,7 @@ describe('ReservationService', () => {
             expect(orderRepo.update).toHaveBeenCalledWith(
                 order.id,
                 expect.objectContaining({
-                    customFields: { branchId: 'branch-1', reservationState: 'FAILED' },
+                    customFields: { reservationState: 'FAILED' },
                 }),
             );
         });
@@ -355,7 +354,7 @@ describe('ReservationService', () => {
             expect(orderRepo.update).toHaveBeenCalledWith(
                 order.id,
                 expect.objectContaining({
-                    customFields: { branchId: 'branch-1', reservationState: 'FAILED' },
+                    customFields: { reservationState: 'FAILED' },
                 }),
             );
         });

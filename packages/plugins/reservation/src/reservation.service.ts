@@ -385,7 +385,6 @@ export class ReservationService {
         // this exact GraphQLError.
         const repo = this.connection.getRepository(ctx, Order);
         const stateFields = {
-            ...order.customFields,
             reservationState: state,
             ...(state === 'RESERVED' ? CLEARED_FAILURE : {}),
         };

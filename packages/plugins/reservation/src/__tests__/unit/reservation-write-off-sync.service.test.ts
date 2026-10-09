@@ -1083,7 +1083,27 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         });
 
         const [, { customFields }] = orderRepo.update.mock.calls[0];
-        expect(customFields.erpContractId).toBe('contract-guid-1');
+        expect(customFields).not.toHaveProperty('erpContractId');
+    });
+
+    // Lost update seen live (#208): the stale snapshot's PENDING erpStatus overwrote the SENT_TO_ERP
+    // written concurrently by ErpOrderService.
+    it('writes only the changed fields, never a snapshot of erpStatus/erpOrderId', async () => {
+        orderRepo.findOne.mockResolvedValue({
+            id: 'order-1',
+            customFields: { erpStatus: 'PENDING', erpOrderId: null },
+        });
+
+        await service.handleOrderChanged(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            status: 'X',
+            reservedLines: [],
+            contractId: 'c-1',
+        });
+
+        const [, { customFields }] = orderRepo.update.mock.calls[0];
+        expect(customFields).toEqual({ erpOrderStatus: 'X', erpContractId: 'c-1' });
     });
 
     it('releases a reservation whose quantity matches the reported reservedQuantity', async () => {
