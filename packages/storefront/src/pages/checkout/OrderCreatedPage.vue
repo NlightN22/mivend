@@ -2,7 +2,7 @@
 import { IconCheck } from '@tabler/icons-vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { MvErrorState } from '@mivend/ui-kit';
+import { MvErrorState, formatDocumentNumber } from '@mivend/ui-kit';
 import { shopApi } from '../../api/client';
 import { useAuthStore } from '../../stores/auth';
 import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
@@ -156,7 +156,7 @@ onMounted(load);
                     <h3 class="oc-card-title">Order details</h3>
                     <div class="oc-detail-list">
                         <div class="oc-detail">
-                            <span>Order number</span><strong>{{ order.code }}</strong>
+                            <span>Order number</span><strong>{{ formatDocumentNumber(order.code) }}</strong>
                         </div>
                         <div v-if="placedAt" class="oc-detail">
                             <span>Date</span><strong>{{ placedAt }}</strong>

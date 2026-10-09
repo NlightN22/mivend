@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MvStatusBadge } from '@mivend/ui-kit';
+import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { RelatedDocument } from '../../api/orderDetail';
 
 defineProps<{ documents: RelatedDocument[] }>();
@@ -19,7 +19,7 @@ function variant(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
         </li>
         <li v-for="doc in documents" :key="doc.id" class="related-documents__item">
             <RouterLink to="/documents" class="related-documents__link">
-                {{ doc.type }} · {{ doc.number }}
+                {{ doc.type }} · {{ formatDocumentNumber(doc.number) }}
             </RouterLink>
             <MvStatusBadge :variant="variant(doc.status)">{{ doc.status }}</MvStatusBadge>
         </li>

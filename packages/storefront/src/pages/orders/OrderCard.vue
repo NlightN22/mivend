@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { formatDocumentNumber } from '@mivend/ui-kit';
 import type { OrderSummary } from './useOrders';
 import { STATUS_LABEL, STATUS_VARIANT } from './useOrders';
 
@@ -42,7 +43,7 @@ const preview = computed(() => {
     <article class="order-card">
         <div class="order-card-head">
             <div>
-                <div class="order-title">Order {{ order.code }}</div>
+                <div class="order-title">Order {{ formatDocumentNumber(order.code) }}</div>
                 <div class="order-meta">{{ meta }}</div>
             </div>
             <span class="status-pill" :class="statusVariant !== 'default' ? statusVariant : ''">

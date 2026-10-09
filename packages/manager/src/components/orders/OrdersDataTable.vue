@@ -11,6 +11,7 @@ import {
     MvStatusBadge,
     MvButton,
     useDataTableState,
+    formatDocumentNumber,
     type DataTableSortMeta,
     type StatusBadgeVariant,
 } from '@mivend/ui-kit';
@@ -388,7 +389,10 @@ function resetLayout(): void {
                         <Rank class="orders-data-table__reorder-icon" />
                     </span>
                 </template>
-                <template v-if="col.field === 'customer'" #body="{ data }">
+                <template v-if="col.field === 'code'" #body="{ data }">{{
+                    formatDocumentNumber((data as OrderRow).code)
+                }}</template>
+                <template v-else-if="col.field === 'customer'" #body="{ data }">
                     <div class="orders-data-table__customer-cell">
                         <span class="orders-data-table__customer-name">{{
                             (data as OrderRow).customer

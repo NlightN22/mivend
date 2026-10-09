@@ -7,6 +7,7 @@ import {
     MvAdvancedDataTable,
     MvDateTimeCell,
     useDataTableState,
+    formatDocumentNumber,
     type AdvancedDataTableColumn,
     type AdvancedDataTableRowClickPayload,
     type StatusBadgeVariant,
@@ -400,6 +401,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<TableRow>): void {
                  empty by default. -->
             <slot name="view-chips" />
         </template>
+
+        <template #cell-code="{ data }">{{
+            formatDocumentNumber((data as TableRow).code as string)
+        }}</template>
 
         <template #cell-date="{ data }">
             <MvDateTimeCell :value="(data as TableRow).date as string" />

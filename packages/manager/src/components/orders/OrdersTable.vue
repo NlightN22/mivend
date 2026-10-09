@@ -2,7 +2,7 @@
 import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
-import { MvTable, MvStatusBadge, MvButton } from '@mivend/ui-kit';
+import { MvTable, MvStatusBadge, MvButton, formatDocumentNumber } from '@mivend/ui-kit';
 import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
 import {
     ORDER_STATE_LABEL,
@@ -42,7 +42,13 @@ function branchName(branchId: string | null | undefined): string {
 
 const columns = computed<Column<TableRow>[]>(() => {
     const cols: Column<TableRow>[] = [
-        { key: 'code', title: 'Order #', dataKey: 'code', width: 160, mobile: { primary: true } },
+        {
+            key: 'code',
+            title: 'Order #',
+            dataKey: 'codeDisplay',
+            width: 160,
+            mobile: { primary: true },
+        },
         {
             key: 'customer',
             title: 'Customer',
@@ -138,6 +144,7 @@ const rows = computed<TableRow[]>(() =>
         const counterparty = order.customer?.counterparty;
         return {
             code: order.code,
+            codeDisplay: formatDocumentNumber(order.code),
             customer: counterparty?.shortName ?? '—',
             customerMeta: counterparty
                 ? `INN ${counterparty.inn ?? '—'} · ${counterparty.priceType}`

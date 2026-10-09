@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { MvStatusBadge } from '@mivend/ui-kit';
+import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import {
     PAYMENT_STATUS_LABEL,
@@ -32,7 +32,9 @@ const remaining = computed(() => {
     <article class="payment-row">
         <div>
             <div class="payment-row__name">PAY-{{ payment.id }}</div>
-            <div class="payment-row__meta" v-if="payment.order">Order {{ payment.order.code }}</div>
+            <div class="payment-row__meta" v-if="payment.order">
+                Order {{ formatDocumentNumber(payment.order.code) }}
+            </div>
         </div>
 
         <div>

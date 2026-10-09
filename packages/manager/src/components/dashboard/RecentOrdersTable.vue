@@ -2,7 +2,7 @@
 import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
-import { MvTable, MvStatusBadge } from '@mivend/ui-kit';
+import { MvTable, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
 import type { RecentOrder } from '../../api/dashboard';
 import { ORDER_STATE_LABEL, ORDER_STATE_BADGE_VARIANT } from '../../api/orders';
@@ -11,7 +11,7 @@ const props = defineProps<{ orders: RecentOrder[] }>();
 const router = useRouter();
 
 const columns: Column<TableRow>[] = [
-    { key: 'code', title: 'Order', dataKey: 'code', width: 170 },
+    { key: 'code', title: 'Order', dataKey: 'codeDisplay', width: 170 },
     { key: 'customer', title: 'Customer', dataKey: 'customer', width: 160 },
     {
         key: 'state',
@@ -34,6 +34,7 @@ const columns: Column<TableRow>[] = [
 const rows = computed<TableRow[]>(() =>
     props.orders.map(order => ({
         code: order.code,
+        codeDisplay: formatDocumentNumber(order.code),
         customer: order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : '—',
         state: ORDER_STATE_LABEL[order.state] ?? order.state,
         stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',

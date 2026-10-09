@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { formatDocumentNumber } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import { useOrderDetail } from './useOrderDetail';
 import { STATUS_LABEL, STATUS_VARIANT } from './useOrders';
@@ -45,7 +46,7 @@ function formatDate(iso: string): string {
             <template v-else>
                 <div class="od-head">
                     <div>
-                        <h1 class="od-title">Order {{ order.code }}</h1>
+                        <h1 class="od-title">Order {{ formatDocumentNumber(order.code) }}</h1>
                         <div class="od-meta">{{ formatDate(order.createdAt) }}</div>
                     </div>
                     <span

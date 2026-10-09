@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { MvStatusBadge } from '@mivend/ui-kit';
+import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import { INVOICE_STATUS_LABEL, INVOICE_STATUS_VARIANT, type InvoiceSummary } from './useInvoices';
 
@@ -34,7 +34,7 @@ const isPayable = props.invoice.status !== 'paid' && props.invoice.status !== 'c
     <article class="invoice-row">
         <div>
             <div class="invoice-row__name">Invoice #{{ invoice.id }}</div>
-            <div class="invoice-row__meta">Order {{ invoice.order.code }}</div>
+            <div class="invoice-row__meta">Order {{ formatDocumentNumber(invoice.order.code) }}</div>
         </div>
 
         <div>

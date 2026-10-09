@@ -5,6 +5,7 @@ import {
     MvAdvancedDataTable,
     MvDateTimeCell,
     useDataTableState,
+    formatDocumentNumber,
     type AdvancedDataTableColumn,
     type StatusBadgeVariant,
 } from '@mivend/ui-kit';
@@ -216,6 +217,9 @@ const rows = computed<PaymentRow[]>(() =>
             <slot name="view-chips" />
         </template>
 
+        <template #cell-number="{ data }">{{
+            formatDocumentNumber((data as PaymentRow).number)
+        }}</template>
         <template #cell-createdAt="{ data }">
             <MvDateTimeCell :value="(data as PaymentRow).createdAt" />
         </template>

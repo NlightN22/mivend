@@ -2,7 +2,7 @@
 import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
-import { MvTable, MvStatusBadge } from '@mivend/ui-kit';
+import { MvTable, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
 import { INVOICE_STATUS_BADGE_VARIANT, type InvoiceListItem } from '../../api/invoices';
 
@@ -54,7 +54,7 @@ const columns = computed<Column<TableRow>[]>(() => {
             mobile: { badge: true },
         },
         { key: 'amount', title: 'Amount', dataKey: 'amount', width: 140, align: 'right' },
-        { key: 'order', title: 'Order', dataKey: 'order', width: 120 },
+        { key: 'order', title: 'Order', dataKey: 'orderDisplay', width: 120 },
     );
     return cols;
 });
@@ -67,6 +67,7 @@ const rows = computed<TableRow[]>(() =>
         statusVariant: INVOICE_STATUS_BADGE_VARIANT[invoice.status] ?? 'neutral',
         amount: money(invoice),
         order: invoice.order.code,
+        orderDisplay: formatDocumentNumber(invoice.order.code),
     })),
 );
 

@@ -228,3 +228,5 @@ export type { SpacingToken, RadiusToken, ShadowToken } from './tokens/spacing';
 
 export { typography } from './tokens/typography';
 export type { FontSizeToken } from './tokens/typography';
+
+export { formatDocumentNumber } from './utils/documentNumber';

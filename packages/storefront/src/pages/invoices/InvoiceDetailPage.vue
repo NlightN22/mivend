@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { MvStatusBadge } from '@mivend/ui-kit';
+import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import { useInvoiceDetail } from './useInvoiceDetail';
@@ -38,7 +38,7 @@ function formatAmount(cents: number, currency: string): string {
                 <div class="id-head">
                     <div>
                         <h1 class="id-title">Invoice #{{ invoice.id }}</h1>
-                        <div class="id-meta">Order {{ invoice.order.code }}</div>
+                        <div class="id-meta">Order {{ formatDocumentNumber(invoice.order.code) }}</div>
                     </div>
                     <MvStatusBadge :variant="INVOICE_STATUS_VARIANT[invoice.status] ?? 'neutral'">
                         {{ INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status }}
@@ -99,7 +99,7 @@ function formatAmount(cents: number, currency: string): string {
                         <div class="id-linked-order">
                             <div>
                                 <div class="id-linked-order-title">Linked order</div>
-                                <div class="id-linked-order-meta">{{ invoice.order.code }}</div>
+                                <div class="id-linked-order-meta">{{ formatDocumentNumber(invoice.order.code) }}</div>
                             </div>
                             <router-link :to="`/orders/${invoice.order.id}`">
                                 <MvButton variant="secondary" size="sm">Open order</MvButton>

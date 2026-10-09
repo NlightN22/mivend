@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { MvPanel, MvStatusBadge } from '@mivend/ui-kit';
+import { MvPanel, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import {
     fetchOrderDetail,
     fetchPriceAdjustmentRequestsForOrder,
@@ -116,10 +116,10 @@ watch(() => route.params.code, load);
     <div v-else-if="order" class="order-detail">
         <div class="order-detail__header">
             <div class="order-detail__breadcrumb">
-                <RouterLink to="/orders">Orders</RouterLink> / {{ order.code }}
+                <RouterLink to="/orders">Orders</RouterLink> / {{ formatDocumentNumber(order.code) }}
             </div>
             <h1 class="order-detail__title">
-                {{ order.code }}
+                {{ formatDocumentNumber(order.code) }}
                 <MvStatusBadge variant="info">{{ order.state }}</MvStatusBadge>
                 <MvStatusBadge v-if="order.creditLimitExceeded" variant="warning"
                     >Credit limit exceeded</MvStatusBadge

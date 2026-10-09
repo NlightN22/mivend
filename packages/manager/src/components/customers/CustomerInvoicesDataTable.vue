@@ -6,6 +6,7 @@ import {
     MvAdvancedDataTable,
     MvDateTimeCell,
     useDataTableState,
+    formatDocumentNumber,
     type AdvancedDataTableColumn,
     type AdvancedDataTableRowClickPayload,
     type StatusBadgeVariant,
@@ -211,6 +212,11 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<InvoiceRow>): void {
                 (data as InvoiceRow).status
             }}</MvStatusBadge>
         </template>
-        <template #cell-order="{ data }">{{ (data as InvoiceRow).orderCode }}</template>
+        <template #cell-number="{ data }">{{
+            formatDocumentNumber((data as InvoiceRow).number)
+        }}</template>
+        <template #cell-order="{ data }">{{
+            formatDocumentNumber((data as InvoiceRow).orderCode)
+        }}</template>
     </MvAdvancedDataTable>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { MvStatusBadge } from '@mivend/ui-kit';
+import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import { usePaymentDetail } from './usePaymentDetail';
@@ -85,7 +85,7 @@ const refundedTotal = computed(() =>
                     <div class="pd-meta-item" v-if="payment.order">
                         <label>Order</label>
                         <router-link class="pd-link" :to="`/orders/${payment.order.id}`">{{
-                            payment.order.code
+                            formatDocumentNumber(payment.order.code)
                         }}</router-link>
                     </div>
                     <div class="pd-meta-item" v-if="payment.invoice">
@@ -143,7 +143,7 @@ const refundedTotal = computed(() =>
                                                 >Invoice #{{ a.invoice?.id }}</router-link
                                             >
                                             <div class="pd-row-meta" v-if="a.invoice?.order">
-                                                Order {{ a.invoice.order.code }}
+                                                Order {{ formatDocumentNumber(a.invoice.order.code) }}
                                             </div>
                                         </td>
                                         <td class="pd-num">
@@ -324,7 +324,7 @@ const refundedTotal = computed(() =>
                             <div class="pd-detail-row" v-if="payment.order">
                                 <span>Order</span>
                                 <router-link class="pd-link" :to="`/orders/${payment.order.id}`">{{
-                                    payment.order.code
+                                    formatDocumentNumber(payment.order.code)
                                 }}</router-link>
                             </div>
                             <div class="pd-detail-row pd-detail-row--mock">
