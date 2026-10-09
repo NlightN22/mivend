@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ListQueryBuilder, Order, PaginatedList, RequestContext } from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, SelectQueryBuilder, WhereExpressionBuilder } from 'typeorm';
+import { documentNumberSearchTerm } from 'shared';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 
@@ -59,9 +60,12 @@ export class OrderVisibilityService {
         }
         if (search) {
             const term = `%${search}%`;
+            // code's own term undoes the display-only dash (docs/identifiers.md) separately —
+            // the other fields match the literal search term as-is.
+            const codeTerm = documentNumberSearchTerm(search);
             qb.andWhere(
                 new Brackets((bqb: WhereExpressionBuilder) => {
-                    bqb.where(`${qb.alias}.code ILIKE :term`, { term })
+                    bqb.where(`${qb.alias}.code ILIKE :codeTerm`, { codeTerm })
                         .orWhere('customer.phoneNumber ILIKE :term', { term })
                         .orWhere('counterparty.shortName ILIKE :term', { term })
                         .orWhere('counterparty.legalName ILIKE :term', { term })

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
+import { documentNumberSearchTerm } from 'shared';
 import { AccessScopeService, AccessScope } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
@@ -141,7 +142,7 @@ export class InvoiceVisibilityService {
         }
         if (options?.search) {
             qb.andWhere('invoice.number ILIKE :search', {
-                search: `%${options.search}%`,
+                search: documentNumberSearchTerm(options.search),
             });
         }
         this.applyScope(qb, scope);

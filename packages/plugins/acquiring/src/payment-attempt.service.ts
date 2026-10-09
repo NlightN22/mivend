@@ -6,6 +6,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
+import { documentNumberSearchTerm } from 'shared';
 import { NumberingService } from '@mivend/plugin-numbering';
 
 import { Invoice } from './entities/invoice.entity';
@@ -290,7 +291,9 @@ export class PaymentAttemptService {
             qb.andWhere('payment.channel = :channel', { channel: options.channel });
         }
         if (options?.search) {
-            qb.andWhere('payment.number ILIKE :search', { search: `%${options.search}%` });
+            qb.andWhere('payment.number ILIKE :search', {
+                search: documentNumberSearchTerm(options.search),
+            });
         }
 
         const [items, totalItems] = await qb.getManyAndCount();

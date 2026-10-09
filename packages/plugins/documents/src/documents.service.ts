@@ -9,6 +9,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { ILike, In } from 'typeorm';
+import { documentNumberSearchTerm } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { Invoice } from '@mivend/plugin-acquiring';
 
@@ -63,7 +64,9 @@ export class DocumentsService {
             qb.andWhere('document.type = :type', { type: options.type });
         }
         if (options?.search) {
-            qb.andWhere('document.number ILIKE :term', { term: `%${options.search}%` });
+            qb.andWhere('document.number ILIKE :term', {
+                term: documentNumberSearchTerm(options.search),
+            });
         }
 
         const [items, totalItems] = await qb.getManyAndCount();
@@ -113,7 +116,9 @@ export class DocumentsService {
                     ...(options?.status ? { status: options.status as Document['status'] } : {}),
                     // Same ILike-on-number search findForCounterparty (the shop-api path) already
                     // had — this admin-facing path was simply missing it.
-                    ...(options?.search ? { number: ILike(`%${options.search}%`) } : {}),
+                    ...(options?.search
+                        ? { number: ILike(documentNumberSearchTerm(options.search)) }
+                        : {}),
                 },
                 order: { issueDate: 'DESC' },
                 take,

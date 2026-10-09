@@ -8,6 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { And, Brackets, In, LessThanOrEqual, MoreThan } from 'typeorm';
+import { documentNumberSearchTerm } from 'shared';
 import { NumberingService } from '@mivend/plugin-numbering';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import {
@@ -247,7 +248,9 @@ export class DiscountGrantService {
             );
 
         if (options.search) {
-            qb.andWhere('grant.number ILIKE :search', { search: `%${options.search}%` });
+            qb.andWhere('grant.number ILIKE :search', {
+                search: documentNumberSearchTerm(options.search),
+            });
         }
         if (options.status) {
             const soon = new Date(now.getTime() + EXPIRING_SOON_DAYS * 24 * 60 * 60 * 1000);

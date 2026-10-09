@@ -9,7 +9,7 @@ import {
     TransactionalConnection,
     TranslatorService,
 } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { documentNumberSearchTerm, withAggregateLock } from 'shared';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { NumberingService } from '@mivend/plugin-numbering';
 
@@ -183,7 +183,7 @@ export class InvoiceService {
         }
         if (options?.search) {
             qb.andWhere('invoice.number ILIKE :search', {
-                search: `%${options.search}%`,
+                search: documentNumberSearchTerm(options.search),
             });
         }
 

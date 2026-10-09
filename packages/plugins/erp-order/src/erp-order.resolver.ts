@@ -10,6 +10,7 @@ import {
 } from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, WhereExpressionBuilder } from 'typeorm';
+import { documentNumberSearchTerm } from 'shared';
 
 @Resolver()
 export class ErpOrderResolver {
@@ -78,12 +79,13 @@ export class ErpOrderResolver {
 
         if (search) {
             const term = `%${search}%`;
+            const codeTerm = documentNumberSearchTerm(search);
             // Product.name is translatable — not a real column on `product`, only on the
             // joined `product_translation` table (see the backend-plugin-rules skill's raw-SQL-in-Brackets gotcha:
             // this was never actually exercised until now, hence never caught).
             qb.andWhere(
                 new Brackets((bqb: WhereExpressionBuilder) => {
-                    bqb.where('"order".code ILIKE :term', { term }).orWhere(
+                    bqb.where('"order".code ILIKE :codeTerm', { codeTerm }).orWhere(
                         'productTranslation.name ILIKE :term',
                         { term },
                     );

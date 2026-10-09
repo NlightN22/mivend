@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
+import { documentNumberSearchTerm } from 'shared';
 import { Counterparty } from '@mivend/plugin-counterparty';
 
 import { Invoice } from './entities/invoice.entity';
@@ -54,7 +55,9 @@ export class PaymentVisibilityService {
             qb.andWhere('payment.channel = :channel', { channel: options.channel });
         }
         if (options?.search) {
-            qb.andWhere('payment.number ILIKE :search', { search: `%${options.search}%` });
+            qb.andWhere('payment.number ILIKE :search', {
+                search: documentNumberSearchTerm(options.search),
+            });
         }
         this.invoiceVisibilityService.applyScope(qb, scope, 'invoice', 'counterparty');
 
