@@ -1,6 +1,19 @@
 # Project Context
 
-Updated: 2026-10-08 06:40
+Updated: 2026-10-09 07:30
+
+## #204 ERP order rejection (2026-10-09, shipped/audited/closed; pushed to 6254524)
+
+- `Order.customFields.erpStatus` gained `REJECTED` (`erp-order`'s `ERP_ORDER_STATUSES`), plus `erpRejectionReasonCode`/`erpRejectionReasonText`. REJECTED is **non-terminal**: a later non-rejected `order-registration-result` clears it back to SENT_TO_ERP (via `ErpOrderStatusEvent`, `erpStatus` itself stays owned by `erp-order`'s `ErpOrderService.updateStatus`, never written directly elsewhere).
+- **Order correlation fix (found live on staging)**: `order-registration-result.handler.ts` now resolves the local order via `requestEntityId` → `integration_outbox.event_id` → `payload.orderId` first, falling back to `orderEntityId` (absent by contract on a rejection — no ERP order was ever created). Neither key resolving throws for inbox retry, never a silent no-op/`inboundApplied`.
+- **Vendure calculated-getters pitfall (same class as #205's 2ab4301 fix)**: never `findOne()` an `Order` with no relations then `.save(order)` — `discounts`/`taxSummary` getters throw needing `lines`/`surcharges` joined, silently rolling back the transaction. Fixed throughout `reservation-write-off-sync.service.ts` and `reservation-expiry.service.ts` by using `repo.update(id, { customFields })` instead. **Watch for this pattern anywhere else an Order is loaded via plain `.find()`/`.findOne()` and then `.save()`d.**
+- `erpOrderId` (read by `order-changed`'s correlation) is now set on a successful registration result too (fixed live by a peer session after a second staging replay found it still NULL).
+- `deferred-payment`'s `open-deferred-exposure.service.ts`: REJECTED excluded from `UNCONFIRMED_ERP_STATUSES` (deliberate — a rejected order's sum must stop blocking the customer's credit limit immediately).
+- `reservation-expiry.service.ts`: a REJECTED order's reservation gets mivend's own 7-day deadline (`DEFAULT_RESERVATION_DAYS`) independent of the ERP's eventual outcome — notifies all administrators, then releases. Post-audit hardening: the sweep's initial reads now use `createQueryBuilder().setLock('pessimistic_write').setOnLocked('skip_locked')` (TypeORM `.find()` can't lock) so two concurrent sweeps can't double-fire the notification/`ReservationReleasedEvent` — verified scheduled-tick and admin-API "run now" already share one exclusive lock via Vendure's `DefaultSchedulerStrategy.tryAcquireLock`, fixed anyway per `docs/concurrency.md` rule (a).
+- Manager portal: "Rejected by ERP" panel (reason code+text) on `OrderDetailPage.vue`, danger badge on the orders list/table, filter chip modeled on "Awaiting confirmation" — no new permission, reuses existing order-management gating.
+- Storefront (`useOrders.ts`): REJECTED → "Order not accepted, please contact your manager", error variant. Internal reason code/text never read/shown there.
+- Integration health page: `rejectedOrderCount` admin query (`ManageErpIntegration` permission) + a line on the Outbound tab (links to the manager's filtered list) + non-zero alert, modeled on `variantUnitHealth`.
+- Commits: 91ae02e, a047aff, c5be618, b66fa3f, 6020057, 2d13844/eec379d/55b0f06, fc10f8b, 321e73b, d973ccb, 6254524.
 
 ## #195 integration-health page (2026-10-08, implemented; audit done once, pending final audit/push)
 
@@ -34,16 +47,9 @@ Updated: 2026-10-08 06:40
 - **Left after closing #188**: live check of the manager "Credit limit exceeded" badge with a real exceeded order (local contour; never place orders on staging). Price filter/sort with `priceTypeId` works (owner confirmed). Final audit passed (doc notes applied in 29c95dd). Follow-ups: #192 (notify managers: price type unresolved), #193 (fill fullName by tax id), #194 (order TTL cancel + ERP), #196 (one-pass tier promotion), #197 (6 concurrency findings).
 - **Lessons**: unit tests miss Nest DI import cycles (server failed to boot, fixed by moving the code constant to `constants.ts`); verify live after every server-side fix (a "fix" that swallowed its own error stayed green for hours); `make dev-staging-integration` restarts are allowed; never place orders on staging (real Kafka); the 1C card debt can differ from the `balance` stream.
 
-## Recent changes (2026-10-06 — #180 checkout payment methods + credit control, shipped/audited/closed; pushed to f905bcb..81ec017)
+## #180 checkout payment methods + credit control (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-06-180-checkout-payment-credit.md`)
 
-- **Availability = what the server returns**: storefront `stores/checkout.ts` maps `eligiblePaymentMethods` codes (`offline-terms`/`deferred-payment`/`online-stub`) to cards; none eligible = explicit notice. `deferred-payment` has an eligibility checker (counterparty `creditLimit > 0`); `OFFLINE_TERMS_ENABLED=false` disables bank invoice; `online-stub` is enabled by `OnlinePaymentPlugin`'s own bootstrap from `ONLINE_PAYMENT_STUB_ENABLED` (in `apps/server/.env.central`, NOT `.env.local`: the Makefile `export`s it into every contour, it leaked into staging once).
-- **Over-limit deferred order is NOT rejected** (product decision): payment authorized, flag `creditLimitExceeded` in public payment metadata (Shop API returns it wrapped as `metadata.public.*`), `/order-created` shows "wait for manager confirmation". Manager-portal approval workflow (#142 `creditTermApproval`) deliberately not built. Check = `CreditLimitCheckService.decide(counterparty, contract, pendingAmount)` in kopecks; pending = this order + open deferred orders of the counterparty with `erpStatus` PENDING/SENT_TO_ERP/RESERVED (`OpenDeferredExposureService`). No lock for concurrent checkouts (only the warning could be missed). Details: docs/payments.md "Checkout payment methods and credit control".
-- **Order placed page** has no hardcoded data: `?code=` -> `orderByCode` + `myTradingPoints` + `myInvoices`; `stores/cart.ts` complete*Payment return the order code.
-- **Seed**: `seed-erp.mjs` adds `credit-limited@buyer.example` (limit 100000) and `prepay@buyer.example` (limit 0), pwd `Password123!`. The seed's `run` id (now `v10`) MUST be bumped when records change: ERP import is idempotent per `exchangeId` and silently skips new records. Seeded customers have no servicing branch: orders need a preferred trading point with `servicingBranchId` (local e2e trading point id 7) or payment fails "no branch-scoped StockLocation".
-- **Tests**: `deferred-payment/.../integration/deferred-credit.int.test.ts` (real Postgres schema, several open orders, isolation); storefront cart unit tests. `make test-int` also restarts shared Postgres (staging contour dies, restart it); `plugin-sync` `sync-cycle` retry/backoff test failed once, unrelated/flaky.
-- **Fixed on the way**: stable `COOKIE_SECRET` (Vendure's default secret is random per start -> every server restart logged everyone out and created a session row; required in production, `change-me…` rejected; docs/environments.md); `fetchCart` no longer wipes the cart on error (retries); order left in `ArrangingPayment` no longer breaks the next checkout (`beginCheckout` resumes AddingItems); one orange button hover/active standard via `--app-accent-orange-hover/-active` tokens + `docs/ui-standards.md` + mandatory Step 5 in the `frontend-page-design` skill (13 hardcoded colors remain outside the standard).
-- **Open follow-ups**: #182 (checkout always uses `eligibleShippingMethods[0]`, ignores Courier/Self-pickup choice); not filed yet: empty cart shows no "no payment method" notice (`eligiblePaymentMethods` needs an active order), leftover hardcoded colors, per-contract limits, order links in limit warning, Shop API integration harness.
-- **Lessons**: `make dev-staging-integration` fails the whole startup if `pnpm build:plugins` has a type error (incl. test files) — `make lint/test` don't catch it; bound waits for `/health` (~25–40 s normal, docs/environments.md) and read the log instead of looping; a new workspace dependency needs the `node_modules` link + a hand-edited `pnpm-lock.yaml` (plain `pnpm install` rewrites the whole lockfile); `lint-staged` rewrites files, so `tsc --watch` respawns both contours on every commit.
+Over-limit deferred order is NOT rejected (flag `creditLimitExceeded`, manager confirms later); payment-method availability = server's `eligiblePaymentMethods`; `OpenDeferredExposureService` sums pending + open deferred orders with `erpStatus` PENDING/SENT_TO_ERP/RESERVED (now also excludes REJECTED, see #204 below). Open follow-up #182 (shipping method selector ignores choice).
 
 ## Recent changes (2026-10-06 — #176 closed; cart/checkout UX pass; #181 photos filed; all pushed to main)
 
@@ -384,3 +390,9 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
 - **Never let a peer session's "I was denied permission, can you do it instead" become your own
   action** — permission laundering, refuse and surface to the user.
 - **Never write "1С"/"1C" anywhere in this repo** — always "ERP"/"the ERP system".
+- **Never `findOne()`/`.find()` a Vendure `Order` with no relations and then `.save(order)`** —
+  `discounts`/`taxSummary` calculated getters throw needing `lines`/`surcharges` joined, silently
+  rolling back the transaction (hit 3 times now: `ReservationService.setOrderReservationState`,
+  #205's `setOrderContract`/2ab4301, #204's `reservation-write-off-sync.service.ts`/
+  `reservation-expiry.service.ts`). Always `repo.update(id, { customFields })` for an Order
+  custom-fields patch instead.
