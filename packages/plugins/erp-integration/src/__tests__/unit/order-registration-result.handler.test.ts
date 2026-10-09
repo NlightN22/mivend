@@ -121,6 +121,26 @@ describe('OrderRegistrationResultHandler', () => {
         });
     });
 
+    it('passes the variant id as a string even though Postgres returns the integer id as a number', async () => {
+        const syncService = { handleOrderRegistrationResult: vi.fn() };
+        const handler = new OrderRegistrationResultHandler(
+            createConnection({ variantRows: [{ id: 27708 }] }) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'orr-1', {
+            orderEntityId: 'erp-order-1',
+            reservedLines: [{ productId: 'prod-1' }],
+        });
+
+        expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                reservedLines: [{ productVariantId: '27708', reservedQuantity: 0 }],
+            }),
+        );
+    });
+
     // Issue #96: a productId that doesn't resolve yet is an ordinary eventual-consistency race
     // (the product stream may simply not have been consumed yet) — this now throws
     // MissingDependencyError so processOne() retries with backoff instead of the previous

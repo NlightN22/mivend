@@ -61,6 +61,23 @@ describe('OrderChangedStreamHandler', () => {
         });
     });
 
+    it('passes the variant id as a string even though Postgres returns the integer id as a number', async () => {
+        const syncService = { handleOrderChanged: vi.fn() };
+        const handler = new OrderChangedStreamHandler(
+            createConnection([{ id: 27708 }]) as never,
+            syncService as never,
+        );
+
+        await handler.apply(ctx, 'erp-order-1', { lines: [{ productId: 'prod-1' }] });
+
+        expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                reservedLines: [{ productVariantId: '27708', reservedQuantity: 0 }],
+            }),
+        );
+    });
+
     // Same all-or-nothing eventual-consistency race as OrderRegistrationResultHandler's own
     // identical lookup — throws so processOne() retries via the inbox, never a silent drop.
     it('throws MissingDependencyError for a line whose productId does not resolve to a known variant', async () => {

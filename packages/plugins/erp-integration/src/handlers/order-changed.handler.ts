@@ -124,6 +124,6 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             .innerJoin('product', 'p', 'p.id = pv."productId"')
             .where('p."customFieldsExternalid" = :productId', { productId })
             .getRawOne<{ id: string }>();
-        return row?.id;
+        return row ? String(row.id) : undefined;
     }
 }
