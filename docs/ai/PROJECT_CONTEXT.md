@@ -1,6 +1,16 @@
 # Project Context
 
-Updated: 2026-10-09 18:10
+Updated: 2026-10-09 20:30
+
+## Orders, contracts, organizations, reserve model (2026-10-08/09; #201/#202/#203/#205/#199 shipped/audited/closed; #194/#206/#208 filed) — decisions in `docs/order-contracts.md`
+
+- **Organization**: `ProductVariant.organizationId` comes from `storage-location` (winner per product from `storage_location_assignment`, any row with an organization). A variant without one is not sellable: hidden for customers, checkout gate (`organizationOrderGuard`, re-checked in `reserveOrder` and the `order.submitted` listener), the external search gets `requireOrganization` (post-filter stays). Line organization is stamped at `ArrangingPayment`; invoices per line organization only for pay-by-invoice/online payment, none for deferred terms (the ERP holds accounting documents); proforma snapshots are #206.
+- **Contract**: `selectedContractId` set at `ArrangingPayment` (stored valid, else main active, else another active by price type/recency/`erpId`, else blocked); manager `setOrderContract` (ConfirmOrder, lock `reserve-order:<id>`, only before reservation/ERP receipt). `order.submitted` is per warehouse, header organization = the contract's organization + `contractId`; schema from `@nlightn22/event-contracts` (producer-owned, subject FORWARD, Confluent wire format); the ERP rejects a contract/organization mismatch.
+- **#199**: a failed auto-reserve is stored on the order (`reservationFailureReason/Detail/At`, cleared on success) and shown to managers; the ERP's reserved quantities win (local hold released, difference recorded); the placement handler marks AWAITING_CONFIRMATION under a row lock only while NOT_REQUIRED.
+- **Reserve/cancel model (#194, spec in the issue body, NOT implemented, separate session)**: A = cancel the reserve (1C closing document, scheduled job at `РезервДо`), B = cancel the order (mark for deletion, includes A); B only for pending orders (automatic), in progress = a request to a person, shipped = never; mivend must send `reserveUntil` (else the 1C job picks orders after ~4 months); the closing document exports no `order-changed` (live test), so explicit ERP signals are required (search-platform#179/#180). Today the expiry task still returns the order to AWAITING_CONFIRMATION.
+- **Do not redo**: closing is not a cancellation; deferred-terms orders get no automatic invoices; ERP-owned masters keep the ERP id.
+- **Contour hazards**: `make dev` (local) can kill the staging-integration contour (start staging last); `ts-node-dev` can hang at ~90% CPU after a plugin dist rebuild (restart via `make`). Staging holds orders registered in 1C during tests (one of them had its 1C reserve closed by a test).
+- **Next**: #208 cross-system manual verification pass (positive/negative/duplicate scenarios), #194 implementation, #206 proforma snapshots.
 
 ## #207 identifiers: uuid everywhere, numeric document numbers, idempotency by uuid (2026-10-09, shipped/audited twice/closed; pushed to 49aeccc)
 
@@ -25,14 +35,9 @@ Updated: 2026-10-09 18:10
 - Integration health page: `rejectedOrderCount` admin query (`ManageErpIntegration` permission) + a line on the Outbound tab (links to the manager's filtered list) + non-zero alert, modeled on `variantUnitHealth`.
 - Commits: 91ae02e, a047aff, c5be618, b66fa3f, 6020057, 2d13844/eec379d/55b0f06, fc10f8b, 321e73b, d973ccb, 6254524.
 
-## #195 integration-health page (2026-10-08, implemented; audit done once, pending final audit/push)
+## #195 integration-health page (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-09-195-integration-health.md`)
 
-- Dashboard System -> Integration health: Inbound tab (stream x contract x Kafka lag x inbox backlog, drift rows, contract version banner) and Outbound tab (outbox per event type). Full description and failed-rows runbook: `docs/integration-health.md`.
-- Unconsumed contract streams are listed with reasons in `erp-integration/src/ignored-contract-streams.ts` (counterparty-contact/-group, order-change-result, product-group, point-of-sale-type); a unit test fails CI on a new unhandled contract stream.
-- Version lookup needs `EVENT_CONTRACTS_REGISTRY_TOKEN` in the contour env file (not in repo); without it the banner says "could not be checked".
-- #200 (implemented, pending audit/push): `OutboundGateway` + outbound type registry, `skipped`/`resolved` outbox statuses, outbox retry with backoff over 24 h, `requeueFailedIntegrationOutbox`/`rebuildSkippedIntegrationOutbox` mutations, lint rule `outbound/no-direct-outbound`, inbound `inboundNoop` outcomes (`outcome`/`outcome_reason` columns, migration 1791442158597, generated), Outbound tab Skipped column + failed/skipped alerts. Left open: crash-gap sweep, inbound dead-letter for malformed payloads, drill-down pages (done: System -> Inbox issues / Outbound problems, replay/requeue/rebuild), Integration Service dedup by event_id verified in source (see docs/integration-health.md). Inbox replay: failed -> replay_requested -> resolved only when the replayed event is processed (back to failed on dead-letter/timeout; migration 1791447802493).
-- Outbound schema state (#203): `order.submitted` is the only outbound event, owned by mivend, one shared `@nlightn22/event-contracts` package for both directions; schema read from the package when it exports `ORDER_SUBMITTED_JSON_SCHEMA` (planned 0.53.0, not released), else the local copy; Outbound tab Schema column shows which; subject compatibility FORWARD; Confluent wire format required, the receiver still parsed plain JSON (fix tracked on their side). Details: `docs/integration-health.md`.
-- Earlier known risk (now fixed by #200): outbox rows dead-lettered after 5 attempts at a 5 s sweep. `make lint` currently fails on untracked foreign scratch files in `packages/e2e`.
+- Dashboard System -> Integration health: Inbound tab (stream x contract x Kafka lag x inbox backlog, drift rows, contract version banner), Outbound tab (outbox health incl. `skipped`, schema source per event type); runbook in `docs/integration-health.md`.
 
 ## #198 order branch fallback + auto-reserve switch (2026-10-08, shipped/audited; pushed)
 
