@@ -263,7 +263,9 @@ Per-channel/per-customer-segment overrides are not needed for stage 1.
 
 - Non-prepaid: reservation → `EXPIRED`, stock returns to ATP, order returns to the
   `AWAITING_CONFIRMATION` queue — requires a fresh confirmation (re-check stock and, if
-  needed, commercial conditions).
+  needed, commercial conditions). **Current behaviour; decided to change in #194**: an order not
+  confirmed/registered by the deadline is cancelled instead (see `docs/order-contracts.md`, "Reserve and
+  order cancellation").
 - Prepaid: do **not** silently release a paid customer's stock. Use a longer TTL for this
   path, and on expiry move to a distinct "needs intervention" state with a task/notification
   for staff, rather than auto-releasing.
@@ -426,8 +428,10 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   reservation for that variant is released like a matching one (the ERP holds the stock now) and the
   difference is recorded as a reconciliation issue for staff. A variant the ERP does not mention keeps
   its local reservation; a rejected result changes nothing here (see #204).
-- **Expiry and cancel of unconfirmed orders** is tracked in #194, not here: unregistered orders are
-  cancelled by mivend at the deadline and the ERP is told; registered ones follow the ERP.
+- **Expiry and cancel of unconfirmed orders** is tracked in #194, not here. Model in
+  `docs/order-contracts.md`: cancelling the reserve (A) and cancelling the order (B, which includes A) are
+  different operations; at the shared deadline 1C does A and mivend does A and, for pending/unregistered
+  orders, B.
 
 ### Order contract (mivend#205)
 

@@ -81,39 +81,64 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
   (a later difference is shown on the order and settled through the ERP). Not an accounting document
   and not synced to the ERP. Tracked in #206 together with the question of system-level versioning.
 
-## Reservation end, expiry and cancellation (decided, planned in #194)
+## Reserve and order cancellation (decided, planned in #194)
 
-Not implemented yet; recorded here so the decisions are not lost. Plan and open points are in #194.
+Not implemented yet; the decisions are recorded here and in #194. The ERP-side facts come from
+search-platform#178 (read from the 1C configuration and checked with live tests on a test order).
 
-- The ERP order document has its own "reserve until" attribute (`РезервДо`), and the ERP releases reserves
-  by that date. The reserve register has no expiry and our current contract carries only the reserved
-  quantity, so the attribute is used and exchanged: mivend sends its own reservation end as `reserveUntil`
-  in `order.submitted`, and the ERP exports the date back on `order-changed` and on the registration result.
-- Before the ERP registers an order, mivend owns the deadline: at expiry it **cancels** the order (it no
-  longer returns it to the confirmation queue) and tells the ERP.
-- Cancellation is propagated to the ERP in both cases, for an order not yet registered and for one already
-  registered: mivend asks, the ERP decides and answers through `order-changed`; if the ERP refuses (for
-  example already shipped), mivend follows the ERP and the order stays. mivend never cancels a registered
-  order on its own authority.
-- Transport: a mivend-owned `order.cancelled` event in `@nlightn22/event-contracts` (same ownership procedure
-  as `order.submitted`), turned by the ERP integration into a narrow cancellation command. Not the
-  `order-change-requests` stream (it reconciles the state of an already registered order).
-- Race (a late `order.submitted` after our cancel): a still-pending outbox row is marked `skipped`, and the
-  ERP keeps a cancelled-`orderId` tombstone and rejects a late submit.
-- If the ERP reports a different reserved quantity than ours, the ERP wins (#199): our reservation follows it
-  and the difference is only recorded for staff.
-- The ERP release is a scheduled job (`АвтоматическоеЗакрытиеЗаказовПокупателей`): it picks orders whose
-  `РезервДо` is earlier than yesterday and posts a "closing of customer orders" document, and posting it
-  releases the reserve in the register (the order itself is not changed). Our orders have an empty
-  `РезервДо` today, so the job never selects them: sending `reserveUntil` is what makes it work.
-- There is no separate manual cancel flow in 1C: cancelling a registered order is the same closing document,
-  created "based on" the order by a person or posted by the job, and the order looks the same afterwards.
-- Confirmed by a live test on a test order (ERP side, search-platform#178): posting the closing document does
-  not touch the order object at all (its data version is identical before and after) and 1C accepts it even for
-  an order awaiting approval, so the exchange exports **no `order-changed`** after any closure, automatic or
-  manual. mivend must not wait passively for `order-changed` to learn that the ERP released or closed an order;
-  the ERP side has to send an explicit signal, for example a result/ack event published when it handles the
-  cancellation command (`order.cancelled`), and for the job-driven closure a dedicated closed-order event.
+### Two operations
+
+| | What it does | Who and when | In 1C |
+| --- | --- | --- | --- |
+| **A. Cancel the reserve** | Zeroes the reserves of an order; the order stays alive | 1C by its scheduled job at the order's "reserve until" date (`РезервДо`); mivend at its own expiry (releases its reservations) | Posting a "closing of customer orders" document |
+| **B. Cancel the order** | Cancels the order and, with it, its reserves (B includes A) | The customer on request; mivend at the reserve deadline, for orders that can still be cancelled | "Mark for deletion" on the order |
+
+Closing (A) is not a cancellation of the order. It is the routine write-off 1C runs for every order in the
+end, cancelled or shipped; posting it never refuses and silently does nothing for an order with a sale.
+
+### Cancellability (technical condition for B, from what 1C already checks)
+
+- **Pending** (no warehouse order, no sale): cancelled automatically. The same applies to an order the ERP
+  has not registered yet.
+- **In progress** (a warehouse order exists, no sale): no programmatic cancel. The customer's button becomes a
+  request to a person (manager/operator); not automated now.
+- **Shipped** (a sale exists): final, no cancellation of any kind. No partial cancellation is modelled: once any
+  sale is posted the order is shown as shipped, by what that sale contains.
+
+### The reserve deadline
+
+- The deadline is one shared date. mivend sends it as `reserveUntil` in `order.submitted` (mandatory: with an
+  empty `РезервДо` the 1C job only picks an order after about four months) and the ERP writes it to `РезервДо`.
+- At the deadline 1C does A and mivend does A and, for a pending or unregistered order, B. Both are idempotent
+  and the order of execution does not matter. An order that is in progress or shipped is left alone: its
+  reserve is already used up, and mivend follows what the ERP reports.
+- Not confirmed/unregistered order: mivend cancels it locally and, if `order.submitted` was already sent, tells
+  the ERP. It no longer returns to the confirmation queue.
+- Prepaid orders and the ERP-rejected reserves (#204) keep their own rules (manual intervention / their deadline).
+
+### Signals from the ERP
+
+- Posting the closing document does not rewrite the order, so the exchange exports **no `order-changed`** after
+  any closure (live test). mivend must not wait for `order-changed` to learn that the ERP released or closed an
+  order. The ERP side provides an explicit signal: a stream with the live reserve per order key, and the three
+  base facts per order (warehouse order exists, sale exists, marked for deletion).
+- mivend asks for B with a mivend-owned `order.cancelled` event (same ownership procedure as `order.submitted`);
+  the ERP answers explicitly (accepted/refused with a reason). The `order-change-requests` stream is not used.
+- A late `order.submitted` after a cancel: a still-pending outbox row is marked `skipped`, and the ERP keeps a
+  cancelled-`orderId` tombstone and rejects a late submit.
+- If the ERP reports a different reserved quantity than ours, the ERP wins (#199).
+
+### Statuses
+
+- `erpStatus` is mivend's own; `erpOrderStatus` is the ERP's raw status. They stay separate. The three base
+  facts map onto ours later (warehouse order -> assembled, sale -> shipped, waybill for delivered orders ->
+  delivered, marked for deletion -> cancelled); a non-priority task.
+- The customer sees a simplified status, staff a detailed one; the ERP only supplies facts.
+
+### Still to verify with the ERP side
+
+- Whether marking an order for deletion also zeroes its reserve in the register automatically (expected: yes,
+  "two in one"); if not, B must include A explicitly.
 
 ## Deliberately out of scope (open questions)
 
