@@ -102,8 +102,26 @@ and is never an idempotency key for a business entity.
   `/opt/search-platform-wt-order-uuid` worktree, branch `feat/order-submitted-uuid` — the npm bump into mivend's
   dependency and the ERP/Integration-Service side's own consumption are separate, tracked follow-ups once that
   branch is reviewed and released.
-- Deferred (tracked for follow-up, separate from this slice): replacing `DateStampedOrderCodeStrategy` with
-  `NumberingService` and renumbering existing Order/Invoice/PaymentAttempt/DiscountGrant/PaymentRefund rows to the new
-  format (the issue's own stretch goal — Order.code today is still the old `ORD-YYYYMM-XXXXXXXX` format, which the
-  new `<order number>-NN` Invoice numbers are built on top of as-is); the Reservation uuid/`erpOperationId`
-  unification described above; Swagger/API example updates; manager/storefront search-by-number UI.
+- Done: `DateStampedOrderCodeStrategy` replaced by `NumberingOrderCodeStrategy`
+  (`apps/server/src/order-code.strategy.ts`), which pulls `NumberingService` via `init(injector)`
+  and calls `NumberingService.next(ctx, 'order')` — `Order.code` is now a plain number in the
+  format described above, wired in `apps/server/src/vendure-config.ts`'s
+  `orderOptions.orderCodeStrategy`.
+- Done, but **not yet run**: the one-off renumbering of every existing Order/Invoice/
+  PaymentAttempt/PaymentRefund/DiscountGrant row onto the new format lives at
+  `infrastructure/scripts/renumber-documents-207.sql` — idempotent, re-runnable, verified against
+  a disposable `make test-int` schema (`packages/plugins/numbering/src/__tests__/integration/
+  renumber-documents-207.int.test.ts`). It has **not been executed against the real local
+  (`mivend_central`) or staging-integration databases** — that is the owning session's own next
+  step, after reviewing the script, and after setting `INSTANCE_NUMBER_CODE` in the real
+  `.env.local`/`apps/server/.env.central.staging-integration` (currently unset in both — only
+  commented out in `.env.local.example` — so the server will not even boot with the new
+  `NumberingOrderCodeStrategy` until it is set there).
+- Checked, nothing to fix: manager/storefront search-by-number UI. Grepped both frontends for any
+  parsing/validation tied to the old `ORD-`/`INV-`/`PAY-`/`DSC-` prefix format — every hit is
+  Storybook fixture data or a hardcoded display prefix built from a Vendure entity id (e.g.
+  `PaymentRow.vue`'s `PAY-{{ payment.id }}`), never the `number`/`code` field itself, and no
+  search box applies a format-specific regex; they already do a plain substring/ILIKE match,
+  which works unchanged for a pure-digit number.
+- Still open, separate from this slice: the Reservation uuid/`erpOperationId` unification
+  described above; Swagger/API example updates.
