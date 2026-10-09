@@ -103,6 +103,8 @@ export class ReservationPaymentService {
     ): Promise<void> {
         const settings = await this.globalSettingsService.getSettings(ctx);
         if (!settings.customFields?.autoReserveOnPlacement) return;
+        // An over-limit deferred order always waits for a manager (#188).
+        if (order.payments?.some(p => p.metadata?.public?.creditLimitExceeded === true)) return;
         try {
             await this.reservationService.reserveOrder(
                 ctx,

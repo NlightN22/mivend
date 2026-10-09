@@ -87,6 +87,29 @@ describe('ReservationPaymentService', () => {
             );
         });
 
+        it('leaves an order flagged creditLimitExceeded awaiting a manager even with the switch on', async () => {
+            autoReserveOnPlacement = true;
+            const overLimit = {
+                ...placed(),
+                payments: [
+                    {
+                        method: 'deferred-payment',
+                        metadata: { public: { creditLimitExceeded: true } },
+                    },
+                ],
+            };
+            await service.handleOrderPlaced(ctx, overLimit as never);
+            expect(reservationService.reserveOrder).not.toHaveBeenCalled();
+            expect(orderRepo.update).toHaveBeenCalledWith(
+                'order-1',
+                expect.objectContaining({
+                    customFields: expect.objectContaining({
+                        reservationState: 'AWAITING_CONFIRMATION',
+                    }),
+                }),
+            );
+        });
+
         it('does not reserve when the switch is off', async () => {
             await service.handleOrderPlaced(ctx, placed() as never);
             expect(reservationService.reserveOrder).not.toHaveBeenCalled();
