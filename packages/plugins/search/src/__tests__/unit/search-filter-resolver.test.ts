@@ -6,6 +6,7 @@ vi.mock('@vendure/core', () => ({
     Collection: class {},
     FacetValue: class {},
     TransactionalConnection: class {},
+    VendureEntity: class {},
 }));
 vi.mock('@mivend/plugin-reservation', () => ({ StockLevelService: class {} }));
 

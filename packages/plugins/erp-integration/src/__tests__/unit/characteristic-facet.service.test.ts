@@ -7,6 +7,7 @@ vi.mock('@vendure/core', () => ({
     ProcessContext: class {},
     RequestContextService: class {},
     TransactionalConnection: class {},
+    VendureEntity: class {},
 }));
 vi.mock('../../entities/product-characteristic.entity', () => ({
     ProductCharacteristic: class {},
