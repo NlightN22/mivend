@@ -60,11 +60,17 @@ and is never an idempotency key for a business entity.
   `apps/server/src/order-uuid.subscriber.ts` (a TypeORM `EntitySubscriber`, not an EventBus listener, so it is atomic
   with the row's own insert); backfilled for existing rows by migration `1791460000000-order-uuid`.
 - Done: `order.submitted`'s duplicate-publish guard (issue #199), in `OrderSubmittedBuilder.build()` via
-  `OutboundGateway.hasActiveEntryForOrder`. **Known limitation:** there is no dedicated "ERP rejected this order" fact
-  recorded anywhere yet, so the guard's only rejection signal is `Order.customFields.erpStatus === 'REJECTED'` (set by
-  `ReservationWriteOffSyncService` from the ERP's registration result). Any other existing `pending`/`published`
-  `order.submitted` outbox entry for the order blocks a new one. If a case arises where a legitimate re-submit should
-  be allowed on some other signal, that needs its own design, not a workaround here.
+  `OutboundGateway.hasActiveEntryForOrder`, with `OrderSubmittedListener.handle()` serializing the whole
+  check-then-enqueue sequence on the same `reserve-order:<id>` advisory lock `order-contract.service.ts`'s
+  `reserveOrder` already uses. **Audit finding fixed:** the first version of this guard was a plain
+  check-then-insert with no lock — two concurrent `handle()` calls for the same order could both see "not yet
+  submitted" and both enqueue, the exact duplicate this issue exists to prevent. A real `Promise.all` test against
+  Postgres (`outbound-gateway.int.test.ts`) now proves exactly one row results. **Known limitation (unchanged):**
+  there is no dedicated "ERP rejected this order" fact recorded anywhere yet, so the guard's only rejection signal
+  is `Order.customFields.erpStatus === 'REJECTED'` (set by `ReservationWriteOffSyncService` from the ERP's
+  registration result). Any other existing `pending`/`published` `order.submitted` outbox entry for the order
+  blocks a new one. If a case arises where a legitimate re-submit should be allowed on some other signal, that
+  needs its own design, not a workaround here.
 - Done: `NumberingService` (`packages/plugins/numbering`) — `next(ctx, documentType)` against a fixed, hardcoded
   Postgres sequence per `NumberingDocumentType` (`order`/`invoice`/`payment`/`refund`/`discount-grant`/`proforma`,
   migration `1791470000000-numbering-sequences`), formats `<3-digit INSTANCE_NUMBER_CODE><7+-digit sequence value>`;
