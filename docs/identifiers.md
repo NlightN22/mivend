@@ -72,14 +72,31 @@ and is never an idempotency key for a business entity.
   validated as exactly 3 digits at plugin init and documented in `.env.local.example`/`docs/environments.md`.
 - Done: shared `UuidEntity` base (`packages/shared/src/uuid-entity.ts`), assigned via `@BeforeInsert()` so it is
   readable before the row's own insert commits.
-- Deferred (not done this pass — out of budget for this slice of #207, tracked for follow-up): applying `UuidEntity`
-  to Invoice/PaymentAttempt/Refund/SettlementEntry/DiscountGrant/Document/ErpReconciliationIssue/Reservation (no
-  entities changed, no backfill migrations written yet); the Reservation uuid/`erpOperationId` unification
-  (not investigated); replacing `generateDocumentCode`/`documentCode.ts` call sites in `DiscountGrantService`/
-  `PaymentAttemptService.payInvoice`/`InvoiceService.createInvoicesForOrder` with `NumberingService` (no order-scoping
-  decision made yet for PaymentAttempt/Refund/SettlementEntry — flat sequence vs. `<order number>-NN` — re-read this
-  doc's "Payment documents" paragraph above when making that call); the per-order `-NN` ordinal's required
-  lock/transaction per `docs/concurrency.md` and its concurrent-writer test; and replacing
-  `DateStampedOrderCodeStrategy`/renumbering existing Order/Invoice/PaymentAttempt/DiscountGrant codes (stretch goal,
-  not attempted). `generateDocumentCode` is still live and in use — do not delete it until every call site above is
-  migrated.
+- Done: `UuidEntity` applied to Invoice/PaymentAttempt/PaymentRefund/SettlementEntry/DiscountGrant/Document/
+  ErpReconciliationIssue/Reservation (migration `1791480000000-plugin-entities-uuid`, backfilled then unique-indexed).
+  SettlementEntry gets uuid only — it has no human-facing number field (confirmed by reading its entity/service: it is
+  a ledger row, never shown or searched by a number of its own). Reservation gets uuid only, additively:
+  `erpOperationId`/`erpReleaseOperationId` are untouched — they track *operations*, a different concept from the
+  entity's own identity. The actual uuid/`erpOperationId` **unification** described in the "Which entities" table
+  above is still open — nobody has yet changed how reservation sync (`packages/plugins/sync`) or the ERP
+  reserve-by-order stream key a reservation; that is real follow-up work, not done by adding the column.
+- Done: every `generateDocumentCode` call site replaced with `NumberingService`; `generateDocumentCode`/
+  `documentCode.ts` is deleted. Order-scoping decisions made:
+  - **Invoice**: order-scoped, `<order number>-NN` via `NumberingService.formatOrderDocumentNumber`. The ordinal is
+    computed inside `InvoiceService.createUnderLock`, which already runs under a per-order `withAggregateLock` lock
+    (pre-existing, for the idempotent-retry guarantee) — no separate locking was needed, just computing the ordinal as
+    the split's 1-based index within that existing locked section. A concurrent-writer test
+    (`invoice-creation.concurrency.int.test.ts`) asserts every Invoice number for one order is distinct even when
+    `createInvoicesForOrder` is called concurrently.
+  - **PaymentAttempt / PaymentRefund**: flat per-instance sequence (`NumberingService.next(ctx, 'payment'|'refund')`),
+    not order-scoped. Reasoning: docs/identifiers.md's "Payment documents" paragraph says the number "always comes
+    from the sequence", unlike Invoice which this doc explicitly calls out as `<order number>-NN`; `providerPaymentId`/
+    `providerRefundId` already carry the acquirer/kassa reference separately. Revisit if this reading turns out wrong.
+  - **DiscountGrant**: flat per-instance sequence — it has no `orderId`, so `<order number>-NN` does not apply.
+- Deferred (tracked for follow-up, separate from this slice): replacing `DateStampedOrderCodeStrategy` with
+  `NumberingService` and renumbering existing Order/Invoice/PaymentAttempt/DiscountGrant/PaymentRefund rows to the new
+  format (the issue's own stretch goal — Order.code today is still the old `ORD-YYYYMM-XXXXXXXX` format, which the
+  new `<order number>-NN` Invoice numbers are built on top of as-is); the Reservation uuid/`erpOperationId`
+  unification described above; wiring `orderUuid`/`orderNumber`/`lineUuid` into the `order.submitted` outbound
+  contract (needs the `@nlightn22/event-contracts` package bumped in a separate `/opt/search-platform` worktree,
+  tracked as its own piece of work); Swagger/API example updates; manager/storefront search-by-number UI.
