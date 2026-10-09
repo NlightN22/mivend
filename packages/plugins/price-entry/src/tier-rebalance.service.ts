@@ -149,8 +149,13 @@ export class TierRebalanceService implements OnApplicationBootstrap {
         for (const line of freshOrder.lines) {
             if (String(line.id) === String(changedLineId)) continue;
             // Same quantity: only forces calculateUnitPrice() against the current aggregate.
-            await this.orderService
-                .adjustOrderLine(ctx, orderId, line.id, line.quantity)
+            // Under the order row lock so its line save cannot overwrite a concurrent stamp (#208).
+            await this.connection
+                .withTransaction(ctx, async txCtx => {
+                    this.ownContexts.add(txCtx);
+                    await this.lockOrder(txCtx, orderId);
+                    await this.orderService.adjustOrderLine(txCtx, orderId, line.id, line.quantity);
+                })
                 .catch(() => undefined);
         }
     }
@@ -159,13 +164,7 @@ export class TierRebalanceService implements OnApplicationBootstrap {
     // otherwise a stale snapshot overwrites its correct total (lost update).
     private async refreshTotals(ctx: RequestContext, orderId: ID): Promise<void> {
         await this.connection.withTransaction(ctx, async txCtx => {
-            await this.connection
-                .getRepository(txCtx, Order)
-                .createQueryBuilder('o')
-                .setLock('pessimistic_write')
-                .where('o.id = :id', { id: orderId })
-                .select('o.id')
-                .getOne();
+            await this.lockOrder(txCtx, orderId);
             const order = await this.orderService.findOne(txCtx, orderId, [
                 'lines',
                 'lines.productVariant',
@@ -174,5 +173,15 @@ export class TierRebalanceService implements OnApplicationBootstrap {
             ]);
             if (order) await this.orderService.applyPriceAdjustments(txCtx, order, []);
         });
+    }
+
+    private async lockOrder(txCtx: RequestContext, orderId: ID): Promise<void> {
+        await this.connection
+            .getRepository(txCtx, Order)
+            .createQueryBuilder('o')
+            .setLock('pessimistic_write')
+            .where('o.id = :id', { id: orderId })
+            .select('o.id')
+            .getOne();
     }
 }

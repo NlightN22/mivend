@@ -89,9 +89,13 @@ describe('TierRebalanceService', () => {
         service.onApplicationBootstrap();
     });
 
-    it('locks the order row before recomputing totals', async () => {
+    it('locks the order row before each sibling adjustment and before recomputing totals', async () => {
+        adjust.mockImplementation(async () => {
+            order.push('adjust');
+            return {};
+        });
         await fire(1, 10);
-        expect(order).toEqual(['lock', 'apply']);
+        expect(order).toEqual(['lock', 'adjust', 'lock', 'apply']);
     });
 
     it('loads the relations Vendure needs to recompute totals, surcharges included', async () => {
