@@ -7,7 +7,7 @@ import {
     LanguageCode,
     VendureConfig,
 } from '@vendure/core';
-import { DateStampedOrderCodeStrategy } from './order-code.strategy';
+import { NumberingOrderCodeStrategy } from './order-code.strategy';
 import { OrderUuidSubscriber, OrderLineUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import {
@@ -592,7 +592,7 @@ export const config: VendureConfig = {
         ],
     },
     orderOptions: {
-        orderCodeStrategy: new DateStampedOrderCodeStrategy(),
+        orderCodeStrategy: new NumberingOrderCodeStrategy(),
         orderItemPriceCalculationStrategy: new CustomerPriceCalculationStrategy(),
     },
     catalogOptions: {
