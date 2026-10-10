@@ -194,6 +194,30 @@ keys the producer on the `uuid`, and find the test that publishes twice. A bound
 only by an integer id, an alphanumeric code or an `eventId` is a real finding (high severity): it is the
 duplicate-document defect waiting for the first re-confirm.
 
+## Topic design — a new topic is a design decision, not a default
+
+Do not create a topic per event type. The unit is the **stream of one entity/aggregate**: all events
+about the same entity whose relative order matters go to ONE topic, keyed by the entity's `uuid`
+(so they share a partition and stay ordered), distinguished by a `type` field in the body and a
+Kafka header. A confirm followed by a cancel of one order is one stream, not two topics.
+
+- **Reuse before create.** Before adding a topic, name the existing topic of that entity and
+  explain why its events cannot join it. Valid reasons for a separate topic: a different
+  entity/aggregate, a different producer owner, genuinely different retention/compaction or
+  throughput, or a different consumer group that must not see the other events. "A new event
+  type" is not a reason.
+- **Types are additive.** One subject per topic (topic-name strategy) with a discriminated union
+  (`oneOf` on a const `type`); a new event type is a new branch. Consumers must skip an unknown
+  `type`, never fail on it.
+- **Name:** `<owner>.<domain>.events.v<N>.<stream>`, one stream per entity, never per event.
+- A topic needs its ACLs (producer write, consumer read), partitions and retention decided and
+  written down before the first publish.
+
+Implementer: state the entity, its key, the existing topic checked and the reason in the PR/issue.
+Auditor: a new topic or subject without that justification, or a second topic carrying events of an
+entity that already has one, is a finding (HIGH); an ordering-sensitive pair split across topics is
+CRITICAL.
+
 ## Kafka consumer resilience patterns
 
 Live incident, 2026-09-05: `plugin-erp-integration`'s Kafka consumer (`KafkaConsumerService`)
