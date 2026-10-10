@@ -36,6 +36,8 @@ export class OrderSubmittedBuilder {
             relations: ['lines', 'lines.productVariant'],
         });
         if (!order) return outboundSkip(`order ${String(orderId)} not found`);
+        if (order.state === 'Cancelled')
+            return outboundSkip(`order ${String(orderId)} is cancelled`);
         if (!order.customerId) return outboundSkip('order has no customer');
         if (order.lines.length === 0) return outboundSkip('order has no lines');
         const orderUuid = order.customFields?.uuid;
@@ -153,7 +155,7 @@ export class OrderSubmittedBuilder {
     // non-failed prior entry for this order blocks a new submit.
     private async wasAlreadySubmitted(orderId: ID, order: Order): Promise<boolean> {
         if (order.customFields?.erpStatus === 'REJECTED') return false;
-        return this.outboundGateway.hasActiveEntryForOrder('order.confirmed', String(orderId));
+        return this.outboundGateway.hasActiveEntry('order.confirmed', String(orderId));
     }
 
     // Only active reservations count; a released/expired one no longer reflects where the stock sits.

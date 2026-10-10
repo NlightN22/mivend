@@ -8,6 +8,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
 import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
 import type { OutboundBuildResult } from './outbound-gateway';
+import { buildCancelRequested } from './order-cancel-requested.builder';
 
 export type RebuildOutcome = 'queued' | 'still-skipped' | 'already-sent';
 
@@ -24,6 +25,8 @@ export class IntegrationOutboxRecoveryService {
     private readonly rebuilders = {
         'order.confirmed': (ctx, subject) =>
             this.orderSubmitted.build(ctx, String(subject.orderId), String(subject.orderCode)),
+        'order.cancel-requested': async (_ctx, subject) =>
+            buildCancelRequested(String(subject.orderUuid)),
     } satisfies Record<OutboundEventType, OutboundRebuilder>;
 
     constructor(

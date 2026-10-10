@@ -46,6 +46,7 @@ function makeOptions(instanceType: 'central' | 'branch'): ErpIntegrationPluginOp
                 'product-photo': 'product-photo',
                 'order-registration-result': 'orr',
                 'order-changed': 'oc',
+                'order-cancel-result': 'ocr',
                 department: 'dept',
                 counterparty: 'cp',
                 'counterparty-credit-balance': 'cpcb',

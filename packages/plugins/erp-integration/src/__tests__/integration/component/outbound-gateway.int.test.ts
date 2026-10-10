@@ -161,7 +161,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
         });
     });
 
-    it('hasActiveEntryForOrder matches only the given orderId and an active status', async () => {
+    it('hasActiveEntry matches only the given orderId and an active status', async () => {
         await gateway.enqueue({
             eventType: 'order.confirmed',
             subject: { orderId: 'order-active' },
@@ -175,11 +175,9 @@ describe('OutboundGateway (integration, real Postgres)', () => {
             build: async () => outboundSend([{ payload: { orderId: 'order-other' } }]),
         });
 
-        expect(await gateway.hasActiveEntryForOrder('order.confirmed', 'order-active')).toBe(false);
-        expect(await gateway.hasActiveEntryForOrder('order.confirmed', 'order-other')).toBe(true);
-        expect(await gateway.hasActiveEntryForOrder('order.confirmed', 'order-missing')).toBe(
-            false,
-        );
+        expect(await gateway.hasActiveEntry('order.confirmed', 'order-active')).toBe(false);
+        expect(await gateway.hasActiveEntry('order.confirmed', 'order-other')).toBe(true);
+        expect(await gateway.hasActiveEntry('order.confirmed', 'order-missing')).toBe(false);
     });
 
     // Mirrors OrderSubmittedListener.handle()'s real guard shape (check then enqueue under the
@@ -207,7 +205,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
     async function guardedSubmit(orderId: string): Promise<'queued' | 'skipped-already'> {
         const ctx = {} as RequestContext;
         return withAggregateLock(lockConnectionShim, ctx, `reserve-order:${orderId}`, async () => {
-            if (await gateway.hasActiveEntryForOrder('order.confirmed', orderId)) {
+            if (await gateway.hasActiveEntry('order.confirmed', orderId)) {
                 return 'skipped-already';
             }
             await sleep(20);

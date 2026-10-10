@@ -12,6 +12,7 @@ import { PositionStreamHandler } from './handlers/position.handler';
 import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
 import { GrantedDiscountStreamHandler } from './handlers/granted-discount.handler';
 import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
+import { OrderCancelResultHandler } from './handlers/order-cancel-result.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
 import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
@@ -67,6 +68,7 @@ export class IntegrationInboxProcessorService {
         storageLocationHandler: StorageLocationStreamHandler,
         orderRegistrationResultHandler: OrderRegistrationResultHandler,
         orderChangedHandler: OrderChangedStreamHandler,
+        orderCancelResultHandler: OrderCancelResultHandler,
         userHandler: UserStreamHandler,
         promoRuleHandler: PromoRuleStreamHandler,
         vatRateHandler: VatRateStreamHandler,
@@ -100,6 +102,7 @@ export class IntegrationInboxProcessorService {
             'storage-location': storageLocationHandler,
             'order-registration-result': orderRegistrationResultHandler,
             'order-changed': orderChangedHandler,
+            'order-cancel-result': orderCancelResultHandler,
             user: userHandler,
             'promo-rule': promoRuleHandler,
             'vat-rate': vatRateHandler,

@@ -12,4 +12,5 @@ export interface OutboundEventSchema {
 // alongside its own schema file — never inferred at runtime from the payload shape.
 export const OUTBOUND_EVENT_SCHEMAS: Record<OutboundEventType, OutboundEventSchema> = {
     'order.confirmed': resolveOutboundSchema('order.confirmed', ORDER_EVENTS_SCHEMA),
+    'order.cancel-requested': resolveOutboundSchema('order.cancel-requested', ORDER_EVENTS_SCHEMA),
 };

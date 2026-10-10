@@ -178,14 +178,15 @@ describe('integrationOutboxHealth', () => {
     it('lists every registered outbound type with zeros for an empty outbox', async () => {
         const rows = await resolver.integrationOutboxHealth();
 
-        expect(rows).toEqual([
-            expect.objectContaining({
-                eventType: 'order.confirmed',
-                pending: 0,
-                failed: 0,
-                skipped: 0,
-            }),
+        expect(rows.map(row => row.eventType).sort()).toEqual([
+            'order.cancel-requested',
+            'order.confirmed',
         ]);
+        expect(rows).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ pending: 0, failed: 0, skipped: 0 }),
+            ]),
+        );
     });
 
     it('counts skipped rows separately and reports the last skip reason, not as a publish error', async () => {

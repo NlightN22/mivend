@@ -82,6 +82,7 @@ import { IntegrationInboxIssueResolver } from './integration-inbox-issue.resolve
 import { IntegrationEventListService } from './integration-event-list.service';
 import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
 import { IntegrationInboxReplayService } from './integration-inbox-replay.service';
+import { OrderCancellationAdapter } from './order-cancellation.adapter';
 import { OutboundGateway } from './outbound-gateway';
 import { IntegrationOutboxRecoveryService } from './integration-outbox-recovery.service';
 import { IntegrationOutboxRecoveryResolver } from './integration-outbox-recovery.resolver';
@@ -138,6 +139,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,
+        OrderCancellationAdapter,
         CategoryOverrideRecomputeListener,
         ProductTaxCodeFlagService,
         ProductManufacturerService,

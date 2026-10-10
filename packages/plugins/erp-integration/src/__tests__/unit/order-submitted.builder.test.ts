@@ -107,7 +107,7 @@ function makeBuilder(options: {
     };
     const priorEntries = options.priorOutboxEntries ?? [];
     const outboundGateway = {
-        hasActiveEntryForOrder: vi.fn(async (_eventType: string, orderId: string) =>
+        hasActiveEntry: vi.fn(async (_eventType: string, orderId: string) =>
             priorEntries.some(
                 entry =>
                     entry.payload.orderId === orderId &&

@@ -12,6 +12,7 @@ import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
 import { UserStreamHandler } from './handlers/user.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
+import { OrderCancelResultHandler } from './handlers/order-cancel-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
 import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
 import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
@@ -46,6 +47,7 @@ export const STREAM_HANDLERS = [
     UserStreamHandler,
     OrderRegistrationResultHandler,
     OrderChangedStreamHandler,
+    OrderCancelResultHandler,
     PromoRuleStreamHandler,
     DiscountRuleStreamHandler,
     GrantedDiscountStreamHandler,

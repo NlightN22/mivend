@@ -18,9 +18,13 @@ describe('streamToAggregateType', () => {
         expect(streamToAggregateType('vat-rate')).toBeNull();
     });
 
+    it('offers no replay for order-cancel-result (an answer to our own command, not an ingested entity)', () => {
+        expect(streamToAggregateType('order-cancel-result')).toBeNull();
+    });
+
     it('every consumed stream is either replayable or deliberately excluded', () => {
         const unmapped = ALL_INBOUND_STREAMS.filter(s => streamToAggregateType(s) === null);
-        expect(unmapped).toEqual(['vat-rate']);
+        expect(unmapped).toEqual(['order-cancel-result', 'vat-rate']);
         for (const stream of ALL_INBOUND_STREAMS) {
             const type = streamToAggregateType(stream);
             if (type) expect(REPLAYABLE_AGGREGATE_TYPES).toContain(type);

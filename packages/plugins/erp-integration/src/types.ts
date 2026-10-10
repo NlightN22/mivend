@@ -119,6 +119,8 @@ export type InboundStream =
     // unlike order-registration-result this is not the sole reservation-release trigger, so a
     // backlog behind catalog/price/stock does not block the release-latency-sensitive path.
     | 'order-changed'
+    // The ERP's answer to an order cancel request (#194): cancelled | rejected per orderUuid.
+    | 'order-cancel-result'
     // The ERP's "Подразделение" (org-structure division) — feeds the existing, previously-unfed
     // Department entity in @mivend/plugin-access-control. Different domain than the 10 streams
     // above (company.customers, not company.catalog/orders) — see DepartmentStreamHandler.
@@ -292,6 +294,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'stock-organization': true,
     'order-registration-result': true,
     'order-changed': true,
+    'order-cancel-result': true,
     department: true,
     position: true,
     counterparty: true,

@@ -30,6 +30,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             'product-photo': 't-product-photo',
             'order-registration-result': 't-order-registration-result',
             'order-changed': 'oc',
+            'order-cancel-result': 'ocr',
             department: 't-department',
             counterparty: 'cp',
             'counterparty-credit-balance': 'cpcb',

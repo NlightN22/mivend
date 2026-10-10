@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import type { EntityManager } from 'typeorm';
 
 import { IntegrationOutboxService } from './integration-outbox.service';
+import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
 import type { OutboundEventType } from './outbound-event-types';
 import { loggerCtx } from './types';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
@@ -77,17 +78,49 @@ export class OutboundGateway {
         return 'skipped';
     }
 
-    // Guard for issue #199's duplicate-publish check. Filtered by payload->>'orderId' at the SQL
-    // level, not loaded into JS — this table is never pruned, so it would scale with order count.
-    async hasActiveEntryForOrder(eventType: OutboundEventType, orderId: string): Promise<boolean> {
+    // Guard for the duplicate-publish check (#199): is there a live entry of this type for the
+    // subject? Filtered at the SQL level on the type's subject key — this table is never pruned.
+    async hasActiveEntry(eventType: OutboundEventType, subjectValue: string): Promise<boolean> {
+        const subjectKey = OUTBOUND_EVENT_TYPES[eventType].subjectKey;
         const count = await this.dataSource
             .getRepository(IntegrationOutboxEntry)
             .createQueryBuilder('outbox')
             .where('outbox.event_type = :eventType', { eventType })
-            .andWhere("outbox.payload->>'orderId' = :orderId", { orderId })
+            .andWhere('outbox.payload ->> :subjectKey = :subjectValue', {
+                subjectKey,
+                subjectValue,
+            })
             .andWhere('outbox.status IN (:...statuses)', { statuses: ['pending', 'published'] })
             .getCount();
         return count > 0;
+    }
+
+    // Statuses of the order's confirmed events that still count: published ones were sent, pending
+    // and failed ones never reached the broker.
+    async confirmedStatusesForOrder(orderId: string): Promise<string[]> {
+        const rows = await this.dataSource.query<Array<{ status: string }>>(
+            `SELECT DISTINCT status FROM integration_outbox
+             WHERE event_type = 'order.confirmed' AND payload ->> 'orderId' = $1
+               AND status IN ('pending', 'failed', 'published')`,
+            [orderId],
+        );
+        return rows.map(row => row.status);
+    }
+
+    // Conditional on the row still waiting: it blocks on a publisher's row lock and then matches
+    // nothing, so a row can never be both skipped and sent.
+    async skipWaitingConfirmed(orderId: string, reason: string): Promise<number> {
+        const result = await this.dataSource
+            .createQueryBuilder()
+            .update(IntegrationOutboxEntry)
+            .set({ status: 'skipped', lastError: reason, lastErrorAt: () => 'now()' })
+            .where(
+                `event_type = 'order.confirmed' AND payload ->> 'orderId' = :orderId
+                 AND status IN ('pending', 'failed')`,
+                { orderId },
+            )
+            .execute();
+        return result.affected ?? 0;
     }
 
     private async recordSkipped(

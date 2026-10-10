@@ -8,6 +8,7 @@ export type OutboundSchemaSource = 'contract' | 'local';
 // installed package carries it, it wins over the local copy; delete the local file then.
 const CONTRACT_EXPORT: Record<OutboundEventType, string> = {
     'order.confirmed': 'ORDER_EVENTS_JSON_SCHEMA',
+    'order.cancel-requested': 'ORDER_EVENTS_JSON_SCHEMA',
 };
 
 export function resolveOutboundSchema(

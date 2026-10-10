@@ -35,6 +35,7 @@ function makeOptions(
                 'product-photo': 'product-photo',
                 'order-registration-result': 'orr',
                 'order-changed': 'oc',
+                'order-cancel-result': 'ocr',
                 department: 'dept',
                 counterparty: 'cp',
                 'counterparty-credit-balance': 'cpcb',

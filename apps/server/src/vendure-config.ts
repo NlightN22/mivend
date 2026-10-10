@@ -865,6 +865,10 @@ export const config: VendureConfig = {
                     'order-changed':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CHANGED ??
                         'company.orders.events.v1.order-changed',
+                    // Issue #194: the ERP's answer to an order cancel request (cancelled | rejected).
+                    'order-cancel-result':
+                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CANCEL_RESULT ??
+                        'company.orders.events.v1.order-cancel-result',
                     // The ERP's "Подразделение" — feeds the Department entity in
                     // @mivend/plugin-access-control. Different domain (company.customers) than
                     // the catalog/orders streams above — see DepartmentStreamHandler.
