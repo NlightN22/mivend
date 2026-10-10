@@ -1,7 +1,7 @@
 import { ORDER_SUBMITTED_SCHEMA } from './order-submitted.schema';
 
-// Mirrors ORDER_EVENTS_JSON_SCHEMA in @nlightn22/event-contracts 0.59.0 (not yet published); the
-// package wins once it is installed. One topic and one union subject for all order events.
+// Mirrors ORDER_EVENTS_JSON_SCHEMA in @nlightn22/event-contracts 0.59.0; the installed
+// package export wins at runtime. One topic and one union subject for all order events.
 export const ORDER_EVENTS_TOPIC = 'mivend.orders.events.v1.order-events';
 
 const CONFIRMED_SCHEMA = {
