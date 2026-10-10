@@ -2,9 +2,6 @@ import { RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import {
     Badge,
-    Alert,
-    AlertDescription,
-    AlertTitle,
     ResultOf,
     Table,
     TableBody,
@@ -16,18 +13,12 @@ import {
     graphql,
 } from '@vendure/dashboard';
 
-import { VERSION_DRIFT_MESSAGES } from './stream-health-view.js';
 import { CountLink } from './count-link.js';
+import { VariantOrganizationAlert, VariantUnitAlert, VersionDriftAlert } from './health-alerts.js';
 import { inboxIssuesLink } from './issue-links.js';
 import { RefreshIconButton } from './refresh-button.js';
 import type { VariantOrganizationHealth, VariantUnitHealth } from './stream-health-view.js';
-import {
-    DRIFT_MESSAGES,
-    formatVariantOrganizationLine,
-    formatVariantUnitLine,
-    formatAge,
-    isLagOverThreshold,
-} from './stream-health-view.js';
+import { DRIFT_MESSAGES, formatAge, isLagOverThreshold } from './stream-health-view.js';
 
 const streamHealthDocument = graphql(`
     query IntegrationStreamHealthForDashboard {
@@ -86,37 +77,6 @@ const variantOrganizationDocument = graphql(`
 `);
 
 type StreamHealthReport = ResultOf<typeof streamHealthDocument>['integrationStreamHealth'];
-
-function VariantUnitAlert({ health }: Readonly<{ health: VariantUnitHealth }>) {
-    const line = formatVariantUnitLine(health);
-    return (
-        <Alert variant={line.problem ? 'destructive' : 'default'} className="mb-3">
-            <AlertDescription>{line.text}</AlertDescription>
-        </Alert>
-    );
-}
-
-function VariantOrganizationAlert({ health }: Readonly<{ health: VariantOrganizationHealth }>) {
-    const line = formatVariantOrganizationLine(health);
-    return (
-        <Alert variant={line.problem ? 'destructive' : 'default'} className="mb-3">
-            <AlertDescription>{line.text}</AlertDescription>
-        </Alert>
-    );
-}
-
-function VersionDriftAlert({
-    drift,
-}: Readonly<{ drift: NonNullable<StreamHealthReport>['versionDrift'] }>) {
-    const message = VERSION_DRIFT_MESSAGES[drift.status];
-    if (!message) return null;
-    return (
-        <Alert variant={drift.status === 'BEHIND' ? 'destructive' : 'default'} className="mb-3">
-            <AlertTitle>Event contract {message.title}</AlertTitle>
-            <AlertDescription>{message.text(drift.installed, drift.latest)}</AlertDescription>
-        </Alert>
-    );
-}
 
 export function InboundTab() {
     const [report, setReport] = useState<StreamHealthReport | null>(null);

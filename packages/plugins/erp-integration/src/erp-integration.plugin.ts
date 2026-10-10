@@ -9,24 +9,11 @@ import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { NotificationPlugin } from '@mivend/plugin-notification';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
 
-import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
-import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
-import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
-import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
-import { ProductTaxCodeFlag } from './entities/product-tax-code-flag.entity';
-import { ProductCategoryFlag } from './entities/product-category-flag.entity';
-import { Manufacturer } from './entities/manufacturer.entity';
-import { ProductPhoto } from './entities/product-photo.entity';
-import { ProductPhotoStreamHandler } from './handlers/product-photo.handler';
 import { ProductPhotoSyncService } from './product-photo-sync.service';
 import { ProductPhotoRecoveryService } from './product-photo-recovery.service';
 import { createProductPhotoRecoveryTask } from './product-photo-recovery.scheduled-task';
 import { ProductPhotoResolver } from './product-photo.resolver';
 import { ResyncReplayClient } from './resync-replay.client';
-import { ProductVariantBarcode } from './entities/product-variant-barcode.entity';
-import { ProductCharacteristic } from './entities/product-characteristic.entity';
-import { ProductManufacturerCode } from './entities/product-manufacturer-code.entity';
-import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import { ProductTaxCodeFlagService } from './product-tax-code-flag.service';
 import { ProductCategoryFlagService } from './product-category-flag.service';
 import { CharacteristicFacetService } from './characteristic-facet.service';
@@ -38,6 +25,7 @@ import { IntegrationOutboxService } from './integration-outbox.service';
 import { IntegrationOutboxProcessorService } from './integration-outbox-processor.service';
 import { createIntegrationOutboxTask } from './integration-outbox.scheduled-task';
 import { IntegrationInboxHealthService } from './integration-inbox-health.service';
+import { IntegrationInboxRetentionService } from './integration-inbox-retention.service';
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
 import {
@@ -54,41 +42,6 @@ import { IntegrationInboxEventResolver } from './integration-inbox-event.resolve
 import { KafkaConsumerService } from './kafka-consumer.service';
 import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.service';
 import { KafkaStatusController } from './kafka-status.controller';
-import { CategoryStreamHandler } from './handlers/category.handler';
-import { PriceStreamHandler } from './handlers/price.handler';
-import { PriceTypeStreamHandler } from './handlers/price-type.handler';
-import { ProductStreamHandler } from './handlers/product.handler';
-import { StockStreamHandler } from './handlers/stock.handler';
-import { WarehouseStreamHandler } from './handlers/warehouse.handler';
-import { OrganizationStreamHandler } from './handlers/organization.handler';
-import { DepartmentStreamHandler } from './handlers/department.handler';
-import { PositionStreamHandler } from './handlers/position.handler';
-import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
-import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-credit-balance.handler';
-import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
-import { StorageLocationAssignment } from './entities/storage-location-assignment.entity';
-import { UserStreamHandler } from './handlers/user.handler';
-import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
-import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
-import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
-import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
-import { GrantedDiscountStreamHandler } from './handlers/granted-discount.handler';
-import { GrantedRetroBonusStreamHandler } from './handlers/granted-retro-bonus.handler';
-import { RetroBonusRuleStreamHandler } from './handlers/retro-bonus-rule.handler';
-import { VatRateStreamHandler } from './handlers/vat-rate.handler';
-import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
-import { ContractStreamHandler } from './handlers/contract.handler';
-import { ManufacturerStreamHandler } from './handlers/manufacturer.handler';
-import { UnitStreamHandler } from './handlers/unit.handler';
-import { UnitRecord } from './entities/unit-record.entity';
-import { RegionRecord } from './entities/region-record.entity';
-import { LegalFormRecord } from './entities/legal-form-record.entity';
-import { BankRecord } from './entities/bank-record.entity';
-import { BankAccountRecord } from './entities/bank-account-record.entity';
-import { BankStreamHandler } from './handlers/bank.handler';
-import { BankAccountStreamHandler } from './handlers/bank-account.handler';
-import { RegionStreamHandler } from './handlers/region.handler';
-import { LegalFormStreamHandler } from './handlers/legal-form.handler';
 import { UnitLookupService } from './unit-lookup.service';
 import { TaxCategoryAutoCreateService } from './tax-category-auto-create.service';
 import { TaxZoneService } from './tax-zone.service';
@@ -98,6 +51,8 @@ import { OrderSubmittedListener } from './order-submitted.listener';
 import { CategoryOverrideRecomputeListener } from './category-override-recompute.listener';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, isEmailOnlyWorker } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
+import { PLUGIN_ENTITIES } from './plugin-entities';
+import { STREAM_HANDLERS } from './plugin-stream-handlers';
 import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
 import { ProductManufacturerService } from './product-manufacturer.service';
@@ -159,65 +114,18 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         ReservationPlugin,
         NotificationPlugin,
     ],
-    entities: [
-        StorageLocationAssignment,
-        IntegrationOutboxEntry,
-        IntegrationInboxEvent,
-        KafkaConsumerStatus,
-        KafkaConsumerLagEntry,
-        ProductTaxCodeFlag,
-        ProductCategoryFlag,
-        Manufacturer,
-        ProductPhoto,
-        ProductVariantBarcode,
-        ProductCharacteristic,
-        ProductManufacturerCode,
-        ErpReconciliationIssue,
-        UnitRecord,
-        RegionRecord,
-        LegalFormRecord,
-        BankRecord,
-        BankAccountRecord,
-    ],
+    entities: PLUGIN_ENTITIES,
     controllers: [KafkaStatusController],
     providers: [
         IntegrationOutboxService,
         IntegrationOutboxProcessorService,
         IntegrationInboxService,
+        IntegrationInboxRetentionService,
         IntegrationInboxHealthService,
         IntegrationInboxProcessorService,
         KafkaConsumerService,
         KafkaConsumerBootstrapService,
-        CategoryStreamHandler,
-        PriceStreamHandler,
-        PriceTypeStreamHandler,
-        ProductStreamHandler,
-        StockStreamHandler,
-        WarehouseStreamHandler,
-        OrganizationStreamHandler,
-        DepartmentStreamHandler,
-        PositionStreamHandler,
-        CounterpartyStreamHandler,
-        CounterpartyCreditBalanceStreamHandler,
-        StorageLocationStreamHandler,
-        UserStreamHandler,
-        OrderRegistrationResultHandler,
-        OrderChangedStreamHandler,
-        PromoRuleStreamHandler,
-        DiscountRuleStreamHandler,
-        GrantedDiscountStreamHandler,
-        RetroBonusRuleStreamHandler,
-        GrantedRetroBonusStreamHandler,
-        VatRateStreamHandler,
-        PointOfSaleStreamHandler,
-        ContractStreamHandler,
-        UnitStreamHandler,
-        ManufacturerStreamHandler,
-        RegionStreamHandler,
-        LegalFormStreamHandler,
-        BankStreamHandler,
-        BankAccountStreamHandler,
-        ProductPhotoStreamHandler,
+        ...STREAM_HANDLERS,
         ProductPhotoSyncService,
         ProductPhotoRecoveryService,
         ResyncReplayClient,

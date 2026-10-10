@@ -3,7 +3,7 @@ import { cronEveryMs } from 'shared';
 
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
 import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
-import { IntegrationInboxService } from './integration-inbox.service';
+import { IntegrationInboxRetentionService } from './integration-inbox-retention.service';
 import {
     INBOX_BULK_BATCH_SIZE_DEFAULT,
     INBOX_BULK_STREAMS,
@@ -169,7 +169,7 @@ export function createIntegrationInboxRetentionTask(
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
 
-            const inbox = injector.get(IntegrationInboxService);
+            const inbox = injector.get(IntegrationInboxRetentionService);
             let totalTombstoned = 0;
             const startedAt = Date.now();
             for (;;) {

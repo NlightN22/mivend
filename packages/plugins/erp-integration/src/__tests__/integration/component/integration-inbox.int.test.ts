@@ -9,6 +9,7 @@ import {
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import { IntegrationInboxHealthService } from '../../../integration-inbox-health.service';
+import { IntegrationInboxRetentionService } from '../../../integration-inbox-retention.service';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 
 // Inbox idempotency/concurrency pattern (docs/testing-patterns.md, the external-integration-rules skill) — mirrors
@@ -17,6 +18,7 @@ import { IntegrationInboxService } from '../../../integration-inbox.service';
 // SELECT ... FOR UPDATE SKIP LOCKED semantics only exist at the DB level.
 let dataSource: DataSource;
 let inboxService: IntegrationInboxService;
+let retention: IntegrationInboxRetentionService;
 let inboxHealth: IntegrationInboxHealthService;
 
 const { schema, extra } = testSchemaOptions('erp_integration_inbox');
@@ -33,6 +35,7 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     inboxService = new IntegrationInboxService(dataSource);
+    retention = new IntegrationInboxRetentionService(dataSource);
     inboxHealth = new IntegrationInboxHealthService(dataSource);
 });
 
@@ -704,7 +707,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             const older2 = await enqueueProcessed('pr-1', '2');
             const newest = await enqueueProcessed('pr-1', '3');
 
-            const tombstoned = await inboxService.purgeSupersededProcessedRows();
+            const tombstoned = await retention.purgeSupersededProcessedRows();
 
             expect(tombstoned).toBe(2);
             const rows = await dataSource
@@ -723,7 +726,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         it('does not create a new pending row when a tombstoned sourceEventId is redelivered', async () => {
             const older = await enqueueProcessed('pr-redelivered', '1');
             await enqueueProcessed('pr-redelivered', '2');
-            await inboxService.purgeSupersededProcessedRows();
+            await retention.purgeSupersededProcessedRows();
 
             const redelivered = await inboxService.enqueue({
                 stream: 'price',
@@ -747,7 +750,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             const older = await enqueueProcessed('pr-numeric', '9');
             const newest = await enqueueProcessed('pr-numeric', '10');
 
-            await inboxService.purgeSupersededProcessedRows();
+            await retention.purgeSupersededProcessedRows();
 
             const rows = await dataSource
                 .getRepository(IntegrationInboxEvent)
@@ -767,7 +770,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 payload: { real: 'data' },
             });
 
-            const tombstoned = await inboxService.purgeSupersededProcessedRows();
+            const tombstoned = await retention.purgeSupersededProcessedRows();
 
             expect(tombstoned).toBe(0);
             const rows = await dataSource
@@ -781,7 +784,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         it('leaves a single processed row alone (no duplicate to tombstone)', async () => {
             const only = await enqueueProcessed('pr-single', '1');
 
-            const tombstoned = await inboxService.purgeSupersededProcessedRows();
+            const tombstoned = await retention.purgeSupersededProcessedRows();
 
             expect(tombstoned).toBe(0);
             const row = await dataSource
@@ -794,8 +797,8 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             await enqueueProcessed('pr-converged', '1');
             const newest = await enqueueProcessed('pr-converged', '2');
 
-            const first = await inboxService.purgeSupersededProcessedRows();
-            const second = await inboxService.purgeSupersededProcessedRows();
+            const first = await retention.purgeSupersededProcessedRows();
+            const second = await retention.purgeSupersededProcessedRows();
 
             expect(first).toBe(1);
             expect(second).toBe(0);
@@ -824,7 +827,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             });
             await inboxService.markProcessed(stockNewest.id);
 
-            await inboxService.purgeSupersededProcessedRows();
+            await retention.purgeSupersededProcessedRows();
 
             const priceRows = await dataSource
                 .getRepository(IntegrationInboxEvent)

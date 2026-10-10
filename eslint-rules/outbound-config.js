@@ -17,6 +17,7 @@ export default {
         // Read-only list model for the health pages: selects rows, never writes or publishes.
         'packages/plugins/erp-integration/src/integration-event-list.service.ts',
         'packages/plugins/erp-integration/src/erp-integration.plugin.ts',
+        'packages/plugins/erp-integration/src/plugin-entities.ts',
         'apps/server/src/migrations/**',
     ],
     languageOptions: { parser: tsParser },
