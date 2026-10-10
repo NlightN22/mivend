@@ -119,6 +119,12 @@ export class IntegrationInboxEvent {
     @Column({ type: 'timestamptz', name: 'next_retry_at', nullable: true })
     nextRetryAt!: Date | null;
 
+    // Set once, only by insertRejectedInboxRow's decode-failure branch, never touched again — a
+    // durable "no entity id to replay" signal independent of lastError, which a failed replay
+    // attempt overwrites (#213, following #212's regression where that overwrite un-marked it).
+    @Column({ type: 'boolean', default: false })
+    undecodable!: boolean;
+
     // Start of the 24h retry budget — the first failure, not enqueue time, so a backlog that
     // waited out a long outage still gets its retries (#145).
     @Column({ type: 'timestamptz', name: 'first_failed_at', nullable: true })

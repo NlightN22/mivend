@@ -9,13 +9,9 @@ export type ClassifiedKafkaMessage =
     | { kind: 'enqueue'; input: EnqueueInboxEventInput }
     | { kind: 'rejected'; rejected: RejectedInboxMessage };
 
-// Shared with integration-inbox-issue.resolver.ts/integration-inbox-replay.service.ts — the
-// marker for a row that was never decoded, so it has no entity id to replay (#212).
+// Human-readable marker for a decode failure (#212); the durable replay/dismiss signal is
+// IntegrationInboxEvent.undecodable (#213) — lastError can be overwritten by a later replay attempt.
 export const DECODE_FAILED_PREFIX = 'decode failed:';
-
-export function isUndecodableLastError(lastError: string | null | undefined): boolean {
-    return typeof lastError === 'string' && lastError.startsWith(DECODE_FAILED_PREFIX);
-}
 
 // Decides what a consumed message becomes: an inbox row to process, or a rejected one with the
 // reason (docs/integration-health.md, "Unprocessable Kafka messages").
@@ -28,7 +24,7 @@ export function classifyInboundMessage(
     const rejected = (
         reason: string,
         payload: Record<string, unknown>,
-        ids: { entityId?: string; sourceEventId?: string } = {},
+        ids: { entityId?: string; sourceEventId?: string; undecodable?: boolean } = {},
     ): ClassifiedKafkaMessage => ({
         kind: 'rejected',
         rejected: { stream, partition, offset: message.offset, reason, payload, ...ids },
@@ -45,7 +41,11 @@ export function classifyInboundMessage(
         >;
     } catch (err) {
         const reason = `${DECODE_FAILED_PREFIX} ${err instanceof Error ? err.message : String(err)}`;
-        return rejected(reason, { rawBase64: message.value.toString('base64') });
+        return rejected(
+            reason,
+            { rawBase64: message.value.toString('base64') },
+            { undecodable: true },
+        );
     }
 
     const entityId = String(record.entityId ?? '');

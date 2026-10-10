@@ -11,6 +11,8 @@ export interface RejectedInboxMessage {
     entityId?: string;
     sourceEventId?: string;
     payload: Record<string, unknown>;
+    // Set only for a decode failure (#213) — the durable signal behind IntegrationInboxEvent.undecodable.
+    undecodable?: boolean;
 }
 
 // Dead-letters a message that can never be processed as a `failed` inbox row; the synthetic ids
@@ -35,6 +37,7 @@ export async function insertRejectedInboxRow(
             attempts: 0,
             lastError: message.reason,
             firstFailedAt: now,
+            undecodable: message.undecodable === true,
         })
         .orIgnore()
         .execute();

@@ -17,9 +17,21 @@ describe('IntegrationInboxIssueResolver.replayable', () => {
 
     // #212: an undecodable row has no entity id Integration Service could ever replay by.
     it('is false for an undecodable row even though its stream is replayable', () => {
-        expect(resolver.replayable(row({ lastError: 'decode failed: invalid wire type' }))).toBe(
-            false,
-        );
+        expect(resolver.replayable(row({ undecodable: true }))).toBe(false);
+    });
+
+    // #213 regression: lastError no longer carries the signal (a failed replay attempt overwrites
+    // it) — the durable `undecodable` column must still win even when lastError looks unrelated.
+    it('is false for an undecodable row even after lastError was overwritten by a failed replay attempt', () => {
+        expect(
+            resolver.replayable(
+                row({
+                    undecodable: true,
+                    lastError:
+                        'replay did not resolve: Integration Service did not accept the replay: not_found',
+                }),
+            ),
+        ).toBe(false);
     });
 });
 

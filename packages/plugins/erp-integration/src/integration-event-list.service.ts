@@ -144,6 +144,7 @@ export class IntegrationEventListService {
                 'e.updatedAt',
                 'e.outcome',
                 'e.outcomeReason',
+                'e.undecodable',
             ])
             .where(
                 new Brackets(b =>

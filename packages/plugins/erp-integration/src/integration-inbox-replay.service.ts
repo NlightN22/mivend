@@ -4,7 +4,6 @@ import { DataSource, In } from 'typeorm';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
-import { isUndecodableLastError } from './kafka-inbound-message';
 import { REPLAY_MAX_IDS, ResyncReplayClient } from './resync-replay.client';
 import { streamToAggregateType } from './stream-aggregate-type';
 import { loggerCtx } from './types';
@@ -45,7 +44,7 @@ export class IntegrationInboxReplayService {
     async replayFailed(ids: number[]): Promise<InboxReplayResult[]> {
         const rows = await this.dataSource.getRepository(IntegrationInboxEvent).find({
             where: { id: In(ids) },
-            select: ['id', 'stream', 'entityId', 'status', 'lastError'],
+            select: ['id', 'stream', 'entityId', 'status', 'undecodable'],
         });
         const results: InboxReplayResult[] = [];
         const eligible: number[] = [];
@@ -53,7 +52,7 @@ export class IntegrationInboxReplayService {
             const base = { id: String(row.id), stream: row.stream, entityId: row.entityId };
             if (row.status !== 'failed') {
                 results.push({ ...base, outcome: 'NOT_FAILED', message: `Row is ${row.status}` });
-            } else if (isUndecodableLastError(row.lastError)) {
+            } else if (row.undecodable) {
                 results.push({
                     ...base,
                     outcome: 'UNDECODABLE',

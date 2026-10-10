@@ -1,7 +1,6 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 
 import type { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
-import { isUndecodableLastError } from './kafka-inbound-message';
 import { streamToAggregateType } from './stream-aggregate-type';
 
 @Resolver('IntegrationInboxIssue')
@@ -11,7 +10,7 @@ export class IntegrationInboxIssueResolver {
         return (
             row.status === 'failed' &&
             streamToAggregateType(row.stream) !== null &&
-            !isUndecodableLastError(row.lastError)
+            !row.undecodable
         );
     }
 
