@@ -99,12 +99,22 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
 
 ### Cancellability (technical condition for B, from what 1C already checks)
 
-- **Pending** (no warehouse order, no sale): cancelled automatically. The same applies to an order the ERP
-  has not registered yet.
-- **In progress** (a warehouse order exists, no sale): no programmatic cancel. The customer's button becomes a
-  request to a person (manager/operator); not automated now.
-- **Shipped** (a sale exists): final, no cancellation of any kind. No partial cancellation is modelled: once any
-  sale is posted the order is shown as shipped, by what that sale contains.
+- **Pending** (no warehouse order, no sale; `erpStatus` UNDER_APPROVAL/APPROVED or not registered yet):
+  cancellable, automatically.
+- **Order or sale exists** (`hasOrder`, i.e. PICKING, or any later status): refused at once with no request to a
+  person. The ERP answers the same way (`ORDER_IN_PROGRESS`, `ORDER_SHIPPED`). Returns are a separate flow.
+- No partial cancellation is modelled.
+
+### Who may cancel (owner-decided)
+
+| Actor | Rule |
+| --- | --- |
+| Customer | Cancels own order without a manager's approval, only while the order is pending |
+| Manager | Same condition, through the new `CancelOrder` permission |
+| System | Reserve deadline expiry, only for a pending or unregistered order |
+
+- A paid (settled) order is not cancelled automatically: refused until a refund flow exists.
+- The ERP may still cancel any order itself; its deletion mark arrives as `markedForDeletion` and is applied.
 
 ### The reserve deadline
 
@@ -167,7 +177,7 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   the lock `reserveOrder` and the registration-result handler take, so a cancel, a manual confirm and a late
   registration result serialize per order. `reserveOrder` refuses a cancelled order.
 - Decision (pure function `decideCancellation`): already cancelled -> no-op; shipped (order/fulfillment state or
-  `erpStatus` SHIPPED/DELIVERED), in progress (`erpStatus` ASSEMBLED), or a settled payment -> refused, nothing
+  `erpStatus` SHIPPED/DELIVERED), in progress (`erpStatus` PICKING), or a settled payment -> refused, nothing
   automatic. Otherwise: the `order.confirmed` outbox row still waiting (pending or failed) -> row marked `skipped`
   (a conditional update that loses to a publisher holding the row) and a local cancel; sent but no `erpOrderId`
   -> `cancel-requested` and a local cancel at once; registered (`erpOrderId` set, written under the lock by the
@@ -220,8 +230,7 @@ Priority, highest first (the first matching fact wins):
   `order-cancel-result` "cancelled" answer (local cancel, reservations released, `CANCELLED` status event).
 - The old placeholders `ASSEMBLED`/`SHIPPED` are gone: "in progress" is `PICKING`, "shipped" is
   `SHIPPING`/`DELIVERING`/`DELIVERED` in `order-cancellation.decision.ts`. `SENT_TO_ERP`/`REJECTED` are unchanged.
-- Cancellation rules (who may cancel and when) are derived from these facts and are fixed in a separate section once
-  the facts are live.
+- Cancellation rules (who may cancel and when) are in "Cancellability" and "Who may cancel" above.
 
 ### Still to verify with the ERP side
 
