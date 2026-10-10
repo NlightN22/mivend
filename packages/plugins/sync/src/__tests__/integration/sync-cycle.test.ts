@@ -354,30 +354,28 @@ describe('branch consumer', () => {
         // Tiny retryBaseDelayMs avoids racing the production 500ms backoff against a fixed
         // wall-clock wait, which flaked under `make test-int`'s full parallel run (issue #213).
         const poisonOptions: SyncPluginOptions = { ...HUB_OPTIONS, retryBaseDelayMs: 5 };
+        // The constructor already kicks off connect() (its `ready` field) — calling connect()
+        // again here would open a second connection and leak the first one.
         const poisonRabbitMQ = new RabbitMQService(poisonOptions, mockLogger as never);
-        await poisonRabbitMQ.connect();
 
         const queueName = 'test.poison-message';
         let attempts = 0;
-        await poisonRabbitMQ.subscribe(queueName, 'poison.test', async () => {
-            attempts++;
-            throw new Error('simulated persistent failure — not a ZodError');
-        });
-
-        const event = {
-            eventId: randomUUID(),
-            eventType: 'product.updated' as const,
-            sourceInstanceId: 'hub',
-            timestamp: new Date().toISOString(),
-            payload: { productId: randomUUID(), enabled: true },
-        };
-        poisonRabbitMQ
-            .requireChannel()
-            .publish(EXCHANGE, 'poison.test', Buffer.from(JSON.stringify(event)), {
-                persistent: true,
-            });
 
         try {
+            await poisonRabbitMQ.subscribe(queueName, 'poison.test', async () => {
+                attempts++;
+                throw new Error('simulated persistent failure — not a ZodError');
+            });
+
+            const event = {
+                eventId: randomUUID(),
+                eventType: 'product.updated' as const,
+                sourceInstanceId: 'hub',
+                timestamp: new Date().toISOString(),
+                payload: { productId: randomUUID(), enabled: true },
+            };
+            await poisonRabbitMQ.publish('poison.test', event);
+
             await waitFor(
                 async () => {
                     const q = await poisonRabbitMQ.requireChannel().checkQueue('sync.dead-letters');
