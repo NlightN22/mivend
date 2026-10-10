@@ -2,14 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { EntityNotFoundError, Permission } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
-import { toCancelOrderResult } from '../../order-cancel-entry.result';
+import { toOrderCancelResult } from '../../order-cancel-entry.result';
 import { OrderCancelEntryService } from '../../order-cancel-entry.service';
 import { AdminCancelOrderResolver, ShopCancelOrderResolver } from '../../order-cancel.resolver';
 import type { CancelOutcome } from '../../order-cancellation.service';
 
 const PERMISSIONS_KEY = '__permissions__';
 
-describe('toCancelOrderResult', () => {
+describe('toOrderCancelResult', () => {
     it.each([
         ['shipped', 'SHIPPED'],
         ['in-progress', 'IN_PROGRESS'],
@@ -17,8 +17,8 @@ describe('toCancelOrderResult', () => {
         ['refused-by-erp', 'REFUSED_BY_ERP'],
         ['registration-rejected', 'REGISTRATION_REJECTED'],
     ] as const)('maps refusal %s to a typed refused result', (reason, code) => {
-        const result = toCancelOrderResult({ kind: 'not-cancellable', reason });
-        expect(result).toMatchObject({ __typename: 'CancelOrderRefused', reason: code });
+        const result = toOrderCancelResult({ kind: 'not-cancellable', reason });
+        expect(result).toMatchObject({ __typename: 'OrderCancelRefused', reason: code });
     });
 
     it.each([
@@ -27,8 +27,8 @@ describe('toCancelOrderResult', () => {
         [{ kind: 'already-requested' }, 'CANCEL_REQUESTED'],
         [{ kind: 'already-cancelled' }, 'ALREADY_CANCELLED'],
     ] as Array<[CancelOutcome, string]>)('maps %j to success %s', (outcome, code) => {
-        expect(toCancelOrderResult(outcome)).toEqual({
-            __typename: 'CancelOrderSuccess',
+        expect(toOrderCancelResult(outcome)).toEqual({
+            __typename: 'OrderCancelSuccess',
             outcome: code,
         });
     });
@@ -94,7 +94,7 @@ describe('cancelOrder permissions', () => {
     it('admin mutation requires CancelOrder, not a generic order permission', () => {
         const perms = Reflect.getMetadata(
             PERMISSIONS_KEY,
-            AdminCancelOrderResolver.prototype.cancelOrder,
+            AdminCancelOrderResolver.prototype.cancelOrderAsStaff,
         );
         expect(perms).toEqual(['CancelOrder']);
     });

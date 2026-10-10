@@ -4,12 +4,12 @@ import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/co
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { OrderCancelEntryService } from './order-cancel-entry.service';
-import type { CancelOrderResult } from './order-cancel-entry.result';
+import type { OrderCancelResult } from './order-cancel-entry.result';
 
-@Resolver('CancelOrderResult')
-export class CancelOrderResultResolver {
+@Resolver('OrderCancelResult')
+export class OrderCancelResultResolver {
     @ResolveField()
-    __resolveType(value: CancelOrderResult): string {
+    __resolveType(value: OrderCancelResult): string {
         return value.__typename;
     }
 }
@@ -24,7 +24,7 @@ export class ShopCancelOrderResolver {
     async cancelOrder(
         @Ctx() ctx: RequestContext,
         @Args() args: { code: string },
-    ): Promise<CancelOrderResult> {
+    ): Promise<OrderCancelResult> {
         return this.entryService.cancelAsCustomer(ctx, args.code);
     }
 }
@@ -36,10 +36,10 @@ export class AdminCancelOrderResolver {
     @Transaction()
     @Mutation()
     @Allow(CustomPermission.CancelOrder.Permission)
-    async cancelOrder(
+    async cancelOrderAsStaff(
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: ID },
-    ): Promise<CancelOrderResult> {
+    ): Promise<OrderCancelResult> {
         return this.entryService.cancelAsStaff(ctx, args.orderId);
     }
 }

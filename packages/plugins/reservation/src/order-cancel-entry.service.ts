@@ -9,7 +9,7 @@ import {
 } from '@vendure/core';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
-import { CancelOrderResult, toCancelOrderResult } from './order-cancel-entry.result';
+import { OrderCancelResult, toOrderCancelResult } from './order-cancel-entry.result';
 import { OrderCancellationService } from './order-cancellation.service';
 
 // Customer and staff entry points over OrderCancellationService; each only resolves which order
@@ -23,7 +23,7 @@ export class OrderCancelEntryService {
         private cancellation: OrderCancellationService,
     ) {}
 
-    async cancelAsCustomer(ctx: RequestContext, code: string): Promise<CancelOrderResult> {
+    async cancelAsCustomer(ctx: RequestContext, code: string): Promise<OrderCancelResult> {
         const customer = ctx.activeUserId
             ? await this.customerService.findOneByUserId(ctx, ctx.activeUserId)
             : undefined;
@@ -33,15 +33,15 @@ export class OrderCancelEntryService {
                   .findOne({ where: { code, customer: { id: customer.id } } })
             : null;
         if (!order) throw new EntityNotFoundError('Order', code);
-        return toCancelOrderResult(
+        return toOrderCancelResult(
             await this.cancellation.cancel(ctx, order.id, 'customer-request'),
         );
     }
 
-    async cancelAsStaff(ctx: RequestContext, orderId: ID): Promise<CancelOrderResult> {
+    async cancelAsStaff(ctx: RequestContext, orderId: ID): Promise<OrderCancelResult> {
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
         const order = await qb.andWhere(`${qb.alias}.id = :orderId`, { orderId }).getOne();
         if (!order) throw new EntityNotFoundError('Order', String(orderId));
-        return toCancelOrderResult(await this.cancellation.cancel(ctx, order.id, 'staff-request'));
+        return toOrderCancelResult(await this.cancellation.cancel(ctx, order.id, 'staff-request'));
     }
 }

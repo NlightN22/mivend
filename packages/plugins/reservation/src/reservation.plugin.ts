@@ -33,7 +33,7 @@ import { OrderCancelEntryService } from './order-cancel-entry.service';
 import { adminCancelOrderSchema, shopCancelOrderSchema } from './order-cancel.schema';
 import {
     AdminCancelOrderResolver,
-    CancelOrderResultResolver,
+    OrderCancelResultResolver,
     ShopCancelOrderResolver,
 } from './order-cancel.resolver';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
@@ -185,7 +185,7 @@ const adminApiSchema = gql`
         resolvers: [
             ProductVariantStockResolver,
             ShopCancelOrderResolver,
-            CancelOrderResultResolver,
+            OrderCancelResultResolver,
         ],
     },
     adminApiExtensions: {
@@ -193,7 +193,7 @@ const adminApiSchema = gql`
             ${adminApiSchema}
             ${adminCancelOrderSchema}
         `,
-        resolvers: [ReservationResolver, AdminCancelOrderResolver, CancelOrderResultResolver],
+        resolvers: [ReservationResolver, AdminCancelOrderResolver, OrderCancelResultResolver],
     },
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.Order = [
