@@ -7,6 +7,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
+import { Reservation } from './entities/reservation.entity';
 import { isExpectedReservationError } from './reservation-failure';
 import { ReservationFailureService } from './reservation-failure.service';
 import { ReservationService } from './reservation.service';
@@ -75,10 +76,15 @@ export class ReservationPaymentService {
                     .where('o.id = :id', { id: order.id })
                     .getOne();
                 if (current?.customFields?.reservationState !== 'NOT_REQUIRED') return;
+                // A manual confirm that won the race left an active reservation: the state is RESERVED.
+                const reserved =
+                    (await this.connection
+                        .getRepository(txCtx, Reservation)
+                        .count({ where: { orderId: String(order.id), status: 'active' } })) > 0;
                 await repo.update(order.id, {
                     customFields: {
                         ...current.customFields,
-                        reservationState: 'AWAITING_CONFIRMATION',
+                        reservationState: reserved ? 'RESERVED' : 'AWAITING_CONFIRMATION',
                     },
                 });
             });

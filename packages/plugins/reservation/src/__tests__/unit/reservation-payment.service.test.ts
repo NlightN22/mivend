@@ -31,6 +31,7 @@ function createMockPaymentMethodRepo(): { findOne: ReturnType<typeof vi.fn> } {
 describe('ReservationPaymentService', () => {
     let orderRepo: ReturnType<typeof createMockOrderRepo>;
     let paymentMethodRepo: ReturnType<typeof createMockPaymentMethodRepo>;
+    let reservationRepo: { count: ReturnType<typeof vi.fn> };
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
         withTransaction: ReturnType<typeof vi.fn>;
@@ -48,9 +49,14 @@ describe('ReservationPaymentService', () => {
         autoReserveOnPlacement = false;
         orderRepo = createMockOrderRepo(null);
         paymentMethodRepo = createMockPaymentMethodRepo();
+        reservationRepo = { count: vi.fn(async () => 0) };
         connection = {
             getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
-                entity?.name === 'PaymentMethod' ? paymentMethodRepo : orderRepo,
+                entity?.name === 'PaymentMethod'
+                    ? paymentMethodRepo
+                    : entity?.name === 'Reservation'
+                      ? reservationRepo
+                      : orderRepo,
             ),
             withTransaction: vi.fn(async (c: unknown, work: (txCtx: unknown) => Promise<void>) =>
                 work(c),
@@ -106,6 +112,17 @@ describe('ReservationPaymentService', () => {
                     customFields: expect.objectContaining({
                         reservationState: 'AWAITING_CONFIRMATION',
                     }),
+                }),
+            );
+        });
+
+        it('marks RESERVED, not AWAITING_CONFIRMATION, when a manual confirm already holds an active reservation', async () => {
+            reservationRepo.count.mockResolvedValue(1);
+            await service.handleOrderPlaced(ctx, placed() as never);
+            expect(orderRepo.update).toHaveBeenCalledWith(
+                'order-1',
+                expect.objectContaining({
+                    customFields: expect.objectContaining({ reservationState: 'RESERVED' }),
                 }),
             );
         });
