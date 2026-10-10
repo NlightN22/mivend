@@ -70,9 +70,8 @@ the owner alone; breaking changes need the consumer's agreement and a version bu
   mivend reads it from the package; otherwise it uses the local copy
   (`erp-integration/src/schemas/order-submitted.schema.ts`). The Outbound tab's **Schema** column
   shows which: `Contract` (package) or `Local copy` (not yet from the shared package). The local
-  file is deleted once the package version that contains the schema is released and installed.
-  State at the time of writing: the schema is prepared in the package repository but not released
-  (planned 0.53.0), so the column shows `Local copy`.
+  copy is a fallback for an installed package version that does not export the schema. State at the
+  time of writing: the installed package (0.56.0) exports it, so the column shows `Contract`.
 - **Registry compatibility.** The subject `order.submitted-value` is explicitly `FORWARD`. The
   registry default (`BACKWARD`) rejected every publish with a 409 once an optional field was added.
 - **The wire format is part of the contract:** Confluent wire format (magic byte, schema id, JSON

@@ -1,6 +1,6 @@
 # Project Context
 
-Updated: 2026-10-10 10:00
+Updated: 2026-10-10 09:49
 
 ## #208 cross-system verification pass + spun-off hardening (2026-10-09/10, shipped, pushed to 0831616; #209/#211/#212 closed)
 
@@ -49,9 +49,12 @@ Updated: 2026-10-10 10:00
 - Integration health page: `rejectedOrderCount` admin query (`ManageErpIntegration` permission) + a line on the Outbound tab (links to the manager's filtered list) + non-zero alert, modeled on `variantUnitHealth`.
 - Commits: 91ae02e, a047aff, c5be618, b66fa3f, 6020057, 2d13844/eec379d/55b0f06, fc10f8b, 321e73b, d973ccb, 6254524.
 
-## #195 integration-health page (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-09-195-integration-health.md`)
+## #195/#200 integration health + gateways (2026-10-10, shipped/audited/closed; pushed to a6c7028b) — full text: `.backup/PROJECT_CONTEXT-2026-10-09-195-integration-health.md`, runbook `docs/integration-health.md`
 
-- Dashboard System -> Integration health: Inbound tab (stream x contract x Kafka lag x inbox backlog, drift rows, contract version banner), Outbound tab (outbox health incl. `skipped`, schema source per event type); runbook in `docs/integration-health.md`.
+- Dashboard System -> Integration health: Inbound tab (stream x contract x Kafka lag x inbox backlog, drift rows, contract version vs registry via `EVENT_CONTRACTS_REGISTRY_TOKEN`, variants-without-organization/unit lines), Outbound tab (outbox per event type, skipped, schema source), Inbox issues / Outbound problems lists with Replay/Requeue/Rebuild (permission `RecoverIntegrationEvents`, SuperAdmin only so far). Count links work via user table settings (a ListPage with a `pageId` ignores URL filters).
+- Principles (skill external-integration-rules, docs/testing-patterns "Silent drop"): no silent drops; `OutboundGateway` is the only outbox writer (lint rule `outbound/no-direct-outbound`), inbound handlers return `inboundApplied`/`inboundNoop(reason)`; outbox retries with backoff for 24h, `skipped`/`resolved` statuses; inbox replay `failed -> replay_requested -> resolved` only when the replayed event is processed (1 h timeout back to failed).
+- Soft vs hard references: soft links (counterparty manager, product -> default sales unit) never block the owner and are back-filled; hard ones (contract/point-of-sale -> counterparty, price/stock/photo targets) retry. A manager id may be a 1C user GROUP that is never published (permanent null manager, by design).
+- State: contract package 0.56.0 exports `ORDER_SUBMITTED_JSON_SCHEMA`, staging shows schema source `contract`; receiver-side Confluent wire format parsing was tracked on the Integration Service side (search-platform#176), production still needs migrations applied and its own read-only registry token. Open: `product.handler.ts`/`types.ts` oversized (pre-existing), no `make test/test-int/ci` re-run after the last split commit.
 
 ## #198 order branch fallback + auto-reserve switch (2026-10-08, shipped/audited; pushed)
 
@@ -61,20 +64,9 @@ Updated: 2026-10-10 10:00
 - **Checkout** shows a generic toast on a thrown error (detail goes to `console.error`). Reservation scenarios (auto-reserve failure, 1C-returned reservations, expiry) are tracked in #199.
 - **Facts**: `order.submitted` has no order code (only eventId/orderId); Integration Service looked up by raw payload text. Starting `make dev` and `make dev-staging-integration` at the same time OOM-killed the staging server (exit 137): start the contours one at a time. `make test-int` restarts shared Postgres and knocks both contours over. Known flaky/not ours: `sync-cycle` retry test, `integration-inbox getBacklogByStream` (other session's stream-health work).
 
-## #188 credit control MVP (2026-10-07, shipped/audited/closed; pushed up to ccadbe9, `make ci` green)
+## #188 credit control MVP (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-10-188-credit-control.md`)
 
-- **Contracts feed everything.** Contracts stream = only ERP contracts with a price type; `isActive=false` = marked for deletion in 1C (82% of contracts, normal). `Заключен` flag is ignored (owner: informational). Counterparty gets `mainContractId`, `fullName` (+ ogrnip/kpp/okpo/legalType/regionId/legalFormId/mainBankAccountId); new reference streams `region`, `legal-form`, `bank`, `bank-account` (event-contracts 0.50.1, soft links, no FK).
-- **Price type** = main contract's price type (active contract + active PriceType) -> `CustomerPriceType` row -> branch default; resolved at read time in SQL (`customer-pricing/main-contract-price-type.sql.ts`, also used by price-entry). Manual `setCustomerPriceType` mutation removed. Search sends `priceTypeId` to search-service (their #173) for price filter/sort (only when a price filter/sort is present).
-- **Limit job** `erp-integration-credit-limit-recompute` (every 15 min, central, set-based): `Counterparty.creditLimit` = pool of active non-flagged contracts' limits; flagged (`controlledIndividually`) sublimits clamped proportionally into `Contract.effectiveCreditLimit` (NOT enforced at checkout, needs per-contract balances #151); `paymentDelayDays` = main contract `debtDaysLimit`. 0/unset = deferred unavailable, never unlimited. **Deferred payment needs limit>0 AND days>0.** Open deferred orders older than `GlobalSettings.deferredOrderMaxAgeDays` (7) stop counting (interim, real TTL/ERP cancel = #194). Debt = `counterparty-credit-balance` (net register balance; overdue/aging NOT included); staging backfilled 2026-10-07 (964 counterparties with debt).
-- **Over-limit order is placed, not rejected**: payment metadata `creditLimitExceeded`; storefront checkout previews it (`deferredCreditPreview` Shop query, `DeferredCreditAssessmentService` shared with the handler): rows "Available credit"/"Over the limit by" in the order widget, short acknowledgement checkbox, confirm button disabled until the preview answered and (if exceeded) ticked; manager sees a "Credit limit exceeded" badge on orders and in Customers "Needs attention" (not yet checked live with a real exceeded order).
-- **Customers see only `fullName`** (never internal `legalName`/`shortName`; Shop API type, portal Customer name, PDFs with placeholder "Название организации не указано"). Audited: erp-order search and price-entry registry are admin-only.
-- **Currency** from `Channel.defaultCurrencyCode` via `useCurrency()` (storefront+manager); credit limit/balance are whole units, Vendure order money is minor units (/100).
-- **Cart totals bug fixed (lost update)**: `TierRebalanceService` refresh now loads `surcharges`, locks the order row, keeps going when a sibling line vanished; `ActiveOrderSettleInterceptor` resolves the session by token and makes `activeOrder` wait for an in-flight rebalance. 40 fresh carts consistent; `make e2e-cart` group (11 tests) green. Redesign = #196. **Run `make e2e-cart` about every 10 commits** (last run 2026-10-07).
-- **Concurrency rules** now in `docs/concurrency.md`, skill `concurrency-audit`, `withAggregateLock` (shared), 2 lint warning rules; audit `docs/ai/concurrency-audit-2026-10.md` -> 6 high findings in #197.
-- **Local seed**: `contract` record type in erp-import, seed run id v11 (credit-limited buyer has limit 100000/14 days, prepay buyer none). Local server :3000, storefront :5173; staging-integration :3010/:5183/:5184 (never seed it).
-- **#198 (resolved, see the section above)**: deferred orders failed silently because trading points/counterparties had no branch.
-- **Left after closing #188**: live check of the manager "Credit limit exceeded" badge with a real exceeded order (local contour; never place orders on staging). Price filter/sort with `priceTypeId` works (owner confirmed). Final audit passed (doc notes applied in 29c95dd). Follow-ups: #192 (notify managers: price type unresolved), #193 (fill fullName by tax id), #194 (order TTL cancel + ERP), #196 (one-pass tier promotion), #197 (6 concurrency findings).
-- **Lessons**: unit tests miss Nest DI import cycles (server failed to boot, fixed by moving the code constant to `constants.ts`); verify live after every server-side fix (a "fix" that swallowed its own error stayed green for hours); `make dev-staging-integration` restarts are allowed; never place orders on staging (real Kafka); the 1C card debt can differ from the `balance` stream.
+- Contracts stream feeds price type (main contract -> `CustomerPriceType` -> branch default, resolved at read time) and credit limit (job `erp-integration-credit-limit-recompute`, every 15 min); deferred payment needs limit>0 AND days>0; over-limit orders are placed with `creditLimitExceeded`, not rejected; customers see only `fullName`.
 
 ## #180 checkout payment methods + credit control (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-06-180-checkout-payment-credit.md`)
 
