@@ -185,6 +185,26 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   cannot be cancelled automatically returns to the confirmation queue.
 - `OpenDeferredExposureService` excludes `Cancelled` orders.
 
+### ERP order statuses (agreed with the ERP side, owner-confirmed; contract + exchange change is sp#189, not live yet)
+
+The ERP publishes **facts** on `order-changed`; mivend builds its own `erpOrderStatus` from them (the ERP does not
+send our statuses). Source on the ERP side: the integration-service design doc, section "order statuses on the ERP side".
+
+| mivend state | ERP fact (on `order-changed`) | Underlying ERP objects |
+| --- | --- | --- |
+| Under approval | `status` = "pending approval" | processing-status enum value |
+| Approved | `status` = "approved" | processing-status enum value |
+| Assembled (in progress) | `hasOrder` = true, `hasRealization` = false | a posted warehouse order based on the order |
+| Shipped | `hasRealization` = true | a posted sales document of the order (the order is linked to it through the deal field, through the warehouse order, or through the transfer of goods; the ERP uses its native method, not the deal field alone) |
+| Cancelled | `markedForDeletion` = true (wins over the others) | deletion mark on the order; NOT `isDeleted`, which only marks a tombstone of the stream record |
+| Delivered | **not decided** | route sheet -> waybill with a "completed" flag exist in the ERP; whether to add `inDelivery`/`delivered` is open |
+
+- `status` is the raw enum value name; the list of values is open, so consumers must tolerate unknown values.
+- The ERP's own operational-status enum/register is NOT used (under development on the ERP side).
+- The exchange scope grows by warehouse orders and sales documents; only documents of mivend orders are queued.
+- Cancellation rules (who may cancel and when) are derived from these facts and are fixed in a separate section once
+  the facts are live.
+
 ### Still to verify with the ERP side
 
 - Whether marking an order for deletion also zeroes its reserve in the register automatically (expected: yes,
