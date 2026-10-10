@@ -255,6 +255,28 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
         expect(reloadedOrder.customFields.reservationState).toBe('AWAITING_CONFIRMATION');
     });
 
+    // #209: this write used to spread a stale customFields snapshot, erasing a concurrent
+    // writer's erpStatus key — both writers' keys must survive.
+    it('survives a concurrent erpStatus write touching a different customFields key on the same order', async () => {
+        const order = await seedOrder('RESERVED', { erpStatus: 'PENDING' });
+        await realDataSource
+            .getRepository(TestReservation)
+            .save(dueReservation({ orderId: order.id, creationMethod: 'manual' }));
+
+        await Promise.all([
+            service.expireDueReservations(),
+            realDataSource
+                .getRepository(TestOrder)
+                .update(order.id, { customFields: { erpStatus: 'CONFIRMED' } }),
+        ]);
+
+        const reloadedOrder = await realDataSource
+            .getRepository(TestOrder)
+            .findOneByOrFail({ id: order.id });
+        expect(reloadedOrder.customFields.reservationState).toBe('AWAITING_CONFIRMATION');
+        expect(reloadedOrder.customFields.erpStatus).toBe('CONFIRMED');
+    });
+
     // issue #204: the ERP-rejection timeout is independent of the reservation's own TTL —
     // this reservation isn't due by expiresAt at all, only by its order's REJECTED deadline.
     describe('REJECTED-order timeout (issue #204)', () => {

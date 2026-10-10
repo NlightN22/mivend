@@ -124,8 +124,10 @@ describe('ErpOrderService', () => {
 
             await service.onFulfillmentStateChanged(mockCtx, { id: 'f-2' } as never);
 
+            // Only the changed key — a stale erpStatus snapshot would overwrite a concurrent
+            // write from updateStatus() below (#209).
             expect(mockOrderRepo.update).toHaveBeenCalledWith('order-1', {
-                customFields: { erpStatus: 'PENDING', latestFulfillmentState: 'Shipped' },
+                customFields: { latestFulfillmentState: 'Shipped' },
             });
         });
 
@@ -154,6 +156,52 @@ describe('ErpOrderService', () => {
             mockFulfillmentRepo.findOne.mockResolvedValue(null);
 
             await service.onFulfillmentStateChanged(mockCtx, { id: 'missing' } as never);
+
+            expect(mockOrderRepo.update).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('updateStatus', () => {
+        it('writes only the changed erp fields, never a stale customFields snapshot (#209)', async () => {
+            mockOrderRepo.findOne.mockResolvedValue({
+                id: 'order-1',
+                code: 'ORD-1',
+                // Fields another concurrent writer (ReservationExpiryService) could change
+                // between this read and the write below — must survive untouched.
+                customFields: { erpStatus: 'PENDING', reservationState: 'RESERVED' },
+            });
+
+            await service.updateStatus(mockCtx, { orderCode: 'ORD-1', status: 'CONFIRMED' });
+
+            const [, update] = mockOrderRepo.update.mock.calls[0];
+            expect(update.customFields).not.toHaveProperty('reservationState');
+            expect(update.customFields).toEqual({
+                erpStatus: 'CONFIRMED',
+                erpStatusAt: expect.any(Date),
+            });
+        });
+
+        it('includes erpOrderId only when the payload carries one', async () => {
+            mockOrderRepo.findOne.mockResolvedValue({
+                id: 'order-1',
+                code: 'ORD-1',
+                customFields: { erpStatus: 'PENDING' },
+            });
+
+            await service.updateStatus(mockCtx, {
+                orderCode: 'ORD-1',
+                status: 'CONFIRMED',
+                erpOrderId: 'erp-9',
+            });
+
+            const [, update] = mockOrderRepo.update.mock.calls[0];
+            expect(update.customFields.erpOrderId).toBe('erp-9');
+        });
+
+        it('is a no-op when the order cannot be found', async () => {
+            mockOrderRepo.findOne.mockResolvedValue(null);
+
+            await service.updateStatus(mockCtx, { orderCode: 'missing', status: 'CONFIRMED' });
 
             expect(mockOrderRepo.update).not.toHaveBeenCalled();
         });

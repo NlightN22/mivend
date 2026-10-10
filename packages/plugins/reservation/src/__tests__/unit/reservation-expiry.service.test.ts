@@ -78,7 +78,16 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             { id: 'res-2', orderId: 'order-2', creationMethod: 'manual' },
         ];
         const { service, txReservationRepo, txOrderRepo } = createService(dueRows, [
-            { id: 'order-1', customFields: { reservationState: 'RESERVED' } },
+            // erpStatus/erpOrderId simulate fields a concurrent writer (ErpOrderService) could
+            // hold — a stale snapshot spread would erase them (#209).
+            {
+                id: 'order-1',
+                customFields: {
+                    reservationState: 'RESERVED',
+                    erpStatus: 'CONFIRMED',
+                    erpOrderId: 'erp-1',
+                },
+            },
             { id: 'order-2', customFields: { reservationState: 'FAILED' } },
         ]);
 
@@ -175,7 +184,13 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         const rejectedOrders = [
             {
                 id: 'order-9',
-                customFields: { erpStatus: 'REJECTED', reservationState: 'RESERVED' },
+                // erpOrderId simulates a field a concurrent writer could hold — a stale
+                // snapshot spread would erase it (#209).
+                customFields: {
+                    erpStatus: 'REJECTED',
+                    reservationState: 'RESERVED',
+                    erpOrderId: 'erp-9',
+                },
             },
         ];
         const rejectedReservations = [
@@ -199,12 +214,10 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             'res-9',
             expect.objectContaining({ status: 'released', releasedAt: expect.any(Date) }),
         );
-        expect(txOrderRepo.update).toHaveBeenCalledWith(
-            'order-9',
-            expect.objectContaining({
-                customFields: expect.objectContaining({ reservationState: 'RELEASED' }),
-            }),
-        );
+        // Only the changed key — never erpStatus/erpOrderId from the stale read above (#209).
+        expect(txOrderRepo.update).toHaveBeenCalledWith('order-9', {
+            customFields: { reservationState: 'RELEASED' },
+        });
         expect(eventBus.publish).toHaveBeenCalledTimes(1);
     });
 

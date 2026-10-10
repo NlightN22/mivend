@@ -88,18 +88,10 @@ export class ReservationExpiryService {
                     .find({ where: { id: In(orderIds) } });
                 for (const order of orders) {
                     if (order.customFields?.reservationState === 'RESERVED') {
-                        // `repo.update()`, not `.save(order)` — same gotcha documented on
-                        // ReservationService.setOrderReservationState: `order` here is loaded with
-                        // no relations at all (plain `.find()` above), so `.save()` throws trying
-                        // to recompute `discounts`/`taxSummary`, which require `lines`/`surcharges`
-                        // to be joined. Real incident this fixes: every expiry sweep run was
-                        // crashing the whole transaction on this line, so due reservations were
-                        // never actually being expired at all — confirmed via [ReservationPlugin]
-                        // "Reservation expiry job failed: The property 'discounts' on the Order
-                        // entity requires the Order.lines relation to be joined" in server logs.
+                        // `repo.update()` of only the changed key, not `.save(order)` of a full
+                        // snapshot — see ReservationService.setOrderReservationState (#209).
                         await manager.getRepository(Order).update(order.id, {
                             customFields: {
-                                ...order.customFields,
                                 reservationState: 'AWAITING_CONFIRMATION',
                             },
                         });
@@ -164,7 +156,7 @@ export class ReservationExpiryService {
                     if (order) {
                         // Same `repo.update()`-not-`.save()` gotcha as the non-prepaid branch above.
                         await manager.getRepository(Order).update(order.id, {
-                            customFields: { ...order.customFields, reservationState: 'RELEASED' },
+                            customFields: { reservationState: 'RELEASED' },
                         });
                     }
 

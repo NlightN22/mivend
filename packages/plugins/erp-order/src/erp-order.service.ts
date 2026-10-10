@@ -84,10 +84,10 @@ export class ErpOrderService {
             });
             if (!order) continue;
 
-            // Plain SQL UPDATE, not save() — see updateStatus()'s identical doc comment on why
-            // (save() would recompute calculated fields that require lines/surcharges joined).
+            // Plain SQL UPDATE of only the changed key, not save() of a full snapshot — see
+            // updateStatus()'s identical comment (#209).
             await this.connection.getRepository(ctx, Order).update(order.id, {
-                customFields: { ...order.customFields, latestFulfillmentState: latestState },
+                customFields: { latestFulfillmentState: latestState },
             });
         }
     }
@@ -101,12 +101,10 @@ export class ErpOrderService {
             return;
         }
 
-        // `repo.update()` issues a plain SQL UPDATE without loading/recomputing
-        // the full entity — `save()` would recompute calculated fields (discounts,
-        // taxSummary) which require lines/surcharges to be joined, crashing the process.
+        // Plain SQL UPDATE of only the changed keys, not save() of a full snapshot — save()
+        // would also recompute calculated fields that require lines/surcharges joined (#209).
         await repo.update(order.id, {
             customFields: {
-                ...order.customFields,
                 erpStatus: payload.status,
                 erpStatusAt: new Date(),
                 ...(payload.erpOrderId ? { erpOrderId: payload.erpOrderId } : {}),
