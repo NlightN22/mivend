@@ -1,7 +1,13 @@
 import * as amqplib from 'amqplib';
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 
-import { DLX, EXCHANGE, MAX_RETRY_DEFAULT, SYNC_PLUGIN_OPTIONS } from './types';
+import {
+    DLX,
+    EXCHANGE,
+    MAX_RETRY_DEFAULT,
+    RETRY_BASE_DELAY_DEFAULT,
+    SYNC_PLUGIN_OPTIONS,
+} from './types';
 import type { SyncPluginOptions } from './types';
 import { SyncLogger } from './sync-logger';
 
@@ -136,7 +142,8 @@ export class RabbitMQService implements OnModuleDestroy {
                 // A still-failing message redelivered with zero delay is a tight loop, not a
                 // retry: it can flood the process fast enough to exhaust host memory (this is
                 // exactly what happened before this fix existed).
-                const delayMs = Math.min(500 * 2 ** (attempts - 1), 10_000);
+                const baseDelayMs = this.options.retryBaseDelayMs ?? RETRY_BASE_DELAY_DEFAULT;
+                const delayMs = Math.min(baseDelayMs * 2 ** (attempts - 1), 10_000);
                 setTimeout(() => {
                     try {
                         ch.nack(msg, false, true);

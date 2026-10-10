@@ -351,9 +351,15 @@ describe('branch consumer', () => {
     // exhaust host memory. Retries must be backed off and capped at maxRetry, landing in
     // dead-letters afterward — never looping forever.
     it('a still-failing (non-schema) message retries with backoff, then lands in dead-letters — never loops forever', async () => {
+        // Tiny retryBaseDelayMs avoids racing the production 500ms backoff against a fixed
+        // wall-clock wait, which flaked under `make test-int`'s full parallel run (issue #213).
+        const poisonOptions: SyncPluginOptions = { ...HUB_OPTIONS, retryBaseDelayMs: 5 };
+        const poisonRabbitMQ = new RabbitMQService(poisonOptions, mockLogger as never);
+        await poisonRabbitMQ.connect();
+
         const queueName = 'test.poison-message';
         let attempts = 0;
-        await hubRabbitMQ.subscribe(queueName, 'poison.test', async () => {
+        await poisonRabbitMQ.subscribe(queueName, 'poison.test', async () => {
             attempts++;
             throw new Error('simulated persistent failure — not a ZodError');
         });
@@ -365,26 +371,30 @@ describe('branch consumer', () => {
             timestamp: new Date().toISOString(),
             payload: { productId: randomUUID(), enabled: true },
         };
-        hubRabbitMQ
+        poisonRabbitMQ
             .requireChannel()
             .publish(EXCHANGE, 'poison.test', Buffer.from(JSON.stringify(event)), {
                 persistent: true,
             });
 
-        await waitFor(
-            async () => {
-                const q = await hubRabbitMQ.requireChannel().checkQueue('sync.dead-letters');
-                return q.messageCount > 0;
-            },
-            15_000,
-            300,
-        );
+        try {
+            await waitFor(
+                async () => {
+                    const q = await poisonRabbitMQ.requireChannel().checkQueue('sync.dead-letters');
+                    return q.messageCount > 0;
+                },
+                5_000,
+                50,
+            );
 
-        // Exactly maxRetry (3) attempts — not more (would mean the cap didn't hold) and not
-        // fewer (would mean it gave up early or never retried at all).
-        expect(attempts).toBe(HUB_OPTIONS.maxRetry);
-        const mainQ = await hubRabbitMQ.requireChannel().checkQueue(queueName);
-        expect(mainQ.messageCount).toBe(0);
+            // Exactly maxRetry (3) attempts — not more (would mean the cap didn't hold) and not
+            // fewer (would mean it gave up early or never retried at all).
+            expect(attempts).toBe(HUB_OPTIONS.maxRetry);
+            const mainQ = await poisonRabbitMQ.requireChannel().checkQueue(queueName);
+            expect(mainQ.messageCount).toBe(0);
+        } finally {
+            await poisonRabbitMQ.onModuleDestroy();
+        }
     }, 20_000);
 });
 

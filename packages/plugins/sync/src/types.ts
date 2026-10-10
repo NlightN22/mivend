@@ -31,11 +31,14 @@ export interface SyncPluginOptions {
     maxRetry?: number;
     outboxPollIntervalMs?: number;
     erpPollIntervalMs?: number;
+    // Base for RabbitMQService's retry backoff (ms) — injectable so tests avoid real-time waits.
+    retryBaseDelayMs?: number;
 }
 
 export const SYNC_PLUGIN_OPTIONS = Symbol('SYNC_PLUGIN_OPTIONS');
 export const EXCHANGE = 'mivend.sync';
 export const DLX = 'mivend.sync.dlx';
 export const MAX_RETRY_DEFAULT = 5;
+export const RETRY_BASE_DELAY_DEFAULT = 500;
 export const POLL_INTERVAL_DEFAULT = 5000;
 export const ERP_POLL_INTERVAL_DEFAULT = 30_000;
