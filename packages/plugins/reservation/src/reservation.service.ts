@@ -103,6 +103,9 @@ export class ReservationService {
                     if (!order) {
                         throw new OrderNotEligibleError('Order not found');
                     }
+                    if (order.lines.length === 0) {
+                        throw new OrderNotEligibleError('Order has no lines');
+                    }
 
                     // Defense in depth alongside the moq plugin's OrderInterceptor — see
                     // docs/order-flow.md "Pack-size / MOQ". null/0/negative multiplicity is a data

@@ -45,7 +45,9 @@ Also exercised, with the ERP side run by the Integration Service owner:
 | Schema registry unreachable | Outbox row stays pending with growing retry delay, visible on the outbox health counts; published exactly once after recovery |
 | Manual confirm racing the placement auto-reserve | One winner, one active reservation, one `order.submitted`, state RESERVED |
 
-Not exercised: numbering on a branch instance, late registration result after a local release.
+Late registration result after a local release: the order registers, the released reservation stays released, no new reservation or difference is created.
+
+Not exercised: numbering on a branch instance (to be tested when a branch instance exists).
 
 ## Known limits
 

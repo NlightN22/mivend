@@ -359,6 +359,15 @@ describe('ReservationService', () => {
             );
         });
 
+        it('refuses an order with no lines and writes nothing', async () => {
+            orderRepo.findOne.mockResolvedValue({ ...order, lines: [] });
+
+            await expect(service.confirmOrder(ctx, 'order-1', 3)).rejects.toThrow(
+                'Order has no lines',
+            );
+            expect(reservationRepo.save).not.toHaveBeenCalled();
+        });
+
         it('rejects the whole order when no active contract can register it', async () => {
             contractService.resolveOrderContract.mockResolvedValue(null);
 
