@@ -26,7 +26,8 @@ function loadScript(): string {
         .split('\n')
         .filter(line => !line.trimStart().startsWith('\\set'))
         .join('\n')
-        .replaceAll(':instance_code_lit', `'${INSTANCE_CODE}'`);
+        .split(':instance_code_lit')
+        .join(`'${INSTANCE_CODE}'`);
 }
 
 async function runScript(): Promise<void> {
