@@ -11,7 +11,7 @@ export class PackagingPolicyShopResolver {
     ) {}
 
     @Query()
-    @Allow(Permission.Authenticated)
+    @Allow(Permission.Public)
     async packagesOnlySales(@Ctx() ctx: RequestContext): Promise<boolean> {
         const customer = ctx.activeUserId
             ? await this.customerService.findOneByUserId(ctx, ctx.activeUserId)

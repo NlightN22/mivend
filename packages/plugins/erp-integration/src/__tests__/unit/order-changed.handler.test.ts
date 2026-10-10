@@ -33,6 +33,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'oc-1', { isDeleted: true });
@@ -45,6 +46,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([{ id: 'variant-1' }]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -61,11 +63,46 @@ describe('OrderChangedStreamHandler', () => {
         });
     });
 
+    it('converts a line quantity expressed in its unit to base units', async () => {
+        const syncService = { handleOrderChanged: vi.fn() };
+        const handler = new OrderChangedStreamHandler(
+            createConnection([{ id: 'variant-1' }]) as never,
+            syncService as never,
+            { findByEntityId: vi.fn().mockResolvedValue({ ratioToBase: 0.9 }) } as never,
+        );
+
+        await handler.apply(ctx, 'erp-order-1', {
+            lines: [{ productId: 'prod-1', unitId: 'unit-pack', reservedQuantity: 10 }],
+        });
+
+        expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 9 }],
+            }),
+        );
+    });
+
+    it('retries (missing dependency) when the line unit has not arrived yet', async () => {
+        const handler = new OrderChangedStreamHandler(
+            createConnection([{ id: 'variant-1' }]) as never,
+            { handleOrderChanged: vi.fn() } as never,
+            { findByEntityId: vi.fn().mockResolvedValue(null) } as never,
+        );
+
+        await expect(
+            handler.apply(ctx, 'erp-order-1', {
+                lines: [{ productId: 'prod-1', unitId: 'unit-x', reservedQuantity: 1 }],
+            }),
+        ).rejects.toBeInstanceOf(MissingDependencyError);
+    });
+
     it('passes the variant id as a string even though Postgres returns the integer id as a number', async () => {
         const syncService = { handleOrderChanged: vi.fn() };
         const handler = new OrderChangedStreamHandler(
             createConnection([{ id: 27708 }]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [{ productId: 'prod-1' }] });
@@ -85,6 +122,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([undefined]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await expect(
@@ -102,6 +140,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([{ id: 'variant-1' }]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -122,6 +161,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -143,6 +183,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [] });
@@ -159,6 +200,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -177,6 +219,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [] });
@@ -194,6 +237,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [], orderUuid: 'order-uuid-1' });
@@ -209,6 +253,7 @@ describe('OrderChangedStreamHandler', () => {
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
+            { findByEntityId: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [] });

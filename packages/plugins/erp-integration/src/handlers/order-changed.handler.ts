@@ -3,6 +3,7 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 
 import { MissingDependencyError } from '../types';
+import { UnitLookupService } from '../unit-lookup.service';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
@@ -38,6 +39,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly reservationWriteOffSyncService: ReservationWriteOffSyncService,
+        private readonly unitLookupService: UnitLookupService,
     ) {}
 
     async apply(
@@ -96,9 +98,11 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                     `order-changed ${entityId}: variant not found for productId=${productId}`,
                 );
             }
+            const unitId = line.unitId != null ? String(line.unitId) : null;
+            const ratio = unitId ? await this.unitRatioToBase(ctx, entityId, unitId) : 1;
             reservedLines.push({
                 productVariantId: variantId,
-                reservedQuantity: Math.round(reservedQuantity),
+                reservedQuantity: Math.round(reservedQuantity * ratio),
             });
         }
 
@@ -114,6 +118,21 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                   `order-changed ${entityId}: applied without ${linesWithoutProductId} line(s) lacking a productId`,
               )
             : inboundApplied();
+    }
+
+    // Quantities of a line with a unit are in that unit (#214); local reservations are in base units.
+    private async unitRatioToBase(
+        ctx: RequestContext,
+        entityId: string,
+        unitId: string,
+    ): Promise<number> {
+        const unit = await this.unitLookupService.findByEntityId(ctx, unitId);
+        if (!unit || !unit.ratioToBase) {
+            throw new MissingDependencyError(
+                `order-changed ${entityId}: unit ${unitId} not received yet`,
+            );
+        }
+        return unit.ratioToBase;
     }
 
     private async findVariantId(productId: string): Promise<string | undefined> {

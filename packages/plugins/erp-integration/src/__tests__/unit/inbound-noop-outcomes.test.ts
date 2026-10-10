@@ -106,7 +106,7 @@ describe.each([
 ] as const)('%s with a line lacking productId', (stream, Handler, syncMethod, linesKey) => {
     it('applies the valid lines and records the skipped one as a noop reason', async () => {
         const sync = { [syncMethod]: vi.fn() };
-        const handler = new Handler(orderConnection('variant-1'), sync as never);
+        const handler = new Handler(orderConnection('variant-1'), sync as never, {} as never);
 
         const outcome = await handler.apply(ctx, 'o-1', {
             orderEntityId: 'o-1',
@@ -126,9 +126,11 @@ describe.each([
     });
 
     it('is applied when every line has a productId', async () => {
-        const handler = new Handler(orderConnection('variant-1'), {
-            [syncMethod]: vi.fn(),
-        } as never);
+        const handler = new Handler(
+            orderConnection('variant-1'),
+            { [syncMethod]: vi.fn() } as never,
+            {} as never,
+        );
 
         const outcome = await handler.apply(ctx, 'o-1', {
             orderEntityId: 'o-1',
