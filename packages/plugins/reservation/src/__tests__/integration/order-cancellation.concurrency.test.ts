@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { OrderNotEligibleError } from '../../reservation-errors';
 import {
+    TestOrder,
     TestOrderLine,
     TestStockLevel,
     mockCtx,
@@ -78,6 +79,7 @@ describe('order cancel vs competing writers (real Postgres)', () => {
         ]);
 
         expect(outcomes.map(o => o.kind).sort()).toEqual(['already-cancelled', 'cancelled']);
+        expect((await loadOrder(h, order.id)).customFields.erpStatus).not.toBe('PICKING');
         expect(f.cancelOrderCalls).toHaveLength(1);
         expect(f.port.requestCalls).toBe(1);
     });
@@ -138,5 +140,48 @@ describe('order cancel vs competing writers (real Postgres)', () => {
 
         expect(outcome).toEqual({ kind: 'cancel-requested' });
         expect((await loadOrder(h, order.id)).state).not.toBe('Cancelled');
+    });
+
+    const changed = (orderUuid: string, derivedStatus: 'PICKING' | 'SHIPPING' | 'CANCELLED') => ({
+        orderUuid,
+        orderEntityId: 'erp-order-1',
+        status: '',
+        reservedLines: [],
+        contractId: null,
+        derivedStatus,
+    });
+
+    it('concurrent order-changed facts and another writer: status ends at the latest fact, no lost update', async () => {
+        const f = buildCancellationFixture(h);
+        const order = await seedCancellableOrder(h, { erpStatus: 'SENT_TO_ERP' });
+        const otherWriter = async (): Promise<void> => {
+            await h.dataSource
+                .getRepository(TestOrder)
+                .update(order.id, { customFields: { erpOrderId: 'erp-order-1' } });
+        };
+
+        await Promise.all([
+            f.writeOff.handleOrderChanged(mockCtx, changed(order.uuid, 'SHIPPING')),
+            f.writeOff.handleOrderChanged(mockCtx, changed(order.uuid, 'PICKING')),
+            otherWriter(),
+        ]);
+
+        const stored = await loadOrder(h, order.id);
+        expect(stored.customFields.erpStatus).toBe('SHIPPING');
+        expect(stored.customFields.erpOrderId).toBe('erp-order-1');
+    });
+
+    it('markedForDeletion cancels the local order once; a repeat and a later fact change nothing', async () => {
+        const f = buildCancellationFixture(h);
+        const order = await seedCancellableOrder(h, { erpStatus: 'SENT_TO_ERP' });
+
+        await f.writeOff.handleOrderChanged(mockCtx, changed(order.uuid, 'CANCELLED'));
+        await f.writeOff.handleOrderChanged(mockCtx, changed(order.uuid, 'CANCELLED'));
+        await f.writeOff.handleOrderChanged(mockCtx, changed(order.uuid, 'PICKING'));
+
+        expect((await loadOrder(h, order.id)).state).toBe('Cancelled');
+        expect(await activeReservations(h, order.id)).toBe(0);
+        expect((await loadOrder(h, order.id)).customFields.erpStatus).not.toBe('PICKING');
+        expect(f.cancelOrderCalls).toHaveLength(1);
     });
 });

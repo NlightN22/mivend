@@ -67,7 +67,7 @@ export const Default: Story = {
                             lines: [],
                             shippingAddress: null,
                             customFields: {
-                                erpStatus: 'SHIPPED',
+                                erpStatus: 'SHIPPING',
                                 erpStatusAt: new Date().toISOString(),
                             },
                         }),

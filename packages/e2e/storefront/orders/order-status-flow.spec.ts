@@ -31,7 +31,7 @@ test.describe('ERP order status flow', () => {
             timeout: 10000,
         });
 
-        await postStatus(page, code, 'SHIPPED');
+        await postStatus(page, code, 'SHIPPING');
         await page.reload();
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.od-status')).toHaveText('Shipped', { timeout: 10000 });

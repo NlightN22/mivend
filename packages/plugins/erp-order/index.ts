@@ -5,3 +5,4 @@ export { OrderVisibilityService } from './src/order-visibility.service';
 export { OrderReadyForErpEvent, ErpOrderStatusEvent } from './src/erp-order.events';
 export type { ErpOrderStatus, ErpStatusUpdatePayload } from './src/types';
 export { ERP_ORDER_STATUSES } from './src/types';
+export { canAdvanceErpStatus } from './src/erp-status-rank';

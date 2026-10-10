@@ -34,6 +34,9 @@ export class TestOrderCustomFields {
     @Column({ type: 'varchar', nullable: true }) reservationState!: string | null;
     @Column({ type: 'varchar', nullable: true }) erpStatus!: string | null;
     @Column({ type: 'varchar', nullable: true }) erpOrderId!: string | null;
+    @Column({ type: 'timestamp', nullable: true }) erpStatusAt!: Date | null;
+    @Column({ type: 'varchar', nullable: true }) erpOrderStatus!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpContractId!: string | null;
     @Column({ type: 'varchar', nullable: true }) latestFulfillmentState!: string | null;
     @Column({ type: 'varchar', nullable: true }) erpRegistrationDocumentNumber!: string | null;
     @Column({ type: 'varchar', nullable: true }) erpRegistrationStatus!: string | null;

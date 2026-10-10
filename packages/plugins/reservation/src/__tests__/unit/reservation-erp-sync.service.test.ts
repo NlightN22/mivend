@@ -67,8 +67,8 @@ describe('ReservationErpSyncService.handleErpOrderStatus', () => {
     // SHIPPED/DELIVERED not being a proven release trigger either without consuming
     // order-registration-result's reservedLines (issue #72/#74) — see this service's own doc
     // comment for the two abandoned attempts that tried to release earlier.
-    it('ignores statuses outside the reservation domain (PENDING/SENT_TO_ERP/ASSEMBLED/SHIPPED/DELIVERED)', async () => {
-        for (const status of ['PENDING', 'SENT_TO_ERP', 'ASSEMBLED', 'SHIPPED', 'DELIVERED']) {
+    it('ignores statuses outside the reservation domain (PENDING/SENT_TO_ERP/PICKING/SHIPPING/DELIVERED)', async () => {
+        for (const status of ['PENDING', 'SENT_TO_ERP', 'PICKING', 'SHIPPING', 'DELIVERED']) {
             await service.handleErpOrderStatus(ctx, 'ORD-1', status);
         }
         expect(reservationRepo.update).not.toHaveBeenCalled();

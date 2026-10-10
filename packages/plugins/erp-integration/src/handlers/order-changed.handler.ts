@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 
+import { deriveOrderErpStatus } from '../order-erp-status.derivation';
 import { MissingDependencyError } from '../types';
 import { UnitLookupService } from '../unit-lookup.service';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -23,6 +24,11 @@ const loggerCtx = 'IntegrationOrderChangedHandler';
 // discount design is still in progress), and the issue's own scope explicitly warns against
 // fabricating a use before one exists. comment is out of scope per the issue too. Revisit once
 // #101 lands a real consumer for these fields.
+//
+// Status facts (event-contracts 0.60.0, sp#189) hasOrder/hasRealization/markedForDeletion/
+// inDelivery/delivered are ALL consumed: deriveOrderErpStatus maps them (plus the raw status) to
+// mivend's own erpStatus; an absent fact means "not computed", never false. documentNumber (15)
+// stays deferred — erpRegistrationDocumentNumber already carries it from order-registration-result.
 //
 // Header-level customerId/organizationId/warehouseId, and per-line plain `quantity` (distinct
 // from reservedQuantity), are ALSO deliberately not consumed — explicit decision, not an
@@ -75,6 +81,15 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             );
         }
 
+        const derivedStatus = deriveOrderErpStatus({
+            markedForDeletion: payload.markedForDeletion as boolean | undefined,
+            delivered: payload.delivered as boolean | undefined,
+            inDelivery: payload.inDelivery as boolean | undefined,
+            hasRealization: payload.hasRealization as boolean | undefined,
+            hasOrder: payload.hasOrder as boolean | undefined,
+            status,
+        });
+
         const rawLines = Array.isArray(payload.lines) ? payload.lines : [];
         const reservedLines: Array<{ productVariantId: string; reservedQuantity: number }> = [];
         let linesWithoutProductId = 0;
@@ -118,6 +133,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             status,
             reservedLines,
             contractId,
+            derivedStatus,
         });
         return linesWithoutProductId > 0
             ? inboundNoop(

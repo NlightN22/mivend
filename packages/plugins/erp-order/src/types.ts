@@ -44,8 +44,12 @@ export const ERP_ORDER_STATUSES = [
     'SENT_TO_ERP',
     'RESERVED',
     'CONFIRMED',
-    'ASSEMBLED',
-    'SHIPPED',
+    // Derived from the ERP's order-changed facts (docs/order-contracts.md, "ERP order statuses").
+    'UNDER_APPROVAL',
+    'APPROVED',
+    'PICKING',
+    'SHIPPING',
+    'DELIVERING',
     'DELIVERED',
     'CANCELLED',
     // ERP refused to register the order (issue #204). Non-terminal — a later non-rejected

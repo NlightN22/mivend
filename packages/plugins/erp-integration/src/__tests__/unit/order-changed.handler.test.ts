@@ -86,6 +86,7 @@ describe('OrderChangedStreamHandler', () => {
             status: 'Проведён',
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 3 }],
             contractId: null,
+            derivedStatus: null,
         });
     });
 
@@ -194,6 +195,7 @@ describe('OrderChangedStreamHandler', () => {
             status: '',
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 0 }],
             contractId: null,
+            derivedStatus: null,
         });
     });
 
@@ -218,6 +220,7 @@ describe('OrderChangedStreamHandler', () => {
             status: '',
             reservedLines: [],
             contractId: null,
+            derivedStatus: null,
         });
     });
 
@@ -256,6 +259,7 @@ describe('OrderChangedStreamHandler', () => {
         await handler.apply(ctx, 'erp-order-1', {
             lines: [],
             contractId: 'contract-guid-1',
+            derivedStatus: null,
         });
 
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(

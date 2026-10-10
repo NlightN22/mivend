@@ -115,6 +115,7 @@ beforeAll(async () => {
         { setOrderReservationState: vi.fn() } as never,
         { reportUnresolvedProductMapping: vi.fn(), reportQuantityMismatch: vi.fn() } as never,
         eventBus as never,
+        { apply: vi.fn() } as never,
     );
     flush = async () => {
         await Promise.all(pending.splice(0));
@@ -168,6 +169,7 @@ const orderChanged = {
     status: 'IN_PROGRESS',
     reservedLines: [],
     contractId: 'contract-1',
+    derivedStatus: null,
 };
 
 describe('order-registration-result -> order-changed chain (component, real Postgres)', () => {

@@ -131,8 +131,8 @@ describe('OrderCancellationService.cancel (real Postgres)', () => {
     });
 
     it.each([
-        ['in progress', { erpStatus: 'ASSEMBLED' }, 'PaymentAuthorized', 'in-progress'],
-        ['shipped (ERP status)', { erpStatus: 'SHIPPED' }, 'PaymentAuthorized', 'shipped'],
+        ['in progress', { erpStatus: 'PICKING' }, 'PaymentAuthorized', 'in-progress'],
+        ['shipped (ERP status)', { erpStatus: 'SHIPPING' }, 'PaymentAuthorized', 'shipped'],
         ['shipped (order state)', {}, 'Delivered', 'shipped'],
     ])('%s: no automatic cancel', async (_name, fields, state, reason) => {
         const f = buildCancellationFixture(h);

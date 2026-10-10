@@ -185,24 +185,24 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   cannot be cancelled automatically returns to the confirmation queue.
 - `OpenDeferredExposureService` excludes `Cancelled` orders.
 
-### ERP order statuses (agreed with the ERP side, owner-confirmed; contract + exchange change is sp#189, not live yet)
+### ERP order statuses (agreed with the ERP side, owner-confirmed; contract 0.60.0 consumed, the ERP side is not live yet)
 
-The ERP publishes **facts** on `order-changed`; mivend builds its own `erpOrderStatus` from them (the ERP does not
-send our statuses). Names are "process" names on purpose: an order has several warehouse orders and as many sales
+The ERP publishes **facts** on `order-changed`; mivend builds its own `erpStatus` from them (the ERP does not send
+our statuses). `erpOrderStatus` stays the ERP's raw `status` value, stored as received. Names are "process" names on purpose: an order has several warehouse orders and as many sales
 documents, so "fully assembled / fully shipped" cannot be known until the last document and is not tracked.
 Source on the ERP side: the integration-service design doc, section "order statuses on the ERP side".
 
 Priority, highest first (the first matching fact wins):
 
-| `erpOrderStatus` | ERP fact (on `order-changed`) | Underlying ERP objects |
+| `erpStatus` | ERP fact (on `order-changed`) | Underlying ERP objects |
 | --- | --- | --- |
 | CANCELLED | `markedForDeletion` = true | deletion mark on the order; NOT `isDeleted`, which only marks a tombstone of the stream record |
 | DELIVERED | `delivered` = true | all waybills of the order are completed (status "processed" or the arrival date filled, as the ERP counts); a sales document outside any route sheet (pickup) is NOT delivered by this fact |
 | DELIVERING | `inDelivery` = true | the order's sales document is in a route sheet and a waybill of it is not completed (a route sheet shared with other orders and without a waybill is neither DELIVERING nor DELIVERED) |
 | SHIPPING | `hasRealization` = true | at least one posted sales document of the order (linked through the deal field); pickup stays here |
 | PICKING | `hasOrder` = true, no sales document yet | at least one posted outgoing warehouse order (receipt-type orders under the same order are ignored) |
-| APPROVED | `status` = "approved" | processing-status enum value |
-| UNDER_APPROVAL | `status` = "pending approval" | processing-status enum value |
+| APPROVED | `status` = "Согласован" | processing-status enum value |
+| UNDER_APPROVAL | `status` = "НаСогласовании" | processing-status enum value |
 
 - `status` is the raw enum value name; the list of values is open, so consumers must tolerate unknown values. For
   retail orders without a warehouse order `status` stays "pending approval" even after a sales document is posted,
@@ -210,8 +210,16 @@ Priority, highest first (the first matching fact wins):
 - The ERP's own operational-status enum/register is NOT used (under development on the ERP side).
 - The exchange scope grows by warehouse orders, sales documents, route sheets and waybills; only documents of mivend
   orders are queued. All facts ship in one event-contracts version (owner decision).
-- Code still uses the older placeholders `ASSEMBLED`/`SHIPPED`/`DELIVERED` (`order-cancellation.decision.ts`); they
-  are renamed to these names when the facts are consumed.
+- Consumption (event-contracts 0.60.0): the five facts are `optional bool`; an explicit `false` is a computed
+  fact, an absent field means the producer did not compute it and never counts as `false`. `deriveOrderErpStatus`
+  maps the facts to the table above; with nothing derivable `erpStatus` is left untouched.
+- `erpStatus` only moves forward (PENDING < SENT_TO_ERP < RESERVED/CONFIRMED < UNDER_APPROVAL < APPROVED < PICKING <
+  SHIPPING < DELIVERING < DELIVERED); CANCELLED is terminal. A repeated event is a no-op. The write is a partial
+  update of `erpStatus`/`erpStatusAt` under the order's `reserve-order:<id>` lock.
+- `markedForDeletion` is not a plain status write: a not-yet-cancelled order goes through the same path as an
+  `order-cancel-result` "cancelled" answer (local cancel, reservations released, `CANCELLED` status event).
+- The old placeholders `ASSEMBLED`/`SHIPPED` are gone: "in progress" is `PICKING`, "shipped" is
+  `SHIPPING`/`DELIVERING`/`DELIVERED` in `order-cancellation.decision.ts`. `SENT_TO_ERP`/`REJECTED` are unchanged.
 - Cancellation rules (who may cancel and when) are derived from these facts and are fixed in a separate section once
   the facts are live.
 

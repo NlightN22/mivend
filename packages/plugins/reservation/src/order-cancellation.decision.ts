@@ -30,9 +30,9 @@ export type CancelDecision =
     | { action: 'request-only' };
 
 const SHIPPED_ORDER_STATES = ['Shipped', 'PartiallyShipped', 'Delivered', 'PartiallyDelivered'];
-const SHIPPED_ERP_STATUSES = ['SHIPPED', 'DELIVERED'];
+const SHIPPED_ERP_STATUSES = ['SHIPPING', 'DELIVERING', 'DELIVERED'];
 const SHIPPED_FULFILLMENT_STATES = ['Shipped', 'Delivered'];
-const IN_PROGRESS_ERP_STATUSES = ['ASSEMBLED'];
+const IN_PROGRESS_ERP_STATUSES = ['PICKING'];
 
 // Pure state decision of "what may happen to this order now" (docs/order-contracts.md, "Reserve and
 // order cancellation"); the service performs the chosen action under the order's lock.

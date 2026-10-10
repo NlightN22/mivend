@@ -2,7 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { EventBus, Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
+import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
 
+import { OrderErpStatusService } from './order-erp-status.service';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssueService } from './reservation-reconciliation-issue.service';
 import { ReservationService } from './reservation.service';
@@ -62,6 +64,8 @@ export interface OrderChangedInput {
     reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>;
     // Real proto `optional string` — null means genuinely not sent, not a zero-value.
     contractId: string | null;
+    // mivend's own status derived from the stream's facts; null when none could be derived.
+    derivedStatus: ErpOrderStatus | null;
 }
 
 // Bridges company.orders.events.v1.order-registration-result into the local reservation domain
@@ -82,6 +86,7 @@ export class ReservationWriteOffSyncService {
         private reservationService: ReservationService,
         private reconciliationIssueService: ReservationReconciliationIssueService,
         private eventBus: EventBus,
+        private orderErpStatus: OrderErpStatusService,
     ) {}
 
     async handleOrderRegistrationResult(
@@ -256,6 +261,8 @@ export class ReservationWriteOffSyncService {
         // handleOrderRegistrationResult above.
         await this.connection.getRepository(ctx, Order).update(order.id, { customFields });
         order.customFields = { ...order.customFields, ...customFields };
+
+        await this.orderErpStatus.apply(ctx, order, input.derivedStatus);
 
         await this.releaseMatchingReservations(
             ctx,

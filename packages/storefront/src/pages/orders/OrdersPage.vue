@@ -16,9 +16,9 @@ const searchQuery = ref('');
 const page = ref(1);
 
 const FILTER_GROUPS: Record<string, ErpStatus[]> = {
-    pending: ['PENDING', 'SENT_TO_ERP', 'RESERVED'],
-    confirmed: ['CONFIRMED', 'ASSEMBLED'],
-    in_transit: ['SHIPPED'],
+    pending: ['PENDING', 'SENT_TO_ERP', 'RESERVED', 'UNDER_APPROVAL'],
+    confirmed: ['CONFIRMED', 'APPROVED', 'PICKING'],
+    in_transit: ['SHIPPING', 'DELIVERING'],
     closed: ['DELIVERED', 'CANCELLED'],
 };
 

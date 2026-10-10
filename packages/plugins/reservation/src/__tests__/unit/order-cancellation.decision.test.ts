@@ -35,8 +35,9 @@ describe('decideCancellation', () => {
     });
 
     it.each([
-        ['in progress', { erpStatus: 'ASSEMBLED' }, 'in-progress'],
-        ['shipped by ERP status', { erpStatus: 'SHIPPED' }, 'shipped'],
+        ['in progress', { erpStatus: 'PICKING' }, 'in-progress'],
+        ['shipping by ERP status', { erpStatus: 'SHIPPING' }, 'shipped'],
+        ['delivering by ERP status', { erpStatus: 'DELIVERING' }, 'shipped'],
         ['delivered by ERP status', { erpStatus: 'DELIVERED' }, 'shipped'],
         ['shipped by order state', { orderState: 'PartiallyShipped' }, 'shipped'],
         ['shipped by fulfillment', { latestFulfillmentState: 'Shipped' }, 'shipped'],
@@ -52,7 +53,7 @@ describe('decideCancellation', () => {
 
     it('shipped wins over a registered order that would otherwise be cancel-requested', () => {
         expect(
-            decideCancellation({ ...base, erpOrderId: 'erp-1', erpStatus: 'SHIPPED' }).action,
+            decideCancellation({ ...base, erpOrderId: 'erp-1', erpStatus: 'SHIPPING' }).action,
         ).toBe('refuse');
     });
 

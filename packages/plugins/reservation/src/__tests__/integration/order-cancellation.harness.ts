@@ -5,6 +5,7 @@ import { OrderCancelResultService } from '../../order-cancel-result.service';
 import { OrderCancellationPortRegistry } from '../../order-cancellation.port';
 import type { CancelSubmission } from '../../order-cancellation.decision';
 import type { CancelRequestSubject, OrderCancellationPort } from '../../order-cancellation.port';
+import { OrderErpStatusService } from '../../order-erp-status.service';
 import { OrderCancellationService } from '../../order-cancellation.service';
 import { ReservationWriteOffSyncService } from '../../reservation-write-off-sync.service';
 import { TestOrder, TestPayment, TestReservation } from './reserve-order.harness';
@@ -107,6 +108,7 @@ export function buildCancellationFixture(h: ReserveOrderHarness): CancellationFi
         h.service,
         {} as never,
         eventBus as never,
+        new OrderErpStatusService(h.connection, fixture.results),
     );
     return fixture;
 }

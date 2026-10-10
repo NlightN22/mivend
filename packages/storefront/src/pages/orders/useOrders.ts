@@ -7,8 +7,11 @@ export type ErpStatus =
     | 'SENT_TO_ERP'
     | 'RESERVED'
     | 'CONFIRMED'
-    | 'ASSEMBLED'
-    | 'SHIPPED'
+    | 'UNDER_APPROVAL'
+    | 'APPROVED'
+    | 'PICKING'
+    | 'SHIPPING'
+    | 'DELIVERING'
     | 'DELIVERED'
     | 'CANCELLED'
     | 'REJECTED';
@@ -27,8 +30,11 @@ export const STATUS_LABEL: Record<string, string> = {
     SENT_TO_ERP: 'Sent to ERP',
     RESERVED: 'Reserved / Pending approval',
     CONFIRMED: 'Confirmed',
-    ASSEMBLED: 'Assembled',
-    SHIPPED: 'Shipped',
+    UNDER_APPROVAL: 'Being approved',
+    APPROVED: 'Approved',
+    PICKING: 'Assembling',
+    SHIPPING: 'Shipped',
+    DELIVERING: 'In delivery',
     DELIVERED: 'Delivered',
     CANCELLED: 'Cancelled',
     // Never show the internal ERP reason code/text here — customer-facing wording only (#204).
@@ -40,8 +46,11 @@ export const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'muted' | 'e
     SENT_TO_ERP: 'warning',
     RESERVED: 'warning',
     CONFIRMED: 'default',
-    ASSEMBLED: 'default',
-    SHIPPED: 'default',
+    UNDER_APPROVAL: 'warning',
+    APPROVED: 'default',
+    PICKING: 'default',
+    SHIPPING: 'default',
+    DELIVERING: 'default',
     DELIVERED: 'muted',
     CANCELLED: 'error',
     REJECTED: 'error',

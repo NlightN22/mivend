@@ -224,7 +224,7 @@ describe('deferred credit check over open orders (real SQL + decide)', () => {
     it('ignores orders ERP already confirmed (they are in the balance), other methods and dead payments', async () => {
         const buyer = await addBuyer(100_000);
         await addOrder(buyer, 90_000, { erpStatus: 'CONFIRMED' });
-        await addOrder(buyer, 90_000, { erpStatus: 'SHIPPED' });
+        await addOrder(buyer, 90_000, { erpStatus: 'SHIPPING' });
         await addOrder(buyer, 90_000, { erpStatus: 'CANCELLED' });
         await addOrder(buyer, 90_000, { method: 'offline-terms' });
         await addOrder(buyer, 90_000, { paymentState: 'Declined' });

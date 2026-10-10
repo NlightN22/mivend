@@ -26,6 +26,7 @@ import { DEFAULT_STOCK_TIER_LOW_MAX, DEFAULT_STOCK_TIER_MEDIUM_MAX } from './sto
 import { ProductVariantStockResolver } from './product-variant-stock.resolver';
 import { StockLevelService } from './stock-level.service';
 import { OrderCancelResultService } from './order-cancel-result.service';
+import { OrderErpStatusService } from './order-erp-status.service';
 import { OrderCancellationPortRegistry } from './order-cancellation.port';
 import { OrderCancellationService } from './order-cancellation.service';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
@@ -154,6 +155,7 @@ const adminApiSchema = gql`
         OrderCancellationPortRegistry,
         OrderCancellationService,
         OrderCancelResultService,
+        OrderErpStatusService,
         ReservationAvailabilityService,
         StockLevelService,
         ReservationExtensionLimitService,

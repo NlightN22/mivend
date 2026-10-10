@@ -6,6 +6,8 @@ import { ReservationWriteOffSyncService } from '../../reservation-write-off-sync
 import { ReservationReconciliationIssueService } from '../../reservation-reconciliation-issue.service';
 import { ReservationService } from '../../reservation.service';
 
+const orderErpStatus = { apply: vi.fn(async () => undefined) };
+
 // Real calculated getters installed, same technique as order-contract.service.test.ts's
 // loadedOrder (#205, 2ab4301) — a plain mock object never exercises this and misses this bug class.
 function loadedOrder(id: string, customFields: Record<string, unknown>): Order {
@@ -81,6 +83,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             reservationService as unknown as ReservationService,
             reconciliationIssueService as unknown as ReservationReconciliationIssueService,
             eventBus as never,
+            orderErpStatus as never,
         );
     });
 
@@ -972,11 +975,13 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         find: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
         count: ReturnType<typeof vi.fn>;
+        query: ReturnType<typeof vi.fn>;
     };
     let rawQuery: ReturnType<typeof vi.fn>;
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
         rawConnection: { query: ReturnType<typeof vi.fn> };
+        withTransaction: ReturnType<typeof vi.fn>;
     };
     let reservationService: { setOrderReservationState: ReturnType<typeof vi.fn> };
     let reconciliationIssueService: {
@@ -987,6 +992,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
     const ctx = {} as unknown as RequestContext;
 
     beforeEach(() => {
+        orderErpStatus.apply.mockClear();
         orderRepo = {
             findOne: vi.fn(async () => ({ id: 'order-1', customFields: {} })),
             save: vi.fn(async (x: unknown) => x),
@@ -996,6 +1002,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             find: vi.fn(async () => []),
             save: vi.fn(async (rows: unknown[]) => rows),
             count: vi.fn(async () => 0),
+            query: vi.fn(async () => undefined),
         };
         rawQuery = vi.fn(async () => [{ id: 'order-1' }]);
         connection = {
@@ -1003,6 +1010,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
                 entity?.name === 'Order' ? orderRepo : reservationRepo,
             ),
             rawConnection: { query: rawQuery },
+            withTransaction: vi.fn(async (c: unknown, work: (x: unknown) => unknown) => work(c)),
         };
         reservationService = { setOrderReservationState: vi.fn(async () => undefined) };
         reconciliationIssueService = {
@@ -1014,6 +1022,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             reservationService as unknown as ReservationService,
             reconciliationIssueService as unknown as ReservationReconciliationIssueService,
             { publish: vi.fn() } as never,
+            orderErpStatus as never,
         );
     });
 
@@ -1029,6 +1038,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
                 status: '',
                 reservedLines: [],
                 contractId: null,
+                derivedStatus: null,
             }),
         ).rejects.toThrow(/no Order found/);
         expect(reservationRepo.find).not.toHaveBeenCalled();
@@ -1041,6 +1051,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             status: 'В обработке',
             reservedLines: [],
             contractId: null,
+            derivedStatus: null,
         });
 
         expect(orderRepo.update).toHaveBeenCalledWith(
@@ -1060,6 +1071,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             status: '',
             reservedLines: [],
             contractId: 'contract-guid-1',
+            derivedStatus: null,
         });
 
         expect(orderRepo.update).toHaveBeenCalledWith(
@@ -1084,6 +1096,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             status: '',
             reservedLines: [],
             contractId: null,
+            derivedStatus: null,
         });
 
         const [, { customFields }] = orderRepo.update.mock.calls[0];
@@ -1104,6 +1117,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             status: 'X',
             reservedLines: [],
             contractId: 'c-1',
+            derivedStatus: null,
         });
 
         const [, { customFields }] = orderRepo.update.mock.calls[0];
@@ -1128,6 +1142,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             status: 'Проведён',
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             contractId: null,
+            derivedStatus: null,
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -1157,6 +1172,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             status: '',
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 3 }],
             contractId: null,
+            derivedStatus: null,
         });
 
         expect(reservationRepo.save).toHaveBeenCalledTimes(1);
@@ -1187,6 +1203,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             status: 'Проведён',
             reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 5 }],
             contractId: null,
+            derivedStatus: null,
         });
 
         expect(reservationRepo.save).not.toHaveBeenCalled();
@@ -1207,6 +1224,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
                 status: 'В обработке',
                 reservedLines: [],
                 contractId: 'contract-guid-1',
+                derivedStatus: null,
             }),
         ).resolves.toBeUndefined();
 
@@ -1232,6 +1250,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             status: '',
             reservedLines: [],
             contractId: null,
+            derivedStatus: null,
         });
 
         expect(rawQuery).toHaveBeenCalledWith(expect.stringContaining('customFieldsUuid'), [
@@ -1252,10 +1271,27 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             status: '',
             reservedLines: [],
             contractId: null,
+            derivedStatus: null,
         });
 
         expect(rawQuery).toHaveBeenCalledWith(expect.stringContaining('customFieldsErporderid'), [
             'erp-order-1',
         ]);
+    });
+
+    it('hands the derived status to the status service with the resolved order', async () => {
+        await service.handleOrderChanged(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            status: '',
+            reservedLines: [],
+            contractId: null,
+            derivedStatus: 'PICKING',
+        });
+        expect(orderErpStatus.apply).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ id: 'order-1' }),
+            'PICKING',
+        );
     });
 });
