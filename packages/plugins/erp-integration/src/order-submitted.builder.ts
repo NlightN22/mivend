@@ -11,13 +11,13 @@ import { outboundSend, outboundSkip, OutboundGateway } from './outbound-gateway'
 import type { OutboundBuildResult } from './outbound-gateway';
 import type { OrderSubmittedLine, OrderSubmittedPayload } from './schemas/order-submitted.schema';
 
-interface OrderSubmittedGroup {
-    warehouseId: string;
-    lines: OrderSubmittedLine[];
+interface ActiveReservations {
+    warehouseIdByLineId: Map<string, string>;
+    reserveUntil: Date | null;
 }
 
-// Builds the order.submitted payloads for one order, or a skip with the reason. Sent whole or not
-// at all: a partial order cannot be completed in the ERP later, a skipped one can be rebuilt.
+// Builds the single order.confirmed payload for one order, or a skip with the reason. Sent whole
+// or not at all: a partial order cannot be completed in the ERP later, a skipped one can be rebuilt.
 @Injectable()
 export class OrderSubmittedBuilder {
     constructor(
@@ -66,7 +66,11 @@ export class OrderSubmittedBuilder {
             order.customerId,
         );
         const priceTypeId = priceType?.externalId ?? null;
-        const warehouseIdByLineId = await this.loadWarehouseIdsByLine(ctx, orderId);
+        const { warehouseIdByLineId, reserveUntil } = await this.loadActiveReservations(
+            ctx,
+            orderId,
+        );
+        if (!reserveUntil) return outboundSkip('order has no active reservation');
         const productExternalIdByProductId = await this.loadProductExternalIds(
             order.lines.map(line => line.productVariant?.productId),
         );
@@ -78,7 +82,8 @@ export class OrderSubmittedBuilder {
         const packagesOnly = branchSettings?.packagesOnly === true;
 
         const unbuildable: string[] = [];
-        const groups = new Map<string, OrderSubmittedGroup>();
+        const lines: OrderSubmittedLine[] = [];
+        const quantityByWarehouse = new Map<string, number>();
         for (const line of order.lines) {
             const warehouseId = warehouseIdByLineId.get(String(line.id));
             const productId = line.productVariant?.productId
@@ -92,15 +97,14 @@ export class OrderSubmittedBuilder {
                 );
                 continue;
             }
-            let group = groups.get(warehouseId);
-            if (!group) {
-                group = { warehouseId, lines: [] };
-                groups.set(warehouseId, group);
-            }
+            quantityByWarehouse.set(
+                warehouseId,
+                (quantityByWarehouse.get(warehouseId) ?? 0) + line.quantity,
+            );
             const unitId = line.productVariant?.customFields?.defaultSalesUnitId;
             const ratio = line.productVariant?.customFields?.unitRatioToBase;
             const inSalesUnit = packagesOnly && !!unitId && !!ratio && ratio > 0 && ratio !== 1;
-            group.lines.push({
+            lines.push({
                 productId,
                 quantity: inSalesUnit
                     ? Math.round((line.quantity / ratio) * 1e6) / 1e6
@@ -114,31 +118,30 @@ export class OrderSubmittedBuilder {
             return outboundSkip(`cannot build order lines: ${unbuildable.join('; ')}`);
         }
 
-        // One payload per warehouse; the header organization is the contract's and the ERP
-        // distributes line organizations itself.
-        return outboundSend(
-            [...groups.values()].map(group => {
-                const payload: OrderSubmittedPayload = {
-                    eventId: randomUUID(),
-                    orderId: String(orderId),
-                    orderCode,
-                    orderUuid,
-                    orderNumber: orderCode,
-                    organizationId: contract.organizationId,
-                    contractId: contract.erpId,
-                    customerId: counterparty.erpId,
-                    warehouseId: group.warehouseId,
-                    lines: group.lines,
-                    submittedAt: new Date().toISOString(),
-                    totalWithTax: order.totalWithTax,
-                    currencyCode: order.currencyCode,
-                };
-                return {
-                    eventId: payload.eventId,
-                    payload: payload as unknown as Record<string, unknown>,
-                };
-            }),
-        );
+        // One warehouse per order: the one holding the most quantity, ties broken by id.
+        const [warehouseId] = [...quantityByWarehouse.entries()].sort(
+            ([idA, qtyA], [idB, qtyB]) => qtyB - qtyA || (idA < idB ? -1 : 1),
+        )[0];
+        const payload: OrderSubmittedPayload = {
+            eventId: randomUUID(),
+            orderId: String(orderId),
+            orderCode,
+            orderUuid,
+            orderNumber: orderCode,
+            organizationId: contract.organizationId,
+            contractId: contract.erpId,
+            customerId: counterparty.erpId,
+            warehouseId,
+            lines,
+            submittedAt: new Date().toISOString(),
+            totalWithTax: order.totalWithTax,
+            currencyCode: order.currencyCode,
+            type: 'confirmed',
+            reserveUntil: reserveUntil.toISOString(),
+        };
+        return outboundSend([
+            { eventId: payload.eventId, payload: payload as unknown as Record<string, unknown> },
+        ]);
     }
 
     // Blocks a second external effect for the same order (re-confirm, release-then-reconfirm,
@@ -150,19 +153,21 @@ export class OrderSubmittedBuilder {
     // non-failed prior entry for this order blocks a new submit.
     private async wasAlreadySubmitted(orderId: ID, order: Order): Promise<boolean> {
         if (order.customFields?.erpStatus === 'REJECTED') return false;
-        return this.outboundGateway.hasActiveEntryForOrder('order.submitted', String(orderId));
+        return this.outboundGateway.hasActiveEntryForOrder('order.confirmed', String(orderId));
     }
 
     // Only active reservations count; a released/expired one no longer reflects where the stock sits.
-    private async loadWarehouseIdsByLine(
+    private async loadActiveReservations(
         ctx: RequestContext,
         orderId: ID,
-    ): Promise<Map<string, string>> {
+    ): Promise<ActiveReservations> {
         const reservations = (await this.reservationService.findForOrder(ctx, orderId)).filter(
             r => r.status === 'active',
         );
-        const result = new Map<string, string>();
-        if (reservations.length === 0) return result;
+        const warehouseIdByLineId = new Map<string, string>();
+        if (reservations.length === 0) return { warehouseIdByLineId, reserveUntil: null };
+        // The earliest deadline: the ERP must never keep a reserve past ours.
+        const reserveUntil = new Date(Math.min(...reservations.map(r => r.expiresAt.getTime())));
 
         const stockLocationIds = [...new Set(reservations.map(r => r.stockLocationId))];
         const rows = await this.connection.rawConnection
@@ -179,9 +184,9 @@ export class OrderSubmittedBuilder {
         }
         for (const reservation of reservations) {
             const warehouseErpId = warehouseErpIdByLocationId.get(reservation.stockLocationId);
-            if (warehouseErpId) result.set(reservation.orderLineId, warehouseErpId);
+            if (warehouseErpId) warehouseIdByLineId.set(reservation.orderLineId, warehouseErpId);
         }
-        return result;
+        return { warehouseIdByLineId, reserveUntil };
     }
 
     // Product.customFields.externalId is not visible on the typed entity from this plugin's TS

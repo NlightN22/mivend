@@ -5,6 +5,7 @@ const ctx = {} as RequestContext;
 
 import { OrderSubmittedBuilder } from '../../order-submitted.builder';
 import type { OutboundBuildResult } from '../../outbound-gateway';
+import { ORDER_EVENTS_SCHEMA } from '../../schemas/order-events.schema';
 
 interface TestLine {
     id: string;
@@ -45,7 +46,12 @@ function makeOrder(
 
 function makeBuilder(options: {
     order: ReturnType<typeof makeOrder> | null;
-    reservations: Array<{ orderLineId: string; stockLocationId: string; status: string }>;
+    reservations: Array<{
+        orderLineId: string;
+        stockLocationId: string;
+        status: string;
+        expiresAt: Date;
+    }>;
     warehouseErpIdByLocationId: Record<string, string>;
     productExternalIds: Record<string, string>;
     counterparty: { erpId: string } | null;
@@ -123,6 +129,17 @@ function makeBuilder(options: {
     );
 }
 
+const reservation = (
+    orderLineId: string,
+    stockLocationId: string,
+    expiresAt = '2026-10-09T10:00:00.000Z',
+): { orderLineId: string; stockLocationId: string; status: string; expiresAt: Date } => ({
+    orderLineId,
+    stockLocationId,
+    status: 'active',
+    expiresAt: new Date(expiresAt),
+});
+
 const build = (builder: OrderSubmittedBuilder): Promise<OutboundBuildResult> =>
     builder.build(ctx, 'order-1', 'ORD-001');
 
@@ -143,7 +160,12 @@ describe('OrderSubmittedBuilder', () => {
             makeBuilder({
                 order: makeOrder([packLine()]),
                 reservations: [
-                    { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+                    {
+                        orderLineId: 'line-1',
+                        stockLocationId: 'location-1',
+                        status: 'active',
+                        expiresAt: new Date('2026-10-09T10:00:00.000Z'),
+                    },
                 ],
                 warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
                 productExternalIds: { 'v-1': 'product-1' },
@@ -196,7 +218,12 @@ describe('OrderSubmittedBuilder', () => {
         const builder = makeBuilder({
             order: makeOrder([line]),
             reservations: [
-                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+                {
+                    orderLineId: 'line-1',
+                    stockLocationId: 'location-1',
+                    status: 'active',
+                    expiresAt: new Date('2026-10-09T10:00:00.000Z'),
+                },
             ],
             warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
             productExternalIds: { 'v-1': 'product-1' },
@@ -225,7 +252,12 @@ describe('OrderSubmittedBuilder', () => {
         const builder = makeBuilder({
             order: makeOrder([goodLine, noWarehouseLine]),
             reservations: [
-                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+                {
+                    orderLineId: 'line-1',
+                    stockLocationId: 'location-1',
+                    status: 'active',
+                    expiresAt: new Date('2026-10-09T10:00:00.000Z'),
+                },
             ],
             warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
             productExternalIds: {
@@ -251,7 +283,12 @@ describe('OrderSubmittedBuilder', () => {
         const builder = makeBuilder({
             order: makeOrder([line]),
             reservations: [
-                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+                {
+                    orderLineId: 'line-1',
+                    stockLocationId: 'location-1',
+                    status: 'active',
+                    expiresAt: new Date('2026-10-09T10:00:00.000Z'),
+                },
             ],
             warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
             productExternalIds: { 'variant-product-1': 'product-1' },
@@ -300,7 +337,12 @@ describe('OrderSubmittedBuilder', () => {
         const builder = makeBuilder({
             order,
             reservations: [
-                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'released' },
+                {
+                    orderLineId: 'line-1',
+                    stockLocationId: 'location-1',
+                    status: 'released',
+                    expiresAt: new Date('2026-10-09T10:00:00.000Z'),
+                },
             ],
             warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
             productExternalIds: { 'variant-1': 'product-1' },
@@ -312,22 +354,22 @@ describe('OrderSubmittedBuilder', () => {
 
         expect(result).toEqual({
             kind: 'skip',
-            reason: expect.stringContaining('warehouseId=undefined'),
+            reason: 'order has no active reservation',
         });
     });
 
-    it('fans out into one payload per warehouse, all under the contract organization', async () => {
+    it('sends ONE payload per order in the warehouse holding the most quantity', async () => {
         const lines: TestLine[] = [
             { id: 'line-1', quantity: 1, productVariant: { productId: 'variant-1' } },
             { id: 'line-2', quantity: 3, productVariant: { productId: 'variant-2' } },
-            { id: 'line-3', quantity: 2, productVariant: { productId: 'variant-3' } },
+            { id: 'line-3', quantity: 1, productVariant: { productId: 'variant-3' } },
         ];
         const builder = makeBuilder({
             order: makeOrder(lines),
             reservations: [
-                { orderLineId: 'line-1', stockLocationId: 'location-A', status: 'active' },
-                { orderLineId: 'line-2', stockLocationId: 'location-B', status: 'active' },
-                { orderLineId: 'line-3', stockLocationId: 'location-A', status: 'active' },
+                reservation('line-1', 'location-A', '2026-10-09T12:00:00.000Z'),
+                reservation('line-2', 'location-B', '2026-10-09T10:00:00.000Z'),
+                reservation('line-3', 'location-A', '2026-10-09T11:00:00.000Z'),
             ],
             warehouseErpIdByLocationId: { 'location-A': 'wh-A', 'location-B': 'wh-B' },
             productExternalIds: {
@@ -343,12 +385,65 @@ describe('OrderSubmittedBuilder', () => {
 
         expect(result.kind).toBe('send');
         const events = (result as Extract<OutboundBuildResult, { kind: 'send' }>).events;
-        const payloads = events.map(
-            e => e.payload as { organizationId: string; warehouseId: string; lines: unknown[] },
-        );
-        expect(payloads.map(p => p.warehouseId).sort()).toEqual(['wh-A', 'wh-B']);
-        expect(payloads.every(p => p.organizationId === 'org-erp-1')).toBe(true);
-        expect(payloads.find(p => p.warehouseId === 'wh-A')?.lines).toHaveLength(2);
+        expect(events).toHaveLength(1);
+        const payload = events[0].payload as {
+            warehouseId: string;
+            lines: unknown[];
+            type: string;
+            reserveUntil: string;
+            eventId: string;
+        };
+        expect(payload).toMatchObject({
+            warehouseId: 'wh-B',
+            type: 'confirmed',
+            reserveUntil: '2026-10-09T10:00:00.000Z',
+        });
+        expect(payload.lines).toHaveLength(3);
+        expect(events[0].eventId).toBe(payload.eventId);
+    });
+
+    it('breaks a quantity tie by the lowest warehouse id', async () => {
+        const lines: TestLine[] = [
+            { id: 'line-1', quantity: 2, productVariant: { productId: 'variant-1' } },
+            { id: 'line-2', quantity: 2, productVariant: { productId: 'variant-2' } },
+        ];
+        const builder = makeBuilder({
+            order: makeOrder(lines),
+            reservations: [
+                reservation('line-1', 'location-B'),
+                reservation('line-2', 'location-A'),
+            ],
+            warehouseErpIdByLocationId: { 'location-A': 'wh-A', 'location-B': 'wh-B' },
+            productExternalIds: { 'variant-1': 'product-1', 'variant-2': 'product-2' },
+            counterparty: { erpId: 'counterparty-1' },
+            priceType: null,
+        });
+
+        const result = await build(builder);
+
+        const events = (result as Extract<OutboundBuildResult, { kind: 'send' }>).events;
+        expect((events[0].payload as { warehouseId: string }).warehouseId).toBe('wh-A');
+    });
+
+    it('produces a payload that validates against the confirmed branch of the union schema', async () => {
+        const builder = makeBuilder({
+            order: makeOrder([
+                { id: 'line-1', quantity: 2, productVariant: { productId: 'variant-1' } },
+            ]),
+            reservations: [reservation('line-1', 'location-A')],
+            warehouseErpIdByLocationId: { 'location-A': 'wh-A' },
+            productExternalIds: { 'variant-1': 'product-1' },
+            counterparty: { erpId: 'counterparty-1' },
+            priceType: null,
+        });
+
+        const result = (await build(builder)) as Extract<OutboundBuildResult, { kind: 'send' }>;
+        const payload = result.events[0].payload;
+        const [confirmed] = ORDER_EVENTS_SCHEMA.oneOf;
+
+        expect(confirmed.required.filter(key => payload[key] === undefined)).toEqual([]);
+        expect(payload.type).toBe(confirmed.properties.type.const);
+        expect(Number.isNaN(Date.parse(String(payload.reserveUntil)))).toBe(false);
     });
 
     it('skips a re-confirm (or release/expiry then reconfirm) of an already-queued order — issue #199', async () => {
@@ -360,7 +455,12 @@ describe('OrderSubmittedBuilder', () => {
         const builder = makeBuilder({
             order: makeOrder([line]),
             reservations: [
-                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+                {
+                    orderLineId: 'line-1',
+                    stockLocationId: 'location-1',
+                    status: 'active',
+                    expiresAt: new Date('2026-10-09T10:00:00.000Z'),
+                },
             ],
             warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
             productExternalIds: { 'variant-product-1': 'product-1' },
@@ -386,7 +486,12 @@ describe('OrderSubmittedBuilder', () => {
         const builder = makeBuilder({
             order: makeOrder([line], { selectedContractId: 'contract-1', erpStatus: 'REJECTED' }),
             reservations: [
-                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+                {
+                    orderLineId: 'line-1',
+                    stockLocationId: 'location-1',
+                    status: 'active',
+                    expiresAt: new Date('2026-10-09T10:00:00.000Z'),
+                },
             ],
             warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
             productExternalIds: { 'variant-product-1': 'product-1' },
@@ -409,7 +514,12 @@ describe('OrderSubmittedBuilder', () => {
         const builder = makeBuilder({
             order: makeOrder([line]),
             reservations: [
-                { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+                {
+                    orderLineId: 'line-1',
+                    stockLocationId: 'location-1',
+                    status: 'active',
+                    expiresAt: new Date('2026-10-09T10:00:00.000Z'),
+                },
             ],
             warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
             productExternalIds: { 'variant-product-1': 'product-1' },
@@ -421,6 +531,24 @@ describe('OrderSubmittedBuilder', () => {
         const result = await build(builder);
 
         expect(result.kind).toBe('send');
+    });
+
+    it('skips with a reason when the order has no active reservation (no reserveUntil)', async () => {
+        const builder = makeBuilder({
+            order: makeOrder([
+                { id: 'line-1', quantity: 1, productVariant: { productId: 'variant-1' } },
+            ]),
+            reservations: [],
+            warehouseErpIdByLocationId: {},
+            productExternalIds: { 'variant-1': 'product-1' },
+            counterparty: { erpId: 'counterparty-1' },
+            priceType: null,
+        });
+
+        expect(await build(builder)).toEqual({
+            kind: 'skip',
+            reason: 'order has no active reservation',
+        });
     });
 
     it('skips an order that cannot be found', async () => {

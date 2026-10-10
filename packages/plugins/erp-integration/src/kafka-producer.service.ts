@@ -6,6 +6,7 @@ import { SchemaRegistryClient } from './schema-registry.client';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 import { encodeConfluentMessage } from './wire-format';
+import { ORDER_EVENTS_TOPIC } from './schemas/order-events.schema';
 import type { OutboundEventSchema } from './schemas/registry';
 import { OUTBOUND_EVENT_SCHEMAS } from './schemas/registry';
 
@@ -23,26 +24,26 @@ export class KafkaProducerService implements OnModuleDestroy {
     // unreachable, send rejected) — the caller (IntegrationOutboxWorker) is responsible for
     // catching this and applying the retry/dead-letter policy; this method never swallows an
     // error itself (the no-silent-drops messaging invariant — no silent drops).
-    async publish(
-        eventId: string,
-        eventType: string,
-        payload: Record<string, unknown>,
-    ): Promise<void> {
+    async publish(eventType: string, payload: Record<string, unknown>): Promise<void> {
         const schemaEntry = this.resolveSchema(eventType);
-        const schemaId = await this.schemaRegistry.resolveSchemaId(eventType, schemaEntry.schema);
+        // The registry client appends "-value", giving the topic's union subject.
+        const schemaId = await this.schemaRegistry.resolveSchemaId(
+            ORDER_EVENTS_TOPIC,
+            schemaEntry.schema,
+        );
         const producer = await this.getProducer();
 
         await producer.send({
-            topic: this.options.kafka.topic,
+            topic: ORDER_EVENTS_TOPIC,
             // acks: -1 (all) — kafkajs requires this on every send() when the producer itself
             // was created with idempotent: true (see getProducer's own comment); it's a per-send
             // option in kafkajs's types, not part of ProducerConfig.
             acks: -1,
             messages: [
                 {
-                    key: eventId,
+                    key: String(payload.orderUuid),
                     value: encodeConfluentMessage(schemaId, payload),
-                    headers: { 'event-type': eventType },
+                    headers: { type: String(payload.type) },
                 },
             ],
         });

@@ -33,10 +33,10 @@ describe('issue links', () => {
     it('builds outbound links by event type and status', () => {
         expect(
             decodedFilters(
-                outboundProblemsLink({ eventType: 'order.submitted', status: 'skipped' }),
+                outboundProblemsLink({ eventType: 'order.confirmed', status: 'skipped' }),
             ),
         ).toEqual([
-            { id: 'eventType', value: { eq: 'order.submitted' } },
+            { id: 'eventType', value: { eq: 'order.confirmed' } },
             { id: 'status', value: { eq: 'skipped' } },
         ]);
     });

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ORDER_SUBMITTED_SCHEMA } from '../../../schemas/order-submitted.schema';
 import type { OrderSubmittedPayload } from '../../../schemas/order-submitted.schema';
+import { ORDER_EVENTS_SCHEMA, ORDER_EVENTS_TOPIC } from '../../../schemas/order-events.schema';
 import { encodeConfluentMessage } from '../../../wire-format';
 
 // Contract-compatibility pattern (docs/testing-patterns.md) — this is the boundary MiVend owns
@@ -9,7 +10,7 @@ import { encodeConfluentMessage } from '../../../wire-format';
 // needed: this checks the schema's own required-field/shape stability and the wire-format
 // envelope layout against a fixed fixture, same shape as plugin-sync's
 // sync-event-envelope.contract.test.ts.
-describe('order.submitted contract', () => {
+describe('order.confirmed contract (order-events topic)', () => {
     const FIXTURE: OrderSubmittedPayload = {
         eventId: '11111111-1111-1111-1111-111111111111',
         orderId: 'order-1',
@@ -37,6 +38,8 @@ describe('order.submitted contract', () => {
         submittedAt: '2026-08-12T00:00:00.000Z',
         totalWithTax: 10000,
         currencyCode: 'RUB',
+        type: 'confirmed',
+        reserveUntil: '2026-08-13T00:00:00.000Z',
     };
 
     it('declares every currently-required field, the consumer needs all of them (#203, #205)', () => {
@@ -94,5 +97,15 @@ describe('order.submitted contract', () => {
         expect(encoded.readUInt8(0)).toBe(0);
         expect(encoded.readUInt32BE(1)).toBe(7);
         expect(JSON.parse(encoded.subarray(5).toString('utf-8'))).toEqual(FIXTURE);
+    });
+
+    it('is a oneOf union discriminated by type, with reserveUntil mandatory on confirmed', () => {
+        const [confirmed, cancel] = ORDER_EVENTS_SCHEMA.oneOf;
+        expect(confirmed.properties.type).toEqual({ const: 'confirmed' });
+        expect(confirmed.required).toEqual(
+            expect.arrayContaining([...ORDER_SUBMITTED_SCHEMA.required, 'type', 'reserveUntil']),
+        );
+        expect(cancel.properties.type).toEqual({ const: 'cancel-requested' });
+        expect(ORDER_EVENTS_TOPIC).toBe('mivend.orders.events.v1.order-events');
     });
 });

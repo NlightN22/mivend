@@ -7,7 +7,7 @@ export type OutboundSchemaSource = 'contract' | 'local';
 // Name of each outbound event's JSON schema export in @nlightn22/event-contracts. Once the
 // installed package carries it, it wins over the local copy; delete the local file then.
 const CONTRACT_EXPORT: Record<OutboundEventType, string> = {
-    'order.submitted': 'ORDER_SUBMITTED_JSON_SCHEMA',
+    'order.confirmed': 'ORDER_EVENTS_JSON_SCHEMA',
 };
 
 export function resolveOutboundSchema(

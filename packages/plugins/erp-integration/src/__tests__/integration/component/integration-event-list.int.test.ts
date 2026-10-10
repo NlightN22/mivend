@@ -145,7 +145,7 @@ describe('listOutboxProblems', () => {
     async function seedOutbox(patch: Partial<IntegrationOutboxEntry>): Promise<void> {
         await dataSource.getRepository(IntegrationOutboxEntry).save({
             eventId: randomUUID(),
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             payload: { orderId: 'order-1', secretLine: 'must-not-leak' },
             status: 'pending',
             ...patch,

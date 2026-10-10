@@ -47,7 +47,7 @@ describe('IntegrationOutboxService atomicity (integration, real Postgres)', () =
     it('writes a row that commits normally', async () => {
         await dataSource.transaction(async em => {
             await outboxService.writeToOutbox(em, {
-                eventType: 'order.submitted',
+                eventType: 'order.confirmed',
                 payload: { orderId: 'order-1' },
             });
         });
@@ -55,7 +55,7 @@ describe('IntegrationOutboxService atomicity (integration, real Postgres)', () =
         const rows = await dataSource.getRepository(IntegrationOutboxEntry).find();
         expect(rows).toHaveLength(1);
         expect(rows[0].status).toBe('pending');
-        expect(rows[0].eventType).toBe('order.submitted');
+        expect(rows[0].eventType).toBe('order.confirmed');
     });
 
     it('a duplicate eventId inside the same transaction rolls back the whole transaction', async () => {
@@ -65,12 +65,12 @@ describe('IntegrationOutboxService atomicity (integration, real Postgres)', () =
             dataSource.transaction(async em => {
                 await outboxService.writeToOutbox(em, {
                     eventId: duplicateEventId,
-                    eventType: 'order.submitted',
+                    eventType: 'order.confirmed',
                     payload: { orderId: 'order-a' },
                 });
                 await outboxService.writeToOutbox(em, {
                     eventId: duplicateEventId,
-                    eventType: 'order.submitted',
+                    eventType: 'order.confirmed',
                     payload: { orderId: 'order-b' },
                 });
             }),
@@ -84,7 +84,7 @@ describe('IntegrationOutboxService atomicity (integration, real Postgres)', () =
         await expect(
             dataSource.transaction(async em => {
                 await outboxService.writeToOutbox(em, {
-                    eventType: 'order.submitted',
+                    eventType: 'order.confirmed',
                     payload: { orderId: 'order-never-persisted' },
                 });
                 throw new Error('simulated failure after the outbox write, before commit');

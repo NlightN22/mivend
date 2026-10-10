@@ -47,7 +47,7 @@ export class IntegrationOutboxProcessorService {
             if (!entry) return;
 
             try {
-                await this.kafkaProducer.publish(entry.eventId, entry.eventType, entry.payload);
+                await this.kafkaProducer.publish(entry.eventType, entry.payload);
                 await em.update(IntegrationOutboxEntry, entry.id, {
                     status: 'published',
                     publishedAt: new Date(),

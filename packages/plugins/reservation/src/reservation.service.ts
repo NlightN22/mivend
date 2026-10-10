@@ -129,7 +129,7 @@ export class ReservationService {
 
                     // mivend#85: this order's stock/warehouse facts are about to become final (see
                     // ErpExportDataMissingError's doc comment) — verify every piece of data
-                    // erp-integration's order.submitted event will need is already resolvable
+                    // erp-integration's order.confirmed event will need is already resolvable
                     // *before* writing any Reservation, rather than allowing a reservation that can
                     // never be reported to the ERP. Full-order-only, same as the stock/multiplicity checks.
                     const branchId = order.customFields.branchId ?? null;

@@ -144,10 +144,10 @@ describe('integrationOutboxHealth', () => {
     it('groups outbox rows per event type with pending, failed, oldest pending and last error', async () => {
         const repo = dataSource.getRepository(IntegrationOutboxEntry);
         await repo.save([
-            { eventId: randomUUID(), eventType: 'order.submitted', payload: {}, status: 'pending' },
+            { eventId: randomUUID(), eventType: 'order.confirmed', payload: {}, status: 'pending' },
             {
                 eventId: randomUUID(),
-                eventType: 'order.submitted',
+                eventType: 'order.confirmed',
                 payload: {},
                 status: 'failed',
                 retryCount: 5,
@@ -166,12 +166,12 @@ describe('integrationOutboxHealth', () => {
         const rows = await resolver.integrationOutboxHealth();
         const byType = Object.fromEntries(rows.map(r => [r.eventType, r]));
 
-        expect(byType['order.submitted']).toMatchObject({
+        expect(byType['order.confirmed']).toMatchObject({
             pending: 1,
             failed: 1,
             lastError: 'broker down',
         });
-        expect(byType['order.submitted'].oldestPendingAt).toBeInstanceOf(Date);
+        expect(byType['order.confirmed'].oldestPendingAt).toBeInstanceOf(Date);
         expect(byType['order.cancelled']).toMatchObject({ pending: 0, failed: 0, lastError: null });
     });
 
@@ -180,7 +180,7 @@ describe('integrationOutboxHealth', () => {
 
         expect(rows).toEqual([
             expect.objectContaining({
-                eventType: 'order.submitted',
+                eventType: 'order.confirmed',
                 pending: 0,
                 failed: 0,
                 skipped: 0,
@@ -191,7 +191,7 @@ describe('integrationOutboxHealth', () => {
     it('counts skipped rows separately and reports the last skip reason, not as a publish error', async () => {
         await dataSource.getRepository(IntegrationOutboxEntry).save({
             eventId: randomUUID(),
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             payload: { orderId: 'o-1' },
             status: 'skipped',
             lastError: 'line 1 has no organizationId',
@@ -199,7 +199,7 @@ describe('integrationOutboxHealth', () => {
         });
 
         const row = (await resolver.integrationOutboxHealth()).find(
-            r => r.eventType === 'order.submitted',
+            r => r.eventType === 'order.confirmed',
         )!;
 
         expect(row).toMatchObject({

@@ -24,7 +24,7 @@ describe('OutboundGateway.enqueue', () => {
         const { gateway, outbox } = makeGateway();
 
         const outcome = await gateway.enqueue({
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             subject,
             build: async () =>
                 outboundSend([{ payload: { a: 1 } }, { eventId: 'e-2', payload: { a: 2 } }]),
@@ -39,7 +39,7 @@ describe('OutboundGateway.enqueue', () => {
         const { gateway, outbox } = makeGateway();
 
         const outcome = await gateway.enqueue({
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             subject,
             build: async () => outboundSkip('no organizationId'),
         });
@@ -47,7 +47,7 @@ describe('OutboundGateway.enqueue', () => {
         expect(outcome).toBe('skipped');
         expect(outbox.writeToOutbox).not.toHaveBeenCalled();
         expect(outbox.writeSkipped).toHaveBeenCalledWith(expect.anything(), {
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             subject,
             reason: 'no organizationId',
         });
@@ -57,7 +57,7 @@ describe('OutboundGateway.enqueue', () => {
         const { gateway, outbox } = makeGateway();
 
         const outcome = await gateway.enqueue({
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             subject,
             build: async () => outboundSend([]),
         });
@@ -74,7 +74,7 @@ describe('OutboundGateway.enqueue', () => {
 
         await expect(
             gateway.enqueue({
-                eventType: 'order.submitted',
+                eventType: 'order.confirmed',
                 subject,
                 build: async () => {
                     throw new Error('db down');

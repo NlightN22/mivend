@@ -46,7 +46,7 @@ export const ORDER_SUBMITTED_SCHEMA = {
         // Counterparty.erpId for the order's customer — see CounterpartyService.getForCustomer.
         customerId: { type: 'string' },
         // The ERP warehouse (StockLocation.customFields.warehouseErpId) this payload's lines were
-        // allocated against — one payload per distinct warehouse.
+        // allocated against — one payload per order, one warehouse.
         warehouseId: { type: 'string' },
         lines: {
             type: 'array',
@@ -92,4 +92,6 @@ export interface OrderSubmittedPayload {
     customerId: string;
     warehouseId: string;
     lines: OrderSubmittedLine[];
+    type: 'confirmed';
+    reserveUntil: string;
 }

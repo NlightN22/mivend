@@ -15,7 +15,7 @@ export interface OrderRegistrationResultInput {
     orderUuid: string | null;
     // ERP-side order id — absent on a rejected result. Fallback correlation key only.
     orderEntityId: string | null;
-    // Original order.submitted request id, echoed back by the ERP — kept for error/log context.
+    // Original order.confirmed request id, echoed back by the ERP — kept for error/log context.
     requestEntityId: string | null;
     // Local Order id, resolved by the caller from requestEntityId via integration_outbox
     // (issue #204 follow-up). Preferred over orderEntityId whenever present.

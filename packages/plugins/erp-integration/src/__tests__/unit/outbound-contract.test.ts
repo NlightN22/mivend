@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveOutboundSchema } from '../../schemas/contract-schema';
-import { ORDER_SUBMITTED_SCHEMA } from '../../schemas/order-submitted.schema';
+import { ORDER_EVENTS_SCHEMA } from '../../schemas/order-events.schema';
 
 interface JsonSchemaNode {
     type?: string | string[];
@@ -56,33 +56,41 @@ const BUILDER_PAYLOAD = {
     submittedAt: '2026-10-08T09:06:46.376Z',
     totalWithTax: 101000,
     currencyCode: 'RUB',
+    type: 'confirmed',
+    reserveUntil: '2026-10-09T09:06:46.376Z',
 };
 
-describe('order.submitted outbound contract', () => {
-    const { schema, source } = resolveOutboundSchema('order.submitted', ORDER_SUBMITTED_SCHEMA);
+describe('order.confirmed outbound contract', () => {
+    const { schema, source } = resolveOutboundSchema('order.confirmed', ORDER_EVENTS_SCHEMA);
+    const branches = (schema as unknown as { oneOf: JsonSchemaNode[] }).oneOf;
+    const confirmed = branches[0];
 
     it('accepts the payload the builder produces', () => {
-        expect(violations(BUILDER_PAYLOAD, schema as JsonSchemaNode, '$')).toEqual([]);
+        expect(violations(BUILDER_PAYLOAD, confirmed, '$')).toEqual([]);
     });
 
     it('rejects a payload missing a field the consumer requires', () => {
         const withoutWarehouse: Record<string, unknown> = { ...BUILDER_PAYLOAD };
         delete withoutWarehouse.warehouseId;
-        expect(violations(withoutWarehouse, schema as JsonSchemaNode, '$')).toContain(
+        expect(violations(withoutWarehouse, confirmed, '$')).toContain(
             '$.warehouseId: required but missing',
         );
     });
 
-    it('requires the contract the order is registered under (local copy, package from 0.54.0)', () => {
-        const withoutContract: Record<string, unknown> = { ...BUILDER_PAYLOAD };
-        delete withoutContract.contractId;
-        expect(
-            violations(withoutContract, ORDER_SUBMITTED_SCHEMA as unknown as JsonSchemaNode, '$'),
-        ).toContain('$.contractId: required but missing');
+    it('requires reserveUntil and the type discriminator', () => {
+        const bare: Record<string, unknown> = { ...BUILDER_PAYLOAD };
+        delete bare.reserveUntil;
+        delete bare.type;
+        expect(violations(bare, confirmed, '$')).toEqual(
+            expect.arrayContaining([
+                '$.reserveUntil: required but missing',
+                '$.type: required but missing',
+            ]),
+        );
     });
 
     it('takes the schema from the contract package when it carries one, else the local copy', () => {
         expect(['contract', 'local']).toContain(source);
-        if (source === 'local') expect(schema).toBe(ORDER_SUBMITTED_SCHEMA);
+        if (source === 'local') expect(schema).toBe(ORDER_EVENTS_SCHEMA);
     });
 });

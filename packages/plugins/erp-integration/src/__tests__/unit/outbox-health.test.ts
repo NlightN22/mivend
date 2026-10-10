@@ -22,21 +22,21 @@ const row = (
 
 describe('mergeOutboxHealth', () => {
     it('lists a registered type with zeros when the outbox has no rows for it', () => {
-        expect(mergeOutboxHealth([], ['order.submitted'])).toEqual([
-            row('order.submitted', { schemaSource: 'contract' }),
+        expect(mergeOutboxHealth([], ['order.confirmed'])).toEqual([
+            row('order.confirmed', { schemaSource: 'local' }),
         ]);
     });
 
     it('keeps the database figures for a registered type', () => {
         const merged = mergeOutboxHealth(
-            [row('order.submitted', { skipped: 2 })],
-            ['order.submitted'],
+            [row('order.confirmed', { skipped: 2 })],
+            ['order.confirmed'],
         );
-        expect(merged).toEqual([row('order.submitted', { skipped: 2, schemaSource: 'contract' })]);
+        expect(merged).toEqual([row('order.confirmed', { skipped: 2, schemaSource: 'local' })]);
     });
 
     it('keeps a type that is in the outbox but no longer registered', () => {
-        const merged = mergeOutboxHealth([row('legacy.event', { failed: 1 })], ['order.submitted']);
-        expect(merged.map(r => r.eventType)).toEqual(['legacy.event', 'order.submitted']);
+        const merged = mergeOutboxHealth([row('legacy.event', { failed: 1 })], ['order.confirmed']);
+        expect(merged.map(r => r.eventType)).toEqual(['legacy.event', 'order.confirmed']);
     });
 });

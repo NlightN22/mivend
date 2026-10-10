@@ -65,7 +65,7 @@ async function insertRow(
     return repo().save(
         repo().create({
             eventId: randomUUID(),
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             payload: subject,
             status: 'pending',
             retryCount: 0,
@@ -144,7 +144,7 @@ describe('rebuildSkipped', () => {
 
     it('matches an already-sent event by the registry subject key against the real payload shape', async () => {
         const subjectKey: keyof OrderSubmittedPayload =
-            OUTBOUND_EVENT_TYPES['order.submitted'].subjectKey;
+            OUTBOUND_EVENT_TYPES['order.confirmed'].subjectKey;
         const realPayload: OrderSubmittedPayload = {
             eventId: randomUUID(),
             orderId: 'order-1',

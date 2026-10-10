@@ -22,7 +22,7 @@ type OutboundRebuilder = (
 export class IntegrationOutboxRecoveryService {
     // A new OutboundEventType is a compile error here until it has a rebuilder.
     private readonly rebuilders = {
-        'order.submitted': (ctx, subject) =>
+        'order.confirmed': (ctx, subject) =>
             this.orderSubmitted.build(ctx, String(subject.orderId), String(subject.orderCode)),
     } satisfies Record<OutboundEventType, OutboundRebuilder>;
 

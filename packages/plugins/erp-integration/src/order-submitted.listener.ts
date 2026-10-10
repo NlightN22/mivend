@@ -41,7 +41,7 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
             `reserve-order:${String(event.orderId)}`,
             txCtx =>
                 this.gateway.enqueue({
-                    eventType: 'order.submitted',
+                    eventType: 'order.confirmed',
                     subject: { orderId: String(event.orderId), orderCode: event.orderCode },
                     build: () => this.builder.build(txCtx, event.orderId, event.orderCode),
                 }),

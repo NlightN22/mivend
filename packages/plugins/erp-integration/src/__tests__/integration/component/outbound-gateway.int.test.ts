@@ -53,7 +53,7 @@ afterAll(async () => {
 describe('OutboundGateway (integration, real Postgres)', () => {
     it('records a skipped row with the reason and the subject, and the processor never publishes it', async () => {
         const outcome = await gateway.enqueue({
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             subject,
             build: async () => outboundSkip('line 1 has no organizationId'),
         });
@@ -63,7 +63,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
         expect(rows).toHaveLength(1);
         expect(rows[0]).toMatchObject({
             status: 'skipped',
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             payload: subject,
             lastError: 'line 1 has no organizationId',
         });
@@ -75,7 +75,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
 
     it('a successful build writes pending rows and no skipped row', async () => {
         await gateway.enqueue({
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             subject,
             build: async () => outboundSend([{ payload: { n: 1 } }, { payload: { n: 2 } }]),
         });
@@ -87,7 +87,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
     it('writes all events of one enqueue in one transaction: a failing second write leaves none', async () => {
         await expect(
             gateway.enqueue({
-                eventType: 'order.submitted',
+                eventType: 'order.confirmed',
                 subject,
                 build: async () =>
                     outboundSend([
@@ -105,7 +105,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
             dataSource.transaction(async em => {
                 await gateway.enqueue(
                     {
-                        eventType: 'order.submitted',
+                        eventType: 'order.confirmed',
                         subject,
                         build: async () => outboundSkip('reason'),
                     },
@@ -121,7 +121,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
     it('records a skipped row and rethrows when the builder throws', async () => {
         await expect(
             gateway.enqueue({
-                eventType: 'order.submitted',
+                eventType: 'order.confirmed',
                 subject,
                 build: async () => {
                     throw new Error('lookup failed');
@@ -142,7 +142,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
             dataSource.transaction(async em => {
                 await gateway.enqueue(
                     {
-                        eventType: 'order.submitted',
+                        eventType: 'order.confirmed',
                         subject,
                         build: async () => {
                             throw new Error('lookup failed');
@@ -163,21 +163,21 @@ describe('OutboundGateway (integration, real Postgres)', () => {
 
     it('hasActiveEntryForOrder matches only the given orderId and an active status', async () => {
         await gateway.enqueue({
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             subject: { orderId: 'order-active' },
             build: async () => outboundSend([{ payload: { orderId: 'order-active' } }]),
         });
         const [row] = await repo().find();
         await repo().update({ id: row.id }, { status: 'failed' });
         await gateway.enqueue({
-            eventType: 'order.submitted',
+            eventType: 'order.confirmed',
             subject: { orderId: 'order-other' },
             build: async () => outboundSend([{ payload: { orderId: 'order-other' } }]),
         });
 
-        expect(await gateway.hasActiveEntryForOrder('order.submitted', 'order-active')).toBe(false);
-        expect(await gateway.hasActiveEntryForOrder('order.submitted', 'order-other')).toBe(true);
-        expect(await gateway.hasActiveEntryForOrder('order.submitted', 'order-missing')).toBe(
+        expect(await gateway.hasActiveEntryForOrder('order.confirmed', 'order-active')).toBe(false);
+        expect(await gateway.hasActiveEntryForOrder('order.confirmed', 'order-other')).toBe(true);
+        expect(await gateway.hasActiveEntryForOrder('order.confirmed', 'order-missing')).toBe(
             false,
         );
     });
@@ -207,12 +207,12 @@ describe('OutboundGateway (integration, real Postgres)', () => {
     async function guardedSubmit(orderId: string): Promise<'queued' | 'skipped-already'> {
         const ctx = {} as RequestContext;
         return withAggregateLock(lockConnectionShim, ctx, `reserve-order:${orderId}`, async () => {
-            if (await gateway.hasActiveEntryForOrder('order.submitted', orderId)) {
+            if (await gateway.hasActiveEntryForOrder('order.confirmed', orderId)) {
                 return 'skipped-already';
             }
             await sleep(20);
             await gateway.enqueue({
-                eventType: 'order.submitted',
+                eventType: 'order.confirmed',
                 subject: { orderId },
                 build: async () => outboundSend([{ payload: { orderId } }]),
             });

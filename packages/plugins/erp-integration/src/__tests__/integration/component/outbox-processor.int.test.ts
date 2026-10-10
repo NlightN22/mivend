@@ -55,7 +55,7 @@ async function insertPending(
     const repo = dataSource.getRepository(IntegrationOutboxEntry);
     const entry = repo.create({
         eventId: overrides.eventId ?? randomUUID(),
-        eventType: 'order.submitted',
+        eventType: 'order.confirmed',
         payload: { orderId: 'order-1' },
         status: 'pending',
         retryCount: 0,
@@ -76,7 +76,7 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
         });
         expect(reloaded.status).toBe('published');
         expect(reloaded.publishedAt).not.toBeNull();
-        expect(publish).toHaveBeenCalledWith(entry.eventId, 'order.submitted', {
+        expect(publish).toHaveBeenCalledWith('order.confirmed', {
             orderId: 'order-1',
         });
     });

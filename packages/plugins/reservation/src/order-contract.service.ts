@@ -32,7 +32,7 @@ export interface OrderContractOption {
 const CHANGEABLE_ERP_STATUSES = [null, undefined, 'PENDING'];
 
 // The contract an order is registered under in the ERP (#205). It can change until the order has
-// been reserved, because reservation is what publishes order.submitted.
+// been reserved, because reservation is what publishes order.confirmed.
 @Injectable()
 export class OrderContractService {
     constructor(

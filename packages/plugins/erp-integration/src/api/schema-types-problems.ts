@@ -63,7 +63,7 @@ export const problemTypes = `
         firstFailedAt: DateTime
         nextRetryAt: DateTime
         createdAt: DateTime!
-        "Identifier of what the event is about (the order id for order.submitted)."
+        "Identifier of what the event is about (the order id for order.confirmed)."
         subjectId: String
     }
 

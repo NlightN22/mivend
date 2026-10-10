@@ -338,7 +338,7 @@ describe('ReservationService', () => {
         });
 
         // mivend#85: ReservationService.reserveOrder() gates on the same data
-        // erp-integration's order.submitted event needs, so a reservation the outbound event
+        // erp-integration's order.confirmed event needs, so a reservation the outbound event
         // could never report never gets written in the first place (see
         // ErpExportDataMissingError's doc comment).
         it('rejects the whole order when the customer has no Counterparty', async () => {

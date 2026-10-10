@@ -35,7 +35,7 @@ export interface ErpExportDataMissingLine {
 // mivend#85: reserveOrder() is the actual commit point for "which warehouse does this order's
 // stock come from" (see docs/order-flow.md's two-stage reservation model — Reservation, not
 // Vendure's native Allocation, is this project's real per-line warehouse fact). If the data
-// erp-integration's order.submitted event needs (a Counterparty for the customer, an ERP
+// erp-integration's order.confirmed event needs (a Counterparty for the customer, an ERP
 // externalId for the product, an ERP-synced warehouse for the resolved StockLocation) isn't
 // available yet, the order must not be reservable at all — surfacing this as a silently-skipped
 // outbound event later is what mivend#85 explicitly decided against. Full-order-only, same as
