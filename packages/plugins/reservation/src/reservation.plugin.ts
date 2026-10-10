@@ -29,6 +29,13 @@ import { OrderCancelResultService } from './order-cancel-result.service';
 import { OrderErpStatusService } from './order-erp-status.service';
 import { OrderCancellationPortRegistry } from './order-cancellation.port';
 import { OrderCancellationService } from './order-cancellation.service';
+import { OrderCancelEntryService } from './order-cancel-entry.service';
+import { adminCancelOrderSchema, shopCancelOrderSchema } from './order-cancel.schema';
+import {
+    AdminCancelOrderResolver,
+    CancelOrderResultResolver,
+    ShopCancelOrderResolver,
+} from './order-cancel.resolver';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
 import { ReservationExpiryService } from './reservation-expiry.service';
 import { createReservationExpiryTask } from './reservation-expiry.scheduled-task';
@@ -154,6 +161,7 @@ const adminApiSchema = gql`
         ReservationExpiryService,
         OrderCancellationPortRegistry,
         OrderCancellationService,
+        OrderCancelEntryService,
         OrderCancelResultService,
         OrderErpStatusService,
         ReservationAvailabilityService,
@@ -173,11 +181,19 @@ const adminApiSchema = gql`
         OrderCancelResultService,
     ],
     shopApiExtensions: {
-        resolvers: [ProductVariantStockResolver],
+        schema: shopCancelOrderSchema,
+        resolvers: [
+            ProductVariantStockResolver,
+            ShopCancelOrderResolver,
+            CancelOrderResultResolver,
+        ],
     },
     adminApiExtensions: {
-        schema: adminApiSchema,
-        resolvers: [ReservationResolver],
+        schema: gql`
+            ${adminApiSchema}
+            ${adminCancelOrderSchema}
+        `,
+        resolvers: [ReservationResolver, AdminCancelOrderResolver, CancelOrderResultResolver],
     },
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.Order = [

@@ -528,3 +528,12 @@ UI); (4) automatic prepaid path (`PaymentMethod` customFields, `EventBus` listen
 outbox integration for the reservation → "на согласование" transition; (6) pack-size/MOQ
 server-side validation; (7) deferred items (trusted-customer auto-confirm etc.) only after
 the above is stable.
+
+### Cancel entry points (#194)
+
+- Shop API `cancelOrder(code)` (owner only: another customer's order is "not found") and admin API
+  `cancelOrder(orderId)` (permission `CancelOrder`, order scope as for the order list) both call
+  `OrderCancellationService.cancel` with reason `customer-request` / `staff-request`.
+- The result is a union: `CancelOrderSuccess { outcome }` or `CancelOrderRefused { reason, message }`
+  with reason SHIPPED | IN_PROGRESS | PAID | REFUSED_BY_ERP | REGISTRATION_REJECTED. A refusal is
+  a result, not an exception. Rules: `docs/order-contracts.md`, "Cancellability" and "Who may cancel".
