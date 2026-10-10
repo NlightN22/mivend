@@ -20,6 +20,12 @@ export class OrderNotEligibleError extends Error {
     readonly code = 'ORDER_NOT_ELIGIBLE';
 }
 
+// Issue #211: thrown when no correlation key resolves to any local Order — lets the inbox
+// resolve it as a no-op after the retry budget, instead of dead-lettering forever.
+export class UnknownOrderUuidError extends Error {
+    readonly code = 'UNKNOWN_ORDER_UUID';
+}
+
 export interface ErpExportDataMissingLine {
     orderLineId: string;
     productVariantId: string;

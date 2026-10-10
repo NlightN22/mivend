@@ -293,6 +293,62 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
     });
 
+    // Issue #211: onBudgetExhausted reroutes a budget-exhausted markFailed to a noop outcome.
+    it('markFailed resolves as noop with the given reason once the budget is exhausted, when onBudgetExhausted is passed', async () => {
+        const row = await inboxService.enqueue({
+            stream: 'order-registration-result',
+            entityId: 'order-unknown',
+            version: '1',
+            sourceEventId: 'evt-unknown-order',
+            payload: { orderCode: 'ORD-UNKNOWN' },
+        });
+        await dataSource.query(
+            "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
+            [row.id],
+        );
+
+        await inboxService.markFailed(
+            row.id,
+            new Error('order-registration-result: no Order found'),
+            undefined,
+            {
+                outcome: 'noop',
+                reason: 'unknown order uuid',
+            },
+        );
+
+        const updated = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .findOneOrFail({ where: { id: row.id } });
+        expect(updated.status).toBe('processed');
+        expect(updated.outcome).toBe('noop');
+        expect(updated.outcomeReason).toBe('unknown order uuid');
+        expect(updated.processedAt).not.toBeNull();
+    });
+
+    // Default behaviour (no onBudgetExhausted) is unchanged — still dead-letters to failed.
+    it('markFailed still dead-letters to failed once the budget is exhausted, when onBudgetExhausted is omitted', async () => {
+        const row = await inboxService.enqueue({
+            stream: 'stock',
+            entityId: 's-genuine-failure',
+            version: '1',
+            sourceEventId: 'evt-genuine-failure',
+            payload: { sku: 'SKU-GF' },
+        });
+        await dataSource.query(
+            "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
+            [row.id],
+        );
+
+        await inboxService.markFailed(row.id, new Error('boom'));
+
+        const updated = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .findOneOrFail({ where: { id: row.id } });
+        expect(updated.status).toBe('failed');
+        expect(updated.outcome).not.toBe('noop');
+    });
+
     it('markProcessed sets status and processedAt', async () => {
         const row = await inboxService.enqueue({
             stream: 'category',

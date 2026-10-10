@@ -6,6 +6,7 @@ import {
     testDataSourceConnectionOptions,
     testSchemaOptions,
 } from 'shared';
+import { UnknownOrderUuidError } from '@mivend/plugin-reservation';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import { makeInboxProcessor } from './inbox-processor-helpers';
@@ -337,5 +338,84 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         expect(updated.status).toBe('pending');
         expect(updated.attempts).toBe(1);
         expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    // Issue #211: no local Order matches any correlation key — these prove the budget gate.
+    describe('UnknownOrderUuidError (issue #211)', () => {
+        it('still retries with backoff like any other error while inside the retry budget', async () => {
+            const apply = vi
+                .fn()
+                .mockRejectedValue(
+                    new UnknownOrderUuidError('no Order found via orderUuid=unknown'),
+                );
+            const row = await inboxService.enqueue({
+                stream: 'order-registration-result',
+                entityId: 'order-unknown',
+                version: '1',
+                sourceEventId: 'evt-unknown-fresh',
+                payload: { orderCode: 'ORD-UNKNOWN' },
+            });
+
+            await makeProcessor(apply).processPendingBatch();
+
+            const updated = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .findOneOrFail({ where: { id: row.id } });
+            expect(updated.status).toBe('pending');
+            expect(updated.attempts).toBe(1);
+            expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
+        });
+
+        it('resolves as a noop with reason "unknown order uuid" once the retry budget is exhausted', async () => {
+            const apply = vi
+                .fn()
+                .mockRejectedValue(
+                    new UnknownOrderUuidError('no Order found via orderUuid=unknown'),
+                );
+            const row = await inboxService.enqueue({
+                stream: 'order-changed',
+                entityId: 'order-unknown-old',
+                version: '1',
+                sourceEventId: 'evt-unknown-old',
+                payload: { orderEntityId: 'order-unknown-old' },
+            });
+            // First failure more than 24h ago: the retry budget is spent.
+            await dataSource.query(
+                "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
+                [row.id],
+            );
+
+            await makeProcessor(apply).processPendingBatch();
+
+            const updated = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .findOneOrFail({ where: { id: row.id } });
+            expect(updated.status).toBe('processed');
+            expect(updated.outcome).toBe('noop');
+            expect(updated.outcomeReason).toBe('unknown order uuid');
+        });
+
+        it('leaves a genuine race (a plain Error, not UnknownOrderUuidError) dead-lettering to failed after the same budget', async () => {
+            const apply = vi.fn().mockRejectedValue(new Error('order not yet created locally'));
+            const row = await inboxService.enqueue({
+                stream: 'order-changed',
+                entityId: 'order-race',
+                version: '1',
+                sourceEventId: 'evt-race-old',
+                payload: { orderEntityId: 'order-race' },
+            });
+            await dataSource.query(
+                "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
+                [row.id],
+            );
+
+            await makeProcessor(apply).processPendingBatch();
+
+            const updated = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .findOneOrFail({ where: { id: row.id } });
+            expect(updated.status).toBe('failed');
+            expect(updated.outcome).not.toBe('noop');
+        });
     });
 });

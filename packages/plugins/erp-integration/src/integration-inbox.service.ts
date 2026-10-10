@@ -208,13 +208,24 @@ export class IntegrationInboxService {
     }
 
     // Every failure retries with backoff (nextRetryAt) and dead-letters only once 24h have passed
-    // since its first failure — one policy for all streams and error kinds (#145).
-    async markFailed(id: number, error: Error, random: () => number = Math.random): Promise<void> {
+    // since its first failure — one policy for all streams and error kinds (#145). Issue #211:
+    // `onBudgetExhausted` lets one error kind resolve to a noop instead, once that budget runs out.
+    async markFailed(
+        id: number,
+        error: Error,
+        random: () => number = Math.random,
+        onBudgetExhausted: { outcome: 'noop'; reason: string } | null = null,
+    ): Promise<void> {
         const repo = this.dataSource.getRepository(IntegrationInboxEvent);
         const row = await repo.findOneOrFail({ where: { id } });
         const attempts = row.attempts + 1;
         const firstFailedAt = row.firstFailedAt ?? new Date();
         if (Date.now() - firstFailedAt.getTime() > INBOX_RETRY_WALL_CLOCK_BUDGET_MS) {
+            if (onBudgetExhausted) {
+                await repo.update({ id }, { attempts, lastError: error.message, firstFailedAt });
+                await this.markProcessed(id, onBudgetExhausted.outcome, onBudgetExhausted.reason);
+                return;
+            }
             await repo.update(
                 { id },
                 { attempts, lastError: error.message, status: 'failed', nextRetryAt: null },

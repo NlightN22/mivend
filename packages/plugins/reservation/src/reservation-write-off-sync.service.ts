@@ -6,6 +6,7 @@ import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssueService } from './reservation-reconciliation-issue.service';
 import { ReservationService } from './reservation.service';
+import { UnknownOrderUuidError } from './reservation-errors';
 import { loggerCtx } from './types';
 
 export interface OrderRegistrationResultInput {
@@ -99,9 +100,9 @@ export class ReservationWriteOffSyncService {
             ? await this.connection.getRepository(ctx, Order).findOne({ where: { id: orderId } })
             : null;
         if (!orderId || !order) {
-            // mivend.audit.72 + issue #204 follow-up: never a silent, permanent skip — all
-            // correlation keys can race ahead of local state, so throw and let the inbox retry.
-            throw new Error(
+            // mivend.audit.72 + issue #204 follow-up + issue #211: never a silent, permanent skip
+            // — throw a distinguishable type (see its own doc comment) and let the inbox retry.
+            throw new UnknownOrderUuidError(
                 `order-registration-result: no Order found via orderUuid=${input.orderUuid ?? ''}, ` +
                     `requestEntityId=${input.requestEntityId ?? ''} or orderEntityId=${input.orderEntityId ?? ''}`,
             );
@@ -205,9 +206,8 @@ export class ReservationWriteOffSyncService {
             : null;
         if (!orderId || !order) {
             // Same cross-entity-dependency retry rule as handleOrderRegistrationResult above
-            // (external-integration-rules skill): an order-changed event can race ahead of local
-            // order creation — never a silent, permanent skip.
-            throw new Error(
+            // (external-integration-rules skill) — issue #211: same distinguishable error type.
+            throw new UnknownOrderUuidError(
                 `order-changed: no Order found via orderUuid=${input.orderUuid ?? ''} or ` +
                     `orderEntityId=${input.orderEntityId}`,
             );

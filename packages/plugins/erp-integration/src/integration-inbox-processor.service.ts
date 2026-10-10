@@ -34,6 +34,8 @@ import { LegalFormStreamHandler } from './handlers/legal-form.handler';
 import { UserStreamHandler } from './handlers/user.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
+import { UnknownOrderUuidError } from '@mivend/plugin-reservation';
+
 import { IntegrationInboxService } from './integration-inbox.service';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { MissingDependencyError, loggerCtx } from './types';
@@ -208,7 +210,13 @@ export class IntegrationInboxProcessorService {
             const message = `Failed processing ${row.stream} entityId=${row.entityId} (attempt ${row.attempts + 1}): ${error.message}`;
             if (error instanceof MissingDependencyError) Logger.warn(message, loggerCtx);
             else Logger.error(message, loggerCtx);
-            await this.inbox.markFailed(row.id, error);
+            // Issue #211: an order uuid unknown to this instance resolves as a noop once the
+            // usual retry budget is exhausted, instead of dead-lettering forever.
+            const onBudgetExhausted =
+                error instanceof UnknownOrderUuidError
+                    ? { outcome: 'noop' as const, reason: 'unknown order uuid' }
+                    : null;
+            await this.inbox.markFailed(row.id, error, undefined, onBudgetExhausted);
             return false;
         }
     }
