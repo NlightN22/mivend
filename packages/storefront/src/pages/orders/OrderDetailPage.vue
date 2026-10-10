@@ -113,7 +113,13 @@ function formatDate(iso: string): string {
                             </div>
                         </div>
 
-                        <div v-if="order.shippingAddress" class="od-address-card">
+                        <div
+                            v-if="
+                                order.shippingAddress?.streetLine1 ||
+                                order.shippingAddress?.fullName
+                            "
+                            class="od-address-card"
+                        >
                             <h2 class="od-section-title">Delivery address</h2>
                             <div class="od-address-line">{{ order.shippingAddress.fullName }}</div>
                             <div class="od-address-line">
@@ -132,18 +138,11 @@ function formatDate(iso: string): string {
                         </div>
 
                         <div
-                            v-if="order.customFields?.erpOrderId || order.customFields?.erpStatus"
+                            v-if="erpDocumentStatusLabel(order.customFields?.erpOrderStatus)"
                             class="od-erp-card"
                         >
-                            <h2 class="od-section-title">ERP</h2>
-                            <div v-if="order.customFields?.erpOrderId" class="od-erp-row">
-                                <span>ERP ID</span>
-                                <span class="od-erp-val">{{ order.customFields?.erpOrderId }}</span>
-                            </div>
-                            <div
-                                v-if="erpDocumentStatusLabel(order.customFields?.erpOrderStatus)"
-                                class="od-erp-row"
-                            >
+                            <h2 class="od-section-title">Document</h2>
+                            <div class="od-erp-row">
                                 <span>Document status</span>
                                 <span class="od-erp-val">{{
                                     erpDocumentStatusLabel(order.customFields?.erpOrderStatus)
