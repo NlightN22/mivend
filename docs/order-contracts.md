@@ -197,11 +197,13 @@ send our statuses). Source on the ERP side: the integration-service design doc, 
 | Assembled (in progress) | `hasOrder` = true, `hasRealization` = false | a posted warehouse order based on the order |
 | Shipped | `hasRealization` = true | a posted sales document of the order (the order is linked to it through the deal field, through the warehouse order, or through the transfer of goods; the ERP uses its native method, not the deal field alone) |
 | Cancelled | `markedForDeletion` = true (wins over the others) | deletion mark on the order; NOT `isDeleted`, which only marks a tombstone of the stream record |
-| Delivered | **not decided** | route sheet -> waybill with a "completed" flag exist in the ERP; whether to add `inDelivery`/`delivered` is open |
+| In delivery | `inDelivery` = true | the order's sales document is in a route sheet and a waybill of that route sheet is not completed |
+| Delivered | `delivered` = true | all waybills of the order are completed (waybill status "processed" or the arrival date filled, as the ERP itself counts); a sales document outside any route sheet (pickup) is NOT delivered by this fact, mivend decides what that means |
 
 - `status` is the raw enum value name; the list of values is open, so consumers must tolerate unknown values.
 - The ERP's own operational-status enum/register is NOT used (under development on the ERP side).
-- The exchange scope grows by warehouse orders and sales documents; only documents of mivend orders are queued.
+- The exchange scope grows by warehouse orders, sales documents, route sheets and waybills; only documents of mivend orders are queued.
+- All facts (`hasOrder`, `hasRealization`, `markedForDeletion`, `inDelivery`, `delivered`) ship in one event-contracts version (owner decision).
 - Cancellation rules (who may cancel and when) are derived from these facts and are fixed in a separate section once
   the facts are live.
 
