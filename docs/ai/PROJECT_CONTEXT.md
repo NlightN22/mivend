@@ -1,6 +1,14 @@
 # Project Context
 
-Updated: 2026-10-10 10:15
+Updated: 2026-10-10 13:35
+
+## #194 reserve deadline / order cancel (2026-10-10, IN PROGRESS: stage 1 committed locally, not pushed, issue open)
+
+- **Decisions (docs/order-contracts.md "Order events topic and warehouse semantics")**: one topic `mivend.orders.events.v1.order-events` (key `orderUuid`, `type` in body + header, one subject, `oneOf` union, event-contracts 0.59.0 published), types `confirmed` (+ mandatory `reserveUntil`) and `cancel-requested`; ONE `confirmed` per order with ONE `warehouseId`, no `registrationUuid`, no per-line warehouse; old `order.submitted` topic dropped at once (integration contour, no dual-publish). ERP answers on `company.orders.events.v1.order-cancel-result` (per `orderUuid`, cancelled|rejected). Topic + ACLs exist on the broker; consumer group is the existing hub group. Search-platform side (consumer, tombstone, cancel command) is done by `sp.issue.178-179`, not by us; the ERP will switch to the standard autoreserve later (until then the reserve lands on the warehouse we send).
+- **Stage 1 DONE** (`ba394eee`, lint/test/test-int green): builder emits one `confirmed` per order (warehouse = largest total quantity, `reserveUntil` = earliest active `expiresAt`, skip without reservation), producer publishes only to the new topic, `order.submitted` renamed `order.confirmed` in the outbox registry. Uses a local mirror schema `schemas/order-events.schema.ts`.
+- **Next**: (1) bump `@nlightn22/event-contracts` to `^0.59.0` in erp-integration `package.json` (currently `^0.57.0`) and replace the mirror with the package import (health test expects schema source `contract` again); (2) docs still say `order.submitted` (`order-flow.md`, `order-contracts.md`, `cross-system-verification.md`); (3) stage 2: `OrderCancellationService` under lock `reserve-order:<id>` sending `cancel-requested`; (4) stage 3: consume `order-cancel-result`, expiry task cancels pending/unregistered orders instead of returning to AWAITING_CONFIRMATION, migration for cancel fields; (5) stage 4: exclude cancelled orders from `OpenDeferredExposureService`, cancel button. Tell `sp.issue.178-179` when the producer is ready so they deploy their consumer.
+- **Rules saved**: topic-design rule (one stream per entity, not per event type) in `external-integration-rules` skill + global `audit`/`consumer-resilience-audit`.
+- **Known gaps**: `options.kafka.topic` unused leftover; old `integration_outbox` rows of type `order.submitted` are unregistered (fine on the contour); organization vs storage-place choice per line is not coordinated with the ERP (candidate separate issue).
 
 ## #208 cross-system verification pass + spun-off hardening (2026-10-09/10, shipped, pushed to 0831616; #209/#211/#212 closed)
 
