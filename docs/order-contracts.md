@@ -188,22 +188,30 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
 ### ERP order statuses (agreed with the ERP side, owner-confirmed; contract + exchange change is sp#189, not live yet)
 
 The ERP publishes **facts** on `order-changed`; mivend builds its own `erpOrderStatus` from them (the ERP does not
-send our statuses). Source on the ERP side: the integration-service design doc, section "order statuses on the ERP side".
+send our statuses). Names are "process" names on purpose: an order has several warehouse orders and as many sales
+documents, so "fully assembled / fully shipped" cannot be known until the last document and is not tracked.
+Source on the ERP side: the integration-service design doc, section "order statuses on the ERP side".
 
-| mivend state | ERP fact (on `order-changed`) | Underlying ERP objects |
+Priority, highest first (the first matching fact wins):
+
+| `erpOrderStatus` | ERP fact (on `order-changed`) | Underlying ERP objects |
 | --- | --- | --- |
-| Under approval | `status` = "pending approval" | processing-status enum value |
-| Approved | `status` = "approved" | processing-status enum value |
-| Assembled (in progress) | `hasOrder` = true, `hasRealization` = false | a posted warehouse order based on the order |
-| Shipped | `hasRealization` = true | a posted sales document of the order (the order is linked to it through the deal field, through the warehouse order, or through the transfer of goods; the ERP uses its native method, not the deal field alone) |
-| Cancelled | `markedForDeletion` = true (wins over the others) | deletion mark on the order; NOT `isDeleted`, which only marks a tombstone of the stream record |
-| In delivery | `inDelivery` = true | the order's sales document is in a route sheet and a waybill of that route sheet is not completed |
-| Delivered | `delivered` = true | all waybills of the order are completed (waybill status "processed" or the arrival date filled, as the ERP itself counts); a sales document outside any route sheet (pickup) is NOT delivered by this fact, mivend decides what that means |
+| CANCELLED | `markedForDeletion` = true | deletion mark on the order; NOT `isDeleted`, which only marks a tombstone of the stream record |
+| DELIVERED | `delivered` = true | all waybills of the order are completed (status "processed" or the arrival date filled, as the ERP counts); a sales document outside any route sheet (pickup) is NOT delivered by this fact |
+| DELIVERING | `inDelivery` = true | the order's sales document is in a route sheet and a waybill of it is not completed (a route sheet shared with other orders and without a waybill is neither DELIVERING nor DELIVERED) |
+| SHIPPING | `hasRealization` = true | at least one posted sales document of the order (linked through the deal field); pickup stays here |
+| PICKING | `hasOrder` = true, no sales document yet | at least one posted outgoing warehouse order (receipt-type orders under the same order are ignored) |
+| APPROVED | `status` = "approved" | processing-status enum value |
+| UNDER_APPROVAL | `status` = "pending approval" | processing-status enum value |
 
-- `status` is the raw enum value name; the list of values is open, so consumers must tolerate unknown values.
+- `status` is the raw enum value name; the list of values is open, so consumers must tolerate unknown values. For
+  retail orders without a warehouse order `status` stays "pending approval" even after a sales document is posted,
+  so it never shows shipping on its own.
 - The ERP's own operational-status enum/register is NOT used (under development on the ERP side).
-- The exchange scope grows by warehouse orders, sales documents, route sheets and waybills; only documents of mivend orders are queued.
-- All facts (`hasOrder`, `hasRealization`, `markedForDeletion`, `inDelivery`, `delivered`) ship in one event-contracts version (owner decision).
+- The exchange scope grows by warehouse orders, sales documents, route sheets and waybills; only documents of mivend
+  orders are queued. All facts ship in one event-contracts version (owner decision).
+- Code still uses the older placeholders `ASSEMBLED`/`SHIPPED`/`DELIVERED` (`order-cancellation.decision.ts`); they
+  are renamed to these names when the facts are consumed.
 - Cancellation rules (who may cancel and when) are derived from these facts and are fixed in a separate section once
   the facts are live.
 
