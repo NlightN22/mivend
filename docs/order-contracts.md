@@ -195,8 +195,9 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
 - **Historical ERP orders without a mivend `orderUuid`** (created in the ERP by managers before mivend
   existed): the ERP keeps sending `order-changed` for them. mivend does not need them now; they will be needed
   so customers can view their own historical documents. No decision yet on linking them to customers/orders.
-  Until then the consumer treats them as an unknown order: retried within the usual 24 h budget, then resolved
-  as a `noop` (never dead-lettered, never retried forever).
+  Until then the consumer ignores an `order-changed` without an `orderUuid` that matches no local order
+  (`erpOrderId`) as a `noop` at once, with the reason recorded; one carrying an unknown `orderUuid` still retries
+  within the usual 24 h budget (#211).
 
 - Contracts with dedicated sub-limits (amount, term) inside the total credit limit, and contracts
   restricted to brands or positions. Credit limits stay counterparty-wide (see #48).

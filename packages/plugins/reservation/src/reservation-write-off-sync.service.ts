@@ -211,6 +211,16 @@ export class ReservationWriteOffSyncService {
         );
     }
 
+    // An order-changed without an orderUuid for an ERP order we never registered (#194): the ERP
+    // keeps sending its own historical orders, there is nothing to apply and nothing to wait for.
+    async isUnmatchedLegacyOrder(
+        orderUuid: string | null,
+        orderEntityId: string,
+    ): Promise<boolean> {
+        if (orderUuid) return false;
+        return (await this.findOrderIdByErpId(orderEntityId)) === null;
+    }
+
     // Issue #110: bridges company.orders.events.v1.order-changed. Only the FK resolve (entityId
     // → productId, both handled by the caller, erp-integration's OrderChangedStreamHandler) and
     // the informational customFields differ from handleOrderRegistrationResult above — the actual

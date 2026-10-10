@@ -69,6 +69,12 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         // not registered through our integration, never a zero-value.
         const orderUuid = payload.orderUuid != null ? String(payload.orderUuid) : null;
 
+        if (await this.reservationWriteOffSyncService.isUnmatchedLegacyOrder(orderUuid, entityId)) {
+            return inboundNoop(
+                `order-changed ${entityId}: ERP order without a mivend orderUuid and no local order, ignored`,
+            );
+        }
+
         const rawLines = Array.isArray(payload.lines) ? payload.lines : [];
         const reservedLines: Array<{ productVariantId: string; reservedQuantity: number }> = [];
         let linesWithoutProductId = 0;
