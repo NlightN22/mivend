@@ -146,6 +146,8 @@ describe('rebuildSkipped', () => {
         const subjectKey: keyof OrderSubmittedPayload =
             OUTBOUND_EVENT_TYPES['order.confirmed'].subjectKey;
         const realPayload: OrderSubmittedPayload = {
+            type: 'confirmed',
+            reserveUntil: new Date().toISOString(),
             eventId: randomUUID(),
             orderId: 'order-1',
             orderCode: 'ORD-1',
