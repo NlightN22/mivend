@@ -15,9 +15,14 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             createQueryBuilder: ReturnType<typeof vi.fn>;
             update: ReturnType<typeof vi.fn>;
         };
-        txOrderRepo: { find: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+        txOrderRepo: {
+            find: ReturnType<typeof vi.fn>;
+            findOne: ReturnType<typeof vi.fn>;
+            update: ReturnType<typeof vi.fn>;
+        };
         notificationService: { create: ReturnType<typeof vi.fn> };
         eventBus: { publish: ReturnType<typeof vi.fn> };
+        cancellation: { cancel: ReturnType<typeof vi.fn> };
     } {
         // expireDueReservations reads the TTL-due rows and (only when REJECTED orders were
         // found) the REJECTED-due rows via createQueryBuilder().setLock(...).getMany() — see
@@ -45,6 +50,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
                 orderFindCall += 1;
                 return orderFindCall === 1 ? rejectedOrders : orderRows;
             }),
+            findOne: vi.fn(async () => orderRows[0] ?? null),
             update: vi.fn(async (x: unknown) => x),
         };
         const manager = {
@@ -54,7 +60,11 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         };
         const dataSource = {
             transaction: vi.fn(async (work: (m: unknown) => unknown) => work(manager)),
+            getRepository: vi.fn(() => txReservationRepo),
         } as unknown as DataSource;
+        const cancellation = {
+            cancel: vi.fn(async () => ({ kind: 'cancelled', eventSent: false })),
+        };
         const requestContextService = { create: vi.fn(async () => ({})) };
         const notificationService = { create: vi.fn(async () => ({})) };
         const eventBus = { publish: vi.fn() };
@@ -64,22 +74,40 @@ describe('ReservationExpiryService.expireDueReservations', () => {
                 requestContextService as never,
                 notificationService as never,
                 eventBus as never,
+                cancellation as never,
             ),
             txReservationRepo,
             txOrderRepo,
             notificationService,
             eventBus,
+            cancellation,
         };
     }
 
-    it('expires past-due reservations and returns their orders to AWAITING_CONFIRMATION', async () => {
+    it('cancels each due order once through the cancellation service, never touching the order itself', async () => {
         const dueRows = [
             { id: 'res-1', orderId: 'order-1', creationMethod: 'manual' },
-            { id: 'res-2', orderId: 'order-2', creationMethod: 'manual' },
+            { id: 'res-2', orderId: 'order-1', creationMethod: 'manual' },
+            { id: 'res-3', orderId: 'order-2', creationMethod: 'manual' },
         ];
-        const { service, txReservationRepo, txOrderRepo } = createService(dueRows, [
-            // erpStatus/erpOrderId simulate fields a concurrent writer (ErpOrderService) could
-            // hold — a stale snapshot spread would erase them (#209).
+        const { service, txOrderRepo, cancellation } = createService(dueRows);
+
+        const count = await service.expireDueReservations();
+
+        expect(count).toBe(3);
+        expect(cancellation.cancel).toHaveBeenCalledTimes(2);
+        expect(cancellation.cancel).toHaveBeenCalledWith(
+            expect.anything(),
+            'order-1',
+            'reserve-expired',
+            { requestRegistered: false },
+        );
+        expect(txOrderRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('returns an order that cannot be cancelled automatically to AWAITING_CONFIRMATION, writing only the changed key (#209)', async () => {
+        const dueRows = [{ id: 'res-1', orderId: 'order-1', creationMethod: 'manual' }];
+        const { service, txReservationRepo, txOrderRepo, cancellation } = createService(dueRows, [
             {
                 id: 'order-1',
                 customFields: {
@@ -88,17 +116,86 @@ describe('ReservationExpiryService.expireDueReservations', () => {
                     erpOrderId: 'erp-1',
                 },
             },
-            { id: 'order-2', customFields: { reservationState: 'FAILED' } },
         ]);
+        cancellation.cancel.mockResolvedValue({ kind: 'not-cancellable', reason: 'paid' });
 
         const count = await service.expireDueReservations();
 
-        expect(count).toBe(2);
-        expect(txReservationRepo.update).toHaveBeenCalled();
-        expect(txOrderRepo.update).toHaveBeenCalledTimes(1);
+        expect(count).toBe(1);
+        expect(txReservationRepo.update).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'active' }),
+            { status: 'expired' },
+        );
         expect(txOrderRepo.update).toHaveBeenCalledWith('order-1', {
             customFields: { reservationState: 'AWAITING_CONFIRMATION' },
         });
+    });
+
+    it('keeps the #204 rule for a REJECTED order at the deadline: back to the queue, no cancel', async () => {
+        const dueRows = [{ id: 'res-1', orderId: 'order-1', creationMethod: 'manual' }];
+        const { service, cancellation, txOrderRepo } = createService(dueRows, [
+            {
+                id: 'order-1',
+                customFields: { reservationState: 'RESERVED', erpStatus: 'REJECTED' },
+            },
+        ]);
+        cancellation.cancel.mockResolvedValue({
+            kind: 'not-cancellable',
+            reason: 'registration-rejected',
+        });
+
+        await service.expireDueReservations();
+
+        expect(txOrderRepo.update).toHaveBeenCalledWith('order-1', {
+            customFields: { reservationState: 'AWAITING_CONFIRMATION' },
+        });
+    });
+
+    it('takes no local action for a registered order and flags it only past the grace period', async () => {
+        const recent = {
+            id: 'res-1',
+            orderId: 'order-1',
+            creationMethod: 'manual',
+            expiresAt: new Date(Date.now() - 60_000),
+        };
+        const old = {
+            id: 'res-2',
+            orderId: 'order-2',
+            creationMethod: 'manual',
+            expiresAt: new Date(Date.now() - 2 * 86_400_000),
+        };
+        const { service, cancellation, txReservationRepo, notificationService } = createService([
+            recent,
+            old,
+        ]);
+        cancellation.cancel.mockResolvedValue({ kind: 'left-to-erp' });
+
+        const count = await service.expireDueReservations();
+
+        expect(count).toBe(0);
+        expect(txReservationRepo.update).toHaveBeenCalledTimes(1);
+        expect(txReservationRepo.update).toHaveBeenCalledWith('res-2', {
+            interventionFlaggedAt: expect.any(Date),
+        });
+        expect(notificationService.create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ sourceType: 'reservation-erp-owned', sourceId: 'res-2' }),
+        );
+    });
+
+    it('keeps cancelling the other orders when one cancel fails, then fails the sweep', async () => {
+        const dueRows = [
+            { id: 'res-1', orderId: 'order-1', creationMethod: 'manual' },
+            { id: 'res-2', orderId: 'order-2', creationMethod: 'manual' },
+        ];
+        const { service, cancellation } = createService(dueRows);
+        cancellation.cancel
+            .mockRejectedValueOnce(new Error('boom'))
+            .mockResolvedValueOnce({ kind: 'cancelled', eventSent: false });
+
+        await expect(service.expireDueReservations()).rejects.toThrow('boom');
+
+        expect(cancellation.cancel).toHaveBeenCalledTimes(2);
     });
 
     it('is a no-op when nothing is due', async () => {

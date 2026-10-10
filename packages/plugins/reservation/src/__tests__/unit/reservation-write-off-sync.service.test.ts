@@ -33,10 +33,12 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         find: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
         count: ReturnType<typeof vi.fn>;
+        query: ReturnType<typeof vi.fn>;
     };
     let rawQuery: ReturnType<typeof vi.fn>;
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
+        withTransaction: ReturnType<typeof vi.fn>;
         rawConnection: { query: ReturnType<typeof vi.fn> };
     };
     let reservationService: { setOrderReservationState: ReturnType<typeof vi.fn> };
@@ -58,6 +60,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             find: vi.fn(async () => []),
             save: vi.fn(async (rows: unknown[]) => rows),
             count: vi.fn(async () => 0),
+            query: vi.fn(async () => undefined),
         };
         rawQuery = vi.fn(async () => [{ id: 'order-1' }]);
         connection = {
@@ -65,6 +68,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
                 entity?.name === 'Order' ? orderRepo : reservationRepo,
             ),
             rawConnection: { query: rawQuery },
+            withTransaction: vi.fn(async (c: unknown, work: (x: unknown) => unknown) => work(c)),
         };
         reservationService = { setOrderReservationState: vi.fn(async () => undefined) };
         reconciliationIssueService = {

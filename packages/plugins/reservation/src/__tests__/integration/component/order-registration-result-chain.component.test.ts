@@ -73,14 +73,17 @@ beforeAll(async () => {
 
     const connection = {
         rawConnection: dataSource,
+        withTransaction: async (c: unknown, work: (x: unknown) => unknown) => work(c),
         getRepository: (_ctx: unknown, entity: unknown) =>
-            dataSource.getRepository(
-                entity === Order
-                    ? TestOrder
-                    : entity === Reservation
-                      ? TestReservation
-                      : (entity as never),
-            ),
+            typeof entity === 'string'
+                ? { query: async () => undefined }
+                : dataSource.getRepository(
+                      entity === Order
+                          ? TestOrder
+                          : entity === Reservation
+                            ? TestReservation
+                            : (entity as never),
+                  ),
     };
     const erpOrderService = new ErpOrderService(
         connection as never,

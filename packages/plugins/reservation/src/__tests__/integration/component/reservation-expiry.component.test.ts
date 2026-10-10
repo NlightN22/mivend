@@ -80,6 +80,10 @@ let realDataSource: DataSource;
 let service: ReservationExpiryService;
 let notificationServiceShim: { create: ReturnType<typeof vi.fn> };
 let eventBusShim: { publish: ReturnType<typeof vi.fn> };
+// The real cancel flow has its own lock/Postgres tests (order-cancellation.concurrency.test.ts);
+// here it is a seam that reports the outcome the sweep must react to.
+let cancellationShim: { cancel: ReturnType<typeof vi.fn> };
+const NOT_CANCELLABLE_PAID = { kind: 'not-cancellable', reason: 'paid' } as const;
 
 const { schema, extra } = testSchemaOptions('reservation_expiry_component');
 
@@ -120,12 +124,14 @@ beforeAll(async () => {
     const requestContextServiceShim = { create: async () => ({}) };
     notificationServiceShim = { create: vi.fn(async () => ({})) };
     eventBusShim = { publish: vi.fn() };
+    cancellationShim = { cancel: vi.fn() };
 
     service = new ReservationExpiryService(
         dataSourceShim as never,
         requestContextServiceShim as never,
         notificationServiceShim as never,
         eventBusShim as never,
+        cancellationShim as never,
     );
 });
 
@@ -140,6 +146,8 @@ beforeEach(async () => {
     );
     notificationServiceShim.create.mockClear();
     eventBusShim.publish.mockClear();
+    cancellationShim.cancel.mockReset();
+    cancellationShim.cancel.mockResolvedValue(NOT_CANCELLABLE_PAID);
 });
 
 async function seedOrder(
@@ -171,7 +179,63 @@ function dueReservation(overrides: Partial<TestReservation>): Partial<TestReserv
 }
 
 describe('ReservationExpiryService.expireDueReservations (component, real Postgres)', () => {
-    it('expires a due manual reservation and flips its order back to AWAITING_CONFIRMATION, atomically', async () => {
+    it('cancels a due non-prepaid order through the cancellation service, at the deadline mode', async () => {
+        cancellationShim.cancel.mockResolvedValue({ kind: 'cancelled', eventSent: false });
+        const order = await seedOrder('RESERVED');
+        await realDataSource
+            .getRepository(TestReservation)
+            .save(dueReservation({ orderId: order.id, creationMethod: 'manual' }));
+
+        const count = await service.expireDueReservations();
+
+        expect(count).toBe(1);
+        expect(cancellationShim.cancel).toHaveBeenCalledWith(
+            expect.anything(),
+            order.id,
+            'reserve-expired',
+            { requestRegistered: false },
+        );
+        const reloadedOrder = await realDataSource
+            .getRepository(TestOrder)
+            .findOneByOrFail({ id: order.id });
+        expect(reloadedOrder.customFields.reservationState).toBe('RESERVED');
+    });
+
+    it('leaves a registered order to the ERP and flags it for staff only after the grace period', async () => {
+        cancellationShim.cancel.mockResolvedValue({ kind: 'left-to-erp' });
+        const order = await seedOrder('RESERVED');
+        await realDataSource.getRepository(TestReservation).save(
+            dueReservation({
+                orderId: order.id,
+                creationMethod: 'manual',
+                expiresAt: new Date(Date.now() - 60_000),
+            }),
+        );
+
+        expect(await service.expireDueReservations()).toBe(0);
+        expect(notificationServiceShim.create).not.toHaveBeenCalled();
+
+        await realDataSource
+            .getRepository(TestReservation)
+            .update(
+                { status: 'active' },
+                { expiresAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+            );
+        await service.expireDueReservations();
+        expect(notificationServiceShim.create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ sourceType: 'reservation-erp-owned' }),
+        );
+        const reservation = await realDataSource.getRepository(TestReservation).find();
+        expect(reservation[0]?.status).toBe('active');
+        expect(reservation[0]?.interventionFlaggedAt).not.toBeNull();
+
+        cancellationShim.cancel.mockClear();
+        await service.expireDueReservations();
+        expect(cancellationShim.cancel).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the confirmation queue when the order cannot be cancelled automatically: expires and flips the state, atomically', async () => {
         const order = await seedOrder('RESERVED');
         await realDataSource
             .getRepository(TestReservation)
@@ -232,20 +296,16 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
         expect(secondRun).toBe(0);
     });
 
-    it('two concurrent sweeps over the same due row do not double-process or lose the order state flip', async () => {
+    it('two concurrent sweeps over the same due row end in one consistent state', async () => {
         const order = await seedOrder('RESERVED');
         await realDataSource
             .getRepository(TestReservation)
             .save(dueReservation({ orderId: order.id, creationMethod: 'manual' }));
 
-        const [countA, countB] = await Promise.all([
-            service.expireDueReservations(),
-            service.expireDueReservations(),
-        ]);
+        await Promise.all([service.expireDueReservations(), service.expireDueReservations()]);
 
-        // SKIP LOCKED on the initial read (reservation-expiry.service.ts) means the loser's
-        // transaction simply sees no due rows — exactly one sweep processes the row, not both.
-        expect([countA, countB].sort()).toEqual([0, 1]);
+        // The cancel step runs outside the sweep transaction and is idempotent under the order
+        // lock, so both sweeps may reach it; the end state is what must be single.
         const reservation = await realDataSource.getRepository(TestReservation).find();
         expect(reservation).toHaveLength(1);
         expect(reservation[0]?.status).toBe('expired');

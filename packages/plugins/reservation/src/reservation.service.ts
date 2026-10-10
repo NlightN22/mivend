@@ -106,6 +106,9 @@ export class ReservationService {
                     if (order.lines.length === 0) {
                         throw new OrderNotEligibleError('Order has no lines');
                     }
+                    if (order.state === 'Cancelled') {
+                        throw new OrderNotEligibleError('Order is cancelled');
+                    }
 
                     // Defense in depth alongside the moq plugin's OrderInterceptor — see
                     // docs/order-flow.md "Pack-size / MOQ". null/0/negative multiplicity is a data

@@ -8,6 +8,7 @@ import { ReservationReconciliationIssueService } from './reservation-reconciliat
 import { ReservationService } from './reservation.service';
 import { UnknownOrderUuidError } from './reservation-errors';
 import { loggerCtx } from './types';
+import { withAggregateLock } from 'shared';
 
 export interface OrderRegistrationResultInput {
     // MiVend's own order uuid (mivend#207), echoed back by the ERP. Preferred correlation key
@@ -96,15 +97,32 @@ export class ReservationWriteOffSyncService {
               : input.orderEntityId
                 ? await this.findOrderIdByErpId(input.orderEntityId)
                 : null;
-        const order = orderId
-            ? await this.connection.getRepository(ctx, Order).findOne({ where: { id: orderId } })
-            : null;
-        if (!orderId || !order) {
+        if (!orderId) {
             // mivend.audit.72 + issue #204 follow-up + issue #211: never a silent, permanent skip
             // — throw a distinguishable type (see its own doc comment) and let the inbox retry.
             throw new UnknownOrderUuidError(
                 `order-registration-result: no Order found via orderUuid=${input.orderUuid ?? ''}, ` +
                     `requestEntityId=${input.requestEntityId ?? ''} or orderEntityId=${input.orderEntityId ?? ''}`,
+            );
+        }
+        // Same lock as reserveOrder and the cancel service: whether the order counts as registered
+        // is decided against a fact written under it (#194).
+        await withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, txCtx =>
+            this.applyRegistrationResult(txCtx, orderId, input),
+        );
+    }
+
+    private async applyRegistrationResult(
+        ctx: RequestContext,
+        orderId: string,
+        input: OrderRegistrationResultInput,
+    ): Promise<void> {
+        const order = await this.connection
+            .getRepository(ctx, Order)
+            .findOne({ where: { id: orderId } });
+        if (!order) {
+            throw new UnknownOrderUuidError(
+                `order-registration-result: Order ${orderId} not found (orderUuid=${input.orderUuid ?? ''})`,
             );
         }
 
@@ -120,6 +138,9 @@ export class ReservationWriteOffSyncService {
             erpRegistrationDocumentNumber: input.documentNumber,
             erpRegistrationStatus: input.status,
         };
+        if (missingErpOrderId && !input.rejected) {
+            customFields.erpOrderId = input.orderEntityId;
+        }
         if (input.rejected) {
             customFields.erpRejectionReasonCode = input.rejectionReasonCode;
             customFields.erpRejectionReasonText = input.rejectionReasonText;

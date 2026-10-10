@@ -6,6 +6,11 @@ declare module '@vendure/core' {
         reservationFailureReason?: ReservationFailureReason | null;
         reservationFailureDetail?: string | null;
         reservationFailedAt?: Date | null;
+        // Order cancel request to the ERP (#194): REQUESTED | REFUSED | CANCELLED, null when none.
+        cancelRequestedAt?: Date | null;
+        cancelReason?: string | null;
+        cancelRequestStatus?: string | null;
+        cancelRefusalReason?: string | null;
         // Owned by @mivend/plugin-erp-order (declaration merging) — reserveOrder() reads this to
         // denormalize onto Reservation.branchId without taking a package dependency on
         // erp-order, see docs/access-control.md's branch-scope axis.

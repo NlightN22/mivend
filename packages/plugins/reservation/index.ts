@@ -28,3 +28,13 @@ export { StockLevelService } from './src/stock-level.service';
 export type { StockTier } from './src/stock-tier';
 export { IN_STOCK_SQL, andProductInStock } from './src/in-stock-filter';
 export { UnknownOrderUuidError } from './src/reservation-errors';
+export { OrderCancellationService } from './src/order-cancellation.service';
+export type { CancelOutcome, CancelOptions, CancelReason } from './src/order-cancellation.service';
+export { OrderCancelResultService } from './src/order-cancel-result.service';
+export type {
+    OrderCancelResultInput,
+    OrderCancelResultOutcome,
+} from './src/order-cancel-result.service';
+export { OrderCancellationPortRegistry } from './src/order-cancellation.port';
+export type { OrderCancellationPort, CancelRequestSubject } from './src/order-cancellation.port';
+export type { CancelSubmission } from './src/order-cancellation.decision';

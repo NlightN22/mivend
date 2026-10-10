@@ -25,6 +25,9 @@ import { ReservationAvailabilityService } from './reservation-availability.servi
 import { DEFAULT_STOCK_TIER_LOW_MAX, DEFAULT_STOCK_TIER_MEDIUM_MAX } from './stock-tier';
 import { ProductVariantStockResolver } from './product-variant-stock.resolver';
 import { StockLevelService } from './stock-level.service';
+import { OrderCancelResultService } from './order-cancel-result.service';
+import { OrderCancellationPortRegistry } from './order-cancellation.port';
+import { OrderCancellationService } from './order-cancellation.service';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
 import { ReservationExpiryService } from './reservation-expiry.service';
 import { createReservationExpiryTask } from './reservation-expiry.scheduled-task';
@@ -148,6 +151,9 @@ const adminApiSchema = gql`
         ReservationReconciliationIssueService,
         ReservationWriteOffSyncService,
         ReservationExpiryService,
+        OrderCancellationPortRegistry,
+        OrderCancellationService,
+        OrderCancelResultService,
         ReservationAvailabilityService,
         StockLevelService,
         ReservationExtensionLimitService,
@@ -156,7 +162,14 @@ const adminApiSchema = gql`
             useFactory: (): ReservationPluginOptions => ReservationPlugin.options,
         },
     ],
-    exports: [ReservationService, ReservationWriteOffSyncService, StockLevelService],
+    exports: [
+        ReservationService,
+        ReservationWriteOffSyncService,
+        StockLevelService,
+        OrderCancellationPortRegistry,
+        OrderCancellationService,
+        OrderCancelResultService,
+    ],
     shopApiExtensions: {
         resolvers: [ProductVariantStockResolver],
     },
@@ -224,6 +237,40 @@ const adminApiSchema = gql`
                 nullable: true,
                 public: false,
                 label: [{ languageCode: LanguageCode.en, value: 'Reservation failed at' }],
+            },
+            {
+                name: 'cancelRequestedAt',
+                type: 'datetime' as const,
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Cancel requested at' }],
+            },
+            {
+                name: 'cancelReason',
+                type: 'string' as const,
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Cancel reason' }],
+            },
+            {
+                name: 'cancelRequestStatus',
+                type: 'string' as const,
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Cancel request status' }],
+                description: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value: 'REQUESTED | REFUSED | CANCELLED — the ERP answer to the order cancel request.',
+                    },
+                ],
+            },
+            {
+                name: 'cancelRefusalReason',
+                type: 'text' as const,
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Cancel refusal reason' }],
             },
         ];
         config.customFields.GlobalSettings = [

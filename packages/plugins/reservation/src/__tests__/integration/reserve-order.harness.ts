@@ -26,12 +26,46 @@ import { ReservationService } from '../../reservation.service';
 // service imports (Order, Reservation, StockLevel, StockLocation) to these test tables, so
 // ReservationService itself is exercised unmodified.
 
+// Flattened columns like Vendure's custom fields, so `update(id, { customFields: { key } })` merges
+// instead of replacing the whole object.
+export class TestOrderCustomFields {
+    @Column({ type: 'varchar', nullable: true }) uuid!: string | null;
+    @Column({ type: 'varchar', nullable: true }) branchId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) reservationState!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpStatus!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpOrderId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) latestFulfillmentState!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpRegistrationDocumentNumber!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpRegistrationStatus!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpRejectionReasonCode!: string | null;
+    @Column({ type: 'varchar', nullable: true }) erpRejectionReasonText!: string | null;
+    @Column({ type: 'varchar', nullable: true }) reservationFailureReason!: string | null;
+    @Column({ type: 'text', nullable: true }) reservationFailureDetail!: string | null;
+    @Column({ type: 'timestamp', nullable: true }) reservationFailedAt!: Date | null;
+    @Column({ type: 'timestamp', nullable: true }) cancelRequestedAt!: Date | null;
+    @Column({ type: 'varchar', nullable: true }) cancelReason!: string | null;
+    @Column({ type: 'varchar', nullable: true }) cancelRequestStatus!: string | null;
+    @Column({ type: 'text', nullable: true }) cancelRefusalReason!: string | null;
+}
+
 @Entity('reservation_test_order')
 export class TestOrder {
     @PrimaryGeneratedColumn('uuid') id!: string;
     @Column({ type: 'varchar', nullable: true }) customerId!: string | null;
-    @Column({ type: 'jsonb', default: {} }) customFields!: Record<string, unknown>;
+    @Column(() => TestOrderCustomFields) customFields!: TestOrderCustomFields;
+    @Column({ type: 'varchar', default: 'PaymentAuthorized' }) state!: string;
+    @Column({ type: 'varchar', default: 'ORD-1' }) code!: string;
     @OneToMany(() => TestOrderLine, line => line.order) lines!: TestOrderLine[];
+}
+
+@Entity('reservation_test_payment')
+export class TestPayment {
+    @PrimaryGeneratedColumn('uuid') id!: string;
+    @Column({ type: 'varchar' }) state!: string;
+    @Column({ type: 'varchar' }) orderId!: string;
+    @ManyToOne(() => TestOrder)
+    @JoinColumn({ name: 'orderId' })
+    order!: TestOrder;
 }
 
 @Entity('reservation_test_product_variant')
@@ -110,6 +144,7 @@ const entityMap = {
     Reservation: TestReservation,
     StockLevel: TestStockLevel,
     StockLocation: TestStockLocation,
+    Payment: TestPayment,
 } as const;
 
 export const mockCtx = { activeUserId: 'user-1' } as unknown as RequestContext;
@@ -147,6 +182,7 @@ export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
                 TestStockLocation,
                 TestStockLevel,
                 TestReservation,
+                TestPayment,
             ],
             synchronize: true,
         });
@@ -166,6 +202,11 @@ export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
                     };
                     return qb;
                 },
+                query: (_sql: string, params: unknown[]) =>
+                    h.dataSource.query(
+                        `SELECT id FROM reservation_test_order WHERE "customFieldsUuid" = $1`,
+                        params,
+                    ),
             },
             getRepository: (ctx: RequestContext, entity: { name: string } | string) => {
                 const manager = (ctx as unknown as { __manager?: EntityManager }).__manager;
@@ -210,7 +251,7 @@ export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
         h.published.length = 0;
         await h.dataSource.query(
             'TRUNCATE TABLE reservation_test_reservation, reservation_test_order_line, ' +
-                'reservation_test_order, reservation_test_stock_level CASCADE',
+                'reservation_test_payment, reservation_test_order, reservation_test_stock_level CASCADE',
         );
     });
 
