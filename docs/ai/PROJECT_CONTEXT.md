@@ -1,6 +1,20 @@
 # Project Context
 
-Updated: 2026-10-09 20:30
+Updated: 2026-10-10 10:00
+
+## #208 cross-system verification pass + spun-off hardening (2026-10-09/10, shipped, pushed to 0831616; #209/#211/#212 closed)
+
+- #208 itself: cross-system manual verification pass (outage/rejection/race/closing-document scenarios, runbook `docs/order-flow.md`/commit history) plus concurrency fixes found along the way (order row lock in the contract guard, hide `erpOrderId` from customers, tier-rebalance sibling lock, auto-reserve-at-placement vs manual-confirm race) — commits `39c56bd..0831616`.
+- **#209** (stale full `customFields` snapshot): `erp-order.service.ts` (`onFulfillmentStateChanged`, `updateStatus`) and `reservation-expiry.service.ts` now write only the changed keys instead of `{ ...order.customFields, field }` from a stale read; `reservation-payment.service.ts` was already correct (re-reads under a row lock). Real-Postgres concurrent-writer test added. Commit `9eb78c4`.
+- **#211** (inbox retried an unknown `orderUuid` forever): new `UnknownOrderUuidError` (in `plugin-reservation`, not `erp-integration` — avoids a circular package dep), thrown when no correlation key resolves to a local order; `IntegrationInboxService.markFailed` gained an `onBudgetExhausted` param so the row resolves `noop`/`'unknown order uuid'` once the existing retry budget is exhausted, instead of dead-lettering forever (other error kinds unaffected). Commit `922adff`.
+- **#212** (undecodable inbox rows stuck forever): new `dismissFailedIntegrationInbox` mutation (`RecoverIntegrationEvents`); replay short-circuits undecodable rows with an explanatory message instead of a bare `NOT_FOUND`; dashboard inbox-issues page got a Dismiss button next to Replay. Commit `e493b10`. **Live regression, fixed same session**: the original "undecodable" signal was `lastError`'s `'decode failed:'` prefix — a replay attempt (even a failed one) overwrites `lastError`, permanently losing the marker. Fixed with a durable `undecodable` boolean column on `IntegrationInboxEvent`, set once at insert, never touched again (migration `1791482000000-inbox-undecodable.ts`, backfilled; staging-integration needed the same `ALTER TABLE`/backfill run by hand, since it runs `synchronize:true`). Commit `8cfccd6`.
+- **Workflow note**: this batch was done via parallel `general-purpose` subagents (never `fork`, per this project's override) coordinated with a cross-session peer (`mivend.issue.208`) owning `make test-int`/push/final audit while this session did the three new-issue implementations — each agent staged explicit paths only, never `test-int`/`ci`/`down` in the shared tree.
+
+## Package-only sales (#214, decided 2026-10-10, not implemented; integration side search-platform#184) and open follow-ups
+
+- **Rule:** a variant is sold only in its default sales unit when its default sales unit differs from the base unit (any ratio) AND the order's branch has `BranchSettings.packagesOnly` ON (positive attribute, default off; wholesale branches turn it on; replaces `allowPiecewiseSale` with the same name and polarity in DB, API and UI). Storage stays in base units; `unitId` plus the quantity in that unit goes to the ERP (optional field on `order.submitted` lines, no rounding on the 1C side when the unit equals the product's package unit). Price per sales unit with the per-piece price in brackets; pack size and multiplicity visible to customers and managers.
+- **Why:** the ERP rounds a base quantity up to whole packages (1 l became 1.8 l for a 0.9 package); cause found in the 1C line fill, not a conversion bug. Data: about 13.4k products have a pack besides the piece, 347 have a pack as default sales unit, `multiplicity` is empty everywhere.
+- **Other open items:** #213 flaky `sync-cycle` integration test; numbering on a branch instance is untested (no such instance yet); reserved quantity 0 from the ERP for products with an empty storage unit is an ERP data gap (`sp.issue.182`), mivend follows the ERP (ERP is the source of truth for reserved quantities).
 
 ## Orders, contracts, organizations, reserve model (2026-10-08/09; #201/#202/#203/#205/#199 shipped/audited/closed; #194/#206/#208 filed) — decisions in `docs/order-contracts.md`
 
@@ -275,7 +289,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 `make dev` · `make dev-staging-integration` · `make dev-branch` · `make up` (never recreates
 running containers; `make up-rebuild` does — interrupts every contour) · `make seed-all` ·
-`make lint` · `make test` (290 files / 2174 tests as of 2026-10-09) · `make ci` (full CI replay in
+`make lint` · `make test` (293 files / 2208 tests as of 2026-10-10) · `make ci` (full CI replay in
 a clean worktree — catches prettier/type issues `make lint`/`make test` miss, mandatory before any
 push) · `make test-int` (never run
 vitest directly) · `pnpm build:plugins` (mandatory alongside lint/test for any
@@ -381,3 +395,7 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
 - **Always run `make ci` before pushing**, not just `make lint`/`make test`/`pnpm build:plugins` —
   it replays CI in a clean worktree with its own `prettier --check`, which caught real formatting
   drift this session that the warm working copy's own lint-staged hook had missed.
+- **Never derive a durable "what kind of row is this" fact from a mutable column like `lastError`**
+  (string-prefix matching) — a later, unrelated write to that same column (e.g. a failed replay
+  attempt) silently erases the fact. Use a dedicated column set once at insert and never touched
+  again (#212's `undecodable` boolean, after the `lastError`-prefix version broke live on staging).
