@@ -47,8 +47,6 @@ Also exercised, with the ERP side run by the Integration Service owner:
 
 Late registration result after a local release: the order registers, the released reservation stays released, no new reservation or difference is created.
 
-Not exercised: numbering on a branch instance (to be tested when a branch instance exists).
-
 ## Known limits
 
 - An order result for an unknown order uuid is retried within the normal inbox budget (24 hours) and
