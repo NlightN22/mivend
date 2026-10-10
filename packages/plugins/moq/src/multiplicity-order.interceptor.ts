@@ -12,6 +12,17 @@ import {
 import { BranchSettingsService } from '@mivend/plugin-access-control';
 import { TradingPointService } from '@mivend/plugin-counterparty';
 
+const MAX_PACKS_FOR_WHOLE_QUANTITY = 1000;
+
+// Smallest whole base quantity that is a whole number of packages (ratio 0.9 -> 9, 2.5 -> 5, 6 -> 6).
+function wholePackagesQuantity(ratio: number): number {
+    for (let packs = 1; packs <= MAX_PACKS_FOR_WHOLE_QUANTITY; packs++) {
+        const base = packs * ratio;
+        if (Math.abs(base - Math.round(base)) < 1e-9) return Math.round(base);
+    }
+    return ratio;
+}
+
 // Server-side pack-size (MOQ) + branch-conditional packaging enforcement — see
 // docs/order-flow.md's "Pack-size / MOQ" and mivend#103 sections.
 export class MultiplicityOrderInterceptor implements OrderInterceptor {
@@ -56,11 +67,11 @@ export class MultiplicityOrderInterceptor implements OrderInterceptor {
         let effective = multiplicity > 1 ? multiplicity : 1;
 
         const unitRatioToBase = variant.customFields?.unitRatioToBase ?? null;
-        if (unitRatioToBase && unitRatioToBase > 1) {
+        if (unitRatioToBase && unitRatioToBase > 0 && unitRatioToBase !== 1) {
             const branchId = await this.resolveBranchId(ctx, order);
             const branchSettings = await this.branchSettingsService.resolveEffective(ctx, branchId);
-            if (branchSettings && branchSettings.allowPiecewiseSale === false) {
-                effective = unitRatioToBase;
+            if (branchSettings?.packagesOnly === true) {
+                effective = wholePackagesQuantity(unitRatioToBase);
             }
         }
 

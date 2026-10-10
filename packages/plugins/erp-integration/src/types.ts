@@ -35,8 +35,9 @@ declare module '@vendure/core' {
         // ProductStreamHandler and docs/order-flow.md's mivend#103 section. Purely informational
         // when read alone (order weight/volume display is a later, storefront-side task); the
         // moq plugin's MultiplicityOrderInterceptor is the only consumer that turns this into an
-        // enforced constraint, and only when BranchSettings.allowPiecewiseSale is false for the
+        // enforced constraint, and only when BranchSettings.packagesOnly is true for the
         // order's branch. Null when defaultSalesUnitId is unset (sold in base/piece unit).
+        defaultSalesUnitId?: string | null;
         unitRatioToBase?: number | null;
         unitWeightKg?: number | null;
         unitVolumeM3?: number | null;

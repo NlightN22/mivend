@@ -87,8 +87,8 @@ describe('MultiplicityOrderInterceptor', () => {
     });
 
     // Issue #103: branch-conditional packaging enforcement.
-    it('enforces unitRatioToBase as the effective multiple when allowPiecewiseSale is false', async () => {
-        resolveEffective.mockResolvedValue({ allowPiecewiseSale: false });
+    it('enforces unitRatioToBase as the effective multiple when packagesOnly is true', async () => {
+        resolveEffective.mockResolvedValue({ packagesOnly: true });
         const result = await interceptor.willAddItemToOrder(ctx, createOrder('branch-wholesale'), {
             productVariant: createVariant(null, 6),
             quantity: 5,
@@ -96,8 +96,22 @@ describe('MultiplicityOrderInterceptor', () => {
         expect(result).toContain('multiples of 6');
     });
 
-    it('allows piece-level quantities when allowPiecewiseSale is true, regardless of unitRatioToBase', async () => {
-        resolveEffective.mockResolvedValue({ allowPiecewiseSale: true });
+    it('enforces whole packages for a ratio below 1 (0.9 -> multiples of 9 base units)', async () => {
+        resolveEffective.mockResolvedValue({ packagesOnly: true });
+        const bad = await interceptor.willAddItemToOrder(ctx, createOrder('branch-wholesale'), {
+            productVariant: createVariant(null, 0.9),
+            quantity: 1,
+        });
+        expect(bad).toContain('multiples of 9');
+        const ok = await interceptor.willAddItemToOrder(ctx, createOrder('branch-wholesale'), {
+            productVariant: createVariant(null, 0.9),
+            quantity: 9,
+        });
+        expect(ok).toBeUndefined();
+    });
+
+    it('allows piece-level quantities when packagesOnly is false, regardless of unitRatioToBase', async () => {
+        resolveEffective.mockResolvedValue({ packagesOnly: false });
         const result = await interceptor.willAddItemToOrder(ctx, createOrder('branch-retail'), {
             productVariant: createVariant(null, 6),
             quantity: 1,
@@ -115,7 +129,7 @@ describe('MultiplicityOrderInterceptor', () => {
     });
 
     it('ignores unitRatioToBase entirely when unset (base/piece unit sold)', async () => {
-        resolveEffective.mockResolvedValue({ allowPiecewiseSale: false });
+        resolveEffective.mockResolvedValue({ packagesOnly: true });
         const result = await interceptor.willAddItemToOrder(ctx, createOrder('branch-wholesale'), {
             productVariant: createVariant(null, null),
             quantity: 1,
@@ -130,9 +144,7 @@ describe('MultiplicityOrderInterceptor', () => {
     it('resolves the branch from the preferred TradingPoint, not order.customFields.branchId', async () => {
         getPreferredForCustomer.mockResolvedValue({ servicingBranchId: 'branch-wholesale' });
         resolveEffective.mockImplementation(async (_ctx: unknown, branchId: string | null) =>
-            branchId === 'branch-wholesale'
-                ? { allowPiecewiseSale: false }
-                : { allowPiecewiseSale: true },
+            branchId === 'branch-wholesale' ? { packagesOnly: true } : { packagesOnly: false },
         );
 
         // order.customFields.branchId is null (pre-placement) — only the TradingPoint lookup
@@ -147,7 +159,7 @@ describe('MultiplicityOrderInterceptor', () => {
     });
 
     it('plain multiplicity enforcement keeps working unchanged when unitRatioToBase is also set but allowed', async () => {
-        resolveEffective.mockResolvedValue({ allowPiecewiseSale: true });
+        resolveEffective.mockResolvedValue({ packagesOnly: false });
         const result = await interceptor.willAddItemToOrder(ctx, createOrder('branch-retail'), {
             productVariant: createVariant(4, 6),
             quantity: 5,

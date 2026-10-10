@@ -531,7 +531,7 @@ export type Branch = {
 };
 
 export type BranchSettings = {
-    allowPiecewiseSale: Scalars['Boolean']['output'];
+    packagesOnly: Scalars['Boolean']['output'];
     branchId: Scalars['String']['output'];
     defaultPriceTypeId: Scalars['String']['output'];
     defaultWarehouseId: Maybe<Scalars['String']['output']>;
@@ -4946,7 +4946,7 @@ export type MutationSetAdministratorActiveArgs = {
 };
 
 export type MutationSetBranchSettingsArgs = {
-    allowPiecewiseSale?: InputMaybe<Scalars['Boolean']['input']>;
+    packagesOnly?: InputMaybe<Scalars['Boolean']['input']>;
     branchId: Scalars['String']['input'];
     defaultPriceTypeId: Scalars['String']['input'];
     defaultWarehouseId: Scalars['String']['input'];

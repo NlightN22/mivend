@@ -47,29 +47,25 @@ describe('BranchSettingsService', () => {
         expect(repo.save).toHaveBeenCalled();
     });
 
-    it('defaults allowPiecewiseSale to true when not supplied', async () => {
+    it('defaults packagesOnly to false when not supplied', async () => {
         repo.findOne.mockResolvedValue(null);
         await service.upsert(ctx, {
             branchId: 'branch-1',
             defaultPriceTypeId: 'pt-1',
             defaultWarehouseId: 'wh-1',
         });
-        expect(repo.create).toHaveBeenCalledWith(
-            expect.objectContaining({ allowPiecewiseSale: true }),
-        );
+        expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ packagesOnly: false }));
     });
 
-    it('persists an explicit allowPiecewiseSale: false', async () => {
+    it('persists an explicit packagesOnly: true', async () => {
         repo.findOne.mockResolvedValue(null);
         await service.upsert(ctx, {
             branchId: 'branch-2',
             defaultPriceTypeId: 'pt-1',
             defaultWarehouseId: 'wh-1',
-            allowPiecewiseSale: false,
+            packagesOnly: true,
         });
-        expect(repo.create).toHaveBeenCalledWith(
-            expect.objectContaining({ allowPiecewiseSale: false }),
-        );
+        expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ packagesOnly: true }));
     });
 
     it('updates an existing BranchSettings row in place, never creating a duplicate', async () => {

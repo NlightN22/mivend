@@ -57,6 +57,8 @@ export const ORDER_SUBMITTED_SCHEMA = {
                 properties: {
                     productId: { type: 'string' },
                     quantity: { type: 'number', exclusiveMinimum: 0 },
+                    // Unit (ERP id) the quantity is expressed in; absent = the product's base unit.
+                    unitId: { type: 'string' },
                     priceTypeId: { type: ['string', 'null'] },
                     // The OrderLine's own immutable uuid, for per-line ERP deduplication.
                     lineUuid: { type: 'string', format: 'uuid' },
@@ -71,6 +73,7 @@ export const ORDER_SUBMITTED_SCHEMA = {
 export interface OrderSubmittedLine {
     productId: string;
     quantity: number;
+    unitId?: string;
     priceTypeId: string | null;
     lineUuid: string;
 }

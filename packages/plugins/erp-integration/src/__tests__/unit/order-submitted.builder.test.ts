@@ -9,7 +9,10 @@ import type { OutboundBuildResult } from '../../outbound-gateway';
 interface TestLine {
     id: string;
     quantity: number;
-    productVariant: { productId?: string | null } | null;
+    productVariant: {
+        productId?: string | null;
+        customFields?: { defaultSalesUnitId?: string | null; unitRatioToBase?: number | null };
+    } | null;
     customFields?: { uuid: string };
 }
 
@@ -48,6 +51,7 @@ function makeBuilder(options: {
     counterparty: { erpId: string } | null;
     priceType: { externalId: string | null } | null;
     contract?: { erpId: string; organizationId: string } | null;
+    packagesOnly?: boolean;
     priorOutboxEntries?: Array<{ payload: { orderId?: string }; status: string }>;
 }): OrderSubmittedBuilder {
     const orderRepo = { findOne: vi.fn().mockResolvedValue(options.order) };
@@ -113,6 +117,9 @@ function makeBuilder(options: {
         customerPricingService as never,
         reservationService as never,
         outboundGateway as never,
+        {
+            resolveEffective: vi.fn(async () => ({ packagesOnly: options.packagesOnly === true })),
+        } as never,
     );
 }
 
@@ -123,6 +130,48 @@ const build = (builder: OrderSubmittedBuilder): Promise<OutboundBuildResult> =>
 // reads go through raw SQL, mocked via rawConnection.createQueryBuilder by table name.
 
 describe('OrderSubmittedBuilder', () => {
+    const packLine = (): TestLine => ({
+        id: 'line-1',
+        quantity: 9,
+        productVariant: {
+            productId: 'v-1',
+            customFields: { defaultSalesUnitId: 'unit-pack', unitRatioToBase: 0.9 },
+        },
+    });
+    const buildPackOrder = (packagesOnly: boolean): Promise<OutboundBuildResult> =>
+        build(
+            makeBuilder({
+                order: makeOrder([packLine()]),
+                reservations: [
+                    { orderLineId: 'line-1', stockLocationId: 'location-1', status: 'active' },
+                ],
+                warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
+                productExternalIds: { 'v-1': 'product-1' },
+                counterparty: { erpId: 'counterparty-1' },
+                priceType: null,
+                packagesOnly,
+            }),
+        );
+
+    it('sends unitId and the quantity in the sales unit when the branch is packages-only', async () => {
+        const result = await buildPackOrder(true);
+        expect(result).toMatchObject({
+            kind: 'send',
+            events: [{ payload: { lines: [{ unitId: 'unit-pack', quantity: 10 }] } }],
+        });
+    });
+
+    it('sends base quantity with no unitId when the branch sells by the piece', async () => {
+        const result = await buildPackOrder(false);
+        const line = (
+            result as unknown as {
+                events: Array<{ payload: { lines: Array<Record<string, unknown>> } }>;
+            }
+        ).events[0].payload.lines[0];
+        expect(line.quantity).toBe(9);
+        expect(line).not.toHaveProperty('unitId');
+    });
+
     it('skips the whole order when no Counterparty resolves for the customer', async () => {
         const order = makeOrder([{ id: 'line-1', quantity: 1, productVariant: null }]);
         const builder = makeBuilder({

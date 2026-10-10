@@ -15,9 +15,7 @@ export interface BranchSettingsInput {
     visiblePriceTypeIds?: string[] | null;
     defaultWarehouseId: string;
     visibleWarehouseIds?: string[] | null;
-    // Issue #103. Defaults to true (no packaging constraint) when omitted — see
-    // BranchSettings.allowPiecewiseSale's own doc comment.
-    allowPiecewiseSale?: boolean;
+    packagesOnly?: boolean;
 }
 
 // CRUD + fallback resolution for issue #66's per-branch business settings. Never a source of
@@ -41,7 +39,7 @@ export class BranchSettingsService {
             settings.visiblePriceTypeIds = input.visiblePriceTypeIds ?? null;
             settings.defaultWarehouseId = input.defaultWarehouseId;
             settings.visibleWarehouseIds = input.visibleWarehouseIds ?? null;
-            settings.allowPiecewiseSale = input.allowPiecewiseSale ?? true;
+            settings.packagesOnly = input.packagesOnly ?? false;
         } else {
             settings = repo.create({
                 branchId: input.branchId,
@@ -49,7 +47,7 @@ export class BranchSettingsService {
                 visiblePriceTypeIds: input.visiblePriceTypeIds ?? null,
                 defaultWarehouseId: input.defaultWarehouseId,
                 visibleWarehouseIds: input.visibleWarehouseIds ?? null,
-                allowPiecewiseSale: input.allowPiecewiseSale ?? true,
+                packagesOnly: input.packagesOnly ?? false,
             });
         }
         const saved = await repo.save(settings);

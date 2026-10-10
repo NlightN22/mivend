@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { ID } from '@vendure/common/lib/shared-types';
+import { BranchSettingsService } from '@mivend/plugin-access-control';
 import { ReservationService } from '@mivend/plugin-reservation';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
@@ -26,6 +27,7 @@ export class OrderSubmittedBuilder {
         private readonly customerPricingService: CustomerPricingService,
         private readonly reservationService: ReservationService,
         private readonly outboundGateway: OutboundGateway,
+        private readonly branchSettingsService: BranchSettingsService,
     ) {}
 
     async build(ctx: RequestContext, orderId: ID, orderCode: string): Promise<OutboundBuildResult> {
@@ -69,6 +71,12 @@ export class OrderSubmittedBuilder {
             order.lines.map(line => line.productVariant?.productId),
         );
 
+        const branchSettings = await this.branchSettingsService.resolveEffective(
+            ctx,
+            order.customFields?.branchId ?? null,
+        );
+        const packagesOnly = branchSettings?.packagesOnly === true;
+
         const unbuildable: string[] = [];
         const groups = new Map<string, OrderSubmittedGroup>();
         for (const line of order.lines) {
@@ -89,9 +97,15 @@ export class OrderSubmittedBuilder {
                 group = { warehouseId, lines: [] };
                 groups.set(warehouseId, group);
             }
+            const unitId = line.productVariant?.customFields?.defaultSalesUnitId;
+            const ratio = line.productVariant?.customFields?.unitRatioToBase;
+            const inSalesUnit = packagesOnly && !!unitId && !!ratio && ratio > 0 && ratio !== 1;
             group.lines.push({
                 productId,
-                quantity: line.quantity,
+                quantity: inSalesUnit
+                    ? Math.round((line.quantity / ratio) * 1e6) / 1e6
+                    : line.quantity,
+                ...(inSalesUnit ? { unitId } : {}),
                 priceTypeId,
                 lineUuid,
             });

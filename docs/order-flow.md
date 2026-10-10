@@ -375,17 +375,17 @@ quantity`), displayed on storefront checkout/order confirmation and the manager 
    depending on the counterparty's branch. Model this as a new field on
    `access-control`'s existing `BranchSettings` (`packages/plugins/access-control/src/entities/
 branch-settings.entity.ts`, issue #66's per-branch business-config pattern — same table
-   already holding `defaultPriceTypeId`/`defaultWarehouseId`), e.g. `allowPiecewiseSale: boolean`
-   (default `true`). Resolved the same way as the rest of `BranchSettings` — via
+   already holding `defaultPriceTypeId`/`defaultWarehouseId`), e.g. `packagesOnly: boolean`
+   (default `false`; #214 replaced `allowPiecewiseSale`, inverted). Resolved the same way as the rest of `BranchSettings` — via
    `BranchSettingsService.resolveEffective(ctx, branchId)`, with its existing global-default-branch
    fallback.
 4. Enforcement itself extends the existing `MultiplicityOrderInterceptor`
    (`packages/plugins/moq/src/multiplicity-order.interceptor.ts`) rather than adding a parallel
    mechanism: when `defaultSalesUnitId` differs from the base unit AND the resolved
-   `BranchSettings.allowPiecewiseSale` is `false` for the order's branch, treat
-   `unitRatioToBase` as the effective required multiple (same "quantity % N === 0" check the
+   `BranchSettings.packagesOnly` is `true` for the order's branch (any ratio, below or above 1, #214), treat
+   the smallest whole-package base quantity as the effective required multiple (same "quantity % N === 0" check the
    interceptor already does for `multiplicity`) — reuse, don't duplicate, the check/error shape
-   (`InvalidMultiplicityError`). When `allowPiecewiseSale` is `true` (or unset with no branch
+   (`InvalidMultiplicityError`). When `packagesOnly` is `false` (or unset with no branch
    settings configured), no packaging constraint applies regardless of what `defaultSalesUnitId`
    says — piece-level sale is allowed.
 
