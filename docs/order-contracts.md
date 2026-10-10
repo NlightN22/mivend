@@ -135,6 +135,30 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   delivered, marked for deletion -> cancelled); a non-priority task.
 - The customer sees a simplified status, staff a detailed one; the ERP only supplies facts.
 
+### Order events topic and warehouse semantics (decided with the ERP side; supersedes `order.cancelled` above)
+
+- One topic `mivend.orders.events.v1.order-events`, message key = `orderUuid`, one subject
+  `mivend.orders.events.v1.order-events-value` (JSON Schema `oneOf` discriminated by the const `type`, also sent as
+  the Kafka header `type`, FORWARD, Confluent wire format). Types: `confirmed` (today's `order.submitted` plus
+  `type` and a mandatory `reserveUntil`) and `cancel-requested` (`eventId`, `orderUuid`, `requestedAt`). Schema:
+  `order-events.ts` in `@nlightn22/event-contracts` (0.59.0). The old `order.submitted` topic is published in
+  parallel with the same `orderUuid` and the same `eventId` per logical event until the ERP confirms its consumer.
+- One order = one `confirmed` event = one ERP order = one `warehouseId`; no per-warehouse split, no
+  `registrationUuid`, no warehouse on lines. The answer to a cancel is `order-cancel-result` per `orderUuid`
+  (`cancelled` | `rejected` with a reason); a `confirmed` after a cancel for the same `orderUuid` is not registered.
+- Warehouse semantics in the ERP: the reserve is per line; the header warehouse reserves nothing, it is only the
+  preferred warehouse and the source of the shipping scheme. The ERP distributes each line over warehouses by free
+  stock (preferred first, then the user's warehouse group, splitting a line when one is short). We send any
+  warehouse from the order's reservations. Until the ERP switches to this standard autoreserve (tracked in
+  search-platform#179) the whole order is reserved at the warehouse we send.
+- Products without a stock-keeping unit in the ERP are skipped from the reserve (the order still registers):
+  their `reservedQuantity` is 0 and indistinguishable from "no stock" (accepted contract gap).
+- `reserveUntil` is our deadline and the source of truth (ISO-8601 UTC); the ERP stores it as the order's
+  "reserve until" and closes the reserve only after it, so it never releases earlier than mivend. Times coming from
+  the ERP are treated as UTC only after search-platform#187 (local time labelled as UTC) is fixed.
+- Which organization/storage place the ERP reserves a line at is its own distribution; mivend's per-line warehouse
+  choice (most available stock) and per-product organization winner are not coordinated with it (known gap).
+
 ### Still to verify with the ERP side
 
 - Whether marking an order for deletion also zeroes its reserve in the register automatically (expected: yes,
