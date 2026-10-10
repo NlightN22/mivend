@@ -263,9 +263,11 @@ Per-channel/per-customer-segment overrides are not needed for stage 1.
 
 - Non-prepaid: reservation → `EXPIRED`, stock returns to ATP, order returns to the
   `AWAITING_CONFIRMATION` queue — requires a fresh confirmation (re-check stock and, if
-  needed, commercial conditions). **Current behaviour; decided to change in #194**: an order not
-  confirmed/registered by the deadline is cancelled instead (see `docs/order-contracts.md`, "Reserve and
-  order cancellation").
+  needed, commercial conditions). **Since #194** a pending or unregistered order is cancelled at the
+  deadline instead (`OrderCancellationService`, see `docs/order-contracts.md`, "Reserve and order
+  cancellation"); a registered, in-progress or shipped order is left to the ERP, and an order that
+  cannot be cancelled automatically (settled payment, an ERP-rejected registration) keeps this
+  behaviour.
 - Prepaid: do **not** silently release a paid customer's stock. Use a longer TTL for this
   path, and on expiry move to a distinct "needs intervention" state with a task/notification
   for staff, rather than auto-releasing.
@@ -401,8 +403,8 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   only organizations read in that statement and fails the transition if a variant lost its
   organization after the first check.
 - Invoice split (one `Invoice` per organization, created under a per-order advisory lock so a double
-  submit yields one set), the `reserveOrder()` gate and the `order.submitted` builder read the line,
-  never the variant. `order.submitted` is a different thing (see "Order contract" below).
+  submit yields one set), the `reserveOrder()` gate and the `order.confirmed` builder read the line,
+  never the variant. `order.confirmed` is a different thing (see "Order contract" below).
 - Not modeled: a per-warehouse organization check. Reservation picks the warehouse by branch stock,
   the organization comes from the product's storage location; they are not cross-checked.
 
@@ -428,10 +430,10 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   reservation for that variant is released like a matching one (the ERP holds the stock now) and the
   difference is recorded as a reconciliation issue for staff. A variant the ERP does not mention keeps
   its local reservation; a rejected result changes nothing here (see #204).
-- **Expiry and cancel of unconfirmed orders** is tracked in #194, not here. Model in
-  `docs/order-contracts.md`: cancelling the reserve (A) and cancelling the order (B, which includes A) are
-  different operations; at the shared deadline 1C does A and mivend does A and, for pending/unregistered
-  orders, B.
+- **Expiry and cancel** (#194, `docs/order-contracts.md`): cancelling the reserve (A) and cancelling the
+  order (B, which includes A) are different operations; at the shared deadline 1C does A and mivend does
+  A and, for pending/unregistered orders, B. One `OrderCancellationService.cancel` serves every cancel
+  path under the `reserve-order:<id>` lock; the registration result is applied under the same lock.
 
 ### Order contract (mivend#205)
 
@@ -439,9 +441,9 @@ All contract and organization decisions are collected in `docs/order-contracts.m
 
 - The ERP registers an order under one contract of the customer; the contract's organization is the
   document header organization and the ERP distributes line organizations itself (this later splits
-  the order into separate sales documents and settlements). So `order.submitted` carries
+  the order into separate sales documents and settlements). So `order.confirmed` carries
   `organizationId` = the contract's organization and `contractId` = `Contract.erpId`, with no line
-  organizations, and fans out per warehouse only. Our own split (invoices, payment split,
+  organizations, one event per order with one warehouse. Our own split (invoices, payment split,
   reservations) stays on the line organization.
 - `Order.customFields.selectedContractId` is set when the order enters `ArrangingPayment`
   (`contractOrderGuard`, plugin-acquiring). Selection order: (1) the stored selection if still valid
@@ -455,7 +457,7 @@ All contract and organization decisions are collected in `docs/order-contracts.m
 - Staff change it with `setOrderContract` (permission `ConfirmOrder`, order scope as for the order
   list, history note). Allowed only while the order has no active reservation and the ERP does not
   have it yet; it takes the same advisory lock as `reserveOrder()`, so a change cannot interleave
-  with a reservation (and with it the `order.submitted` publish).
+  with a reservation (and with it the `order.confirmed` publish).
 
 ### Permissions
 

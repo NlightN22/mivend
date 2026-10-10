@@ -22,28 +22,32 @@ ERP inbound/outbound handlers. Never from an automated suite: orders reach the r
 
 | Scenario | Expected |
 | --- | --- |
-| Auto-reserve on placement | `RESERVED`, exactly one published `order.submitted` per warehouse, numeric order number, 1C registers one document, `erpStatus` SENT_TO_ERP, `erpOrderId` set |
+| Auto-reserve on placement | `RESERVED`, exactly one published `order.confirmed` (type `confirmed` on the order-events topic), numeric order number, 1C registers one document, `erpStatus` SENT_TO_ERP, `erpOrderId` set |
 | ERP reserves less than ours | Local reservation released, `QUANTITY_MISMATCH` issue recorded, `erpStatus` untouched |
-| Re-confirm a submitted order | Second `order.submitted` row is `skipped`, nothing published |
+| Re-confirm a submitted order | Second `order.confirmed` row is `skipped`, nothing published |
 | Same `eventId` redelivered | One inbox row, one customer order, one ERP document |
 | New `eventId`, same `orderUuid` | New inbox row processed, still one customer order and one ERP document |
 | Same registration result applied twice | State unchanged, no error (re-queue the inbox row) |
 | Variant without organization | Hidden for customers, checkout transition refused; reason in `transitionError` |
-| Cart with two organizations, same warehouse | One `order.submitted`; lines keep their organizations after checkout |
+| Cart with two organizations, same warehouse | One `order.confirmed`; lines keep their organizations after checkout |
 | Digits search | Order found by digits; the display dash is undone by the manager search only |
 
 Also exercised, with the ERP side run by the Integration Service owner:
 
 | Scenario | Expected |
 | --- | --- |
-| Over-limit deferred order | Not auto-reserved, waits for a manager; after confirm one `order.submitted` |
+| Over-limit deferred order | Not auto-reserved, waits for a manager; after confirm one `order.confirmed` |
 | Manager changes the contract | Allowed only before reservation/ERP receipt; inactive, unknown or other-counterparty contracts are refused |
 | ERP rejects an order (inconsistent contract and organization) | `REJECTED` with the reason for the manager, `REJECTED` for the customer, health counter 1; a corrected re-submit registers exactly once (needs Integration Service resend-after-rejection support) |
-| ERP closing document | No event reaches mivend; the order keeps SENT_TO_ERP (explicit signal is #194) |
+| ERP closing document | No event reaches mivend; the order keeps SENT_TO_ERP (explicit signals are #194) |
 | Undecodable message | Stored as failed with raw bytes, listed in the failures query, stream behind it keeps flowing; not replayable (no entity id) |
 | Integration Service stopped, then resumed | Message published during the gap is consumed after resume exactly once |
 | Schema registry unreachable | Outbox row stays pending with growing retry delay, visible on the outbox health counts; published exactly once after recovery |
-| Manual confirm racing the placement auto-reserve | One winner, one active reservation, one `order.submitted`, state RESERVED |
+| Manual confirm racing the placement auto-reserve | One winner, one active reservation, one `order.confirmed`, state RESERVED |
+| Cancel before the confirmed event left the outbox (#194) | The `order.confirmed` row is `skipped`, order `Cancelled`, reservations released, nothing published |
+| Cancel after sending, before the ERP registered it | One `cancel-requested` on the order-events topic and the order `Cancelled` at once; the ERP's `order-cancel-result` is recorded |
+| Cancel of a registered pending order | One `cancel-requested`, order stays until `order-cancel-result` `cancelled`; `rejected` keeps it and notifies staff |
+| Reserve deadline passes (#194) | Pending or unregistered order `Cancelled` (reservations released); registered, in-progress or shipped orders untouched, staff warned after one day |
 
 Late registration result after a local release: the order registers, the released reservation stays released, no new reservation or difference is created.
 

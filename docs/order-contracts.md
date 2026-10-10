@@ -8,7 +8,7 @@ Issues: #201, #202, #203, #205 (ERP rejection handling is #204, tracked separate
 | Concept                   | Where it lives                                  | Used for                                               |
 | ------------------------- | ----------------------------------------------- | ------------------------------------------------------ |
 | Line organization         | `OrderLine.customFields.organizationId`         | Invoices, payment split, reservations (our own split)  |
-| Order (header) contract   | `Order.customFields.selectedContractId`         | `order.submitted` header: contract + contract's organization |
+| Order (header) contract   | `Order.customFields.selectedContractId`         | `order.confirmed` header: contract + contract's organization |
 
 - The line organization comes from the product: one storage location = one product = one
   organization (`ProductVariant.customFields.organizationId`, winner election in
@@ -26,8 +26,8 @@ Issues: #201, #202, #203, #205 (ERP rejection handling is #204, tracked separate
 - Hidden in the customer catalog and search (both backends; the external search service also gets
   `requireOrganization`, the local post-filter stays as a safety net). Staff see it with a marker.
 - Hard gate at cart confirmation (transition to `ArrangingPayment`), re-checked when the stamp is
-  written and in `reserveOrder()` and the `order.submitted` listener. Nobody, including a manager,
-  can override it. A skipped `order.submitted` is never silent (`skipped` outbox row, shown on the
+  written and in `reserveOrder()` and the `order.confirmed` listener. Nobody, including a manager,
+  can override it. A skipped `order.confirmed` is never silent (`skipped` outbox row, shown on the
   Integration health page).
 - Missing organizations are an expected data condition (some storage locations legitimately carry
   none), so the Integration health page shows a "variants without organization" counter.
@@ -56,16 +56,16 @@ order visibility scope as for the order, history entry). Allowed only while ther
 reservation and the ERP has not received the order, and only to an active contract of the same
 counterparty. It takes the same lock as `reserveOrder()`. The customer has no choice for now.
 
-## `order.submitted` contents
+## `order.confirmed` contents
 
-- One event per warehouse group (not per organization).
+- One event per order (one warehouse, see "Order events topic" below); never per organization.
 - Header `organizationId` = the selected contract's organization (`Organization.entityId` of the
   `organization-changed` stream, a GUID, never our numeric id) and `contractId` = `Contract.erpId`.
   The ERP validates that the contract belongs to the customer and that its organization equals
   `organizationId`, and rejects the order otherwise.
 - Lines carry `productId`, `quantity`, `priceTypeId` and no organization.
 - The schema is owned by mivend and lives in the shared `@nlightn22/event-contracts` package
-  (subject `order.submitted-value`, compatibility `FORWARD`, Confluent wire format). Procedure:
+  (subject `mivend.orders.events.v1.order-events-value`, compatibility `FORWARD`, Confluent wire format). Procedure:
   change the schema in the package repository on a branch, review by the ERP side, publish by
   pushing to its `master`, bump the dependency here. See `docs/integration-health.md` for the
   contract drift indicator on the Outbound tab.
@@ -81,9 +81,10 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
   (a later difference is shown on the order and settled through the ERP). Not an accounting document
   and not synced to the ERP. Tracked in #206 together with the question of system-level versioning.
 
-## Reserve and order cancellation (decided, planned in #194)
+## Reserve and order cancellation (decided and implemented in #194)
 
-Not implemented yet; the decisions are recorded here and in #194. The ERP-side facts come from
+Implemented as `OrderCancellationService` (plugin-reservation), `order.cancel-requested` (outbound) and
+the `order-cancel-result` stream (inbound); the decisions are recorded here and in #194. The ERP-side facts come from
 search-platform#178 (read from the 1C configuration and checked with live tests on a test order).
 
 ### Two operations
@@ -107,12 +108,12 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
 
 ### The reserve deadline
 
-- The deadline is one shared date. mivend sends it as `reserveUntil` in `order.submitted` (mandatory: with an
+- The deadline is one shared date. mivend sends it as `reserveUntil` in `order.confirmed` (mandatory: with an
   empty `РезервДо` the 1C job only picks an order after about four months) and the ERP writes it to `РезервДо`.
 - At the deadline 1C does A and mivend does A and, for a pending or unregistered order, B. Both are idempotent
   and the order of execution does not matter. An order that is in progress or shipped is left alone: its
   reserve is already used up, and mivend follows what the ERP reports.
-- Not confirmed/unregistered order: mivend cancels it locally and, if `order.submitted` was already sent, tells
+- Not confirmed/unregistered order: mivend cancels it locally and, if `order.confirmed` was already sent, tells
   the ERP. It no longer returns to the confirmation queue.
 - Prepaid orders and the ERP-rejected reserves (#204) keep their own rules (manual intervention / their deadline).
 
@@ -122,9 +123,10 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   any closure (live test). mivend must not wait for `order-changed` to learn that the ERP released or closed an
   order. The ERP side provides an explicit signal: a stream with the live reserve per order key, and the three
   base facts per order (warehouse order exists, sale exists, marked for deletion).
-- mivend asks for B with a mivend-owned `order.cancelled` event (same ownership procedure as `order.submitted`);
-  the ERP answers explicitly (accepted/refused with a reason). The `order-change-requests` stream is not used.
-- A late `order.submitted` after a cancel: a still-pending outbox row is marked `skipped`, and the ERP keeps a
+- mivend asks for B with `cancel-requested` on the order-events topic (see below); the ERP answers
+  explicitly with `order-cancel-result` (`cancelled`/`rejected` with a reason). The
+  `order-change-requests` stream is not used.
+- A late `order.confirmed` after a cancel: a still-pending outbox row is marked `skipped`, and the ERP keeps a
   cancelled-`orderId` tombstone and rejects a late submit.
 - If the ERP reports a different reserved quantity than ours, the ERP wins (#199).
 
@@ -135,14 +137,14 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   delivered, marked for deletion -> cancelled); a non-priority task.
 - The customer sees a simplified status, staff a detailed one; the ERP only supplies facts.
 
-### Order events topic and warehouse semantics (decided with the ERP side; supersedes `order.cancelled` above)
+### Order events topic and warehouse semantics (decided with the ERP side; supersedes the earlier `order.cancelled` idea)
 
 - One topic `mivend.orders.events.v1.order-events`, message key = `orderUuid`, one subject
   `mivend.orders.events.v1.order-events-value` (JSON Schema `oneOf` discriminated by the const `type`, also sent as
   the Kafka header `type`, FORWARD, Confluent wire format). Types: `confirmed` (today's `order.submitted` plus
   `type` and a mandatory `reserveUntil`) and `cancel-requested` (`eventId`, `orderUuid`, `requestedAt`). Schema:
-  `order-events.ts` in `@nlightn22/event-contracts` (0.59.0). The old `order.submitted` topic is published in
-  parallel with the same `orderUuid` and the same `eventId` per logical event until the ERP confirms its consumer.
+  `order-events.ts` in `@nlightn22/event-contracts` (0.59.0). The old `order.submitted` topic is no longer
+  published (integration contour, no dual publish).
 - One order = one `confirmed` event = one ERP order = one `warehouseId`; no per-warehouse split, no
   `registrationUuid`, no warehouse on lines. The answer to a cancel is `order-cancel-result` per `orderUuid`
   (`cancelled` | `rejected` with a reason); a `confirmed` after a cancel for the same `orderUuid` is not registered.
@@ -158,6 +160,30 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   the ERP are treated as UTC only after search-platform#187 (local time labelled as UTC) is fixed.
 - Which organization/storage place the ERP reserves a line at is its own distribution; mivend's per-line warehouse
   choice (most available stock) and per-product organization winner are not coordinated with it (known gap).
+
+### How mivend cancels (implemented, #194)
+
+- One entry point, `OrderCancellationService.cancel(orderId, reason)`, under `withAggregateLock('reserve-order:<id>')`,
+  the lock `reserveOrder` and the registration-result handler take, so a cancel, a manual confirm and a late
+  registration result serialize per order. `reserveOrder` refuses a cancelled order.
+- Decision (pure function `decideCancellation`): already cancelled -> no-op; shipped (order/fulfillment state or
+  `erpStatus` SHIPPED/DELIVERED), in progress (`erpStatus` ASSEMBLED), or a settled payment -> refused, nothing
+  automatic. Otherwise: the `order.confirmed` outbox row still waiting (pending or failed) -> row marked `skipped`
+  (a conditional update that loses to a publisher holding the row) and a local cancel; sent but no `erpOrderId`
+  -> `cancel-requested` and a local cancel at once; registered (`erpOrderId` set, written under the lock by the
+  registration result) -> `cancel-requested`, `cancelRequestedAt`/`cancelReason`/`cancelRequestStatus=REQUESTED`
+  recorded, no local cancel until the ERP answers.
+- `order-cancel-result` (applied under the same lock): `cancelled` -> local cancel, `CANCELLED`; `rejected` ->
+  `cancelRequestStatus=REFUSED`, `cancelRefusalReason`, staff notification, the order stays (a refusal after a
+  local cancel is an error notification). One `cancel-requested` per `orderUuid`: after a refusal there is no
+  automatic second request.
+- Local cancel: release reservations, void the authorized payment, Vendure `Cancelled` with the reason in the
+  history, `ErpOrderStatusEvent` CANCELLED, staff notification (a settled payment adds a manual-refund warning).
+- Reserve deadline (`ReservationExpiryService`): the same service with `requestRegistered=false`: pending or
+  unregistered orders are cancelled; a registered, in-progress or shipped order gets no local action and staff
+  are warned once, one day after the deadline; prepaid and `REJECTED` orders keep their own rules; an order that
+  cannot be cancelled automatically returns to the confirmation queue.
+- `OpenDeferredExposureService` excludes `Cancelled` orders.
 
 ### Still to verify with the ERP side
 
