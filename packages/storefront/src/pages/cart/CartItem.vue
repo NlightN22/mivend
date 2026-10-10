@@ -4,6 +4,8 @@ import { MvStatusBadge, MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit'
 import { useCartStore, type CartLine } from '../../stores/cart';
 import CartLinePrice from '../../components/CartLinePrice.vue';
 import { brandOf } from '../../utils/brand';
+import { usePackagesOnly } from '../../composables/usePackagesOnly';
+import { baseToPacks, packsToBase, salesUnitOf } from '../../composables/useSalesUnit';
 import { formatTierValue } from '../../utils/discount';
 import { discountLineReason, discountTierReachedReason } from '../../utils/discountMessages';
 
@@ -11,6 +13,14 @@ const props = defineProps<{ line: CartLine; checked: boolean }>();
 const emit = defineEmits<{ 'update:checked': [value: boolean] }>();
 
 const cartStore = useCartStore();
+const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
+void loadPackagesOnly();
+const salesUnit = computed(() =>
+    salesUnitOf(props.line.productVariant.customFields, packagesOnly.value),
+);
+const stepperQty = computed(() =>
+    salesUnit.value ? baseToPacks(qty.value, salesUnit.value) : qty.value,
+);
 const qty = ref(props.line.quantity);
 const confirmingRemove = ref(false);
 
@@ -55,8 +65,9 @@ async function onQtyChange(newQty: number): Promise<void> {
         confirmingRemove.value = true;
         return;
     }
-    qty.value = newQty;
-    await cartStore.adjustItem(props.line.id, newQty);
+    const baseQty = salesUnit.value ? packsToBase(newQty, salesUnit.value) : newQty;
+    qty.value = baseQty;
+    await cartStore.adjustItem(props.line.id, baseQty);
 }
 
 async function confirmRemove(): Promise<void> {
@@ -117,6 +128,7 @@ function cancelRemove(): void {
                             :line="line"
                             :currency="line.productVariant.currencyCode"
                             kind="unit"
+                            :unit-factor="salesUnit?.ratio ?? 1"
                         />
                     </button>
                 </template>
@@ -127,6 +139,7 @@ function cancelRemove(): void {
                 :line="line"
                 :currency="line.productVariant.currencyCode"
                 kind="unit"
+                :unit-factor="salesUnit?.ratio ?? 1"
             />
         </div>
 
@@ -143,10 +156,14 @@ function cancelRemove(): void {
             <MvQtyStepper
                 v-else
                 editable
-                :model-value="qty"
+                :model-value="stepperQty"
                 :min="0"
+                :step="salesUnit?.packStep ?? 1"
                 @update:model-value="onQtyChange"
             />
+            <div v-if="salesUnit && !confirmingRemove" class="cart-item__qty-note">
+                {{ salesUnit.name }}, {{ line.quantity }} pcs. total
+            </div>
         </div>
 
         <div class="cart-item__total">
@@ -163,6 +180,11 @@ function cancelRemove(): void {
     align-items: center;
     padding: 18px 0;
     border-bottom: 1px solid #edf2ef;
+}
+.cart-item__qty-note {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #66736e;
 }
 .cart-item:last-child {
     border-bottom: none;

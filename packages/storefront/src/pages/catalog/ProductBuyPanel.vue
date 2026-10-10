@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
 import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { baseToPacks, packsToBase, type SalesUnitView } from '../../composables/useSalesUnit';
 
@@ -13,6 +12,7 @@ interface Props {
     cartQty?: number;
     cartLineId?: string;
     salesUnit?: SalesUnitView | null;
+    nearestPack?: { name: string; ratio: number } | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -23,9 +23,9 @@ const props = withDefaults(defineProps<Props>(), {
     cartQty: 0,
     cartLineId: undefined,
     salesUnit: null,
+    nearestPack: null,
 });
 
-const { t, n } = useI18n();
 const emit = defineEmits<{
     'add-to-cart': [qty: number];
     'update-cart-qty': [lineId: string, qty: number];
@@ -39,9 +39,7 @@ const unitPrice = computed(() =>
 );
 const perPieceNote = computed(() =>
     props.price !== undefined && props.salesUnit
-        ? t('product.perPiece', {
-              price: n(props.price, { style: 'currency', currency: props.currency }),
-          })
+        ? `${new Intl.NumberFormat('ru-RU', { style: 'currency', currency: props.currency }).format(props.price)} per pc.`
         : null,
 );
 const stepperValue = computed(() =>
@@ -50,6 +48,15 @@ const stepperValue = computed(() =>
 const addQty = computed(() =>
     props.salesUnit ? packsToBase(props.salesUnit.packStep, props.salesUnit) : 1,
 );
+
+function onAddPack(): void {
+    if (!props.nearestPack) return;
+    if (props.cartQty > 0 && props.cartLineId) {
+        emit('update-cart-qty', props.cartLineId, props.cartQty + props.nearestPack.ratio);
+    } else {
+        emit('add-to-cart', props.nearestPack.ratio);
+    }
+}
 
 function onStepper(lineId: string | undefined, value: number): void {
     if (!lineId) return;
@@ -72,17 +79,27 @@ function onStepper(lineId: string | undefined, value: number): void {
                 :amount="unitPrice"
                 :currency="currency ?? 'RUB'"
                 size="lg"
+                :decimals="Number.isInteger(unitPrice) ? 0 : 2"
                 class="buy-panel__price"
             />
-            <div v-if="showPrices && salesUnit && price !== undefined" class="buy-panel__unit-note">
-                {{ t('product.perUnit', { unit: salesUnit.name }) }} · {{ perPieceNote }}
-                <br />
-                {{ t('product.packSize', { size: salesUnit.ratio }) }}
-            </div>
             <div v-else-if="!showPrices" class="buy-panel__price-hint">Log in to see prices</div>
             <div v-else class="buy-panel__price buy-panel__price--on-request">Price on request</div>
+            <div class="buy-panel__price-note">
+                <template v-if="showPrices && salesUnit && price !== undefined">
+                    Price per {{ salesUnit.name }} · {{ perPieceNote }}<br />
+                </template>
+                Price includes customer terms and VAT.
+            </div>
 
-            <div class="buy-panel__price-note">Price includes customer terms and VAT.</div>
+            <MvButton
+                v-if="showPrices && nearestPack"
+                variant="secondary"
+                size="sm"
+                class="buy-panel__add-pack"
+                @click="onAddPack"
+            >
+                Add {{ nearestPack.name }} (+{{ nearestPack.ratio }} pc.)
+            </MvButton>
 
             <MvQtyStepper
                 v-if="cartQty > 0"
@@ -158,15 +175,14 @@ function onStepper(lineId: string | undefined, value: number): void {
     color: #a8b8b2;
     margin-bottom: 6px;
 }
-.buy-panel__unit-note {
-    font-size: 13px;
-    color: #5b6b66;
-    margin-bottom: 6px;
-}
 .buy-panel__price-note {
     font-size: 12px;
     color: #a8b8b2;
     margin-bottom: 16px;
+}
+
+.buy-panel__add-pack {
+    margin-bottom: 10px;
 }
 
 .buy-panel__add {

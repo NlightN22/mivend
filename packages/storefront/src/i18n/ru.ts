@@ -24,11 +24,6 @@ export default {
         inStock: 'В наличии',
         outOfStock: 'Нет в наличии',
     },
-    product: {
-        perUnit: 'Цена за {unit}',
-        perPiece: '{price} за штуку',
-        packSize: 'В упаковке: {size}',
-    },
     cart: {
         title: 'Корзина',
         empty: 'Корзина пуста',

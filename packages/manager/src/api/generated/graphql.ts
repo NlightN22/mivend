@@ -531,11 +531,11 @@ export type Branch = {
 };
 
 export type BranchSettings = {
-    packagesOnly: Scalars['Boolean']['output'];
     branchId: Scalars['String']['output'];
     defaultPriceTypeId: Scalars['String']['output'];
     defaultWarehouseId: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
+    packagesOnly: Scalars['Boolean']['output'];
     visiblePriceTypeIds: Maybe<Array<Scalars['String']['output']>>;
     visibleWarehouseIds: Maybe<Array<Scalars['String']['output']>>;
 };
@@ -2929,7 +2929,14 @@ export type ImportInfo = {
     processed: Scalars['Int']['output'];
 };
 
-export type InboxReplayOutcome = 'FAILED' | 'NOT_FAILED' | 'NOT_FOUND' | 'REPLAYED' | 'UNSUPPORTED';
+export type InboxReplayOutcome =
+    | 'FAILED'
+    | 'NOT_FAILED'
+    | 'NOT_FOUND'
+    | 'REPLAYED'
+    /** The message could not be decoded and has no entity id to replay — dismiss it instead. */
+    | 'UNDECODABLE'
+    | 'UNSUPPORTED';
 
 /** Returned when attempting to set a ShippingMethod for which the Order is not eligible */
 export type IneligibleShippingMethodError = ErrorResult & {
@@ -2997,6 +3004,8 @@ export type IntegrationInboxBacklogByStream = {
 /** Inbox row that needs attention: dead-lettered (failed) or recorded as a no-op. Never carries the payload. */
 export type IntegrationInboxIssue = Node & {
     attempts: Scalars['Int']['output'];
+    /** True when the row is failed and can be dismissed by a human (#212) — e.g. undecodable. */
+    dismissable: Scalars['Boolean']['output'];
     entityId: Scalars['String']['output'];
     firstFailedAt: Maybe<Scalars['DateTime']['output']>;
     id: Scalars['ID']['output'];
@@ -3014,6 +3023,8 @@ export type IntegrationInboxIssueFilterParameter = {
     _and?: InputMaybe<Array<IntegrationInboxIssueFilterParameter>>;
     _or?: InputMaybe<Array<IntegrationInboxIssueFilterParameter>>;
     attempts?: InputMaybe<NumberOperators>;
+    /** True when the row is failed and can be dismissed by a human (#212) — e.g. undecodable. */
+    dismissable?: InputMaybe<BooleanOperators>;
     entityId?: InputMaybe<StringOperators>;
     firstFailedAt?: InputMaybe<DateOperators>;
     id?: InputMaybe<IdOperators>;
@@ -3999,6 +4010,8 @@ export type Mutation = {
     deleteZone: DeletionResponse;
     /** Delete a Zone */
     deleteZones: Array<DeletionResponse>;
+    /** Resolves a failed inbox row that can never be replayed (e.g. undecodable, no entity id) with a required reason; the row leaves the failures list permanently. Needs RecoverIntegrationEvents. */
+    dismissFailedIntegrationInbox: Scalars['Boolean']['output'];
     /**
      * Duplicate an existing entity using a specific EntityDuplicator.
      * Since v2.2.0.
@@ -4711,6 +4724,11 @@ export type MutationDeleteZonesArgs = {
     ids: Array<Scalars['ID']['input']>;
 };
 
+export type MutationDismissFailedIntegrationInboxArgs = {
+    id: Scalars['ID']['input'];
+    reason: Scalars['String']['input'];
+};
+
 export type MutationDuplicateEntityArgs = {
     input: DuplicateEntityInput;
 };
@@ -4946,10 +4964,10 @@ export type MutationSetAdministratorActiveArgs = {
 };
 
 export type MutationSetBranchSettingsArgs = {
-    packagesOnly?: InputMaybe<Scalars['Boolean']['input']>;
     branchId: Scalars['String']['input'];
     defaultPriceTypeId: Scalars['String']['input'];
     defaultWarehouseId: Scalars['String']['input'];
+    packagesOnly?: InputMaybe<Scalars['Boolean']['input']>;
     visiblePriceTypeIds?: InputMaybe<Array<Scalars['String']['input']>>;
     visibleWarehouseIds?: InputMaybe<Array<Scalars['String']['input']>>;
 };
@@ -5403,6 +5421,7 @@ export type Order = Node & {
      * completed the checkout and the Order is no longer "active"
      */
     orderPlacedAt: Maybe<Scalars['DateTime']['output']>;
+    packagesOnlySales: Scalars['Boolean']['output'];
     payments: Maybe<Array<Payment>>;
     /** Promotions applied to the order. Only gets populated after the payment process has completed. */
     promotions: Array<Promotion>;
@@ -5489,6 +5508,7 @@ export type OrderCustomFields = {
     selectedContractId: Maybe<Scalars['String']['output']>;
     sourceOrderId: Maybe<Scalars['String']['output']>;
     tradingPointId: Maybe<Scalars['String']['output']>;
+    uuid: Maybe<Scalars['String']['output']>;
 };
 
 export type OrderFilterParameter = {
@@ -5520,6 +5540,7 @@ export type OrderFilterParameter = {
      * completed the checkout and the Order is no longer "active"
      */
     orderPlacedAt?: InputMaybe<DateOperators>;
+    packagesOnlySales?: InputMaybe<BooleanOperators>;
     paymentStatus?: InputMaybe<StringOperators>;
     placedByAdministratorId?: InputMaybe<StringOperators>;
     reservationDays?: InputMaybe<NumberOperators>;
@@ -5550,6 +5571,7 @@ export type OrderFilterParameter = {
     transactionId?: InputMaybe<StringOperators>;
     type?: InputMaybe<StringOperators>;
     updatedAt?: InputMaybe<DateOperators>;
+    uuid?: InputMaybe<StringOperators>;
 };
 
 /** Returned when an order operation is rejected by an OrderInterceptor method. */
@@ -5633,12 +5655,14 @@ export type OrderLineCustomFields = {
     manualPriceReason: Maybe<Scalars['String']['output']>;
     manualUnitPrice: Maybe<Scalars['Int']['output']>;
     organizationId: Maybe<Scalars['Int']['output']>;
+    uuid: Maybe<Scalars['String']['output']>;
 };
 
 export type OrderLineCustomFieldsInput = {
     manualPriceReason?: InputMaybe<Scalars['String']['input']>;
     manualUnitPrice?: InputMaybe<Scalars['Int']['input']>;
     organizationId?: InputMaybe<Scalars['Int']['input']>;
+    uuid?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type OrderLineInput = {
@@ -5761,6 +5785,7 @@ export type OrderSortParameter = {
     tradingPointId?: InputMaybe<SortOrder>;
     transactionId?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
+    uuid?: InputMaybe<SortOrder>;
 };
 
 /** Returned if there is an error in transitioning the Order state */
@@ -6714,6 +6739,7 @@ export type ProductVariantCustomFields = {
     organizationId: Maybe<Scalars['Int']['output']>;
     organizationPriority: Maybe<Scalars['Int']['output']>;
     organizationSourceEntityId: Maybe<Scalars['String']['output']>;
+    unitName: Maybe<Scalars['String']['output']>;
     unitRatioToBase: Maybe<Scalars['Float']['output']>;
     unitVolumeM3: Maybe<Scalars['Float']['output']>;
     unitWeightKg: Maybe<Scalars['Float']['output']>;
@@ -6744,6 +6770,7 @@ export type ProductVariantFilterParameter = {
     stockLevel?: InputMaybe<StringOperators>;
     stockOnHand?: InputMaybe<NumberOperators>;
     trackInventory?: InputMaybe<StringOperators>;
+    unitName?: InputMaybe<StringOperators>;
     unitRatioToBase?: InputMaybe<NumberOperators>;
     unitVolumeM3?: InputMaybe<NumberOperators>;
     unitWeightKg?: InputMaybe<NumberOperators>;
@@ -6793,6 +6820,7 @@ export type ProductVariantSortParameter = {
     stockAllocated?: InputMaybe<SortOrder>;
     stockLevel?: InputMaybe<SortOrder>;
     stockOnHand?: InputMaybe<SortOrder>;
+    unitName?: InputMaybe<SortOrder>;
     unitRatioToBase?: InputMaybe<SortOrder>;
     unitVolumeM3?: InputMaybe<SortOrder>;
     unitWeightKg?: InputMaybe<SortOrder>;
@@ -9030,6 +9058,7 @@ export type UpdateOrderCustomFieldsInput = {
     selectedContractId?: InputMaybe<Scalars['String']['input']>;
     sourceOrderId?: InputMaybe<Scalars['String']['input']>;
     tradingPointId?: InputMaybe<Scalars['String']['input']>;
+    uuid?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateOrderInput = {
@@ -9636,6 +9665,7 @@ export type BranchSettingsFieldsFragment = {
     visiblePriceTypeIds: Array<string> | null;
     defaultWarehouseId: string | null;
     visibleWarehouseIds: Array<string> | null;
+    packagesOnly: boolean;
 };
 
 export type WarehousesQueryVariables = Exact<{ [key: string]: never }>;
@@ -9690,6 +9720,7 @@ export type BranchSettingsForBranchQuery = {
         visiblePriceTypeIds: Array<string> | null;
         defaultWarehouseId: string | null;
         visibleWarehouseIds: Array<string> | null;
+        packagesOnly: boolean;
     } | null;
 };
 
@@ -9703,6 +9734,7 @@ export type SetBranchSettingsMutationVariables = Exact<{
     visibleWarehouseIds?: InputMaybe<
         Array<Scalars['String']['input']> | Scalars['String']['input']
     >;
+    packagesOnly: Scalars['Boolean']['input'];
 }>;
 
 export type SetBranchSettingsMutation = {
@@ -9713,6 +9745,7 @@ export type SetBranchSettingsMutation = {
         visiblePriceTypeIds: Array<string> | null;
         defaultWarehouseId: string | null;
         visibleWarehouseIds: Array<string> | null;
+        packagesOnly: boolean;
     };
 };
 
@@ -10885,6 +10918,7 @@ export type OrderDetailQuery = {
             createdAt: any;
             creditLimitExceeded: boolean;
             currencyCode: CurrencyCode;
+            packagesOnlySales: boolean;
             subTotalWithTax: any;
             shippingWithTax: any;
             totalWithTax: any;
@@ -10907,6 +10941,7 @@ export type OrderDetailQuery = {
                     name: string;
                     sku: string;
                     customFields: {
+                        unitName: string | null;
                         unitRatioToBase: number | null;
                         unitWeightKg: number | null;
                         unitVolumeM3: number | null;
@@ -11703,6 +11738,7 @@ export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
   visiblePriceTypeIds
   defaultWarehouseId
   visibleWarehouseIds
+  packagesOnly
 }
     `,
     { fragmentName: 'BranchSettingsFields' },
@@ -12276,18 +12312,20 @@ export const BranchSettingsForBranchDocument = new TypedDocumentString(`
   visiblePriceTypeIds
   defaultWarehouseId
   visibleWarehouseIds
+  packagesOnly
 }`) as unknown as TypedDocumentString<
     BranchSettingsForBranchQuery,
     BranchSettingsForBranchQueryVariables
 >;
 export const SetBranchSettingsDocument = new TypedDocumentString(`
-    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!]) {
+    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!) {
   setBranchSettings(
     branchId: $branchId
     defaultPriceTypeId: $defaultPriceTypeId
     visiblePriceTypeIds: $visiblePriceTypeIds
     defaultWarehouseId: $defaultWarehouseId
     visibleWarehouseIds: $visibleWarehouseIds
+    packagesOnly: $packagesOnly
   ) {
     ...BranchSettingsFields
   }
@@ -12299,6 +12337,7 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
   visiblePriceTypeIds
   defaultWarehouseId
   visibleWarehouseIds
+  packagesOnly
 }`) as unknown as TypedDocumentString<
     SetBranchSettingsMutation,
     SetBranchSettingsMutationVariables
@@ -13623,6 +13662,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
       createdAt
       creditLimitExceeded
       currencyCode
+      packagesOnlySales
       subTotalWithTax
       shippingWithTax
       totalWithTax
@@ -13645,6 +13685,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
           name
           sku
           customFields {
+            unitName
             unitRatioToBase
             unitWeightKg
             unitVolumeM3

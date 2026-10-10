@@ -32,6 +32,7 @@ export interface BranchSettingsInput {
     visiblePriceTypeIds: string[] | null;
     defaultWarehouseId: string;
     visibleWarehouseIds: string[] | null;
+    packagesOnly: boolean;
 }
 
 // Warehouses are ERP org-structure master data (see access-control's Warehouse entity) — one

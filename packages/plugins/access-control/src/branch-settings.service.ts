@@ -39,7 +39,7 @@ export class BranchSettingsService {
             settings.visiblePriceTypeIds = input.visiblePriceTypeIds ?? null;
             settings.defaultWarehouseId = input.defaultWarehouseId;
             settings.visibleWarehouseIds = input.visibleWarehouseIds ?? null;
-            settings.packagesOnly = input.packagesOnly ?? false;
+            settings.packagesOnly = input.packagesOnly ?? settings.packagesOnly;
         } else {
             settings = repo.create({
                 branchId: input.branchId,

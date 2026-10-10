@@ -140,6 +140,7 @@ watch(() => route.params.code, load);
                         :lines="order.lines"
                         :currency-code="order.currencyCode"
                         :editable="editable"
+                        :packages-only="order.packagesOnlySales"
                         :adjustment-requests="adjustmentRequests"
                         @adjusted="reload"
                     />

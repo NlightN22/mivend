@@ -5,8 +5,17 @@ import CartLinePrice from '../../components/CartLinePrice.vue';
 import { assetUrl } from '../../composables/assetUrl';
 import { brandOf } from '../../utils/brand';
 import { useCartStore, type CartLine } from '../../stores/cart';
+import { usePackagesOnly } from '../../composables/usePackagesOnly';
+import { baseToPacks, salesUnitOf } from '../../composables/useSalesUnit';
 
 const cartStore = useCartStore();
+const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
+void loadPackagesOnly();
+
+function quantityLabel(line: CartLine): string {
+    const unit = salesUnitOf(line.productVariant.customFields, packagesOnly.value);
+    return unit ? `${baseToPacks(line.quantity, unit)} ${unit.name}` : `${line.quantity} pcs.`;
+}
 
 function getBrand(line: CartLine): string {
     return brandOf(line.productVariant.product.manufacturer);
@@ -40,7 +49,8 @@ const totalQty = computed(() => cartStore.totalQuantity);
                 <div class="checkout-items__info">
                     <div class="checkout-items__name">{{ line.productVariant.product.name }}</div>
                     <div class="checkout-items__meta">
-                        {{ getBrand(line) ? getBrand(line) + ' · ' : '' }}{{ line.quantity }} pcs. ·
+                        {{ getBrand(line) ? getBrand(line) + ' · ' : ''
+                        }}{{ quantityLabel(line) }} ·
                         {{ line.productVariant.sku }}
                     </div>
                 </div>

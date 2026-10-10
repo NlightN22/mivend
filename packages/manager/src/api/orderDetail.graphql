@@ -8,6 +8,7 @@ query OrderDetail($code: String!) {
             createdAt
             creditLimitExceeded
             currencyCode
+            packagesOnlySales
             subTotalWithTax
             shippingWithTax
             totalWithTax
@@ -30,6 +31,7 @@ query OrderDetail($code: String!) {
                     name
                     sku
                     customFields {
+                        unitName
                         unitRatioToBase
                         unitWeightKg
                         unitVolumeM3

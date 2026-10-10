@@ -19,7 +19,7 @@ import { shopApi } from '../../api/client';
 import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
 import { ProductDetailDocument, type ProductDetailQuery } from '../../api/generated/graphql';
 import ProductBuyPanel from './ProductBuyPanel.vue';
-import { salesUnitOf } from '../../composables/useSalesUnit';
+import { nearestPackOf, salesUnitLabels, salesUnitOf } from '../../composables/useSalesUnit';
 import ProductSkeleton from './ProductSkeleton.vue';
 
 type Product = NonNullable<ProductDetailQuery['product']>;
@@ -42,7 +42,13 @@ const galleryImages = computed(() =>
 );
 const variant = computed(() => product.value?.variants[0]);
 const packagesOnly = ref(false);
+const nearestPack = computed(() =>
+    packagesOnly.value
+        ? null
+        : nearestPackOf(variant.value?.customFields, product.value?.packagingLevels ?? []),
+);
 const salesUnit = computed(() => salesUnitOf(variant.value?.customFields, packagesOnly.value));
+const unitLabels = computed(() => salesUnitLabels(salesUnit.value));
 const brand = computed(() => brandOf(product.value?.manufacturer));
 
 // A product can belong to several collections; the deepest one (most breadcrumbs) gives the
@@ -140,6 +146,9 @@ onMounted(() => {
                     :category="category"
                     :full-name="product.customFields?.fullName ?? ''"
                     :multiplicity="variant?.customFields?.multiplicity ?? 1"
+                    :unit-label="unitLabels.unit"
+                    :multiplicity-label="unitLabels.multiplicity"
+                    :packaging-levels="product.packagingLevels"
                     :extra-specs="extraSpecs"
                     :stock-variant-label="stockVariantLabel"
                     :related="[]"
@@ -159,6 +168,7 @@ onMounted(() => {
                     :cart-qty="cartLineFor(variant?.id)?.quantity ?? 0"
                     :cart-line-id="cartLineFor(variant?.id)?.id"
                     :sales-unit="salesUnit"
+                    :nearest-pack="nearestPack"
                     @add-to-cart="(qty: number) => onAddToCart(variant?.id, qty)"
                     @update-cart-qty="onUpdateQty"
                 />

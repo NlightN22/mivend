@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
+import MvStatusBadge from '../MvStatusBadge/MvStatusBadge.vue';
 import type { StockVariant } from '../MvStockBadge/stock-variant';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 
@@ -24,6 +25,9 @@ interface Props {
     category: string;
     fullName?: string;
     multiplicity?: number;
+    unitLabel?: string;
+    multiplicityLabel?: string;
+    packagingLevels?: { name: string; ratioToBase: number }[];
     extraSpecs?: { label: string; value: string }[];
     stockVariantLabel: StockVariant;
     related: RelatedProduct[];
@@ -39,6 +43,9 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     fullName: '',
     multiplicity: 1,
+    unitLabel: 'pc.',
+    multiplicityLabel: '',
+    packagingLevels: () => [],
     extraSpecs: () => [],
     showRelatedPrices: false,
     showAddToCartButton: true,
@@ -83,11 +90,21 @@ function getBrand(p: RelatedProduct) {
             <div class="pmc__mini">
                 <div class="pmc__mini-item">
                     <div class="pmc__mini-lbl">Unit</div>
-                    <div class="pmc__mini-val">pc.</div>
+                    <div class="pmc__mini-val">{{ unitLabel }}</div>
                 </div>
                 <div class="pmc__mini-item">
                     <div class="pmc__mini-lbl">Multiplicity</div>
-                    <div class="pmc__mini-val">{{ multiplicity }} pc.</div>
+                    <div class="pmc__mini-val">
+                        {{ multiplicityLabel || `${multiplicity} pc.` }}
+                    </div>
+                </div>
+                <div v-if="packagingLevels.length" class="pmc__mini-item pmc__mini-item--wide">
+                    <div class="pmc__mini-lbl">Packaging</div>
+                    <div class="pmc__chips">
+                        <MvStatusBadge v-for="level in packagingLevels" :key="level.name">
+                            {{ level.name }} · {{ level.ratioToBase }} pc.
+                        </MvStatusBadge>
+                    </div>
                 </div>
             </div>
         </div>
@@ -199,6 +216,15 @@ function getBrand(p: RelatedProduct) {
     letter-spacing: 0.05em;
     color: #a8b8b2;
     margin-bottom: 4px;
+}
+.pmc__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+.pmc__mini-item--wide {
+    grid-column: 1 / -1;
 }
 .pmc__mini-val {
     font-size: 14px;

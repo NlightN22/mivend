@@ -14,6 +14,7 @@ fragment BranchSettingsFields on BranchSettings {
     visiblePriceTypeIds
     defaultWarehouseId
     visibleWarehouseIds
+    packagesOnly
 }
 
 query Warehouses {
@@ -64,6 +65,7 @@ mutation SetBranchSettings(
     $visiblePriceTypeIds: [String!]
     $defaultWarehouseId: String!
     $visibleWarehouseIds: [String!]
+    $packagesOnly: Boolean!
 ) {
     setBranchSettings(
         branchId: $branchId
@@ -71,6 +73,7 @@ mutation SetBranchSettings(
         visiblePriceTypeIds: $visiblePriceTypeIds
         defaultWarehouseId: $defaultWarehouseId
         visibleWarehouseIds: $visibleWarehouseIds
+        packagesOnly: $packagesOnly
     ) {
         ...BranchSettingsFields
     }

@@ -2,13 +2,25 @@
 import { computed } from 'vue';
 import { deriveLinePricing, type LinePricingInput } from '../utils/linePricing';
 
-const props = defineProps<{ line: LinePricingInput; currency: string; kind: 'unit' | 'total' }>();
+const props = withDefaults(
+    defineProps<{
+        line: LinePricingInput;
+        currency: string;
+        kind: 'unit' | 'total';
+        unitFactor?: number;
+    }>(),
+    { unitFactor: 1 },
+);
 
 const pricing = computed(() => deriveLinePricing(props.line));
-const current = computed(() => (props.kind === 'unit' ? pricing.value.unit : pricing.value.total));
-const old = computed(() =>
-    props.kind === 'unit' ? pricing.value.oldUnit : pricing.value.oldTotal,
+const current = computed(() =>
+    props.kind === 'unit' ? pricing.value.unit * props.unitFactor : pricing.value.total,
 );
+const old = computed(() => {
+    if (props.kind !== 'unit') return pricing.value.oldTotal;
+    const oldUnit = pricing.value.oldUnit;
+    return oldUnit == null ? oldUnit : oldUnit * props.unitFactor;
+});
 const decimals = computed(() => (props.kind === 'unit' ? 2 : 0));
 </script>
 

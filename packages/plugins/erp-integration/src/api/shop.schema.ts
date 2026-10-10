@@ -7,8 +7,15 @@ export const shopApiExtensions: DocumentNode = gql`
         name: String
     }
 
+    type PackagingLevel {
+        name: String!
+        ratioToBase: Float!
+    }
+
     extend type Product {
         manufacturer: ProductManufacturer
+        "Product-owned packaging units (pack, pallet), smallest first."
+        packagingLevels: [PackagingLevel!]!
     }
 
     extend type SearchResult {

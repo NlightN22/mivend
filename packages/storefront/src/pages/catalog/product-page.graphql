@@ -5,6 +5,10 @@ query ProductDetail($slug: String!) {
         name
         slug
         description
+        packagingLevels {
+            name
+            ratioToBase
+        }
         assets {
             preview
         }

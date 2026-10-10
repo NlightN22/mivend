@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue';
-import { MvFormField, MvSelect, MvMultiSelect, MvButton, MvNotice } from '@mivend/ui-kit';
+import { MvFormField, MvSelect, MvMultiSelect, MvButton, MvNotice, MvSwitch } from '@mivend/ui-kit';
 import type { SelectOption } from '@mivend/ui-kit';
 import type { BranchSettings, PriceTypeOption, Warehouse } from '../../api/branchSettings';
 
@@ -19,6 +19,7 @@ const emit = defineEmits<{
             visiblePriceTypeIds: string[];
             defaultWarehouseId: string;
             visibleWarehouseIds: string[];
+            packagesOnly: boolean;
         },
     ];
 }>();
@@ -28,6 +29,7 @@ const form = reactive({
     visiblePriceTypeIds: [] as string[],
     defaultWarehouseId: '',
     visibleWarehouseIds: [] as string[],
+    packagesOnly: false,
 });
 
 // Re-seeds the form whenever a different branch's settings load (or none exist yet) — the two
@@ -40,6 +42,7 @@ watch(
         form.visiblePriceTypeIds = settings?.visiblePriceTypeIds ?? [];
         form.defaultWarehouseId = settings?.defaultWarehouseId ?? '';
         form.visibleWarehouseIds = settings?.visibleWarehouseIds ?? [];
+        form.packagesOnly = settings?.packagesOnly ?? false;
     },
     { immediate: true },
 );
@@ -69,6 +72,7 @@ function onSave(): void {
         visiblePriceTypeIds: form.visiblePriceTypeIds,
         defaultWarehouseId: form.defaultWarehouseId,
         visibleWarehouseIds: form.visibleWarehouseIds,
+        packagesOnly: form.packagesOnly,
     });
 }
 </script>
@@ -98,6 +102,18 @@ function onSave(): void {
             <MvFormField label="Visible warehouses">
                 <MvMultiSelect v-model="form.visibleWarehouseIds" :options="warehouseOptions" />
                 <p class="branch-settings-form__hint">Leave empty to allow every warehouse.</p>
+            </MvFormField>
+        </section>
+
+        <section class="branch-settings-form__section">
+            <h3 class="branch-settings-form__section-title">Sales</h3>
+
+            <MvFormField label="Packages only">
+                <MvSwitch v-model="form.packagesOnly" label="Enabled" />
+                <p class="branch-settings-form__hint">
+                    When on, products whose default sales unit is a package are sold only in whole
+                    packages. When off, they can also be sold by the piece.
+                </p>
             </MvFormField>
         </section>
 

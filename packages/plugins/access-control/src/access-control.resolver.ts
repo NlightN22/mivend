@@ -223,7 +223,7 @@ export class AccessControlResolver {
             visiblePriceTypeIds: args.visiblePriceTypeIds ?? null,
             defaultWarehouseId: args.defaultWarehouseId,
             visibleWarehouseIds: args.visibleWarehouseIds ?? null,
-            packagesOnly: args.packagesOnly ?? false,
+            packagesOnly: args.packagesOnly,
         });
     }
 

@@ -2629,6 +2629,11 @@ export enum OrderType {
     Seller = 'Seller',
 }
 
+export type PackagingLevel = {
+    name: Scalars['String']['output'];
+    ratioToBase: Scalars['Float']['output'];
+};
+
 export type PaginatedList = {
     items: Array<Node>;
     totalItems: Scalars['Int']['output'];
@@ -3089,6 +3094,8 @@ export type Product = Node & {
     manufacturer?: Maybe<ProductManufacturer>;
     name: Scalars['String']['output'];
     optionGroups: Array<ProductOptionGroup>;
+    /** Product-owned packaging units (pack, pallet), smallest first. */
+    packagingLevels: Array<PackagingLevel>;
     slug: Scalars['String']['output'];
     translations: Array<ProductTranslation>;
     updatedAt: Scalars['DateTime']['output'];
@@ -4395,6 +4402,10 @@ export type SearchSuggestionsQuery = {
     };
 };
 
+export type PackagesOnlySalesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PackagesOnlySalesQuery = { packagesOnlySales: boolean };
+
 export type ProductWidgetFieldsFragment = {
     id: string;
     name: string;
@@ -4521,6 +4532,7 @@ export type ProductDetailQuery = {
         name: string;
         slug: string;
         description: string;
+        packagingLevels: Array<{ name: string; ratioToBase: number }>;
         assets: Array<{ preview: string }>;
         customFields?: { fullName?: string | null; manufacturerPartNumber?: string | null } | null;
         variants: Array<{
@@ -4923,6 +4935,7 @@ export type ActiveOrderQuery = {
                 availableForOrder: boolean;
                 customFields?: {
                     weight?: number | null;
+                    unitName?: string | null;
                     unitRatioToBase?: number | null;
                     unitWeightKg?: number | null;
                     unitVolumeM3?: number | null;
@@ -5423,6 +5436,11 @@ export const SearchSuggestionsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<SearchSuggestionsQuery, SearchSuggestionsQueryVariables>;
+export const PackagesOnlySalesDocument = new TypedDocumentString(`
+    query PackagesOnlySales {
+  packagesOnlySales
+}
+    `) as unknown as TypedDocumentString<PackagesOnlySalesQuery, PackagesOnlySalesQueryVariables>;
 export const NewArrivalsDocument = new TypedDocumentString(`
     query NewArrivals($since: DateTime!) {
   products(
@@ -5552,6 +5570,10 @@ export const ProductDetailDocument = new TypedDocumentString(`
     name
     slug
     description
+    packagingLevels {
+      name
+      ratioToBase
+    }
     assets {
       preview
     }
@@ -6025,6 +6047,7 @@ export const ActiveOrderDocument = new TypedDocumentString(`
         availableForOrder
         customFields {
           weight
+          unitName
           unitRatioToBase
           unitWeightKg
           unitVolumeM3

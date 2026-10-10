@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/orderDetail';
 import { fetchAvailableStock } from '../../api/reservation';
+import { formatLineQuantity } from '../../composables/lineSalesUnit';
 import PriceAdjustmentPanel from '../order-create/PriceAdjustmentPanel.vue';
 
 const props = defineProps<{
@@ -10,6 +11,7 @@ const props = defineProps<{
     lines: OrderDetailLine[];
     currencyCode: string;
     editable: boolean;
+    packagesOnly: boolean;
     adjustmentRequests: PriceAdjustmentRequestSummary[];
 }>();
 const emit = defineEmits<{ adjusted: [] }>();
@@ -102,7 +104,15 @@ function toggleAdjust(lineId: string): void {
                 <tr>
                     <td>{{ line.productVariant.sku }}</td>
                     <td>{{ line.productVariant.name }}</td>
-                    <td>{{ line.quantity }}</td>
+                    <td>
+                        {{
+                            formatLineQuantity(
+                                line.quantity,
+                                line.productVariant.customFields,
+                                packagesOnly,
+                            )
+                        }}
+                    </td>
                     <td>
                         <span
                             :class="{

@@ -35,3 +35,32 @@ export const packsToBase = (packs: number, unit: SalesUnitView): number =>
 
 export const baseToPacks = (base: number, unit: SalesUnitView): number =>
     Math.round((base / unit.ratio) * 1e6) / 1e6;
+
+export interface PackagingLevel {
+    name: string;
+    ratioToBase: number;
+}
+
+// The pack offered next to piece sale: the variant's own default unit, else the smallest level above 1.
+export function nearestPackOf(
+    variant: SalesUnitVariant | null | undefined,
+    levels: PackagingLevel[],
+): { name: string; ratio: number } | null {
+    if (variant?.unitName && variant.unitRatioToBase && variant.unitRatioToBase > 1) {
+        return { name: variant.unitName, ratio: variant.unitRatioToBase };
+    }
+    const level = levels.find(l => l.ratioToBase > 1);
+    return level ? { name: level.name, ratio: level.ratioToBase } : null;
+}
+
+// Texts for the product card's Unit / Multiplicity block; empty strings keep the ui-kit defaults.
+export function salesUnitLabels(unit: SalesUnitView | null): {
+    unit: string;
+    multiplicity: string;
+} {
+    if (!unit) return { unit: 'pc.', multiplicity: '' };
+    return {
+        unit: unit.name,
+        multiplicity: `${unit.packStep} ${unit.name} (= ${packsToBase(unit.packStep, unit)} pc.)`,
+    };
+}

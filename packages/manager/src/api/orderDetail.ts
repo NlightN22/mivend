@@ -42,6 +42,7 @@ function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
             productVariant: {
                 ...line.productVariant,
                 customFields: line.productVariant.customFields ?? {
+                    unitName: null,
                     unitRatioToBase: null,
                     unitWeightKg: null,
                     unitVolumeM3: null,

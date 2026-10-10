@@ -43,6 +43,8 @@ import { KafkaConsumerService } from './kafka-consumer.service';
 import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.service';
 import { KafkaStatusController } from './kafka-status.controller';
 import { UnitLookupService } from './unit-lookup.service';
+import { ProductPackagingLevelsResolver } from './product-packaging-levels.resolver';
+import { ProductPackagingLevelsService } from './product-packaging-levels.service';
 import { TaxCategoryAutoCreateService } from './tax-category-auto-create.service';
 import { TaxZoneService } from './tax-zone.service';
 import { KafkaProducerService } from './kafka-producer.service';
@@ -130,6 +132,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         ProductPhotoRecoveryService,
         ResyncReplayClient,
         UnitLookupService,
+        ProductPackagingLevelsService,
         TaxCategoryAutoCreateService,
         TaxZoneService,
         KafkaProducerService,
@@ -181,6 +184,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         schema: shopApiExtensions,
         resolvers: [
             ProductManufacturerResolver,
+            ProductPackagingLevelsResolver,
             SearchResultManufacturerResolver,
             SearchResultGalleryResolver,
         ],
