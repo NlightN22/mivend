@@ -934,9 +934,15 @@ importers:
             '@nestjs/common':
                 specifier: ^11.0.0
                 version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
+            '@nestjs/graphql':
+                specifier: ^13.0.0
+                version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
             '@vendure/core':
                 specifier: ^3.7.3
                 version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+            graphql-tag:
+                specifier: ^2.12.6
+                version: 2.12.7(graphql@16.14.2)
         devDependencies:
             '@vendure/common':
                 specifier: ^3.7.3

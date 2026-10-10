@@ -141,7 +141,12 @@ describe('UnitStreamHandler', () => {
 
         expect(updateQueryBuilder.update).toHaveBeenCalledWith(ProductVariant);
         expect(updateQueryBuilder.set).toHaveBeenCalledWith({
-            customFields: { unitRatioToBase: 4, unitWeightKg: 16.8, unitVolumeM3: 18.5 },
+            customFields: {
+                unitRatioToBase: 4,
+                unitName: 'Box',
+                unitWeightKg: 16.8,
+                unitVolumeM3: 18.5,
+            },
         });
         expect(updateQueryBuilder.where).toHaveBeenCalledWith(
             '"customFieldsDefaultsalesunitid" = :defaultSalesUnitId',
@@ -150,7 +155,7 @@ describe('UnitStreamHandler', () => {
         expect(updateQueryBuilder.andWhere).toHaveBeenCalledWith('"deletedAt" IS NULL');
         expect(updateQueryBuilder.andWhere).toHaveBeenCalledWith(
             expect.stringContaining('IS DISTINCT FROM'),
-            { unitRatioToBase: 4, unitWeightKg: 16.8, unitVolumeM3: 18.5 },
+            { unitRatioToBase: 4, unitName: 'Box', unitWeightKg: 16.8, unitVolumeM3: 18.5 },
         );
         expect(updateQueryBuilder.execute).toHaveBeenCalled();
     });

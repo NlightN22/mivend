@@ -78,7 +78,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
             loggerCtx,
         );
 
-        await this.refreshVariants(ctx, entityId, ratioToBase, weightKg, volumeM3);
+        await this.refreshVariants(ctx, entityId, ratioToBase, name, weightKg, volumeM3);
         return inboundApplied();
     }
 
@@ -89,6 +89,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
         ctx: RequestContext,
         defaultSalesUnitId: string,
         unitRatioToBase: number,
+        unitName: string,
         unitWeightKg: number | null,
         unitVolumeM3: number | null,
     ): Promise<void> {
@@ -99,6 +100,7 @@ export class UnitStreamHandler implements InboundStreamHandler {
             .set({
                 customFields: {
                     unitRatioToBase,
+                    unitName,
                     unitWeightKg,
                     unitVolumeM3,
                 },
@@ -107,9 +109,10 @@ export class UnitStreamHandler implements InboundStreamHandler {
             .andWhere('"deletedAt" IS NULL')
             .andWhere(
                 '("customFieldsUnitratiotobase" IS DISTINCT FROM :unitRatioToBase OR ' +
+                    '"customFieldsUnitname" IS DISTINCT FROM :unitName OR ' +
                     '"customFieldsUnitweightkg" IS DISTINCT FROM :unitWeightKg OR ' +
                     '"customFieldsUnitvolumem3" IS DISTINCT FROM :unitVolumeM3)',
-                { unitRatioToBase, unitWeightKg, unitVolumeM3 },
+                { unitRatioToBase, unitName, unitWeightKg, unitVolumeM3 },
             )
             .execute();
 

@@ -38,6 +38,7 @@ declare module '@vendure/core' {
         // enforced constraint, and only when BranchSettings.packagesOnly is true for the
         // order's branch. Null when defaultSalesUnitId is unset (sold in base/piece unit).
         defaultSalesUnitId?: string | null;
+        unitName?: string | null;
         unitRatioToBase?: number | null;
         unitWeightKg?: number | null;
         unitVolumeM3?: number | null;

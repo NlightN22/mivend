@@ -9,8 +9,7 @@ import {
     WillAddItemToOrderInput,
     WillAdjustOrderLineInput,
 } from '@vendure/core';
-import { BranchSettingsService } from '@mivend/plugin-access-control';
-import { TradingPointService } from '@mivend/plugin-counterparty';
+import { PackagingPolicyService } from './packaging-policy.service';
 
 const MAX_PACKS_FOR_WHOLE_QUANTITY = 1000;
 
@@ -28,14 +27,12 @@ function wholePackagesQuantity(ratio: number): number {
 export class MultiplicityOrderInterceptor implements OrderInterceptor {
     private entityHydrator!: EntityHydrator;
     private translatorService!: TranslatorService;
-    private branchSettingsService!: BranchSettingsService;
-    private tradingPointService!: TradingPointService;
+    private packagingPolicyService!: PackagingPolicyService;
 
     init(injector: Injector): void {
         this.entityHydrator = injector.get(EntityHydrator);
         this.translatorService = injector.get(TranslatorService);
-        this.branchSettingsService = injector.get(BranchSettingsService);
-        this.tradingPointService = injector.get(TradingPointService);
+        this.packagingPolicyService = injector.get(PackagingPolicyService);
     }
 
     async willAddItemToOrder(
@@ -68,9 +65,12 @@ export class MultiplicityOrderInterceptor implements OrderInterceptor {
 
         const unitRatioToBase = variant.customFields?.unitRatioToBase ?? null;
         if (unitRatioToBase && unitRatioToBase > 0 && unitRatioToBase !== 1) {
-            const branchId = await this.resolveBranchId(ctx, order);
-            const branchSettings = await this.branchSettingsService.resolveEffective(ctx, branchId);
-            if (branchSettings?.packagesOnly === true) {
+            const packagesOnly = await this.packagingPolicyService.isPackagesOnly(
+                ctx,
+                order.customerId,
+                order.customFields?.branchId ?? null,
+            );
+            if (packagesOnly) {
                 effective = wholePackagesQuantity(unitRatioToBase);
             }
         }
@@ -81,22 +81,6 @@ export class MultiplicityOrderInterceptor implements OrderInterceptor {
 
         const variantName = await this.getTranslatedVariantName(ctx, variant);
         return `"${variantName}" must be ordered in multiples of ${effective}`;
-    }
-
-    // order.customFields.branchId is unset until placement (audit finding) — mirror
-    // ErpOrderService.onOrderPlaced's own resolution instead: preferred TradingPoint's branch.
-    private async resolveBranchId(ctx: RequestContext, order: Order): Promise<string | null> {
-        if (order.customerId) {
-            const tradingPoint = await this.tradingPointService.getPreferredForCustomer(
-                ctx,
-                order.customerId,
-            );
-            const branchId = tradingPoint
-                ? await this.tradingPointService.resolveServicingBranchId(ctx, tradingPoint)
-                : null;
-            if (branchId) return branchId;
-        }
-        return order.customFields?.branchId ?? null;
     }
 
     private async getTranslatedVariantName(

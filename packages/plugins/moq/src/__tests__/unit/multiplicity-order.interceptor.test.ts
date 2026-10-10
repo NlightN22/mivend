@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Injector, Order, ProductVariant, RequestContext } from '@vendure/core';
 
+import { PackagingPolicyService } from '../../packaging-policy.service';
 import { MultiplicityOrderInterceptor } from '../../multiplicity-order.interceptor';
 
 function createVariant(
@@ -31,17 +32,17 @@ describe('MultiplicityOrderInterceptor', () => {
         // just that valid/invalid quantities are judged correctly.
         interceptor.init({
             get: (token: unknown) => {
-                if (typeof token === 'function' && token.name === 'BranchSettingsService') {
-                    return { resolveEffective };
-                }
-                if (typeof token === 'function' && token.name === 'TradingPointService') {
-                    return {
-                        getPreferredForCustomer,
-                        resolveServicingBranchId: async (
-                            _c: unknown,
-                            tp: { servicingBranchId: string | null },
-                        ) => tp.servicingBranchId,
-                    };
+                if (typeof token === 'function' && token.name === 'PackagingPolicyService') {
+                    return new PackagingPolicyService(
+                        { resolveEffective } as never,
+                        {
+                            getPreferredForCustomer,
+                            resolveServicingBranchId: async (
+                                _c: unknown,
+                                tp: { servicingBranchId: string | null },
+                            ) => tp.servicingBranchId,
+                        } as never,
+                    );
                 }
                 return {
                     hydrate: vi.fn(async () => undefined),

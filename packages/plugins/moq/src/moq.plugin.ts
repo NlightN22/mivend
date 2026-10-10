@@ -4,9 +4,12 @@ import {
     RuntimeVendureConfig,
     VendurePlugin,
 } from '@vendure/core';
+import gql from 'graphql-tag';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 
+import { PackagingPolicyShopResolver } from './packaging-policy.resolver';
+import { PackagingPolicyService } from './packaging-policy.service';
 import { MultiplicityOrderInterceptor } from './multiplicity-order.interceptor';
 import './types';
 
@@ -14,6 +17,15 @@ import './types';
 // "Pack-size / MOQ" and mivend#103 sections. Deliberately its own small plugin (AGENTS.md).
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
+    providers: [PackagingPolicyService],
+    shopApiExtensions: {
+        schema: gql`
+            extend type Query {
+                packagesOnlySales: Boolean!
+            }
+        `,
+        resolvers: [PackagingPolicyShopResolver],
+    },
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.ProductVariant = [
             ...(config.customFields.ProductVariant ?? []),

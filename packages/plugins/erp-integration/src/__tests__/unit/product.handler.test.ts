@@ -261,6 +261,7 @@ describe('ProductStreamHandler', () => {
                 customFields: {
                     defaultSalesUnitId: null,
                     unitRatioToBase: null,
+                    unitName: null,
                     unitWeightKg: null,
                     unitVolumeM3: null,
                 },
@@ -782,6 +783,7 @@ describe('ProductStreamHandler', () => {
                     customFields: {
                         defaultSalesUnitId: null,
                         unitRatioToBase: null,
+                        unitName: null,
                         unitWeightKg: null,
                         unitVolumeM3: null,
                     },
@@ -805,6 +807,7 @@ describe('ProductStreamHandler', () => {
             const unitLookupService = {
                 findByEntityId: vi.fn().mockResolvedValue({
                     ratioToBase: 12,
+                    name: 'Box',
                     weightKg: 5.5,
                     volumeM3: 3.2,
                 }),
@@ -823,6 +826,7 @@ describe('ProductStreamHandler', () => {
                     customFields: {
                         defaultSalesUnitId: 'unit-box',
                         unitRatioToBase: 12,
+                        unitName: 'Box',
                         unitWeightKg: 5.5,
                         unitVolumeM3: 3.2,
                     },
@@ -846,6 +850,7 @@ describe('ProductStreamHandler', () => {
                     customFields: {
                         defaultSalesUnitId: 'unit-not-yet-synced',
                         unitRatioToBase: null,
+                        unitName: null,
                         unitWeightKg: null,
                         unitVolumeM3: null,
                     },
@@ -863,6 +868,7 @@ describe('ProductStreamHandler', () => {
             const unitLookupService = {
                 findByEntityId: vi.fn().mockResolvedValue({
                     ratioToBase: 6,
+                    name: 'Box',
                     weightKg: null,
                     volumeM3: null,
                 }),
@@ -892,6 +898,7 @@ describe('ProductStreamHandler', () => {
                     customFields: {
                         defaultSalesUnitId: 'unit-box',
                         unitRatioToBase: 6,
+                        unitName: 'Box',
                         unitWeightKg: null,
                         unitVolumeM3: null,
                     },

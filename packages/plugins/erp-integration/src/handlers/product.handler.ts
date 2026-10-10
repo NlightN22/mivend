@@ -205,6 +205,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                         customFields: {
                             defaultSalesUnitId: unitFields?.defaultSalesUnitId ?? null,
                             unitRatioToBase: unitFields?.unitRatioToBase ?? null,
+                            unitName: unitFields?.unitName ?? null,
                             unitWeightKg: unitFields?.unitWeightKg ?? null,
                             unitVolumeM3: unitFields?.unitVolumeM3 ?? null,
                         },
@@ -480,6 +481,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 customFields: {
                     defaultSalesUnitId: unitFields?.defaultSalesUnitId ?? null,
                     unitRatioToBase: unitFields?.unitRatioToBase ?? null,
+                    unitName: unitFields?.unitName ?? null,
                     unitWeightKg: unitFields?.unitWeightKg ?? null,
                     unitVolumeM3: unitFields?.unitVolumeM3 ?? null,
                 },
@@ -505,6 +507,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
             return {
                 defaultSalesUnitId,
                 unitRatioToBase: null,
+                unitName: null,
                 unitWeightKg: null,
                 unitVolumeM3: null,
                 unitMissing: true,
@@ -514,6 +517,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return {
             defaultSalesUnitId,
             unitRatioToBase: unit.ratioToBase,
+            unitName: unit.name,
             unitWeightKg: unit.weightKg,
             unitVolumeM3: unit.volumeM3,
             unitMissing: false,
@@ -530,6 +534,7 @@ interface ResolvedUnitFields {
     defaultSalesUnitId: string;
     unitMissing: boolean;
     unitRatioToBase: number | null;
+    unitName: string | null;
     unitWeightKg: number | null;
     unitVolumeM3: number | null;
 }

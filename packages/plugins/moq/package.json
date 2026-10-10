@@ -14,7 +14,9 @@
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@nestjs/common": "^11.0.0",
-        "@vendure/core": "^3.7.3"
+        "@nestjs/graphql": "^13.0.0",
+        "@vendure/core": "^3.7.3",
+        "graphql-tag": "^2.12.6"
     },
     "devDependencies": {
         "@vendure/common": "^3.7.3",
