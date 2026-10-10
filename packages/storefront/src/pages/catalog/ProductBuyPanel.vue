@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { stockVariantFromLevel } from '@mivend/ui-kit';
+import { baseToPacks, packsToBase, type SalesUnitView } from '../../composables/useSalesUnit';
 
 interface Props {
     price?: number;
@@ -10,6 +12,7 @@ interface Props {
     showPrices: boolean;
     cartQty?: number;
     cartLineId?: string;
+    salesUnit?: SalesUnitView | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -19,11 +22,39 @@ const props = withDefaults(defineProps<Props>(), {
     stockLevel: undefined,
     cartQty: 0,
     cartLineId: undefined,
+    salesUnit: null,
 });
 
-const emit = defineEmits<{ 'add-to-cart': []; 'update-cart-qty': [lineId: string, qty: number] }>();
+const { t, n } = useI18n();
+const emit = defineEmits<{
+    'add-to-cart': [qty: number];
+    'update-cart-qty': [lineId: string, qty: number];
+}>();
 
 const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
+const unitPrice = computed(() =>
+    props.price !== undefined && props.salesUnit
+        ? props.price * props.salesUnit.ratio
+        : props.price,
+);
+const perPieceNote = computed(() =>
+    props.price !== undefined && props.salesUnit
+        ? t('product.perPiece', {
+              price: n(props.price, { style: 'currency', currency: props.currency }),
+          })
+        : null,
+);
+const stepperValue = computed(() =>
+    props.salesUnit ? baseToPacks(props.cartQty, props.salesUnit) : props.cartQty,
+);
+const addQty = computed(() =>
+    props.salesUnit ? packsToBase(props.salesUnit.packStep, props.salesUnit) : 1,
+);
+
+function onStepper(lineId: string | undefined, value: number): void {
+    if (!lineId) return;
+    emit('update-cart-qty', lineId, props.salesUnit ? packsToBase(value, props.salesUnit) : value);
+}
 </script>
 
 <template>
@@ -37,12 +68,17 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
                 class="buy-panel__compare-at-price"
             />
             <MvAmountDisplay
-                v-if="showPrices && price !== undefined"
-                :amount="price"
+                v-if="showPrices && unitPrice !== undefined"
+                :amount="unitPrice"
                 :currency="currency ?? 'RUB'"
                 size="lg"
                 class="buy-panel__price"
             />
+            <div v-if="showPrices && salesUnit && price !== undefined" class="buy-panel__unit-note">
+                {{ t('product.perUnit', { unit: salesUnit.name }) }} · {{ perPieceNote }}
+                <br />
+                {{ t('product.packSize', { size: salesUnit.ratio }) }}
+            </div>
             <div v-else-if="!showPrices" class="buy-panel__price-hint">Log in to see prices</div>
             <div v-else class="buy-panel__price buy-panel__price--on-request">Price on request</div>
 
@@ -50,12 +86,11 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
 
             <MvQtyStepper
                 v-if="cartQty > 0"
-                :model-value="cartQty"
+                :model-value="stepperValue"
                 :min="0"
+                :step="salesUnit?.packStep ?? 1"
                 block
-                @update:model-value="
-                    (val: number) => cartLineId && emit('update-cart-qty', cartLineId, val)
-                "
+                @update:model-value="(val: number) => onStepper(cartLineId, val)"
             />
             <RouterLink
                 v-else-if="showPrices && price === undefined"
@@ -69,7 +104,7 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
                 class="buy-panel__add"
                 type="button"
                 :disabled="!showPrices || stockVariant === 'out'"
-                @click="emit('add-to-cart')"
+                @click="emit('add-to-cart', addQty)"
             >
                 Add to cart
             </button>
@@ -121,6 +156,11 @@ const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
 .buy-panel__price-hint {
     font-size: 14px;
     color: #a8b8b2;
+    margin-bottom: 6px;
+}
+.buy-panel__unit-note {
+    font-size: 13px;
+    color: #5b6b66;
     margin-bottom: 6px;
 }
 .buy-panel__price-note {

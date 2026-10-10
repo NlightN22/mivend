@@ -1,4 +1,5 @@
 query ProductDetail($slug: String!) {
+    packagesOnlySales
     product(slug: $slug) {
         id
         name
@@ -21,6 +22,8 @@ query ProductDetail($slug: String!) {
             stockLevel
             customFields {
                 multiplicity
+                unitName
+                unitRatioToBase
                 weight
             }
         }

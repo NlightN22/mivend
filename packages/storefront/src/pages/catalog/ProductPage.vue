@@ -19,6 +19,7 @@ import { shopApi } from '../../api/client';
 import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
 import { ProductDetailDocument, type ProductDetailQuery } from '../../api/generated/graphql';
 import ProductBuyPanel from './ProductBuyPanel.vue';
+import { salesUnitOf } from '../../composables/useSalesUnit';
 import ProductSkeleton from './ProductSkeleton.vue';
 
 type Product = NonNullable<ProductDetailQuery['product']>;
@@ -40,6 +41,8 @@ const galleryImages = computed(() =>
     })),
 );
 const variant = computed(() => product.value?.variants[0]);
+const packagesOnly = ref(false);
+const salesUnit = computed(() => salesUnitOf(variant.value?.customFields, packagesOnly.value));
 const brand = computed(() => brandOf(product.value?.manufacturer));
 
 // A product can belong to several collections; the deepest one (most breadcrumbs) gives the
@@ -88,6 +91,7 @@ async function fetchData(slug: string) {
     try {
         const detailRes = await shopApi(ProductDetailDocument, { slug });
         product.value = detailRes.product ?? null;
+        packagesOnly.value = detailRes.packagesOnlySales;
     } catch (e) {
         error.value = describeLoadError(e);
     } finally {
@@ -154,7 +158,8 @@ onMounted(() => {
                     :show-prices="authStore.isLoggedIn"
                     :cart-qty="cartLineFor(variant?.id)?.quantity ?? 0"
                     :cart-line-id="cartLineFor(variant?.id)?.id"
-                    @add-to-cart="onAddToCart(variant?.id)"
+                    :sales-unit="salesUnit"
+                    @add-to-cart="(qty: number) => onAddToCart(variant?.id, qty)"
                     @update-cart-qty="onUpdateQty"
                 />
             </div>

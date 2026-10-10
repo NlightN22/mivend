@@ -3246,6 +3246,7 @@ export type ProductVariant = Node & {
 export type ProductVariantCustomFields = {
     multiplicity?: Maybe<Scalars['Int']['output']>;
     organizationId?: Maybe<Scalars['Int']['output']>;
+    unitName?: Maybe<Scalars['String']['output']>;
     unitRatioToBase?: Maybe<Scalars['Float']['output']>;
     unitVolumeM3?: Maybe<Scalars['Float']['output']>;
     unitWeightKg?: Maybe<Scalars['Float']['output']>;
@@ -3271,6 +3272,7 @@ export type ProductVariantFilterParameter = {
     productId?: InputMaybe<IdOperators>;
     sku?: InputMaybe<StringOperators>;
     stockLevel?: InputMaybe<StringOperators>;
+    unitName?: InputMaybe<StringOperators>;
     unitRatioToBase?: InputMaybe<NumberOperators>;
     unitVolumeM3?: InputMaybe<NumberOperators>;
     unitWeightKg?: InputMaybe<NumberOperators>;
@@ -3309,6 +3311,7 @@ export type ProductVariantSortParameter = {
     productId?: InputMaybe<SortOrder>;
     sku?: InputMaybe<SortOrder>;
     stockLevel?: InputMaybe<SortOrder>;
+    unitName?: InputMaybe<SortOrder>;
     unitRatioToBase?: InputMaybe<SortOrder>;
     unitVolumeM3?: InputMaybe<SortOrder>;
     unitWeightKg?: InputMaybe<SortOrder>;
@@ -3452,6 +3455,7 @@ export type Query = {
      * general anonymous access to Order data.
      */
     orderByCode?: Maybe<Order>;
+    packagesOnlySales: Scalars['Boolean']['output'];
     payment?: Maybe<PaymentAttempt>;
     popularProductIds: Array<Scalars['ID']['output']>;
     /** Get a Product either by id or slug. If neither 'id' nor 'slug' is specified, an error will result. */
@@ -4511,6 +4515,7 @@ export type ProductDetailQueryVariables = Exact<{
 }>;
 
 export type ProductDetailQuery = {
+    packagesOnlySales: boolean;
     product?: {
         id: string;
         name: string;
@@ -4526,7 +4531,12 @@ export type ProductDetailQuery = {
             compareAtPrice?: number | null;
             currencyCode: CurrencyCode;
             stockLevel: string;
-            customFields?: { multiplicity?: number | null; weight?: number | null } | null;
+            customFields?: {
+                multiplicity?: number | null;
+                unitName?: string | null;
+                unitRatioToBase?: number | null;
+                weight?: number | null;
+            } | null;
         }>;
         facetValues: Array<{ name: string; facet: { code: string; name: string } }>;
         manufacturer?: { name?: string | null } | null;
@@ -5536,6 +5546,7 @@ export const PopularProductsDocument = new TypedDocumentString(`
 }`) as unknown as TypedDocumentString<PopularProductsQuery, PopularProductsQueryVariables>;
 export const ProductDetailDocument = new TypedDocumentString(`
     query ProductDetail($slug: String!) {
+  packagesOnlySales
   product(slug: $slug) {
     id
     name
@@ -5558,6 +5569,8 @@ export const ProductDetailDocument = new TypedDocumentString(`
       stockLevel
       customFields {
         multiplicity
+        unitName
+        unitRatioToBase
         weight
       }
     }
