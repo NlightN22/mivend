@@ -47,6 +47,12 @@ Also exercised, with the ERP side run by the Integration Service owner:
 
 Not exercised: numbering on a branch instance, late registration result after a local release.
 
+## Known limits
+
+- An order result for an unknown order uuid is retried within the normal inbox budget (24 hours) and
+  then resolved as a no-op (#211). A genuine race longer than that budget (for example the
+  Integration Service down for more than a day) is not told apart from a result for another instance.
+
 ## Pitfalls found
 
 - Raw `pg` returns integer ids as numbers; compare them as strings with entity string ids.

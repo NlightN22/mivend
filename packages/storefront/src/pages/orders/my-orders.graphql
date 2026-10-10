@@ -28,7 +28,6 @@ query MyOrders($options: OrderListOptions, $search: String) {
             }
             customFields {
                 erpStatus
-                erpOrderId
                 erpStatusAt
                 erpOrderStatus
             }

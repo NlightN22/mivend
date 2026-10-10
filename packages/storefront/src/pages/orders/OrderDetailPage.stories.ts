@@ -54,7 +54,6 @@ export const Default: Story = {
                     },
                     customFields: {
                         erpStatus: 'CONFIRMED',
-                        erpOrderId: 'erp-1',
                         erpStatusAt: new Date().toISOString(),
                     },
                 },

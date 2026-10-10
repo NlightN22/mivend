@@ -33,7 +33,6 @@ query OrderDetail($id: ID!) {
         }
         customFields {
             erpStatus
-            erpOrderId
             erpStatusAt
             erpOrderStatus
         }

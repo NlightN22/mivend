@@ -36,6 +36,10 @@ export const contractOrderGuard: OrderProcess<OrderState> = {
     },
     async onTransitionEnd(_fromState, toState, { ctx, order }) {
         if (toState !== 'ArrangingPayment') return;
+        // Same order row lock as organizationOrderGuard: a concurrent refresh must commit first.
+        await connection
+            .getRepository(ctx, Order)
+            .query('SELECT id FROM "order" WHERE id = $1 FOR UPDATE', [order.id]);
         const contract = await resolveContract(ctx, order);
         if (!contract) return;
         await connection.getRepository(ctx, Order).query(

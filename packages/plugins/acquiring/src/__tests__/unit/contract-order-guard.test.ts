@@ -66,6 +66,12 @@ describe('contractOrderGuard', () => {
         ]);
     });
 
+    it('locks the order row before resolving and stamping the contract', async () => {
+        await end('ArrangingPayment');
+        expect(query.mock.calls[0][0]).toContain('FOR UPDATE');
+        expect(query.mock.calls[1][0]).toContain('UPDATE "order"');
+    });
+
     it('mirrors the stamp onto the in-memory order so the transition save does not erase it', async () => {
         resolveOrderContract.mockResolvedValue({ erpId: 'resolved' });
         const o = order();

@@ -2367,7 +2367,6 @@ export type OrderAddress = {
 export type OrderCustomFields = {
     branchId?: Maybe<Scalars['String']['output']>;
     erpContractId?: Maybe<Scalars['String']['output']>;
-    erpOrderId?: Maybe<Scalars['String']['output']>;
     erpOrderStatus?: Maybe<Scalars['String']['output']>;
     erpRegistrationDocumentNumber?: Maybe<Scalars['String']['output']>;
     erpRegistrationStatus?: Maybe<Scalars['String']['output']>;
@@ -2394,7 +2393,6 @@ export type OrderFilterParameter = {
     createdAt?: InputMaybe<DateOperators>;
     currencyCode?: InputMaybe<StringOperators>;
     erpContractId?: InputMaybe<StringOperators>;
-    erpOrderId?: InputMaybe<StringOperators>;
     erpOrderStatus?: InputMaybe<StringOperators>;
     erpRegistrationDocumentNumber?: InputMaybe<StringOperators>;
     erpRegistrationStatus?: InputMaybe<StringOperators>;
@@ -2562,7 +2560,6 @@ export type OrderSortParameter = {
     code?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
     erpContractId?: InputMaybe<SortOrder>;
-    erpOrderId?: InputMaybe<SortOrder>;
     erpOrderStatus?: InputMaybe<SortOrder>;
     erpRegistrationDocumentNumber?: InputMaybe<SortOrder>;
     erpRegistrationStatus?: InputMaybe<SortOrder>;
@@ -4101,7 +4098,6 @@ export type UpdateMultipleOrderItemsResult = {
 export type UpdateOrderCustomFieldsInput = {
     branchId?: InputMaybe<Scalars['String']['input']>;
     erpContractId?: InputMaybe<Scalars['String']['input']>;
-    erpOrderId?: InputMaybe<Scalars['String']['input']>;
     erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
     erpRegistrationDocumentNumber?: InputMaybe<Scalars['String']['input']>;
     erpRegistrationStatus?: InputMaybe<Scalars['String']['input']>;
@@ -4711,7 +4707,6 @@ export type MyOrdersQuery = {
             } | null;
             customFields?: {
                 erpStatus?: string | null;
-                erpOrderId?: string | null;
                 erpStatusAt?: any | null;
                 erpOrderStatus?: string | null;
             } | null;
@@ -4755,7 +4750,6 @@ export type OrderDetailQuery = {
         } | null;
         customFields?: {
             erpStatus?: string | null;
-            erpOrderId?: string | null;
             erpStatusAt?: any | null;
             erpOrderStatus?: string | null;
         } | null;
@@ -5788,7 +5782,6 @@ export const MyOrdersDocument = new TypedDocumentString(`
       }
       customFields {
         erpStatus
-        erpOrderId
         erpStatusAt
         erpOrderStatus
       }
@@ -5833,7 +5826,6 @@ export const OrderDetailDocument = new TypedDocumentString(`
     }
     customFields {
       erpStatus
-      erpOrderId
       erpStatusAt
       erpOrderStatus
     }

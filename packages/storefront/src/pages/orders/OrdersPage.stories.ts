@@ -56,7 +56,6 @@ export const Default: Story = {
                             },
                             customFields: {
                                 erpStatus: 'CONFIRMED',
-                                erpOrderId: 'erp-1',
                                 erpStatusAt: new Date().toISOString(),
                             },
                         }),
@@ -69,7 +68,6 @@ export const Default: Story = {
                             shippingAddress: null,
                             customFields: {
                                 erpStatus: 'SHIPPED',
-                                erpOrderId: 'erp-2',
                                 erpStatusAt: new Date().toISOString(),
                             },
                         }),
