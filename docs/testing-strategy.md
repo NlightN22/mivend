@@ -153,6 +153,17 @@ verify retry, verify recovery, verify concurrency (real concurrent calls, not tw
 ones). Production BullMQ wiring gets one separate, minimal integration check — not exercised by
 every component test.
 
+## Retry/backoff testing
+
+Never assert a retry/backoff outcome by racing the real delay against a fixed wall-clock
+`waitFor`/timeout — under `make test-int`'s full parallel run (all plugin suites plus
+Postgres/RabbitMQ sharing the host) that margin can shrink enough to flake with no code change
+(issue #213, `sync-cycle.test.ts`'s poison-message test). Make the delay itself injectable (e.g.
+a `retryBaseDelayMs`-style option, defaulting to the production value) and have the test pass a
+near-zero value, so the real retry/backoff/DLQ code path still runs, just on a millisecond
+timescale instead of seconds. Same principle as "Worker testing" above (never wait on a real
+scheduler interval) — applies equally to a RabbitMQ/Kafka consumer's nack-and-requeue backoff.
+
 ## Fixtures, factories, builders
 
 - Factories build minimally valid objects; builders explicitly override the fields relevant to
@@ -314,6 +325,9 @@ A change is not done until:
 - Integration/component failure: check `make up` actually succeeded (`docker ps`); a
   cross-file DDL race shows up as a Postgres error unrelated to the assertion — see the
   schema-per-file rule above before assuming a logic bug.
+- Intermittent failure with no code change in the area, specifically around a retry/backoff/
+  timeout assertion: suspect a real-time race against `make test-int`'s full parallel load
+  before suspecting a real defect — see "Retry/backoff testing" above.
 - E2E failure: check the Playwright trace/screenshot artifact first, not the assertion message —
   most failures are stale auth state, seed drift, or a missing `make dev`/`make seed`, per
   `docs/e2e-testing.md`.
