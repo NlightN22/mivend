@@ -4,11 +4,18 @@ import { DataSource, In } from 'typeorm';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
+import { isUndecodableLastError } from './kafka-inbound-message';
 import { REPLAY_MAX_IDS, ResyncReplayClient } from './resync-replay.client';
 import { streamToAggregateType } from './stream-aggregate-type';
 import { loggerCtx } from './types';
 
-export type InboxReplayOutcome = 'REPLAYED' | 'NOT_FOUND' | 'UNSUPPORTED' | 'NOT_FAILED' | 'FAILED';
+export type InboxReplayOutcome =
+    | 'REPLAYED'
+    | 'NOT_FOUND'
+    | 'UNSUPPORTED'
+    | 'NOT_FAILED'
+    | 'FAILED'
+    | 'UNDECODABLE';
 
 export interface InboxReplayResult {
     id: string;
@@ -38,7 +45,7 @@ export class IntegrationInboxReplayService {
     async replayFailed(ids: number[]): Promise<InboxReplayResult[]> {
         const rows = await this.dataSource.getRepository(IntegrationInboxEvent).find({
             where: { id: In(ids) },
-            select: ['id', 'stream', 'entityId', 'status'],
+            select: ['id', 'stream', 'entityId', 'status', 'lastError'],
         });
         const results: InboxReplayResult[] = [];
         const eligible: number[] = [];
@@ -46,6 +53,13 @@ export class IntegrationInboxReplayService {
             const base = { id: String(row.id), stream: row.stream, entityId: row.entityId };
             if (row.status !== 'failed') {
                 results.push({ ...base, outcome: 'NOT_FAILED', message: `Row is ${row.status}` });
+            } else if (isUndecodableLastError(row.lastError)) {
+                results.push({
+                    ...base,
+                    outcome: 'UNDECODABLE',
+                    message:
+                        'message could not be decoded, no entity id to replay — dismiss it instead',
+                });
             } else if (!streamToAggregateType(row.stream)) {
                 results.push({
                     ...base,

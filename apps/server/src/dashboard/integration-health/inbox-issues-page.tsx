@@ -20,6 +20,7 @@ const inboxIssuesDocument = graphql(`
                 outcome
                 outcomeReason
                 replayable
+                dismissable
             }
             totalItems
         }
@@ -36,6 +37,12 @@ const replayDocument = graphql(`
     }
 `);
 
+const dismissDocument = graphql(`
+    mutation DismissFailedIntegrationInboxFromDashboard($id: ID!, $reason: String!) {
+        dismissFailedIntegrationInbox(id: $id, reason: $reason)
+    }
+`);
+
 export function InboxIssuesPage({ route }: Readonly<{ route: AnyRoute }>) {
     const refreshRef = useRef<() => void>(() => {});
 
@@ -48,6 +55,18 @@ export function InboxIssuesPage({ route }: Readonly<{ route: AnyRoute }>) {
             refreshRef.current();
         } catch (e) {
             toast.error(e instanceof Error ? e.message : 'Could not request replay');
+        }
+    }
+
+    async function dismiss(id: string): Promise<void> {
+        const reason = window.prompt('Reason for dismissing this inbox row:');
+        if (!reason || !reason.trim()) return;
+        try {
+            await api.mutate(dismissDocument, { id, reason });
+            toast.success('Row dismissed.');
+            refreshRef.current();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Could not dismiss the row');
         }
     }
 
@@ -121,20 +140,32 @@ export function InboxIssuesPage({ route }: Readonly<{ route: AnyRoute }>) {
             }}
             additionalColumns={{
                 actions: {
-                    meta: { dependencies: ['id', 'replayable'] },
+                    meta: { dependencies: ['id', 'replayable', 'dismissable'] },
                     header: 'Actions',
-                    cell: ({ row }) =>
-                        row.original.replayable ? (
-                            <PermissionGuard requires={['RecoverIntegrationEvents']}>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => void replay(row.original.id)}
-                                >
-                                    Replay
-                                </Button>
-                            </PermissionGuard>
-                        ) : null,
+                    cell: ({ row }) => (
+                        <PermissionGuard requires={['RecoverIntegrationEvents']}>
+                            <div className="flex items-center gap-1">
+                                {row.original.replayable ? (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => void replay(row.original.id)}
+                                    >
+                                        Replay
+                                    </Button>
+                                ) : null}
+                                {row.original.dismissable ? (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => void dismiss(row.original.id)}
+                                    >
+                                        Dismiss
+                                    </Button>
+                                ) : null}
+                            </div>
+                        </PermissionGuard>
+                    ),
                 },
             }}
             registerRefresher={refresher => {

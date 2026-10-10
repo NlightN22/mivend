@@ -103,10 +103,10 @@ export class IntegrationInboxEvent {
     @Column({ type: 'timestamptz', name: 'processed_at', nullable: true })
     processedAt!: Date | null;
 
-    // How a processed row ended: applied, superseded by a newer version, or a deliberate no-op
-    // with its reason (#200). Null on rows processed before this column existed.
+    // How a processed row ended: applied, superseded by a newer version, a deliberate no-op
+    // (#200), or dismissed by a human (#212). Null on rows processed before this column existed.
     @Column({ type: 'varchar', name: 'outcome', nullable: true })
-    outcome!: 'applied' | 'superseded' | 'noop' | null;
+    outcome!: 'applied' | 'superseded' | 'noop' | 'dismissed' | null;
 
     @Column({ type: 'timestamptz', name: 'replay_requested_at', nullable: true })
     replayRequestedAt!: Date | null;

@@ -14,4 +14,26 @@ describe('IntegrationInboxIssueResolver.replayable', () => {
         expect(resolver.replayable(row({ stream: 'vat-rate' }))).toBe(false);
         expect(resolver.replayable(row({ status: 'processed' }))).toBe(false);
     });
+
+    // #212: an undecodable row has no entity id Integration Service could ever replay by.
+    it('is false for an undecodable row even though its stream is replayable', () => {
+        expect(resolver.replayable(row({ lastError: 'decode failed: invalid wire type' }))).toBe(
+            false,
+        );
+    });
+});
+
+describe('IntegrationInboxIssueResolver.dismissable', () => {
+    const resolver = new IntegrationInboxIssueResolver();
+
+    it('is true for any failed row, replayable or not', () => {
+        expect(resolver.dismissable(row({}))).toBe(true);
+        expect(resolver.dismissable(row({ lastError: 'decode failed: invalid wire type' }))).toBe(
+            true,
+        );
+    });
+
+    it('is false once the row has left the failed status', () => {
+        expect(resolver.dismissable(row({ status: 'processed' }))).toBe(false);
+    });
 });

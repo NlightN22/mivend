@@ -102,6 +102,22 @@ export class IntegrationInboxService {
         await insertRejectedInboxRow(this.dataSource, message);
     }
 
+    // Terminal human resolution for a `failed` row that can never be replayed (#212) — e.g. an
+    // undecodable message with no entity id. Conditional UPDATE: only a still-`failed` row moves,
+    // so a double click or a race with another sweep cannot dismiss a row twice.
+    async dismissFailed(id: number, reason: string): Promise<boolean> {
+        const result = await this.dataSource.getRepository(IntegrationInboxEvent).update(
+            { id, status: 'failed' },
+            {
+                status: 'processed',
+                processedAt: new Date(),
+                outcome: 'dismissed',
+                outcomeReason: reason,
+            },
+        );
+        return (result.affected ?? 0) > 0;
+    }
+
     // Phase 2 repeats the eligibility condition so the lock-time recheck drops rows a competing
     // sweep already claimed (#148, see docs/environments.md's own note for the full incident).
     async claimBatch(limit = 20, streams?: InboundStream[]): Promise<IntegrationInboxEvent[]> {

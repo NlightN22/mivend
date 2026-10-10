@@ -365,6 +365,52 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(updated.processedAt).not.toBeNull();
     });
 
+    // #212: a failed row that can never be replayed (e.g. undecodable) must still have a way out.
+    describe('dismissFailed', () => {
+        it('moves a failed row out of the failures list, recording the reason', async () => {
+            const row = await inboxService.enqueue({
+                stream: 'category',
+                entityId: 'rejected@0:7',
+                version: '',
+                sourceEventId: 'rejected@0:7',
+                payload: { rawBase64: 'abcd' },
+            });
+            await deadLetter(row.id);
+
+            const dismissed = await inboxService.dismissFailed(row.id, 'undecodable, no entity id');
+            expect(dismissed).toBe(true);
+
+            const updated = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .findOneOrFail({ where: { id: row.id } });
+            expect(updated.status).toBe('processed');
+            expect(updated.outcome).toBe('dismissed');
+            expect(updated.outcomeReason).toBe('undecodable, no entity id');
+
+            const failed = await inboxService.findFailed();
+            expect(failed.items.find(item => item.id === row.id)).toBeUndefined();
+        });
+
+        it('is a no-op on a row that is not failed, so a double click cannot double-dismiss', async () => {
+            const row = await inboxService.enqueue({
+                stream: 'category',
+                entityId: 'c-dismiss-noop',
+                version: '1',
+                sourceEventId: 'evt-dismiss-noop',
+                payload: { name: 'Widgets' },
+            });
+            await inboxService.markProcessed(row.id, 'applied');
+
+            const dismissed = await inboxService.dismissFailed(row.id, 'late click');
+            expect(dismissed).toBe(false);
+
+            const updated = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .findOneOrFail({ where: { id: row.id } });
+            expect(updated.outcome).toBe('applied');
+        });
+    });
+
     // issue #76's dashboard read model — recent dead-lettered events for a manager to notice.
     describe('findFailed', () => {
         it('returns a failed row', async () => {

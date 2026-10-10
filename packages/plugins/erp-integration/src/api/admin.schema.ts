@@ -136,6 +136,8 @@ export const adminApiExtensions: DocumentNode = gql`
         outcomeReason: String
         "True when the row is failed and Integration Service can replay its entity."
         replayable: Boolean!
+        "True when the row is failed and can be dismissed by a human (#212) — e.g. undecodable."
+        dismissable: Boolean!
     }
 
     type IntegrationInboxIssueList implements PaginatedList {
@@ -223,6 +225,8 @@ export const adminApiExtensions: DocumentNode = gql`
         UNSUPPORTED
         NOT_FAILED
         FAILED
+        "The message could not be decoded and has no entity id to replay — dismiss it instead."
+        UNDECODABLE
     }
 
     type IntegrationInboxReplayResult {
@@ -354,6 +358,8 @@ export const adminApiExtensions: DocumentNode = gql`
     extend type Mutation {
         "Asks Integration Service to re-publish dead-lettered inbox entities (1 to 100 row ids); replayed rows become resolved. Needs RecoverIntegrationEvents."
         replayFailedIntegrationInbox(ids: [ID!]!): [IntegrationInboxReplayResult!]!
+        "Resolves a failed inbox row that can never be replayed (e.g. undecodable, no entity id) with a required reason; the row leaves the failures list permanently. Needs RecoverIntegrationEvents."
+        dismissFailedIntegrationInbox(id: ID!, reason: String!): Boolean!
         "Asks Integration Service to re-publish one photo (fresh download link) and resets its attempt counter (issue #181)."
         replayProductPhoto(id: ID!): ProductPhoto!
         "Manually runs the reconciliation comparison against Integration Service immediately, instead of waiting for the daily ScheduledTask (issue #84) — same ReconciliationService.runComparison the scheduled run uses, recorded with triggeredBy='manual' and the calling administrator's id."
