@@ -594,6 +594,28 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         );
     });
 
+    it('does not clear a known documentNumber when a rejected result carries none', async () => {
+        await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
+            orderEntityId: null,
+            requestEntityId: null,
+            localOrderId: 'order-1',
+            rejected: true,
+            reservedLines: [],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: 'rejected',
+            rejectionReasonCode: 'PROCESSING_ERROR',
+            rejectionReasonText: 'unit does not belong to the product',
+        });
+
+        const { customFields } = orderRepo.update.mock.calls[0][1] as {
+            customFields: Record<string, unknown>;
+        };
+        expect(customFields).not.toHaveProperty('erpRegistrationDocumentNumber');
+        expect(customFields).toMatchObject({ erpRegistrationStatus: 'rejected' });
+    });
+
     it('persists documentNumber/status even when there is nothing to release', async () => {
         reservationRepo.find.mockResolvedValue([]);
 

@@ -148,9 +148,11 @@ export class ReservationWriteOffSyncService {
 
         // Purely informational for staff — never read by the release/quantity-match logic below.
         const customFields: Partial<typeof order.customFields> = {
-            erpRegistrationDocumentNumber: input.documentNumber,
             erpRegistrationStatus: input.status,
         };
+        if (input.documentNumber) {
+            customFields.erpRegistrationDocumentNumber = input.documentNumber;
+        }
         if (missingErpOrderId && !input.rejected) {
             customFields.erpOrderId = input.orderEntityId;
         }
