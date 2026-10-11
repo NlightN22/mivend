@@ -6,7 +6,8 @@ import { MvButton, MvModal, formatDocumentNumber } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import { useCancelOrder } from './useCancelOrder';
 import { useOrderDetail } from './useOrderDetail';
-import { STATUS_LABEL, STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
+import { STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
+import { isNotRegisteredInErp } from './isNotRegisteredInErp';
 
 const route = useRoute();
 const { order, loading, load } = useOrderDetail();
@@ -52,23 +53,29 @@ function formatDate(iso: string): string {
         <AccountSidebar />
 
         <section class="od-content">
-            <router-link to="/orders" class="od-back">← My orders</router-link>
+            <router-link to="/orders" class="od-back">{{ t('orders.detail.back') }}</router-link>
 
-            <div v-if="loading" class="od-state">Loading...</div>
+            <div v-if="loading" class="od-state">{{ t('orders.detail.loading') }}</div>
 
-            <div v-else-if="!order" class="od-state">Order not found.</div>
+            <div v-else-if="!order" class="od-state">{{ t('orders.detail.notFound') }}</div>
 
             <template v-else>
                 <div class="od-head">
                     <div>
-                        <h1 class="od-title">Order {{ formatDocumentNumber(order.code) }}</h1>
+                        <h1 class="od-title">
+                            {{
+                                t('orders.detail.title', {
+                                    number: formatDocumentNumber(order.code),
+                                })
+                            }}
+                        </h1>
                         <div class="od-meta">{{ formatDate(order.createdAt) }}</div>
                     </div>
                     <span
                         class="od-status"
                         :class="STATUS_VARIANT[order.customFields?.erpStatus ?? 'PENDING']"
                     >
-                        {{ STATUS_LABEL[order.customFields?.erpStatus ?? 'PENDING'] }}
+                        {{ t(`orders.statusLabel.${order.customFields?.erpStatus ?? 'PENDING'}`) }}
                     </span>
                 </div>
 
@@ -100,15 +107,15 @@ function formatDate(iso: string): string {
 
                 <div class="od-body">
                     <div class="od-lines">
-                        <h2 class="od-section-title">Order items</h2>
+                        <h2 class="od-section-title">{{ t('orders.detail.items') }}</h2>
                         <table class="od-table">
                             <thead>
                                 <tr>
-                                    <th>SKU</th>
-                                    <th>Product</th>
-                                    <th class="od-th-num">Qty</th>
-                                    <th class="od-th-num">Price</th>
-                                    <th class="od-th-num">Total</th>
+                                    <th>{{ t('orders.detail.sku') }}</th>
+                                    <th>{{ t('orders.detail.product') }}</th>
+                                    <th class="od-th-num">{{ t('orders.detail.qty') }}</th>
+                                    <th class="od-th-num">{{ t('orders.detail.price') }}</th>
+                                    <th class="od-th-num">{{ t('orders.detail.total') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -133,21 +140,21 @@ function formatDate(iso: string): string {
 
                     <aside class="od-aside">
                         <div class="od-summary-card">
-                            <h2 class="od-section-title">Summary</h2>
+                            <h2 class="od-section-title">{{ t('orders.detail.summary') }}</h2>
                             <div class="od-summary-row">
-                                <span>Subtotal</span>
+                                <span>{{ t('orders.detail.subtotal') }}</span>
                                 <span>{{
                                     formatAmount(order.subTotalWithTax, order.currencyCode)
                                 }}</span>
                             </div>
                             <div class="od-summary-row">
-                                <span>Shipping</span>
+                                <span>{{ t('orders.detail.shipping') }}</span>
                                 <span>{{
                                     formatAmount(order.shippingWithTax, order.currencyCode)
                                 }}</span>
                             </div>
                             <div class="od-summary-row od-summary-total">
-                                <span>Total</span>
+                                <span>{{ t('orders.detail.total') }}</span>
                                 <span>{{
                                     formatAmount(order.totalWithTax, order.currencyCode)
                                 }}</span>
@@ -161,7 +168,9 @@ function formatDate(iso: string): string {
                             "
                             class="od-address-card"
                         >
-                            <h2 class="od-section-title">Delivery address</h2>
+                            <h2 class="od-section-title">
+                                {{ t('orders.detail.deliveryAddress') }}
+                            </h2>
                             <div class="od-address-line">{{ order.shippingAddress.fullName }}</div>
                             <div class="od-address-line">
                                 {{ order.shippingAddress.streetLine1 }}
@@ -178,19 +187,28 @@ function formatDate(iso: string): string {
                             </div>
                         </div>
 
+                        <div v-if="isNotRegisteredInErp(order.customFields)" class="od-erp-card">
+                            <h2 class="od-section-title">{{ t('orders.detail.document') }}</h2>
+                            <div class="od-erp-row">
+                                <span class="od-erp-val">{{
+                                    t('orders.detail.notRegistered')
+                                }}</span>
+                            </div>
+                        </div>
+
                         <div
-                            v-if="erpDocumentStatusLabel(order.customFields?.erpOrderStatus)"
+                            v-else-if="erpDocumentStatusLabel(order.customFields?.erpOrderStatus)"
                             class="od-erp-card"
                         >
-                            <h2 class="od-section-title">Document</h2>
+                            <h2 class="od-section-title">{{ t('orders.detail.document') }}</h2>
                             <div class="od-erp-row">
-                                <span>Document status</span>
+                                <span>{{ t('orders.detail.documentStatus') }}</span>
                                 <span class="od-erp-val">{{
-                                    erpDocumentStatusLabel(order.customFields?.erpOrderStatus)
+                                    t(`orders.documentStatus.${order.customFields?.erpOrderStatus}`)
                                 }}</span>
                             </div>
                             <div v-if="order.customFields?.erpStatusAt" class="od-erp-row">
-                                <span>Updated</span>
+                                <span>{{ t('orders.detail.updated') }}</span>
                                 <span class="od-erp-val">{{
                                     formatDate(order.customFields?.erpStatusAt)
                                 }}</span>
