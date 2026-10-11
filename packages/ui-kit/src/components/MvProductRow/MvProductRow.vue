@@ -32,6 +32,8 @@ interface Props {
     unitLabel?: string;
     unitNote?: string;
     multiplicityLabel?: string;
+    // false hides the Multiplicity cell and its grid track (branch does not enforce multiplicity).
+    showMultiplicity?: boolean;
     qtyStep?: number;
     slug?: string;
     showPrices?: boolean;
@@ -61,6 +63,7 @@ const props = withDefaults(defineProps<Props>(), {
     unitLabel: '',
     unitNote: '',
     multiplicityLabel: '',
+    showMultiplicity: true,
     qtyStep: 1,
     slug: '',
     showPrices: true,
@@ -95,7 +98,13 @@ function onStepperChange(qty: number): void {
 </script>
 
 <template>
-    <article class="mv-product-row" :class="{ 'mv-product-row--with-floor-price': showFloorPrice }">
+    <article
+        class="mv-product-row"
+        :class="{
+            'mv-product-row--with-floor-price': showFloorPrice,
+            'mv-product-row--no-multiplicity': !showMultiplicity,
+        }"
+    >
         <div class="mv-product-row__media">
             <div class="mv-product-row__img-wrap">
                 <slot name="image">
@@ -145,7 +154,7 @@ function onStepperChange(qty: number): void {
             <div v-if="unitNote" class="mv-product-row__unit">{{ unitNote }}</div>
         </div>
 
-        <div class="mv-product-row__cell">
+        <div v-if="showMultiplicity" class="mv-product-row__cell">
             <div class="mv-product-row__cell-label">Multiplicity</div>
             <div class="mv-product-row__cell-value">
                 {{ multiplicityLabel || (multiplicity > 1 ? `${multiplicity} pcs.` : '—') }}
@@ -258,6 +267,13 @@ function onStepperChange(qty: number): void {
 /* Extra track for the staff-only "Floor price" cell — see hasFloorPrice/props.floorPrice. */
 .mv-product-row--with-floor-price {
     grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 90px 110px 110px 140px;
+}
+
+.mv-product-row--no-multiplicity {
+    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 110px 140px;
+}
+.mv-product-row--no-multiplicity.mv-product-row--with-floor-price {
+    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 110px 110px 140px;
 }
 
 .mv-product-row__media {

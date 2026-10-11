@@ -27,6 +27,7 @@ interface Props {
     multiplicity?: number;
     unitLabel?: string;
     multiplicityLabel?: string;
+    showMultiplicity?: boolean;
     packagingLevels?: { name: string; ratioToBase: number }[];
     extraSpecs?: { label: string; value: string }[];
     stockVariantLabel: StockVariant;
@@ -45,6 +46,7 @@ const props = withDefaults(defineProps<Props>(), {
     multiplicity: 1,
     unitLabel: 'pc.',
     multiplicityLabel: '',
+    showMultiplicity: true,
     packagingLevels: () => [],
     extraSpecs: () => [],
     showRelatedPrices: false,
@@ -92,7 +94,7 @@ function getBrand(p: RelatedProduct) {
                     <div class="pmc__mini-lbl">Unit</div>
                     <div class="pmc__mini-val">{{ unitLabel }}</div>
                 </div>
-                <div class="pmc__mini-item">
+                <div v-if="showMultiplicity" class="pmc__mini-item">
                     <div class="pmc__mini-lbl">Multiplicity</div>
                     <div class="pmc__mini-val">
                         {{ multiplicityLabel || `${multiplicity} pc.` }}

@@ -1,3 +1,4 @@
+import { PackagingPolicyService } from '@mivend/plugin-moq';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserInputError } from '@vendure/core';
 import type { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
@@ -122,7 +123,10 @@ describe('ReservationService', () => {
         ],
     };
 
+    let branchSettings: { packagesOnly: boolean; enforceMultiplicity: boolean } | null;
+
     beforeEach(() => {
+        branchSettings = { packagesOnly: false, enforceMultiplicity: true };
         reservationRepo = createMockReservationRepo();
         orderRepo = createMockOrderRepo(order);
         stockLevelRepo = createMockStockLevelRepo(20);
@@ -173,6 +177,10 @@ describe('ReservationService', () => {
             warehouseService as never,
             counterpartyService as never,
             contractService as never,
+            new PackagingPolicyService(
+                { resolveEffective: async () => branchSettings } as never,
+                { getPreferredForCustomer: async () => null } as never,
+            ),
         );
     });
 
@@ -314,6 +322,48 @@ describe('ReservationService', () => {
                 },
             ]);
             expect(stockLevelRepo.createQueryBuilder).not.toHaveBeenCalled();
+        });
+
+        it('does not enforce multiplicity when the branch has not enabled it (#219)', async () => {
+            branchSettings = { packagesOnly: false, enforceMultiplicity: false };
+            orderRepo.findOne.mockResolvedValue({
+                ...order,
+                lines: [
+                    {
+                        id: 'line-1',
+                        productVariantId: 'variant-1',
+                        quantity: 5,
+                        customFields: { organizationId: 1 },
+                        productVariant: {
+                            productId: 'product-1',
+                            customFields: { multiplicity: 4 },
+                        },
+                    },
+                ],
+            });
+
+            await expect(service.confirmOrder(ctx, 'order-1', 3)).resolves.toBeDefined();
+        });
+
+        it('lets the pack rule replace multiplicity, agreeing with the order interceptor (#219)', async () => {
+            branchSettings = { packagesOnly: true, enforceMultiplicity: true };
+            orderRepo.findOne.mockResolvedValue({
+                ...order,
+                lines: [
+                    {
+                        id: 'line-1',
+                        productVariantId: 'variant-1',
+                        quantity: 6,
+                        customFields: { organizationId: 1 },
+                        productVariant: {
+                            productId: 'product-1',
+                            customFields: { multiplicity: 10, unitRatioToBase: 6 },
+                        },
+                    },
+                ],
+            });
+
+            await expect(service.confirmOrder(ctx, 'order-1', 3)).resolves.toBeDefined();
         });
 
         it('treats null/0/negative multiplicity as no constraint', async () => {

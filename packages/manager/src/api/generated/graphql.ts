@@ -534,6 +534,7 @@ export type BranchSettings = {
     branchId: Scalars['String']['output'];
     defaultPriceTypeId: Scalars['String']['output'];
     defaultWarehouseId: Maybe<Scalars['String']['output']>;
+    enforceMultiplicity: Scalars['Boolean']['output'];
     id: Scalars['ID']['output'];
     packagesOnly: Scalars['Boolean']['output'];
     visiblePriceTypeIds: Maybe<Array<Scalars['String']['output']>>;
@@ -1862,6 +1863,11 @@ export type CustomFields = {
     TaxRate: Array<CustomFieldConfig>;
     User: Array<CustomFieldConfig>;
     Zone: Array<CustomFieldConfig>;
+};
+
+export type CustomProductMappings = {
+    fullName: Maybe<Scalars['String']['output']>;
+    oemCodes: Maybe<Array<Scalars['String']['output']>>;
 };
 
 export type Customer = Node & {
@@ -4968,6 +4974,7 @@ export type MutationSetBranchSettingsArgs = {
     branchId: Scalars['String']['input'];
     defaultPriceTypeId: Scalars['String']['input'];
     defaultWarehouseId: Scalars['String']['input'];
+    enforceMultiplicity?: InputMaybe<Scalars['Boolean']['input']>;
     packagesOnly?: InputMaybe<Scalars['Boolean']['input']>;
     visiblePriceTypeIds?: InputMaybe<Array<Scalars['String']['input']>>;
     visibleWarehouseIds?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -5418,6 +5425,7 @@ export type Order = Node & {
     id: Scalars['ID']['output'];
     lines: Array<OrderLine>;
     modifications: Array<OrderModification>;
+    multiplicityEnforced: Scalars['Boolean']['output'];
     nextStates: Array<Scalars['String']['output']>;
     /**
      * The date & time that the Order was placed, i.e. the Customer
@@ -5568,6 +5576,7 @@ export type OrderFilterParameter = {
     erpStatusAt?: InputMaybe<DateOperators>;
     id?: InputMaybe<IdOperators>;
     latestFulfillmentState?: InputMaybe<StringOperators>;
+    multiplicityEnforced?: InputMaybe<BooleanOperators>;
     /**
      * The date & time that the Order was placed, i.e. the Customer
      * completed the checkout and the Order is no longer "active"
@@ -6377,6 +6386,16 @@ export type PriceEntryInput = {
 export type PriceRange = {
     max: Scalars['Money']['output'];
     min: Scalars['Money']['output'];
+};
+
+export type PriceRangeBucket = {
+    count: Scalars['Int']['output'];
+    to: Scalars['Int']['output'];
+};
+
+export type PriceRangeInput = {
+    max: Scalars['Int']['input'];
+    min: Scalars['Int']['input'];
 };
 
 export type PriceType = {
@@ -8084,6 +8103,10 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
+    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
+    inStock?: InputMaybe<Scalars['Boolean']['input']>;
+    priceRange?: InputMaybe<PriceRangeInput>;
+    priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -8098,7 +8121,15 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
+    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchResponsePriceData = {
+    buckets: Array<PriceRangeBucket>;
+    bucketsWithTax: Array<PriceRangeBucket>;
+    range: PriceRange;
+    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -8109,10 +8140,14 @@ export type SearchResult = {
     /** An array of ids of the Collections in which this result appears */
     collectionIds: Array<Scalars['ID']['output']>;
     currencyCode: CurrencyCode;
+    /** @deprecated Use customProductMappings or customProductVariantMappings */
+    customMappings: CustomProductMappings;
+    customProductMappings: CustomProductMappings;
     description: Scalars['String']['output'];
     enabled: Scalars['Boolean']['output'];
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
+    inStock: Maybe<Scalars['Boolean']['output']>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset: Maybe<SearchResultAsset>;
@@ -9683,6 +9718,7 @@ export type BranchSettingsFieldsFragment = {
     defaultWarehouseId: string | null;
     visibleWarehouseIds: Array<string> | null;
     packagesOnly: boolean;
+    enforceMultiplicity: boolean;
 };
 
 export type WarehousesQueryVariables = Exact<{ [key: string]: never }>;
@@ -9738,6 +9774,7 @@ export type BranchSettingsForBranchQuery = {
         defaultWarehouseId: string | null;
         visibleWarehouseIds: Array<string> | null;
         packagesOnly: boolean;
+        enforceMultiplicity: boolean;
     } | null;
 };
 
@@ -9752,6 +9789,7 @@ export type SetBranchSettingsMutationVariables = Exact<{
         Array<Scalars['String']['input']> | Scalars['String']['input']
     >;
     packagesOnly: Scalars['Boolean']['input'];
+    enforceMultiplicity: Scalars['Boolean']['input'];
 }>;
 
 export type SetBranchSettingsMutation = {
@@ -9763,6 +9801,7 @@ export type SetBranchSettingsMutation = {
         defaultWarehouseId: string | null;
         visibleWarehouseIds: Array<string> | null;
         packagesOnly: boolean;
+        enforceMultiplicity: boolean;
     };
 };
 
@@ -11770,6 +11809,7 @@ export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
   defaultWarehouseId
   visibleWarehouseIds
   packagesOnly
+  enforceMultiplicity
 }
     `,
     { fragmentName: 'BranchSettingsFields' },
@@ -12344,12 +12384,13 @@ export const BranchSettingsForBranchDocument = new TypedDocumentString(`
   defaultWarehouseId
   visibleWarehouseIds
   packagesOnly
+  enforceMultiplicity
 }`) as unknown as TypedDocumentString<
     BranchSettingsForBranchQuery,
     BranchSettingsForBranchQueryVariables
 >;
 export const SetBranchSettingsDocument = new TypedDocumentString(`
-    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!) {
+    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!, $enforceMultiplicity: Boolean!) {
   setBranchSettings(
     branchId: $branchId
     defaultPriceTypeId: $defaultPriceTypeId
@@ -12357,6 +12398,7 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
     defaultWarehouseId: $defaultWarehouseId
     visibleWarehouseIds: $visibleWarehouseIds
     packagesOnly: $packagesOnly
+    enforceMultiplicity: $enforceMultiplicity
   ) {
     ...BranchSettingsFields
   }
@@ -12369,6 +12411,7 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
   defaultWarehouseId
   visibleWarehouseIds
   packagesOnly
+  enforceMultiplicity
 }`) as unknown as TypedDocumentString<
     SetBranchSettingsMutation,
     SetBranchSettingsMutationVariables

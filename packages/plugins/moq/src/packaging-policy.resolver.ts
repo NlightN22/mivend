@@ -20,6 +20,23 @@ export class PackagingPolicyShopResolver {
     }
 }
 
+@Resolver()
+export class MultiplicityEnforcedShopResolver {
+    constructor(
+        private readonly packagingPolicyService: PackagingPolicyService,
+        private readonly customerService: CustomerService,
+    ) {}
+
+    @Query()
+    @Allow(Permission.Public)
+    async multiplicityEnforced(@Ctx() ctx: RequestContext): Promise<boolean> {
+        const customer = ctx.activeUserId
+            ? await this.customerService.findOneByUserId(ctx, ctx.activeUserId)
+            : undefined;
+        return this.packagingPolicyService.isMultiplicityEnforced(ctx, customer?.id);
+    }
+}
+
 @Resolver('Order')
 export class OrderPackagesOnlyAdminResolver {
     constructor(private readonly packagingPolicyService: PackagingPolicyService) {}
@@ -27,6 +44,15 @@ export class OrderPackagesOnlyAdminResolver {
     @ResolveField()
     packagesOnlySales(@Ctx() ctx: RequestContext, @Parent() order: Order): Promise<boolean> {
         return this.packagingPolicyService.isPackagesOnly(
+            ctx,
+            order.customerId,
+            order.customFields?.branchId ?? null,
+        );
+    }
+
+    @ResolveField()
+    multiplicityEnforced(@Ctx() ctx: RequestContext, @Parent() order: Order): Promise<boolean> {
+        return this.packagingPolicyService.isMultiplicityEnforced(
             ctx,
             order.customerId,
             order.customFields?.branchId ?? null,

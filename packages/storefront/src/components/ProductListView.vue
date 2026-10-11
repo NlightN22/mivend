@@ -6,6 +6,7 @@ import { useFavoritesStore } from '../stores/favorites';
 import { useCartActions } from '../composables/useCartActions';
 import { brandOf } from '../utils/brand';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
+import { useMultiplicityEnforced } from '../composables/useMultiplicityEnforced';
 import { usePackagesOnly } from '../composables/usePackagesOnly';
 import { baseToPacks, packsToBase, salesUnitOf } from '../composables/useSalesUnit';
 
@@ -38,6 +39,8 @@ const favoritesStore = useFavoritesStore();
 const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
 const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
 void loadPackagesOnly();
+const { multiplicityEnforced, load: loadMultiplicityEnforced } = useMultiplicityEnforced();
+void loadMultiplicityEnforced();
 
 // Unit view of a list item: in a packages-only branch prices and quantities are per pack.
 function unitView(p: ProductItem): {
@@ -167,9 +170,13 @@ function handleToggleFavorite(p: ProductItem): void {
 
         <template v-else-if="viewMode === 'list'">
             <div class="plv-list">
-                <div class="plv-list__header">
+                <div
+                    class="plv-list__header"
+                    :class="{ 'plv-list__header--no-multiplicity': !multiplicityEnforced }"
+                >
                     <span></span><span>Product</span><span>SKU</span> <span>Stock</span
-                    ><span>Unit</span><span>Multiplicity</span><span>Price</span><span>Order</span>
+                    ><span>Unit</span><span v-if="multiplicityEnforced">Multiplicity</span
+                    ><span>Price</span><span>Order</span>
                 </div>
                 <MvProductRow
                     v-for="p in items"
@@ -197,6 +204,7 @@ function handleToggleFavorite(p: ProductItem): void {
                     :unit-note="unitView(p).note"
                     :multiplicity="p.variants[0]?.multiplicity ?? 1"
                     :multiplicity-label="unitView(p).multiplicity"
+                    :show-multiplicity="multiplicityEnforced"
                     :qty-step="unitView(p).step"
                     :discount-tiers="p.variants[0]?.discountTiers"
                     :currency="p.variants[0]?.currencyCode ?? 'RUB'"
@@ -372,6 +380,10 @@ function handleToggleFavorite(p: ProductItem): void {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #66736e;
+}
+
+.plv-list__header--no-multiplicity {
+    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 110px 140px;
 }
 
 .plv-grid {

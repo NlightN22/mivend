@@ -325,6 +325,12 @@ quantity, checkout, order-confirm, API-driven changes) — this is the one point
 non-optional; product-page/cart-level checks are UX sugar on top, not a substitute. Don't
 auto-round silently.
 
+**Opt-in per branch (#219).** Multiplicity is enforced and shown only when the resolved
+`BranchSettings.enforceMultiplicity` is `true` (default `false`); when off, the interceptor and
+reservation skip it and the storefront hides the Multiplicity cell/block. The pack rule below is
+unaffected. ERP import keeps writing the field. Both enforcement points call
+`PackagingPolicyService.requiredMultiple`, so they always agree.
+
 **Only some SKUs are constrained — this is intentional, not a partial implementation.** In ERP,
 a package multiplicity only applies to items whose default sales unit of measure
 ("Ед. изм. для продажи по умолчанию") is itself a package (a screenshot from the client showed
@@ -391,7 +397,7 @@ branch-settings.entity.ts`, issue #66's per-branch business-config pattern — s
    settings configured), no packaging constraint applies regardless of what `defaultSalesUnitId`
    says — piece-level sale is allowed.
    When the pack rule applies it REPLACES the variant's `multiplicity` as the effective multiple (it is not an
-   LCM): a variant with `multiplicity` 10 and a pack of 6 is sold by 6. A ratio with no whole multiple within
+   LCM): a variant with `multiplicity` 10 and a pack of 6 is sold by 6, at the order interceptor and at reservation alike (`PackagingPolicyService.requiredMultiple`). A ratio with no whole multiple within
    1000 packs is not enforced and the line is sent by base unit. The same decision (`PackagingPolicyService`,
    preferred TradingPoint's branch, then `order.customFields.branchId`) drives the interceptor, the
    `order.submitted` `unitId` and the manager view; a line whose quantity is not whole packs goes by base unit.

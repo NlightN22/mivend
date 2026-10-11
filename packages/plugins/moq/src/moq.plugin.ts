@@ -9,6 +9,7 @@ import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 
 import {
+    MultiplicityEnforcedShopResolver,
     OrderPackagesOnlyAdminResolver,
     PackagingPolicyShopResolver,
 } from './packaging-policy.resolver';
@@ -26,14 +27,16 @@ import './types';
         schema: gql`
             extend type Query {
                 packagesOnlySales: Boolean!
+                multiplicityEnforced: Boolean!
             }
         `,
-        resolvers: [PackagingPolicyShopResolver],
+        resolvers: [PackagingPolicyShopResolver, MultiplicityEnforcedShopResolver],
     },
     adminApiExtensions: {
         schema: gql`
             extend type Order {
                 packagesOnlySales: Boolean!
+                multiplicityEnforced: Boolean!
             }
         `,
         resolvers: [OrderPackagesOnlyAdminResolver],

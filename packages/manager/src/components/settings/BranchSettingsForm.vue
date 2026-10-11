@@ -20,6 +20,7 @@ const emit = defineEmits<{
             defaultWarehouseId: string;
             visibleWarehouseIds: string[];
             packagesOnly: boolean;
+            enforceMultiplicity: boolean;
         },
     ];
 }>();
@@ -30,6 +31,7 @@ const form = reactive({
     defaultWarehouseId: '',
     visibleWarehouseIds: [] as string[],
     packagesOnly: false,
+    enforceMultiplicity: false,
 });
 
 // Re-seeds the form whenever a different branch's settings load (or none exist yet) — the two
@@ -43,6 +45,7 @@ watch(
         form.defaultWarehouseId = settings?.defaultWarehouseId ?? '';
         form.visibleWarehouseIds = settings?.visibleWarehouseIds ?? [];
         form.packagesOnly = settings?.packagesOnly ?? false;
+        form.enforceMultiplicity = settings?.enforceMultiplicity ?? false;
     },
     { immediate: true },
 );
@@ -73,6 +76,7 @@ function onSave(): void {
         defaultWarehouseId: form.defaultWarehouseId,
         visibleWarehouseIds: form.visibleWarehouseIds,
         packagesOnly: form.packagesOnly,
+        enforceMultiplicity: form.enforceMultiplicity,
     });
 }
 </script>
@@ -113,6 +117,14 @@ function onSave(): void {
                 <p class="branch-settings-form__hint">
                     When on, products whose default sales unit is a package are sold only in whole
                     packages. When off, they can also be sold by the piece.
+                </p>
+            </MvFormField>
+
+            <MvFormField label="Enforce order multiplicity">
+                <MvSwitch v-model="form.enforceMultiplicity" label="Enabled" />
+                <p class="branch-settings-form__hint">
+                    When on, quantities must be multiples of the product multiplicity, and it is
+                    shown in the catalog. When off, multiplicity is neither enforced nor shown.
                 </p>
             </MvFormField>
         </section>

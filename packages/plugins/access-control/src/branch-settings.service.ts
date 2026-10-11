@@ -16,6 +16,7 @@ export interface BranchSettingsInput {
     defaultWarehouseId: string;
     visibleWarehouseIds?: string[] | null;
     packagesOnly?: boolean;
+    enforceMultiplicity?: boolean;
 }
 
 // CRUD + fallback resolution for issue #66's per-branch business settings. Never a source of
@@ -40,6 +41,8 @@ export class BranchSettingsService {
             settings.defaultWarehouseId = input.defaultWarehouseId;
             settings.visibleWarehouseIds = input.visibleWarehouseIds ?? null;
             settings.packagesOnly = input.packagesOnly ?? settings.packagesOnly;
+            settings.enforceMultiplicity =
+                input.enforceMultiplicity ?? settings.enforceMultiplicity;
         } else {
             settings = repo.create({
                 branchId: input.branchId,
@@ -48,6 +51,7 @@ export class BranchSettingsService {
                 defaultWarehouseId: input.defaultWarehouseId,
                 visibleWarehouseIds: input.visibleWarehouseIds ?? null,
                 packagesOnly: input.packagesOnly ?? false,
+                enforceMultiplicity: input.enforceMultiplicity ?? false,
             });
         }
         const saved = await repo.save(settings);

@@ -168,6 +168,7 @@ async function onSave(payload: {
     defaultWarehouseId: string;
     visibleWarehouseIds: string[];
     packagesOnly: boolean;
+    enforceMultiplicity: boolean;
 }): Promise<void> {
     if (!selectedBranchId.value) return;
     saving.value = true;
@@ -184,6 +185,7 @@ async function onSave(payload: {
                 ? payload.visibleWarehouseIds
                 : null,
             packagesOnly: payload.packagesOnly,
+            enforceMultiplicity: payload.enforceMultiplicity,
         });
     } catch (e) {
         saveError.value = e instanceof Error ? e.message : 'Could not save branch settings';

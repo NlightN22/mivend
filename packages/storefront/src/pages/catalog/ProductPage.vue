@@ -42,6 +42,7 @@ const galleryImages = computed(() =>
 );
 const variant = computed(() => product.value?.variants[0]);
 const packagesOnly = ref(false);
+const multiplicityEnforced = ref(false);
 const nearestPack = computed(() =>
     packagesOnly.value
         ? null
@@ -98,6 +99,7 @@ async function fetchData(slug: string) {
         const detailRes = await shopApi(ProductDetailDocument, { slug });
         product.value = detailRes.product ?? null;
         packagesOnly.value = detailRes.packagesOnlySales;
+        multiplicityEnforced.value = detailRes.multiplicityEnforced;
     } catch (e) {
         error.value = describeLoadError(e);
     } finally {
@@ -148,6 +150,7 @@ onMounted(() => {
                     :multiplicity="variant?.customFields?.multiplicity ?? 1"
                     :unit-label="unitLabels.unit"
                     :multiplicity-label="unitLabels.multiplicity"
+                    :show-multiplicity="multiplicityEnforced"
                     :packaging-levels="product.packagingLevels"
                     :extra-specs="extraSpecs"
                     :stock-variant-label="stockVariantLabel"

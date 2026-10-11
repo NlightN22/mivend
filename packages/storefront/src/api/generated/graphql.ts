@@ -3475,6 +3475,7 @@ export type Query = {
     invoice?: Maybe<Invoice>;
     /** Returns information about the current authenticated User */
     me?: Maybe<CurrentUser>;
+    multiplicityEnforced: Scalars['Boolean']['output'];
     myAdvanceBalance: Array<MoneyAmount>;
     myDocuments: DocumentList;
     myHiddenTradingPoints: Array<TradingPoint>;
@@ -4447,6 +4448,10 @@ export type SearchSuggestionsQuery = {
     };
 };
 
+export type MultiplicityEnforcedQueryVariables = Exact<{ [key: string]: never }>;
+
+export type MultiplicityEnforcedQuery = { multiplicityEnforced: boolean };
+
 export type PackagesOnlySalesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type PackagesOnlySalesQuery = { packagesOnlySales: boolean };
@@ -4572,6 +4577,7 @@ export type ProductDetailQueryVariables = Exact<{
 
 export type ProductDetailQuery = {
     packagesOnlySales: boolean;
+    multiplicityEnforced: boolean;
     product?: {
         id: string;
         name: string;
@@ -5502,6 +5508,14 @@ export const SearchSuggestionsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<SearchSuggestionsQuery, SearchSuggestionsQueryVariables>;
+export const MultiplicityEnforcedDocument = new TypedDocumentString(`
+    query MultiplicityEnforced {
+  multiplicityEnforced
+}
+    `) as unknown as TypedDocumentString<
+    MultiplicityEnforcedQuery,
+    MultiplicityEnforcedQueryVariables
+>;
 export const PackagesOnlySalesDocument = new TypedDocumentString(`
     query PackagesOnlySales {
   packagesOnlySales
@@ -5631,6 +5645,7 @@ export const PopularProductsDocument = new TypedDocumentString(`
 export const ProductDetailDocument = new TypedDocumentString(`
     query ProductDetail($slug: String!) {
   packagesOnlySales
+  multiplicityEnforced
   product(slug: $slug) {
     id
     name

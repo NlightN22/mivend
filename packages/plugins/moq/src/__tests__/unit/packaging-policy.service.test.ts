@@ -57,4 +57,15 @@ describe('PackagingPolicyService', () => {
         });
         expect(await service.isPackagesOnly(ctx, 'customer-1')).toBe(false);
     });
+
+    it('isMultiplicityEnforced reads enforceMultiplicity and defaults to false', async () => {
+        const resolveEffective = vi.fn(async () => ({ enforceMultiplicity: true }));
+        const on = new PackagingPolicyService({ resolveEffective } as never, {} as never);
+        expect(await on.isMultiplicityEnforced(ctx, undefined, 'branch-a')).toBe(true);
+        const off = new PackagingPolicyService(
+            { resolveEffective: vi.fn(async () => null) } as never,
+            {} as never,
+        );
+        expect(await off.isMultiplicityEnforced(ctx, undefined)).toBe(false);
+    });
 });

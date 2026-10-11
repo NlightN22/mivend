@@ -10,6 +10,7 @@
         { "path": "../access-control" },
         { "path": "../counterparty" },
         { "path": "../erp-order" },
+        { "path": "../moq" },
         { "path": "../notification" },
         { "path": "../../shared" }
     ]

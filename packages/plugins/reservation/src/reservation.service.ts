@@ -11,6 +11,7 @@ import {
 } from '@vendure/core';
 import { WarehouseService } from '@mivend/plugin-access-control';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
+import { PackagingPolicyService } from '@mivend/plugin-moq';
 
 import { Reservation } from './entities/reservation.entity';
 import {
@@ -44,6 +45,7 @@ export class ReservationService {
         private warehouseService: WarehouseService,
         private counterpartyService: CounterpartyService,
         private contractService: ContractService,
+        private packagingPolicyService: PackagingPolicyService,
     ) {}
 
     // Thin wrapper over reserveOrder() for the manual-confirm mutation (see docs/order-flow.md
@@ -110,13 +112,17 @@ export class ReservationService {
                         throw new OrderNotEligibleError('Order is cancelled');
                     }
 
-                    // Defense in depth alongside the moq plugin's OrderInterceptor — see
-                    // docs/order-flow.md "Pack-size / MOQ". null/0/negative multiplicity is a data
-                    // error, treated as "no constraint" (same as 1), not a rejection.
+                    // Defense in depth: same step as the moq OrderInterceptor (docs/order-flow.md).
                     const multiplicityViolations: InvalidMultiplicityLine[] = [];
                     for (const line of order.lines) {
-                        const multiplicity = line.productVariant?.customFields?.multiplicity ?? 1;
-                        const effective = multiplicity > 1 ? multiplicity : 1;
+                        const effective = line.productVariant
+                            ? await this.packagingPolicyService.requiredMultiple(
+                                  txCtx,
+                                  line.productVariant,
+                                  order.customerId,
+                                  order.customFields?.branchId ?? null,
+                              )
+                            : 1;
                         if (line.quantity % effective !== 0) {
                             multiplicityViolations.push({
                                 orderLineId: String(line.id),

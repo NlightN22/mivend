@@ -10,7 +10,6 @@ import {
     WillAdjustOrderLineInput,
 } from '@vendure/core';
 import { PackagingPolicyService } from './packaging-policy.service';
-import { wholePackQuantity } from './whole-pack';
 
 // Server-side pack-size (MOQ) + branch-conditional packaging enforcement — see
 // docs/order-flow.md's "Pack-size / MOQ" and mivend#103 sections.
@@ -41,30 +40,18 @@ export class MultiplicityOrderInterceptor implements OrderInterceptor {
         return this.checkMultiplicity(ctx, order, input.orderLine.productVariant, input.quantity);
     }
 
-    // Normalizes per docs/order-flow.md's decided rule: null/0/negative multiplicity is a data
-    // error, treated as "no constraint" (same as 1), not a rejection — don't block orders over
-    // bad ERP data. Same normalization applies to the branch-conditional packaging multiple.
     private async checkMultiplicity(
         ctx: RequestContext,
         order: Order,
         variant: ProductVariant,
         quantity: number,
     ): Promise<void | string> {
-        const multiplicity = variant.customFields?.multiplicity ?? 1;
-        let effective = multiplicity > 1 ? multiplicity : 1;
-
-        const unitRatioToBase = variant.customFields?.unitRatioToBase ?? null;
-        if (unitRatioToBase && unitRatioToBase > 0 && unitRatioToBase !== 1) {
-            const packagesOnly = await this.packagingPolicyService.isPackagesOnly(
-                ctx,
-                order.customerId,
-                order.customFields?.branchId ?? null,
-            );
-            const packQuantity = packagesOnly ? wholePackQuantity(unitRatioToBase) : null;
-            if (packQuantity !== null) {
-                effective = packQuantity;
-            }
-        }
+        const effective = await this.packagingPolicyService.requiredMultiple(
+            ctx,
+            variant,
+            order.customerId,
+            order.customFields?.branchId ?? null,
+        );
 
         if (quantity % effective === 0) {
             return;

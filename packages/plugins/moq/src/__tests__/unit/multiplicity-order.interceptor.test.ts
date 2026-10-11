@@ -23,7 +23,7 @@ describe('MultiplicityOrderInterceptor', () => {
 
     beforeEach(() => {
         interceptor = new MultiplicityOrderInterceptor();
-        resolveEffective = vi.fn(async () => null);
+        resolveEffective = vi.fn(async () => ({ enforceMultiplicity: true }));
         // No customer on the order by default (guest cart) — falls through to
         // order.customFields.branchId, same as before this fix existed.
         getPreferredForCustomer = vi.fn(async () => null);
@@ -160,11 +160,49 @@ describe('MultiplicityOrderInterceptor', () => {
     });
 
     it('plain multiplicity enforcement keeps working unchanged when unitRatioToBase is also set but allowed', async () => {
-        resolveEffective.mockResolvedValue({ packagesOnly: false });
+        resolveEffective.mockResolvedValue({ packagesOnly: false, enforceMultiplicity: true });
         const result = await interceptor.willAddItemToOrder(ctx, createOrder('branch-retail'), {
             productVariant: createVariant(4, 6),
             quantity: 5,
         });
         expect(result).toContain('multiples of 4');
+    });
+
+    describe('enforceMultiplicity off (#219)', () => {
+        it('does not enforce multiplicity when the branch has not enabled it', async () => {
+            resolveEffective.mockResolvedValue({ packagesOnly: false, enforceMultiplicity: false });
+            const result = await interceptor.willAddItemToOrder(ctx, createOrder('branch-a'), {
+                productVariant: createVariant(4),
+                quantity: 5,
+            });
+            expect(result).toBeUndefined();
+        });
+
+        it('does not enforce multiplicity when no settings resolve', async () => {
+            resolveEffective.mockResolvedValue(null);
+            const result = await interceptor.willAddItemToOrder(ctx, createOrder(), {
+                productVariant: createVariant(4),
+                quantity: 5,
+            });
+            expect(result).toBeUndefined();
+        });
+
+        it('still enforces the pack rule when packagesOnly is on', async () => {
+            resolveEffective.mockResolvedValue({ packagesOnly: true, enforceMultiplicity: false });
+            const result = await interceptor.willAddItemToOrder(ctx, createOrder('branch-a'), {
+                productVariant: createVariant(10, 6),
+                quantity: 5,
+            });
+            expect(result).toContain('multiples of 6');
+        });
+    });
+
+    it('lets the pack rule replace multiplicity when both are on (multiplicity 10, pack 6)', async () => {
+        resolveEffective.mockResolvedValue({ packagesOnly: true, enforceMultiplicity: true });
+        const ok = await interceptor.willAddItemToOrder(ctx, createOrder('branch-a'), {
+            productVariant: createVariant(10, 6),
+            quantity: 6,
+        });
+        expect(ok).toBeUndefined();
     });
 });

@@ -34,4 +34,8 @@ export class BranchSettings extends VendureEntity {
     // only in that unit (docs/order-flow.md). Read by plugin-moq via resolveEffective.
     @Column({ type: 'boolean', default: false })
     packagesOnly!: boolean;
+
+    // #219: variant multiplicity is enforced and shown only when true.
+    @Column({ type: 'boolean', default: false })
+    enforceMultiplicity!: boolean;
 }

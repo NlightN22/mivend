@@ -15,6 +15,7 @@ import { subscribeAndLog } from 'shared';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderPlugin, ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
+import { MoqPlugin } from '@mivend/plugin-moq';
 import { NotificationPlugin } from '@mivend/plugin-notification';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
@@ -147,6 +148,7 @@ const adminApiSchema = gql`
         AccessControlPlugin,
         CounterpartyPlugin,
         ErpOrderPlugin,
+        MoqPlugin,
         NotificationPlugin,
     ],
     entities: [Reservation, ReservationExtensionLimit, ReservationReconciliationIssue],

@@ -215,6 +215,7 @@ export class AccessControlResolver {
             defaultWarehouseId: string;
             visibleWarehouseIds?: string[];
             packagesOnly?: boolean;
+            enforceMultiplicity?: boolean;
         },
     ): Promise<BranchSettings> {
         return this.branchSettingsService.upsert(ctx, {
@@ -224,6 +225,7 @@ export class AccessControlResolver {
             defaultWarehouseId: args.defaultWarehouseId,
             visibleWarehouseIds: args.visibleWarehouseIds ?? null,
             packagesOnly: args.packagesOnly,
+            enforceMultiplicity: args.enforceMultiplicity,
         });
     }
 
