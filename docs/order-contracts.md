@@ -105,6 +105,8 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   person. The ERP answers the same way (`ORDER_IN_PROGRESS`, `ORDER_SHIPPED`). Returns are a separate flow.
 - A `REJECTED` order was never created by the ERP: an explicit cancel by the customer or staff cancels it locally
   without a cancel request (at the reserve deadline it keeps its own #204 rules).
+- The server is the single source of "may be cancelled now": `Order.cancellable` (shop and admin API) is computed
+  through the same decision function; both portals show the cancel button from it alone.
 - No partial cancellation is modelled.
 
 ### Who may cancel (owner-decided)

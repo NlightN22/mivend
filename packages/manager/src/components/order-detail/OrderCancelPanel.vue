@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { MvButton, MvModal, MvNotice } from '@mivend/ui-kit';
-import { isCancellable, useCancelOrderAsStaff } from '../../composables/useCancelOrderAsStaff';
+import { useCancelOrderAsStaff } from '../../composables/useCancelOrderAsStaff';
 
-const props = defineProps<{ orderId: string; state: string; erpStatus: string | null }>();
+const props = defineProps<{ orderId: string; cancellable: boolean }>();
 const emit = defineEmits<{ cancelled: [] }>();
 
 const confirmOpen = ref(false);
@@ -11,7 +11,7 @@ const { allowed, cancelling, error, cancel } = useCancelOrderAsStaff(
     () => props.orderId,
     () => emit('cancelled'),
 );
-const visible = computed(() => allowed.value && isCancellable(props.state, props.erpStatus));
+const visible = computed(() => allowed.value && props.cancellable);
 
 async function confirm(): Promise<void> {
     await cancel();

@@ -3,12 +3,6 @@ import { adminApi } from '../api/client';
 import { CancelOrderAsStaffDocument } from '../api/generated/graphql';
 import { useAuthStore } from '../stores/auth';
 
-const NOT_CANCELLABLE_ERP = ['CANCELLED', 'PICKING', 'SHIPPING', 'DELIVERING', 'DELIVERED'];
-
-export function isCancellable(state: string, erpStatus: string | null): boolean {
-    return state !== 'Cancelled' && !NOT_CANCELLABLE_ERP.includes(erpStatus ?? '');
-}
-
 export const REFUSAL_TEXT: Record<string, string> = {
     SHIPPED: 'The order has already shipped and cannot be cancelled.',
     IN_PROGRESS: 'The order is already in progress and cannot be cancelled.',

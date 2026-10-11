@@ -55,12 +55,14 @@ describe('OrderCancelEntryService', () => {
     };
     const ctx = { activeUserId: 'u1' } as unknown as RequestContext;
 
-    it('looks the order up by code AND the active customer, so another customer gets not found', async () => {
+    it('looks the order up by code AND the active customer (never an active cart), so another customer gets not found', async () => {
         const { service, findOne, cancel } = build(null, { id: 'c1' });
         await expect(service.cancelAsCustomer(ctx, 'A1')).rejects.toBeInstanceOf(
             EntityNotFoundError,
         );
-        expect(findOne).toHaveBeenCalledWith({ where: { code: 'A1', customer: { id: 'c1' } } });
+        expect(findOne).toHaveBeenCalledWith({
+            where: { code: 'A1', active: false, customer: { id: 'c1' } },
+        });
         expect(cancel).not.toHaveBeenCalled();
     });
 

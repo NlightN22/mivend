@@ -3,14 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const shopApi = vi.fn();
 vi.mock('../api/client', () => ({ shopApi: (...a: unknown[]) => shopApi(...a) }));
 
-import { canCancelOrder, useCancelOrder } from '../pages/orders/useCancelOrder';
+import { useCancelOrder } from '../pages/orders/useCancelOrder';
 
-describe('canCancelOrder', () => {
-    it.each(['CANCELLED', 'PICKING', 'SHIPPING', 'DELIVERING', 'DELIVERED'])('hides for %s', s => {
-        expect(canCancelOrder(s)).toBe(false);
-    });
-    it.each([undefined, null, 'PENDING', 'RESERVED', 'REJECTED'])('shows for %s', s => {
-        expect(canCancelOrder(s)).toBe(true);
+describe('canCancel', () => {
+    it.each([
+        [true, true],
+        [false, false],
+        [undefined, false],
+    ])('follows the server flag %s', (flag, expected) => {
+        expect(
+            useCancelOrder(
+                () => '100',
+                () => flag,
+                vi.fn(),
+            ).canCancel.value,
+        ).toBe(expected);
     });
 });
 
@@ -22,7 +29,7 @@ describe('useCancelOrder', () => {
         const refresh = vi.fn();
         const c = useCancelOrder(
             () => '100',
-            () => 'PENDING',
+            () => true,
             refresh,
         );
         expect(await c.cancel()).toBe(true);
@@ -35,7 +42,7 @@ describe('useCancelOrder', () => {
         const refresh = vi.fn();
         const c = useCancelOrder(
             () => '100',
-            () => 'PENDING',
+            () => true,
             refresh,
         );
         expect(await c.cancel()).toBe(false);
@@ -48,7 +55,7 @@ describe('useCancelOrder', () => {
         shopApi.mockRejectedValueOnce(new Error('down'));
         const c = useCancelOrder(
             () => '100',
-            () => 'PENDING',
+            () => true,
             vi.fn(),
         );
         expect(await c.cancel()).toBe(false);

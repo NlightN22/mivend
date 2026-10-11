@@ -16,7 +16,7 @@ const { t } = useI18n();
 const confirmOpen = ref(false);
 const { cancelling, refusalReason, failed, canCancel, cancel } = useCancelOrder(
     () => order.value?.code,
-    () => order.value?.customFields?.erpStatus,
+    () => order.value?.cancellable,
     () => load(route.params.id as string),
 );
 

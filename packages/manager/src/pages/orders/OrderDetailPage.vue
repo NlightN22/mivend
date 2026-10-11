@@ -162,8 +162,7 @@ watch(() => route.params.code, load);
             <aside class="order-detail__right-stack">
                 <OrderCancelPanel
                     :order-id="order.id"
-                    :state="order.state"
-                    :erp-status="order.customFields.erpStatus"
+                    :cancellable="order.cancellable"
                     @cancelled="reload"
                 />
                 <MvPanel

@@ -30,7 +30,7 @@ export class OrderCancelEntryService {
         const order = customer
             ? await this.connection
                   .getRepository(ctx, Order)
-                  .findOne({ where: { code, customer: { id: customer.id } } })
+                  .findOne({ where: { code, active: false, customer: { id: customer.id } } })
             : null;
         if (!order) throw new EntityNotFoundError('Order', code);
         return toOrderCancelResult(

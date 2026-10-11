@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { decideCancellation } from '../../order-cancellation.decision';
+import { decideCancellation, isOrderCancellable } from '../../order-cancellation.decision';
 import type { CancelFacts } from '../../order-cancellation.decision';
 
 const base: CancelFacts = {
@@ -95,5 +95,22 @@ describe('decideCancellation', () => {
             decideCancellation({ ...base, ...facts, erpStatus: 'REJECTED', submission: 'sent' })
                 .action,
         ).toBe('cancel-rejected-locally');
+    });
+});
+
+describe('isOrderCancellable', () => {
+    it.each([
+        ['pending', {}, true],
+        ['registered', { erpOrderId: 'erp-1' }, true],
+        ['rejected by the ERP', { erpStatus: 'REJECTED' }, true],
+        ['paid', { hasSettledPayment: true }, false],
+        ['picking', { erpStatus: 'PICKING' }, false],
+        ['shipped', { orderState: 'Shipped' }, false],
+        ['already cancelled', { orderState: 'Cancelled' }, false],
+        ['cancel refused by the ERP', { cancelRequestStatus: 'REFUSED' }, false],
+        ['active cart', { orderState: 'AddingItems' }, false],
+        ['active cart in checkout', { orderState: 'ArrangingPayment' }, false],
+    ])('%s', (_name, facts, expected) => {
+        expect(isOrderCancellable({ ...base, ...facts })).toBe(expected);
     });
 });

@@ -2299,6 +2299,8 @@ export type Order = Node & {
     /** An order is active as long as the payment process has not been completed */
     active: Scalars['Boolean']['output'];
     billingAddress?: Maybe<OrderAddress>;
+    /** True while the customer or staff may still cancel this order. */
+    cancellable: Scalars['Boolean']['output'];
     /** A unique code for the Order */
     code: Scalars['String']['output'];
     /** An array of all coupon codes applied to the Order */
@@ -2374,7 +2376,6 @@ export enum OrderCancelOutcome {
     AlreadyCancelled = 'ALREADY_CANCELLED',
     Cancelled = 'CANCELLED',
     CancelRequested = 'CANCEL_REQUESTED',
-    LeftToErp = 'LEFT_TO_ERP',
 }
 
 export enum OrderCancelRefusalReason {
@@ -2420,6 +2421,8 @@ export type OrderFilterParameter = {
     /** An order is active as long as the payment process has not been completed */
     active?: InputMaybe<BooleanOperators>;
     branchId?: InputMaybe<StringOperators>;
+    /** True while the customer or staff may still cancel this order. */
+    cancellable?: InputMaybe<BooleanOperators>;
     /** A unique code for the Order */
     code?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
@@ -4789,6 +4792,7 @@ export type OrderDetailQuery = {
         id: string;
         code: string;
         state: string;
+        cancellable: boolean;
         createdAt: any;
         totalWithTax: any;
         subTotalWithTax: any;
@@ -5889,6 +5893,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
     id
     code
     state
+    cancellable
     createdAt
     totalWithTax
     subTotalWithTax

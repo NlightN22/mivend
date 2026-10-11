@@ -3,6 +3,7 @@ query OrderDetail($id: ID!) {
         id
         code
         state
+        cancellable
         createdAt
         totalWithTax
         subTotalWithTax

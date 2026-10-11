@@ -5,19 +5,7 @@ const hasPermission = vi.fn();
 vi.mock('../../api/client', () => ({ adminApi: (...a: unknown[]) => adminApi(...a) }));
 vi.mock('../../stores/auth', () => ({ useAuthStore: () => ({ hasPermission }) }));
 
-import { isCancellable, useCancelOrderAsStaff } from '../../composables/useCancelOrderAsStaff';
-
-describe('isCancellable', () => {
-    it('hides for a cancelled state or a shipped/in-progress erp status', () => {
-        expect(isCancellable('Cancelled', null)).toBe(false);
-        expect(isCancellable('PaymentSettled', 'PICKING')).toBe(false);
-        expect(isCancellable('PaymentSettled', 'DELIVERED')).toBe(false);
-    });
-    it('shows otherwise', () => {
-        expect(isCancellable('ArrangingPayment', null)).toBe(true);
-        expect(isCancellable('ArrangingPayment', 'RESERVED')).toBe(true);
-    });
-});
+import { useCancelOrderAsStaff } from '../../composables/useCancelOrderAsStaff';
 
 describe('useCancelOrderAsStaff', () => {
     beforeEach(() => {

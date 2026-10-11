@@ -5400,6 +5400,8 @@ export type Order = Node & {
     aggregateOrder: Maybe<Order>;
     aggregateOrderId: Maybe<Scalars['ID']['output']>;
     billingAddress: Maybe<OrderAddress>;
+    /** True while the customer or staff may still cancel this order. */
+    cancellable: Scalars['Boolean']['output'];
     channels: Array<Channel>;
     /** A unique code for the Order */
     code: Scalars['String']['output'];
@@ -5477,11 +5479,7 @@ export type OrderAddress = {
     streetLine2: Maybe<Scalars['String']['output']>;
 };
 
-export type OrderCancelOutcome =
-    | 'ALREADY_CANCELLED'
-    | 'CANCELLED'
-    | 'CANCEL_REQUESTED'
-    | 'LEFT_TO_ERP';
+export type OrderCancelOutcome = 'ALREADY_CANCELLED' | 'CANCELLED' | 'CANCEL_REQUESTED';
 
 export type OrderCancelRefusalReason =
     | 'IN_PROGRESS'
@@ -5551,6 +5549,8 @@ export type OrderFilterParameter = {
     cancelRefusalReason?: InputMaybe<StringOperators>;
     cancelRequestStatus?: InputMaybe<StringOperators>;
     cancelRequestedAt?: InputMaybe<DateOperators>;
+    /** True while the customer or staff may still cancel this order. */
+    cancellable?: InputMaybe<BooleanOperators>;
     /** A unique code for the Order */
     code?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
@@ -10941,6 +10941,7 @@ export type OrderDetailQuery = {
             id: string;
             code: string;
             state: string;
+            cancellable: boolean;
             orderPlacedAt: any | null;
             createdAt: any;
             creditLimitExceeded: boolean;
@@ -13703,6 +13704,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
       id
       code
       state
+      cancellable
       orderPlacedAt
       createdAt
       creditLimitExceeded

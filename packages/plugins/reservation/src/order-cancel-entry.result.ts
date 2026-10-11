@@ -3,7 +3,7 @@ import type { CancelOutcome } from './order-cancellation.service';
 export type OrderCancelResult =
     | {
           __typename: 'OrderCancelSuccess';
-          outcome: 'CANCELLED' | 'CANCEL_REQUESTED' | 'ALREADY_CANCELLED' | 'LEFT_TO_ERP';
+          outcome: 'CANCELLED' | 'CANCEL_REQUESTED' | 'ALREADY_CANCELLED';
       }
     | {
           __typename: 'OrderCancelRefused';
@@ -29,7 +29,7 @@ export function toOrderCancelResult(outcome: CancelOutcome): OrderCancelResult {
         case 'already-cancelled':
             return { __typename: 'OrderCancelSuccess', outcome: 'ALREADY_CANCELLED' };
         case 'left-to-erp':
-            return { __typename: 'OrderCancelSuccess', outcome: 'LEFT_TO_ERP' };
+            throw new Error('left-to-erp is only produced at the reserve deadline');
         case 'not-cancellable':
             return {
                 __typename: 'OrderCancelRefused',

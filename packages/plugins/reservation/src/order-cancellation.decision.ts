@@ -70,3 +70,12 @@ export function decideCancellation(facts: CancelFacts): CancelDecision {
     if (facts.submission === 'sent') return { action: 'request-and-cancel' };
     return { action: 'cancel-without-event' };
 }
+
+const ACTIVE_CART_STATES = ['AddingItems', 'ArrangingPayment'];
+
+// The single answer to "may the customer or staff cancel this order now", exposed as Order.cancellable.
+export function isOrderCancellable(facts: CancelFacts): boolean {
+    if (ACTIVE_CART_STATES.includes(facts.orderState)) return false;
+    const { action } = decideCancellation(facts);
+    return action !== 'refuse' && action !== 'already-cancelled' && action !== 'leave-to-erp';
+}

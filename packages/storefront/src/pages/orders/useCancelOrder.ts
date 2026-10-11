@@ -2,12 +2,6 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { shopApi } from '../../api/client';
 import { CancelOrderDocument } from '../../api/generated/graphql';
 
-const NOT_CANCELLABLE = ['CANCELLED', 'PICKING', 'SHIPPING', 'DELIVERING', 'DELIVERED'];
-
-export function canCancelOrder(erpStatus: string | null | undefined): boolean {
-    return !NOT_CANCELLABLE.includes(erpStatus ?? 'PENDING');
-}
-
 export interface UseCancelOrder {
     cancelling: Ref<boolean>;
     refusalReason: Ref<string | null>;
@@ -18,13 +12,13 @@ export interface UseCancelOrder {
 
 export function useCancelOrder(
     code: () => string | undefined,
-    erpStatus: () => string | null | undefined,
+    cancellable: () => boolean | undefined,
     onCancelled: () => Promise<void> | void,
 ): UseCancelOrder {
     const cancelling = ref(false);
     const refusalReason = ref<string | null>(null);
     const failed = ref(false);
-    const canCancel = computed(() => canCancelOrder(erpStatus()));
+    const canCancel = computed(() => cancellable() === true);
 
     async function cancel(): Promise<boolean> {
         const orderCode = code();

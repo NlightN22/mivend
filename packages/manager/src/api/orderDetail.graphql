@@ -4,6 +4,7 @@ query OrderDetail($code: String!) {
             id
             code
             state
+            cancellable
             orderPlacedAt
             createdAt
             creditLimitExceeded

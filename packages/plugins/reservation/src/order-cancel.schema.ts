@@ -6,7 +6,6 @@ const resultTypes = gql`
         CANCELLED
         CANCEL_REQUESTED
         ALREADY_CANCELLED
-        LEFT_TO_ERP
     }
 
     enum OrderCancelRefusalReason {
@@ -27,6 +26,11 @@ const resultTypes = gql`
     }
 
     union OrderCancelResult = OrderCancelSuccess | OrderCancelRefused
+
+    extend type Order {
+        "True while the customer or staff may still cancel this order."
+        cancellable: Boolean!
+    }
 `;
 
 export const shopCancelOrderSchema: DocumentNode = gql`

@@ -531,9 +531,9 @@ the above is stable.
 
 ### Cancel entry points (#194)
 
-- Shop API `cancelOrder(code)` (owner only: another customer's order is "not found") and admin API
+- Shop API `cancelOrder(code)` (owner only: another customer's order or an active cart is "not found") and admin API
   `cancelOrderAsStaff(orderId)` (permission `CancelOrder`, order scope as for the order list) both call
   `OrderCancellationService.cancel` with reason `customer-request` / `staff-request`.
 - The result is a union: `OrderCancelSuccess { outcome }` or `OrderCancelRefused { reason, message }`
-  with reason SHIPPED | IN_PROGRESS | PAID | REFUSED_BY_ERP | REGISTRATION_REJECTED. A refusal is
+  with reason SHIPPED | IN_PROGRESS | PAID | REFUSED_BY_ERP | REGISTRATION_REJECTED (outcomes: CANCELLED | CANCEL_REQUESTED | ALREADY_CANCELLED; `LEFT_TO_ERP` stays internal to the deadline path). A refusal is
   a result, not an exception. Rules: `docs/order-contracts.md`, "Cancellability" and "Who may cancel".
