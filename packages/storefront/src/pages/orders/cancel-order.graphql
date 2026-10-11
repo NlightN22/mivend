@@ -1,0 +1,11 @@
+mutation CancelOrder($code: String!) {
+    cancelOrder(code: $code) {
+        ... on OrderCancelSuccess {
+            outcome
+        }
+        ... on OrderCancelRefused {
+            reason
+            message
+        }
+    }
+}

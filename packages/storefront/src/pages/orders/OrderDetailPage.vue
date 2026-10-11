@@ -1,13 +1,28 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { formatDocumentNumber } from '@mivend/ui-kit';
+import { useI18n } from 'vue-i18n';
+import { MvButton, MvModal, formatDocumentNumber } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
+import { useCancelOrder } from './useCancelOrder';
 import { useOrderDetail } from './useOrderDetail';
 import { STATUS_LABEL, STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
 
 const route = useRoute();
 const { order, loading, load } = useOrderDetail();
+
+const { t } = useI18n();
+const confirmOpen = ref(false);
+const { cancelling, refusalReason, failed, canCancel, cancel } = useCancelOrder(
+    () => order.value?.code,
+    () => order.value?.customFields?.erpStatus,
+    () => load(route.params.id as string),
+);
+
+async function confirmCancel(): Promise<void> {
+    await cancel();
+    confirmOpen.value = false;
+}
 
 onMounted(() => {
     void load(route.params.id as string);
@@ -56,6 +71,32 @@ function formatDate(iso: string): string {
                         {{ STATUS_LABEL[order.customFields?.erpStatus ?? 'PENDING'] }}
                     </span>
                 </div>
+
+                <div v-if="canCancel" class="od-cancel">
+                    <MvButton variant="secondary" @click="confirmOpen = true">{{
+                        t('orders.cancel.button')
+                    }}</MvButton>
+                </div>
+                <div v-if="refusalReason" class="od-cancel-msg">
+                    {{ t(`orders.cancel.refused.${refusalReason}`) }}
+                </div>
+                <div v-else-if="failed" class="od-cancel-msg">{{ t('orders.cancel.failed') }}</div>
+
+                <MvModal
+                    v-if="confirmOpen"
+                    :title="t('orders.cancel.confirmTitle')"
+                    @close="confirmOpen = false"
+                >
+                    <p>{{ t('orders.cancel.confirmText') }}</p>
+                    <div class="od-cancel">
+                        <MvButton variant="secondary" @click="confirmOpen = false">{{
+                            t('orders.cancel.keep')
+                        }}</MvButton>
+                        <MvButton variant="danger" :loading="cancelling" @click="confirmCancel">{{
+                            t('orders.cancel.confirm')
+                        }}</MvButton>
+                    </div>
+                </MvModal>
 
                 <div class="od-body">
                     <div class="od-lines">
@@ -240,6 +281,17 @@ function formatDate(iso: string): string {
 .od-status.error {
     background: #ffeeed;
     color: #c0362c;
+}
+
+.od-cancel {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.od-cancel-msg {
+    margin-bottom: 16px;
+    color: #c0362c;
+    font-size: 14px;
 }
 
 .od-body {

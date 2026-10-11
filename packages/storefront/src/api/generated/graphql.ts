@@ -1886,6 +1886,8 @@ export type Mutation = {
     applyCouponCode: ApplyCouponCodeResult;
     /** Authenticates the user using a named authentication strategy */
     authenticate: AuthenticationResult;
+    /** Cancel the active customer's own order; only while it is pending. */
+    cancelOrder: OrderCancelResult;
     /** Create a new Customer Address */
     createCustomerAddress: Address;
     customerAddTradingPoint?: Maybe<TradingPoint>;
@@ -2032,6 +2034,10 @@ export type MutationApplyCouponCodeArgs = {
 export type MutationAuthenticateArgs = {
     input: AuthenticationInput;
     rememberMe?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type MutationCancelOrderArgs = {
+    code: Scalars['String']['input'];
 };
 
 export type MutationCreateCustomerAddressArgs = {
@@ -2362,6 +2368,32 @@ export type OrderAddress = {
     province?: Maybe<Scalars['String']['output']>;
     streetLine1?: Maybe<Scalars['String']['output']>;
     streetLine2?: Maybe<Scalars['String']['output']>;
+};
+
+export enum OrderCancelOutcome {
+    AlreadyCancelled = 'ALREADY_CANCELLED',
+    Cancelled = 'CANCELLED',
+    CancelRequested = 'CANCEL_REQUESTED',
+    LeftToErp = 'LEFT_TO_ERP',
+}
+
+export enum OrderCancelRefusalReason {
+    InProgress = 'IN_PROGRESS',
+    Paid = 'PAID',
+    RefusedByErp = 'REFUSED_BY_ERP',
+    RegistrationRejected = 'REGISTRATION_REJECTED',
+    Shipped = 'SHIPPED',
+}
+
+export type OrderCancelRefused = {
+    message: Scalars['String']['output'];
+    reason: OrderCancelRefusalReason;
+};
+
+export type OrderCancelResult = OrderCancelRefused | OrderCancelSuccess;
+
+export type OrderCancelSuccess = {
+    outcome: OrderCancelOutcome;
 };
 
 export type OrderCustomFields = {
@@ -2835,6 +2867,8 @@ export enum Permission {
     ApproveSecurityLimit = 'ApproveSecurityLimit',
     /** Authenticated means simply that the user is logged in */
     Authenticated = 'Authenticated',
+    /** Cancel a pending order on behalf of a customer (refused once an order or sale exists in the ERP, see docs/order-contracts.md) */
+    CancelOrder = 'CancelOrder',
     /** Confirm or release a manual order reservation (order-confirmation flow, see docs/order-flow.md) */
     ConfirmOrder = 'ConfirmOrder',
     /** Grants permission to create Administrator */
@@ -4696,6 +4730,16 @@ export type PayInvoiceMutationVariables = Exact<{
 
 export type PayInvoiceMutation = { payInvoice: { id: string; status: string } };
 
+export type CancelOrderMutationVariables = Exact<{
+    code: Scalars['String']['input'];
+}>;
+
+export type CancelOrderMutation = {
+    cancelOrder:
+        | { reason: OrderCancelRefusalReason; message: string }
+        | { outcome: OrderCancelOutcome };
+};
+
 export type MyOrdersQueryVariables = Exact<{
     options?: InputMaybe<OrderListOptions>;
     search?: InputMaybe<Scalars['String']['input']>;
@@ -5786,6 +5830,19 @@ export const PayInvoiceDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<PayInvoiceMutation, PayInvoiceMutationVariables>;
+export const CancelOrderDocument = new TypedDocumentString(`
+    mutation CancelOrder($code: String!) {
+  cancelOrder(code: $code) {
+    ... on OrderCancelSuccess {
+      outcome
+    }
+    ... on OrderCancelRefused {
+      reason
+      message
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<CancelOrderMutation, CancelOrderMutationVariables>;
 export const MyOrdersDocument = new TypedDocumentString(`
     query MyOrders($options: OrderListOptions, $search: String) {
   myOrders(options: $options, search: $search) {
