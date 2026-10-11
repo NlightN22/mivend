@@ -8,6 +8,7 @@ import {
     JoinColumn,
     ManyToOne,
     OneToMany,
+    PrimaryColumn,
     PrimaryGeneratedColumn,
 } from 'typeorm';
 import type { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
@@ -51,10 +52,19 @@ export class TestOrderCustomFields {
     @Column({ type: 'text', nullable: true }) cancelRefusalReason!: string | null;
 }
 
+@Entity('reservation_test_customer')
+export class TestCustomer {
+    @PrimaryColumn({ type: 'varchar' }) id!: string;
+}
+
 @Entity('reservation_test_order')
 export class TestOrder {
     @PrimaryGeneratedColumn('uuid') id!: string;
     @Column({ type: 'varchar', nullable: true }) customerId!: string | null;
+    @ManyToOne(() => TestCustomer, { createForeignKeyConstraints: false })
+    @JoinColumn({ name: 'customerId' })
+    customer!: TestCustomer | null;
+    @Column({ type: 'boolean', default: false }) active!: boolean;
     @Column(() => TestOrderCustomFields) customFields!: TestOrderCustomFields;
     @Column({ type: 'varchar', default: 'PaymentAuthorized' }) state!: string;
     @Column({ type: 'varchar', default: 'ORD-1' }) code!: string;
@@ -179,6 +189,7 @@ export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
             schema,
             extra,
             entities: [
+                TestCustomer,
                 TestOrder,
                 TestOrderLine,
                 TestProductVariant,
