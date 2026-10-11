@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { MvPagination, MvInput } from '@mivend/ui-kit';
+import { ref, toRef, watch } from 'vue';
+import type { Ref } from 'vue';
+import { MvPagination, MvInput, useUrlState } from '@mivend/ui-kit';
 import type { NotificationItem, NotificationStatus } from '@mivend/ui-kit';
 import AccountSidebar from './AccountSidebar.vue';
 import { fetchNotifications, markNotificationRead } from '../../api/notifications';
@@ -20,9 +21,9 @@ const PAGE_SIZE = 20;
 const notifications = ref<NotificationItem[]>([]);
 const totalItems = ref(0);
 const loading = ref(false);
-const page = ref(1);
-const searchTerm = ref('');
-const activeStatus = ref<'all' | NotificationStatus>('all');
+const { filters: urlState, page } = useUrlState({ status: 'all', q: '' }, { typingKeys: ['q'] });
+const searchTerm = toRef(urlState, 'q');
+const activeStatus = toRef(urlState, 'status') as Ref<'all' | NotificationStatus>;
 
 const STATUS_FILTERS: { key: 'all' | NotificationStatus; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -52,7 +53,6 @@ let searchDebounce: ReturnType<typeof setTimeout> | undefined;
 watch(searchTerm, () => {
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(() => {
-        page.value = 1;
         void load();
     }, 300);
 });

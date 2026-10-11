@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
-import { MvPagination } from '@mivend/ui-kit';
+import { toRef, watch, onMounted } from 'vue';
+import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import OrderCard from './OrderCard.vue';
 import OrdersAside from './OrdersAside.vue';
@@ -11,9 +11,9 @@ const { orders, totalItems, loading, load } = useOrders();
 
 const PAGE_SIZE = 20;
 
-const activeFilter = ref('all');
-const searchQuery = ref('');
-const page = ref(1);
+const { filters: urlState, page } = useUrlState({ status: 'all', q: '' }, { typingKeys: ['q'] });
+const activeFilter = toRef(urlState, 'status');
+const searchQuery = toRef(urlState, 'q');
 
 const FILTER_GROUPS: Record<string, ErpStatus[]> = {
     pending: ['PENDING', 'SENT_TO_ERP', 'RESERVED', 'UNDER_APPROVAL'],
@@ -41,11 +41,7 @@ function reload(): void {
     });
 }
 
-watch([activeFilter, searchQuery], () => {
-    page.value = 1;
-    reload();
-});
-watch(page, reload);
+watch([activeFilter, searchQuery, page], reload);
 
 onMounted(reload);
 </script>

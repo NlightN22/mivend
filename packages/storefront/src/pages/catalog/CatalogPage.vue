@@ -9,6 +9,7 @@ import { useProductList, type FilterState } from '../../composables/useProductLi
 import { MvCatalogFacets, MvBreadcrumbs, MvActiveFilters } from '@mivend/ui-kit';
 import { useActiveFilterChips } from '../../composables/useActiveFilterChips';
 import ProductListView from '../../components/ProductListView.vue';
+import { useCatalogSortUrl } from './useCatalogSortUrl';
 // Imports the TS source directly — see the comment in useProductList.ts for why 'shared''s
 // compiled package output breaks a Vite production build.
 import {
@@ -62,7 +63,9 @@ const {
     query: searchQuery,
     filters,
     collectionSlug: activeCollectionSlug,
+    initialSort: (route.query.sort as string) || undefined,
 });
+useCatalogSortUrl(sortKey);
 
 // Sync filter state → URL; user changes push history entries (see below).
 let syncingFromUrl = false;

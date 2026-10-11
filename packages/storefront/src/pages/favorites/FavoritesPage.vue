@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { STOCK_VARIANT_LABELS, type StockVariant } from '@mivend/ui-kit';
-import { ref, computed } from 'vue';
+import { STOCK_VARIANT_LABELS, useUrlState, type StockVariant } from '@mivend/ui-kit';
+import { ref, computed, toRef } from 'vue';
 import { useViewMode } from '../../composables/useViewMode';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import FavoritesToolbar from './FavoritesToolbar.vue';
@@ -18,10 +18,14 @@ const favoritesStore = useFavoritesStore();
 const cartStore = useCartStore();
 const { views, error } = useFavoriteProducts();
 
-const search = ref('');
-const sort = ref('available');
-const activeGroup = ref('all');
-const activeChip = ref('all');
+const { filters: urlState } = useUrlState(
+    { q: '', sort: 'available', group: 'all', chip: 'all' },
+    { typingKeys: ['q'] },
+);
+const search = toRef(urlState, 'q');
+const sort = toRef(urlState, 'sort');
+const activeGroup = toRef(urlState, 'group');
+const activeChip = toRef(urlState, 'chip');
 const { viewMode, setViewMode } = useViewMode();
 
 const localQty = ref<Record<string, number>>({});

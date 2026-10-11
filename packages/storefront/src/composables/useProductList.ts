@@ -70,6 +70,7 @@ export interface FilterState {
 interface UseProductListOptions {
     pageSize?: number;
     query?: Ref<string>;
+    initialSort?: string;
     filters?: Ref<FilterState>;
     collectionSlug?: Ref<string | undefined>;
 }
@@ -134,7 +135,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     loadMore: () => Promise<void>;
     load: () => Promise<void>;
 } {
-    const { pageSize = 24, query, filters, collectionSlug } = options;
+    const { pageSize = 24, query, filters, collectionSlug, initialSort } = options;
 
     const items = ref<ProductItem[]>([]);
     const facetGroups = ref<FacetGroup[]>([]);
@@ -147,7 +148,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     const loadingMore = ref(false);
     const hasMore = ref(true);
     const { viewMode, setViewMode } = useViewMode();
-    const sortKey = ref('relevance');
+    const sortKey = ref(initialSort || 'relevance');
     const {
         sortOptions,
         priceRange: priceRangeSupported,

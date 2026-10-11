@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { toRef } from 'vue';
+import { useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import RequestsToolbar from './RequestsToolbar.vue';
 import RequestCard from './RequestCard.vue';
 import type { RequestData } from './RequestCard.vue';
 
-const activeStatus = ref('all');
-const activeTopic = ref('');
-const search = ref('');
-const sort = ref('newest');
+const { filters: urlState } = useUrlState(
+    { status: 'all', topic: '', q: '', sort: 'newest' },
+    { typingKeys: ['q'] },
+);
+const activeStatus = toRef(urlState, 'status');
+const activeTopic = toRef(urlState, 'topic');
+const search = toRef(urlState, 'q');
+const sort = toRef(urlState, 'sort');
 
 const requests: RequestData[] = [
     {

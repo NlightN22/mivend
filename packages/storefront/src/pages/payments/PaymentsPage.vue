@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
-import { MvPagination } from '@mivend/ui-kit';
+import { computed, onMounted, ref, toRef, watch } from 'vue';
+import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import PaymentRow from './PaymentRow.vue';
 import { usePayments, PAYMENT_STATUS_LABEL, PAYMENT_CHANNEL_LABEL } from './usePayments';
@@ -10,9 +10,9 @@ import { MyAdvanceBalanceDocument } from '../../api/generated/graphql';
 const { payments, totalItems, loading, load } = usePayments();
 
 const PAGE_SIZE = 20;
-const activeStatus = ref('all');
-const activeChannel = ref('all');
-const page = ref(1);
+const { filters: urlState, page } = useUrlState({ status: 'all', channel: 'all' });
+const activeStatus = toRef(urlState, 'status');
+const activeChannel = toRef(urlState, 'channel');
 
 const statusFilters = [
     { key: 'all', label: 'All statuses' },
@@ -32,11 +32,7 @@ function reload(): void {
     });
 }
 
-watch([activeStatus, activeChannel], () => {
-    page.value = 1;
-    reload();
-});
-watch(page, reload);
+watch([activeStatus, activeChannel, page], reload);
 
 function formatAmount(cents: number, currency: string): string {
     return (

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, toRef } from 'vue';
+import type { Ref } from 'vue';
+import { useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from './AccountSidebar.vue';
 
 interface Employee {
@@ -101,7 +103,8 @@ const filters: { key: Filter; label: string; count: number }[] = [
     { key: 'disabled', label: 'Disabled', count: 1 },
 ];
 
-const activeFilter = ref<Filter>('all');
+const { filters: urlState } = useUrlState({ status: 'all' });
+const activeFilter = toRef(urlState, 'status') as unknown as Ref<Filter>;
 const addOpen = ref(false);
 const showRolesHelp = ref(false);
 const addForm = ref({ name: '', contact: '', role: '', allPoints: false, points: [] as string[] });

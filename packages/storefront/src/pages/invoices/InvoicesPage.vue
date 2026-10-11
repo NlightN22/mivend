@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
-import { MvPagination } from '@mivend/ui-kit';
+import { computed, onMounted, toRef, watch } from 'vue';
+import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import InvoiceRow from './InvoiceRow.vue';
 import { useInvoices, INVOICE_STATUS_LABEL } from './useInvoices';
@@ -9,8 +9,8 @@ const { invoices, totalItems, loading, load } = useInvoices();
 
 const PAGE_SIZE = 20;
 
-const activeFilter = ref('all');
-const page = ref(1);
+const { filters: urlState, page } = useUrlState({ status: 'all' });
+const activeFilter = toRef(urlState, 'status');
 
 const statusFilters = [
     { key: 'all', label: 'All invoices' },
@@ -25,11 +25,7 @@ function reload(): void {
     });
 }
 
-watch(activeFilter, () => {
-    page.value = 1;
-    reload();
-});
-watch(page, reload);
+watch([activeFilter, page], reload);
 
 onMounted(reload);
 

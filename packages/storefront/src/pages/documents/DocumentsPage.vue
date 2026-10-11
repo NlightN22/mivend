@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
-import { MvPagination } from '@mivend/ui-kit';
+import { computed, onMounted, toRef, watch } from 'vue';
+import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import DocumentsToolbar from './DocumentsToolbar.vue';
 import DocumentRow from './DocumentRow.vue';
@@ -11,9 +11,9 @@ const { documents, totalItems, loading, load } = useDocuments();
 
 const PAGE_SIZE = 20;
 
-const activeFilter = ref('all');
-const search = ref('');
-const page = ref(1);
+const { filters: urlState, page } = useUrlState({ type: 'all', q: '' }, { typingKeys: ['q'] });
+const activeFilter = toRef(urlState, 'type');
+const search = toRef(urlState, 'q');
 
 const typeFilters: TypeFilterOption[] = [
     { key: 'all', label: 'All documents' },
@@ -29,11 +29,7 @@ function reload(): void {
     });
 }
 
-watch([activeFilter, search], () => {
-    page.value = 1;
-    reload();
-});
-watch(page, reload);
+watch([activeFilter, search, page], reload);
 
 onMounted(reload);
 
