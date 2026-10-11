@@ -13,6 +13,8 @@ import {
     type FavoriteVariantView,
 } from '../../composables/useFavoriteProducts';
 import { useCartStore } from '../../stores/cart';
+import { usePackagesOnly } from '../../composables/usePackagesOnly';
+import { packsToBase, salesUnitOf } from '../../composables/useSalesUnit';
 
 const favoritesStore = useFavoritesStore();
 const cartStore = useCartStore();
@@ -27,6 +29,8 @@ const sort = toRef(urlState, 'sort');
 const activeGroup = toRef(urlState, 'group');
 const activeChip = toRef(urlState, 'chip');
 const { viewMode, setViewMode } = useViewMode();
+const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
+void loadPackagesOnly();
 
 const localQty = ref<Record<string, number>>({});
 
@@ -35,9 +39,11 @@ function getQty(variantId: string): number {
 }
 
 function toCard(item: FavoriteVariantView): FavoriteProduct {
+    const unit = salesUnitOf(item, packagesOnly.value);
+    const shownPrice = item.price != null && unit ? item.price * unit.ratio : item.price;
     const priceStr =
-        item.price != null
-            ? new Intl.NumberFormat('ru-RU').format(item.price) +
+        shownPrice != null
+            ? new Intl.NumberFormat('ru-RU').format(shownPrice) +
               ' ' +
               (item.currency === 'RUB' ? '₽' : item.currency)
             : '—';
@@ -55,6 +61,7 @@ function toCard(item: FavoriteVariantView): FavoriteProduct {
         stockLabel,
         stockVariant,
         qty: getQty(item.variantId),
+        unitLabel: unit?.name,
         emoji: '📦',
         unitName: item.unitName,
         unitRatioToBase: item.unitRatioToBase,
@@ -93,7 +100,8 @@ function handleQtyChange(id: string, delta: number): void {
 async function handleAddAll(): Promise<void> {
     for (const card of filteredCards.value) {
         if (card.stockVariant !== 'out') {
-            await cartStore.addItem(card.id, card.qty);
+            const unit = salesUnitOf(card, packagesOnly.value);
+            await cartStore.addItem(card.id, unit ? packsToBase(card.qty, unit) : card.qty);
         }
     }
 }

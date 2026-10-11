@@ -15,6 +15,7 @@ export interface FavoriteProduct {
     emoji: string;
     unitName?: string | null;
     unitRatioToBase?: number | null;
+    unitLabel?: string;
 }
 
 const props = defineProps<{ product: FavoriteProduct }>();
@@ -50,7 +51,10 @@ const emit = defineEmits<{
             <div class="fav-card__note">{{ props.product.note }}</div>
 
             <div class="fav-card__price-row">
-                <div class="fav-card__price">{{ props.product.price }}</div>
+                <div class="fav-card__price">
+                    {{ props.product.price
+                    }}<span v-if="props.product.unitLabel"> / {{ props.product.unitLabel }}</span>
+                </div>
                 <div
                     class="fav-card__stock"
                     :class="{
@@ -66,7 +70,7 @@ const emit = defineEmits<{
             <div v-if="props.product.stockVariant !== 'out'" class="fav-card__actions">
                 <div class="fav-card__qty">
                     <button @click="emit('qtyChange', props.product.id, -1)">−</button>
-                    <span>{{ props.product.qty }}</span>
+                    <span>{{ props.product.qty }} {{ props.product.unitLabel ?? '' }}</span>
                     <button @click="emit('qtyChange', props.product.id, 1)">+</button>
                 </div>
                 <button
