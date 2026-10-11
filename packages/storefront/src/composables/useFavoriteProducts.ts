@@ -1,31 +1,19 @@
 import { ref, watch, type Ref } from 'vue';
-import { stockVariantFromLevel, type StockVariant } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import { FavoriteProductsDocument } from '../api/generated/graphql';
 import { useFavoritesStore } from '../stores/favorites';
-import { brandOf } from '../utils/brand';
-
-export interface FavoriteVariantView {
-    variantId: string;
-    name: string;
-    sku: string;
-    brand: string;
-    price: number | undefined;
-    currency: string;
-    stockVariant: StockVariant;
-    unitName: string | null;
-    unitRatioToBase: number | null;
-}
+import { assetUrl } from './assetUrl';
+import type { ProductItem } from './useProductList';
 
 const ID_BATCH = 100;
 
 export function useFavoriteProducts(): {
-    views: Ref<FavoriteVariantView[]>;
+    products: Ref<ProductItem[]>;
     loading: Ref<boolean>;
     error: Ref<boolean>;
 } {
     const store = useFavoritesStore();
-    const views = ref<FavoriteVariantView[]>([]);
+    const products = ref<ProductItem[]>([]);
     const loading = ref(false);
     const error = ref(false);
     let requestSeq = 0;
@@ -35,7 +23,7 @@ export function useFavoriteProducts(): {
         const productIds = [...new Set(store.items.map(i => i.productId))];
         const seq = ++requestSeq;
         if (ids.length === 0) {
-            views.value = [];
+            products.value = [];
             return;
         }
         loading.value = true;
@@ -56,21 +44,32 @@ export function useFavoriteProducts(): {
                     .flatMap(r => r.products.items)
                     .flatMap(p => p.variants.map(v => [v.id, { p, v }] as const)),
             );
-            views.value = ids.flatMap(id => {
+            products.value = ids.flatMap(id => {
                 const found = byVariantId.get(id);
                 if (!found) return [];
                 const { p, v } = found;
                 return [
                     {
-                        variantId: v.id,
-                        name: v.name,
-                        sku: v.sku,
-                        brand: brandOf(p.manufacturer),
-                        price: v.customerPrice != null ? v.customerPrice / 100 : undefined,
-                        currency: v.currencyCode,
-                        stockVariant: stockVariantFromLevel(v.stockLevel),
-                        unitName: v.customFields?.unitName ?? null,
-                        unitRatioToBase: v.customFields?.unitRatioToBase ?? null,
+                        id: p.id,
+                        name: p.name,
+                        slug: p.slug,
+                        manufacturer: p.manufacturer,
+                        images: p.assets.map(a => assetUrl(a.preview, 'small')),
+                        facetValues: [],
+                        variants: [
+                            {
+                                id: v.id,
+                                sku: v.sku,
+                                price: v.customerPrice ?? v.price ?? undefined,
+                                customerPrice: v.customerPrice ?? null,
+                                compareAtPrice: v.compareAtPrice ?? null,
+                                discountTiers: [],
+                                currencyCode: v.currencyCode,
+                                stockLevel: v.stockLevel,
+                                unitName: v.customFields?.unitName ?? null,
+                                unitRatioToBase: v.customFields?.unitRatioToBase ?? null,
+                            },
+                        ],
                     },
                 ];
             });
@@ -84,5 +83,5 @@ export function useFavoriteProducts(): {
 
     watch(() => store.items.map(i => i.variantId).join(','), load, { immediate: true });
 
-    return { views, loading, error };
+    return { products, loading, error };
 }

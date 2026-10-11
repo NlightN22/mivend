@@ -4671,12 +4671,16 @@ export type FavoriteProductsQuery = {
     products: {
         items: Array<{
             id: string;
+            name: string;
+            slug: string;
+            assets: Array<{ preview: string }>;
             manufacturer?: { name?: string | null } | null;
             variants: Array<{
                 id: string;
                 sku: string;
-                name: string;
+                price: any;
                 customerPrice?: number | null;
+                compareAtPrice?: number | null;
                 currencyCode: CurrencyCode;
                 stockLevel: string;
                 customFields?: { unitName?: string | null; unitRatioToBase?: number | null } | null;
@@ -5769,14 +5773,20 @@ export const FavoriteProductsDocument = new TypedDocumentString(`
   products(options: {take: $take, filter: {id: {in: $ids}}}) {
     items {
       id
+      name
+      slug
+      assets {
+        preview
+      }
       manufacturer {
         name
       }
       variants {
         id
         sku
-        name
+        price
         customerPrice
+        compareAtPrice
         currencyCode
         stockLevel
         customFields {

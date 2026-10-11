@@ -143,13 +143,25 @@ const canOrder = computed(() => props.stockVariant !== 'out');
             <template v-if="showPrices">
                 <div class="mv-product-card__price-row">
                     <div class="mv-product-card__prices">
-                        <MvAmountDisplay
-                            v-if="customerPrice !== undefined"
-                            :amount="customerPrice"
-                            :currency="currency"
-                            size="md"
-                            class="mv-product-card__customer-price"
-                        />
+                        <div class="mv-product-card__price-line">
+                            <MvAmountDisplay
+                                v-if="customerPrice !== undefined"
+                                :amount="customerPrice"
+                                :currency="currency"
+                                size="md"
+                                class="mv-product-card__customer-price"
+                            />
+                            <MvAmountDisplay
+                                v-else-if="price !== undefined"
+                                :amount="price"
+                                :currency="currency"
+                                size="md"
+                                class="mv-product-card__customer-price"
+                            />
+                            <span v-if="unitLabel" class="mv-product-card__unit">
+                                / {{ unitLabel }}
+                            </span>
+                        </div>
                         <MvAmountDisplay
                             v-if="compareAtPrice !== undefined"
                             :amount="compareAtPrice"
@@ -157,16 +169,6 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                             size="md"
                             class="mv-product-card__base-price--strike"
                         />
-                        <MvAmountDisplay
-                            v-if="customerPrice === undefined && price !== undefined"
-                            :amount="price"
-                            :currency="currency"
-                            size="md"
-                            class="mv-product-card__customer-price"
-                        />
-                        <span v-if="unitLabel" class="mv-product-card__unit">
-                            / {{ unitLabel }}
-                        </span>
                     </div>
                     <MvStockBadge
                         v-if="stockQuantity !== undefined"
@@ -375,6 +377,12 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     flex-shrink: 0;
 }
 
+.mv-product-card__price-line {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    flex-wrap: wrap;
+}
 .mv-product-card__unit {
     font-size: 12px;
     color: #66736e;

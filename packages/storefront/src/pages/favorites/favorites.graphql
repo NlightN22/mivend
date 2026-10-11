@@ -2,14 +2,20 @@ query FavoriteProducts($ids: [String!]!, $take: Int!) {
     products(options: { take: $take, filter: { id: { in: $ids } } }) {
         items {
             id
+            name
+            slug
+            assets {
+                preview
+            }
             manufacturer {
                 name
             }
             variants {
                 id
                 sku
-                name
+                price
                 customerPrice
+                compareAtPrice
                 currencyCode
                 stockLevel
                 customFields {

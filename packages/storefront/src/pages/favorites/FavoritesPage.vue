@@ -1,129 +1,65 @@
 <script setup lang="ts">
-import { STOCK_VARIANT_LABELS, useUrlState, type StockVariant } from '@mivend/ui-kit';
-import { ref, computed, toRef } from 'vue';
-import { useViewMode } from '../../composables/useViewMode';
-import AccountSidebar from '../account/AccountSidebar.vue';
-import FavoritesToolbar from './FavoritesToolbar.vue';
-import FavoriteProductCard from './FavoriteProductCard.vue';
-import FavoriteProductRow from './FavoriteProductRow.vue';
-import type { FavoriteProduct } from './FavoriteProductCard.vue';
-import { useFavoritesStore } from '../../stores/favorites';
-import {
-    useFavoriteProducts,
-    type FavoriteVariantView,
-} from '../../composables/useFavoriteProducts';
+import { stockVariantFromLevel, useUrlState } from '@mivend/ui-kit';
+import { computed, toRef } from 'vue';
+import ProductListView from '../../components/ProductListView.vue';
+import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
+import { useFavoritesStore } from '../../stores/favorites';
+import { useFavoriteProducts } from '../../composables/useFavoriteProducts';
 import { usePackagesOnly } from '../../composables/usePackagesOnly';
 import { packsToBase, salesUnitOf } from '../../composables/useSalesUnit';
+import { useViewMode } from '../../composables/useViewMode';
+import AccountSidebar from '../account/AccountSidebar.vue';
 
-const favoritesStore = useFavoritesStore();
+const authStore = useAuthStore();
 const cartStore = useCartStore();
-const { views, error } = useFavoriteProducts();
-
-const { filters: urlState } = useUrlState(
-    { q: '', sort: 'available', group: 'all', chip: 'all' },
-    { typingKeys: ['q'] },
-);
-const search = toRef(urlState, 'q');
-const sort = toRef(urlState, 'sort');
-const activeGroup = toRef(urlState, 'group');
-const activeChip = toRef(urlState, 'chip');
+const favoritesStore = useFavoritesStore();
+const { products, loading, error } = useFavoriteProducts();
 const { viewMode, setViewMode } = useViewMode();
 const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
 void loadPackagesOnly();
 
-const localQty = ref<Record<string, number>>({});
+const { filters: urlState } = useUrlState({ q: '', inStock: '' }, { typingKeys: ['q'] });
+const search = toRef(urlState, 'q');
+const inStockOnly = computed({
+    get: () => urlState.inStock === '1',
+    set: (value: boolean) => {
+        urlState.inStock = value ? '1' : '';
+    },
+});
 
-function stepOf(variantId: string): number {
-    const item = views.value.find(v => v.variantId === variantId);
-    return (item && salesUnitOf(item, packagesOnly.value)?.packStep) || 1;
-}
+const isAvailable = (stockLevel: string): boolean => stockVariantFromLevel(stockLevel) !== 'out';
 
-function getQty(variantId: string): number {
-    return localQty.value[variantId] ?? stepOf(variantId);
-}
-
-function toCard(item: FavoriteVariantView): FavoriteProduct {
-    const unit = salesUnitOf(item, packagesOnly.value);
-    const shownPrice =
-        item.price != null && unit ? Math.round(item.price * unit.ratio * 100) / 100 : item.price;
-    const priceStr =
-        shownPrice != null
-            ? new Intl.NumberFormat('ru-RU').format(shownPrice) +
-              ' ' +
-              (item.currency === 'RUB' ? '₽' : item.currency)
-            : '—';
-    const stockVariant: StockVariant = item.stockVariant;
-    const stockLabel = STOCK_VARIANT_LABELS[stockVariant];
-    return {
-        id: item.variantId,
-        brand: item.brand,
-        sku: item.sku,
-        name: item.name,
-        note: '',
-        price: priceStr,
-        unitPrice: item.price,
-        currency: item.currency,
-        stockLabel,
-        stockVariant,
-        qty: getQty(item.variantId),
-        unitLabel: unit?.name,
-        qtyStep: unit?.packStep,
-        emoji: '📦',
-        unitName: item.unitName,
-        unitRatioToBase: item.unitRatioToBase,
-    };
-}
-
-const filteredCards = computed<FavoriteProduct[]>(() => {
-    let items = views.value.map(toCard);
-    if (search.value.trim()) {
-        const q = search.value.toLowerCase();
-        items = items.filter(
-            p =>
-                p.name.toLowerCase().includes(q) ||
-                p.sku.toLowerCase().includes(q) ||
-                p.brand.toLowerCase().includes(q),
+const shown = computed(() => {
+    const q = search.value.trim().toLowerCase();
+    return products.value.filter(p => {
+        const v = p.variants[0];
+        if (inStockOnly.value && !isAvailable(v?.stockLevel ?? '')) return false;
+        if (!q) return true;
+        return [p.name, v?.sku ?? '', p.manufacturer?.name ?? ''].some(t =>
+            t.toLowerCase().includes(q),
         );
-    }
-    if (activeChip.value === 'available') {
-        items = items.filter(p => p.stockVariant !== 'out');
-    }
-    return items;
+    });
 });
 
 const availableCount = computed(
-    () => filteredCards.value.filter(p => p.stockVariant !== 'out').length,
+    () => shown.value.filter(p => isAvailable(p.variants[0]?.stockLevel ?? '')).length,
 );
 
-function handleRemove(id: string): void {
-    favoritesStore.remove(id);
-}
-
-function handleSetQty(id: string, qty: number): void {
-    localQty.value[id] = Math.max(stepOf(id), qty);
-}
-
-async function handleCardAdd(id: string, qty: number): Promise<void> {
-    const item = views.value.find(v => v.variantId === id);
-    const unit = item ? salesUnitOf(item, packagesOnly.value) : null;
-    await cartStore.addItem(id, unit ? packsToBase(qty, unit) : qty);
-}
-
 async function handleAddAll(): Promise<void> {
-    for (const card of filteredCards.value) {
-        if (card.stockVariant !== 'out') {
-            const unit = salesUnitOf(card, packagesOnly.value);
-            await cartStore.addItem(card.id, unit ? packsToBase(card.qty, unit) : card.qty);
-        }
+    for (const p of shown.value) {
+        const v = p.variants[0];
+        if (!v || !isAvailable(v.stockLevel)) continue;
+        const unit = salesUnitOf(v, packagesOnly.value);
+        await cartStore.addItem(v.id, unit ? packsToBase(unit.packStep, unit) : 1);
     }
 }
 
 function handleClearUnavailable(): void {
-    const unavailableIds = favoritesStore.items
-        .map(i => i.variantId)
-        .filter(id => (views.value.find(v => v.variantId === id)?.stockVariant ?? 'out') === 'out');
-    unavailableIds.forEach(id => favoritesStore.remove(id));
+    for (const p of products.value) {
+        const v = p.variants[0];
+        if (v && !isAvailable(v.stockLevel)) favoritesStore.remove(v.id);
+    }
 }
 </script>
 
@@ -141,15 +77,12 @@ function handleClearUnavailable(): void {
                     </p>
                 </div>
                 <div class="favorites-page__head-actions">
-                    <button class="favorites-page__btn" @click="handleClearUnavailable">
+                    <MvButton variant="secondary" @click="handleClearUnavailable">
                         Clear unavailable
-                    </button>
-                    <button
-                        class="favorites-page__btn favorites-page__btn--primary"
-                        @click="handleAddAll"
-                    >
-                        Add selected to cart
-                    </button>
+                    </MvButton>
+                    <MvButton @click="handleAddAll">
+                        Add {{ availableCount }} available to cart
+                    </MvButton>
                 </div>
             </div>
 
@@ -157,63 +90,25 @@ function handleClearUnavailable(): void {
                 <p>No favorites yet. Click the heart icon on any product to save it here.</p>
             </div>
 
-            <div v-else-if="error" class="favorites-page__empty">
-                <p>Failed to load favorites. Please try again later.</p>
-            </div>
-
-            <div v-else class="favorites-page__main">
-                <FavoritesToolbar
-                    :search="search"
-                    :sort="sort"
-                    :active-group="activeGroup"
-                    :active-chip="activeChip"
+            <template v-else>
+                <div class="favorites-page__search">
+                    <MvSearchInput v-model="search" placeholder="Search favorites" />
+                    <MvCheckbox v-model="inStockOnly" label="In stock only" />
+                </div>
+                <ProductListView
+                    :items="shown"
+                    :total-items="shown.length"
+                    :loading="loading"
+                    :load-error="error"
+                    :loading-more="false"
+                    :has-more="false"
                     :view-mode="viewMode"
-                    @update:search="search = $event"
-                    @update:sort="sort = $event"
-                    @update:active-group="activeGroup = $event"
-                    @update:active-chip="activeChip = $event"
+                    :sort-key="'added'"
+                    :sort-options="[{ value: 'added', label: 'Recently added' }]"
+                    :show-prices="authStore.isLoggedIn"
                     @update:view-mode="setViewMode($event)"
                 />
-
-                <div v-if="viewMode === 'grid'" class="favorites-page__grid">
-                    <FavoriteProductCard
-                        v-for="card in filteredCards"
-                        :key="card.id"
-                        :product="card"
-                        @remove="handleRemove"
-                        @set-qty="handleSetQty"
-                        @add-to-cart="handleCardAdd"
-                    />
-                </div>
-
-                <div v-else class="favorites-page__list">
-                    <FavoriteProductRow
-                        v-for="card in filteredCards"
-                        :key="card.id"
-                        :product="card"
-                        @add-to-cart="(id, qty) => cartStore.addItem(id, qty)"
-                        @remove="handleRemove"
-                    />
-                </div>
-
-                <div class="favorites-page__bulk">
-                    <div>
-                        <div class="favorites-page__bulk-title">
-                            {{ availableCount }} available items
-                        </div>
-                        <div class="favorites-page__bulk-note">
-                            You can add them to the cart with the specified quantities. Unavailable
-                            items will remain in favorites.
-                        </div>
-                    </div>
-                    <button
-                        class="favorites-page__btn favorites-page__btn--orange"
-                        @click="handleAddAll"
-                    >
-                        Add available to cart
-                    </button>
-                </div>
-            </div>
+            </template>
         </section>
     </div>
 </template>
@@ -262,32 +157,11 @@ function handleClearUnavailable(): void {
     justify-content: flex-end;
 }
 
-.favorites-page__btn {
-    border: 0;
-    min-height: 40px;
-    border-radius: 12px;
-    padding: 0 14px;
-    background: #f3f8f6;
-    color: #263732;
-    font: inherit;
-    font-weight: 950;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.favorites-page__btn--primary {
-    background: #00a878;
-    color: #fff;
-}
-.favorites-page__btn--orange {
-    background: var(--app-accent-orange, #ff8a00);
-    color: #fff;
-}
-.favorites-page__btn--orange:hover:not(:disabled) {
-    background: var(--app-accent-orange-hover, #e67c00);
-}
-.favorites-page__btn--orange:active:not(:disabled) {
-    background: var(--app-accent-orange-active, #cc6e00);
+.favorites-page__search {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
 }
 
 .favorites-page__empty {
@@ -297,75 +171,14 @@ function handleClearUnavailable(): void {
     font-size: 15px;
 }
 
-.favorites-page__main {
-    display: grid;
-    gap: 16px;
-    min-width: 0;
-}
-
-.favorites-page__grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-}
-
-.favorites-page__list {
-    display: grid;
-    gap: 8px;
-}
-
-.favorites-page__bulk {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    padding: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-}
-
-.favorites-page__bulk-title {
-    font-weight: 950;
-    margin-bottom: 4px;
-}
-
-.favorites-page__bulk-note {
-    color: #66736e;
-    font-size: 13px;
-    line-height: 1.35;
-}
-
-@media (max-width: 1260px) {
-    .favorites-page__grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 960px) {
+@media (max-width: 900px) {
     .favorites-page {
         grid-template-columns: 1fr;
-        padding-left: 16px;
-        padding-right: 16px;
+        padding: 16px;
     }
     .favorites-page__head {
-        display: grid;
-    }
-    .favorites-page__head-actions {
-        justify-content: flex-start;
-    }
-    .favorites-page__grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 640px) {
-    .favorites-page__grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .favorites-page__bulk {
-        display: grid;
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 </style>

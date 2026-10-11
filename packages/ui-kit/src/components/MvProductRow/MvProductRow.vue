@@ -30,6 +30,7 @@ interface Props {
     multiplicity?: number;
     // Unit the price is for ('pc.', 'pack'); empty hides it. Pack mode also changes the stepper step.
     unitLabel?: string;
+    unitNote?: string;
     multiplicityLabel?: string;
     qtyStep?: number;
     slug?: string;
@@ -58,6 +59,7 @@ const props = withDefaults(defineProps<Props>(), {
     stockVariant: undefined,
     multiplicity: 1,
     unitLabel: '',
+    unitNote: '',
     multiplicityLabel: '',
     qtyStep: 1,
     slug: '',
@@ -138,9 +140,15 @@ function onStepperChange(qty: number): void {
         </div>
 
         <div class="mv-product-row__cell">
+            <div class="mv-product-row__cell-label">Unit</div>
+            <div class="mv-product-row__cell-value">{{ unitLabel || 'pc.' }}</div>
+            <div v-if="unitNote" class="mv-product-row__unit">{{ unitNote }}</div>
+        </div>
+
+        <div class="mv-product-row__cell">
             <div class="mv-product-row__cell-label">Multiplicity</div>
             <div class="mv-product-row__cell-value">
-                {{ multiplicityLabel || `${multiplicity} pcs.` }}
+                {{ multiplicityLabel || (multiplicity > 1 ? `${multiplicity} pcs.` : '—') }}
             </div>
         </div>
 
@@ -169,8 +177,7 @@ function onStepperChange(qty: number): void {
                     class="mv-product-row__price"
                 />
             </template>
-            <div v-if="showPrices && unitLabel" class="mv-product-row__unit">/ {{ unitLabel }}</div>
-            <div v-else-if="!showPrices" class="mv-product-row__price-hint">Log in</div>
+            <div v-if="!showPrices" class="mv-product-row__price-hint">Log in</div>
             <div v-else class="mv-product-row__price-hint">—</div>
         </div>
 
@@ -232,7 +239,7 @@ function onStepperChange(qty: number): void {
 <style scoped>
 .mv-product-row {
     display: grid;
-    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 90px 110px 140px;
+    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 90px 110px 140px;
     align-items: center;
     padding: 12px 16px;
     border-bottom: 1px solid #edf3f0;
@@ -245,7 +252,7 @@ function onStepperChange(qty: number): void {
 
 /* Extra track for the staff-only "Floor price" cell — see hasFloorPrice/props.floorPrice. */
 .mv-product-row--with-floor-price {
-    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 90px 110px 110px 140px;
+    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 90px 110px 110px 140px;
 }
 
 .mv-product-row__media {

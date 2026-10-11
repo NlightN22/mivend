@@ -45,6 +45,7 @@ function unitView(p: ProductItem): {
     factor: number;
     step: number;
     multiplicity?: string;
+    note?: string;
 } {
     const v = p.variants[0];
     const unit = salesUnitOf(
@@ -56,7 +57,8 @@ function unitView(p: ProductItem): {
         label: unit.name,
         factor: unit.ratio,
         step: unit.packStep,
-        multiplicity: `${unit.packStep} ${unit.name}`,
+        multiplicity: unit.packStep > 1 ? `${unit.packStep} ${unit.name}` : '—',
+        note: `= ${packsToBase(1, unit)} pc.`,
     };
 }
 
@@ -167,7 +169,7 @@ function handleToggleFavorite(p: ProductItem): void {
             <div class="plv-list">
                 <div class="plv-list__header">
                     <span></span><span>Product</span><span>SKU</span> <span>Stock</span
-                    ><span>Multiplicity</span><span>Price</span><span>Order</span>
+                    ><span>Unit</span><span>Multiplicity</span><span>Price</span><span>Order</span>
                 </div>
                 <MvProductRow
                     v-for="p in items"
@@ -192,6 +194,7 @@ function handleToggleFavorite(p: ProductItem): void {
                             : undefined
                     "
                     :unit-label="unitView(p).label"
+                    :unit-note="unitView(p).note"
                     :multiplicity-label="unitView(p).multiplicity"
                     :qty-step="unitView(p).step"
                     :discount-tiers="p.variants[0]?.discountTiers"
@@ -359,7 +362,7 @@ function handleToggleFavorite(p: ProductItem): void {
 
 .plv-list__header {
     display: grid;
-    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 90px 110px 140px;
+    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 90px 110px 140px;
     padding: 10px 16px;
     background: #f7fbfa;
     border-bottom: 2px solid #edf3f0;
