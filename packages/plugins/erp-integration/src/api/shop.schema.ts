@@ -25,6 +25,8 @@ export const shopApiExtensions: DocumentNode = gql`
         "Name and ratio to base of the variant's default sales unit."
         unitName: String
         unitRatioToBase: Float
+        "Product-owned packaging units (pack, pallet), smallest first."
+        packagingLevels: [PackagingLevel!]!
         "Order quantity step of the variant, in base units."
         multiplicity: Int
     }

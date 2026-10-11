@@ -45,6 +45,8 @@ import { KafkaStatusController } from './kafka-status.controller';
 import { MoqPlugin } from '@mivend/plugin-moq';
 import { UnitLookupService } from './unit-lookup.service';
 import { SearchResultSalesUnitResolver } from './search-result-sales-unit.resolver';
+import { SearchResultPackagingLevelsResolver } from './search-result-packaging-levels.resolver';
+import { SearchResultPackagingLevelsService } from './search-result-packaging-levels.service';
 import { VariantSalesUnitService } from './variant-sales-unit.service';
 import { ProductPackagingLevelsResolver } from './product-packaging-levels.resolver';
 import { ProductPackagingLevelsService } from './product-packaging-levels.service';
@@ -139,6 +141,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         UnitLookupService,
         ProductPackagingLevelsService,
         VariantSalesUnitService,
+        SearchResultPackagingLevelsService,
         TaxCategoryAutoCreateService,
         TaxZoneService,
         KafkaProducerService,
@@ -193,6 +196,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
             ProductManufacturerResolver,
             ProductPackagingLevelsResolver,
             SearchResultSalesUnitResolver,
+            SearchResultPackagingLevelsResolver,
             SearchResultManufacturerResolver,
             SearchResultGalleryResolver,
         ],
