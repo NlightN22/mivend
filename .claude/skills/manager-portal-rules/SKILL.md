@@ -10,24 +10,9 @@ Read the **`frontend-rules`** skill first (common ui-kit conventions shared with
 building or restyling a table, **`manager-table-standard`** is the authority and takes precedence
 over anything below that overlaps with it.
 
-1. **Every page with search/filter/sort/pagination controls must sync that state to the URL
-   query string, bidirectionally.** On mount, read initial filter values from `route.query`
-   (via `useRoute()`); on every filter change, write them back via `router.replace({ query })`
-   (use `replace`, not `push`, so filter tweaks don't spam browser history — only real
-   navigation should create a history entry). The goal: any filtered/sorted/paginated view is a
-   shareable link that reproduces exactly what the sender was looking at — "send me the
-   overdue orders for branch X" should be a URL, not a screenshot with verbal instructions.
-    - **A one-off mount-time read of a single param (e.g. reading `?search=` once to prefill a
-      field, or `?unassigned=true` to preselect a filter) is not compliant** — it's one-way and
-      silently drops every other filter field, and typically doesn't even survive the _user's
-      own_ subsequent filter changes back into the URL. Real compliance is symmetric: every
-      filter field that has a value is reflected in the query string, and every filter field
-      supported by the query string is restored on load.
-    - Applies to search inputs, status/enum selects, manager/branch/department pickers, chip
-      filters, sort column/direction, and the current page number — not to transient UI-only
-      state (e.g. a form being open, a hover state).
-    - See issue tracking the page-by-page rollout of this rule (existing pages predate it and
-      need retrofitting one at a time) for the current status per page.
+1. **URL query-string sync for filters/sort/page is mandatory** - see "URL state for list pages" in
+   `frontend-rules` (shared with the storefront). Manager-only: existing pages are retrofitted
+   page by page; a one-way mount-time read of a single param is not compliant.
 
 2. **A tab bar must never be a plain unwrapped flex/scroll row once it holds more than ~4-5
    tabs on a mobile viewport.** Industry consensus (Material Design 3, Apple HIG, and general

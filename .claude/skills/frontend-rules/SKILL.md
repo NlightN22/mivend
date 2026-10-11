@@ -55,3 +55,13 @@ for a colored icon+label chip keyed off free-text business data with a neutral f
 
 Canonical hover/active colors and tokens live in `docs/ui-standards.md`; follow it for any button or
 button-like element in either portal.
+
+## URL state for list pages
+
+Every list page with filters, search, sort or pagination keeps that state in the URL query so
+back/forward and shared links restore it. Use `useUrlState` / `useUrlSyncedState`
+(`packages/ui-kit/src/composables/`), never hand-rolled `route.query` code.
+
+- Filter and page changes push a history entry; typing in a search box replaces it (`typingKeys`).
+- Default values are omitted from the URL; keys the page does not own are preserved.
+- State is initialised from the URL on load and re-read when the route query changes.

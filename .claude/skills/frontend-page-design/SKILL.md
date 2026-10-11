@@ -75,7 +75,7 @@ overrides.
 Read the **`manager-portal-rules`** skill in full before implementing. Highlights (not a
 replacement for reading the real skill):
 
-- URL query-string sync for any filter/search/sort/page state (`useUrlSyncedState`).
+- URL query-string sync for filter/search/sort/page state (see `frontend-rules`, "URL state for list pages").
 - Tab bars collapse to a "More ▾" control past ~4-5 tabs on mobile only (`max-width: 800px`
   breakpoint, `window.matchMedia`, not CSS-only).
 - A list's toolbar search defaults to the identifying column only; full multi-column search is a
