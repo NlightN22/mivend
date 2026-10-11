@@ -13,6 +13,8 @@ export interface FavoriteProduct {
     stockVariant: StockVariant;
     qty: number;
     emoji: string;
+    unitName?: string | null;
+    unitRatioToBase?: number | null;
 }
 
 const props = defineProps<{ product: FavoriteProduct }>();

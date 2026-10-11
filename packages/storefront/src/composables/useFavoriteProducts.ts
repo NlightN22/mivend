@@ -13,6 +13,8 @@ export interface FavoriteVariantView {
     price: number | undefined;
     currency: string;
     stockVariant: StockVariant;
+    unitName: string | null;
+    unitRatioToBase: number | null;
 }
 
 const ID_BATCH = 100;
@@ -67,6 +69,8 @@ export function useFavoriteProducts(): {
                         price: v.customerPrice != null ? v.customerPrice / 100 : undefined,
                         currency: v.currencyCode,
                         stockVariant: stockVariantFromLevel(v.stockLevel),
+                        unitName: v.customFields?.unitName ?? null,
+                        unitRatioToBase: v.customFields?.unitRatioToBase ?? null,
                     },
                 ];
             });

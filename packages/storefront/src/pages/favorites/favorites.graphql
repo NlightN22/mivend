@@ -12,6 +12,10 @@ query FavoriteProducts($ids: [String!]!, $take: Int!) {
                 customerPrice
                 currencyCode
                 stockLevel
+                customFields {
+                    unitName
+                    unitRatioToBase
+                }
             }
         }
     }

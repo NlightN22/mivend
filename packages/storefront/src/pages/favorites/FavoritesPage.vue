@@ -56,6 +56,8 @@ function toCard(item: FavoriteVariantView): FavoriteProduct {
         stockVariant,
         qty: getQty(item.variantId),
         emoji: '📦',
+        unitName: item.unitName,
+        unitRatioToBase: item.unitRatioToBase,
     };
 }
 

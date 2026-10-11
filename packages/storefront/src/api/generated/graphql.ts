@@ -4679,6 +4679,7 @@ export type FavoriteProductsQuery = {
                 customerPrice?: number | null;
                 currencyCode: CurrencyCode;
                 stockLevel: string;
+                customFields?: { unitName?: string | null; unitRatioToBase?: number | null } | null;
             }>;
         }>;
     };
@@ -5778,6 +5779,10 @@ export const FavoriteProductsDocument = new TypedDocumentString(`
         customerPrice
         currencyCode
         stockLevel
+        customFields {
+          unitName
+          unitRatioToBase
+        }
       }
     }
   }
