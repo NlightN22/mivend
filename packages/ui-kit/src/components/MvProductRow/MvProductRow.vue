@@ -34,6 +34,8 @@ interface Props {
     multiplicityLabel?: string;
     // false hides the Multiplicity cell and its grid track (branch does not enforce multiplicity).
     showMultiplicity?: boolean;
+    // Text for a Pack cell that takes the Multiplicity slot when it is hidden; undefined omits it.
+    packLabel?: string;
     qtyStep?: number;
     slug?: string;
     showPrices?: boolean;
@@ -64,6 +66,7 @@ const props = withDefaults(defineProps<Props>(), {
     unitNote: '',
     multiplicityLabel: '',
     showMultiplicity: true,
+    packLabel: undefined,
     qtyStep: 1,
     slug: '',
     showPrices: true,
@@ -90,6 +93,8 @@ const effectiveStockVariant = computed(
             : (props.stockVariant ?? 'out'),
 );
 
+const showPack = computed(() => !props.showMultiplicity && props.packLabel !== undefined);
+
 const canOrder = computed(() => effectiveStockVariant.value !== 'out');
 
 function onStepperChange(qty: number): void {
@@ -102,7 +107,7 @@ function onStepperChange(qty: number): void {
         class="mv-product-row"
         :class="{
             'mv-product-row--with-floor-price': showFloorPrice,
-            'mv-product-row--no-multiplicity': !showMultiplicity,
+            'mv-product-row--no-multiplicity': !showMultiplicity && !showPack,
         }"
     >
         <div class="mv-product-row__media">
@@ -159,6 +164,11 @@ function onStepperChange(qty: number): void {
             <div class="mv-product-row__cell-value">
                 {{ multiplicityLabel || (multiplicity > 1 ? `${multiplicity} pcs.` : '—') }}
             </div>
+        </div>
+
+        <div v-if="showPack" class="mv-product-row__cell">
+            <div class="mv-product-row__cell-label">Pack</div>
+            <div class="mv-product-row__cell-value">{{ packLabel || '—' }}</div>
         </div>
 
         <div class="mv-product-row__cell">

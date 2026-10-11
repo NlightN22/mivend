@@ -3756,6 +3756,8 @@ export type SearchResult = {
     manufacturer?: Maybe<ProductManufacturer>;
     /** Order quantity step of the variant, in base units. */
     multiplicity?: Maybe<Scalars['Int']['output']>;
+    /** Product-owned packaging units (pack, pallet), smallest first. */
+    packagingLevels: Array<PackagingLevel>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset?: Maybe<SearchResultAsset>;
@@ -4385,6 +4387,7 @@ export type CatalogProductsQuery = {
             compareAtPrice?: number | null;
             manufacturer?: { name?: string | null } | null;
             priceWithTax: { min: any } | { value: any };
+            packagingLevels: Array<{ name: string; ratioToBase: number }>;
             discountTiers: Array<{
                 percent: number;
                 minWeightKg?: number | null;
@@ -5433,6 +5436,10 @@ export const CatalogProductsDocument = new TypedDocumentString(`
       unitName
       unitRatioToBase
       multiplicity
+      packagingLevels {
+        name
+        ratioToBase
+      }
       facetValueIds
       customerPrice
       compareAtPrice

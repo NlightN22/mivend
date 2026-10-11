@@ -45,6 +45,10 @@ query CatalogProducts(
             unitName
             unitRatioToBase
             multiplicity
+            packagingLevels {
+                name
+                ratioToBase
+            }
             facetValueIds
             customerPrice
             compareAtPrice

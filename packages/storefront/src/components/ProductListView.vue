@@ -8,7 +8,7 @@ import { brandOf } from '../utils/brand';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 import { useMultiplicityEnforced } from '../composables/useMultiplicityEnforced';
 import { usePackagesOnly } from '../composables/usePackagesOnly';
-import { baseToPacks, packsToBase, salesUnitOf } from '../composables/useSalesUnit';
+import { baseToPacks, nearestPackOf, packsToBase, salesUnitOf } from '../composables/useSalesUnit';
 
 const props = defineProps<{
     items: ProductItem[];
@@ -63,6 +63,17 @@ function unitView(p: ProductItem): {
         multiplicity: unit.packStep > 1 ? `${unit.packStep} ${unit.name}` : '—',
         note: `= ${packsToBase(1, unit)} pc.`,
     };
+}
+
+// Pieces in the nearest pack (the variant's own pack unit, else the smallest level above 1).
+function packQty(p: ProductItem): number | null {
+    const v = p.variants[0];
+    return (
+        nearestPackOf(
+            { unitName: v?.unitName, unitRatioToBase: v?.unitRatioToBase },
+            v?.packagingLevels ?? [],
+        )?.baseQty ?? null
+    );
 }
 
 function shownQty(p: ProductItem): number {
@@ -170,12 +181,10 @@ function handleToggleFavorite(p: ProductItem): void {
 
         <template v-else-if="viewMode === 'list'">
             <div class="plv-list">
-                <div
-                    class="plv-list__header"
-                    :class="{ 'plv-list__header--no-multiplicity': !multiplicityEnforced }"
-                >
+                <div class="plv-list__header">
                     <span></span><span>Product</span><span>SKU</span> <span>Stock</span
-                    ><span>Unit</span><span v-if="multiplicityEnforced">Multiplicity</span
+                    ><span>Unit</span
+                    ><span>{{ multiplicityEnforced ? 'Multiplicity' : 'Pack' }}</span
                     ><span>Price</span><span>Order</span>
                 </div>
                 <MvProductRow
@@ -205,6 +214,9 @@ function handleToggleFavorite(p: ProductItem): void {
                     :multiplicity="p.variants[0]?.multiplicity ?? 1"
                     :multiplicity-label="unitView(p).multiplicity"
                     :show-multiplicity="multiplicityEnforced"
+                    :pack-label="
+                        multiplicityEnforced ? undefined : packQty(p) ? `${packQty(p)} pcs` : '—'
+                    "
                     :qty-step="unitView(p).step"
                     :discount-tiers="p.variants[0]?.discountTiers"
                     :currency="p.variants[0]?.currencyCode ?? 'RUB'"
@@ -252,6 +264,7 @@ function handleToggleFavorite(p: ProductItem): void {
                             : undefined
                     "
                     :unit-label="unitView(p).label"
+                    :pack-label="packQty(p) ? `pack of ${packQty(p)}` : ''"
                     :qty-step="unitView(p).step"
                     :discount-tiers="p.variants[0]?.discountTiers"
                     :currency="p.variants[0]?.currencyCode ?? 'RUB'"
@@ -380,10 +393,6 @@ function handleToggleFavorite(p: ProductItem): void {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #66736e;
-}
-
-.plv-list__header--no-multiplicity {
-    grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 110px 140px;
 }
 
 .plv-grid {

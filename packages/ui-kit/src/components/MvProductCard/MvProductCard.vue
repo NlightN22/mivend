@@ -35,6 +35,8 @@ interface Props {
     // Unit the price is for ('pc.', 'pack'); empty hides it. Pack mode also changes the stepper step.
     unitLabel?: string;
     qtyStep?: number;
+    // Short caption such as 'pack of 12'; empty hides it.
+    packLabel?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -56,6 +58,7 @@ const props = withDefaults(defineProps<Props>(), {
     showActions: true,
     unitLabel: '',
     qtyStep: 1,
+    packLabel: '',
 });
 
 const emit = defineEmits<{
@@ -139,6 +142,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
             </div>
 
             <a :href="`/product/${slug}`" class="mv-product-card__name">{{ name }}</a>
+            <div v-if="packLabel" class="mv-product-card__pack">{{ packLabel }}</div>
 
             <template v-if="showPrices">
                 <div class="mv-product-card__price-row">
@@ -382,6 +386,10 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     align-items: baseline;
     gap: 4px;
     flex-wrap: wrap;
+}
+.mv-product-card__pack {
+    font-size: 12px;
+    color: #66736e;
 }
 .mv-product-card__unit {
     font-size: 12px;

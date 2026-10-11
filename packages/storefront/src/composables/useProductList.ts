@@ -47,6 +47,7 @@ interface ProductVariant {
     unitName: string | null;
     unitRatioToBase: number | null;
     multiplicity?: number | null;
+    packagingLevels?: { name: string; ratioToBase: number }[];
 }
 
 export type { FacetGroup, FacetValue } from 'shared';
@@ -113,6 +114,7 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
                 unitName: item.unitName ?? null,
                 unitRatioToBase: item.unitRatioToBase ?? null,
                 multiplicity: item.multiplicity ?? null,
+                packagingLevels: item.packagingLevels,
             },
         ],
         facetValues: item.facetValueIds.flatMap(id => {
