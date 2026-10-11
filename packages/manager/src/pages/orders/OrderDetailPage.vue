@@ -165,10 +165,7 @@ watch(() => route.params.code, load);
                     :cancellable="order.cancellable"
                     @cancelled="reload"
                 />
-                <MvPanel
-                    v-if="isNotRegisteredInErp(order.customFields)"
-                    title="ERP registration"
-                >
+                <MvPanel v-if="isNotRegisteredInErp(order.customFields)" title="ERP registration">
                     <MvStatusBadge variant="warning">Not registered in the ERP</MvStatusBadge>
                 </MvPanel>
                 <MvPanel v-if="order.customFields.erpStatus === 'REJECTED'" title="Rejected by ERP">
