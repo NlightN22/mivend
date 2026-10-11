@@ -16,6 +16,7 @@ export interface FavoriteProduct {
     unitName?: string | null;
     unitRatioToBase?: number | null;
     unitLabel?: string;
+    qtyStep?: number;
 }
 
 const props = defineProps<{ product: FavoriteProduct }>();
@@ -23,7 +24,7 @@ const props = defineProps<{ product: FavoriteProduct }>();
 const emit = defineEmits<{
     remove: [id: string];
     addToCart: [id: string, qty: number];
-    qtyChange: [id: string, delta: number];
+    setQty: [id: string, qty: number];
 }>();
 </script>
 
@@ -68,22 +69,30 @@ const emit = defineEmits<{
             </div>
 
             <div v-if="props.product.stockVariant !== 'out'" class="fav-card__actions">
-                <div class="fav-card__qty">
-                    <button @click="emit('qtyChange', props.product.id, -1)">−</button>
-                    <span>{{ props.product.qty }} {{ props.product.unitLabel ?? '' }}</span>
-                    <button @click="emit('qtyChange', props.product.id, 1)">+</button>
-                </div>
-                <button
-                    class="fav-card__remove"
-                    @click="emit('remove', props.product.id)"
-                    aria-label="Remove"
+                <MvQtyStepper
+                    :model-value="props.product.qty"
+                    :min="props.product.qtyStep ?? 1"
+                    :step="props.product.qtyStep ?? 1"
+                    size="sm"
+                    block
+                    @update:model-value="(qty: number) => emit('setQty', props.product.id, qty)"
+                />
+                <MvButton
+                    variant="primary"
+                    size="sm"
+                    @click="emit('addToCart', props.product.id, props.product.qty)"
                 >
-                    ×
-                </button>
+                    Add to cart{{ props.product.unitLabel ? ` (${props.product.unitLabel})` : '' }}
+                </MvButton>
             </div>
 
-            <div v-else class="fav-card__actions fav-card__actions--none">
-                <button class="fav-card__analogs">View analogs</button>
+            <div v-else class="fav-card__actions">
+                <MvTooltip placement="top">
+                    <template #trigger>
+                        <MvButton variant="secondary" size="sm">View analogs</MvButton>
+                    </template>
+                    Analogs are not available yet. Coming later.
+                </MvTooltip>
             </div>
         </div>
     </article>
@@ -203,60 +212,6 @@ const emit = defineEmits<{
 
 .fav-card__actions {
     display: grid;
-    grid-template-columns: 1fr 44px;
     gap: 8px;
-}
-
-.fav-card__actions--none {
-    grid-template-columns: 1fr;
-}
-
-.fav-card__qty {
-    min-height: 42px;
-    display: grid;
-    grid-template-columns: 38px 1fr 38px;
-    align-items: center;
-    border-radius: 13px;
-    background: #f3f8f6;
-    overflow: hidden;
-    color: #17231f;
-    font-weight: 950;
-}
-
-.fav-card__qty button {
-    border: 0;
-    background: transparent;
-    min-height: 42px;
-    cursor: pointer;
-    font-weight: 950;
-    font-size: 18px;
-}
-
-.fav-card__qty span {
-    text-align: center;
-}
-
-.fav-card__remove {
-    min-height: 42px;
-    border-radius: 13px;
-    border: 0;
-    background: #fff2f1;
-    color: #c0362c;
-    font: inherit;
-    font-weight: 950;
-    font-size: 20px;
-    cursor: pointer;
-}
-
-.fav-card__analogs {
-    min-height: 42px;
-    border: 0;
-    border-radius: 13px;
-    padding: 0 14px;
-    background: #f3f8f6;
-    color: #263732;
-    font: inherit;
-    font-weight: 950;
-    cursor: pointer;
 }
 </style>

@@ -68,6 +68,7 @@ function toCard(item: FavoriteVariantView): FavoriteProduct {
         stockVariant,
         qty: getQty(item.variantId),
         unitLabel: unit?.name,
+        qtyStep: unit?.packStep,
         emoji: '📦',
         unitName: item.unitName,
         unitRatioToBase: item.unitRatioToBase,
@@ -99,9 +100,14 @@ function handleRemove(id: string): void {
     favoritesStore.remove(id);
 }
 
-function handleQtyChange(id: string, delta: number): void {
-    const step = stepOf(id);
-    localQty.value[id] = Math.max(step, getQty(id) + delta * step);
+function handleSetQty(id: string, qty: number): void {
+    localQty.value[id] = Math.max(stepOf(id), qty);
+}
+
+async function handleCardAdd(id: string, qty: number): Promise<void> {
+    const item = views.value.find(v => v.variantId === id);
+    const unit = item ? salesUnitOf(item, packagesOnly.value) : null;
+    await cartStore.addItem(id, unit ? packsToBase(qty, unit) : qty);
 }
 
 async function handleAddAll(): Promise<void> {
@@ -175,7 +181,8 @@ function handleClearUnavailable(): void {
                         :key="card.id"
                         :product="card"
                         @remove="handleRemove"
-                        @qty-change="handleQtyChange"
+                        @set-qty="handleSetQty"
+                        @add-to-cart="handleCardAdd"
                     />
                 </div>
 
