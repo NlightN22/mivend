@@ -91,6 +91,7 @@ function onSelectSuggestion(item: SuggestionItem): void {
 }
 
 function onSearch(value: string): void {
+    catalogOpen.value = false;
     router.push(buildSearchLocation(value, scopeSlug.value));
 }
 
@@ -128,7 +129,7 @@ function onKeydown(e: KeyboardEvent): void {
 
 watch(
     () => route.fullPath,
-    () => closeMobileNav(),
+    () => closeAll(),
 );
 
 onMounted(() => {
