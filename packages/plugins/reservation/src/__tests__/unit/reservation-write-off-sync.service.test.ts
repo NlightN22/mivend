@@ -1064,6 +1064,40 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         expect(customFields.erpRegistrationStatus).toBeUndefined();
     });
 
+    it.each([
+        ['PICKING', false],
+        ['APPROVED', true],
+    ])(
+        'with derived status %s a zero ERP reserve reports a mismatch: %s',
+        async (derivedStatus, reported) => {
+            reservationRepo.find.mockResolvedValue([
+                {
+                    id: 'res-1',
+                    orderId: 'order-1',
+                    productVariantId: 'v-1',
+                    quantity: 2,
+                    status: 'active',
+                },
+            ]);
+
+            await service.handleOrderChanged(ctx, {
+                orderUuid: null,
+                orderEntityId: 'erp-order-1',
+                status: 'Согласован',
+                reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 0 }],
+                contractId: null,
+                derivedStatus: derivedStatus as never,
+            });
+
+            expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
+                expect.objectContaining({ status: 'released' }),
+            );
+            expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledTimes(
+                reported ? 1 : 0,
+            );
+        },
+    );
+
     it('persists contractId when present', async () => {
         await service.handleOrderChanged(ctx, {
             orderUuid: null,

@@ -12,6 +12,13 @@ import { UnknownOrderUuidError } from './reservation-errors';
 import { loggerCtx } from './types';
 import { withAggregateLock } from 'shared';
 
+const WAREHOUSE_ORDER_STATUSES: ReadonlySet<string> = new Set([
+    'PICKING',
+    'SHIPPING',
+    'DELIVERING',
+    'DELIVERED',
+]);
+
 export interface OrderRegistrationResultInput {
     // MiVend's own order uuid (mivend#207), echoed back by the ERP. Preferred correlation key
     // over localOrderId/orderEntityId below; null only for results predating this field.
@@ -271,6 +278,7 @@ export class ReservationWriteOffSyncService {
             input.reservedLines,
             input.orderEntityId,
             'order-changed',
+            input.derivedStatus !== null && WAREHOUSE_ORDER_STATUSES.has(input.derivedStatus),
         );
     }
 
@@ -281,6 +289,7 @@ export class ReservationWriteOffSyncService {
         reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>,
         orderEntityId: string,
         source: 'order-registration-result' | 'order-changed',
+        warehouseOrderExists = false,
     ): Promise<void> {
         const reservationRepo = this.connection.getRepository(ctx, Reservation);
         const active = await reservationRepo.find({ where: { orderId, status: 'active' } });
@@ -314,7 +323,9 @@ export class ReservationWriteOffSyncService {
                 // Not confirmed in this result — leave active, may arrive in a later document.
                 continue;
             }
-            if (erpQuantity !== localQuantity) {
+            // Once a warehouse order exists the ERP may have closed the reserve; zero is normal.
+            const closedByOrderScheme = warehouseOrderExists && erpQuantity === 0;
+            if (erpQuantity !== localQuantity && !closedByOrderScheme) {
                 // The ERP is the source of truth (#199): it holds whatever it reserved, so our hold
                 // is released like a matching one; the difference is only recorded for staff.
                 await this.reconciliationIssueService.reportQuantityMismatch(ctx, {

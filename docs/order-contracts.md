@@ -232,6 +232,10 @@ Priority, highest first (the first matching fact wins):
   `SHIPPING`/`DELIVERING`/`DELIVERED` in `order-cancellation.decision.ts`. `SENT_TO_ERP`/`REJECTED` are unchanged.
 - Cancellation rules (who may cancel and when) are in "Cancellability" and "Who may cancel" above.
 
+- `reservedQuantity` is the ERP's current remaining reserve of the order, not a status signal: it may be 0 (no
+  reserve kept, or closed after warehouse orders exist) or still above 0 after shipment. Statuses come from the
+  facts only; once a warehouse order exists (PICKING or later) a zero reserve is not reported as a mismatch.
+
 ### Still to verify with the ERP side
 
 - Whether marking an order for deletion also zeroes its reserve in the register automatically (expected: yes,
