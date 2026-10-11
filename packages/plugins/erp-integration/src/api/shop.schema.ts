@@ -25,5 +25,7 @@ export const shopApiExtensions: DocumentNode = gql`
         "Name and ratio to base of the variant's default sales unit."
         unitName: String
         unitRatioToBase: Float
+        "Order quantity step of the variant, in base units."
+        multiplicity: Int
     }
 `;

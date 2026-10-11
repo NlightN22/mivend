@@ -195,6 +195,7 @@ function handleToggleFavorite(p: ProductItem): void {
                     "
                     :unit-label="unitView(p).label"
                     :unit-note="unitView(p).note"
+                    :multiplicity="p.variants[0]?.multiplicity ?? 1"
                     :multiplicity-label="unitView(p).multiplicity"
                     :qty-step="unitView(p).step"
                     :discount-tiers="p.variants[0]?.discountTiers"

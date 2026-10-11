@@ -28,4 +28,15 @@ export class SearchResultSalesUnitResolver {
                 ?.unitRatioToBase ?? null
         );
     }
+
+    @ResolveField()
+    async multiplicity(
+        @Ctx() ctx: RequestContext,
+        @Parent() result: { productVariantId: string },
+    ): Promise<number | null> {
+        return (
+            (await this.variantSalesUnitService.load(ctx, String(result.productVariantId)))
+                ?.multiplicity ?? null
+        );
+    }
 }

@@ -3753,6 +3753,8 @@ export type SearchResult = {
     /** Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels. */
     galleryPreviews: Array<Scalars['String']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
+    /** Order quantity step of the variant, in base units. */
+    multiplicity?: Maybe<Scalars['Int']['output']>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset?: Maybe<SearchResultAsset>;
@@ -4376,6 +4378,7 @@ export type CatalogProductsQuery = {
             stockLevel: string;
             unitName?: string | null;
             unitRatioToBase?: number | null;
+            multiplicity?: number | null;
             facetValueIds: Array<string>;
             customerPrice?: number | null;
             compareAtPrice?: number | null;
@@ -5423,6 +5426,7 @@ export const CatalogProductsDocument = new TypedDocumentString(`
       stockLevel
       unitName
       unitRatioToBase
+      multiplicity
       facetValueIds
       customerPrice
       compareAtPrice

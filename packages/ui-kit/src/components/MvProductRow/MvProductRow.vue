@@ -178,7 +178,12 @@ function onStepperChange(qty: number): void {
                 />
             </template>
             <div v-if="!showPrices" class="mv-product-row__price-hint">Log in</div>
-            <div v-else class="mv-product-row__price-hint">—</div>
+            <div
+                v-else-if="price === undefined && customerPrice === undefined"
+                class="mv-product-row__price-hint"
+            >
+                —
+            </div>
         </div>
 
         <div v-if="showFloorPrice" class="mv-product-row__cell">

@@ -44,6 +44,7 @@ query CatalogProducts(
             stockLevel
             unitName
             unitRatioToBase
+            multiplicity
             facetValueIds
             customerPrice
             compareAtPrice

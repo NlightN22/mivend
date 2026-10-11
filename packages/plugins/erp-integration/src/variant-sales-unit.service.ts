@@ -4,6 +4,7 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 export interface VariantSalesUnitView {
     unitName: string | null;
     unitRatioToBase: number | null;
+    multiplicity: number | null;
 }
 
 interface Batch {
@@ -43,12 +44,22 @@ export class VariantSalesUnitService {
             .select('pv.id', 'id')
             .addSelect('pv."customFieldsUnitname"', 'unitName')
             .addSelect('pv."customFieldsUnitratiotobase"', 'unitRatioToBase')
+            .addSelect('pv."customFieldsMultiplicity"', 'multiplicity')
             .where('pv.id IN (:...ids)', { ids })
-            .getRawMany<{ id: string; unitName: string | null; unitRatioToBase: number | null }>();
+            .getRawMany<{
+                id: string;
+                unitName: string | null;
+                unitRatioToBase: number | null;
+                multiplicity: number | null;
+            }>();
         return new Map(
             rows.map(row => [
                 String(row.id),
-                { unitName: row.unitName ?? null, unitRatioToBase: row.unitRatioToBase ?? null },
+                {
+                    unitName: row.unitName ?? null,
+                    unitRatioToBase: row.unitRatioToBase ?? null,
+                    multiplicity: row.multiplicity ?? null,
+                },
             ]),
         );
     }
