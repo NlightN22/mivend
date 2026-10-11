@@ -35,6 +35,7 @@ function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
             erpStatus: null,
             erpOrderId: null,
             erpRegistrationStatus: null,
+            erpRegistrationDocumentNumber: null,
             erpRejectionReasonCode: null,
             erpRejectionReasonText: null,
         },

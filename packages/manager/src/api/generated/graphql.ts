@@ -10958,6 +10958,7 @@ export type OrderDetailQuery = {
                 erpStatus: string | null;
                 erpOrderId: string | null;
                 erpRegistrationStatus: string | null;
+                erpRegistrationDocumentNumber: string | null;
                 erpRejectionReasonCode: string | null;
                 erpRejectionReasonText: string | null;
             } | null;
@@ -13721,6 +13722,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
         erpStatus
         erpOrderId
         erpRegistrationStatus
+        erpRegistrationDocumentNumber
         erpRejectionReasonCode
         erpRejectionReasonText
       }
