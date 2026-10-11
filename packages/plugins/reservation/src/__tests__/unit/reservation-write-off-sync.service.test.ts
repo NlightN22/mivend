@@ -1158,6 +1158,43 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         expect(customFields).toEqual({ erpOrderStatus: 'X', erpContractId: 'c-1' });
     });
 
+    // #218: document_number rides on every order-changed; stale events are dropped by the inbox version check.
+    it('writes erpRegistrationDocumentNumber when a non-empty documentNumber arrives', async () => {
+        await service.handleOrderChanged(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            status: 'X',
+            reservedLines: [],
+            contractId: null,
+            documentNumber: 'DOC-0000020',
+            derivedStatus: null,
+        });
+
+        const [, { customFields }] = orderRepo.update.mock.calls[0];
+        expect(customFields).toEqual({
+            erpOrderStatus: 'X',
+            erpRegistrationDocumentNumber: 'DOC-0000020',
+        });
+    });
+
+    it.each([[null], [undefined], ['']])(
+        'never clears a known document number for documentNumber=%s',
+        async documentNumber => {
+            await service.handleOrderChanged(ctx, {
+                orderUuid: null,
+                orderEntityId: 'erp-order-1',
+                status: 'X',
+                reservedLines: [],
+                contractId: null,
+                documentNumber,
+                derivedStatus: null,
+            });
+
+            const [, { customFields }] = orderRepo.update.mock.calls[0];
+            expect(customFields).not.toHaveProperty('erpRegistrationDocumentNumber');
+        },
+    );
+
     it('releases a reservation whose quantity matches the reported reservedQuantity', async () => {
         reservationRepo.find.mockResolvedValue([
             {

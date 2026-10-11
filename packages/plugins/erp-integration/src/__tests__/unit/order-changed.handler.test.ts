@@ -87,6 +87,7 @@ describe('OrderChangedStreamHandler', () => {
             status: 'Проведён',
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 3 }],
             contractId: null,
+            documentNumber: null,
             derivedStatus: null,
         });
     });
@@ -229,6 +230,7 @@ describe('OrderChangedStreamHandler', () => {
             status: '',
             reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 0 }],
             contractId: null,
+            documentNumber: null,
             derivedStatus: null,
         });
     });
@@ -254,6 +256,7 @@ describe('OrderChangedStreamHandler', () => {
             status: '',
             reservedLines: [],
             contractId: null,
+            documentNumber: null,
             derivedStatus: null,
         });
     });
@@ -318,6 +321,33 @@ describe('OrderChangedStreamHandler', () => {
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({ contractId: null }),
+        );
+    });
+
+    // document_number (field 15) is a real `optional string` sent on every emission (#218).
+    it.each([
+        [
+            'passes documentNumber through when present',
+            { documentNumber: 'DOC-0000020' },
+            'DOC-0000020',
+        ],
+        ['passes documentNumber as null when absent', {}, null],
+    ])('%s', async (_name, extra, expected) => {
+        const syncService = {
+            handleOrderChanged: vi.fn(),
+            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
+        };
+        const handler = new OrderChangedStreamHandler(
+            createConnection([]) as never,
+            syncService as never,
+            { findByEntityId: vi.fn() } as never,
+        );
+
+        await handler.apply(ctx, 'erp-order-1', { lines: [], ...extra });
+
+        expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ documentNumber: expected }),
         );
     });
 

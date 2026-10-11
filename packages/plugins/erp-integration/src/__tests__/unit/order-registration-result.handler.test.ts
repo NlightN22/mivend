@@ -327,6 +327,38 @@ describe('OrderRegistrationResultHandler', () => {
         });
     });
 
+    // #218: the ERP's real foreign-unit refusal — rejected before any document exists, so no
+    // orderEntityId/documentNumber, and the reason text must reach the order intact.
+    it('carries the ERP foreign-unit PROCESSING_ERROR text through with no document or order id', async () => {
+        const syncService = { handleOrderRegistrationResult: vi.fn() };
+        const handler = new OrderRegistrationResultHandler(
+            createConnection({ outboxOrderId: 'order-7' }) as never,
+            syncService as never,
+        );
+        const message = 'Unit unitId=unit-b is not owned by product Sealant 320ml.';
+
+        await handler.apply(ctx, 'orr-2', {
+            status: 'rejected',
+            requestEntityId: 'order-uuid-7',
+            businessRejectionReason: { code: 'PROCESSING_ERROR', message },
+            reservedLines: [],
+            isDeleted: false,
+        });
+
+        expect(syncService.handleOrderRegistrationResult).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                rejected: true,
+                orderEntityId: null,
+                documentNumber: null,
+                localOrderId: 'order-7',
+                reservedLines: [],
+                rejectionReasonCode: 'PROCESSING_ERROR',
+                rejectionReasonText: message,
+            }),
+        );
+    });
+
     // Same gap currently affects "registered" results too (peer report, mivend.issue.199) —
     // requestEntityId must resolve localOrderId here as well, independent of orderEntityId.
     it('resolves localOrderId via requestEntityId on a registered result with no orderEntityId', async () => {

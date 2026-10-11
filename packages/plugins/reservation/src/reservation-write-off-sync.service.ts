@@ -57,10 +57,9 @@ export interface OrderRegistrationResultInput {
 // naturally idempotent/re-callable — it only ever acts on Reservation rows still `status:
 // 'active'` and only releases when local vs ERP quantity fully matches per variant, so a repeat
 // call with the same reservedQuantity is a safe no-op, and a later call with an updated quantity
-// is just a fresh comparison. There is no `rejected`/`documentNumber` concept on this stream
-// (order-changed carries no business-rejection reason or document number — only
-// order-registration-result does), so those are fixed at false/null for this caller rather than
-// exposed on this input shape.
+// is just a fresh comparison. There is no `rejected` concept on this stream (only
+// order-registration-result carries a business-rejection reason), so it is fixed at false for this
+// caller rather than exposed on this input shape.
 export interface OrderChangedInput {
     // Real optional presence (mivend#207): absent for orders not registered through our
     // integration. Preferred correlation key over orderEntityId below when present.
@@ -71,6 +70,8 @@ export interface OrderChangedInput {
     reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>;
     // Real proto `optional string` — null means genuinely not sent, not a zero-value.
     contractId: string | null;
+    // Real proto `optional string` (field 15), sent on every emission; null/'' never clears a known number.
+    documentNumber?: string | null;
     // mivend's own status derived from the stream's facts; null when none could be derived.
     derivedStatus: ErpOrderStatus | null;
 }
@@ -263,6 +264,9 @@ export class ReservationWriteOffSyncService {
             // Real optional presence: an absent contractId on a later event does not mean the
             // order lost its contract — never overwrite an already-known value with null.
             customFields.erpContractId = input.contractId;
+        }
+        if (input.documentNumber) {
+            customFields.erpRegistrationDocumentNumber = input.documentNumber;
         }
         // `repo.update()`, not `.save(order)` — same calculated-getter gotcha as
         // handleOrderRegistrationResult above.

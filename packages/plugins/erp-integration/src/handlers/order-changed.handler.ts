@@ -28,7 +28,7 @@ const loggerCtx = 'IntegrationOrderChangedHandler';
 // Status facts (event-contracts 0.60.0, sp#189) hasOrder/hasRealization/markedForDeletion/
 // inDelivery/delivered are ALL consumed: deriveOrderErpStatus maps them (plus the raw status) to
 // mivend's own erpStatus; an absent fact means "not computed", never false. documentNumber (15)
-// stays deferred — erpRegistrationDocumentNumber already carries it from order-registration-result.
+// refreshes erpRegistrationDocumentNumber; stale events are dropped upstream by the inbox version check.
 //
 // Header-level customerId/organizationId/warehouseId, and per-line plain `quantity` (distinct
 // from reservedQuantity), are ALSO deliberately not consumed — explicit decision, not an
@@ -74,6 +74,9 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         // order_uuid (field 14, mivend#207) is a real `optional string` — absent genuinely means
         // not registered through our integration, never a zero-value.
         const orderUuid = payload.orderUuid != null ? String(payload.orderUuid) : null;
+        // document_number (field 15) is a real `optional string`: absent/'' never clears a known number.
+        const documentNumber =
+            payload.documentNumber != null ? String(payload.documentNumber) : null;
 
         if (await this.reservationWriteOffSyncService.isUnmatchedLegacyOrder(orderUuid, entityId)) {
             return inboundNoop(
@@ -134,6 +137,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             status,
             reservedLines,
             contractId,
+            documentNumber,
             derivedStatus,
         });
         return linesWithoutProductId > 0
