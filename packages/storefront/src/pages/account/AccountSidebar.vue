@@ -2,9 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import { useFavoritesStore } from '../../stores/favorites';
+import { useDocuments } from '../documents/useDocuments';
 import { useInvoices } from '../invoices/useInvoices';
+import { useOrders } from '../orders/useOrders';
 import { usePayments } from '../payments/usePayments';
 import { useCompanyName } from './useCompanyName';
+import { useTradingPoints } from './useTradingPoints';
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -21,7 +25,16 @@ watch(
 
 const { totalItems: invoiceCount, load: loadInvoices } = useInvoices();
 const { totalItems: paymentCount, load: loadPayments } = usePayments();
+const { totalItems: orderCount, load: loadOrders } = useOrders();
+const { totalItems: documentCount, load: loadDocuments } = useDocuments();
+const { visiblePoints, loadPoints } = useTradingPoints();
+const tradingPointCount = computed(() => visiblePoints.value.length);
+const favoritesStore = useFavoritesStore();
+const favoriteCount = computed(() => favoritesStore.count);
 onMounted(() => {
+    void loadOrders({ take: 1, skip: 0 });
+    void loadDocuments({ take: 1, skip: 0 });
+    void loadPoints();
     void loadInvoices({ take: 1, skip: 0 });
     void loadPayments({ take: 1, skip: 0 });
 });
@@ -68,14 +81,20 @@ const isActive = (path: string) => route.path === path;
                     class="account-sidebar__link"
                     :class="{ 'account-sidebar__link--active': isActive('/orders') }"
                 >
-                    <span>Orders</span><span class="account-sidebar__count">8</span>
+                    <span>Orders</span
+                    ><span v-if="orderCount > 0" class="account-sidebar__count">{{
+                        orderCount
+                    }}</span>
                 </RouterLink>
                 <RouterLink
                     to="/documents"
                     class="account-sidebar__link"
                     :class="{ 'account-sidebar__link--active': isActive('/documents') }"
                 >
-                    <span>Documents</span><span class="account-sidebar__count">12</span>
+                    <span>Documents</span
+                    ><span v-if="documentCount > 0" class="account-sidebar__count">{{
+                        documentCount
+                    }}</span>
                 </RouterLink>
                 <RouterLink
                     to="/invoices"
@@ -102,14 +121,17 @@ const isActive = (path: string) => route.path === path;
                     class="account-sidebar__link"
                     :class="{ 'account-sidebar__link--active': isActive('/favorites') }"
                 >
-                    <span>Favorites</span><span class="account-sidebar__count">34</span>
+                    <span>Favorites</span
+                    ><span v-if="favoriteCount > 0" class="account-sidebar__count">{{
+                        favoriteCount
+                    }}</span>
                 </RouterLink>
                 <RouterLink
                     to="/requests"
                     class="account-sidebar__link"
                     :class="{ 'account-sidebar__link--active': isActive('/requests') }"
                 >
-                    <span>Requests</span><span class="account-sidebar__count">2</span>
+                    <span>Requests</span>
                 </RouterLink>
             </nav>
 
@@ -122,7 +144,10 @@ const isActive = (path: string) => route.path === path;
                         'account-sidebar__link--active': isActive('/account/trading-points'),
                     }"
                 >
-                    <span>Trading points</span><span class="account-sidebar__count">4</span>
+                    <span>Trading points</span
+                    ><span v-if="tradingPointCount > 0" class="account-sidebar__count">{{
+                        tradingPointCount
+                    }}</span>
                 </RouterLink>
                 <RouterLink
                     to="/account/balance"
