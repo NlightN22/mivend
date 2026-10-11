@@ -42,6 +42,8 @@ query CatalogProducts(
             }
             currencyCode
             stockLevel
+            unitName
+            unitRatioToBase
             facetValueIds
             customerPrice
             compareAtPrice

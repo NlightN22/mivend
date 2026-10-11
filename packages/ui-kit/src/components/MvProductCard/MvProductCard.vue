@@ -32,6 +32,9 @@ interface Props {
     // Suppresses the qty stepper/"Add to cart"/"View analogs" action area entirely — for a
     // view-only, no-cart consumer (e.g. an internal staff catalog lookup).
     showActions?: boolean;
+    // Unit the price is for ('pc.', 'pack'); empty hides it. Pack mode also changes the stepper step.
+    unitLabel?: string;
+    qtyStep?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -51,6 +54,8 @@ const props = withDefaults(defineProps<Props>(), {
     linkBase: '/product',
     showFavorite: true,
     showActions: true,
+    unitLabel: '',
+    qtyStep: 1,
 });
 
 const emit = defineEmits<{
@@ -159,6 +164,9 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                             size="md"
                             class="mv-product-card__customer-price"
                         />
+                        <span v-if="unitLabel" class="mv-product-card__unit">
+                            / {{ unitLabel }}
+                        </span>
                     </div>
                     <MvStockBadge
                         v-if="stockQuantity !== undefined"
@@ -177,6 +185,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                             v-if="cartQty && cartQty > 0"
                             :model-value="cartQty"
                             :min="0"
+                            :step="qtyStep"
                             class="mv-product-card__stepper"
                             @update:model-value="
                                 val => cartLineId && emit('update-cart-qty', cartLineId, val)
@@ -366,6 +375,10 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     flex-shrink: 0;
 }
 
+.mv-product-card__unit {
+    font-size: 12px;
+    color: #66736e;
+}
 .mv-product-card__prices {
     display: flex;
     flex-direction: column;

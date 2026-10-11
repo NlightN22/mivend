@@ -26,6 +26,8 @@ function makeItem(customerPrice: number | null): ProductItem {
                 discountTiers: [],
                 currencyCode: 'RUB',
                 stockLevel: 'HIGH_STOCK',
+                unitName: null,
+                unitRatioToBase: null,
             },
         ],
     };

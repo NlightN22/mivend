@@ -44,6 +44,8 @@ interface ProductVariant {
     discountTiers: DiscountTierVM[];
     currencyCode: string;
     stockLevel: string;
+    unitName: string | null;
+    unitRatioToBase: number | null;
 }
 
 export type { FacetGroup, FacetValue } from 'shared';
@@ -107,6 +109,8 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
                 })),
                 currencyCode: item.currencyCode,
                 stockLevel: item.stockLevel,
+                unitName: item.unitName ?? null,
+                unitRatioToBase: item.unitRatioToBase ?? null,
             },
         ],
         facetValues: item.facetValueIds.flatMap(id => {

@@ -22,5 +22,8 @@ export const shopApiExtensions: DocumentNode = gql`
         manufacturer: ProductManufacturer
         "Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels."
         galleryPreviews: [String!]!
+        "Name and ratio to base of the variant's default sales unit."
+        unitName: String
+        unitRatioToBase: Float
     }
 `;

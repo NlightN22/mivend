@@ -6,6 +6,8 @@ import { useFavoritesStore } from '../stores/favorites';
 import { useCartActions } from '../composables/useCartActions';
 import { brandOf } from '../utils/brand';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
+import { usePackagesOnly } from '../composables/usePackagesOnly';
+import { baseToPacks, packsToBase, salesUnitOf } from '../composables/useSalesUnit';
 
 const props = defineProps<{
     items: ProductItem[];
@@ -34,6 +36,50 @@ const emit = defineEmits<{
 const authStore = useAuthStore();
 const favoritesStore = useFavoritesStore();
 const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
+const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
+void loadPackagesOnly();
+
+// Unit view of a list item: in a packages-only branch prices and quantities are per pack.
+function unitView(p: ProductItem): {
+    label: string;
+    factor: number;
+    step: number;
+    multiplicity?: string;
+} {
+    const v = p.variants[0];
+    const unit = salesUnitOf(
+        { unitName: v?.unitName, unitRatioToBase: v?.unitRatioToBase },
+        packagesOnly.value,
+    );
+    if (!unit) return { label: 'pc.', factor: 1, step: 1 };
+    return {
+        label: unit.name,
+        factor: unit.ratio,
+        step: unit.packStep,
+        multiplicity: `${unit.packStep} ${unit.name}`,
+    };
+}
+
+function shownQty(p: ProductItem): number {
+    const qty = cartLineFor(p.variants[0]?.id)?.quantity ?? 0;
+    const unit = salesUnitOf(
+        { unitName: p.variants[0]?.unitName, unitRatioToBase: p.variants[0]?.unitRatioToBase },
+        packagesOnly.value,
+    );
+    return unit ? baseToPacks(qty, unit) : qty;
+}
+
+function toBaseQty(p: ProductItem, shown: number): number {
+    const unit = salesUnitOf(
+        { unitName: p.variants[0]?.unitName, unitRatioToBase: p.variants[0]?.unitRatioToBase },
+        packagesOnly.value,
+    );
+    return unit ? packsToBase(shown, unit) : shown;
+}
+
+function addQty(p: ProductItem): number {
+    return toBaseQty(p, unitView(p).step);
+}
 const sentinel = ref<HTMLElement | null>(null);
 const gridStyle = computed(() =>
     props.gridColumns
@@ -130,28 +176,39 @@ function handleToggleFavorite(p: ProductItem): void {
                     :name="p.name"
                     :sku="p.variants[0]?.sku ?? ''"
                     :brand="brandOf(p.manufacturer)"
-                    :price="p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined"
+                    :price="
+                        p.variants[0]?.price != null
+                            ? (p.variants[0].price / 100) * unitView(p).factor
+                            : undefined
+                    "
                     :customer-price="
                         p.variants[0]?.customerPrice != null
-                            ? p.variants[0].customerPrice / 100
+                            ? (p.variants[0].customerPrice / 100) * unitView(p).factor
                             : undefined
                     "
                     :old-price="
                         p.variants[0]?.compareAtPrice != null
-                            ? p.variants[0].compareAtPrice / 100
+                            ? (p.variants[0].compareAtPrice / 100) * unitView(p).factor
                             : undefined
                     "
+                    :unit-label="unitView(p).label"
+                    :multiplicity-label="unitView(p).multiplicity"
+                    :qty-step="unitView(p).step"
                     :discount-tiers="p.variants[0]?.discountTiers"
                     :currency="p.variants[0]?.currencyCode ?? 'RUB'"
                     :slug="p.slug"
                     :show-prices="showPrices"
                     :variant-id="p.variants[0]?.id"
-                    :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
+                    :cart-qty="shownQty(p)"
                     :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1)"
-                    @update-cart-qty="onUpdateQty"
+                    @add-to-cart="
+                        (variantId: string | undefined) => onAddToCart(variantId, addQty(p))
+                    "
+                    @update-cart-qty="
+                        (lineId: string, qty: number) => onUpdateQty(lineId, toBaseQty(p, qty))
+                    "
                     @toggle-favorite="() => handleToggleFavorite(p)"
                     @view-analogs="() => {}"
                 />
@@ -167,28 +224,38 @@ function handleToggleFavorite(p: ProductItem): void {
                     :name="p.name"
                     :sku="p.variants[0]?.sku ?? ''"
                     :brand="brandOf(p.manufacturer)"
-                    :price="p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined"
+                    :price="
+                        p.variants[0]?.price != null
+                            ? (p.variants[0].price / 100) * unitView(p).factor
+                            : undefined
+                    "
                     :customer-price="
                         p.variants[0]?.customerPrice != null
-                            ? p.variants[0].customerPrice / 100
+                            ? (p.variants[0].customerPrice / 100) * unitView(p).factor
                             : undefined
                     "
                     :compare-at-price="
                         p.variants[0]?.compareAtPrice != null
-                            ? p.variants[0].compareAtPrice / 100
+                            ? (p.variants[0].compareAtPrice / 100) * unitView(p).factor
                             : undefined
                     "
+                    :unit-label="unitView(p).label"
+                    :qty-step="unitView(p).step"
                     :discount-tiers="p.variants[0]?.discountTiers"
                     :currency="p.variants[0]?.currencyCode ?? 'RUB'"
                     :slug="p.slug"
                     :show-prices="showPrices"
                     :variant-id="p.variants[0]?.id"
-                    :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
+                    :cart-qty="shownQty(p)"
                     :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
                     :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
                     v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1)"
-                    @update-cart-qty="onUpdateQty"
+                    @add-to-cart="
+                        (variantId: string | undefined) => onAddToCart(variantId, addQty(p))
+                    "
+                    @update-cart-qty="
+                        (lineId: string, qty: number) => onUpdateQty(lineId, toBaseQty(p, qty))
+                    "
                     @toggle-favorite="() => handleToggleFavorite(p)"
                     @view-analogs="() => {}"
                 />

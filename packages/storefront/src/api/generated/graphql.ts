@@ -3766,6 +3766,9 @@ export type SearchResult = {
     sku: Scalars['String']['output'];
     slug: Scalars['String']['output'];
     stockLevel: Scalars['String']['output'];
+    /** Name and ratio to base of the variant's default sales unit. */
+    unitName?: Maybe<Scalars['String']['output']>;
+    unitRatioToBase?: Maybe<Scalars['Float']['output']>;
 };
 
 export type SearchResultAsset = {
@@ -4371,6 +4374,8 @@ export type CatalogProductsQuery = {
             sku: string;
             currencyCode: CurrencyCode;
             stockLevel: string;
+            unitName?: string | null;
+            unitRatioToBase?: number | null;
             facetValueIds: Array<string>;
             customerPrice?: number | null;
             compareAtPrice?: number | null;
@@ -5411,6 +5416,8 @@ export const CatalogProductsDocument = new TypedDocumentString(`
       }
       currencyCode
       stockLevel
+      unitName
+      unitRatioToBase
       facetValueIds
       customerPrice
       compareAtPrice

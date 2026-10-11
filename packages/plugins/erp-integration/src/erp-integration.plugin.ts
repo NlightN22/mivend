@@ -44,6 +44,8 @@ import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.servic
 import { KafkaStatusController } from './kafka-status.controller';
 import { MoqPlugin } from '@mivend/plugin-moq';
 import { UnitLookupService } from './unit-lookup.service';
+import { SearchResultSalesUnitResolver } from './search-result-sales-unit.resolver';
+import { VariantSalesUnitService } from './variant-sales-unit.service';
 import { ProductPackagingLevelsResolver } from './product-packaging-levels.resolver';
 import { ProductPackagingLevelsService } from './product-packaging-levels.service';
 import { TaxCategoryAutoCreateService } from './tax-category-auto-create.service';
@@ -136,6 +138,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         ResyncReplayClient,
         UnitLookupService,
         ProductPackagingLevelsService,
+        VariantSalesUnitService,
         TaxCategoryAutoCreateService,
         TaxZoneService,
         KafkaProducerService,
@@ -189,6 +192,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         resolvers: [
             ProductManufacturerResolver,
             ProductPackagingLevelsResolver,
+            SearchResultSalesUnitResolver,
             SearchResultManufacturerResolver,
             SearchResultGalleryResolver,
         ],

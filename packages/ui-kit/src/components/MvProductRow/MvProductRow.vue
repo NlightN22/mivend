@@ -28,6 +28,10 @@ interface Props {
     stock?: number;
     stockVariant?: StockVariant;
     multiplicity?: number;
+    // Unit the price is for ('pc.', 'pack'); empty hides it. Pack mode also changes the stepper step.
+    unitLabel?: string;
+    multiplicityLabel?: string;
+    qtyStep?: number;
     slug?: string;
     showPrices?: boolean;
     variantId?: string;
@@ -53,6 +57,9 @@ const props = withDefaults(defineProps<Props>(), {
     stock: undefined,
     stockVariant: undefined,
     multiplicity: 1,
+    unitLabel: '',
+    multiplicityLabel: '',
+    qtyStep: 1,
     slug: '',
     showPrices: true,
     variantId: undefined,
@@ -132,7 +139,9 @@ function onStepperChange(qty: number): void {
 
         <div class="mv-product-row__cell">
             <div class="mv-product-row__cell-label">Multiplicity</div>
-            <div class="mv-product-row__cell-value">{{ multiplicity }} pcs.</div>
+            <div class="mv-product-row__cell-value">
+                {{ multiplicityLabel || `${multiplicity} pcs.` }}
+            </div>
         </div>
 
         <div class="mv-product-row__cell">
@@ -160,6 +169,7 @@ function onStepperChange(qty: number): void {
                     class="mv-product-row__price"
                 />
             </template>
+            <div v-if="showPrices && unitLabel" class="mv-product-row__unit">/ {{ unitLabel }}</div>
             <div v-else-if="!showPrices" class="mv-product-row__price-hint">Log in</div>
             <div v-else class="mv-product-row__price-hint">—</div>
         </div>
@@ -190,6 +200,7 @@ function onStepperChange(qty: number): void {
                             v-if="cartQty > 0"
                             :model-value="cartQty"
                             :min="0"
+                            :step="qtyStep"
                             size="sm"
                             @update:model-value="onStepperChange"
                         />
@@ -330,6 +341,10 @@ function onStepperChange(qty: number): void {
 .mv-product-row__price {
     font-weight: 900;
     letter-spacing: -0.02em;
+}
+.mv-product-row__unit {
+    font-size: 12px;
+    color: #66736e;
 }
 .mv-product-row__price--customer {
     color: #00a878;
