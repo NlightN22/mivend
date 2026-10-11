@@ -13,7 +13,7 @@ export function useMultiplicityEnforced(): {
     function load(): Promise<void> {
         loaded ??= shopApi(MultiplicityEnforcedDocument)
             .then(res => {
-                multiplicityEnforced.value = res.multiplicityEnforcedSales;
+                multiplicityEnforced.value = res.multiplicityEnforced;
             })
             .catch(() => {
                 loaded = null;
