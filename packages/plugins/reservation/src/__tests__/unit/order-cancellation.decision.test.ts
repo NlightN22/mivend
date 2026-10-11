@@ -85,11 +85,15 @@ describe('decideCancellation', () => {
                 'request-and-cancel',
             );
         });
+    });
 
-        it('a rejected order is cancellable on an explicit request', () => {
-            expect(
-                decideCancellation({ ...base, erpStatus: 'REJECTED', submission: 'sent' }).action,
-            ).toBe('request-and-cancel');
-        });
+    it.each([
+        ['without an ERP id', {}],
+        ['with an ERP id', { erpOrderId: 'erp-1' }],
+    ])('a rejected order is cancelled locally on request, %s', (_name, facts) => {
+        expect(
+            decideCancellation({ ...base, ...facts, erpStatus: 'REJECTED', submission: 'sent' })
+                .action,
+        ).toBe('cancel-rejected-locally');
     });
 });

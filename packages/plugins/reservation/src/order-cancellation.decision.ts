@@ -26,6 +26,7 @@ export type CancelDecision =
     | { action: 'leave-to-erp' }
     | { action: 'skip-pending-and-cancel' }
     | { action: 'cancel-without-event' }
+    | { action: 'cancel-rejected-locally' }
     | { action: 'request-and-cancel' }
     | { action: 'request-only' };
 
@@ -54,6 +55,8 @@ export function decideCancellation(facts: CancelFacts): CancelDecision {
     if (facts.erpStatus === 'REJECTED' && !facts.requestRegistered) {
         return { action: 'refuse', reason: 'registration-rejected' };
     }
+    // The ERP never created a rejected order, so there is nothing to ask it to cancel.
+    if (facts.erpStatus === 'REJECTED') return { action: 'cancel-rejected-locally' };
 
     if (facts.cancelRequestStatus === 'REQUESTED') return { action: 'already-requested' };
     if (facts.cancelRequestStatus === 'REFUSED') {

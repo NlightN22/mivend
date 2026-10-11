@@ -103,6 +103,8 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   cancellable, automatically.
 - **Order or sale exists** (`hasOrder`, i.e. PICKING, or any later status): refused at once with no request to a
   person. The ERP answers the same way (`ORDER_IN_PROGRESS`, `ORDER_SHIPPED`). Returns are a separate flow.
+- A `REJECTED` order was never created by the ERP: an explicit cancel by the customer or staff cancels it locally
+  without a cancel request (at the reserve deadline it keeps its own #204 rules).
 - No partial cancellation is modelled.
 
 ### Who may cancel (owner-decided)

@@ -173,6 +173,7 @@ export class OrderCancellationService {
                 return { kind: 'not-cancellable', reason: decision.reason };
             case 'skip-pending-and-cancel':
             case 'cancel-without-event':
+            case 'cancel-rejected-locally':
                 await this.cancelLocally(ctx, order, reason);
                 return { kind: 'cancelled', eventSent: false };
             case 'request-only':
