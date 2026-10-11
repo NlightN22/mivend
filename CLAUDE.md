@@ -8,5 +8,7 @@
 
 ## Agent delegation
 
-- Forks (`subagent_type: "fork"`) are fine for implementation work in this project.
+- Prefer a fresh agent (`general-purpose`, no inherited context) with a self-contained brief: link the
+  issue, `AGENTS.md`, `docs/ai/PROJECT_CONTEXT.md`, the exact files and the acceptance checks.
+- Use `subagent_type: "fork"` only when the task genuinely depends on the current conversation.
 - Run at most 2 forks/agents in parallel.
