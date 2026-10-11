@@ -10,17 +10,7 @@ import {
     WillAdjustOrderLineInput,
 } from '@vendure/core';
 import { PackagingPolicyService } from './packaging-policy.service';
-
-const MAX_PACKS_FOR_WHOLE_QUANTITY = 1000;
-
-// Smallest whole base quantity that is a whole number of packages (ratio 0.9 -> 9, 2.5 -> 5, 6 -> 6).
-function wholePackagesQuantity(ratio: number): number {
-    for (let packs = 1; packs <= MAX_PACKS_FOR_WHOLE_QUANTITY; packs++) {
-        const base = packs * ratio;
-        if (Math.abs(base - Math.round(base)) < 1e-9) return Math.round(base);
-    }
-    return ratio;
-}
+import { wholePackQuantity } from './whole-pack';
 
 // Server-side pack-size (MOQ) + branch-conditional packaging enforcement — see
 // docs/order-flow.md's "Pack-size / MOQ" and mivend#103 sections.
@@ -70,8 +60,9 @@ export class MultiplicityOrderInterceptor implements OrderInterceptor {
                 order.customerId,
                 order.customFields?.branchId ?? null,
             );
-            if (packagesOnly) {
-                effective = wholePackagesQuantity(unitRatioToBase);
+            const packQuantity = packagesOnly ? wholePackQuantity(unitRatioToBase) : null;
+            if (packQuantity !== null) {
+                effective = packQuantity;
             }
         }
 

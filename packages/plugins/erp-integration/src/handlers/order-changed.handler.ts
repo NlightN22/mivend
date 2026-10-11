@@ -109,8 +109,8 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                 continue;
             }
 
-            const variantId = await this.findVariantId(productId);
-            if (!variantId) {
+            const variant = await this.findVariant(productId);
+            if (!variant) {
                 // Ordinary eventual-consistency race (product stream not consumed yet) — retry
                 // via MissingDependencyError, same as OrderRegistrationResultHandler's own
                 // identical lookup (see that file's extensive comment on the all-or-nothing
@@ -119,8 +119,9 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                     `order-changed ${entityId}: variant not found for productId=${productId}`,
                 );
             }
+            const variantId = variant.id;
             const unitId = line.unitId != null ? String(line.unitId) : null;
-            const ratio = unitId ? await this.unitRatioToBase(ctx, entityId, unitId) : 1;
+            const ratio = unitId ? await this.unitRatioToBase(ctx, entityId, unitId, variant) : 1;
             reservedLines.push({
                 productVariantId: variantId,
                 reservedQuantity: Math.round(reservedQuantity * ratio),
@@ -143,28 +144,51 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
     }
 
     // Quantities of a line with a unit are in that unit (#214); local reservations are in base units.
+    // An unknown unit is not retried (it would stall every order): treated as base, the ERP wins.
     private async unitRatioToBase(
         ctx: RequestContext,
         entityId: string,
         unitId: string,
+        variant: { defaultSalesUnitId: string | null; unitRatioToBase: number | null },
     ): Promise<number> {
+        if (unitId === variant.defaultSalesUnitId && variant.unitRatioToBase) {
+            return variant.unitRatioToBase;
+        }
         const unit = await this.unitLookupService.findByEntityId(ctx, unitId);
         if (!unit || !unit.ratioToBase) {
-            throw new MissingDependencyError(
-                `order-changed ${entityId}: unit ${unitId} not received yet`,
+            Logger.warn(
+                `order-changed ${entityId}: unit ${unitId} unknown, quantity read as base unit`,
+                loggerCtx,
             );
+            return 1;
         }
         return unit.ratioToBase;
     }
 
-    private async findVariantId(productId: string): Promise<string | undefined> {
+    private async findVariant(productId: string): Promise<{
+        id: string;
+        defaultSalesUnitId: string | null;
+        unitRatioToBase: number | null;
+    } | null> {
         const row = await this.connection.rawConnection
             .createQueryBuilder()
             .select('pv.id', 'id')
+            .addSelect('pv."customFieldsDefaultsalesunitid"', 'defaultSalesUnitId')
+            .addSelect('pv."customFieldsUnitratiotobase"', 'unitRatioToBase')
             .from('product_variant', 'pv')
             .innerJoin('product', 'p', 'p.id = pv."productId"')
             .where('p."customFieldsExternalid" = :productId', { productId })
-            .getRawOne<{ id: string }>();
-        return row ? String(row.id) : undefined;
+            .getRawOne<{
+                id: string;
+                defaultSalesUnitId: string | null;
+                unitRatioToBase: number | null;
+            }>();
+        return row
+            ? {
+                  id: String(row.id),
+                  defaultSalesUnitId: row.defaultSalesUnitId ?? null,
+                  unitRatioToBase: row.unitRatioToBase ?? null,
+              }
+            : null;
     }
 }

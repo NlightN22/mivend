@@ -36,8 +36,13 @@ describe('nearestPackOf', () => {
             { name: 'box', ratioToBase: 10 },
             { name: 'pallet', ratioToBase: 200 },
         ];
-        expect(nearestPackOf(variant, levels)).toEqual({ name: 'pack', ratio: 6 });
-        expect(nearestPackOf({}, levels)).toEqual({ name: 'box', ratio: 10 });
+        expect(nearestPackOf(variant, levels)).toEqual({ name: 'pack', ratio: 6, baseQty: 6 });
+        expect(nearestPackOf({}, levels)).toEqual({ name: 'box', ratio: 10, baseQty: 10 });
+        expect(nearestPackOf({}, [{ name: 'tray', ratioToBase: 2.5 }])).toEqual({
+            name: 'tray',
+            ratio: 2.5,
+            baseQty: 5,
+        });
         expect(nearestPackOf({}, [])).toBeNull();
     });
 });

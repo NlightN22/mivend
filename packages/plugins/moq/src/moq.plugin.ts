@@ -21,6 +21,7 @@ import './types';
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
     providers: [PackagingPolicyService],
+    exports: [PackagingPolicyService],
     shopApiExtensions: {
         schema: gql`
             extend type Query {

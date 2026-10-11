@@ -20,6 +20,7 @@ function orderConnection(variantId: string): never {
         rawConnection: {
             createQueryBuilder: () => ({
                 select: vi.fn().mockReturnThis(),
+                addSelect: vi.fn().mockReturnThis(),
                 from: vi.fn().mockReturnThis(),
                 innerJoin: vi.fn().mockReturnThis(),
                 where: vi.fn().mockReturnThis(),

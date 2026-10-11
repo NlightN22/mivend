@@ -19,6 +19,7 @@
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-documents": "workspace:*",
+        "@mivend/plugin-moq": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-notification": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",

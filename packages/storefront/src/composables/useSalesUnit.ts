@@ -12,12 +12,13 @@ export interface SalesUnitView {
 
 const MAX_PACKS_FOR_WHOLE_QUANTITY = 1000;
 
-function wholePackStep(ratio: number): number {
+// Mirrors plugin-moq's wholePackQuantity; null (no whole multiple) means the unit is not enforced.
+function wholePackStep(ratio: number): number | null {
     for (let packs = 1; packs <= MAX_PACKS_FOR_WHOLE_QUANTITY; packs++) {
         const base = packs * ratio;
         if (Math.abs(base - Math.round(base)) < 1e-9) return packs;
     }
-    return 1;
+    return null;
 }
 
 // Null when the variant is sold by the piece, or the branch does not sell by packages only.
@@ -27,7 +28,8 @@ export function salesUnitOf(
 ): SalesUnitView | null {
     const ratio = variant?.unitRatioToBase;
     if (!packagesOnly || !variant?.unitName || !ratio || ratio <= 0 || ratio === 1) return null;
-    return { name: variant.unitName, ratio, packStep: wholePackStep(ratio) };
+    const packStep = wholePackStep(ratio);
+    return packStep === null ? null : { name: variant.unitName, ratio, packStep };
 }
 
 export const packsToBase = (packs: number, unit: SalesUnitView): number =>
@@ -45,12 +47,24 @@ export interface PackagingLevel {
 export function nearestPackOf(
     variant: SalesUnitVariant | null | undefined,
     levels: PackagingLevel[],
-): { name: string; ratio: number } | null {
-    if (variant?.unitName && variant.unitRatioToBase && variant.unitRatioToBase > 1) {
-        return { name: variant.unitName, ratio: variant.unitRatioToBase };
+): { name: string; ratio: number; baseQty: number } | null {
+    const candidates = [
+        ...(variant?.unitName && variant.unitRatioToBase
+            ? [{ name: variant.unitName, ratioToBase: variant.unitRatioToBase }]
+            : []),
+        ...levels,
+    ];
+    for (const c of candidates) {
+        const step = c.ratioToBase > 1 ? wholePackStep(c.ratioToBase) : null;
+        if (step !== null) {
+            return {
+                name: c.name,
+                ratio: c.ratioToBase,
+                baseQty: Math.round(step * c.ratioToBase),
+            };
+        }
     }
-    const level = levels.find(l => l.ratioToBase > 1);
-    return level ? { name: level.name, ratio: level.ratioToBase } : null;
+    return null;
 }
 
 // Texts for the product card's Unit / Multiplicity block; empty strings keep the ui-kit defaults.

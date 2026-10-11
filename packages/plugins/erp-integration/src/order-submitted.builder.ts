@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { ID } from '@vendure/common/lib/shared-types';
-import { BranchSettingsService } from '@mivend/plugin-access-control';
+import { PackagingPolicyService, wholePacks } from '@mivend/plugin-moq';
 import { ReservationService } from '@mivend/plugin-reservation';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
@@ -27,7 +27,7 @@ export class OrderSubmittedBuilder {
         private readonly customerPricingService: CustomerPricingService,
         private readonly reservationService: ReservationService,
         private readonly outboundGateway: OutboundGateway,
-        private readonly branchSettingsService: BranchSettingsService,
+        private readonly packagingPolicyService: PackagingPolicyService,
     ) {}
 
     async build(ctx: RequestContext, orderId: ID, orderCode: string): Promise<OutboundBuildResult> {
@@ -77,11 +77,11 @@ export class OrderSubmittedBuilder {
             order.lines.map(line => line.productVariant?.productId),
         );
 
-        const branchSettings = await this.branchSettingsService.resolveEffective(
+        const packagesOnly = await this.packagingPolicyService.isPackagesOnly(
             ctx,
+            order.customerId,
             order.customFields?.branchId ?? null,
         );
-        const packagesOnly = branchSettings?.packagesOnly === true;
 
         const unbuildable: string[] = [];
         const lines: OrderSubmittedLine[] = [];
@@ -105,13 +105,15 @@ export class OrderSubmittedBuilder {
             );
             const unitId = line.productVariant?.customFields?.defaultSalesUnitId;
             const ratio = line.productVariant?.customFields?.unitRatioToBase;
-            const inSalesUnit = packagesOnly && !!unitId && !!ratio && ratio > 0 && ratio !== 1;
+            // A quantity that is not whole packs (flag switched on after the line was added) goes by base unit.
+            const packs =
+                packagesOnly && !!unitId && !!ratio && ratio > 0 && ratio !== 1
+                    ? wholePacks(line.quantity, ratio)
+                    : null;
             lines.push({
                 productId,
-                quantity: inSalesUnit
-                    ? Math.round((line.quantity / ratio) * 1e6) / 1e6
-                    : line.quantity,
-                ...(inSalesUnit ? { unitId } : {}),
+                quantity: packs ?? line.quantity,
+                ...(packs !== null && unitId ? { unitId } : {}),
                 priceTypeId,
                 lineUuid,
             });

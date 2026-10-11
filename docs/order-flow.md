@@ -390,6 +390,11 @@ branch-settings.entity.ts`, issue #66's per-branch business-config pattern — s
    (`InvalidMultiplicityError`). When `packagesOnly` is `false` (or unset with no branch
    settings configured), no packaging constraint applies regardless of what `defaultSalesUnitId`
    says — piece-level sale is allowed.
+   When the pack rule applies it REPLACES the variant's `multiplicity` as the effective multiple (it is not an
+   LCM): a variant with `multiplicity` 10 and a pack of 6 is sold by 6. A ratio with no whole multiple within
+   1000 packs is not enforced and the line is sent by base unit. The same decision (`PackagingPolicyService`,
+   preferred TradingPoint's branch, then `order.customFields.branchId`) drives the interceptor, the
+   `order.submitted` `unitId` and the manager view; a line whose quantity is not whole packs goes by base unit.
 
 Not needed for this: per-branch catalog duplication, Vendure `ProductOption`/multi-variant unit
 selection, a shared-stock-across-variants strategy — all avoided by keeping a single variant in

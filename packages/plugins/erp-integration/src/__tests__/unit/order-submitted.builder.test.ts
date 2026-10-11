@@ -123,9 +123,7 @@ function makeBuilder(options: {
         customerPricingService as never,
         reservationService as never,
         outboundGateway as never,
-        {
-            resolveEffective: vi.fn(async () => ({ packagesOnly: options.packagesOnly === true })),
-        } as never,
+        { isPackagesOnly: vi.fn(async () => options.packagesOnly === true) } as never,
     );
 }
 
@@ -181,6 +179,28 @@ describe('OrderSubmittedBuilder', () => {
             kind: 'send',
             events: [{ payload: { lines: [{ unitId: 'unit-pack', quantity: 10 }] } }],
         });
+    });
+
+    it('sends base quantity with no unitId when the quantity is not whole packs', async () => {
+        const line: TestLine = { ...packLine(), quantity: 1 };
+        const result = await build(
+            makeBuilder({
+                order: makeOrder([line]),
+                reservations: [reservation('line-1', 'location-1')],
+                warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
+                productExternalIds: { 'v-1': 'product-1' },
+                counterparty: { erpId: 'counterparty-1' },
+                priceType: null,
+                packagesOnly: true,
+            }),
+        );
+        const sent = (
+            result as unknown as {
+                events: Array<{ payload: { lines: Array<Record<string, unknown>> } }>;
+            }
+        ).events[0].payload.lines[0];
+        expect(sent.quantity).toBe(1);
+        expect(sent).not.toHaveProperty('unitId');
     });
 
     it('sends base quantity with no unitId when the branch sells by the piece', async () => {

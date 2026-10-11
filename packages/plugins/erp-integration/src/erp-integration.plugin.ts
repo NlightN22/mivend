@@ -42,6 +42,7 @@ import { IntegrationInboxEventResolver } from './integration-inbox-event.resolve
 import { KafkaConsumerService } from './kafka-consumer.service';
 import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.service';
 import { KafkaStatusController } from './kafka-status.controller';
+import { MoqPlugin } from '@mivend/plugin-moq';
 import { UnitLookupService } from './unit-lookup.service';
 import { ProductPackagingLevelsResolver } from './product-packaging-levels.resolver';
 import { ProductPackagingLevelsService } from './product-packaging-levels.service';
@@ -112,6 +113,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         PriceEntryPlugin,
         RetroBonusPlugin,
         AccessControlPlugin,
+        MoqPlugin,
         CounterpartyPlugin,
         DocumentsPlugin,
         ReservationPlugin,

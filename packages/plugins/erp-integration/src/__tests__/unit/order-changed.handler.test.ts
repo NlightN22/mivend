@@ -15,6 +15,7 @@ function createConnection(rows: Array<Record<string, unknown> | undefined>): {
                 call += 1;
                 return {
                     select: vi.fn().mockReturnThis(),
+                    addSelect: vi.fn().mockReturnThis(),
                     from: vi.fn().mockReturnThis(),
                     innerJoin: vi.fn().mockReturnThis(),
                     where: vi.fn().mockReturnThis(),
@@ -113,21 +114,54 @@ describe('OrderChangedStreamHandler', () => {
         );
     });
 
-    it('retries (missing dependency) when the line unit has not arrived yet', async () => {
+    it('reads an unknown line unit as base instead of stalling the order', async () => {
+        const syncService = {
+            handleOrderChanged: vi.fn(),
+            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
+        };
         const handler = new OrderChangedStreamHandler(
             createConnection([{ id: 'variant-1' }]) as never,
-            {
-                handleOrderChanged: vi.fn(),
-                isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
-            } as never,
+            syncService as never,
             { findByEntityId: vi.fn().mockResolvedValue(null) } as never,
         );
 
-        await expect(
-            handler.apply(ctx, 'erp-order-1', {
-                lines: [{ productId: 'prod-1', unitId: 'unit-x', reservedQuantity: 1 }],
+        await handler.apply(ctx, 'erp-order-1', {
+            lines: [{ productId: 'prod-1', unitId: 'unit-x', reservedQuantity: 4 }],
+        });
+
+        expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 4 }],
             }),
-        ).rejects.toBeInstanceOf(MissingDependencyError);
+        );
+    });
+
+    it('uses the variant own ratio when the line unit is its default sales unit (no unit lookup)', async () => {
+        const syncService = {
+            handleOrderChanged: vi.fn(),
+            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
+        };
+        const findByEntityId = vi.fn();
+        const handler = new OrderChangedStreamHandler(
+            createConnection([
+                { id: 'variant-1', defaultSalesUnitId: 'unit-pack', unitRatioToBase: 6 },
+            ]) as never,
+            syncService as never,
+            { findByEntityId } as never,
+        );
+
+        await handler.apply(ctx, 'erp-order-1', {
+            lines: [{ productId: 'prod-1', unitId: 'unit-pack', reservedQuantity: 2 }],
+        });
+
+        expect(findByEntityId).not.toHaveBeenCalled();
+        expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                reservedLines: [{ productVariantId: 'variant-1', reservedQuantity: 12 }],
+            }),
+        );
     });
 
     it('passes the variant id as a string even though Postgres returns the integer id as a number', async () => {

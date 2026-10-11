@@ -26,11 +26,10 @@ export class OrderPackagesOnlyAdminResolver {
 
     @ResolveField()
     packagesOnlySales(@Ctx() ctx: RequestContext, @Parent() order: Order): Promise<boolean> {
-        const placedBranchId = order.customFields?.branchId ?? null;
         return this.packagingPolicyService.isPackagesOnly(
             ctx,
-            placedBranchId ? null : order.customerId,
-            placedBranchId,
+            order.customerId,
+            order.customFields?.branchId ?? null,
         );
     }
 }

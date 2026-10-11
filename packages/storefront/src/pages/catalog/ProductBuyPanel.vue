@@ -12,7 +12,7 @@ interface Props {
     cartQty?: number;
     cartLineId?: string;
     salesUnit?: SalesUnitView | null;
-    nearestPack?: { name: string; ratio: number } | null;
+    nearestPack?: { name: string; ratio: number; baseQty: number } | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -52,9 +52,9 @@ const addQty = computed(() =>
 function onAddPack(): void {
     if (!props.nearestPack) return;
     if (props.cartQty > 0 && props.cartLineId) {
-        emit('update-cart-qty', props.cartLineId, props.cartQty + props.nearestPack.ratio);
+        emit('update-cart-qty', props.cartLineId, props.cartQty + props.nearestPack.baseQty);
     } else {
-        emit('add-to-cart', props.nearestPack.ratio);
+        emit('add-to-cart', props.nearestPack.baseQty);
     }
 }
 
@@ -98,7 +98,7 @@ function onStepper(lineId: string | undefined, value: number): void {
                 class="buy-panel__add-pack"
                 @click="onAddPack"
             >
-                Add {{ nearestPack.name }} (+{{ nearestPack.ratio }} pc.)
+                Add {{ nearestPack.name }} (+{{ nearestPack.baseQty }} pc.)
             </MvButton>
 
             <MvQtyStepper
