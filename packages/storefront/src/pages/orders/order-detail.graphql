@@ -37,6 +37,7 @@ query OrderDetail($id: ID!) {
             erpStatusAt
             erpOrderStatus
             erpRegistrationStatus
+            erpRegistrationDocumentNumber
         }
     }
 }

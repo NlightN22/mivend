@@ -7,6 +7,15 @@ describe('isNotRegisteredInErp', () => {
         expect(isNotRegisteredInErp(null)).toBe(true);
     });
 
+    it('is false with only a document number', () => {
+        expect(
+            isNotRegisteredInErp({
+                erpRegistrationStatus: null,
+                erpRegistrationDocumentNumber: '123',
+            }),
+        ).toBe(false);
+    });
+
     it('is false with a registration status', () => {
         expect(isNotRegisteredInErp({ erpRegistrationStatus: 'SENT' })).toBe(false);
     });

@@ -4823,6 +4823,7 @@ export type OrderDetailQuery = {
             erpStatusAt?: any | null;
             erpOrderStatus?: string | null;
             erpRegistrationStatus?: string | null;
+            erpRegistrationDocumentNumber?: string | null;
         } | null;
     } | null;
 };
@@ -5927,6 +5928,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
       erpStatusAt
       erpOrderStatus
       erpRegistrationStatus
+      erpRegistrationDocumentNumber
     }
   }
 }

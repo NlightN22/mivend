@@ -197,11 +197,26 @@ function formatDate(iso: string): string {
                         </div>
 
                         <div
-                            v-else-if="erpDocumentStatusLabel(order.customFields?.erpOrderStatus)"
+                            v-else-if="
+                                erpDocumentStatusLabel(order.customFields?.erpOrderStatus) ||
+                                order.customFields?.erpRegistrationDocumentNumber
+                            "
                             class="od-erp-card"
                         >
                             <h2 class="od-section-title">{{ t('orders.detail.document') }}</h2>
-                            <div class="od-erp-row">
+                            <div
+                                v-if="order.customFields?.erpRegistrationDocumentNumber"
+                                class="od-erp-row"
+                            >
+                                <span>{{ t('orders.detail.documentNumber') }}</span>
+                                <span class="od-erp-val">{{
+                                    order.customFields.erpRegistrationDocumentNumber
+                                }}</span>
+                            </div>
+                            <div
+                                v-if="erpDocumentStatusLabel(order.customFields?.erpOrderStatus)"
+                                class="od-erp-row"
+                            >
                                 <span>{{ t('orders.detail.documentStatus') }}</span>
                                 <span class="od-erp-val">{{
                                     t(`orders.documentStatus.${order.customFields?.erpOrderStatus}`)

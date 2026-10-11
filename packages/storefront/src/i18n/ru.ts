@@ -55,6 +55,7 @@ export default {
             deliveryAddress: 'Адрес доставки',
             document: 'Документ',
             documentStatus: 'Статус документа',
+            documentNumber: 'Номер документа',
             updated: 'Обновлено',
             notRegistered: 'Заказ не был передан в учётную систему',
         },
