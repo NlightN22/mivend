@@ -36,13 +36,11 @@ describe('ErpOrderResolver.myOrders', () => {
     // setCustomerForDraftOrder but was abandoned before ever being placed (0 lines, never
     // transitioned out of Draft) showed up permanently in that customer's storefront "My
     // Orders" list — a $0/0-item ghost order — because 'Draft' was missing from the state
-    // exclusion list alongside 'AddingItems'/'Cancelled'.
-    it("excludes 'Draft' (admin work-in-progress) alongside 'AddingItems'/'Cancelled'", async () => {
+    // exclusion list alongside 'AddingItems'.
+    it("excludes 'Draft' (admin work-in-progress) alongside 'AddingItems', keeps 'Cancelled'", async () => {
         await resolver.myOrders(mockCtx, {});
 
-        expect(qb.andWhere).toHaveBeenCalledWith(
-            "order.state NOT IN ('AddingItems', 'Draft', 'Cancelled')",
-        );
+        expect(qb.andWhere).toHaveBeenCalledWith("order.state NOT IN ('AddingItems', 'Draft')");
     });
 
     it('returns no rows without querying when there is no active user', async () => {

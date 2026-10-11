@@ -19,7 +19,8 @@ const FILTER_GROUPS: Record<string, ErpStatus[]> = {
     pending: ['PENDING', 'SENT_TO_ERP', 'RESERVED', 'UNDER_APPROVAL'],
     confirmed: ['CONFIRMED', 'APPROVED', 'PICKING'],
     in_transit: ['SHIPPING', 'DELIVERING'],
-    closed: ['DELIVERED', 'CANCELLED'],
+    delivered: ['DELIVERED'],
+    cancelled: ['CANCELLED'],
 };
 
 const filters = [
@@ -27,7 +28,8 @@ const filters = [
     { key: 'pending', label: 'In progress' },
     { key: 'confirmed', label: 'Confirmed' },
     { key: 'in_transit', label: 'Shipped' },
-    { key: 'closed', label: 'Closed' },
+    { key: 'delivered', label: 'Delivered' },
+    { key: 'cancelled', label: 'Cancelled' },
 ];
 
 function reload(): void {

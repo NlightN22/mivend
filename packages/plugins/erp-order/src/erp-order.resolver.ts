@@ -53,7 +53,7 @@ export class ErpOrderResolver {
             // automation like e2e's createConfirmedOrder helper failed partway through) showed
             // up in that customer's storefront "My Orders" as a permanent $0/0-item ghost order,
             // because 'Draft' was missing from this exclusion list.
-            .andWhere("order.state NOT IN ('AddingItems', 'Draft', 'Cancelled')")
+            .andWhere("order.state NOT IN ('AddingItems', 'Draft')")
             .orderBy('order.createdAt', 'DESC')
             .take(take)
             .skip(skip);
