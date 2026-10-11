@@ -1,0 +1,11 @@
+mutation CancelOrderAsStaff($orderId: ID!) {
+    cancelOrderAsStaff(orderId: $orderId) {
+        ... on OrderCancelSuccess {
+            outcome
+        }
+        ... on OrderCancelRefused {
+            reason
+            message
+        }
+    }
+}

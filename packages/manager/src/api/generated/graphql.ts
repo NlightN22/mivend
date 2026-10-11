@@ -1864,11 +1864,6 @@ export type CustomFields = {
     Zone: Array<CustomFieldConfig>;
 };
 
-export type CustomProductMappings = {
-    fullName: Maybe<Scalars['String']['output']>;
-    oemCodes: Maybe<Array<Scalars['String']['output']>>;
-};
-
 export type Customer = Node & {
     addresses: Maybe<Array<Address>>;
     counterparty: Maybe<Counterparty>;
@@ -3099,7 +3094,7 @@ export type IntegrationOutboxProblem = Node & {
     nextRetryAt: Maybe<Scalars['DateTime']['output']>;
     retryCount: Scalars['Int']['output'];
     status: Scalars['String']['output'];
-    /** Identifier of what the event is about (the order id for order.submitted). */
+    /** Identifier of what the event is about (the order id for order.confirmed). */
     subjectId: Maybe<Scalars['String']['output']>;
 };
 
@@ -3116,7 +3111,7 @@ export type IntegrationOutboxProblemFilterParameter = {
     nextRetryAt?: InputMaybe<DateOperators>;
     retryCount?: InputMaybe<NumberOperators>;
     status?: InputMaybe<StringOperators>;
-    /** Identifier of what the event is about (the order id for order.submitted). */
+    /** Identifier of what the event is about (the order id for order.confirmed). */
     subjectId?: InputMaybe<StringOperators>;
 };
 
@@ -3144,7 +3139,7 @@ export type IntegrationOutboxProblemSortParameter = {
     nextRetryAt?: InputMaybe<SortOrder>;
     retryCount?: InputMaybe<SortOrder>;
     status?: InputMaybe<SortOrder>;
-    /** Identifier of what the event is about (the order id for order.submitted). */
+    /** Identifier of what the event is about (the order id for order.confirmed). */
     subjectId?: InputMaybe<SortOrder>;
 };
 
@@ -3849,6 +3844,8 @@ export type Mutation = {
     bulkUpsertPriceEntries: Scalars['Int']['output'];
     cancelJob: Job;
     cancelOrder: CancelOrderResult;
+    /** Cancel an order on behalf of staff; same condition as the customer. */
+    cancelOrderAsStaff: OrderCancelResult;
     cancelPayment: CancelPaymentResult;
     confirmOrder: Array<Reservation>;
     /** Create a new Administrator */
@@ -4355,6 +4352,10 @@ export type MutationCancelJobArgs = {
 
 export type MutationCancelOrderArgs = {
     input: CancelOrderInput;
+};
+
+export type MutationCancelOrderAsStaffArgs = {
+    orderId: Scalars['ID']['input'];
 };
 
 export type MutationCancelPaymentArgs = {
@@ -5476,6 +5477,30 @@ export type OrderAddress = {
     streetLine2: Maybe<Scalars['String']['output']>;
 };
 
+export type OrderCancelOutcome =
+    | 'ALREADY_CANCELLED'
+    | 'CANCELLED'
+    | 'CANCEL_REQUESTED'
+    | 'LEFT_TO_ERP';
+
+export type OrderCancelRefusalReason =
+    | 'IN_PROGRESS'
+    | 'PAID'
+    | 'REFUSED_BY_ERP'
+    | 'REGISTRATION_REJECTED'
+    | 'SHIPPED';
+
+export type OrderCancelRefused = {
+    message: Scalars['String']['output'];
+    reason: OrderCancelRefusalReason;
+};
+
+export type OrderCancelResult = OrderCancelRefused | OrderCancelSuccess;
+
+export type OrderCancelSuccess = {
+    outcome: OrderCancelOutcome;
+};
+
 export type OrderContractOption = {
     erpId: Scalars['String']['output'];
     isMain: Scalars['Boolean']['output'];
@@ -5488,6 +5513,10 @@ export type OrderContractOption = {
 
 export type OrderCustomFields = {
     branchId: Maybe<Scalars['String']['output']>;
+    cancelReason: Maybe<Scalars['String']['output']>;
+    cancelRefusalReason: Maybe<Scalars['String']['output']>;
+    cancelRequestStatus: Maybe<Scalars['String']['output']>;
+    cancelRequestedAt: Maybe<Scalars['DateTime']['output']>;
     erpContractId: Maybe<Scalars['String']['output']>;
     erpOrderId: Maybe<Scalars['String']['output']>;
     erpOrderStatus: Maybe<Scalars['String']['output']>;
@@ -5518,6 +5547,10 @@ export type OrderFilterParameter = {
     active?: InputMaybe<BooleanOperators>;
     aggregateOrderId?: InputMaybe<IdOperators>;
     branchId?: InputMaybe<StringOperators>;
+    cancelReason?: InputMaybe<StringOperators>;
+    cancelRefusalReason?: InputMaybe<StringOperators>;
+    cancelRequestStatus?: InputMaybe<StringOperators>;
+    cancelRequestedAt?: InputMaybe<DateOperators>;
     /** A unique code for the Order */
     code?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
@@ -5736,6 +5769,10 @@ export type OrderProcessState = {
 export type OrderSortParameter = {
     aggregateOrderId?: InputMaybe<SortOrder>;
     branchId?: InputMaybe<SortOrder>;
+    cancelReason?: InputMaybe<SortOrder>;
+    cancelRefusalReason?: InputMaybe<SortOrder>;
+    cancelRequestStatus?: InputMaybe<SortOrder>;
+    cancelRequestedAt?: InputMaybe<SortOrder>;
     /** A unique code for the Order */
     code?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
@@ -6069,6 +6106,8 @@ export type Permission =
     | 'ApproveSecurityLimit'
     /** Authenticated means simply that the user is logged in */
     | 'Authenticated'
+    /** Cancel a pending order on behalf of a customer (refused once an order or sale exists in the ERP, see docs/order-contracts.md) */
+    | 'CancelOrder'
     /** Confirm or release a manual order reservation (order-confirmation flow, see docs/order-flow.md) */
     | 'ConfirmOrder'
     /** Grants permission to create Administrator */
@@ -6338,16 +6377,6 @@ export type PriceEntryInput = {
 export type PriceRange = {
     max: Scalars['Money']['output'];
     min: Scalars['Money']['output'];
-};
-
-export type PriceRangeBucket = {
-    count: Scalars['Int']['output'];
-    to: Scalars['Int']['output'];
-};
-
-export type PriceRangeInput = {
-    max: Scalars['Int']['input'];
-    min: Scalars['Int']['input'];
 };
 
 export type PriceType = {
@@ -8055,10 +8084,6 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
-    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
-    inStock?: InputMaybe<Scalars['Boolean']['input']>;
-    priceRange?: InputMaybe<PriceRangeInput>;
-    priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -8073,15 +8098,7 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
-    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
-};
-
-export type SearchResponsePriceData = {
-    buckets: Array<PriceRangeBucket>;
-    bucketsWithTax: Array<PriceRangeBucket>;
-    range: PriceRange;
-    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -8092,14 +8109,10 @@ export type SearchResult = {
     /** An array of ids of the Collections in which this result appears */
     collectionIds: Array<Scalars['ID']['output']>;
     currencyCode: CurrencyCode;
-    /** @deprecated Use customProductMappings or customProductVariantMappings */
-    customMappings: CustomProductMappings;
-    customProductMappings: CustomProductMappings;
     description: Scalars['String']['output'];
     enabled: Scalars['Boolean']['output'];
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
-    inStock: Maybe<Scalars['Boolean']['output']>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset: Maybe<SearchResultAsset>;
@@ -9038,6 +9051,10 @@ export type UpdateOrderAddressInput = {
 
 export type UpdateOrderCustomFieldsInput = {
     branchId?: InputMaybe<Scalars['String']['input']>;
+    cancelReason?: InputMaybe<Scalars['String']['input']>;
+    cancelRefusalReason?: InputMaybe<Scalars['String']['input']>;
+    cancelRequestStatus?: InputMaybe<Scalars['String']['input']>;
+    cancelRequestedAt?: InputMaybe<Scalars['DateTime']['input']>;
     erpContractId?: InputMaybe<Scalars['String']['input']>;
     erpOrderId?: InputMaybe<Scalars['String']['input']>;
     erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
@@ -10632,6 +10649,16 @@ export type ResolveNotificationMutation = {
         resolution: string | null;
         createdAt: any;
     };
+};
+
+export type CancelOrderAsStaffMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type CancelOrderAsStaffMutation = {
+    cancelOrderAsStaff:
+        | { reason: OrderCancelRefusalReason; message: string }
+        | { outcome: OrderCancelOutcome };
 };
 
 export type OrderCreateCounterpartiesQueryVariables = Exact<{ [key: string]: never }>;
@@ -13322,6 +13349,22 @@ export const ResolveNotificationDocument = new TypedDocumentString(`
 }`) as unknown as TypedDocumentString<
     ResolveNotificationMutation,
     ResolveNotificationMutationVariables
+>;
+export const CancelOrderAsStaffDocument = new TypedDocumentString(`
+    mutation CancelOrderAsStaff($orderId: ID!) {
+  cancelOrderAsStaff(orderId: $orderId) {
+    ... on OrderCancelSuccess {
+      outcome
+    }
+    ... on OrderCancelRefused {
+      reason
+      message
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CancelOrderAsStaffMutation,
+    CancelOrderAsStaffMutationVariables
 >;
 export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
     query OrderCreateCounterparties {

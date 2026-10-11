@@ -19,6 +19,7 @@ import OrderContextPanel from '../../components/order-detail/OrderContextPanel.v
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
+import OrderCancelPanel from '../../components/order-detail/OrderCancelPanel.vue';
 import OrderContractPanel from '../../components/order-detail/OrderContractPanel.vue';
 import ReservationFailurePanel from '../../components/order-detail/ReservationFailurePanel.vue';
 import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
@@ -158,6 +159,12 @@ watch(() => route.params.code, load);
             </div>
 
             <aside class="order-detail__right-stack">
+                <OrderCancelPanel
+                    :order-id="order.id"
+                    :state="order.state"
+                    :erp-status="order.customFields.erpStatus"
+                    @cancelled="reload"
+                />
                 <MvPanel v-if="order.customFields.erpStatus === 'REJECTED'" title="Rejected by ERP">
                     <div class="order-detail__rejection">
                         <MvStatusBadge variant="danger">Rejected by ERP</MvStatusBadge>
