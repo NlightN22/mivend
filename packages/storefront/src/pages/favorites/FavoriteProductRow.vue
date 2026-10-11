@@ -17,7 +17,7 @@ void load();
 const unit = computed(() => salesUnitOf(props.product, packagesOnly.value));
 const unitPrice = computed(() =>
     props.product.unitPrice !== undefined && unit.value
-        ? props.product.unitPrice * unit.value.ratio
+        ? Math.round(props.product.unitPrice * unit.value.ratio * 100) / 100
         : props.product.unitPrice,
 );
 

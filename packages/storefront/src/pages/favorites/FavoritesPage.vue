@@ -34,13 +34,19 @@ void loadPackagesOnly();
 
 const localQty = ref<Record<string, number>>({});
 
+function stepOf(variantId: string): number {
+    const item = views.value.find(v => v.variantId === variantId);
+    return (item && salesUnitOf(item, packagesOnly.value)?.packStep) || 1;
+}
+
 function getQty(variantId: string): number {
-    return localQty.value[variantId] ?? 1;
+    return localQty.value[variantId] ?? stepOf(variantId);
 }
 
 function toCard(item: FavoriteVariantView): FavoriteProduct {
     const unit = salesUnitOf(item, packagesOnly.value);
-    const shownPrice = item.price != null && unit ? item.price * unit.ratio : item.price;
+    const shownPrice =
+        item.price != null && unit ? Math.round(item.price * unit.ratio * 100) / 100 : item.price;
     const priceStr =
         shownPrice != null
             ? new Intl.NumberFormat('ru-RU').format(shownPrice) +
@@ -94,7 +100,8 @@ function handleRemove(id: string): void {
 }
 
 function handleQtyChange(id: string, delta: number): void {
-    localQty.value[id] = Math.max(1, (localQty.value[id] ?? 1) + delta);
+    const step = stepOf(id);
+    localQty.value[id] = Math.max(step, getQty(id) + delta * step);
 }
 
 async function handleAddAll(): Promise<void> {

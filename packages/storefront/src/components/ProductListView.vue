@@ -178,17 +178,17 @@ function handleToggleFavorite(p: ProductItem): void {
                     :brand="brandOf(p.manufacturer)"
                     :price="
                         p.variants[0]?.price != null
-                            ? (p.variants[0].price / 100) * unitView(p).factor
+                            ? Math.round(p.variants[0].price * unitView(p).factor) / 100
                             : undefined
                     "
                     :customer-price="
                         p.variants[0]?.customerPrice != null
-                            ? (p.variants[0].customerPrice / 100) * unitView(p).factor
+                            ? Math.round(p.variants[0].customerPrice * unitView(p).factor) / 100
                             : undefined
                     "
                     :old-price="
                         p.variants[0]?.compareAtPrice != null
-                            ? (p.variants[0].compareAtPrice / 100) * unitView(p).factor
+                            ? Math.round(p.variants[0].compareAtPrice * unitView(p).factor) / 100
                             : undefined
                     "
                     :unit-label="unitView(p).label"
@@ -226,17 +226,17 @@ function handleToggleFavorite(p: ProductItem): void {
                     :brand="brandOf(p.manufacturer)"
                     :price="
                         p.variants[0]?.price != null
-                            ? (p.variants[0].price / 100) * unitView(p).factor
+                            ? Math.round(p.variants[0].price * unitView(p).factor) / 100
                             : undefined
                     "
                     :customer-price="
                         p.variants[0]?.customerPrice != null
-                            ? (p.variants[0].customerPrice / 100) * unitView(p).factor
+                            ? Math.round(p.variants[0].customerPrice * unitView(p).factor) / 100
                             : undefined
                     "
                     :compare-at-price="
                         p.variants[0]?.compareAtPrice != null
-                            ? (p.variants[0].compareAtPrice / 100) * unitView(p).factor
+                            ? Math.round(p.variants[0].compareAtPrice * unitView(p).factor) / 100
                             : undefined
                     "
                     :unit-label="unitView(p).label"

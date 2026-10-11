@@ -19,6 +19,14 @@ describe('salesUnitOf', () => {
 
     it('steps a ratio below 1 in the smallest whole number of packs', () => {
         expect(salesUnitOf({ unitName: 'pack', unitRatioToBase: 0.9 }, true)?.packStep).toBe(10);
+        expect(salesUnitOf({ unitName: 'pack', unitRatioToBase: 2.5 }, true)?.packStep).toBe(2);
+    });
+
+    it('turns one step of packs into a whole base quantity', () => {
+        const slow = salesUnitOf({ unitName: 'pack', unitRatioToBase: 0.9 }, true)!;
+        const half = salesUnitOf({ unitName: 'pack', unitRatioToBase: 2.5 }, true)!;
+        expect(packsToBase(slow.packStep, slow)).toBe(9);
+        expect(packsToBase(half.packStep, half)).toBe(5);
     });
 });
 
