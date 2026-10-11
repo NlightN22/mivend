@@ -18,6 +18,8 @@ query OrderDetail($code: String!) {
                 reservationFailureDetail
                 reservationFailedAt
                 erpStatus
+                erpOrderId
+                erpRegistrationStatus
                 erpRejectionReasonCode
                 erpRejectionReasonText
             }

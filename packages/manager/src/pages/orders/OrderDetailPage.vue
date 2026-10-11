@@ -14,6 +14,7 @@ import {
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
 import { fetchCreditForCounterparty, type CustomerCredit } from '../../api/customers';
 import { fetchOrderReservations, type OrderReservation } from '../../api/reservation';
+import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
@@ -165,6 +166,12 @@ watch(() => route.params.code, load);
                     :erp-status="order.customFields.erpStatus"
                     @cancelled="reload"
                 />
+                <MvPanel
+                    v-if="isNotRegisteredInErp(order.customFields)"
+                    title="ERP registration"
+                >
+                    <MvStatusBadge variant="warning">Not registered in the ERP</MvStatusBadge>
+                </MvPanel>
                 <MvPanel v-if="order.customFields.erpStatus === 'REJECTED'" title="Rejected by ERP">
                     <div class="order-detail__rejection">
                         <MvStatusBadge variant="danger">Rejected by ERP</MvStatusBadge>

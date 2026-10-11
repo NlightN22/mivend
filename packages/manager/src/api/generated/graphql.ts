@@ -10955,6 +10955,8 @@ export type OrderDetailQuery = {
                 reservationFailureDetail: string | null;
                 reservationFailedAt: any | null;
                 erpStatus: string | null;
+                erpOrderId: string | null;
+                erpRegistrationStatus: string | null;
                 erpRejectionReasonCode: string | null;
                 erpRejectionReasonText: string | null;
             } | null;
@@ -13715,6 +13717,8 @@ export const OrderDetailDocument = new TypedDocumentString(`
         reservationFailureDetail
         reservationFailedAt
         erpStatus
+        erpOrderId
+        erpRegistrationStatus
         erpRejectionReasonCode
         erpRejectionReasonText
       }
