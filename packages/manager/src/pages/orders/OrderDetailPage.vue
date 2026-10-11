@@ -169,12 +169,25 @@ watch(() => route.params.code, load);
                     <MvStatusBadge variant="warning">Not registered in the ERP</MvStatusBadge>
                 </MvPanel>
                 <MvPanel
-                    v-if="order.customFields.erpRegistrationDocumentNumber"
+                    v-if="
+                        order.customFields.erpRegistrationDocumentNumber ||
+                        order.customFields.erpRegistrationStatus
+                    "
                     title="ERP document"
                 >
-                    <div class="order-detail__rejection-row">
+                    <div
+                        v-if="order.customFields.erpRegistrationDocumentNumber"
+                        class="order-detail__rejection-row"
+                    >
                         <span class="order-detail__rejection-label">Document number</span>
                         <span>{{ order.customFields.erpRegistrationDocumentNumber }}</span>
+                    </div>
+                    <div
+                        v-if="order.customFields.erpRegistrationStatus"
+                        class="order-detail__rejection-row"
+                    >
+                        <span class="order-detail__rejection-label">Registration status</span>
+                        <span>{{ order.customFields.erpRegistrationStatus }}</span>
                     </div>
                 </MvPanel>
                 <MvPanel v-if="order.customFields.erpStatus === 'REJECTED'" title="Rejected by ERP">
