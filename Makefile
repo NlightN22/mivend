@@ -248,7 +248,7 @@ test:
 	pnpm test
 
 test-int: up
-	pnpm --filter "{packages/**}" --no-bail test:integration
+	pnpm --filter "{packages/**}" --filter server --no-bail test:integration
 
 # Mutation testing pilot (docs/testing-strategy.md "Mutation testing") — ad hoc only, not part
 # of CI or `make test`. Scoped in stryker.config.mjs to one small module at a time.

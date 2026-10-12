@@ -22,8 +22,9 @@ is a separate later task. The legacy persisted keys, routes and file names were 
 
 ## Mapping from external and legacy names
 
-- The order-changed event's `linkedDocuments[]` entry of type `invoice` (a 1C payment request) maps to
-  ProformaInvoice; type `realization` maps to the future SalesInvoice.
+- The order-changed event's `linkedDocuments[]` kind `proforma_invoice` (event-contracts >= 0.63.0) maps to
+  ProformaInvoice. The legacy kind `invoice` (a 1C payment request) is still accepted until the integration
+  service is deployed with the new contract. Kind `realization` maps to the future SalesInvoice.
 - GraphQL fields and types renamed to `proformaInvoice*` (for example `PaymentAttempt.proformaInvoiceId`) are a
   breaking change for external Shop API / Admin API clients.
 

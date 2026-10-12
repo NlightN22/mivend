@@ -383,3 +383,8 @@ stable across restarts. Vendure's default is a random secret per process start, 
 out (and creates a new session row) on every restart. Outside production a fixed dev default is used;
 in production the server refuses to start without a real value (a `change-me…` placeholder is also
 rejected). Changing it logs everybody out exactly once.
+
+## Migration name drift
+
+The plain rename migrations (#223) do not rename FK/PK/index hash names, so `migration:run` on a
+non-synchronize database drifts those names from entity-derived ones. Accepted: there is no production database yet.
