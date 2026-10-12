@@ -3816,6 +3816,8 @@ export type Mutation = {
     confirmOrder: Array<Reservation>;
     /** Marks the order's cash or bank-transfer payment (or the one given by paymentId) as received (Settled), recording who and when; a repeat is a no-op. */
     confirmPaymentReceived: Order;
+    /** Issues (or returns the unchanged) current proforma invoice snapshots of a placed, not cancelled order; changed content makes a new version. Idempotent per order content. */
+    requestProformaInvoicesForOrder: Array<ProformaInvoice>;
     /** Create a new Administrator */
     createAdministrator: Administrator;
     createAdministratorFromErpUser: Administrator;
@@ -4333,6 +4335,10 @@ export type MutationCancelPaymentArgs = {
 export type MutationConfirmOrderArgs = {
     orderId: Scalars['ID']['input'];
     reservationDays: Scalars['Int']['input'];
+};
+
+export type MutationRequestProformaInvoicesForOrderArgs = {
+    orderId: Scalars['ID']['input'];
 };
 
 export type MutationConfirmPaymentReceivedArgs = {
@@ -6858,15 +6864,55 @@ export type ProformaInvoice = {
     createdAt: Scalars['DateTime']['output'];
     currencyCode: Scalars['String']['output'];
     id: Scalars['ID']['output'];
-    /** Resolved via ProformaInvoiceFieldResolver.lines — must be declared here too: registering ProformaInvoiceFieldResolver without declaring every field it resolves throws 'ProformaInvoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging). */
-    lines: Array<OrderLine>;
+    /** The printable document of this snapshot; null until the document row exists. */
+    document: Maybe<Document>;
+    /** Snapshot lines, resolved via ProformaInvoiceFieldResolver.lines. */
+    lines: Array<ProformaInvoiceLine>;
     /** Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts). */
     number: Scalars['String']['output'];
     /** Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: ProformaInvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page). */
     order: ProformaInvoiceOrder;
+    /** Current order content minus this paid snapshot; null unless the order changed after payment. */
+    orderChangedDifference: Maybe<Scalars['Int']['output']>;
     orderId: Scalars['ID']['output'];
     organizationId: Scalars['ID']['output'];
+    seller: Maybe<ProformaInvoiceSeller>;
     status: Scalars['String']['output'];
+    supersededBy: Maybe<ProformaInvoiceVersionRef>;
+    supersedes: Maybe<ProformaInvoiceVersionRef>;
+    version: Scalars['Int']['output'];
+};
+
+/** A line of the immutable snapshot taken when the proforma invoice was issued. */
+export type ProformaInvoiceLine = {
+    linePriceWithTax: Scalars['Int']['output'];
+    productVariant: ProformaInvoiceLineProductVariant;
+    quantity: Scalars['Int']['output'];
+    unitPriceWithTax: Scalars['Int']['output'];
+};
+
+export type ProformaInvoiceLineProductVariant = {
+    name: Scalars['String']['output'];
+    sku: Scalars['String']['output'];
+};
+
+/** Seller requisites of the organization that issued a proforma invoice. */
+export type ProformaInvoiceSeller = {
+    bankAccount: Maybe<Scalars['String']['output']>;
+    bankBik: Maybe<Scalars['String']['output']>;
+    bankName: Maybe<Scalars['String']['output']>;
+    correspondentAccount: Maybe<Scalars['String']['output']>;
+    inn: Maybe<Scalars['String']['output']>;
+    kpp: Maybe<Scalars['String']['output']>;
+    legalAddress: Maybe<Scalars['String']['output']>;
+    legalName: Scalars['String']['output'];
+};
+
+/** Another version of the same proforma invoice (a new version is a new document with its own number). */
+export type ProformaInvoiceVersionRef = {
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    version: Scalars['Int']['output'];
 };
 
 export type ProformaInvoiceList = {
@@ -11185,6 +11231,35 @@ export type ConfirmPaymentReceivedMutationVariables = Exact<{
 
 export type ConfirmPaymentReceivedMutation = { confirmPaymentReceived: { id: string } };
 
+export type OrderProformaInvoicesQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type OrderProformaInvoicesQuery = {
+    proformaInvoicesForOrder: Array<{
+        id: string;
+        number: string;
+        version: number;
+        status: string;
+        amount: number;
+        currencyCode: string;
+        organizationId: string;
+        orderChangedDifference: number | null;
+        seller: { legalName: string } | null;
+        supersedes: { id: string; number: string; version: number } | null;
+        supersededBy: { id: string; number: string; version: number } | null;
+        document: { status: string; asset: { source: string } | null } | null;
+    }>;
+};
+
+export type RequestProformaInvoicesForOrderMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type RequestProformaInvoicesForOrderMutation = {
+    requestProformaInvoicesForOrder: Array<{ id: string }>;
+};
+
 export type PaymentListItemFieldsFragment = {
     id: string;
     number: string;
@@ -11259,6 +11334,7 @@ export type ProductCrossReferencesQuery = {
 export type ProformaInvoiceListItemFieldsFragment = {
     id: string;
     number: string;
+    version: number;
     createdAt: any;
     orderId: string;
     counterpartyId: string;
@@ -11266,6 +11342,7 @@ export type ProformaInvoiceListItemFieldsFragment = {
     currencyCode: string;
     status: string;
     branchId: string | null;
+    supersededBy: { number: string; version: number } | null;
     order: { code: string };
 };
 
@@ -11280,6 +11357,7 @@ export type ProformaInvoicesPageQuery = {
         items: Array<{
             id: string;
             number: string;
+            version: number;
             createdAt: any;
             orderId: string;
             counterpartyId: string;
@@ -11287,6 +11365,7 @@ export type ProformaInvoicesPageQuery = {
             currencyCode: string;
             status: string;
             branchId: string | null;
+            supersededBy: { number: string; version: number } | null;
             order: { code: string };
         }>;
     };
@@ -12042,6 +12121,11 @@ export const ProformaInvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
     fragment ProformaInvoiceListItemFields on ProformaInvoice {
   id
   number
+  version
+  supersededBy {
+    number
+    version
+  }
   createdAt
   orderId
   counterpartyId
@@ -13947,6 +14031,52 @@ export const ConfirmPaymentReceivedDocument = new TypedDocumentString(`
     ConfirmPaymentReceivedMutation,
     ConfirmPaymentReceivedMutationVariables
 >;
+export const OrderProformaInvoicesDocument = new TypedDocumentString(`
+    query OrderProformaInvoices($orderId: ID!) {
+  proformaInvoicesForOrder(orderId: $orderId) {
+    id
+    number
+    version
+    status
+    amount
+    currencyCode
+    organizationId
+    orderChangedDifference
+    seller {
+      legalName
+    }
+    supersedes {
+      id
+      number
+      version
+    }
+    supersededBy {
+      id
+      number
+      version
+    }
+    document {
+      status
+      asset {
+        source
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderProformaInvoicesQuery,
+    OrderProformaInvoicesQueryVariables
+>;
+export const RequestProformaInvoicesForOrderDocument = new TypedDocumentString(`
+    mutation RequestProformaInvoicesForOrder($orderId: ID!) {
+  requestProformaInvoicesForOrder(orderId: $orderId) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    RequestProformaInvoicesForOrderMutation,
+    RequestProformaInvoicesForOrderMutationVariables
+>;
 export const PaymentViewCountsDocument = new TypedDocumentString(`
     query PaymentViewCounts($counterpartyId: ID) {
   all: visiblePayments(options: {take: 0}, counterpartyId: $counterpartyId) {
@@ -14050,6 +14180,11 @@ export const ProformaInvoicesPageDocument = new TypedDocumentString(`
     fragment ProformaInvoiceListItemFields on ProformaInvoice {
   id
   number
+  version
+  supersededBy {
+    number
+    version
+  }
   createdAt
   orderId
   counterpartyId

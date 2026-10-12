@@ -32,10 +32,30 @@ describe('useOrderPlacement', () => {
         vi.spyOn(cart, 'fetchCart').mockResolvedValue(undefined);
     });
 
-    it('bank transfer opens a tab per proforma invoice and lands on the order-created page', async () => {
+    it('bank transfer opens the PDF when ready and lands on the order-created page', async () => {
         vi.mocked(shopApi)
             .mockResolvedValueOnce(placed as never)
             .mockResolvedValueOnce({
+                myProformaInvoices: {
+                    items: [
+                        {
+                            id: '7',
+                            status: 'issued',
+                            document: { status: 'ready', asset: { source: '/assets/a.pdf' } },
+                        },
+                    ],
+                },
+            } as never);
+        useCheckoutStore().setPayment('bank-transfer');
+        await useOrderPlacement().place();
+        expect(open).toHaveBeenCalledWith('/assets/a.pdf', '_blank');
+        expect(push).toHaveBeenCalledWith({ path: '/order-created', query: { code: 'ORD-1' } });
+    });
+
+    it('bank transfer falls back to a printable page per proforma invoice when no PDF is ready', async () => {
+        vi.mocked(shopApi)
+            .mockResolvedValueOnce(placed as never)
+            .mockResolvedValue({
                 myProformaInvoices: {
                     items: [
                         { id: '7', status: 'issued' },

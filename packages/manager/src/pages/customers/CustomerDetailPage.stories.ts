@@ -58,6 +58,8 @@ const PROFORMA_INVOICE_STATUSES = ['pending', 'issued', 'paid', 'cancelled'];
 const CUSTOMER_PROFORMA_INVOICES: ProformaInvoiceListItem[] = Array.from({ length: 6 }, (_, i) => ({
     id: `INV-${1000 + i}`,
     number: `ORD-${200 + i}-1`,
+    version: 1,
+    supersededBy: null,
     createdAt: new Date(2026, 6, 1 + i).toISOString(),
     orderId: String(200 + i),
     counterpartyId: '1',

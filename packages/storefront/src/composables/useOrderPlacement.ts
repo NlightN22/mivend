@@ -8,7 +8,16 @@ import {
 } from '../api/generated/graphql';
 import { useCartStore } from '../stores/cart';
 import { useCheckoutStore } from '../stores/checkout';
-import { METHOD_CODE_BY_FORM, placementMetadata, proformaTabIds } from '../utils/checkoutPolicy';
+import {
+    METHOD_CODE_BY_FORM,
+    placementMetadata,
+    proformaDocumentUrl,
+    proformaPrintTargets,
+    type ProformaInvoiceRef,
+} from '../utils/checkoutPolicy';
+
+const PDF_POLL_ATTEMPTS = 3;
+const PDF_POLL_INTERVAL_MS = 1000;
 
 // Cash and bank transfer settle as an obligation at placement; card is paid on the payment page.
 export function useOrderPlacement(): { place: () => Promise<void> } {
@@ -16,14 +25,28 @@ export function useOrderPlacement(): { place: () => Promise<void> } {
     const checkoutStore = useCheckoutStore();
     const router = useRouter();
 
+    // The PDF is rendered by a background job: wait briefly for it, then fall back to the printable page.
     async function openProformaTabs(form: PaymentForm, orderCode: string): Promise<void> {
         if (form !== 'bank-transfer') return;
-        const { myProformaInvoices } = await shopApi(OrderProformaInvoicesDocument, { orderCode });
-        for (const id of proformaTabIds(form, myProformaInvoices.items)) {
-            const href = router.resolve({
-                path: `/proforma-invoices/${id}`,
-                query: { print: '1' },
-            }).href;
+        let invoices: ProformaInvoiceRef[] = [];
+        for (let attempt = 0; attempt < PDF_POLL_ATTEMPTS; attempt += 1) {
+            const { myProformaInvoices } = await shopApi(OrderProformaInvoicesDocument, {
+                orderCode,
+            });
+            invoices = myProformaInvoices.items;
+            if (invoices.every(i => i.status === 'cancelled' || proformaDocumentUrl(i))) break;
+            if (attempt < PDF_POLL_ATTEMPTS - 1) {
+                await new Promise(resolve => setTimeout(resolve, PDF_POLL_INTERVAL_MS));
+            }
+        }
+        for (const target of proformaPrintTargets(form, invoices)) {
+            const href =
+                target.kind === 'pdf'
+                    ? target.url
+                    : router.resolve({
+                          path: `/proforma-invoices/${target.id}`,
+                          query: { print: '1' },
+                      }).href;
             window.open(href, '_blank');
         }
     }

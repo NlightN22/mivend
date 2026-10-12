@@ -1,6 +1,11 @@
 fragment ProformaInvoiceListItemFields on ProformaInvoice {
     id
     number
+    version
+    supersededBy {
+        number
+        version
+    }
     createdAt
     orderId
     counterpartyId

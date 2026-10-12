@@ -2,11 +2,39 @@ query ProformaInvoiceDetail($id: ID!) {
     proformaInvoice(id: $id) {
         id
         number
+        version
         orderId
         organizationId
         amount
         currencyCode
         status
+        orderChangedDifference
+        supersedes {
+            id
+            number
+            version
+        }
+        supersededBy {
+            id
+            number
+            version
+        }
+        seller {
+            legalName
+            inn
+            kpp
+            legalAddress
+            bankName
+            bankAccount
+            bankBik
+            correspondentAccount
+        }
+        document {
+            status
+            asset {
+                source
+            }
+        }
         order {
             id
             code

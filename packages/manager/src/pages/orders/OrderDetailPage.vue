@@ -21,6 +21,7 @@ import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
 import OrderCancelPanel from '../../components/order-detail/OrderCancelPanel.vue';
+import ProformaInvoicesPanel from '../../components/order-detail/ProformaInvoicesPanel.vue';
 import PaymentReceivedPanel from '../../components/order-detail/PaymentReceivedPanel.vue';
 import OrderContractPanel from '../../components/order-detail/OrderContractPanel.vue';
 import ReservationFailurePanel from '../../components/order-detail/ReservationFailurePanel.vue';
@@ -165,6 +166,10 @@ watch(() => route.params.code, load);
                     :order-id="order.id"
                     :payments="order.payments ?? []"
                     @confirmed="reload"
+                />
+                <ProformaInvoicesPanel
+                    :order-id="order.id"
+                    :cancelled="order.state === 'Cancelled'"
                 />
                 <OrderCancelPanel
                     :order-id="order.id"

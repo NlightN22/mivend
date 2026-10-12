@@ -13,16 +13,27 @@ const meta: Meta<typeof ProformaInvoiceDetailPage> = {
 export default meta;
 type Story = StoryObj<typeof ProformaInvoiceDetailPage>;
 
-function mockProformaInvoice(status: string): void {
+function mockProformaInvoice(status: string, extra: Record<string, unknown> = {}): void {
     registerMock('ProformaInvoiceDetail', () => ({
         proformaInvoice: {
             id: '1',
             number: '1000000001-01',
+            version: 1,
+            supersedes: null,
+            supersededBy: null,
+            orderChangedDifference: null,
+            seller: {
+                legalName: 'Demo Trading Co.',
+                inn: '000000000000',
+                legalAddress: '1 Demo Ave',
+            },
+            document: null,
             orderId: '1',
             organizationId: 'org-1',
             amount: 460000,
             currencyCode: 'RUB',
             status,
+            ...extra,
             order: { id: '1', code: 'ORD-101' },
             lines: [
                 {
@@ -55,6 +66,36 @@ export const Paid: Story = {
         async () => {
             registerDefaultMocks();
             mockProformaInvoice('paid');
+            await router.push('/proforma-invoices/1');
+        },
+    ],
+    render: () => ({
+        components: { ProformaInvoiceDetailPage },
+        template: '<ProformaInvoiceDetailPage />',
+    }),
+};
+
+export const Superseded: Story = {
+    loaders: [
+        async () => {
+            registerDefaultMocks();
+            mockProformaInvoice('superseded', {
+                supersededBy: { id: '2', number: '1000000001-03', version: 2 },
+            });
+            await router.push('/proforma-invoices/1');
+        },
+    ],
+    render: () => ({
+        components: { ProformaInvoiceDetailPage },
+        template: '<ProformaInvoiceDetailPage />',
+    }),
+};
+
+export const PaidThenOrderChanged: Story = {
+    loaders: [
+        async () => {
+            registerDefaultMocks();
+            mockProformaInvoice('paid', { orderChangedDifference: 120000 });
             await router.push('/proforma-invoices/1');
         },
     ],

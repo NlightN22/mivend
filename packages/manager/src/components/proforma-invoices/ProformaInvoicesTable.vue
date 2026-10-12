@@ -38,8 +38,22 @@ const columns = computed<Column<TableRow>[]>(() => {
         {
             key: 'id',
             title: 'Proforma invoice #',
-            dataKey: 'id',
-            width: 120,
+            dataKey: 'number',
+            width: 190,
+            cellRenderer: ({ rowData }) => {
+                const row = rowData as TableRow;
+                const version = row.version as number;
+                return h('span', [
+                    row.number as string,
+                    version > 1
+                        ? h(
+                              MvStatusBadge,
+                              { variant: 'info', class: 'version-badge' },
+                              () => `v${version}`,
+                          )
+                        : null,
+                ]);
+            },
             mobile: { primary: true },
         },
     ];
@@ -71,6 +85,8 @@ const columns = computed<Column<TableRow>[]>(() => {
 const rows = computed<TableRow[]>(() =>
     props.proformaInvoices.map(proformaInvoice => ({
         id: proformaInvoice.id,
+        number: proformaInvoice.number,
+        version: proformaInvoice.version,
         customer:
             props.counterpartyNames.get(proformaInvoice.counterpartyId) ??
             proformaInvoice.counterpartyId,

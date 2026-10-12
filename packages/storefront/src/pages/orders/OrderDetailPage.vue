@@ -8,6 +8,7 @@ import { useCancelOrder } from './useCancelOrder';
 import { useOrderDetail } from './useOrderDetail';
 import { STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
 import { isNotRegisteredInErp } from './isNotRegisteredInErp';
+import OrderProformaInvoices from './OrderProformaInvoices.vue';
 
 const route = useRoute();
 const { order, loading, load } = useOrderDetail();
@@ -160,6 +161,11 @@ function formatDate(iso: string): string {
                                 }}</span>
                             </div>
                         </div>
+
+                        <OrderProformaInvoices
+                            :order-code="order.code"
+                            :cancelled="order.state === 'Cancelled'"
+                        />
 
                         <div
                             v-if="

@@ -3,7 +3,31 @@ query OrderProformaInvoices($orderCode: String!) {
         items {
             id
             number
+            version
             status
+            amount
+            currencyCode
+            orderChangedDifference
+            supersededBy {
+                id
+                number
+                version
+            }
+            document {
+                status
+                asset {
+                    source
+                }
+            }
         }
+    }
+}
+
+mutation RequestProformaInvoices($orderCode: String!) {
+    requestProformaInvoices(orderCode: $orderCode) {
+        id
+        number
+        version
+        status
     }
 }

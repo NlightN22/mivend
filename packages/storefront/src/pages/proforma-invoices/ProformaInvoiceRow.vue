@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
+import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import {
     PROFORMA_INVOICE_STATUS_LABEL,
@@ -31,8 +32,7 @@ function payProformaInvoice(): void {
     void router.push(`/proforma-invoices/${props.proformaInvoice.id}/pay`);
 }
 
-const isPayable =
-    props.proformaInvoice.status !== 'paid' && props.proformaInvoice.status !== 'cancelled';
+const isPayable = !['paid', 'cancelled', 'superseded'].includes(props.proformaInvoice.status);
 </script>
 
 <template>
@@ -40,6 +40,11 @@ const isPayable =
         <div>
             <div class="proforma-invoice-row__name">
                 Proforma invoice #{{ proformaInvoice.number }}
+                <ProformaInvoiceVersionBadge :version="proformaInvoice.version" />
+            </div>
+            <div v-if="proformaInvoice.supersededBy" class="proforma-invoice-row__meta">
+                Replaced by v{{ proformaInvoice.supersededBy.version }} (№
+                {{ proformaInvoice.supersededBy.number }})
             </div>
             <div class="proforma-invoice-row__meta">
                 Order {{ formatDocumentNumber(proformaInvoice.order.code) }}

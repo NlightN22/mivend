@@ -56,12 +56,27 @@ export function placementMetadata(acknowledged: boolean): Record<string, boolean
 export interface ProformaInvoiceRef {
     id: string;
     status: string;
+    document?: { status: string; asset?: { source: string } | null } | null;
 }
 
-// Bank transfer opens one printable page per organization's proforma invoice; other forms open none.
-export function proformaTabIds(form: PaymentForm, invoices: ProformaInvoiceRef[]): string[] {
+export type ProformaPrintTarget = { kind: 'pdf'; url: string } | { kind: 'page'; id: string };
+
+export function proformaDocumentUrl(invoice: ProformaInvoiceRef): string | null {
+    return invoice.document?.status === 'ready' ? (invoice.document.asset?.source ?? null) : null;
+}
+
+// Bank transfer opens each current proforma invoice: its PDF when ready, otherwise the printable page.
+export function proformaPrintTargets(
+    form: PaymentForm,
+    invoices: ProformaInvoiceRef[],
+): ProformaPrintTarget[] {
     if (form !== 'bank-transfer') return [];
-    return invoices.filter(i => i.status !== 'cancelled').map(i => i.id);
+    return invoices
+        .filter(i => i.status !== 'cancelled' && i.status !== 'superseded')
+        .map(i => {
+            const url = proformaDocumentUrl(i);
+            return url ? { kind: 'pdf', url } : { kind: 'page', id: i.id };
+        });
 }
 
 // Mirror EXPECTED_AMOUNT_KEY and CARD_AMOUNT_CHANGED_CODE in `shared` (same runtime-import reason as above).

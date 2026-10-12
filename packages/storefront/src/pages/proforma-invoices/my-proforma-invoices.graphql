@@ -3,6 +3,12 @@ query MyProformaInvoices($options: ProformaInvoiceListOptions) {
         items {
             id
             number
+            version
+            supersededBy {
+                id
+                number
+                version
+            }
             orderId
             organizationId
             amount

@@ -18,6 +18,7 @@ export const PROFORMA_INVOICE_STATUS_LABEL: Record<string, string> = {
     issued: 'Issued',
     paid: 'Paid',
     cancelled: 'Cancelled',
+    superseded: 'Superseded',
 };
 
 export const PROFORMA_INVOICE_STATUS_VARIANT: Record<
@@ -28,6 +29,7 @@ export const PROFORMA_INVOICE_STATUS_VARIANT: Record<
     issued: 'warning',
     paid: 'success',
     cancelled: 'neutral',
+    superseded: 'neutral',
 };
 
 export function useProformaInvoices(): {

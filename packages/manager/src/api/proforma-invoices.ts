@@ -33,6 +33,7 @@ export const PROFORMA_INVOICE_STATUS_OPTIONS = [
     { value: 'issued', label: 'Issued' },
     { value: 'paid', label: 'Paid' },
     { value: 'cancelled', label: 'Cancelled' },
+    { value: 'superseded', label: 'Superseded' },
 ] as const;
 
 // Single source of truth for the ProformaInvoice status badge color (the frontend-rules skill's ui-kit "single source of
@@ -44,6 +45,7 @@ export const PROFORMA_INVOICE_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVa
     issued: 'info',
     paid: 'success',
     cancelled: 'danger',
+    superseded: 'neutral',
 };
 
 export async function fetchProformaInvoicesPage(

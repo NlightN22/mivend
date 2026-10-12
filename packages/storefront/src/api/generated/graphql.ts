@@ -1886,6 +1886,8 @@ export type Mutation = {
     logout: Success;
     markNotificationRead: Notification;
     payProformaInvoice: ProformaInvoice;
+    /** Issues (or returns the unchanged) current proforma invoices of the customer's own placed, not cancelled order; changed content makes a new version. */
+    requestProformaInvoices: Array<ProformaInvoice>;
     /** Regenerate and send a verification token for a new Customer registration. Only applicable if `authOptions.requireVerification` is set to true. */
     refreshCustomerVerification: RefreshCustomerVerificationResult;
     /**
@@ -2069,6 +2071,10 @@ export type MutationPayProformaInvoiceArgs = {
     channel?: InputMaybe<Scalars['String']['input']>;
     proformaInvoiceId: Scalars['ID']['input'];
     status: Scalars['String']['input'];
+};
+
+export type MutationRequestProformaInvoicesArgs = {
+    orderCode: Scalars['String']['input'];
 };
 
 export type MutationRefreshCustomerVerificationArgs = {
@@ -3355,14 +3361,41 @@ export type ProductVariantTranslation = {
 export type ProformaInvoice = {
     amount: Scalars['Int']['output'];
     currencyCode: Scalars['String']['output'];
+    /** The printable document of this snapshot; null until the document row exists. */
+    document?: Maybe<Document>;
     id: Scalars['ID']['output'];
     lines: Array<ProformaInvoiceLine>;
     number: Scalars['String']['output'];
     order: ProformaInvoiceOrder;
+    /** Current order content minus this paid snapshot; null unless the order changed after payment. */
+    orderChangedDifference?: Maybe<Scalars['Int']['output']>;
     orderId: Scalars['ID']['output'];
     organizationId: Scalars['ID']['output'];
+    seller?: Maybe<ProformaInvoiceSeller>;
     status: Scalars['String']['output'];
+    supersededBy?: Maybe<ProformaInvoiceVersionRef>;
+    supersedes?: Maybe<ProformaInvoiceVersionRef>;
     uuid: Scalars['String']['output'];
+    version: Scalars['Int']['output'];
+};
+
+/** Seller requisites of the organization that issued a proforma invoice. */
+export type ProformaInvoiceSeller = {
+    bankAccount?: Maybe<Scalars['String']['output']>;
+    bankBik?: Maybe<Scalars['String']['output']>;
+    bankName?: Maybe<Scalars['String']['output']>;
+    correspondentAccount?: Maybe<Scalars['String']['output']>;
+    inn?: Maybe<Scalars['String']['output']>;
+    kpp?: Maybe<Scalars['String']['output']>;
+    legalAddress?: Maybe<Scalars['String']['output']>;
+    legalName: Scalars['String']['output'];
+};
+
+/** Another version of the same proforma invoice (a new version is a new document with its own number). */
+export type ProformaInvoiceVersionRef = {
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    version: Scalars['Int']['output'];
 };
 
 export type ProformaInvoiceLine = {
@@ -4695,7 +4728,15 @@ export type OrderCreatedQuery = {
         customFields?: { tradingPointId?: string | null } | null;
     } | null;
     myTradingPoints: Array<{ id: string; name: string; address: string }>;
-    myProformaInvoices: { items: Array<{ id: string; number: string; status: string }> };
+    myProformaInvoices: {
+        items: Array<{
+            id: string;
+            number: string;
+            version: number;
+            status: string;
+            document?: { status: string; asset?: { source: string } | null } | null;
+        }>;
+    };
 };
 
 export type OrderProformaInvoicesQueryVariables = Exact<{
@@ -4703,7 +4744,27 @@ export type OrderProformaInvoicesQueryVariables = Exact<{
 }>;
 
 export type OrderProformaInvoicesQuery = {
-    myProformaInvoices: { items: Array<{ id: string; number: string; status: string }> };
+    myProformaInvoices: {
+        items: Array<{
+            id: string;
+            number: string;
+            version: number;
+            status: string;
+            amount: number;
+            currencyCode: string;
+            orderChangedDifference?: number | null;
+            supersededBy?: { id: string; number: string; version: number } | null;
+            document?: { status: string; asset?: { source: string } | null } | null;
+        }>;
+    };
+};
+
+export type RequestProformaInvoicesMutationVariables = Exact<{
+    orderCode: Scalars['String']['input'];
+}>;
+
+export type RequestProformaInvoicesMutation = {
+    requestProformaInvoices: Array<{ id: string; number: string; version: number; status: string }>;
 };
 
 export type MyDocumentsQueryVariables = Exact<{
@@ -4940,11 +5001,13 @@ export type MyProformaInvoicesQuery = {
         items: Array<{
             id: string;
             number: string;
+            version: number;
             orderId: string;
             organizationId: string;
             amount: number;
             currencyCode: string;
             status: string;
+            supersededBy?: { id: string; number: string; version: number } | null;
             order: { id: string; code: string };
         }>;
     };
@@ -4965,11 +5028,26 @@ export type ProformaInvoiceDetailQuery = {
     proformaInvoice?: {
         id: string;
         number: string;
+        version: number;
         orderId: string;
         organizationId: string;
         amount: number;
         currencyCode: string;
         status: string;
+        orderChangedDifference?: number | null;
+        supersedes?: { id: string; number: string; version: number } | null;
+        supersededBy?: { id: string; number: string; version: number } | null;
+        seller?: {
+            legalName: string;
+            inn?: string | null;
+            kpp?: string | null;
+            legalAddress?: string | null;
+            bankName?: string | null;
+            bankAccount?: string | null;
+            bankBik?: string | null;
+            correspondentAccount?: string | null;
+        } | null;
+        document?: { status: string; asset?: { source: string } | null } | null;
         order: { id: string; code: string };
         lines: Array<{
             quantity: number;
@@ -5815,7 +5893,14 @@ export const OrderCreatedDocument = new TypedDocumentString(`
     items {
       id
       number
+      version
       status
+      document {
+        status
+        asset {
+          source
+        }
+      }
     }
   }
 }
@@ -5826,13 +5911,41 @@ export const OrderProformaInvoicesDocument = new TypedDocumentString(`
     items {
       id
       number
+      version
       status
+      amount
+      currencyCode
+      orderChangedDifference
+      supersededBy {
+        id
+        number
+        version
+      }
+      document {
+        status
+        asset {
+          source
+        }
+      }
     }
   }
 }
     `) as unknown as TypedDocumentString<
     OrderProformaInvoicesQuery,
     OrderProformaInvoicesQueryVariables
+>;
+export const RequestProformaInvoicesDocument = new TypedDocumentString(`
+    mutation RequestProformaInvoices($orderCode: String!) {
+  requestProformaInvoices(orderCode: $orderCode) {
+    id
+    number
+    version
+    status
+  }
+}
+    `) as unknown as TypedDocumentString<
+    RequestProformaInvoicesMutation,
+    RequestProformaInvoicesMutationVariables
 >;
 export const MyDocumentsDocument = new TypedDocumentString(`
     query MyDocuments($options: DocumentListOptions) {
@@ -6087,6 +6200,12 @@ export const MyProformaInvoicesDocument = new TypedDocumentString(`
     items {
       id
       number
+      version
+      supersededBy {
+        id
+        number
+        version
+      }
       orderId
       organizationId
       amount
@@ -6117,11 +6236,39 @@ export const ProformaInvoiceDetailDocument = new TypedDocumentString(`
   proformaInvoice(id: $id) {
     id
     number
+    version
     orderId
     organizationId
     amount
     currencyCode
     status
+    orderChangedDifference
+    supersedes {
+      id
+      number
+      version
+    }
+    supersededBy {
+      id
+      number
+      version
+    }
+    seller {
+      legalName
+      inn
+      kpp
+      legalAddress
+      bankName
+      bankAccount
+      bankBik
+      correspondentAccount
+    }
+    document {
+      status
+      asset {
+        source
+      }
+    }
     order {
       id
       code

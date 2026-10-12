@@ -5,7 +5,7 @@ import {
     isCardAmountChanged,
     orderedForms,
     placementMetadata,
-    proformaTabIds,
+    proformaPrintTargets,
 } from '../../utils/checkoutPolicy';
 import { describeOrderCreated } from '../../utils/orderCreatedText';
 
@@ -36,10 +36,13 @@ describe('checkout policy helpers', () => {
             { id: '2', status: 'pending' },
             { id: '3', status: 'cancelled' },
         ];
-        expect(proformaTabIds('bank-transfer', invoices)).toEqual(['1', '2']);
-        expect(proformaTabIds('cash', invoices)).toEqual([]);
-        expect(proformaTabIds('card', invoices)).toEqual([]);
-        expect(proformaTabIds('bank-transfer', [])).toEqual([]);
+        expect(proformaPrintTargets('bank-transfer', invoices)).toEqual([
+            { kind: 'page', id: '1' },
+            { kind: 'page', id: '2' },
+        ]);
+        expect(proformaPrintTargets('cash', invoices)).toEqual([]);
+        expect(proformaPrintTargets('card', invoices)).toEqual([]);
+        expect(proformaPrintTargets('bank-transfer', [])).toEqual([]);
     });
 
     it('shows the waiting-for-cash-confirmation state only for cash', () => {
@@ -61,5 +64,33 @@ describe('checkout policy helpers', () => {
         expect(isCardAmountChanged('CARD_AMOUNT_CHANGED: again')).toBe(true);
         expect(isCardAmountChanged('declined')).toBe(false);
         expect(isCardAmountChanged(undefined)).toBe(false);
+    });
+});
+
+describe('proformaPrintTargets documents and versions', () => {
+    it('opens the PDF when the document is ready and the page otherwise', () => {
+        const targets = proformaPrintTargets('bank-transfer', [
+            {
+                id: '1',
+                status: 'issued',
+                document: { status: 'ready', asset: { source: 'http://x/a.pdf' } },
+            },
+            { id: '2', status: 'issued', document: { status: 'generating', asset: null } },
+            { id: '3', status: 'issued', document: null },
+        ]);
+        expect(targets).toEqual([
+            { kind: 'pdf', url: 'http://x/a.pdf' },
+            { kind: 'page', id: '2' },
+            { kind: 'page', id: '3' },
+        ]);
+    });
+
+    it('skips cancelled and superseded snapshots', () => {
+        const targets = proformaPrintTargets('bank-transfer', [
+            { id: '1', status: 'superseded' },
+            { id: '2', status: 'cancelled' },
+            { id: '3', status: 'issued' },
+        ]);
+        expect(targets).toEqual([{ kind: 'page', id: '3' }]);
     });
 });

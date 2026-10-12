@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { nextTick, onMounted } from 'vue';
+import { computed, nextTick, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import AccountSidebar from '../account/AccountSidebar.vue';
+import ProformaInvoiceSellerRows from './ProformaInvoiceSellerRows.vue';
+import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
+import ProformaInvoiceVersionNotice from './ProformaInvoiceVersionNotice.vue';
+import { formatMoney } from './formatMoney';
 import { useProformaInvoiceDetail } from './useProformaInvoiceDetail';
 import {
     PROFORMA_INVOICE_STATUS_LABEL,
@@ -12,6 +16,10 @@ import {
 
 const route = useRoute();
 const { proformaInvoice, loading, load } = useProformaInvoiceDetail();
+const pdfUrl = computed(() => {
+    const document = proformaInvoice.value?.document;
+    return document?.status === 'ready' ? (document.asset?.source ?? null) : null;
+});
 
 // `?print=1` (opened in a new tab after checkout) shows the browser print dialog once loaded.
 onMounted(async () => {
@@ -22,13 +30,7 @@ onMounted(async () => {
     }
 });
 
-function formatAmount(cents: number, currency: string): string {
-    return (
-        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100) +
-        ' ' +
-        (currency === 'RUB' ? '₽' : currency)
-    );
-}
+const formatAmount = formatMoney;
 </script>
 
 <template>
@@ -47,7 +49,10 @@ function formatAmount(cents: number, currency: string): string {
             <template v-else>
                 <div class="id-head">
                     <div>
-                        <h1 class="id-title">Proforma invoice #{{ proformaInvoice.number }}</h1>
+                        <h1 class="id-title">
+                            Proforma invoice #{{ proformaInvoice.number }}
+                            <ProformaInvoiceVersionBadge :version="proformaInvoice.version" />
+                        </h1>
                         <div class="id-meta">
                             Order {{ formatDocumentNumber(proformaInvoice.order.code) }}
                         </div>
@@ -63,6 +68,14 @@ function formatAmount(cents: number, currency: string): string {
                         }}
                     </MvStatusBadge>
                 </div>
+
+                <ProformaInvoiceVersionNotice
+                    :version="proformaInvoice.version"
+                    :currency-code="proformaInvoice.currencyCode"
+                    :supersedes="proformaInvoice.supersedes"
+                    :superseded-by="proformaInvoice.supersededBy"
+                    :order-changed-difference="proformaInvoice.orderChangedDifference"
+                />
 
                 <div class="id-summary">
                     <div class="id-summary-card">
@@ -148,6 +161,12 @@ function formatAmount(cents: number, currency: string): string {
                             >
                                 This proforma invoice is cancelled.
                             </p>
+                            <p
+                                v-else-if="proformaInvoice.status === 'superseded'"
+                                class="id-pay-note"
+                            >
+                                This version was replaced and cannot be paid.
+                            </p>
                             <p v-else class="id-pay-note">
                                 Pay this proforma invoice any time — independent of the order it
                                 came from.
@@ -155,7 +174,8 @@ function formatAmount(cents: number, currency: string): string {
                             <MvButton
                                 v-if="
                                     proformaInvoice.status === 'paid' ||
-                                    proformaInvoice.status === 'cancelled'
+                                    proformaInvoice.status === 'cancelled' ||
+                                    proformaInvoice.status === 'superseded'
                                 "
                                 variant="primary"
                                 size="md"
@@ -172,11 +192,14 @@ function formatAmount(cents: number, currency: string): string {
 
                         <div class="id-details-card">
                             <h2 class="id-section-title">Proforma invoice details</h2>
+                            <ProformaInvoiceSellerRows :seller="proformaInvoice.seller" />
                             <div class="id-detail-row">
-                                <span>Organization</span>
-                                <span class="id-detail-val">{{
-                                    proformaInvoice.organizationId
-                                }}</span>
+                                <span>Version</span>
+                                <span class="id-detail-val">{{ proformaInvoice.version }}</span>
+                            </div>
+                            <div v-if="pdfUrl" class="id-detail-row">
+                                <span>Document</span>
+                                <a :href="pdfUrl" target="_blank" rel="noopener">Download PDF</a>
                             </div>
                             <div class="id-detail-row">
                                 <span>Currency</span>

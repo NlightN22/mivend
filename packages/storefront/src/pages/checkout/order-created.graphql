@@ -25,7 +25,14 @@ query OrderCreated($code: String!) {
         items {
             id
             number
+            version
             status
+            document {
+                status
+                asset {
+                    source
+                }
+            }
         }
     }
 }

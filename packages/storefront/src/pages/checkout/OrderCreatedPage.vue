@@ -7,6 +7,8 @@ import { shopApi } from '../../api/client';
 import { useAuthStore } from '../../stores/auth';
 import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
 import { describeOrderCreated, PAYMENT_LABELS } from '../../utils/orderCreatedText';
+import ProformaInvoiceVersionBadge from '../proforma-invoices/ProformaInvoiceVersionBadge.vue';
+import { proformaDocumentUrl } from '../../utils/checkoutPolicy';
 import { OrderCreatedDocument, type OrderCreatedQuery } from '../../api/generated/graphql';
 
 const route = useRoute();
@@ -60,7 +62,11 @@ const placedAt = computed(() =>
 function proformaInvoiceHref(id: string): string {
     return router.resolve({ path: `/proforma-invoices/${id}`, query: { print: '1' } }).href;
 }
-const proformaInvoices = computed(() => data.value?.myProformaInvoices.items ?? []);
+const proformaInvoices = computed(() =>
+    (data.value?.myProformaInvoices.items ?? [])
+        .filter(i => i.status !== 'superseded')
+        .map(i => ({ ...i, href: proformaDocumentUrl(i) ?? proformaInvoiceHref(i.id) })),
+);
 
 async function load(): Promise<void> {
     if (!code.value) {
@@ -130,12 +136,13 @@ onMounted(load);
                     <a
                         v-for="proformaInvoice in proformaInvoices"
                         :key="proformaInvoice.id"
-                        :href="proformaInvoiceHref(proformaInvoice.id)"
+                        :href="proformaInvoice.href"
                         target="_blank"
                         rel="noopener"
                         class="oc-btn oc-btn--secondary"
-                        >Print proforma invoice {{ proformaInvoice.number }}</a
-                    >
+                        >Print proforma invoice {{ proformaInvoice.number }}
+                        <ProformaInvoiceVersionBadge :version="proformaInvoice.version"
+                    /></a>
                     <RouterLink to="/catalog" class="oc-btn oc-btn--ghost"
                         >Continue shopping</RouterLink
                     >
