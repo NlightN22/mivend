@@ -5232,9 +5232,9 @@ export type CompleteOnlinePaymentMutation = {
         | { __typename: 'OrderStateTransitionError'; errorCode: ErrorCode; message: string }
         | {
               __typename: 'PaymentDeclinedError';
-              paymentErrorMessage: string;
               errorCode: ErrorCode;
               message: string;
+              paymentErrorMessage: string;
           }
         | { __typename: 'PaymentFailedError'; errorCode: ErrorCode; message: string };
 };

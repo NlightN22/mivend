@@ -3814,7 +3814,7 @@ export type Mutation = {
     cancelOrderAsStaff: OrderCancelResult;
     cancelPayment: CancelPaymentResult;
     confirmOrder: Array<Reservation>;
-    /** Marks the order's cash or bank-transfer payment as received (Settled); a repeat is a no-op. */
+    /** Marks the order's cash or bank-transfer payment (or the one given by paymentId) as received (Settled), recording who and when; a repeat is a no-op. */
     confirmPaymentReceived: Order;
     /** Create a new Administrator */
     createAdministrator: Administrator;
