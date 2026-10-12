@@ -69,14 +69,16 @@ export async function createConfirmedOrder(
             transitionOrderToState(id: $id, state: "ArrangingPayment") {
                 __typename
                 ... on Order { code }
-                ... on OrderStateTransitionError { errorCode message }
+                ... on OrderStateTransitionError { errorCode message transitionError }
             }
         }`,
         { id: orderId },
         token,
     );
     if (transition.data.transitionOrderToState.__typename !== 'Order') {
-        throw new Error(`Could not move order ${orderId} to ArrangingPayment`);
+        throw new Error(
+            `Could not move order ${orderId} to ArrangingPayment: ${JSON.stringify(transition.data.transitionOrderToState)}`,
+        );
     }
 
     const payment = await adminGql<{
