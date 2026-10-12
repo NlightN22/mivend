@@ -44,6 +44,10 @@ query ActiveOrder {
                     manufacturer {
                         name
                     }
+                    packagingLevels {
+                        name
+                        ratioToBase
+                    }
                 }
             }
         }

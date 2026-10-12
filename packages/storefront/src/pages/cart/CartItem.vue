@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { IconPackage } from '@tabler/icons-vue';
 import { MvStatusBadge, MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
+import { assetUrl } from '../../composables/assetUrl';
+import { useFavoritesStore } from '../../stores/favorites';
 import { useCartStore, type CartLine } from '../../stores/cart';
 import CartLinePrice from '../../components/CartLinePrice.vue';
 import { brandOf } from '../../utils/brand';
 import { usePackagesOnly } from '../../composables/usePackagesOnly';
-import { baseToPacks, packsToBase, salesUnitOf } from '../../composables/useSalesUnit';
+import {
+    baseToPacks,
+    nearestPackOf,
+    packsToBase,
+    salesUnitOf,
+} from '../../composables/useSalesUnit';
 import { formatTierValue } from '../../utils/discount';
 import { discountLineReason, discountTierReachedReason } from '../../utils/discountMessages';
 
@@ -13,6 +21,7 @@ const props = defineProps<{ line: CartLine; checked: boolean }>();
 const emit = defineEmits<{ 'update:checked': [value: boolean] }>();
 
 const cartStore = useCartStore();
+const favoritesStore = useFavoritesStore();
 const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
 void loadPackagesOnly();
 const salesUnit = computed(() =>
@@ -21,6 +30,16 @@ const salesUnit = computed(() =>
 const stepperQty = computed(() =>
     salesUnit.value ? baseToPacks(qty.value, salesUnit.value) : qty.value,
 );
+const packInfo = computed(() =>
+    nearestPackOf(
+        props.line.productVariant.customFields,
+        props.line.productVariant.product.packagingLevels,
+    ),
+);
+const isFavorited = computed(() => favoritesStore.has(props.line.productVariant.id));
+function toggleFavorite(): void {
+    favoritesStore.toggle(props.line.productVariant.id, props.line.productVariant.product.id);
+}
 const qty = ref(props.line.quantity);
 const confirmingRemove = ref(false);
 
@@ -82,15 +101,20 @@ function cancelRemove(): void {
 
 <template>
     <article class="cart-item">
-        <input
-            type="checkbox"
+        <MvCheckbox
             class="cart-item__check"
-            :checked="checked"
-            @change="emit('update:checked', ($event.target as HTMLInputElement).checked)"
+            :model-value="checked"
+            @update:model-value="(value: boolean) => emit('update:checked', value)"
         />
 
         <div class="cart-item__img">
-            <span class="cart-item__img-icon" aria-hidden="true" />
+            <img
+                v-if="line.featuredAsset"
+                :src="assetUrl(line.featuredAsset.preview, 'thumb')"
+                :alt="line.productVariant.product.name"
+                loading="lazy"
+            />
+            <IconPackage v-else :size="32" stroke-width="1.6" aria-hidden="true" />
         </div>
 
         <div class="cart-item__info">
@@ -104,6 +128,7 @@ function cancelRemove(): void {
                 <span>SKU {{ line.productVariant.sku }}</span>
                 <span v-if="brand">{{ brand }}</span>
                 <span v-if="totalWeightKg != null">{{ totalWeightKg.toLocaleString() }} kg</span>
+                <span v-if="packInfo">Pack {{ packInfo.baseQty }} pcs.</span>
             </div>
             <div class="cart-item__pills">
                 <MvStockBadge :variant="stockVariant" />
@@ -115,8 +140,13 @@ function cancelRemove(): void {
                 </MvStatusBadge>
             </div>
             <div class="cart-item__links">
-                <button type="button">Favorites</button>
-                <button type="button">Analogs</button>
+                <MvFavoriteButton :is-favorited="isFavorited" @toggle="toggleFavorite" />
+                <MvTooltip placement="bottom">
+                    <template #trigger>
+                        <MvButton variant="ghost" size="sm">Analogs</MvButton>
+                    </template>
+                    Analogs are not available yet. Coming later.
+                </MvTooltip>
             </div>
         </div>
 
@@ -146,12 +176,8 @@ function cancelRemove(): void {
         <div class="cart-item__qty">
             <div v-if="confirmingRemove" class="cart-item__remove-confirm">
                 <span>Remove?</span>
-                <button class="cart-item__remove-confirm-yes" type="button" @click="confirmRemove">
-                    Yes
-                </button>
-                <button class="cart-item__remove-confirm-no" type="button" @click="cancelRemove">
-                    No
-                </button>
+                <MvButton variant="danger" size="sm" @click="confirmRemove">Yes</MvButton>
+                <MvButton variant="secondary" size="sm" @click="cancelRemove">No</MvButton>
             </div>
             <MvQtyStepper
                 v-else
@@ -205,13 +231,14 @@ function cancelRemove(): void {
     border: 1px solid #edf2ef;
     display: grid;
     place-items: center;
+    color: #8fb5a6;
+    overflow: hidden;
 }
-.cart-item__img-icon {
-    display: block;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #b8e8d8, #d8f4ea);
+.cart-item__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 18px;
 }
 
 .cart-item__info {
@@ -254,22 +281,8 @@ function cancelRemove(): void {
 
 .cart-item__links {
     display: flex;
+    align-items: center;
     gap: 12px;
-    color: #66736e;
-    font-size: 13px;
-    font-weight: 800;
-}
-.cart-item__links button {
-    border: none;
-    background: transparent;
-    padding: 0;
-    color: inherit;
-    font-size: inherit;
-    font-weight: inherit;
-    cursor: pointer;
-}
-.cart-item__links button:hover {
-    color: #008a64;
 }
 
 .cart-item__unit,
@@ -295,38 +308,6 @@ function cancelRemove(): void {
     font-weight: 800;
     color: #66736e;
 }
-.cart-item__remove-confirm-yes {
-    height: 32px;
-    padding: 0 10px;
-    border: none;
-    border-radius: 10px;
-    background: #fff0ee;
-    color: #f04438;
-    font-size: 12px;
-    font-weight: 900;
-    cursor: pointer;
-    font-family: inherit;
-}
-.cart-item__remove-confirm-yes:hover {
-    background: #fde3e0;
-}
-.cart-item__remove-confirm-no {
-    height: 32px;
-    padding: 0 10px;
-    border: none;
-    border-radius: 10px;
-    background: #f4faf7;
-    color: #66736e;
-    font-size: 12px;
-    font-weight: 900;
-    cursor: pointer;
-    font-family: inherit;
-}
-.cart-item__remove-confirm-no:hover {
-    background: #e2f8ef;
-    color: #008a64;
-}
-
 @media (max-width: 900px) {
     .cart-item {
         grid-template-columns: 28px 72px minmax(0, 1fr) auto;

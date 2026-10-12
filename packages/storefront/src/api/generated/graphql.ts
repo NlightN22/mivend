@@ -5017,6 +5017,7 @@ export type ActiveOrderQuery = {
                     name: string;
                     slug: string;
                     manufacturer?: { name?: string | null } | null;
+                    packagingLevels: Array<{ name: string; ratioToBase: number }>;
                 };
             };
         }>;
@@ -6172,6 +6173,10 @@ export const ActiveOrderDocument = new TypedDocumentString(`
           slug
           manufacturer {
             name
+          }
+          packagingLevels {
+            name
+            ratioToBase
           }
         }
       }
