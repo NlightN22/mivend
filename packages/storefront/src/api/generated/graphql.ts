@@ -2976,8 +2976,6 @@ export enum Permission {
     ReadFacet = 'ReadFacet',
     /** Read the raw floor-price threshold for a variant (financial data, layer 4 redaction) */
     ReadFloorPrice = 'ReadFloorPrice',
-    /** Read proforma invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveProformaInvoiceScope) */
-    ReadProformaInvoice = 'ReadProformaInvoice',
     /** Grants permission to read Order */
     ReadOrder = 'ReadOrder',
     /** Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope) */
@@ -2986,6 +2984,8 @@ export enum Permission {
     ReadPaymentMethod = 'ReadPaymentMethod',
     /** Grants permission to read Product */
     ReadProduct = 'ReadProduct',
+    /** Read proforma invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveProformaInvoiceScope) */
+    ReadProformaInvoice = 'ReadProformaInvoice',
     /** Grants permission to read Promotion */
     ReadPromotion = 'ReadPromotion',
     /** Grants permission to read Seller */
@@ -4725,62 +4725,6 @@ export type FavoriteProductsQuery = {
     };
 };
 
-export type MyAdvanceBalanceQueryVariables = Exact<{ [key: string]: never }>;
-
-export type MyAdvanceBalanceQuery = {
-    myAdvanceBalance: Array<{ amount: number; currencyCode: string }>;
-};
-
-export type ProformaInvoiceDetailQueryVariables = Exact<{
-    id: Scalars['ID']['input'];
-}>;
-
-export type ProformaInvoiceDetailQuery = {
-    proformaInvoice?: {
-        id: string;
-        number: string;
-        orderId: string;
-        organizationId: string;
-        amount: number;
-        currencyCode: string;
-        status: string;
-        order: { id: string; code: string };
-        lines: Array<{
-            quantity: number;
-            unitPriceWithTax: number;
-            linePriceWithTax: number;
-            productVariant: { name: string; sku: string };
-        }>;
-    } | null;
-};
-
-export type MyProformaInvoicesQueryVariables = Exact<{
-    options?: InputMaybe<ProformaInvoiceListOptions>;
-}>;
-
-export type MyProformaInvoicesQuery = {
-    myProformaInvoices: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            number: string;
-            orderId: string;
-            organizationId: string;
-            amount: number;
-            currencyCode: string;
-            status: string;
-            order: { id: string; code: string };
-        }>;
-    };
-};
-
-export type PayProformaInvoiceMutationVariables = Exact<{
-    proformaInvoiceId: Scalars['ID']['input'];
-    status: Scalars['String']['input'];
-}>;
-
-export type PayProformaInvoiceMutation = { payProformaInvoice: { id: string; status: string } };
-
 export type CancelOrderMutationVariables = Exact<{
     code: Scalars['String']['input'];
 }>;
@@ -4946,6 +4890,62 @@ export type PaymentDetailQuery = {
                 status: string;
                 order: { id: string; code: string };
             } | null;
+        }>;
+    } | null;
+};
+
+export type MyAdvanceBalanceQueryVariables = Exact<{ [key: string]: never }>;
+
+export type MyAdvanceBalanceQuery = {
+    myAdvanceBalance: Array<{ amount: number; currencyCode: string }>;
+};
+
+export type MyProformaInvoicesQueryVariables = Exact<{
+    options?: InputMaybe<ProformaInvoiceListOptions>;
+}>;
+
+export type MyProformaInvoicesQuery = {
+    myProformaInvoices: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            number: string;
+            orderId: string;
+            organizationId: string;
+            amount: number;
+            currencyCode: string;
+            status: string;
+            order: { id: string; code: string };
+        }>;
+    };
+};
+
+export type PayProformaInvoiceMutationVariables = Exact<{
+    proformaInvoiceId: Scalars['ID']['input'];
+    status: Scalars['String']['input'];
+}>;
+
+export type PayProformaInvoiceMutation = { payProformaInvoice: { id: string; status: string } };
+
+export type ProformaInvoiceDetailQueryVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type ProformaInvoiceDetailQuery = {
+    proformaInvoice?: {
+        id: string;
+        number: string;
+        orderId: string;
+        organizationId: string;
+        amount: number;
+        currencyCode: string;
+        status: string;
+        order: { id: string; code: string };
+        lines: Array<{
+            quantity: number;
+            unitPriceWithTax: number;
+            linePriceWithTax: number;
+            productVariant: { name: string; sku: string };
         }>;
     } | null;
 };
@@ -5852,74 +5852,6 @@ export const FavoriteProductsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<FavoriteProductsQuery, FavoriteProductsQueryVariables>;
-export const MyAdvanceBalanceDocument = new TypedDocumentString(`
-    query MyAdvanceBalance {
-  myAdvanceBalance {
-    amount
-    currencyCode
-  }
-}
-    `) as unknown as TypedDocumentString<MyAdvanceBalanceQuery, MyAdvanceBalanceQueryVariables>;
-export const ProformaInvoiceDetailDocument = new TypedDocumentString(`
-    query ProformaInvoiceDetail($id: ID!) {
-  proformaInvoice(id: $id) {
-    id
-    number
-    orderId
-    organizationId
-    amount
-    currencyCode
-    status
-    order {
-      id
-      code
-    }
-    lines {
-      quantity
-      unitPriceWithTax
-      linePriceWithTax
-      productVariant {
-        name
-        sku
-      }
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<
-    ProformaInvoiceDetailQuery,
-    ProformaInvoiceDetailQueryVariables
->;
-export const MyProformaInvoicesDocument = new TypedDocumentString(`
-    query MyProformaInvoices($options: ProformaInvoiceListOptions) {
-  myProformaInvoices(options: $options) {
-    items {
-      id
-      number
-      orderId
-      organizationId
-      amount
-      currencyCode
-      status
-      order {
-        id
-        code
-      }
-    }
-    totalItems
-  }
-}
-    `) as unknown as TypedDocumentString<MyProformaInvoicesQuery, MyProformaInvoicesQueryVariables>;
-export const PayProformaInvoiceDocument = new TypedDocumentString(`
-    mutation PayProformaInvoice($proformaInvoiceId: ID!, $status: String!) {
-  payProformaInvoice(proformaInvoiceId: $proformaInvoiceId, status: $status) {
-    id
-    status
-  }
-}
-    `) as unknown as TypedDocumentString<
-    PayProformaInvoiceMutation,
-    PayProformaInvoiceMutationVariables
->;
 export const CancelOrderDocument = new TypedDocumentString(`
     mutation CancelOrder($code: String!) {
   cancelOrder(code: $code) {
@@ -6108,6 +6040,74 @@ export const PaymentDetailDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<PaymentDetailQuery, PaymentDetailQueryVariables>;
+export const MyAdvanceBalanceDocument = new TypedDocumentString(`
+    query MyAdvanceBalance {
+  myAdvanceBalance {
+    amount
+    currencyCode
+  }
+}
+    `) as unknown as TypedDocumentString<MyAdvanceBalanceQuery, MyAdvanceBalanceQueryVariables>;
+export const MyProformaInvoicesDocument = new TypedDocumentString(`
+    query MyProformaInvoices($options: ProformaInvoiceListOptions) {
+  myProformaInvoices(options: $options) {
+    items {
+      id
+      number
+      orderId
+      organizationId
+      amount
+      currencyCode
+      status
+      order {
+        id
+        code
+      }
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<MyProformaInvoicesQuery, MyProformaInvoicesQueryVariables>;
+export const PayProformaInvoiceDocument = new TypedDocumentString(`
+    mutation PayProformaInvoice($proformaInvoiceId: ID!, $status: String!) {
+  payProformaInvoice(proformaInvoiceId: $proformaInvoiceId, status: $status) {
+    id
+    status
+  }
+}
+    `) as unknown as TypedDocumentString<
+    PayProformaInvoiceMutation,
+    PayProformaInvoiceMutationVariables
+>;
+export const ProformaInvoiceDetailDocument = new TypedDocumentString(`
+    query ProformaInvoiceDetail($id: ID!) {
+  proformaInvoice(id: $id) {
+    id
+    number
+    orderId
+    organizationId
+    amount
+    currencyCode
+    status
+    order {
+      id
+      code
+    }
+    lines {
+      quantity
+      unitPriceWithTax
+      linePriceWithTax
+      productVariant {
+        name
+        sku
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ProformaInvoiceDetailQuery,
+    ProformaInvoiceDetailQueryVariables
+>;
 export const ActiveCustomerForAuthDocument = new TypedDocumentString(`
     query ActiveCustomerForAuth {
   activeCustomer {
