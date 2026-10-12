@@ -72,6 +72,9 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
 
 ## Invoices
 
+Terminology (owner decision, #223): our payment request is a **proforma invoice** (code still `Invoice` until
+#223 lands); "sales invoice" is reserved for the ERP's fact of sale (1C realization), which mivend never issues.
+
 - Invoices (`Invoice`, one per distinct line organization) are created for the payment methods that
   need them: pay-by-invoice and online payment. Orders on deferred terms get no automatic invoices:
   the ERP holds the accounting documents (sales documents after its own distribution, settlements).

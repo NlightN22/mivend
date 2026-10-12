@@ -683,7 +683,8 @@ until #222 ships, the sections that follow describe the current behavior.
   prepayment, or a one-off manager confirmation. The limit is a hidden control, not a payment method.
 - An order occupies the limit until it is paid (cash accepted, invoices paid, card payment received); a paid order
   does not count. How shipment/realization replaces the preliminary estimate is a separate discussion.
-- An invoice is a document of the order and can be requested on any form and under any terms (#206).
+- An invoice (a proforma invoice, renamed in #223) is a document of the order and can be requested on any form and
+  under any terms (#206). Order of work: #222, #223, #206.
 
 | Limit state | Form | Placement | Goes to ERP | Counts against limit |
 | --- | --- | --- | --- | --- |
