@@ -13,7 +13,9 @@ export { withAggregateLock } from './aggregate-lock';
 export { CREDIT_LIMIT_EXCEEDED_KEY } from './creditLimit';
 export {
     AWAITING_MANAGER_KEY,
+    CARD_AMOUNT_CHANGED_CODE,
     CREDIT_ACKNOWLEDGED_KEY,
+    EXPECTED_AMOUNT_KEY,
     DEFAULT_PREPAYMENT_RESERVE_DAYS,
     PAYMENT_FORMS,
     PAYMENT_FORM_BY_METHOD_CODE,
@@ -74,7 +76,9 @@ export {
     API_KEY_MIN_LENGTH,
     extractApiKey,
     isApiKeyUsable,
+    ERP_CALLBACK_DEV_PLACEHOLDER_KEY,
     isRestSurfaceEnabled,
+    productionRejectValues,
     verifyApiKey,
     type ApiKeyHeaders,
     type ApiKeyOptions,

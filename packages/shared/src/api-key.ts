@@ -11,6 +11,13 @@ export interface ApiKeyOptions {
     rejectValues?: readonly string[];
 }
 
+// Dev placeholder keys are refused only when NODE_ENV=production; other contours keep their local defaults.
+export function productionRejectValues(...placeholders: string[]): string[] {
+    return process.env.NODE_ENV === 'production' ? placeholders : [];
+}
+
+export const ERP_CALLBACK_DEV_PLACEHOLDER_KEY = 'dev-callback-key-change-me-0000';
+
 function first(value: string | string[] | undefined): string | undefined {
     return Array.isArray(value) ? value[0] : value;
 }
