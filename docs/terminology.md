@@ -11,8 +11,6 @@ Fixed vocabulary for documents and payments. Use these terms in code, UI, docs a
 | **Payment** | Money received: bank payment, cash receipt, card payment. | payer / ERP / acquirer | by origin |
 | **Sales return / credit note** | A return from the customer. | ERP | ERP |
 
-- The ERP's cross-document receivable fact may travel on a neutral `SettlementDocument` transport with a raw
-  ERP `documentType`; mivend maps it to its own term on receipt (a realization becomes a `SalesInvoice`).
 - A proforma invoice is not a sales invoice and never becomes one: the sale is the ERP's fact.
 
 ## The word "invoice" alone
