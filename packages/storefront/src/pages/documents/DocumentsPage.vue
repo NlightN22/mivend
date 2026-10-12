@@ -47,8 +47,8 @@ const stats = computed(() => [
                 <div>
                     <h1 class="documents-page__title">Documents</h1>
                     <p class="documents-page__subtitle">
-                        Proforma invoices, contracts, returns and reconciliation reports linked to your
-                        account.
+                        Proforma invoices, contracts, returns and reconciliation reports linked to
+                        your account.
                     </p>
                 </div>
             </div>

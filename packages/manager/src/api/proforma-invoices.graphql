@@ -38,7 +38,10 @@ query ProformaInvoiceViewCounts($counterpartyId: ID) {
     ) {
         totalItems
     }
-    paid: visibleProformaInvoices(options: { take: 0, status: "paid" }, counterpartyId: $counterpartyId) {
+    paid: visibleProformaInvoices(
+        options: { take: 0, status: "paid" }
+        counterpartyId: $counterpartyId
+    ) {
         totalItems
     }
     cancelled: visibleProformaInvoices(

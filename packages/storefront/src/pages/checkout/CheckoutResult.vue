@@ -47,7 +47,10 @@ const stateConfig: Record<NonNullable<ResultState>, StateConfig> = {
                 primary: true,
                 handler: () => checkoutStore.setResultState(null),
             },
-            { label: 'Generate proforma invoice', handler: () => checkoutStore.setResultState(null) },
+            {
+                label: 'Generate proforma invoice',
+                handler: () => checkoutStore.setResultState(null),
+            },
             { label: 'Back to order', handler: () => checkoutStore.setResultState(null) },
         ],
     },
