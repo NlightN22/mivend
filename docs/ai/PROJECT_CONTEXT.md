@@ -18,11 +18,11 @@ Updated: 2026-10-12 12:00
 ## #222 stage 2a: placement policy for every payment form (2026-10-12, backend done, not yet audited)
 - `deferred-payment` method removed; forms are `cash` / `offline-terms` (bank transfer) / `online-stub` (card). One pure matrix `decidePlacement` + `CreditPlacementService.place` (lock `credit-exposure:<counterparty>`) store `Payment.metadata.placement` (route, countsAgainstLimit, reserveDays); reservation reads the route (`paymentClassification` and `reservationTtlDays` removed). Details and decisions: `docs/payments.md` "Stage 2a done".
 - New: `BranchSettings.prepaymentReserveDays` (default 3), mutation `confirmPaymentReceived` + permission `ConfirmPaymentReceived`, shop `deferredCreditPreview` extended. Migrations 1791492000000/1791493000000 (synchronize contours: apply the data SQL by hand).
-- Storefront follow-ups (next run): checkout forms cash/bank-transfer/card (rename `'invoice'`/`'deferred'`), send `creditLimitAcknowledged` in payment metadata, show `payableCardAmount` and `acknowledgementRequired`.
+- Stage 2b (storefront checkout, done): forms from `availableForms`, acknowledgement for cash/bank transfer, card shows `payableCardAmount`, bank transfer opens a print tab per proforma invoice (`?print=1`), cash shows a waiting-for-confirmation state. Over-limit card orders are cured by payment (route `after-payment`). Not yet audited; visual check pending. Details: `docs/payments.md` "Stage 2b done".
 
 ## #222 stage 1: limit exposure by payment fact (2026-10-12, done, not yet audited; stages 2+ open)
 - `OpenDeferredExposureService` counts any unpaid unconfirmed order (any method); a Settled non-`deferred-payment` payment frees it; legacy deferred keeps counting. Details: `docs/payments.md` "Target model".
-- `BranchSettings.allowExceedingCreditLimit` (default off, migration 1791489000000, manager Branch settings "Credit" section) is returned by `DeferredCreditAssessmentService.assess`; checkout does not act on it yet (stage 2). Manager `generated/graphql.ts` was edited by hand (codegen needs the dev server): re-run `codegen` when convenient.
+- `BranchSettings.allowExceedingCreditLimit` (default off, migration 1791489000000, manager Branch settings "Credit" section) is returned by `DeferredCreditAssessmentService.assess`; checkout does not act on it yet (stage 2). Manager and storefront `generated/graphql.ts` were regenerated against the live server in stage 2b.
 
 ## #194 reserve deadline / order cancel (2026-10-11, DONE: audited, pushed, closed)
 

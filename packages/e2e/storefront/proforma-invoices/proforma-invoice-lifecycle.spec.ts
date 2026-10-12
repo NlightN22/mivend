@@ -61,7 +61,7 @@ test.describe('Proforma invoice lifecycle: order split, payment, status, filters
         }
     });
 
-    test('offline-terms checkout leaves proforma invoices "issued" (deferred payment, not yet settled)', async ({
+    test('offline-terms checkout leaves proforma invoices "issued" (unpaid until a payment fact arrives)', async ({
         page,
     }) => {
         await buildOrderAcrossOrganizations(page);

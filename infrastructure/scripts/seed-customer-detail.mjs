@@ -91,7 +91,7 @@ async function shopLogin(username, password) {
 // 'online-succeeded' -> Settled order, ProformaInvoice(s) 'paid', real PaymentAttempt 'success'
 // 'online-pending'   -> Authorized order, ProformaInvoice(s) 'issued', real PaymentAttempt 'pending'
 // 'online-failed'    -> Declined order, ProformaInvoice(s) stay 'pending' (never touched), PaymentAttempt 'failed'
-// 'offline-terms'    -> Authorized order, ProformaInvoice(s) 'issued', no PaymentAttempt (deferred payment)
+// 'offline-terms'    -> Authorized order, ProformaInvoice(s) 'issued', no PaymentAttempt (bank transfer, unpaid)
 async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminToken) {
     await shopGql(
         `mutation { transitionOrderToState(state: "AddingItems") { __typename } }`,

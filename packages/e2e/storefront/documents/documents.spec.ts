@@ -50,7 +50,7 @@ async function waitForDocumentReady(
 // `myDocuments` Shop API query in plugin-documents. Covers all 4 document
 // types and both real data sources: ERP push (return/reconciliation, seeded
 // directly via the erp-import REST endpoint) and Vendure-generated
-// (proforma invoice via a real deferred-payment checkout, contract via the Admin
+// (proforma invoice via a real bank-transfer checkout, contract via the Admin
 // mutation) — see docs/ai/PROJECT_CONTEXT.md "Documents Phase 1".
 test.describe('Documents page — all document types', () => {
     test('ERP-pushed return and reconciliation documents render with the correct type, number and a working download link', async ({
@@ -108,7 +108,7 @@ test.describe('Documents page — all document types', () => {
         await popup.close();
     });
 
-    test('a checkout with deferred payment generates a real, downloadable proforma invoice document', async ({
+    test('a bank-transfer checkout generates a real, downloadable proforma invoice document', async ({
         page,
     }) => {
         await clearCart(page);

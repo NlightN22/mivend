@@ -717,7 +717,7 @@ The checkout list below mixes a form (proforma invoice, online) with terms (defe
 `SENT_TO_ERP`/`RESERVED`), non-cancelled, not-too-old order of the counterparty counts until a payment of a method
 other than `deferred-payment` is `Settled`. Legacy `deferred-payment` payments (`Authorized` at placement, no money)
 keep counting. New branch setting `allowExceedingCreditLimit` (default off, manager portal Settings -> Branches) is
-exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; checkout does not use it yet (stage 2).
+exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront checkout uses it since stage 2b.
 
 **Stage 2a done (#222, backend only; storefront checkout UI is the next run):**
 
@@ -754,6 +754,28 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; checkout does n
   `acknowledgementRequired`, `payableCardAmount` (rubles) and `availableForms` (`cash`, `bank-transfer`, `card`).
 - Open: manager marking of a bank transfer does not create a `PaymentAttempt`; partial payments and allocating a card
   excess to older orders are later work.
+
+**Stage 2b done (#222, storefront checkout):**
+
+- Checkout lists the forms from `deferredCreditPreview.availableForms` (bank proforma invoice, card online, cash); the
+  preview is loaded on checkout open and re-fetched when the cart total changes. No `deferred-payment` code mapping
+  is left in the storefront.
+- Correction to the matrix: a card order that is over the limit is cured by its payment (excess + total). It is placed
+  `after-payment`, does not count against the limit, carries `creditLimitExceeded = false` and goes to the ERP once the
+  payment is Settled; it never falls back to manager confirmation. Cash and bank transfer keep the over-limit rule.
+- Over the limit (`acknowledgementRequired`) cash and bank transfer need the acknowledgement checkbox; when
+  `limitControlled` and not `allowExceedingCreditLimit` the checkout says the order will wait for manager
+  confirmation. The acknowledgement is sent as `creditLimitAcknowledged: true` in the `addPaymentToOrder` metadata.
+  A card does not ask for it.
+- Card path shows `payableCardAmount` ("To pay online") and, when it exceeds the order total, a note that the excess is
+  debt above the limit cleared together with the order.
+- After a bank-transfer placement one browser tab opens per non-cancelled proforma invoice of the order
+  (`/proforma-invoices/:id?print=1`, the detail page prints itself when loaded; sidebar hidden in print); the current
+  tab lands on the order-created page, which also lists a print link per invoice (popup blockers). Shop API
+  `ProformaInvoiceListOptions.orderCode` (additive) selects the invoices of one own order.
+- Cash: the order-created page shows "waiting for the manager to confirm receipt" until the manager marks the cash
+  received. Public payment metadata flag `awaitingManagerConfirmation` (route `manager-confirmation`) drives the
+  over-limit manager-wait notice.
 
 ### Credit limit on deferred orders
 

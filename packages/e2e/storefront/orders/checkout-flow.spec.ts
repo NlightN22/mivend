@@ -32,12 +32,12 @@ async function latestOrderState(page: Page): Promise<string | undefined> {
 // AddingItems for ANY payment method — CheckoutSummary.vue/PaymentStubPage.vue just
 // did a client-side router.push() with no mutation at all. myOrders correctly excludes
 // AddingItems/Cancelled, so a placed order silently never showed up in /orders despite
-// the UI claiming success. Fixed via cartStore.beginCheckout()/completeOfflinePayment()/
+// the UI claiming success. Fixed via cartStore.beginCheckout()/the order placement composable/
 // completeOnlinePayment() — see docs/ai/PROJECT_CONTEXT.md "checkout never actually
 // placed orders". These tests click the real checkout/payment-stub buttons (not gql())
 // so they exercise the exact code path that was broken.
 test.describe('Checkout places a real order (regression)', () => {
-    test('deferred payment moves the order out of AddingItems and it appears in /orders @smoke', async ({
+    test('cash payment moves the order out of AddingItems and it appears in /orders @smoke', async ({
         page,
     }) => {
         await clearCart(page);
@@ -45,10 +45,11 @@ test.describe('Checkout places a real order (regression)', () => {
 
         await page.goto('/checkout');
         await page.waitForLoadState('networkidle');
-        await page.getByRole('button', { name: /Deferred payment/i }).click();
-        await page.getByRole('button', { name: 'Confirm order' }).click();
+        await page.getByRole('button', { name: /^Cash/i }).click();
+        await page.getByRole('button', { name: 'Place order' }).click();
 
-        await expect(page).toHaveURL(/\/order-created\?method=deferred/, { timeout: 15000 });
+        await expect(page).toHaveURL(/\/order-created\?code=/, { timeout: 15000 });
+        await expect(page.getByText(/Waiting for the manager to confirm/).first()).toBeVisible();
 
         const state = await latestOrderState(page);
         expect(state).not.toBe('AddingItems');
@@ -70,10 +71,10 @@ test.describe('Checkout places a real order (regression)', () => {
 
         await page.goto('/checkout');
         await page.waitForLoadState('networkidle');
-        await page.getByRole('button', { name: /Bank proforma-invoice/i }).click();
+        await page.getByRole('button', { name: /Bank proforma invoice/i }).click();
         await page.getByRole('button', { name: 'Place order & get proforma invoice' }).click();
 
-        await expect(page).toHaveURL(/\/order-created\?method=proformaInvoice/, { timeout: 15000 });
+        await expect(page).toHaveURL(/\/order-created\?code=/, { timeout: 15000 });
 
         const state = await latestOrderState(page);
         expect(state).not.toBe('AddingItems');
@@ -87,7 +88,7 @@ test.describe('Checkout places a real order (regression)', () => {
 
         await page.goto('/checkout');
         await page.waitForLoadState('networkidle');
-        await page.getByRole('button', { name: /Online payment/i }).click();
+        await page.getByRole('button', { name: /Card online/i }).click();
         await page.getByRole('button', { name: 'Pay online →' }).click();
 
         await expect(page).toHaveURL(/\/payment-stub/, { timeout: 15000 });
@@ -109,7 +110,7 @@ test.describe('Checkout places a real order (regression)', () => {
 
         await page.goto('/checkout');
         await page.waitForLoadState('networkidle');
-        await page.getByRole('button', { name: /Online payment/i }).click();
+        await page.getByRole('button', { name: /Card online/i }).click();
         await page.getByRole('button', { name: 'Pay online →' }).click();
 
         await expect(page).toHaveURL(/\/payment-stub/, { timeout: 15000 });

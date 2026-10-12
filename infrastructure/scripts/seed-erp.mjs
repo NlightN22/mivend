@@ -465,9 +465,9 @@ async function main() {
     await ensureTaxSetup();
 
     // ShippingMethod ("pickup") and PaymentMethods (offline-terms, online-stub,
-    // deferred-payment) are no longer seeded here — each idempotently self-provisions at
+    // cash) are no longer seeded here — each idempotently self-provisions at
     // server boot from its own owning plugin (plugin-pickup-shipping, plugin-acquiring,
-    // plugin-online-payment, plugin-deferred-payment).
+    // plugin-online-payment).
 
     // Administrator accounts are Vendure system config, same carve-out as tax
     // zones/shipping/payment methods above — cannot go through erp-import.
@@ -913,7 +913,7 @@ async function main() {
             lastName: 'Frolov',
             password: 'Password123!',
         },
-        // Checkout credit control (#180): one buyer with a deferred-payment limit, one prepayment buyer.
+        // Checkout credit control (#180): one buyer with a credit limit, one prepayment buyer.
         {
             email: 'credit-limited@buyer.example',
             firstName: 'Credit',

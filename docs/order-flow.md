@@ -199,7 +199,7 @@ reservation — no divergent logic between "automatic" and "manual."
 classification. The placement policy stores `Payment.metadata.placement.route` (`erp-now`,
 `after-payment`, `manager-confirmation`) at checkout and `ReservationPaymentService` reads it:
 `erp-now` reserves at placement (TTL = `placement.reserveDays` for prepayment, else 7 days),
-`after-payment` (card) reserves once the payment is Settled (30 days), `manager-confirmation` and
+`after-payment` (card, also when over the limit: the payment covers the excess and cures the order) reserves once the payment is Settled (30 days), `manager-confirmation` (cash/bank transfer over the limit) and
 payments without a route (admin-created orders) wait in the confirmation queue (the global
 `autoReserveOnPlacement` switch now only affects orders without a route). See `docs/payments.md`.
 
