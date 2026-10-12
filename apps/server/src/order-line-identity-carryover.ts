@@ -8,8 +8,8 @@ export async function carryOverOrderLineIdentity(): Promise<void> {
     const production = process.env.NODE_ENV === 'production';
     const client = createDbClient();
     await client.connect();
-    try {
-        if (production) {
+    if (production) {
+        try {
             const { rows } = await client.query(
                 `SELECT to_regclass('order_line_identity') AS "name"`,
             );
@@ -18,8 +18,12 @@ export async function carryOverOrderLineIdentity(): Promise<void> {
                     'Table order_line_identity is missing: run migration:run (1791487000000-order-line-identity) before starting this process',
                 );
             }
-            return;
+        } finally {
+            await client.end();
         }
+        return;
+    }
+    try {
         await client.query('BEGIN');
         // Runs before Vendure bootstraps, so there is no TransactionalConnection for withAggregateLock.
         await client.query(
