@@ -76,7 +76,10 @@ and is never an idempotency key for a business entity.
   every existing `customFieldsUuid`, drops the column, and merges duplicate lines of carts in `AddingItems` (same
   variant and line custom fields, one list price and no adjustments, so the stored order totals stay exact; the
   oldest line and its uuid are kept). On the `synchronize` contours the same step runs before bootstrap
-  (`apps/server/src/order-line-identity-carryover.ts`), because `synchronize` would drop the column first.
+  (`apps/server/src/order-line-identity-carryover.ts`), because `synchronize` would drop the column first. In production the same module only checks that
+  `order_line_identity` exists and fails startup with a `migration:run` hint otherwise (the subscriber writes it on
+  every line insert); duplicate groups with an active reservation on any line are skipped, and the log reports
+  `mergedLines` and `skippedGroups`.
 - Done: `order.submitted`'s duplicate-publish guard (issue #199), in `OrderSubmittedBuilder.build()` via
   `OutboundGateway.hasActiveEntryForOrder`, with `OrderSubmittedListener.handle()` serializing the whole
   check-then-enqueue sequence on the same `reserve-order:<id>` advisory lock `order-contract.service.ts`'s

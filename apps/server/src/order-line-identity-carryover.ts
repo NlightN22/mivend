@@ -3,12 +3,23 @@ import { migrateOrderLineIdentity } from '@mivend/plugin-order-identity';
 import { createDbClient } from './db-client';
 
 // synchronize would drop order_line."customFieldsUuid" before anything could copy it (#221); this
-// runs migration 1791487000000's data step first on the synchronize contours. No-op once dropped.
+// runs migration 1791487000000's data step first on the synchronize contours; production only checks the table.
 export async function carryOverOrderLineIdentity(): Promise<void> {
-    if (process.env.NODE_ENV === 'production') return;
+    const production = process.env.NODE_ENV === 'production';
     const client = createDbClient();
     await client.connect();
     try {
+        if (production) {
+            const { rows } = await client.query(
+                `SELECT to_regclass('order_line_identity') AS "name"`,
+            );
+            if (!rows[0]?.name) {
+                throw new Error(
+                    'Table order_line_identity is missing: run migration:run (1791487000000-order-line-identity) before starting this process',
+                );
+            }
+            return;
+        }
         await client.query('BEGIN');
         // Runs before Vendure bootstraps, so there is no TransactionalConnection for withAggregateLock.
         await client.query(
@@ -24,7 +35,7 @@ export async function carryOverOrderLineIdentity(): Promise<void> {
                 client.query(sql).then(res => res.rows),
             );
             console.log(
-                `order_line_identity carried over, ${result.mergedLines} duplicate lines merged`,
+                `order_line_identity carried over, ${result.mergedLines} duplicate lines merged, ${result.skippedGroups} groups skipped`,
             );
         }
         await client.query('COMMIT');
