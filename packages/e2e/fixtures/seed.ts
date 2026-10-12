@@ -49,6 +49,17 @@ export const seedRecords = [
         },
     },
     {
+        type: 'contract' as const,
+        data: {
+            erpId: 'e2e-contract-001',
+            counterpartyErpId: E2E_COUNTERPARTY_ID,
+            name: 'E2E contract',
+            organizationId: 'e2e-org-001',
+            priceTypeId: 'WHOLESALE',
+            isActive: true,
+        },
+    },
+    {
         type: 'product' as const,
         data: {
             externalId: 'e2e-prod-001',
