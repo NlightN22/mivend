@@ -20,9 +20,10 @@ export class ErpPaymentReportedDto {
     @ApiProperty({
         required: false,
         description:
-            'Human document number of the ProformaInvoice (digits, optionally "-NN"). Reference ' +
-            'only: when given and it does not match the document, the payment is rejected.',
-        example: '1042-01',
+            'Human document number of the ProformaInvoice, stored form ("001234-01") or displayed ' +
+            'form with the instance-code hyphen ("001-234-01"). Reference only: when given and ' +
+            'it does not match the document, the payment is rejected.',
+        example: '001234-01',
     })
     proformaInvoiceNumber?: string;
 

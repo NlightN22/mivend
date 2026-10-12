@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
+import { normalizeDocumentNumber } from 'shared';
 
 import { PaymentChannel } from './entities/payment-attempt.entity';
 import { InboxService } from './inbox.service';
@@ -11,6 +12,9 @@ import {
 } from './payment-attempt.service';
 
 export class ProformaInvoiceReferenceError extends Error {}
+
+// Retryable: the payment fact may arrive before the document reaches this instance.
+export class UnknownProformaInvoiceError extends Error {}
 
 export interface IncomingPaymentPayload {
     // The ERP names a document by uuid (+ optional number); a branch reports the internal id.
@@ -68,13 +72,14 @@ export class PaymentInboxProcessorService {
             payload.proformaInvoiceUuid,
         );
         if (!document) {
-            throw new ProformaInvoiceReferenceError(
-                `ProformaInvoice with uuid ${payload.proformaInvoiceUuid} not found`,
+            throw new UnknownProformaInvoiceError(
+                `ProformaInvoice with uuid ${payload.proformaInvoiceUuid} not found on this instance`,
             );
         }
         if (
             payload.proformaInvoiceNumber !== undefined &&
-            payload.proformaInvoiceNumber !== document.number
+            normalizeDocumentNumber(payload.proformaInvoiceNumber) !==
+                normalizeDocumentNumber(document.number)
         ) {
             throw new ProformaInvoiceReferenceError(
                 `ProformaInvoice ${payload.proformaInvoiceUuid} has number ${document.number}, ` +

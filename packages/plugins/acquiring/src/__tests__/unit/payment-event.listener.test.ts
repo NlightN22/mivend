@@ -75,6 +75,21 @@ describe('PaymentEventListener', () => {
         });
     });
 
+    it('hashes identity fields only: the optional document number does not change the hash', () => {
+        const uuid = '8b1c7a0e-5d3f-4c1a-9a55-0d3f6f7a1c42';
+        eventBus.emit(
+            ErpPaymentReportedEvent,
+            new ErpPaymentReportedEvent(mockCtx, uuid, 1, 'success', 'ERP-EVT-2', '1042-01'),
+        );
+        eventBus.emit(
+            ErpPaymentReportedEvent,
+            new ErpPaymentReportedEvent(mockCtx, uuid, 1, 'success', 'ERP-EVT-2'),
+        );
+
+        const [first, second] = inboxService.enqueue.mock.calls;
+        expect(first[3]).toBe(second[3]);
+    });
+
     it('enqueues a BranchKassaPaymentEvent as provider="branch-kassa", channel="branch-kassa"', () => {
         eventBus.emit(
             BranchKassaPaymentEvent,

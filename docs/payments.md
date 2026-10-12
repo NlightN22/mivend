@@ -212,6 +212,7 @@ the async contract.
   own id for the payment fact — a resend is a safe no-op; the document is named by
   `proformaInvoiceUuid`, never the internal id). Also the simulation entry point until
   a real ERP integration exists.
+  Known gap: this endpoint has no guard or authentication of its own (no auth in the controller, none in the sync plugin); access control is not defined yet.
 - `provider: 'branch-kassa'` — no separate transport: a branch's existing `payment.recorded`
   outbox event (see "Flow: branch till (kassa) payment" below) carries optional `proformaInvoiceId`/
   `outcome` fields; Central's `CentralConsumer.handlePaymentRecorded` publishes

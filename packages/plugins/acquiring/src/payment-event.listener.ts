@@ -23,8 +23,10 @@ interface StoredPaymentPayload {
     externalReference?: string;
 }
 
+// Identity fields only: an optional, descriptive proformaInvoiceNumber must not change the hash.
 function hashPayload(payload: StoredPaymentPayload): string {
-    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+    const identity = { ...payload, proformaInvoiceNumber: undefined };
+    return createHash('sha256').update(JSON.stringify(identity)).digest('hex');
 }
 
 // Subscribes only — never calls PaymentAttemptService.payProformaInvoice directly (the

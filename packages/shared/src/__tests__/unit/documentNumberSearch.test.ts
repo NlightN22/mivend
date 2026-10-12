@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { documentNumberSearchTerm } from '../../documentNumberSearch';
+import { documentNumberSearchTerm, normalizeDocumentNumber } from '../../documentNumberSearch';
 
 describe('documentNumberSearchTerm', () => {
     it('strips a display dash so the stored digits-only value still matches', () => {
@@ -17,5 +17,13 @@ describe('documentNumberSearchTerm', () => {
     it('leaves a search with no leading-3-digit-dash pattern unchanged', () => {
         expect(documentNumberSearchTerm('abc')).toBe('%abc%');
         expect(documentNumberSearchTerm('0000002-01')).toBe('%0000002-01%');
+    });
+});
+
+describe('normalizeDocumentNumber', () => {
+    it('maps the displayed form to the stored one and leaves stored values alone', () => {
+        expect(normalizeDocumentNumber('001-234-01')).toBe('001234-01');
+        expect(normalizeDocumentNumber('001234-01')).toBe('001234-01');
+        expect(normalizeDocumentNumber('1042-01')).toBe('1042-01');
     });
 });

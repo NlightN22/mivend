@@ -681,7 +681,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         expect(unchanged.status).toBe('issued');
     });
 
-    it('an ERP payment fact naming an unknown proforma invoice uuid is dead-lettered, not retried', async () => {
+    it('an ERP payment fact naming an unknown proforma invoice uuid is retried, then dead-lettered once the budget is exhausted', async () => {
         await eventBus.publish(
             new ErpPaymentReportedEvent(
                 mockCtx,
@@ -691,15 +691,69 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
                 'erp-evt-unknown-uuid-1',
             ),
         );
+        const findRow = () =>
+            dataSource
+                .getRepository(TestIncomingPaymentEvent)
+                .findOneOrFail({ where: { providerEventId: 'erp-evt-unknown-uuid-1' } });
 
-        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
-            processed: 0,
-            failed: 1,
+        await processorService.processPendingEvents(mockCtx);
+        const afterFirst = await findRow();
+        expect(afterFirst.status).toBe('pending');
+        expect(afterFirst.attempts).toBe(1);
+
+        for (let i = 0; i < 4; i++) await processorService.processPendingEvents(mockCtx);
+        const exhausted = await findRow();
+        expect(exhausted.status).toBe('failed');
+        expect(exhausted.lastError).toContain('not found on this instance');
+    });
+
+    it('a payment fact that arrives before its proforma invoice is applied once the document exists', async () => {
+        const uuid = '11111111-1111-4111-8111-111111111111';
+        await eventBus.publish(
+            new ErpPaymentReportedEvent(mockCtx, uuid, 1, 'success', 'erp-evt-early-1'),
+        );
+        await processorService.processPendingEvents(mockCtx);
+
+        await dataSource.getRepository(TestProformaInvoice).save({
+            uuid,
+            orderId: 16,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 600,
+            currencyCode: 'RUB',
+            status: 'issued',
+            number: '001234-01',
         });
-        const row = await dataSource
-            .getRepository(TestIncomingPaymentEvent)
-            .findOneOrFail({ where: { providerEventId: 'erp-evt-unknown-uuid-1' } });
-        expect(row.status).toBe('failed');
+        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
+            processed: 1,
+            failed: 0,
+        });
+    });
+
+    it('the displayed document number (instance code with a hyphen) matches the stored one', async () => {
+        const proformaInvoice = await dataSource.getRepository(TestProformaInvoice).save({
+            orderId: 17,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 600,
+            currencyCode: 'RUB',
+            status: 'issued',
+            number: '001234-01',
+        });
+        await eventBus.publish(
+            new ErpPaymentReportedEvent(
+                mockCtx,
+                proformaInvoice.uuid,
+                1,
+                'success',
+                'erp-evt-display-number-1',
+                '001-234-01',
+            ),
+        );
+        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
+            processed: 1,
+            failed: 0,
+        });
     });
 });
 

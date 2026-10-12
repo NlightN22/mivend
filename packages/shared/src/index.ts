@@ -58,4 +58,4 @@ export {
     characteristicKeyFromFacetCode,
 } from './characteristicFacet';
 export { UuidEntity } from './uuid-entity';
-export { documentNumberSearchTerm } from './documentNumberSearch';
+export { documentNumberSearchTerm, normalizeDocumentNumber } from './documentNumberSearch';

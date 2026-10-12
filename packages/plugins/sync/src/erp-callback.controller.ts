@@ -9,7 +9,7 @@ import { ERP_PAYMENT_OUTCOMES, ErpPaymentReportedDto } from './dto/erp-payment-r
 import { ErpPaymentReportedEvent } from './erp-payment.events';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DOCUMENT_NUMBER_PATTERN = /^\d+(-\d+)?$/;
+const DOCUMENT_NUMBER_PATTERN = /^\d+(-\d+)*$/;
 
 @ApiTags('ERP Callback')
 @Controller('erp/callback')
@@ -73,7 +73,7 @@ export class ErpCallbackController {
             !DOCUMENT_NUMBER_PATTERN.test(payload.proformaInvoiceNumber)
         ) {
             throw new BadRequestException(
-                'proformaInvoiceNumber must be digits, optionally followed by -NN',
+                'proformaInvoiceNumber must be digits with optional hyphens (stored 001234-01 or displayed 001-234-01)',
             );
         }
         if (!ERP_PAYMENT_OUTCOMES.includes(payload.outcome)) {
