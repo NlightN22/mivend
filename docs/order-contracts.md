@@ -245,14 +245,30 @@ Priority, highest first (the first matching fact wins):
 - Whether marking an order for deletion also zeroes its reserve in the register automatically (expected: yes,
   "two in one"); if not, B must include A explicitly.
 
-## Deliberately out of scope (open questions)
+## Historical ERP orders without a mivend `orderUuid` (decided in #215, not yet implemented)
 
-- **Historical ERP orders without a mivend `orderUuid`** (created in the ERP by managers before mivend
-  existed): the ERP keeps sending `order-changed` for them. mivend does not need them now; they will be needed
-  so customers can view their own historical documents. No decision yet on linking them to customers/orders.
-  Until then the consumer ignores an `order-changed` without an `orderUuid` that matches no local order
-  (`erpOrderId`) as a `noop` at once, with the reason recorded; one carrying an unknown `orderUuid` still retries
-  within the usual 24 h budget (#211).
+Orders created in the ERP before mivend existed keep arriving as `order-changed` without an `orderUuid`.
+Today the consumer drops them as a `noop`. Decision: import them as real `Order` rows and mark them as external.
+
+- **Owner marker.** `Order` gets an origin flag (`isExternal`, or `origin` = `mivend` | `erp`), set once at
+  creation: an `order-changed` with no `orderUuid` and no local match by `erpOrderId` creates an external order.
+  It is not derived from `orderUuid` later, so adopting the order (writing our uuid back) does not lose it.
+- **Direct counterparty link.** `Order` gets its own `counterpartyId` (denormalized at creation). Visibility
+  (manager scope and the customer's own list) is computed from it, not through `Order -> Customer ->
+  Counterparty`. An external order needs no `Customer` (`Order.customer` is nullable).
+- **Waiting only for the counterparty.** If the counterparty is not imported yet, the raw ERP id is kept and the
+  order is attached when the counterparty arrives (same pending pattern as `assignedManagerId`), instead of
+  retrying inside the 24 h inbox budget. No wait for a `Customer` and none for another `order-changed`.
+- **Rules by owner.** External orders are read-only for mivend for now: no reserve release/matching from
+  `order-changed`, no reserve deadline auto-cancel, no `cancel-requested`, no customer-facing mutations, skipped by
+  customer notifications/emails that assume `order.customer`. Managing them is deliberately later.
+- **Credit control.** External orders that are not yet approved/closed must count toward the counterparty's
+  exposure like our own; verify that credit control counts by order state, not by a mivend-only field.
+- **Open for later.** Writing a mivend `orderUuid`/number back to the ERP needs a new event type
+  (`confirmed` would register a duplicate) and an ERP-side change; not required for showing history.
+- **Migration.** Backfill `counterpartyId` on existing orders from their customer's counterparty.
+
+## Deliberately out of scope (open questions)
 
 - Contracts with dedicated sub-limits (amount, term) inside the total credit limit, and contracts
   restricted to brands or positions. Credit limits stay counterparty-wide (see #48).
