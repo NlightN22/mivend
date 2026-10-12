@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     baseToPacks,
     nearestPackOf,
+    nextPackAbove,
     packsToBase,
     salesUnitOf,
 } from '../../composables/useSalesUnit';
@@ -52,5 +53,23 @@ describe('nearestPackOf', () => {
             baseQty: 5,
         });
         expect(nearestPackOf({}, [])).toBeNull();
+    });
+});
+
+describe('nextPackAbove', () => {
+    const levels = [
+        { name: 'pack', ratioToBase: 12 },
+        { name: 'box', ratioToBase: 48 },
+    ];
+
+    it('offers the smallest pack when sold in pieces', () => {
+        expect(nextPackAbove(null, levels, 1)?.baseQty).toBe(12);
+    });
+
+    it('skips the pack the item is already sold in', () => {
+        expect(nextPackAbove({ unitName: 'pack', unitRatioToBase: 12 }, levels, 12)?.baseQty).toBe(
+            48,
+        );
+        expect(nextPackAbove({ unitName: 'box', unitRatioToBase: 48 }, levels, 48)).toBeNull();
     });
 });

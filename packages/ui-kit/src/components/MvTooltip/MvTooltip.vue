@@ -3,10 +3,12 @@ import { ElTooltip } from 'element-plus';
 
 interface Props {
     placement?: 'top' | 'bottom' | 'left' | 'right';
+    trigger?: 'click' | 'hover';
 }
 
 withDefaults(defineProps<Props>(), {
     placement: 'bottom',
+    trigger: 'click',
 });
 </script>
 
@@ -14,7 +16,7 @@ withDefaults(defineProps<Props>(), {
     <ElTooltip
         :placement="placement"
         effect="light"
-        trigger="click"
+        :trigger="trigger"
         popper-class="mv-tooltip__popper"
     >
         <template #content>

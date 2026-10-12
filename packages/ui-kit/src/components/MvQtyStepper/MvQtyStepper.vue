@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { IconCheck } from '@tabler/icons-vue';
+import { IconCheck, IconX } from '@tabler/icons-vue';
 
 interface Props {
     modelValue: number;
@@ -26,8 +26,13 @@ const emit = defineEmits<{ 'update:modelValue': [n: number] }>();
 const draft = ref(String(props.modelValue));
 const parsedDraft = computed(() => (/^\d+$/.test(draft.value) ? Number(draft.value) : null));
 const dirty = computed(() => draft.value !== String(props.modelValue));
+const editing = computed(() => props.editable && dirty.value);
 const canConfirm = computed(
-    () => parsedDraft.value !== null && parsedDraft.value >= props.min && dirty.value,
+    () =>
+        parsedDraft.value !== null &&
+        parsedDraft.value >= props.min &&
+        parsedDraft.value % props.step === 0 &&
+        dirty.value,
 );
 
 watch(
@@ -65,6 +70,16 @@ function inc() {
         }"
     >
         <button
+            v-if="editing"
+            class="mv-qty-stepper__btn"
+            type="button"
+            aria-label="Cancel"
+            @click="revert"
+        >
+            <IconX :size="16" />
+        </button>
+        <button
+            v-else
             class="mv-qty-stepper__btn"
             type="button"
             :disabled="disabled || modelValue <= min"
@@ -82,17 +97,18 @@ function inc() {
             @keydown.esc.prevent="revert"
         />
         <span v-else class="mv-qty-stepper__val">{{ modelValue }}</span>
-        <button class="mv-qty-stepper__btn" type="button" :disabled="disabled" @click="inc">
-            +
-        </button>
         <button
-            v-if="editable && dirty"
+            v-if="editing"
             class="mv-qty-stepper__btn mv-qty-stepper__confirm"
             type="button"
+            aria-label="Confirm"
             :disabled="!canConfirm"
             @click="confirm"
         >
             <IconCheck :size="18" />
+        </button>
+        <button v-else class="mv-qty-stepper__btn" type="button" :disabled="disabled" @click="inc">
+            +
         </button>
     </div>
 </template>

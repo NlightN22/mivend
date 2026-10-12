@@ -43,6 +43,33 @@ export interface PackagingLevel {
     ratioToBase: number;
 }
 
+// The smallest pack strictly above the unit the item is sold in, so the same pack is never shown twice.
+export function nextPackAbove(
+    variant: SalesUnitVariant | null | undefined,
+    levels: PackagingLevel[],
+    soldRatio: number,
+): { name: string; ratio: number; baseQty: number } | null {
+    const candidates = [
+        ...(variant?.unitName && variant.unitRatioToBase
+            ? [{ name: variant.unitName, ratioToBase: variant.unitRatioToBase }]
+            : []),
+        ...levels,
+    ]
+        .filter(c => c.ratioToBase > soldRatio)
+        .sort((a, b) => a.ratioToBase - b.ratioToBase);
+    for (const c of candidates) {
+        const step = wholePackStep(c.ratioToBase);
+        if (step !== null) {
+            return {
+                name: c.name,
+                ratio: c.ratioToBase,
+                baseQty: Math.round(step * c.ratioToBase),
+            };
+        }
+    }
+    return null;
+}
+
 // The pack offered next to piece sale: the variant's own default unit, else the smallest level above 1.
 export function nearestPackOf(
     variant: SalesUnitVariant | null | undefined,

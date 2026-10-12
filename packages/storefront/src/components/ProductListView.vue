@@ -8,7 +8,7 @@ import { brandOf } from '../utils/brand';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 import { useMultiplicityEnforced } from '../composables/useMultiplicityEnforced';
 import { usePackagesOnly } from '../composables/usePackagesOnly';
-import { baseToPacks, nearestPackOf, packsToBase, salesUnitOf } from '../composables/useSalesUnit';
+import { baseToPacks, nextPackAbove, packsToBase, salesUnitOf } from '../composables/useSalesUnit';
 
 const props = defineProps<{
     items: ProductItem[];
@@ -61,7 +61,7 @@ function unitView(p: ProductItem): {
         factor: unit.ratio,
         step: unit.packStep,
         multiplicity: unit.packStep > 1 ? `${unit.packStep} ${unit.name}` : '—',
-        note: `= ${packsToBase(1, unit)} pc.`,
+        note: `1 ${unit.name} = ${packsToBase(1, unit)} pc.`,
     };
 }
 
@@ -69,9 +69,13 @@ function unitView(p: ProductItem): {
 function packQty(p: ProductItem): number | null {
     const v = p.variants[0];
     return (
-        nearestPackOf(
+        nextPackAbove(
             { unitName: v?.unitName, unitRatioToBase: v?.unitRatioToBase },
             v?.packagingLevels ?? [],
+            salesUnitOf(
+                { unitName: v?.unitName, unitRatioToBase: v?.unitRatioToBase },
+                packagesOnly.value,
+            )?.ratio ?? 1,
         )?.baseQty ?? null
     );
 }
@@ -264,6 +268,7 @@ function handleToggleFavorite(p: ProductItem): void {
                             : undefined
                     "
                     :unit-label="unitView(p).label"
+                    :unit-note="unitView(p).note"
                     :pack-label="packQty(p) ? `pack of ${packQty(p)}` : ''"
                     :qty-step="unitView(p).step"
                     :discount-tiers="p.variants[0]?.discountTiers"

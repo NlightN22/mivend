@@ -3,7 +3,9 @@ import { computed } from 'vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import { type StockVariant, stockVariantFromQuantity } from '../MvStockBadge/stock-variant';
+import { IconInfoCircle } from '@tabler/icons-vue';
 import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
+import MvTooltip from '../MvTooltip/MvTooltip.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
 
@@ -155,8 +157,15 @@ function onStepperChange(qty: number): void {
 
         <div class="mv-product-row__cell">
             <div class="mv-product-row__cell-label">Unit</div>
-            <div class="mv-product-row__cell-value">{{ unitLabel || 'pc.' }}</div>
-            <div v-if="unitNote" class="mv-product-row__unit">{{ unitNote }}</div>
+            <div class="mv-product-row__cell-value mv-product-row__unit-value">
+                {{ unitLabel || 'pc.' }}
+                <MvTooltip v-if="unitNote" placement="top" trigger="hover">
+                    <template #trigger>
+                        <IconInfoCircle :size="14" class="mv-product-row__unit-info" />
+                    </template>
+                    {{ unitNote }}
+                </MvTooltip>
+            </div>
         </div>
 
         <div v-if="showMultiplicity" class="mv-product-row__cell">
@@ -232,6 +241,7 @@ function onStepperChange(qty: number): void {
                             :model-value="cartQty"
                             :min="0"
                             :step="qtyStep"
+                            editable
                             size="sm"
                             @update:model-value="onStepperChange"
                         />
@@ -379,6 +389,15 @@ function onStepperChange(qty: number): void {
 .mv-product-row__price {
     font-weight: 900;
     letter-spacing: -0.02em;
+}
+.mv-product-row__unit-value {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.mv-product-row__unit-info {
+    color: #8fa39b;
+    cursor: help;
 }
 .mv-product-row__unit {
     font-size: 12px;

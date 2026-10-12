@@ -4,7 +4,9 @@ import { IconChevronLeft, IconChevronRight } from '@tabler/icons-vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import type { StockVariant } from '../MvStockBadge/stock-variant';
+import { IconInfoCircle } from '@tabler/icons-vue';
 import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
+import MvTooltip from '../MvTooltip/MvTooltip.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
 
@@ -34,6 +36,7 @@ interface Props {
     showActions?: boolean;
     // Unit the price is for ('pc.', 'pack'); empty hides it. Pack mode also changes the stepper step.
     unitLabel?: string;
+    unitNote?: string;
     qtyStep?: number;
     // Short caption such as 'pack of 12'; empty hides it.
     packLabel?: string;
@@ -57,6 +60,7 @@ const props = withDefaults(defineProps<Props>(), {
     showFavorite: true,
     showActions: true,
     unitLabel: '',
+    unitNote: '',
     qtyStep: 1,
     packLabel: '',
 });
@@ -165,6 +169,12 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                             <span v-if="unitLabel" class="mv-product-card__unit">
                                 / {{ unitLabel }}
                             </span>
+                            <MvTooltip v-if="unitNote" placement="top" trigger="hover">
+                                <template #trigger>
+                                    <IconInfoCircle :size="14" class="mv-product-card__unit-info" />
+                                </template>
+                                {{ unitNote }}
+                            </MvTooltip>
                         </div>
                         <MvAmountDisplay
                             v-if="compareAtPrice !== undefined"
@@ -192,6 +202,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                             :model-value="cartQty"
                             :min="0"
                             :step="qtyStep"
+                            editable
                             class="mv-product-card__stepper"
                             @update:model-value="
                                 val => cartLineId && emit('update-cart-qty', cartLineId, val)
@@ -381,6 +392,11 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     flex-shrink: 0;
 }
 
+.mv-product-card__unit-info {
+    color: #8fa39b;
+    cursor: help;
+    align-self: center;
+}
 .mv-product-card__price-line {
     display: flex;
     align-items: baseline;
