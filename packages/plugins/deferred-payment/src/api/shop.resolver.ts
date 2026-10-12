@@ -10,6 +10,7 @@ const NOT_EXCEEDED: DeferredCreditAssessment = {
     exceeded: false,
     availableCredit: 0,
     orderAmount: 0,
+    allowExceedingCreditLimit: false,
 };
 
 @Resolver()

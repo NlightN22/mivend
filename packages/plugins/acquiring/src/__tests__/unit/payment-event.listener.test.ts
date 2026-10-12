@@ -132,7 +132,13 @@ describe('PaymentEventListener', () => {
     it('does not call payProformaInvoice-adjacent processing — enqueue/rejectAsInvalid are the only side effects', () => {
         eventBus.emit(
             ErpPaymentReportedEvent,
-            new ErpPaymentReportedEvent(mockCtx, 1, 1, 'success', 'ERP-EVT-2'),
+            new ErpPaymentReportedEvent(
+                mockCtx,
+                '3f1c1a5e-6c1d-4a63-9b0e-0b8a5d2f7a10',
+                1,
+                'success',
+                'ERP-EVT-2',
+            ),
         );
         expect(Object.keys(inboxService).sort()).toEqual(['enqueue', 'rejectAsInvalid']);
     });
