@@ -146,7 +146,9 @@ describe('offlineTermsPaymentHandler', () => {
         expect(place).toHaveBeenCalledWith(mockCtx, mockOrder, 'bank-transfer', {
             creditLimitAcknowledged: true,
         });
-        expect((result as { metadata: { placement: unknown } }).metadata.placement).toEqual({
+        expect(
+            (result as unknown as { metadata: { placement: unknown } }).metadata.placement,
+        ).toEqual({
             route: 'erp-now',
         });
     });
