@@ -11,7 +11,7 @@ import { PaymentRefundService } from '../../payment-refund.service';
 import { DisputeService } from '../../dispute.service';
 
 // Mirrors the real payment_refund/dispute tables against real Postgres — same approach as this
-// directory's invoice.service.int.test.ts (VendureEntity needs a bootstrapped EntityIdStrategy).
+// directory's proforma-invoice.service.int.test.ts (VendureEntity needs a bootstrapped EntityIdStrategy).
 @Entity('payment_refund')
 class TestPaymentRefund {
     @PrimaryGeneratedColumn()

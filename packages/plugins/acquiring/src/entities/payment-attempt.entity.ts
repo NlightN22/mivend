@@ -27,7 +27,7 @@ export type ErpPostingStatus =
 // providerPaymentId alone, since the reference format/values are chosen independently by each
 // channel's own system (acquirer RRN, branch kassa receipt number, ERP payment-document id) and
 // could coincidentally collide across channels. This is the DB-level last line of defense for
-// the external-integration-rules skill's three-level idempotency requirement (see PaymentAttemptService.payInvoice
+// the external-integration-rules skill's three-level idempotency requirement (see PaymentAttemptService.payProformaInvoice
 // for level 3's application-level check, which this index backs against a race).
 @Entity()
 @Index(['channel', 'providerPaymentId'], { unique: true })
@@ -37,7 +37,7 @@ export class PaymentAttempt extends UuidEntity {
     }
 
     // The payment's own internal, human-facing business number — a flat NumberingService
-    // sequence (PaymentAttemptService.payInvoice), not order-scoped. Deliberately
+    // sequence (PaymentAttemptService.payProformaInvoice), not order-scoped. Deliberately
     // distinct from `providerPaymentId` below: per the external-integration-rules skill, an internally-generated
     // identity and an external system's own reference serve two different purposes (this
     // project's own document numbering vs. reconciling against the acquirer/kassa/ERP) and must
@@ -49,15 +49,15 @@ export class PaymentAttempt extends UuidEntity {
     @Column({ type: 'varchar' })
     channel!: PaymentChannel;
 
-    // The Invoice this payment settles — one per our own legal entity (organizationId lives on
-    // Invoice, not here, to keep a single source of truth). For online-acquiring, the Invoice
+    // The ProformaInvoice this payment settles — one per our own legal entity (organizationId lives on
+    // ProformaInvoice, not here, to keep a single source of truth). For online-acquiring, the ProformaInvoice
     // must exist *before* this PaymentAttempt is created — split-payment acquirers need the
-    // full organization/amount breakdown upfront (see Invoice's own doc comment). Nullable only
-    // for channels/flows that predate real Invoice splitting (see docs/payments.md
+    // full organization/amount breakdown upfront (see ProformaInvoice's own doc comment). Nullable only
+    // for channels/flows that predate real ProformaInvoice splitting (see docs/payments.md
     // "Organizations" open question, issue TBD).
     @Index()
     @Column({ type: 'int', nullable: true })
-    invoiceId!: number | null;
+    proformaInvoiceId!: number | null;
 
     @Index()
     @Column({ type: 'int', nullable: true })

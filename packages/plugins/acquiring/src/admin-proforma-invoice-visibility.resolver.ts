@@ -2,33 +2,40 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Allow, Ctx, PaginatedList, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
-import { Invoice } from './entities/invoice.entity';
-import { InvoiceVisibilityService } from './invoice-visibility.service';
-import { InvoiceListOptions } from './invoice.service';
+import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
+import { ProformaInvoiceListOptions } from './proforma-invoice.service';
 
-// Scoped equivalent of a plain "list all invoices" query for the manager portal — mirrors
-// packages/plugins/erp-order/src/admin-order-visibility.resolver.ts. Invoice is a plugin-owned
-// entity (no Vendure-generated InvoiceListOptions to reuse), so InvoiceListOptions/InvoiceList
-// are hand-defined in api/admin.schema.ts, same as the Shop API's myInvoices.
+// Scoped equivalent of a plain "list all proforma invoices" query for the manager portal — mirrors
+// packages/plugins/erp-order/src/admin-order-visibility.resolver.ts. ProformaInvoice is a plugin-owned
+// entity (no Vendure-generated ProformaInvoiceListOptions to reuse), so ProformaInvoiceListOptions/ProformaInvoiceList
+// are hand-defined in api/admin.schema.ts, same as the Shop API's myProformaInvoices.
 @Resolver()
-export class AdminInvoiceVisibilityResolver {
-    constructor(private invoiceVisibilityService: InvoiceVisibilityService) {}
+export class AdminProformaInvoiceVisibilityResolver {
+    constructor(private proformaInvoiceVisibilityService: ProformaInvoiceVisibilityService) {}
 
     @Query()
     @Allow(CustomPermission.ReadInvoice.Permission)
-    async visibleInvoices(
+    async visibleProformaInvoices(
         @Ctx() ctx: RequestContext,
-        @Args() args: { options?: InvoiceListOptions; counterpartyId?: string },
-    ): Promise<PaginatedList<Invoice>> {
-        return this.invoiceVisibilityService.findVisible(ctx, args.options, args.counterpartyId);
+        @Args() args: { options?: ProformaInvoiceListOptions; counterpartyId?: string },
+    ): Promise<PaginatedList<ProformaInvoice>> {
+        return this.proformaInvoiceVisibilityService.findVisible(
+            ctx,
+            args.options,
+            args.counterpartyId,
+        );
     }
 
     @Query()
     @Allow(CustomPermission.ReadInvoice.Permission)
-    async invoiceOutstandingBalance(
+    async proformaInvoiceOutstandingBalance(
         @Ctx() ctx: RequestContext,
         @Args() args: { counterpartyId: string },
     ): Promise<{ amount: number; currencyCode: string } | null> {
-        return this.invoiceVisibilityService.getOutstandingBalance(ctx, args.counterpartyId);
+        return this.proformaInvoiceVisibilityService.getOutstandingBalance(
+            ctx,
+            args.counterpartyId,
+        );
     }
 }

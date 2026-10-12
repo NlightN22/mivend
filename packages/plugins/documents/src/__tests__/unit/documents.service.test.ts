@@ -318,10 +318,10 @@ describe('DocumentsService', () => {
         });
     });
 
-    describe('createInvoicePlaceholder', () => {
-        it('derives counterpartyId/amount/currency/invoiceId from the given Invoice, not the order', async () => {
+    describe('createProformaInvoicePlaceholder', () => {
+        it('derives counterpartyId/amount/currency/proformaInvoiceId from the given ProformaInvoice, not the order', async () => {
             const order = { id: 42, code: 'ORD-1' } as never;
-            const invoice = {
+            const proformaInvoice = {
                 id: 7,
                 organizationId: 2,
                 counterpartyId: 5,
@@ -329,20 +329,26 @@ describe('DocumentsService', () => {
                 currencyCode: 'RUB',
             } as never;
 
-            const result = await service.createInvoicePlaceholder(mockCtx, order, invoice);
+            const result = await service.createProformaInvoicePlaceholder(
+                mockCtx,
+                order,
+                proformaInvoice,
+            );
 
             expect(mockRepo.create).toHaveBeenCalledWith(
                 expect.objectContaining({
                     type: 'invoice',
                     counterpartyId: '5',
                     orderId: '42',
-                    invoiceId: '7',
+                    proformaInvoiceId: '7',
                     number: 'ORD-1-2',
                     amount: 12345,
                     currencyCode: 'RUB',
                 }),
             );
-            expect(result).toEqual(expect.objectContaining({ invoiceId: '7', number: 'ORD-1-2' }));
+            expect(result).toEqual(
+                expect.objectContaining({ proformaInvoiceId: '7', number: 'ORD-1-2' }),
+            );
         });
     });
 

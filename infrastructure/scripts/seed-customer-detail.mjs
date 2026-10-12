@@ -1,4 +1,4 @@
-// Tops up every tab on the CustomerDetailPage (Orders/Invoices/Documents/History) for one demo
+// Tops up every tab on the CustomerDetailPage (Orders/Proforma invoices/Documents/History) for one demo
 // customer (ivan@autoservice-nord.example / counterparty cnt-001) past its tab's page size (20),
 // so pagination is actually exercisable in dev/manual QA — see AGENTS.md's pagination rule and
 // the real incident it documents (pagination-scroll.spec.ts self-skipping on thin lists).
@@ -193,13 +193,13 @@ async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminTok
 }
 
 // Pays exactly one invoice of an already-created multi-invoice order via the real customer-facing
-// payInvoice mutation (shop-api, Permission.Owner) — the direct, per-invoice equivalent of what a
+// payProformaInvoice mutation (shop-api, Permission.Owner) — the direct, per-invoice equivalent of what a
 // customer does from the invoice detail page. Leaves the order's other invoice(s) at 'issued',
 // which is what makes the order show up as "Partially paid" (CustomerOrdersTab's real captured-vs-
 // total comparison), not just "every invoice has the same status" like a single checkout produces.
 async function payOneInvoice(customerToken, invoiceId) {
     await shopGql(
-        `mutation($invoiceId: ID!) { payInvoice(invoiceId: $invoiceId, status: "success", channel: "online-acquiring") { id status } }`,
+        `mutation($invoiceId: ID!) { payProformaInvoice(proformaInvoiceId: $invoiceId, status: "success", channel: "online-acquiring") { id status } }`,
         { invoiceId },
         customerToken,
     );
@@ -212,13 +212,13 @@ async function topUpOrdersInvoicesAndPayments(
     variantsByOrg,
 ) {
     const existing = await adminGql(
-        `query($options: InvoiceListOptions, $counterpartyId: ID) {
-            visibleInvoices(options: $options, counterpartyId: $counterpartyId) { totalItems }
+        `query($options: ProformaInvoiceListOptions, $counterpartyId: ID) {
+            visibleProformaInvoices(options: $options, counterpartyId: $counterpartyId) { totalItems }
         }`,
         { options: { take: 0 }, counterpartyId },
         directorToken,
     );
-    const currentCount = existing.data.visibleInvoices.totalItems;
+    const currentCount = existing.data.visibleProformaInvoices.totalItems;
     const toCreate = Math.max(0, TARGET_COUNT - currentCount);
     console.log(
         `Invoices: ${currentCount} existing for counterparty ${counterpartyId}, checking out orders for ${toCreate} more...`,
@@ -278,11 +278,11 @@ async function topUpOrdersInvoicesAndPayments(
                 'offline-terms',
             );
             const invoicesRes = await adminGql(
-                `query($orderId: ID!) { invoicesForOrder(orderId: $orderId) { id } }`,
+                `query($orderId: ID!) { proformaInvoicesForOrder(orderId: $orderId) { id } }`,
                 { orderId: result.id },
                 directorToken,
             );
-            const invoiceIds = invoicesRes.data.invoicesForOrder.map(inv => inv.id);
+            const invoiceIds = invoicesRes.data.proformaInvoicesForOrder.map(inv => inv.id);
             if (invoiceIds.length >= 2) {
                 await payOneInvoice(customerToken, invoiceIds[0]);
             }

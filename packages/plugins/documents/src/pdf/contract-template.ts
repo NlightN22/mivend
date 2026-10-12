@@ -1,5 +1,5 @@
 import { CompleteOrganizationRequisites } from '../entities/organization-requisites.entity';
-import { renderLogoMarkup } from './invoice-template';
+import { renderLogoMarkup } from './proforma-invoice-template';
 
 export interface ContractTemplateData {
     documentNumber: string;

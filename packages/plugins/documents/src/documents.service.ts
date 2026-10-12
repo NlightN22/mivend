@@ -11,7 +11,7 @@ import {
 import { ILike, In } from 'typeorm';
 import { documentNumberSearchTerm } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
-import { Invoice } from '@mivend/plugin-acquiring';
+import { ProformaInvoice } from '@mivend/plugin-acquiring';
 
 import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
@@ -107,7 +107,7 @@ export class DocumentsService {
                     // data must live in the database"), rendered in the manager portal as a text
                     // filter box. An exact-match filter behind a text box that looks like search
                     // is a real UX mismatch (typing "inv" would silently match nothing even
-                    // though "invoice" documents exist) — same reasoning as `search` below.
+                    // though "proforma invoice" documents exist) — same reasoning as `search` below.
                     ...(options?.types?.length
                         ? { type: In(options.types) }
                         : options?.type
@@ -195,7 +195,7 @@ export class DocumentsService {
     // erp-import's own richer feed doesn't run against every contour (e.g. staging-integration,
     // issue #68). Now always creates a row — inn/legalAddress/bank fields stay null until
     // erp-import's own record arrives (if it ever does in this contour) — never fabricated here.
-    // PdfGeneratorService refuses to render an invoice/contract against a row still missing them
+    // PdfGeneratorService refuses to render a proforma invoice/contract against a row still missing them
     // (see assertRequisitesComplete).
     //
     // `name: null` (mivend.issue.84.88 follow-up): Integration Service's `organization` deletion
@@ -225,7 +225,7 @@ export class DocumentsService {
 
     // PdfGeneratorService's guard before rendering any document against a given
     // OrganizationRequisites row — a partial row (issue #88, created from Kafka name/isActive
-    // alone) must never be used to generate a real invoice/contract with blank/fake legal fields.
+    // alone) must never be used to generate a real proforma invoice/contract with blank/fake legal fields.
     assertRequisitesComplete(
         requisites: OrganizationRequisites,
     ): asserts requisites is CompleteOrganizationRequisites {
@@ -284,10 +284,10 @@ export class DocumentsService {
         return entity ? Number(entity.id) : null;
     }
 
-    // Used to render an invoice for one specific organization (plugin-acquiring's Invoice
+    // Used to render a proforma invoice for one specific organization (plugin-acquiring's ProformaInvoice
     // .organizationId) — as opposed to getActiveRequisites(), which is a single-organization
     // fallback for documents that predate per-organization splitting (contracts, legacy
-    // whole-order invoices). See docs/payments.md "Organizations".
+    // whole-order proforma invoices). See docs/payments.md "Organizations".
     async getRequisitesById(
         ctx: RequestContext,
         organizationId: number,
@@ -315,25 +315,27 @@ export class DocumentsService {
     // away); actual PDF rendering is enqueued separately by the caller via
     // PdfGeneratorService.enqueue(document.id) — kept out of this service to avoid
     // a circular DI dependency between DocumentsService and PdfGeneratorService.
-    async createInvoicePlaceholder(
+    async createProformaInvoicePlaceholder(
         ctx: RequestContext,
         order: Order,
-        invoice: Invoice,
+        proformaInvoice: ProformaInvoice,
     ): Promise<Document> {
         const repo = this.connection.getRepository(ctx, Document);
-        // A document number must stay unique per organization-split invoice, not just per
-        // order — one order can now have several invoices (docs/payments.md "Organizations").
+        // A document number must stay unique per organization-split proforma invoice, not just per
+        // order — one order can now have several proforma invoices (docs/payments.md "Organizations").
         const documentNumber =
-            invoice.organizationId != null ? `${order.code}-${invoice.organizationId}` : order.code;
+            proformaInvoice.organizationId != null
+                ? `${order.code}-${proformaInvoice.organizationId}`
+                : order.code;
         const entity = repo.create({
             type: 'invoice',
-            counterpartyId: String(invoice.counterpartyId),
+            counterpartyId: String(proformaInvoice.counterpartyId),
             orderId: String(order.id),
-            invoiceId: String(invoice.id),
+            proformaInvoiceId: String(proformaInvoice.id),
             number: documentNumber,
             issueDate: new Date(),
-            amount: invoice.amount,
-            currencyCode: invoice.currencyCode,
+            amount: proformaInvoice.amount,
+            currencyCode: proformaInvoice.currencyCode,
             status: 'pending' as const,
             source: 'generated' as const,
             erpId: null,
@@ -342,7 +344,7 @@ export class DocumentsService {
             metadata: null,
         });
         const saved = await repo.save(entity);
-        Logger.verbose(`Created invoice placeholder for order ${order.code}`, loggerCtx);
+        Logger.verbose(`Created proforma invoice placeholder for order ${order.code}`, loggerCtx);
         return saved;
     }
 

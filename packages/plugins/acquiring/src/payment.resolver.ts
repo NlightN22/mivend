@@ -12,12 +12,12 @@ import {
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
 import { Dispute } from './entities/dispute.entity';
-import { Invoice } from './entities/invoice.entity';
+import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt, PaymentChannel } from './entities/payment-attempt.entity';
 import { PaymentRefund } from './entities/payment-refund.entity';
 import { DisputeService } from './dispute.service';
 import { InboxService } from './inbox.service';
-import { InvoiceService } from './invoice.service';
+import { ProformaInvoiceService } from './proforma-invoice.service';
 import {
     PaymentAllocation,
     PaymentAttemptService,
@@ -44,7 +44,7 @@ const CHANNEL_TO_INBOX_PROVIDER: Partial<Record<PaymentChannel, string>> = {
 @Resolver('PaymentAttempt')
 export class PaymentFieldResolver {
     constructor(
-        private invoiceService: InvoiceService,
+        private proformaInvoiceService: ProformaInvoiceService,
         private orderService: OrderService,
         private paymentAttemptService: PaymentAttemptService,
         private paymentRefundService: PaymentRefundService,
@@ -111,11 +111,13 @@ export class PaymentFieldResolver {
     }
 
     @ResolveField()
-    async invoice(
+    async proformaInvoice(
         @Ctx() ctx: RequestContext,
         @Parent() payment: PaymentAttempt,
-    ): Promise<Invoice | null> {
-        return payment.invoiceId ? this.invoiceService.findOne(ctx, payment.invoiceId) : null;
+    ): Promise<ProformaInvoice | null> {
+        return payment.proformaInvoiceId
+            ? this.proformaInvoiceService.findOne(ctx, payment.proformaInvoiceId)
+            : null;
     }
 
     @ResolveField()
@@ -132,15 +134,17 @@ export class PaymentFieldResolver {
     async allocations(
         @Ctx() ctx: RequestContext,
         @Parent() payment: PaymentAttempt,
-    ): Promise<Array<{ invoice: Invoice | null; amount: number; isAdvance: boolean }>> {
+    ): Promise<
+        Array<{ proformaInvoice: ProformaInvoice | null; amount: number; isAdvance: boolean }>
+    > {
         const allocations = await this.paymentAttemptService.getAllocationsForPayment(
             ctx,
             Number(payment.id),
         );
         return allocations.map((a: PaymentAllocation) => ({
-            invoice: a.invoice,
+            proformaInvoice: a.proformaInvoice,
             amount: a.settlementEntry.amount,
-            isAdvance: a.invoice === null,
+            isAdvance: a.proformaInvoice === null,
         }));
     }
 }

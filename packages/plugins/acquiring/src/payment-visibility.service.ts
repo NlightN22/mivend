@@ -3,20 +3,20 @@ import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure
 import { documentNumberSearchTerm } from 'shared';
 import { Counterparty } from '@mivend/plugin-counterparty';
 
-import { Invoice } from './entities/invoice.entity';
+import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt } from './entities/payment-attempt.entity';
-import { InvoiceVisibilityService } from './invoice-visibility.service';
+import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
 import { PaymentListOptions } from './payment-attempt.service';
 
 // Row-level visibility for the manager portal's payment list — a payment is a resource *derived*
-// from Invoice (joined via invoiceId), so it reuses InvoiceVisibilityService's scope resolution
+// from ProformaInvoice (joined via proformaInvoiceId), so it reuses ProformaInvoiceVisibilityService's scope resolution
 // and filter logic rather than duplicating a resolvePaymentScope (see docs/access-control.md's
 // "derived resource" rule — same reasoning as documents inheriting counterparty scope).
 @Injectable()
 export class PaymentVisibilityService {
     constructor(
         private connection: TransactionalConnection,
-        private invoiceVisibilityService: InvoiceVisibilityService,
+        private proformaInvoiceVisibilityService: ProformaInvoiceVisibilityService,
     ) {}
 
     async findVisible(
@@ -24,7 +24,7 @@ export class PaymentVisibilityService {
         options?: PaymentListOptions,
         counterpartyId?: string,
     ): Promise<PaginatedList<PaymentAttempt>> {
-        const scope = await this.invoiceVisibilityService.resolveScope(ctx);
+        const scope = await this.proformaInvoiceVisibilityService.resolveScope(ctx);
         const take = options?.take ?? 50;
         const skip = options?.skip ?? 0;
 
@@ -34,17 +34,21 @@ export class PaymentVisibilityService {
             // Raw ON-clause strings, not .where()/.andWhere() — TypeORM's alias.property
             // auto-quoting replacement doesn't run here, so camelCase columns must be quoted by
             // hand or Postgres lowercases them to nonexistent columns (real bug, only caught by
-            // a live query against real Postgres — see invoice-visibility.service.ts's identical
+            // a live query against real Postgres — see proforma-invoice-visibility.service.ts's identical
             // fix).
-            .innerJoin(Invoice, 'invoice', 'invoice.id = payment."invoiceId"')
+            .innerJoin(
+                ProformaInvoice,
+                'proformaInvoice',
+                'proformaInvoice.id = payment."proformaInvoiceId"',
+            )
             .leftJoin(
                 Counterparty,
                 'counterparty',
-                'counterparty.id::text = invoice."counterpartyId"::text',
+                'counterparty.id::text = proforma proformaInvoice."counterpartyId"::text',
             );
 
         if (counterpartyId) {
-            qb.andWhere('invoice.counterpartyId = :counterpartyId', { counterpartyId });
+            qb.andWhere('proformaInvoice.counterpartyId = :counterpartyId', { counterpartyId });
         }
         if (options?.status) {
             qb.andWhere('payment.paymentStatus = :paymentStatus', {
@@ -59,22 +63,27 @@ export class PaymentVisibilityService {
                 search: documentNumberSearchTerm(options.search),
             });
         }
-        this.invoiceVisibilityService.applyScope(qb, scope, 'invoice', 'counterparty');
+        this.proformaInvoiceVisibilityService.applyScope(
+            qb,
+            scope,
+            'proformaInvoice',
+            'counterparty',
+        );
 
         const totalItems = await qb.getCount();
-        // getRawAndEntities (not getManyAndCount) — invoice.counterpartyId isn't a PaymentAttempt
+        // getRawAndEntities (not getManyAndCount) — proformaInvoice.counterpartyId isn't a PaymentAttempt
         // column, so it only comes back via the raw row; attached below as a transient property
         // so PaymentAttempt.counterpartyId (admin.schema.ts) can resolve it without a second,
-        // per-row invoice lookup from the manager-portal Payments list (see api/payments.ts).
+        // per-row proforma invoice lookup from the manager-portal Payments list (see api/payments.ts).
         const { entities, raw } = await qb
-            .addSelect('invoice.counterpartyId', 'invoice_counterpartyId')
+            .addSelect('proformaInvoice.counterpartyId', 'proformaInvoice_counterpartyId')
             .orderBy('payment.createdAt', 'DESC')
             .addOrderBy('payment.id', 'DESC')
             .skip(skip)
             .take(take)
             .getRawAndEntities();
         const items = entities.map((item, i) =>
-            Object.assign(item, { counterpartyId: String(raw[i].invoice_counterpartyId) }),
+            Object.assign(item, { counterpartyId: String(raw[i].proformaInvoice_counterpartyId) }),
         );
         return { items, totalItems };
     }

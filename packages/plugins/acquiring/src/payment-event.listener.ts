@@ -25,7 +25,7 @@ function hashPayload(payload: StoredPaymentPayload): string {
     return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
 
-// Subscribes only — never calls PaymentAttemptService.payInvoice directly (the
+// Subscribes only — never calls PaymentAttemptService.payProformaInvoice directly (the
 // external-integration-rules skill's async-inbox rule). Each event is durably enqueued into IncomingPaymentEvent; PaymentInboxWorker's periodic
 // sweep does the actual, risky processing.
 @Injectable()

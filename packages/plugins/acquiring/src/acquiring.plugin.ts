@@ -15,7 +15,7 @@ import { Dispute } from './entities/dispute.entity';
 import { FiscalReceipt } from './entities/fiscal-receipt.entity';
 import { IdempotencyKey } from './entities/idempotency-key.entity';
 import { IncomingPaymentEvent } from './entities/incoming-payment-event.entity';
-import { Invoice } from './entities/invoice.entity';
+import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { PaymentReconciliationIssue } from './entities/payment-reconciliation-issue.entity';
 import { PaymentRefund } from './entities/payment-refund.entity';
@@ -23,7 +23,7 @@ import { SettlementEntry } from './entities/settlement-entry.entity';
 import { DisputeService } from './dispute.service';
 import { IdempotencyService } from './idempotency.service';
 import { InboxService } from './inbox.service';
-import { InvoiceService } from './invoice.service';
+import { ProformaInvoiceService } from './proforma-invoice.service';
 import { PaymentAttemptService } from './payment-attempt.service';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
 import { contractOrderGuard } from './contract-order-guard';
@@ -33,17 +33,17 @@ import { PaymentEventListener } from './payment-event.listener';
 import { PaymentReconciliationIssueService } from './payment-reconciliation-issue.service';
 import { PaymentRefundService } from './payment-refund.service';
 import { SettlementEntryService } from './settlement-entry.service';
-import { InvoiceVisibilityService } from './invoice-visibility.service';
+import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
 import { PaymentVisibilityService } from './payment-visibility.service';
 import { OfflineTermsBootstrapService } from './offline-terms-bootstrap.service';
 import {
-    InvoiceAdminResolver,
-    InvoiceShopResolver,
-    InvoiceFieldResolver,
-} from './invoice.resolver';
+    ProformaInvoiceAdminResolver,
+    ProformaInvoiceShopResolver,
+    ProformaInvoiceFieldResolver,
+} from './proforma-invoice.resolver';
 import { PaymentAdminResolver } from './payment-admin.resolver';
 import { PaymentFieldResolver, PaymentShopResolver } from './payment.resolver';
-import { AdminInvoiceVisibilityResolver } from './admin-invoice-visibility.resolver';
+import { AdminProformaInvoiceVisibilityResolver } from './admin-proforma-invoice-visibility.resolver';
 import { AdminPaymentVisibilityResolver } from './admin-payment-visibility.resolver';
 import { AdminOrderPaymentViewResolver } from './admin-order-payment-view.resolver';
 import { PaymentReconciliationIssueResolver } from './payment-reconciliation-issue.resolver';
@@ -65,7 +65,7 @@ import type { AcquiringPluginOptions } from './types';
         NumberingPlugin,
     ],
     entities: [
-        Invoice,
+        ProformaInvoice,
         PaymentAttempt,
         FiscalReceipt,
         PaymentRefund,
@@ -78,7 +78,7 @@ import type { AcquiringPluginOptions } from './types';
     providers: [
         IdempotencyService,
         InboxService,
-        InvoiceService,
+        ProformaInvoiceService,
         PaymentAttemptService,
         SettlementEntryService,
         PaymentInboxProcessorService,
@@ -86,7 +86,7 @@ import type { AcquiringPluginOptions } from './types';
         PaymentReconciliationIssueService,
         PaymentRefundService,
         DisputeService,
-        InvoiceVisibilityService,
+        ProformaInvoiceVisibilityService,
         PaymentVisibilityService,
         OfflineTermsBootstrapService,
         VariantOrganizationHealthService,
@@ -98,31 +98,31 @@ import type { AcquiringPluginOptions } from './types';
     exports: [
         IdempotencyService,
         InboxService,
-        InvoiceService,
+        ProformaInvoiceService,
         PaymentAttemptService,
         SettlementEntryService,
     ],
     adminApiExtensions: {
         schema: adminApiExtensions,
         resolvers: [
-            InvoiceAdminResolver,
+            ProformaInvoiceAdminResolver,
             PaymentAdminResolver,
-            AdminInvoiceVisibilityResolver,
+            AdminProformaInvoiceVisibilityResolver,
             AdminPaymentVisibilityResolver,
             AdminOrderPaymentViewResolver,
             PaymentReconciliationIssueResolver,
             VariantOrganizationHealthResolver,
-            // Field resolver for Invoice.order (admin.schema.ts) — previously only registered
-            // for shopApiExtensions, so the admin API's Invoice.order was a dead schema field
-            // with no resolver wired to it at all (see admin.schema.ts's comment on Invoice.order).
-            InvoiceFieldResolver,
+            // Field resolver for ProformaInvoice.order (admin.schema.ts) — previously only registered
+            // for shopApiExtensions, so the admin API's ProformaInvoice.order was a dead schema field
+            // with no resolver wired to it at all (see admin.schema.ts's comment on ProformaInvoice.order).
+            ProformaInvoiceFieldResolver,
         ],
     },
     shopApiExtensions: {
         schema: shopApiExtensions,
         resolvers: [
-            InvoiceShopResolver,
-            InvoiceFieldResolver,
+            ProformaInvoiceShopResolver,
+            ProformaInvoiceFieldResolver,
             PaymentShopResolver,
             PaymentFieldResolver,
             ProductVariantAvailabilityResolver,

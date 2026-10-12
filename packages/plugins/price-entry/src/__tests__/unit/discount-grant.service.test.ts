@@ -257,7 +257,7 @@ describe('DiscountGrantService', () => {
         // (company-wide vs counterparty) logic is unchanged and already covered by existing
         // decideAndApply tests above, not re-tested here. No CQRS/inbox/outbox/idempotency risk
         // applies — a plain paginated read, same level (unit, mocked query builder) as
-        // PaymentVisibilityService/InvoiceVisibilityService's own tests.
+        // PaymentVisibilityService/ProformaInvoiceVisibilityService's own tests.
         const ctx = mockCtx([]);
 
         it('applies search as a substring match against the grant number', async () => {

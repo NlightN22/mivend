@@ -29,10 +29,10 @@ export class PaymentReconciliationIssue extends VendureEntity {
     @Column({ type: 'int', nullable: true })
     paymentId!: number | null;
 
-    // See PaymentAttempt.invoiceId for why this is nullable — same "Invoice splitting not
+    // See PaymentAttempt.proformaInvoiceId for why this is nullable — same "ProformaInvoice splitting not
     // implemented yet" caveat.
     @Column({ type: 'int', nullable: true })
-    invoiceId!: number | null;
+    proformaInvoiceId!: number | null;
 
     @Column({ type: 'int', nullable: true })
     organizationId!: number | null;

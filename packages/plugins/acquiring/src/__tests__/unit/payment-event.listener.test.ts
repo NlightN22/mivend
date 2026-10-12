@@ -121,7 +121,7 @@ describe('PaymentEventListener', () => {
         expect(inboxService.rejectAsInvalid).not.toHaveBeenCalled();
     });
 
-    it('does not call payInvoice-adjacent processing — enqueue/rejectAsInvalid are the only side effects', () => {
+    it('does not call payProformaInvoice-adjacent processing — enqueue/rejectAsInvalid are the only side effects', () => {
         eventBus.emit(
             ErpPaymentReportedEvent,
             new ErpPaymentReportedEvent(mockCtx, 1, 1, 'success', 'ERP-EVT-2'),

@@ -21,12 +21,12 @@ export class Document extends UuidEntity {
     @Column({ type: 'varchar', nullable: true })
     orderId!: string | null;
 
-    // Which plugin-acquiring Invoice (one per organization within the order) this document
+    // Which plugin-acquiring ProformaInvoice (one per organization within the order) this document
     // is for — see docs/payments.md "Organizations". Null for documents that predate
-    // per-organization invoice splitting (ERP-pushed/legacy) or aren't invoices at all
+    // per-organization proforma invoice splitting (ERP-pushed/legacy) or aren't proforma invoices at all
     // (contracts).
     @Column({ type: 'varchar', nullable: true })
-    invoiceId!: string | null;
+    proformaInvoiceId!: string | null;
 
     @Column({ type: 'varchar' })
     number!: string;
@@ -59,7 +59,7 @@ export class Document extends UuidEntity {
     fileUrl!: string | null;
 
     // Idempotency key for ERP-pushed documents. Nullable because generated
-    // documents (invoice/contract) have no ERP-side natural key.
+    // documents (proforma invoice/contract) have no ERP-side natural key.
     @Column({ type: 'varchar', nullable: true })
     erpId!: string | null;
 

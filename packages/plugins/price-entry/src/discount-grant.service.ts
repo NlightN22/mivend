@@ -220,8 +220,8 @@ export class DiscountGrantService {
     // Real, server-side paginated + filtered (the backend-plugin-rules skill's "Pagination" rule) — this list is NOT
     // genuinely bounded despite an earlier comment here claiming otherwise: nothing ever removes
     // an expired grant, so it accumulates over the customer's whole lifetime the same way orders/
-    // invoices/payments do, one row per approved renewal. `search`/`status` mirror
-    // PaymentVisibilityService/InvoiceVisibilityService's shape.
+    // proforma invoices/payments do, one row per approved renewal. `search`/`status` mirror
+    // PaymentVisibilityService/ProformaInvoiceVisibilityService's shape.
     async findForCounterparty(
         ctx: RequestContext,
         counterpartyId: ID,

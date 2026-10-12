@@ -8,12 +8,12 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import { InvoiceService } from '../../invoice.service';
+import { ProformaInvoiceService } from '../../proforma-invoice.service';
 
-// Hand-rolled mirror of the invoice table (VendureEntity needs bootstrap). The race: two
-// simultaneous payment submissions for one order both read "no invoices yet" and both insert.
-@Entity('invoice')
-class TestInvoice {
+// Hand-rolled mirror of the proforma invoice table (VendureEntity needs bootstrap). The race: two
+// simultaneous payment submissions for one order both read "no proforma invoices yet" and both insert.
+@Entity('proforma_invoice')
+class TestProformaInvoice {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'int' }) orderId!: number;
     @Column({ type: 'int' }) organizationId!: number;
@@ -26,8 +26,8 @@ class TestInvoice {
 }
 
 let dataSource: DataSource;
-let service: InvoiceService;
-const { schema, extra } = testSchemaOptions('invoice_creation_concurrency');
+let service: ProformaInvoiceService;
+const { schema, extra } = testSchemaOptions('proformaInvoice_creation_concurrency');
 
 const withManager = (ctx: RequestContext, manager: EntityManager): RequestContext =>
     ({ ...ctx, __manager: manager }) as unknown as RequestContext;
@@ -50,7 +50,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestInvoice],
+        entities: [TestProformaInvoice],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -61,7 +61,7 @@ beforeAll(async () => {
             if (typeof entity === 'string') {
                 return { query: (sql: string, params?: unknown[]) => manager!.query(sql, params) };
             }
-            return (manager ?? dataSource).getRepository(TestInvoice);
+            return (manager ?? dataSource).getRepository(TestProformaInvoice);
         },
         withTransaction: async (
             ctx: RequestContext,
@@ -69,7 +69,7 @@ beforeAll(async () => {
         ) => dataSource.transaction(manager => work(withManager(ctx, manager))),
     } as unknown as TransactionalConnection;
 
-    service = new InvoiceService(
+    service = new ProformaInvoiceService(
         connection,
         { hydrate: async () => undefined } as unknown as EntityHydrator,
         { getForCustomer: async () => ({ id: '42' }) } as never,
@@ -86,7 +86,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-    await dataSource.getRepository(TestInvoice).clear();
+    await dataSource.getRepository(TestProformaInvoice).clear();
 });
 
 afterAll(async () => {
@@ -94,23 +94,23 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
-describe('InvoiceService.createInvoicesForOrder under concurrent submits (real Postgres)', () => {
-    it('creates one invoice per organization even when called concurrently', async () => {
+describe('ProformaInvoiceService.createProformaInvoicesForOrder under concurrent submits (real Postgres)', () => {
+    it('creates one proforma invoice per organization even when called concurrently', async () => {
         const ctx = {} as RequestContext;
 
         const results = await Promise.all(
-            Array.from({ length: 6 }, () => service.createInvoicesForOrder(ctx, order)),
+            Array.from({ length: 6 }, () => service.createProformaInvoicesForOrder(ctx, order)),
         );
 
         const rows = await dataSource
-            .getRepository(TestInvoice)
+            .getRepository(TestProformaInvoice)
             .find({ order: { organizationId: 'ASC' } });
         expect(rows.map(row => [row.organizationId, row.amount])).toEqual([
             [1, 1000],
             [2, 500],
         ]);
-        for (const invoices of results) {
-            expect(invoices).toHaveLength(2);
+        for (const proformaInvoices of results) {
+            expect(proformaInvoices).toHaveLength(2);
         }
         expect(new Set(rows.map(row => row.number)).size).toBe(rows.length);
     });
@@ -120,12 +120,12 @@ describe('InvoiceService.createInvoicesForOrder under concurrent submits (real P
         const other = { ...order, id: 8 } as unknown as Order;
 
         await Promise.all([
-            service.createInvoicesForOrder(ctx, order),
-            service.createInvoicesForOrder(ctx, other),
-            service.createInvoicesForOrder(ctx, order),
+            service.createProformaInvoicesForOrder(ctx, order),
+            service.createProformaInvoicesForOrder(ctx, other),
+            service.createProformaInvoicesForOrder(ctx, order),
         ]);
 
-        const rows = await dataSource.getRepository(TestInvoice).find();
+        const rows = await dataSource.getRepository(TestProformaInvoice).find();
         expect(rows.filter(row => row.orderId === 7)).toHaveLength(2);
         expect(rows.filter(row => row.orderId === 8)).toHaveLength(2);
     });

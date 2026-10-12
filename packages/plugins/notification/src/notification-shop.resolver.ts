@@ -30,7 +30,7 @@ export function customerNotificationSubscriptionFilter(
     );
 }
 
-// Permission.Owner mirrors plugin-acquiring's PaymentShopResolver/InvoiceResolver convention for
+// Permission.Owner mirrors plugin-acquiring's PaymentShopResolver/ProformaInvoiceResolver convention for
 // "any logged-in customer, scoped to their own data" — no new role-based permission, per
 // docs/access-control.md.
 @Resolver()

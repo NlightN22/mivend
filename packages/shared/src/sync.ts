@@ -104,17 +104,17 @@ const PaymentRecordedPayload = z.object({
     state: z.enum(['Authorized', 'Settled']),
     witnessedBy: z.string(),
     // Optional: present when the witnessed payment applies to a specific plugin-acquiring
-    // Invoice (rather than only the legacy native-Order payment above) — lets
+    // ProformaInvoice (rather than only the legacy native-Order payment above) — lets
     // CentralConsumer additionally publish BranchKassaPaymentEvent for the acquiring inbox.
     invoiceId: z.number().int().positive().optional(),
     // The organization (plugin-documents OrganizationRequisites) this payment is for — mandatory
-    // whenever invoiceId/outcome are present, validated against the target Invoice's real
+    // whenever proformaInvoiceId/outcome are present, validated against the target ProformaInvoice's real
     // organizationId before the payment is applied (the external-integration-rules skill). Left optional at
     // this shared wire-format layer for the same reason rrn is, below.
     organizationId: z.number().int().positive().optional(),
     outcome: z.enum(['success', 'pending', 'fail', 'cancel']).optional(),
     // RRN (Retrieval Reference Number) from the branch's card terminal, or the kassa's own
-    // fiscal receipt/cheque number for a cash payment — mandatory whenever invoiceId/outcome are
+    // fiscal receipt/cheque number for a cash payment — mandatory whenever proformaInvoiceId/outcome are
     // present (i.e. this payload represents a plugin-acquiring payment fact), since without it
     // the payment can never be reconciled against the branch's kassa system. Left optional at
     // this wire-format/parse layer (this envelope is shared with non-payment sync payloads too)

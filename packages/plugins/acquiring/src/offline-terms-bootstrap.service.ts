@@ -63,7 +63,7 @@ export class OfflineTermsBootstrapService implements OnApplicationBootstrap {
             translations: [
                 {
                     languageCode: LanguageCode.en,
-                    name: 'Invoice / deferred payment',
+                    name: 'ProformaInvoice / deferred payment',
                 },
             ],
         });

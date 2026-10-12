@@ -1,5 +1,8 @@
 export { AcquiringPlugin } from './src/acquiring.plugin';
-export { Invoice, type InvoiceStatus } from './src/entities/invoice.entity';
+export {
+    ProformaInvoice,
+    type ProformaInvoiceStatus,
+} from './src/entities/proforma-invoice.entity';
 export {
     PaymentAttempt,
     type PaymentChannel,
@@ -28,8 +31,11 @@ export {
 } from './src/entities/incoming-payment-event.entity';
 export { IdempotencyService } from './src/idempotency.service';
 export { InboxService } from './src/inbox.service';
-export { InvoiceService } from './src/invoice.service';
-export { PaymentAttemptService, type PayInvoiceOutcome } from './src/payment-attempt.service';
+export { ProformaInvoiceService } from './src/proforma-invoice.service';
+export {
+    PaymentAttemptService,
+    type PayProformaInvoiceOutcome,
+} from './src/payment-attempt.service';
 export {
     PaymentInboxProcessorService,
     type IncomingPaymentPayload,

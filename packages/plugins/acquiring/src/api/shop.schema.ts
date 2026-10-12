@@ -7,40 +7,40 @@ export const shopApiExtensions: DocumentNode = gql`
         availableForOrder: Boolean!
     }
 
-    type InvoiceLineProductVariant {
+    type ProformaInvoiceLineProductVariant {
         name: String!
         sku: String!
     }
 
-    type InvoiceLine {
-        productVariant: InvoiceLineProductVariant!
+    type ProformaInvoiceLine {
+        productVariant: ProformaInvoiceLineProductVariant!
         quantity: Int!
         unitPriceWithTax: Int!
         linePriceWithTax: Int!
     }
 
-    type InvoiceOrder {
+    type ProformaInvoiceOrder {
         id: ID!
         code: String!
     }
 
-    type Invoice {
+    type ProformaInvoice {
         id: ID!
         orderId: ID!
         organizationId: ID!
         amount: Int!
         currencyCode: String!
         status: String!
-        lines: [InvoiceLine!]!
-        order: InvoiceOrder!
+        lines: [ProformaInvoiceLine!]!
+        order: ProformaInvoiceOrder!
     }
 
-    type InvoiceList {
-        items: [Invoice!]!
+    type ProformaInvoiceList {
+        items: [ProformaInvoice!]!
         totalItems: Int!
     }
 
-    input InvoiceListOptions {
+    input ProformaInvoiceListOptions {
         take: Int
         skip: Int
         status: String
@@ -51,8 +51,8 @@ export const shopApiExtensions: DocumentNode = gql`
         currencyCode: String!
     }
 
-    # docs/payments.md: a payment is a money-movement fact, independent from Invoice (the
-    # obligation) — one payment can settle several invoices (cash application) or none at all
+    # docs/payments.md: a payment is a money-movement fact, independent from ProformaInvoice (the
+    # obligation) — one payment can settle several proforma invoices (cash application) or none at all
     # (a pure advance). "status" mirrors PaymentAttempt.paymentStatus (pending/authorized/
     # captured/failed/canceled/... — see the entity for the full set); "channel" mirrors
     # PaymentAttempt.channel (online-acquiring/branch-kassa/bank-transfer-erp).
@@ -62,15 +62,15 @@ export const shopApiExtensions: DocumentNode = gql`
     # the backend-plugin-rules skill's Vendure gotchas).
     type PaymentAttempt {
         id: ID!
-        invoiceId: ID
+        proformaInvoiceId: ID
         orderId: ID
         amount: Int!
         currencyCode: String!
         channel: String!
         status: String!
         createdAt: DateTime!
-        invoice: Invoice
-        order: InvoiceOrder
+        proformaInvoice: ProformaInvoice
+        order: ProformaInvoiceOrder
         allocations: [PaymentAllocation!]!
         # The originating system's own reference for this payment (PaymentAttempt.providerPaymentId):
         # an ERP payment-document id for bank-transfer-erp, an RRN (Retrieval Reference Number,
@@ -116,7 +116,7 @@ export const shopApiExtensions: DocumentNode = gql`
     }
 
     type PaymentAllocation {
-        invoice: Invoice
+        proformaInvoice: ProformaInvoice
         amount: Int!
         isAdvance: Boolean!
     }
@@ -134,25 +134,29 @@ export const shopApiExtensions: DocumentNode = gql`
     }
 
     extend type Query {
-        # Scoped to the current customer's own counterparty — see InvoiceShopResolver.
-        myInvoices(options: InvoiceListOptions): InvoiceList!
-        invoice(id: ID!): Invoice
+        # Scoped to the current customer's own counterparty — see ProformaInvoiceShopResolver.
+        myProformaInvoices(options: ProformaInvoiceListOptions): ProformaInvoiceList!
+        proformaInvoice(id: ID!): ProformaInvoice
         # Unallocated credit accumulated from cash application (docs/payments.md "Cash
         # application") — a captured payment whose amount exceeded what was owed on its target
-        # invoice, with no other open invoice to absorb the remainder. One entry per currency.
+        # proforma invoice, with no other open proforma invoice to absorb the remainder. One entry per currency.
         myAdvanceBalance: [MoneyAmount!]!
         myPayments(options: PaymentListOptions): PaymentAttemptList!
         payment(id: ID!): PaymentAttempt
     }
 
     extend type Mutation {
-        # Pays a single invoice directly, independent of Vendure's Order/Payment/activeOrder —
+        # Pays a single proforma invoice directly, independent of Vendure's Order/Payment/activeOrder —
         # payable any time, regardless of the underlying order's own state. "status" is the
         # demo-stub outcome: "success" | "pending" | "fail" | "cancel" (mirrors the online-stub
         # payment method's own status metadata arg). "channel" defaults to "online-acquiring";
         # pass "bank-transfer-erp" to simulate the ERP reporting a bank transfer for the same
-        # invoice, or "branch-kassa" for a till payment — no real acquirer/kassa/bank-statement
+        # proforma invoice, or "branch-kassa" for a till payment — no real acquirer/kassa/bank-statement
         # integration exists yet (docs/payments.md), this is a demo stub for all three.
-        payInvoice(invoiceId: ID!, status: String!, channel: String): Invoice!
+        payProformaInvoice(
+            proformaInvoiceId: ID!
+            status: String!
+            channel: String
+        ): ProformaInvoice!
     }
 `;

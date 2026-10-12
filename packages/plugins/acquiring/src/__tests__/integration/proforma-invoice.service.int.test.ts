@@ -7,14 +7,14 @@ import {
     testDataSourceConnectionOptions,
     testSchemaOptions,
 } from 'shared';
-import { InvoiceService } from '../../invoice.service';
+import { ProformaInvoiceService } from '../../proforma-invoice.service';
 
 // Same approach as plugin-documents' integration test: VendureEntity needs a bootstrapped
-// EntityIdStrategy, so we mirror the production `invoice` table with a standalone TypeORM
-// entity against real Postgres rather than using the real Invoice class directly.
-@Entity('invoice')
+// EntityIdStrategy, so we mirror the production `proforma invoice` table with a standalone TypeORM
+// entity against real Postgres rather than using the real ProformaInvoice class directly.
+@Entity('proforma_invoice')
 @Index(['counterpartyId'])
-class TestInvoice {
+class TestProformaInvoice {
     @PrimaryGeneratedColumn()
     id!: number;
 
@@ -28,9 +28,9 @@ class TestInvoice {
 }
 
 let dataSource: DataSource;
-let service: InvoiceService;
+let service: ProformaInvoiceService;
 const mockCtx = {} as RequestContext;
-const { schema, extra } = testSchemaOptions('invoice_service');
+const { schema, extra } = testSchemaOptions('proformaInvoice_service');
 
 beforeAll(async () => {
     await createTestSchema(schema);
@@ -39,17 +39,17 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestInvoice],
+        entities: [TestProformaInvoice],
         synchronize: true,
     });
     await dataSource.initialize();
 
     const connectionShim = {
-        getRepository: () => dataSource.getRepository(TestInvoice),
+        getRepository: () => dataSource.getRepository(TestProformaInvoice),
         rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
-    service = new InvoiceService(
+    service = new ProformaInvoiceService(
         connectionShim,
         {} as unknown as EntityHydrator,
         {} as never,
@@ -65,12 +65,12 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await dataSource.getRepository(TestInvoice).clear();
+    await dataSource.getRepository(TestProformaInvoice).clear();
 });
 
-describe('InvoiceService.findForCounterparty (integration, real Postgres)', () => {
-    it('only returns invoices for that counterparty (no cross-tenant leak)', async () => {
-        await dataSource.getRepository(TestInvoice).save([
+describe('ProformaInvoiceService.findForCounterparty (integration, real Postgres)', () => {
+    it('only returns proforma invoices for that counterparty (no cross-tenant leak)', async () => {
+        await dataSource.getRepository(TestProformaInvoice).save([
             { orderId: 1, organizationId: 1, counterpartyId: 1, amount: 1000, currencyCode: 'RUB' },
             { orderId: 2, organizationId: 1, counterpartyId: 1, amount: 500, currencyCode: 'RUB' },
             { orderId: 3, organizationId: 1, counterpartyId: 2, amount: 999, currencyCode: 'RUB' },
@@ -79,11 +79,13 @@ describe('InvoiceService.findForCounterparty (integration, real Postgres)', () =
         const result = await service.findForCounterparty(mockCtx, 1);
 
         expect(result.totalItems).toBe(2);
-        expect(result.items.every(invoice => invoice.counterpartyId === 1)).toBe(true);
+        expect(result.items.every(proformaInvoice => proformaInvoice.counterpartyId === 1)).toBe(
+            true,
+        );
     });
 
     it('paginates and filters by status', async () => {
-        await dataSource.getRepository(TestInvoice).save([
+        await dataSource.getRepository(TestProformaInvoice).save([
             {
                 orderId: 1,
                 organizationId: 1,

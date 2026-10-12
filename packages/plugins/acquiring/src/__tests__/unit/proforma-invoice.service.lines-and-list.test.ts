@@ -2,8 +2,8 @@ import { EntityHydrator, Order, RequestContext, TransactionalConnection } from '
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Invoice } from '../../entities/invoice.entity';
-import { InvoiceService } from '../../invoice.service';
+import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
+import { ProformaInvoiceService } from '../../proforma-invoice.service';
 
 const mockQb = {
     leftJoinAndSelect: vi.fn(),
@@ -36,12 +36,12 @@ const mockCtx = {} as unknown as RequestContext;
 
 const mockTranslator = { translate: vi.fn(entity => entity) };
 
-describe('InvoiceService.getLinesForInvoice', () => {
-    let service: InvoiceService;
+describe('ProformaInvoiceService.getLinesForProformaInvoice', () => {
+    let service: ProformaInvoiceService;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        service = new InvoiceService(
+        service = new ProformaInvoiceService(
             mockConnection,
             {} as unknown as EntityHydrator,
             {} as unknown as CounterpartyService,
@@ -51,7 +51,7 @@ describe('InvoiceService.getLinesForInvoice', () => {
         );
     });
 
-    it('returns only the lines belonging to the invoice organization', async () => {
+    it('returns only the lines belonging to the proforma invoice organization', async () => {
         const order = {
             id: 5,
             lines: [
@@ -60,9 +60,9 @@ describe('InvoiceService.getLinesForInvoice', () => {
             ],
         } as unknown as Order;
         mockQb.getOne.mockResolvedValue(order);
-        const invoice = { id: 10, orderId: 5, organizationId: 1 } as Invoice;
+        const proformaInvoice = { id: 10, orderId: 5, organizationId: 1 } as ProformaInvoice;
 
-        const lines = await service.getLinesForInvoice(mockCtx, invoice);
+        const lines = await service.getLinesForProformaInvoice(mockCtx, proformaInvoice);
 
         expect(lines).toHaveLength(1);
         expect(lines[0].id).toBe('l1');
@@ -75,29 +75,29 @@ describe('InvoiceService.getLinesForInvoice', () => {
             lines: [{ id: 'l1', customFields: { organizationId: 1 }, productVariant: variant }],
         } as unknown as Order;
         mockQb.getOne.mockResolvedValue(order);
-        const invoice = { id: 10, orderId: 5, organizationId: 1 } as Invoice;
+        const proformaInvoice = { id: 10, orderId: 5, organizationId: 1 } as ProformaInvoice;
 
-        await service.getLinesForInvoice(mockCtx, invoice);
+        await service.getLinesForProformaInvoice(mockCtx, proformaInvoice);
 
         expect(mockTranslator.translate).toHaveBeenCalledWith(variant, mockCtx);
     });
 
     it('throws when the order is not found', async () => {
         mockQb.getOne.mockResolvedValue(null);
-        const invoice = { id: 10, orderId: 999, organizationId: 1 } as Invoice;
+        const proformaInvoice = { id: 10, orderId: 999, organizationId: 1 } as ProformaInvoice;
 
-        await expect(service.getLinesForInvoice(mockCtx, invoice)).rejects.toThrow(
+        await expect(service.getLinesForProformaInvoice(mockCtx, proformaInvoice)).rejects.toThrow(
             /Order 999 not found/,
         );
     });
 });
 
-describe('InvoiceService.findForCounterparty', () => {
-    let service: InvoiceService;
+describe('ProformaInvoiceService.findForCounterparty', () => {
+    let service: ProformaInvoiceService;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        service = new InvoiceService(
+        service = new ProformaInvoiceService(
             mockConnection,
             {} as unknown as EntityHydrator,
             {} as unknown as CounterpartyService,
@@ -112,9 +112,12 @@ describe('InvoiceService.findForCounterparty', () => {
 
         const result = await service.findForCounterparty(mockCtx, '42', { take: 10, skip: 0 });
 
-        expect(mockQb.where).toHaveBeenCalledWith('invoice.counterpartyId = :counterpartyId', {
-            counterpartyId: 42,
-        });
+        expect(mockQb.where).toHaveBeenCalledWith(
+            'proformaInvoice.counterpartyId = :counterpartyId',
+            {
+                counterpartyId: 42,
+            },
+        );
         expect(mockQb.take).toHaveBeenCalledWith(10);
         expect(mockQb.skip).toHaveBeenCalledWith(0);
         expect(result).toEqual({ items: [{ id: 1 }], totalItems: 1 });
@@ -125,30 +128,30 @@ describe('InvoiceService.findForCounterparty', () => {
 
         await service.findForCounterparty(mockCtx, '42', { status: 'issued' });
 
-        expect(mockQb.andWhere).toHaveBeenCalledWith('invoice.status = :status', {
+        expect(mockQb.andWhere).toHaveBeenCalledWith('proformaInvoice.status = :status', {
             status: 'issued',
         });
     });
 
-    it('applies search as a substring match against the invoice number', async () => {
+    it('applies search as a substring match against the proforma invoice number', async () => {
         mockQb.getManyAndCount.mockResolvedValue([[], 0]);
 
         await service.findForCounterparty(mockCtx, '42', { search: 'ORD-202607' });
 
-        expect(mockQb.andWhere).toHaveBeenCalledWith('invoice.number ILIKE :search', {
+        expect(mockQb.andWhere).toHaveBeenCalledWith('proformaInvoice.number ILIKE :search', {
             search: '%ORD-202607%',
         });
     });
 });
 
-describe('InvoiceService.updateStatusForOrder', () => {
-    let service: InvoiceService;
+describe('ProformaInvoiceService.updateStatusForOrder', () => {
+    let service: ProformaInvoiceService;
     const mockUpdate = vi.fn();
 
     beforeEach(() => {
         vi.clearAllMocks();
         mockUpdate.mockReset();
-        service = new InvoiceService(
+        service = new ProformaInvoiceService(
             {
                 getRepository: vi.fn(() => ({ update: mockUpdate })),
             } as unknown as TransactionalConnection,
@@ -160,7 +163,7 @@ describe('InvoiceService.updateStatusForOrder', () => {
         );
     });
 
-    it('updates the status of every invoice belonging to the order', async () => {
+    it('updates the status of every proforma invoice belonging to the order', async () => {
         await service.updateStatusForOrder(mockCtx, 7, 'paid');
 
         expect(mockUpdate).toHaveBeenCalledWith({ orderId: 7 }, { status: 'paid' });

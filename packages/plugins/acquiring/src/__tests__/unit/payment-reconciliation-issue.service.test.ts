@@ -39,7 +39,7 @@ describe('PaymentReconciliationIssueService.report — Notification wiring', () 
     // signed-in administrator — rather than skip notifying, this broadcasts to every
     // administrator instead (issue #87 Part 2).
     it('creates an administrator-broadcast Notification (webhook/inbox-triggered path, no signed-in administrator)', async () => {
-        await service.report(ctx, 'AMOUNT_MISMATCH', { invoiceId: 1 });
+        await service.report(ctx, 'AMOUNT_MISMATCH', { proformaInvoiceId: 1 });
 
         expect(notificationService.create).toHaveBeenCalledWith(
             ctx,
@@ -54,8 +54,8 @@ describe('PaymentReconciliationIssueService.report — Notification wiring', () 
 
 // mivend.audit.common's HIGH finding on issue #76: findOpen had no branch/counterparty scoping
 // at all, so a branch-scoped manager saw payment reconciliation issues company-wide. Mirrors
-// InvoiceVisibilityService's own consuming pattern (PaymentVisibilityService) — this reuses
-// InvoiceVisibilityService.applyScope against an invoice/counterparty join.
+// ProformaInvoiceVisibilityService's own consuming pattern (PaymentVisibilityService) — this reuses
+// ProformaInvoiceVisibilityService.applyScope against a proforma invoice/counterparty join.
 describe('PaymentReconciliationIssueService.findOpen — scope filtering', () => {
     function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
         const qb: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -77,7 +77,7 @@ describe('PaymentReconciliationIssueService.findOpen — scope filtering', () =>
 
     let qb: ReturnType<typeof mockQueryBuilder>;
     let service: PaymentReconciliationIssueService;
-    let invoiceVisibilityService: {
+    let proformaInvoiceVisibilityService: {
         resolveScope: ReturnType<typeof vi.fn>;
         applyScope: ReturnType<typeof vi.fn>;
     };
@@ -87,33 +87,33 @@ describe('PaymentReconciliationIssueService.findOpen — scope filtering', () =>
         qb = mockQueryBuilder();
         const repo = { createQueryBuilder: vi.fn(() => qb) };
         const connection = { getRepository: vi.fn(() => repo) };
-        invoiceVisibilityService = {
+        proformaInvoiceVisibilityService = {
             resolveScope: vi.fn(),
             applyScope: vi.fn(),
         };
         service = new PaymentReconciliationIssueService(
             connection as unknown as TransactionalConnection,
             { create: vi.fn(async () => ({})) } as never,
-            invoiceVisibilityService as never,
+            proformaInvoiceVisibilityService as never,
         );
     });
 
-    it('applies no invoice join for "all" scope', async () => {
-        invoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+    it('applies no proforma invoice join for "all" scope', async () => {
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
 
         await service.findOpen(ctx);
 
         expect(qb.innerJoin).not.toHaveBeenCalled();
-        expect(invoiceVisibilityService.applyScope).not.toHaveBeenCalled();
+        expect(proformaInvoiceVisibilityService.applyScope).not.toHaveBeenCalled();
     });
 
-    it('inner-joins Invoice and delegates to InvoiceVisibilityService.applyScope for "own"/"department" scope', async () => {
+    it('inner-joins ProformaInvoice and delegates to ProformaInvoiceVisibilityService.applyScope for "own"/"department" scope', async () => {
         const scope = { kind: 'department', departmentId: 'dept-1', branchId: 'branch-1' };
-        invoiceVisibilityService.resolveScope.mockResolvedValue(scope);
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue(scope);
 
         await service.findOpen(ctx);
 
         expect(qb.innerJoin).toHaveBeenCalled();
-        expect(invoiceVisibilityService.applyScope).toHaveBeenCalledWith(qb, scope);
+        expect(proformaInvoiceVisibilityService.applyScope).toHaveBeenCalledWith(qb, scope);
     });
 });

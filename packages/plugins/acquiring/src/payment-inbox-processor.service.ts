@@ -4,7 +4,7 @@ import { RequestContext } from '@vendure/core';
 import { PaymentChannel } from './entities/payment-attempt.entity';
 import { InboxService } from './inbox.service';
 import {
-    PayInvoiceOutcome,
+    PayProformaInvoiceOutcome,
     PaymentAttemptService,
     PaymentOrganizationMismatchError,
 } from './payment-attempt.service';
@@ -12,13 +12,13 @@ import {
 export interface IncomingPaymentPayload {
     invoiceId: number;
     // The organization the reporting side (ERP/branch) believes this payment belongs to.
-    // PaymentAttemptService.payInvoice validates this against the target Invoice's real
+    // PaymentAttemptService.payProformaInvoice validates this against the target ProformaInvoice's real
     // organizationId before applying — a mismatch is a genuine cross-system discrepancy
     // (PaymentReconciliationIssue), not a rejected/dead-lettered event, since the ERP/branch
-    // isn't necessarily lying — its own invoiceId reference may simply be stale or wrong, and a
-    // human needs to reconcile which invoice was actually meant (the external-integration-rules skill).
+    // isn't necessarily lying — its own proformaInvoiceId reference may simply be stale or wrong, and a
+    // human needs to reconcile which proforma invoice was actually meant (the external-integration-rules skill).
     organizationId: number;
-    outcome: PayInvoiceOutcome;
+    outcome: PayProformaInvoiceOutcome;
     channel: PaymentChannel;
     // The originating system's own reference for this payment fact — an ERP payment-document id
     // for bank-transfer-erp, or an RRN (Retrieval Reference Number, the standard 12-digit
@@ -31,7 +31,7 @@ export interface IncomingPaymentPayload {
 
 // The periodic sweep half of the inbox pattern — called by PaymentInboxWorker on a timer (once a
 // minute by default). Claims whatever is currently 'pending' and, for each row, does the actual
-// work (PaymentAttemptService.payInvoice, same atomic/transactional path used everywhere else in
+// work (PaymentAttemptService.payProformaInvoice, same atomic/transactional path used everywhere else in
 // this plugin) — never the enqueue side, which must stay fast and separate (see InboxService).
 //
 // If Central was unreachable when the event was first enqueued, that's moot — enqueue() already
@@ -60,11 +60,11 @@ export class PaymentInboxProcessorService {
                 if (!payload.externalReference) {
                     // Defense in depth: PaymentEventListener should already have rejected this
                     // before it ever became a 'pending' row — a missing reference here means a
-                    // producer skipped that validation. Dead-letter, don't let payInvoice's
+                    // producer skipped that validation. Dead-letter, don't let payProformaInvoice's
                     // stub-reference default silently paper over invalid inbound data.
                     throw new Error('Inbox event is missing its mandatory externalReference');
                 }
-                await this.paymentAttemptService.payInvoice(
+                await this.paymentAttemptService.payProformaInvoice(
                     ctx,
                     payload.invoiceId,
                     payload.outcome,
@@ -76,8 +76,8 @@ export class PaymentInboxProcessorService {
                 processed += 1;
             } catch (err) {
                 if (err instanceof PaymentOrganizationMismatchError) {
-                    // A PaymentReconciliationIssue was already recorded (payInvoice) — retrying
-                    // won't change which organization the invoice actually belongs to, so
+                    // A PaymentReconciliationIssue was already recorded (payProformaInvoice) — retrying
+                    // won't change which organization the proforma invoice actually belongs to, so
                     // dead-letter immediately rather than wasting sweep cycles (same reasoning as
                     // InboxService.rejectAsInvalid for a missing external reference).
                     await this.inboxService.rejectAsInvalid(ctx, Number(event.id), err.message);

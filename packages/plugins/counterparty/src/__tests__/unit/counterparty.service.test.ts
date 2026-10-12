@@ -543,7 +543,7 @@ describe('CounterpartyService', () => {
         // for "department"-kind scope (security-first correction, 2026-09-20 round 3) — a
         // branch-scoped manager must never see a Counterparty that isn't theirs, including one
         // with no branchId assigned yet (deny-by-default: `c.branchId = :scopeBranch` has no
-        // `OR IS NULL` carve-out, unlike Order/Invoice).
+        // `OR IS NULL` carve-out, unlike Order/ProformaInvoice).
         it('filters by branchId only for "department" scope, ignoring departmentId entirely', async () => {
             const qb = mockQueryBuilder();
             (

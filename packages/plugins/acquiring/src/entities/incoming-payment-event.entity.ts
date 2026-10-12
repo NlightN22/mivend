@@ -15,7 +15,7 @@ export type IncomingPaymentEventStatus = 'pending' | 'processing' | 'processed' 
 // PaymentInboxProcessorService.processPendingEvents' work on it, the row is left in
 // 'processing'/'pending' (never advanced to 'processed'), so the next periodic sweep picks it
 // back up automatically. A row is only ever marked 'processed' *after* the real work
-// (PaymentAttemptService.payInvoice) actually completes.
+// (PaymentAttemptService.payProformaInvoice) actually completes.
 @Entity()
 @Index(['provider', 'providerEventId'], { unique: true })
 export class IncomingPaymentEvent extends VendureEntity {

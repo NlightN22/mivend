@@ -154,7 +154,7 @@ seed-payment-refunds:
 	@echo "Server ready. Seeding payment refunds/disputes..."
 	node infrastructure/scripts/seed-payment-refunds.mjs
 
-# Tops up Orders/Invoices/Documents/History on the demo customer's detail page (AutoService
+# Tops up Orders/ProformaInvoices/Documents/History on the demo customer's detail page (AutoService
 # Nord / cnt-001) past each tab's page size, so pagination is exercisable in dev/manual QA.
 # Idempotent — safe to re-run, only creates the difference up to its target count.
 seed-customer-detail:

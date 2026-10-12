@@ -2,9 +2,9 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
-export type InvoiceStatus = 'pending' | 'issued' | 'paid' | 'cancelled';
+export type ProformaInvoiceStatus = 'pending' | 'issued' | 'paid' | 'cancelled';
 
-// One aggregate storefront Order can split into several Invoices — one per our own legal
+// One aggregate storefront Order can split into several ProformaInvoices — one per our own legal
 // entity (OrganizationRequisites, plugin-documents) that owns the stock the order lines are
 // fulfilled from. This split must be known and materialized *before* an online payment is
 // requested — split-payment acquirers (ЮKassa "сплитование", Т-Банк "Мультирасчёты") require
@@ -13,14 +13,14 @@ export type InvoiceStatus = 'pending' | 'issued' | 'paid' | 'cancelled';
 // docs/payments.md "Organizations" for the full reasoning and open questions (issue TBD).
 //
 // Composite index on (counterpartyId, organizationId, status): this is exactly the filter shape
-// SettlementEntryService.getOpenInvoicesFifo runs on every successful payment (find open
+// SettlementEntryService.getOpenProformaInvoicesFifo runs on every successful payment (find open
 // obligations for one counterparty within one organization) — the three separate single-column
 // indexes below don't cover that combination efficiently once a counterparty accumulates many
-// invoices.
+// proforma invoices.
 @Entity()
 @Index(['counterpartyId', 'organizationId', 'status'])
-export class Invoice extends UuidEntity {
-    constructor(input?: DeepPartial<Invoice>) {
+export class ProformaInvoice extends UuidEntity {
+    constructor(input?: DeepPartial<ProformaInvoice>) {
         super(input);
     }
 
@@ -29,10 +29,10 @@ export class Invoice extends UuidEntity {
     orderId!: number;
 
     // `<order number>-NN` (NumberingService.formatOrderDocumentNumber, see
-    // InvoiceService.createInvoicesForOrder) — reusing Order.code directly here would give every
-    // invoice split off one order the same visible identity as that order, indistinguishable from
+    // ProformaInvoiceService.createProformaInvoicesForOrder) — reusing Order.code directly here would give every
+    // proforma invoice split off one order the same visible identity as that order, indistinguishable from
     // it in a shared list. `orderId` (below) is the real, queryable link
-    // back to the order; this column is Invoice's own identity, not a derived alias of Order's.
+    // back to the order; this column is ProformaInvoice's own identity, not a derived alias of Order's.
     @Index()
     @Column({ type: 'varchar' })
     number!: string;
@@ -52,7 +52,7 @@ export class Invoice extends UuidEntity {
     currencyCode!: string;
 
     @Column({ type: 'varchar', default: 'pending' })
-    status!: InvoiceStatus;
+    status!: ProformaInvoiceStatus;
 
     // Denormalized servicing branch, set at creation time from the customer's preferred
     // TradingPoint (mirrors Order.customFields.branchId in plugin-erp-order) — see

@@ -81,12 +81,12 @@ export const CustomPermission = {
     ReadInvoice: new PermissionDefinition({
         name: 'ReadInvoice',
         description:
-            'Read invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveInvoiceScope)',
+            'Read proforma invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveProformaInvoiceScope)',
     }),
     ReadPayment: new PermissionDefinition({
         name: 'ReadPayment',
         description:
-            'Read payment records for the manager portal — a resource derived from Invoice, scoped the same way (AccessScopeService.resolveInvoiceScope)',
+            'Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope)',
     }),
     ManageErpIntegration: new PermissionDefinition({
         name: 'ManageErpIntegration',

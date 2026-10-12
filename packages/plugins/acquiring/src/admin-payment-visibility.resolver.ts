@@ -12,7 +12,7 @@ export interface OrderPaymentSummary {
 }
 
 // Scoped equivalent of a plain "list all payments" query for the manager portal — see
-// PaymentVisibilityService for the derived-from-Invoice scoping reasoning.
+// PaymentVisibilityService for the derived-from-ProformaInvoice scoping reasoning.
 @Resolver()
 export class AdminPaymentVisibilityResolver {
     constructor(

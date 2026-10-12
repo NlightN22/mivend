@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Dispute } from '../../entities/dispute.entity';
 import { FiscalReceipt } from '../../entities/fiscal-receipt.entity';
 import { IdempotencyKey } from '../../entities/idempotency-key.entity';
-import { Invoice } from '../../entities/invoice.entity';
+import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { PaymentAttempt } from '../../entities/payment-attempt.entity';
 import { PaymentReconciliationIssue } from '../../entities/payment-reconciliation-issue.entity';
 import { IncomingPaymentEvent } from '../../entities/incoming-payment-event.entity';
@@ -11,8 +11,8 @@ import { PaymentRefund } from '../../entities/payment-refund.entity';
 import { SettlementEntry } from '../../entities/settlement-entry.entity';
 
 describe('acquiring entities', () => {
-    it('constructs an Invoice split off an aggregate order for one organization', () => {
-        const invoice = new Invoice({
+    it('constructs an ProformaInvoice split off an aggregate order for one organization', () => {
+        const proformaInvoice = new ProformaInvoice({
             orderId: 1,
             organizationId: 1,
             counterpartyId: 42,
@@ -21,14 +21,14 @@ describe('acquiring entities', () => {
             status: 'pending',
         });
 
-        expect(invoice.organizationId).toBe(1);
-        expect(invoice.status).toBe('pending');
+        expect(proformaInvoice.organizationId).toBe(1);
+        expect(proformaInvoice.status).toBe('pending');
     });
 
-    it('constructs a PaymentAttempt referencing an Invoice', () => {
+    it('constructs a PaymentAttempt referencing an ProformaInvoice', () => {
         const attempt = new PaymentAttempt({
             channel: 'online-acquiring',
-            invoiceId: 1,
+            proformaInvoiceId: 1,
             orderId: 1,
             amount: 1000,
             currencyCode: 'RUB',
@@ -85,7 +85,7 @@ describe('acquiring entities', () => {
     it('constructs a SettlementEntry with allocation fields', () => {
         const entry = new SettlementEntry({
             counterpartyId: 42,
-            invoiceId: 1,
+            proformaInvoiceId: 1,
             organizationId: 1,
             sourceType: 'payment.captured',
             sourcePaymentId: 1,
@@ -105,7 +105,7 @@ describe('acquiring entities', () => {
         const issue = new PaymentReconciliationIssue({
             issueType: 'AMOUNT_MISMATCH',
             paymentId: 1,
-            invoiceId: 1,
+            proformaInvoiceId: 1,
             organizationId: 1,
             providerPaymentId: 'prov-1',
             erpDocumentId: null,

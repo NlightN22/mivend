@@ -41,7 +41,7 @@ export class ErpCallbackController {
     @HttpCode(200)
     @ApiOperation({
         summary:
-            'Receive a payment fact pushed from the ERP (the ERP) for an Invoice — durably ' +
+            'Receive a payment fact pushed from the ERP (the ERP) for an ProformaInvoice — durably ' +
             'enqueued by plugin-acquiring, never processed inline (the external-integration-rules skill). ' +
             'Also the simulation entry point until a real ERP integration exists.',
     })

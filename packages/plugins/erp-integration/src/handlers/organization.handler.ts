@@ -16,7 +16,7 @@ const loggerCtx = 'IntegrationOrganizationHandler';
 // (issue #84's ErpReconciliationIssue for `organization` always showed a full 0-vs-N gap). Now
 // always creates/updates a row via legalName=name; inn/legalAddress/bank fields stay null until
 // erp-import's own record arrives, if it ever does in this contour — never fabricated here.
-// PdfGeneratorService refuses to render an invoice/contract against a still-partial row.
+// PdfGeneratorService refuses to render a proforma invoice/contract against a still-partial row.
 @Injectable()
 export class OrganizationStreamHandler implements InboundStreamHandler {
     constructor(private readonly documentsService: DocumentsService) {}

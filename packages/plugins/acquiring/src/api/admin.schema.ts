@@ -2,15 +2,15 @@ import { gql } from 'graphql-tag';
 import type { DocumentNode } from 'graphql';
 
 export const adminApiExtensions: DocumentNode = gql`
-    "Mirrors shop.schema.ts's InvoiceOrder — a lightweight ref, not the full core Order type."
-    type InvoiceOrder {
+    "Mirrors shop.schema.ts's ProformaInvoiceOrder — a lightweight ref, not the full core Order type."
+    type ProformaInvoiceOrder {
         id: ID!
         code: String!
     }
 
-    type Invoice {
+    type ProformaInvoice {
         id: ID!
-        "Human-facing business number — generated at creation, distinct from the order's own code — see Invoice.number's own doc comment (invoice.entity.ts)."
+        "Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts)."
         number: String!
         createdAt: DateTime!
         orderId: ID!
@@ -20,14 +20,14 @@ export const adminApiExtensions: DocumentNode = gql`
         currencyCode: String!
         status: String!
         branchId: ID
-        "Resolved via InvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: InvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page)."
-        order: InvoiceOrder!
-        "Resolved via InvoiceFieldResolver.lines — must be declared here too: registering InvoiceFieldResolver without declaring every field it resolves throws 'Invoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging)."
+        "Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: InvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page)."
+        order: ProformaInvoiceOrder!
+        "Resolved via ProformaInvoiceFieldResolver.lines — must be declared here too: registering ProformaInvoiceFieldResolver without declaring every field it resolves throws 'ProformaInvoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging)."
         lines: [OrderLine!]!
     }
 
-    type InvoiceList {
-        items: [Invoice!]!
+    type ProformaInvoiceList {
+        items: [ProformaInvoice!]!
         totalItems: Int!
     }
 
@@ -36,11 +36,11 @@ export const adminApiExtensions: DocumentNode = gql`
         currencyCode: String!
     }
 
-    input InvoiceListOptions {
+    input ProformaInvoiceListOptions {
         take: Int
         skip: Int
         status: String
-        "Substring match against the invoice's own number (Invoice.number)."
+        "Substring match against the proforma invoice's own number (ProformaInvoice.number)."
         search: String
     }
 
@@ -51,7 +51,7 @@ export const adminApiExtensions: DocumentNode = gql`
 
     type PaymentAttempt {
         id: ID!
-        "The payment's own internal, human-facing business number — generated the same way as Order.code/Invoice.number/DiscountGrant.number. See PaymentAttempt.number's own doc comment (payment-attempt.entity.ts) for why this is distinct from providerPaymentId below (the external-integration-rules skill)."
+        "The payment's own internal, human-facing business number — generated the same way as Order.code/ProformaInvoice.number/DiscountGrant.number. See PaymentAttempt.number's own doc comment (payment-attempt.entity.ts) for why this is distinct from providerPaymentId below (the external-integration-rules skill)."
         number: String!
         createdAt: DateTime!
         "The payment's real external reference — an acquirer RRN, a branch kassa receipt number, an ERP payment-document id, or (until a real acquirer is wired in) a clearly-marked stub value. Mandatory for every channel; used for reconciliation, never as this payment's own displayed identity."
@@ -60,8 +60,8 @@ export const adminApiExtensions: DocumentNode = gql`
         paymentStatus: String!
         amount: Int!
         currencyCode: String!
-        invoiceId: ID
-        "Only populated when returned from visiblePayments (joined from its Invoice) — null elsewhere."
+        proformaInvoiceId: ID
+        "Only populated when returned from visiblePayments (joined from its ProformaInvoice) — null elsewhere."
         counterpartyId: ID
     }
 
@@ -100,7 +100,7 @@ export const adminApiExtensions: DocumentNode = gql`
         id: ID!
         issueType: String!
         paymentId: ID
-        invoiceId: ID
+        proformaInvoiceId: ID
         organizationId: ID
         providerPaymentId: String
         erpDocumentId: String
@@ -136,19 +136,22 @@ export const adminApiExtensions: DocumentNode = gql`
     extend type Query {
         "Enabled variants and how many have no organization (cannot be ordered). Integration health."
         variantOrganizationHealth: VariantOrganizationHealth!
-        invoicesForOrder(orderId: ID!): [Invoice!]!
+        invoicesForOrder(orderId: ID!): [ProformaInvoice!]!
         "Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (backend-plugin-rules skill's Dev seed rules exception, see seed-payment-refunds.mjs)."
         capturedOnlinePayments(take: Int): [PaymentAttempt!]!
         "Seed-script idempotency helper only — see seed-payment-refunds.mjs."
         paymentRefundExists(providerRefundId: String!): Boolean!
         "Seed-script idempotency helper only — see seed-payment-refunds.mjs."
         paymentDisputeExists(paymentId: ID!, type: String!): Boolean!
-        "Manager-portal invoice list, branch-scoped via AccessScopeService.resolveInvoiceScope — see AdminInvoiceVisibilityResolver / docs/access-control.md."
-        visibleInvoices(options: InvoiceListOptions, counterpartyId: ID): InvoiceList!
-        "Manager-portal payment list — derived-from-Invoice scoping, see PaymentVisibilityService."
+        "Manager-portal proforma invoice list, branch-scoped via AccessScopeService.resolveProformaInvoiceScope — see AdminProformaInvoiceVisibilityResolver / docs/access-control.md."
+        visibleProformaInvoices(
+            options: ProformaInvoiceListOptions
+            counterpartyId: ID
+        ): ProformaInvoiceList!
+        "Manager-portal payment list — derived-from-ProformaInvoice scoping, see PaymentVisibilityService."
         visiblePayments(options: PaymentListOptions, counterpartyId: ID): PaymentAttemptList!
-        "Sum of a counterparty's unpaid (pending/issued) invoices, scoped the same way visibleInvoices is. Null if the counterparty has no unpaid invoices, not zero-with-a-currency."
-        invoiceOutstandingBalance(counterpartyId: ID!): MoneyAmount
+        "Sum of a counterparty's unpaid (pending/issued) proforma invoices, scoped the same way visibleProformaInvoices is. Null if the counterparty has no unpaid proforma invoices, not zero-with-a-currency."
+        proformaInvoiceOutstandingBalance(counterpartyId: ID!): MoneyAmount
         "Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet."
         orderPaymentSummaries(orderIds: [ID!]!): [OrderPaymentSummary!]!
         "Real DB-level filtered + paginated order list for one customer, bucketed by real captured-payment status (unpaid/partial/paid) — see AdminOrderPaymentViewResolver. Used by CustomerOrdersTab.vue's Unpaid/Partially paid/Paid view chips."

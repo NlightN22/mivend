@@ -8,19 +8,19 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import { Invoice } from '../../entities/invoice.entity';
+import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { PaymentAttempt } from '../../entities/payment-attempt.entity';
 import { SettlementEntry } from '../../entities/settlement-entry.entity';
-import { InvoiceService } from '../../invoice.service';
+import { ProformaInvoiceService } from '../../proforma-invoice.service';
 import { PaymentAttemptService } from '../../payment-attempt.service';
 import { SettlementEntryService } from '../../settlement-entry.service';
 
-// Mirrors the real invoice/payment_attempt/settlement_entry tables against a real Postgres
-// (same approach as invoice.service.int.test.ts) — real transaction/rollback/row-locking
+// Mirrors the real proforma invoice/payment_attempt/settlement_entry tables against a real Postgres
+// (same approach as proforma-invoice.service.int.test.ts) — real transaction/rollback/row-locking
 // semantics can't be observed against a mocked TransactionalConnection, only a real DB.
-@Entity('invoice')
+@Entity('proforma_invoice')
 @Index(['counterpartyId', 'organizationId', 'status'])
-class TestInvoice {
+class TestProformaInvoice {
     @PrimaryGeneratedColumn()
     id!: number;
 
@@ -40,7 +40,7 @@ class TestPaymentAttempt {
     id!: number;
 
     @Column({ type: 'varchar' }) channel!: string;
-    @Column({ type: 'int', nullable: true }) invoiceId!: number | null;
+    @Column({ type: 'int', nullable: true }) proformaInvoiceId!: number | null;
     @Column({ type: 'int', nullable: true }) orderId!: number | null;
     @Column({ type: 'int' }) amount!: number;
     @Column({ type: 'varchar' }) currencyCode!: string;
@@ -56,7 +56,7 @@ class TestSettlementEntry {
     id!: number;
 
     @Column({ type: 'int' }) counterpartyId!: number;
-    @Column({ type: 'int', nullable: true }) invoiceId!: number | null;
+    @Column({ type: 'int', nullable: true }) proformaInvoiceId!: number | null;
     @Column({ type: 'int', nullable: true }) organizationId!: number | null;
     @Column({ type: 'varchar' }) sourceType!: string;
     @Column({ type: 'int', nullable: true }) sourcePaymentId!: number | null;
@@ -70,19 +70,19 @@ class TestSettlementEntry {
 }
 
 let dataSource: DataSource;
-let invoiceService: InvoiceService;
+let proformaInvoiceService: ProformaInvoiceService;
 let settlementEntryService: SettlementEntryService;
 let paymentAttemptService: PaymentAttemptService;
 const mockCtx = {} as RequestContext;
 
-// Maps the real entity classes the services import (Invoice/PaymentAttempt/SettlementEntry)
+// Maps the real entity classes the services import (ProformaInvoice/PaymentAttempt/SettlementEntry)
 // onto this file's standalone Test* mirrors, keyed by object identity — the real service code
-// does `entity === Invoice` style lookups, so the shim must recognize the *actual* imported
+// does `entity === ProformaInvoice` style lookups, so the shim must recognize the *actual* imported
 // classes, not just any class with the right shape.
 function mapEntity(
     entity: unknown,
-): typeof TestInvoice | typeof TestPaymentAttempt | typeof TestSettlementEntry {
-    if (entity === Invoice) return TestInvoice;
+): typeof TestProformaInvoice | typeof TestPaymentAttempt | typeof TestSettlementEntry {
+    if (entity === ProformaInvoice) return TestProformaInvoice;
     if (entity === PaymentAttempt) return TestPaymentAttempt;
     if (entity === SettlementEntry) return TestSettlementEntry;
     throw new Error(`Unmapped entity in test connection shim: ${String(entity)}`);
@@ -134,7 +134,7 @@ function buildConnectionShim(): TransactionalConnection {
                 },
             });
         },
-        // Only the 2-arg form is used by PaymentAttemptService.payInvoice — no need to shim the
+        // Only the 2-arg form is used by PaymentAttemptService.payProformaInvoice — no need to shim the
         // 1-arg overload here.
         withTransaction: async <T>(
             ctx: RequestContext & TxCtx,
@@ -157,7 +157,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestInvoice, TestPaymentAttempt, TestSettlementEntry],
+        entities: [TestProformaInvoice, TestPaymentAttempt, TestSettlementEntry],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -168,7 +168,7 @@ beforeAll(async () => {
         formatOrderDocumentNumber: (orderNumber: string, ordinal: number) =>
             `${orderNumber}-${String(ordinal).padStart(2, '0')}`,
     } as never;
-    invoiceService = new InvoiceService(
+    proformaInvoiceService = new ProformaInvoiceService(
         connectionShim,
         {} as never,
         {} as never,
@@ -176,10 +176,10 @@ beforeAll(async () => {
         {} as never,
         numberingServiceShim,
     );
-    settlementEntryService = new SettlementEntryService(connectionShim, invoiceService);
+    settlementEntryService = new SettlementEntryService(connectionShim, proformaInvoiceService);
     paymentAttemptService = new PaymentAttemptService(
         connectionShim,
-        invoiceService,
+        proformaInvoiceService,
         settlementEntryService,
         { report: vi.fn(async () => ({ id: 1 })) } as never,
         numberingServiceShim,
@@ -194,46 +194,52 @@ afterAll(async () => {
 beforeEach(async () => {
     await dataSource.getRepository(TestSettlementEntry).clear();
     await dataSource.getRepository(TestPaymentAttempt).clear();
-    await dataSource.getRepository(TestInvoice).clear();
+    await dataSource.getRepository(TestProformaInvoice).clear();
 });
 
 afterEach(() => {
     clearForcedFailure();
 });
 
-async function seedInvoicePair(): Promise<[TestInvoice, TestInvoice]> {
-    const [invoiceA, invoiceB] = await dataSource.getRepository(TestInvoice).save([
-        {
-            orderId: 1,
-            organizationId: 1,
-            counterpartyId: 5,
-            amount: 3000,
-            currencyCode: 'RUB',
-            status: 'paid',
-        },
-        {
-            orderId: 2,
-            organizationId: 1,
-            counterpartyId: 5,
-            amount: 1000,
-            currencyCode: 'RUB',
-            status: 'issued',
-        },
-    ]);
-    return [invoiceA, invoiceB];
+async function seedProformaInvoicePair(): Promise<[TestProformaInvoice, TestProformaInvoice]> {
+    const [proformaInvoiceA, proformaInvoiceB] = await dataSource
+        .getRepository(TestProformaInvoice)
+        .save([
+            {
+                orderId: 1,
+                organizationId: 1,
+                counterpartyId: 5,
+                amount: 3000,
+                currencyCode: 'RUB',
+                status: 'paid',
+            },
+            {
+                orderId: 2,
+                organizationId: 1,
+                counterpartyId: 5,
+                amount: 1000,
+                currencyCode: 'RUB',
+                status: 'issued',
+            },
+        ]);
+    return [proformaInvoiceA, proformaInvoiceB];
 }
 
 describe('Payment atomicity and recovery (integration, real Postgres)', () => {
-    // invoiceA is already paid (simulating "a duplicate payment arrives from another channel")
-    // so this payInvoice call's whole amount cascades to invoiceB, then the remainder becomes
+    // proformaInvoiceA is already paid (simulating "a duplicate payment arrives from another channel")
+    // so this payProformaInvoice call's whole amount cascades to proformaInvoiceB, then the remainder becomes
     // an advance — two separate SettlementEntry writes in one call, which is what lets us
     // observe a forced failure *between* them.
-    it('a failure partway through allocation rolls back everything — no orphaned PaymentAttempt, no partial SettlementEntry, no partial invoice status change', async () => {
-        const [invoiceA, invoiceB] = await seedInvoicePair();
+    it('a failure partway through allocation rolls back everything — no orphaned PaymentAttempt, no partial SettlementEntry, no partial proforma invoice status change', async () => {
+        const [proformaInvoiceA, proformaInvoiceB] = await seedProformaInvoicePair();
         failNthSettlementSave(2);
 
         await expect(
-            paymentAttemptService.payInvoice(mockCtx, Number(invoiceA.id), 'success'),
+            paymentAttemptService.payProformaInvoice(
+                mockCtx,
+                Number(proformaInvoiceA.id),
+                'success',
+            ),
         ).rejects.toThrow(/simulated crash mid-allocation/);
 
         clearForcedFailure();
@@ -243,71 +249,77 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
         // transaction, so all of it rolled back together.
         const paymentAttempts = await dataSource
             .getRepository(TestPaymentAttempt)
-            .find({ where: { invoiceId: Number(invoiceA.id) } });
+            .find({ where: { proformaInvoiceId: Number(proformaInvoiceA.id) } });
         expect(paymentAttempts).toHaveLength(0);
 
         const settlementEntries = await dataSource.getRepository(TestSettlementEntry).find();
         expect(settlementEntries).toHaveLength(0);
 
-        const refetchedB = await dataSource.getRepository(TestInvoice).findOneOrFail({
-            where: { id: Number(invoiceB.id) },
+        const refetchedB = await dataSource.getRepository(TestProformaInvoice).findOneOrFail({
+            where: { id: Number(proformaInvoiceB.id) },
         });
         expect(refetchedB.status).toBe('issued'); // NOT 'paid' — that update rolled back too
     });
 
     it('resumes correctly on retry after an interrupted allocation, completing the allocation exactly once with no duplication', async () => {
-        const [invoiceA, invoiceB] = await seedInvoicePair();
+        const [proformaInvoiceA, proformaInvoiceB] = await seedProformaInvoicePair();
         failNthSettlementSave(2);
 
         await expect(
-            paymentAttemptService.payInvoice(mockCtx, Number(invoiceA.id), 'success'),
+            paymentAttemptService.payProformaInvoice(
+                mockCtx,
+                Number(proformaInvoiceA.id),
+                'success',
+            ),
         ).rejects.toThrow(/simulated crash mid-allocation/);
 
         // Central "recovers" — the caller (branch/ERP redelivery, or the customer retrying)
-        // simply calls payInvoice again. Nothing partial existed to reconcile (see the previous
+        // simply calls payProformaInvoice again. Nothing partial existed to reconcile (see the previous
         // test), so this is a clean run.
         clearForcedFailure();
 
-        const result = await paymentAttemptService.payInvoice(
+        const result = await paymentAttemptService.payProformaInvoice(
             mockCtx,
-            Number(invoiceA.id),
+            Number(proformaInvoiceA.id),
             'success',
         );
-        expect(result.status).toBe('paid'); // invoiceA itself — already paid before, unaffected by this call
+        expect(result.status).toBe('paid'); // proformaInvoiceA itself — already paid before, unaffected by this call
 
-        const refetchedB = await dataSource.getRepository(TestInvoice).findOneOrFail({
-            where: { id: Number(invoiceB.id) },
+        const refetchedB = await dataSource.getRepository(TestProformaInvoice).findOneOrFail({
+            where: { id: Number(proformaInvoiceB.id) },
         });
         expect(refetchedB.status).toBe('paid');
 
         const entries = await dataSource.getRepository(TestSettlementEntry).find();
-        // Exactly one allocation to invoiceB (1000) and one advance entry for the remainder
+        // Exactly one allocation to proformaInvoiceB (1000) and one advance entry for the remainder
         // (3000 - 1000 = 2000) — not doubled by the earlier failed/rolled-back attempt.
         expect(entries).toHaveLength(2);
-        const toInvoiceB = entries.find(e => e.invoiceId === Number(invoiceB.id));
-        const advance = entries.find(e => e.invoiceId === null);
-        expect(toInvoiceB?.allocationAmount).toBe(1000);
+        const toProformaInvoiceB = entries.find(
+            e => e.proformaInvoiceId === Number(proformaInvoiceB.id),
+        );
+        const advance = entries.find(e => e.proformaInvoiceId === null);
+        expect(toProformaInvoiceB?.allocationAmount).toBe(1000);
         expect(advance?.amount).toBe(2000);
 
         const paymentAttempts = await dataSource
             .getRepository(TestPaymentAttempt)
-            .find({ where: { invoiceId: Number(invoiceA.id) } });
+            .find({ where: { proformaInvoiceId: Number(proformaInvoiceA.id) } });
         expect(paymentAttempts).toHaveLength(1); // exactly one — the failed attempt left nothing behind
     });
 
     // Level 3 idempotency (the external-integration-rules skill). Mirrors a real partial-failure gap: the inbox
-    // processor calls payInvoice with an *explicit* externalReference (not the auto-generated
-    // stub), then calls markProcessed — if payInvoice already committed but markProcessed itself
-    // then fails, the inbox row is left retryable and the next sweep calls payInvoice again with
+    // processor calls payProformaInvoice with an *explicit* externalReference (not the auto-generated
+    // stub), then calls markProcessed — if payProformaInvoice already committed but markProcessed itself
+    // then fails, the inbox row is left retryable and the next sweep calls payProformaInvoice again with
     // the exact same externalReference. Before the (channel, providerPaymentId) uniqueness guard,
     // this created a second PaymentAttempt for the same real-world payment.
-    it('retrying payInvoice with the exact same (channel, externalReference) is a safe no-op — no duplicate PaymentAttempt, no double allocation', async () => {
-        const [invoiceA, invoiceB] = await seedInvoicePair();
+    it('retrying payProformaInvoice with the exact same (channel, externalReference) is a safe no-op — no duplicate PaymentAttempt, no double allocation', async () => {
+        const [proformaInvoiceA, proformaInvoiceB] = await seedProformaInvoicePair();
         const sameReference = 'RRN-fixed-reference-for-retry-test';
 
-        const first = await paymentAttemptService.payInvoice(
+        const first = await paymentAttemptService.payProformaInvoice(
             mockCtx,
-            Number(invoiceA.id),
+            Number(proformaInvoiceA.id),
             'success',
             'branch-kassa',
             sameReference,
@@ -317,9 +329,9 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
         // Simulates the inbox processor's retry: same channel, same externalReference, as if the
         // previous call's business write succeeded but its own bookkeeping (markProcessed) failed
         // and the event became retryable again.
-        const second = await paymentAttemptService.payInvoice(
+        const second = await paymentAttemptService.payProformaInvoice(
             mockCtx,
-            Number(invoiceA.id),
+            Number(proformaInvoiceA.id),
             'success',
             'branch-kassa',
             sameReference,
@@ -331,8 +343,8 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
             .find({ where: { providerPaymentId: sameReference } });
         expect(paymentAttempts).toHaveLength(1); // not 2 — the retry did not create a duplicate
 
-        const refetchedB = await dataSource.getRepository(TestInvoice).findOneOrFail({
-            where: { id: Number(invoiceB.id) },
+        const refetchedB = await dataSource.getRepository(TestProformaInvoice).findOneOrFail({
+            where: { id: Number(proformaInvoiceB.id) },
         });
         expect(refetchedB.status).toBe('paid');
 
@@ -341,21 +353,21 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
         expect(entries).toHaveLength(2);
     });
 
-    it('two concurrent payInvoice calls with the same (channel, externalReference) create exactly one PaymentAttempt', async () => {
-        const [invoiceA] = await seedInvoicePair();
+    it('two concurrent payProformaInvoice calls with the same (channel, externalReference) create exactly one PaymentAttempt', async () => {
+        const [proformaInvoiceA] = await seedProformaInvoicePair();
         const sameReference = 'RRN-fixed-reference-for-concurrency-test';
 
         const results = await Promise.allSettled([
-            paymentAttemptService.payInvoice(
+            paymentAttemptService.payProformaInvoice(
                 mockCtx,
-                Number(invoiceA.id),
+                Number(proformaInvoiceA.id),
                 'success',
                 'branch-kassa',
                 sameReference,
             ),
-            paymentAttemptService.payInvoice(
+            paymentAttemptService.payProformaInvoice(
                 mockCtx,
-                Number(invoiceA.id),
+                Number(proformaInvoiceA.id),
                 'success',
                 'branch-kassa',
                 sameReference,
@@ -363,7 +375,7 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
         ]);
 
         // Both calls resolve (the loser recognizes the unique-constraint race and treats it as a
-        // safe no-op, per payInvoice's catch(isUniqueViolation) branch) — real concurrency, not
+        // safe no-op, per payProformaInvoice's catch(isUniqueViolation) branch) — real concurrency, not
         // two sequential calls, exercising the DB-level guard the find-first check alone can't.
         expect(results.every(r => r.status === 'fulfilled')).toBe(true);
 

@@ -1,6 +1,6 @@
 import { CompleteOrganizationRequisites } from '../entities/organization-requisites.entity';
 
-export interface InvoiceLineData {
+export interface ProformaInvoiceLineData {
     name: string;
     sku: string;
     quantity: number;
@@ -8,7 +8,7 @@ export interface InvoiceLineData {
     lineTotal: string;
 }
 
-export interface InvoiceSourceLine {
+export interface ProformaInvoiceSourceLine {
     quantity: number;
     unitPriceWithTax: number;
     linePriceWithTax: number;
@@ -16,17 +16,17 @@ export interface InvoiceSourceLine {
 }
 
 // Decoupled from a raw Vendure `Order` — a document can now be one of several
-// organization-split invoices for an order (docs/payments.md "Organizations"), each with its
+// organization-split proforma invoices for an order (docs/payments.md "Organizations"), each with its
 // own document number, total, and (usually filtered) line subset — not the whole order.
-export interface InvoiceSource {
+export interface ProformaInvoiceSource {
     documentNumber: string;
     issueDate: Date;
     currencyCode: string | null;
     totalAmount: number;
-    lines: InvoiceSourceLine[];
+    lines: ProformaInvoiceSourceLine[];
 }
 
-export interface InvoiceTemplateData {
+export interface ProformaInvoiceTemplateData {
     documentNumber: string;
     issueDate: string;
     seller: {
@@ -39,7 +39,7 @@ export interface InvoiceTemplateData {
     buyer: {
         legalName: string;
     };
-    lines: InvoiceLineData[];
+    lines: ProformaInvoiceLineData[];
     currencySymbol: string;
     totalAmount: string;
     // Base64 data URI (e.g. "data:image/png;base64,...") — embedded directly so
@@ -56,12 +56,12 @@ function formatMoney(minorUnits: number, currencySymbol: string): string {
     return `${(minorUnits / 100).toFixed(2)} ${currencySymbol}`;
 }
 
-export function buildInvoiceTemplateData(
-    source: InvoiceSource,
+export function buildProformaInvoiceTemplateData(
+    source: ProformaInvoiceSource,
     requisites: CompleteOrganizationRequisites,
     buyerLegalName: string,
     logoDataUri: string | null = null,
-): InvoiceTemplateData {
+): ProformaInvoiceTemplateData {
     const currencySymbol = source.currencyCode ?? '';
     const bankDetails = requisites.bankName
         ? [requisites.bankName, requisites.bankAccount, requisites.bankBik]
@@ -109,7 +109,7 @@ export function renderLogoMarkup(legalName: string, logoDataUri: string | null):
     return `<div class="logo logo--fallback">${logoInitial(legalName)}</div>`;
 }
 
-export function renderInvoiceHtml(data: InvoiceTemplateData): string {
+export function renderProformaInvoiceHtml(data: ProformaInvoiceTemplateData): string {
     const rows = data.lines
         .map(
             line => `
@@ -150,7 +150,7 @@ export function renderInvoiceHtml(data: InvoiceTemplateData): string {
         <div class="header">
             ${renderLogoMarkup(data.seller.legalName, data.logoDataUri)}
             <div>
-                <p class="title">Invoice ${data.documentNumber}</p>
+                <p class="title">ProformaInvoice ${data.documentNumber}</p>
                 <p class="doc-meta">Issued ${data.issueDate}</p>
             </div>
         </div>

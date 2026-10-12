@@ -397,9 +397,9 @@ export class CounterpartyService {
                 // shown to all of them — deny-by-default, not permissive-by-default. Only
                 // 'all'-scope roles (general-director, portal-admin) see unassigned rows, same as
                 // every other counterparty. There is deliberately no `OR c.branchId IS NULL`
-                // carve-out here (unlike Order/Invoice's own denormalized-branch filter) — see
+                // carve-out here (unlike Order/ProformaInvoice's own denormalized-branch filter) — see
                 // docs/access-control.md's "Branch scope" section for why Counterparty's
-                // no-carve-out rule differs from Order/Invoice's.
+                // no-carve-out rule differs from Order/ProformaInvoice's.
                 qb.andWhere('c.branchId = :scopeBranch', { scopeBranch: scope.branchId ?? null });
                 break;
             case 'all':

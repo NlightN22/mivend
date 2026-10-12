@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-// The full set of values plugin-acquiring's PayInvoiceOutcome accepts (see
+// The full set of values plugin-acquiring's PayProformaInvoiceOutcome accepts (see
 // packages/plugins/acquiring/src/payment-attempt.service.ts's OUTCOME_TO_PAYMENT_STATUS) —
 // duplicated here rather than imported since plugin-sync must not depend on plugin-acquiring
 // (rule #5/#6: sync owns the transport boundary, not the other way around). Exported so
@@ -11,13 +11,13 @@ import { ApiProperty } from '@nestjs/swagger';
 export const ERP_PAYMENT_OUTCOMES = ['success', 'pending', 'fail', 'cancel'] as const;
 
 export class ErpPaymentReportedDto {
-    @ApiProperty({ description: 'plugin-acquiring Invoice id this payment applies to.' })
+    @ApiProperty({ description: 'plugin-acquiring ProformaInvoice id this payment applies to.' })
     invoiceId!: number;
 
     @ApiProperty({
         description:
             'The organization (legal entity, plugin-documents OrganizationRequisites) this ' +
-            'payment is for. Validated against the target Invoice.organizationId before the ' +
+            'payment is for. Validated against the target ProformaInvoice.organizationId before the ' +
             'payment is applied — payment allocation is always scoped to one organization, ' +
             'regardless of which branch or channel reported it (the external-integration-rules skill).',
     })

@@ -52,7 +52,7 @@ describe('ErpCallbackController', () => {
             expect(eventBus.publish).not.toHaveBeenCalled();
         });
 
-        it('rejects with 400 when invoiceId is missing', async () => {
+        it('rejects with 400 when proformaInvoiceId is missing', async () => {
             await expect(
                 controller.receivePayment({} as never, {
                     invoiceId: 0,

@@ -17,11 +17,11 @@ import {
 } from 'shared';
 
 import { IncomingPaymentEvent } from '../../entities/incoming-payment-event.entity';
-import { Invoice } from '../../entities/invoice.entity';
+import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { PaymentAttempt } from '../../entities/payment-attempt.entity';
 import { SettlementEntry } from '../../entities/settlement-entry.entity';
 import { InboxService } from '../../inbox.service';
-import { InvoiceService } from '../../invoice.service';
+import { ProformaInvoiceService } from '../../proforma-invoice.service';
 import { PaymentAttemptService } from '../../payment-attempt.service';
 import { PaymentEventListener } from '../../payment-event.listener';
 import { PaymentInboxProcessorService } from '../../payment-inbox-processor.service';
@@ -61,9 +61,9 @@ class FakeEventBus {
 // processing for its own reasons (the scenario that prompted this test), the event is durably
 // recorded and the *next* sweep resumes it automatically — nothing is lost, and redelivery of
 // the same event is a safe no-op (level 2 idempotency, docs/payments.md).
-@Entity('invoice')
+@Entity('proforma_invoice')
 @Index(['counterpartyId', 'organizationId', 'status'])
-class TestInvoice {
+class TestProformaInvoice {
     @PrimaryGeneratedColumn()
     id!: number;
 
@@ -83,7 +83,7 @@ class TestPaymentAttempt {
     id!: number;
 
     @Column({ type: 'varchar' }) channel!: string;
-    @Column({ type: 'int', nullable: true }) invoiceId!: number | null;
+    @Column({ type: 'int', nullable: true }) proformaInvoiceId!: number | null;
     @Column({ type: 'int', nullable: true }) orderId!: number | null;
     @Column({ type: 'int' }) amount!: number;
     @Column({ type: 'varchar' }) currencyCode!: string;
@@ -99,7 +99,7 @@ class TestSettlementEntry {
     id!: number;
 
     @Column({ type: 'int' }) counterpartyId!: number;
-    @Column({ type: 'int', nullable: true }) invoiceId!: number | null;
+    @Column({ type: 'int', nullable: true }) proformaInvoiceId!: number | null;
     @Column({ type: 'int', nullable: true }) organizationId!: number | null;
     @Column({ type: 'varchar' }) sourceType!: string;
     @Column({ type: 'int', nullable: true }) sourcePaymentId!: number | null;
@@ -131,7 +131,7 @@ class TestIncomingPaymentEvent {
 }
 
 let dataSource: DataSource;
-let invoiceService: InvoiceService;
+let invoiceService: ProformaInvoiceService;
 let settlementEntryService: SettlementEntryService;
 let paymentAttemptService: PaymentAttemptService;
 let inboxService: InboxService;
@@ -148,11 +148,11 @@ const mockCtx = {} as RequestContext;
 function mapEntity(
     entity: unknown,
 ):
-    | typeof TestInvoice
+    | typeof TestProformaInvoice
     | typeof TestPaymentAttempt
     | typeof TestSettlementEntry
     | typeof TestIncomingPaymentEvent {
-    if (entity === Invoice) return TestInvoice;
+    if (entity === ProformaInvoice) return TestProformaInvoice;
     if (entity === PaymentAttempt) return TestPaymentAttempt;
     if (entity === SettlementEntry) return TestSettlementEntry;
     if (entity === IncomingPaymentEvent) return TestIncomingPaymentEvent;
@@ -163,7 +163,7 @@ interface TxCtx {
     __manager?: import('typeorm').EntityManager;
 }
 
-// Forces processPendingEvents' underlying payInvoice call to fail on its Nth SettlementEntry
+// Forces processPendingEvents' underlying payProformaInvoice call to fail on its Nth SettlementEntry
 // write — simulating "Central could not complete the transaction for its own reasons" without
 // needing a real crash. Applied at the single getRepository choke point so it works whether or
 // not the call happens to be inside a transaction at the time (same technique as
@@ -226,7 +226,12 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestInvoice, TestPaymentAttempt, TestSettlementEntry, TestIncomingPaymentEvent],
+        entities: [
+            TestProformaInvoice,
+            TestPaymentAttempt,
+            TestSettlementEntry,
+            TestIncomingPaymentEvent,
+        ],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -237,7 +242,7 @@ beforeAll(async () => {
         formatOrderDocumentNumber: (orderNumber: string, ordinal: number) =>
             `${orderNumber}-${String(ordinal).padStart(2, '0')}`,
     } as never;
-    invoiceService = new InvoiceService(
+    invoiceService = new ProformaInvoiceService(
         connectionShim,
         {} as never,
         {} as never,
@@ -270,7 +275,7 @@ beforeEach(async () => {
     await dataSource.getRepository(TestIncomingPaymentEvent).clear();
     await dataSource.getRepository(TestSettlementEntry).clear();
     await dataSource.getRepository(TestPaymentAttempt).clear();
-    await dataSource.getRepository(TestInvoice).clear();
+    await dataSource.getRepository(TestProformaInvoice).clear();
 });
 
 afterEach(() => {
@@ -279,7 +284,7 @@ afterEach(() => {
 
 describe('Payment inbox: webhook/ERP event arrives once, processing recovers on its own (integration, real Postgres)', () => {
     it('an event that fails to process on the first sweep is retried and completes correctly on the next sweep — nothing is lost', async () => {
-        const invoice = await dataSource.getRepository(TestInvoice).save({
+        const invoice = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 1,
             organizationId: 1,
             counterpartyId: 5,
@@ -289,7 +294,7 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
         });
 
         // The event arrives exactly once — e.g. the ERP exchange reports a bank transfer for
-        // this invoice. enqueue() durably records it before any processing is attempted.
+        // this proforma invoice. enqueue() durably records it before any processing is attempted.
         const enqueued = await inboxService.enqueue(
             mockCtx,
             'bank-transfer-erp',
@@ -311,10 +316,10 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
         expect(firstSweep).toEqual({ processed: 0, failed: 1 });
         clearForcedFailure();
 
-        // The invoice must NOT be paid yet — the failed attempt rolled back completely (same
+        // The proforma invoice must NOT be paid yet — the failed attempt rolled back completely (same
         // transactional guarantee verified in payment-atomicity.int.test.ts).
         const afterFirstSweep = await dataSource
-            .getRepository(TestInvoice)
+            .getRepository(TestProformaInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
         expect(afterFirstSweep.status).toBe('issued');
 
@@ -334,7 +339,7 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
         expect(secondSweep).toEqual({ processed: 1, failed: 0 });
 
         const afterSecondSweep = await dataSource
-            .getRepository(TestInvoice)
+            .getRepository(TestProformaInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
         expect(afterSecondSweep.status).toBe('paid');
 
@@ -346,12 +351,12 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
 
         const paymentAttempts = await dataSource
             .getRepository(TestPaymentAttempt)
-            .find({ where: { invoiceId: Number(invoice.id) } });
+            .find({ where: { proformaInvoiceId: Number(invoice.id) } });
         expect(paymentAttempts).toHaveLength(1); // exactly one — the failed attempt left nothing behind
     });
 
     it('redelivery of the same event (provider retries because it never saw our ack) is a safe no-op, not a duplicate payment', async () => {
-        const invoice = await dataSource.getRepository(TestInvoice).save({
+        const invoice = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 2,
             organizationId: 1,
             counterpartyId: 5,
@@ -386,12 +391,12 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
 
         const paymentAttempts = await dataSource
             .getRepository(TestPaymentAttempt)
-            .find({ where: { invoiceId: Number(invoice.id) } });
+            .find({ where: { proformaInvoiceId: Number(invoice.id) } });
         expect(paymentAttempts).toHaveLength(1); // not doubled by the redelivery
     });
 
     it('an event that keeps failing is dead-lettered after the retry limit, instead of being retried forever', async () => {
-        const invoice = await dataSource.getRepository(TestInvoice).save({
+        const invoice = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 3,
             organizationId: 1,
             counterpartyId: 5,
@@ -428,8 +433,8 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
 });
 
 describe('Payment inbox producers: real cross-plugin events land in the inbox (integration, real Postgres)', () => {
-    it('a simulated ERP-reported bank transfer (ErpPaymentReportedEvent) is durably enqueued and eventually pays the invoice', async () => {
-        const invoice = await dataSource.getRepository(TestInvoice).save({
+    it('a simulated ERP-reported bank transfer (ErpPaymentReportedEvent) is durably enqueued and eventually pays the proforma invoice', async () => {
+        const invoice = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 10,
             organizationId: 1,
             counterpartyId: 5,
@@ -464,10 +469,10 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         const sweep = await processorService.processPendingEvents(mockCtx);
         expect(sweep).toEqual({ processed: 1, failed: 0 });
 
-        const paidInvoice = await dataSource
-            .getRepository(TestInvoice)
+        const paidProformaInvoice = await dataSource
+            .getRepository(TestProformaInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
-        expect(paidInvoice.status).toBe('paid');
+        expect(paidProformaInvoice.status).toBe('paid');
 
         // The real timeline PaymentFieldResolver.processingEvents derives its stages from —
         // round-trips through the actual DB, not a fabricated shape.
@@ -480,8 +485,8 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         expect(inboxRow?.processedAt).not.toBeNull();
     });
 
-    it('a simulated branch-kassa cash payment (BranchKassaPaymentEvent) is durably enqueued and eventually pays the invoice', async () => {
-        const invoice = await dataSource.getRepository(TestInvoice).save({
+    it('a simulated branch-kassa cash payment (BranchKassaPaymentEvent) is durably enqueued and eventually pays the proforma invoice', async () => {
+        const invoice = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 11,
             organizationId: 1,
             counterpartyId: 5,
@@ -510,14 +515,14 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         const sweep = await processorService.processPendingEvents(mockCtx);
         expect(sweep).toEqual({ processed: 1, failed: 0 });
 
-        const paidInvoice = await dataSource
-            .getRepository(TestInvoice)
+        const paidProformaInvoice = await dataSource
+            .getRepository(TestProformaInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
-        expect(paidInvoice.status).toBe('paid');
+        expect(paidProformaInvoice.status).toBe('paid');
     });
 
     it('redelivery of the same ERP event through the EventBus again does not enqueue a duplicate row', async () => {
-        const invoice = await dataSource.getRepository(TestInvoice).save({
+        const invoice = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 12,
             organizationId: 1,
             counterpartyId: 5,
@@ -543,7 +548,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
     });
 
     it('a branch-kassa payment fact with no RRN/kassa receipt is durably recorded but immediately dead-lettered — never silently processed without its mandatory reconciliation reference', async () => {
-        const invoice = await dataSource.getRepository(TestInvoice).save({
+        const invoice = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 13,
             organizationId: 1,
             counterpartyId: 5,
@@ -571,14 +576,14 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         const sweep = await processorService.processPendingEvents(mockCtx);
         expect(sweep).toEqual({ processed: 0, failed: 0 }); // nothing pending — dead-lettered rows aren't retried
 
-        const untouchedInvoice = await dataSource
-            .getRepository(TestInvoice)
+        const untouchedProformaInvoice = await dataSource
+            .getRepository(TestProformaInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
-        expect(untouchedInvoice.status).toBe('issued');
+        expect(untouchedProformaInvoice.status).toBe('issued');
     });
 
     it('a payment event declaring the wrong organization is durably enqueued, then dead-lettered on its first sweep — never applied and never retried, since a mismatch will not fix itself', async () => {
-        const invoice = await dataSource.getRepository(TestInvoice).save({
+        const invoice = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 14,
             organizationId: 1,
             counterpartyId: 5,
@@ -602,7 +607,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         expect(reconciliationIssueService.report).toHaveBeenCalledWith(
             mockCtx,
             'ORGANIZATION_MISMATCH',
-            expect.objectContaining({ invoiceId: Number(invoice.id), organizationId: 999 }),
+            expect.objectContaining({ proformaInvoiceId: Number(invoice.id), organizationId: 999 }),
         );
 
         const row = await dataSource
@@ -610,22 +615,22 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
             .findOneOrFail({ where: { providerEventId: 'erp-evt-org-mismatch-1' } });
         expect(row.status).toBe('failed'); // dead-lettered immediately, not left 'pending' for retry
 
-        const untouchedInvoice = await dataSource
-            .getRepository(TestInvoice)
+        const untouchedProformaInvoice = await dataSource
+            .getRepository(TestProformaInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
-        expect(untouchedInvoice.status).toBe('issued'); // never applied
+        expect(untouchedProformaInvoice.status).toBe('issued'); // never applied
     });
 });
 
 describe('Payment inbox: organization data isolation within a single sweep batch (integration, real Postgres)', () => {
-    // AGENTS.md's scope-isolation pattern: two invoices in different organizations, processed in
+    // AGENTS.md's scope-isolation pattern: two proforma invoices in different organizations, processed in
     // the SAME sweep batch (claimBatch's default limit is 20 — both events land in one call), one
     // with a coincidentally identical externalReference value to prove the isolation is by
     // organization scope, not by accidentally-unique reference strings. Asserting only "org A's
-    // invoice got paid" is not enough — this also asserts org B's invoice, PaymentAttempt count,
+    // proforma invoice got paid" is not enough — this also asserts org B's proforma invoice, PaymentAttempt count,
     // and SettlementEntry are byte-for-byte the same before and after processing org A's event.
     it("processing organization A's event in the same batch as organization B's event never touches organization B's data", async () => {
-        const invoiceA = await dataSource.getRepository(TestInvoice).save({
+        const invoiceA = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 20,
             organizationId: 1,
             counterpartyId: 5,
@@ -633,7 +638,7 @@ describe('Payment inbox: organization data isolation within a single sweep batch
             currencyCode: 'RUB',
             status: 'issued',
         });
-        const invoiceB = await dataSource.getRepository(TestInvoice).save({
+        const invoiceB = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 21,
             organizationId: 2,
             counterpartyId: 6,
@@ -664,22 +669,22 @@ describe('Payment inbox: organization data isolation within a single sweep batch
         expect(sweep).toEqual({ processed: 2, failed: 0 });
 
         const paidA = await dataSource
-            .getRepository(TestInvoice)
+            .getRepository(TestProformaInvoice)
             .findOneOrFail({ where: { id: Number(invoiceA.id) } });
         expect(paidA.status).toBe('paid');
         const paidB = await dataSource
-            .getRepository(TestInvoice)
+            .getRepository(TestProformaInvoice)
             .findOneOrFail({ where: { id: Number(invoiceB.id) } });
         expect(paidB.status).toBe('paid');
 
-        // Each organization's own PaymentAttempt exists, scoped to its own invoice — neither
-        // batch member created a stray attempt against the other organization's invoice.
+        // Each organization's own PaymentAttempt exists, scoped to its own proforma invoice — neither
+        // batch member created a stray attempt against the other organization's proforma invoice.
         const attemptsForA = await dataSource
             .getRepository(TestPaymentAttempt)
-            .find({ where: { invoiceId: Number(invoiceA.id) } });
+            .find({ where: { proformaInvoiceId: Number(invoiceA.id) } });
         const attemptsForB = await dataSource
             .getRepository(TestPaymentAttempt)
-            .find({ where: { invoiceId: Number(invoiceB.id) } });
+            .find({ where: { proformaInvoiceId: Number(invoiceB.id) } });
         expect(attemptsForA).toHaveLength(1);
         expect(attemptsForB).toHaveLength(1);
         expect(attemptsForA[0].channel).toBe('bank-transfer-erp');

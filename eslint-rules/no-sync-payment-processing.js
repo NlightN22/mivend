@@ -13,7 +13,7 @@
 // accepting an inbound request, so this rule is scoped (via eslint.config.js `files`/`ignores`)
 // to controller/resolver/listener files only, not to `payment-inbox-processor.service.ts` or the
 // worker.
-const RISKY_METHOD_NAMES = new Set(['payInvoice']);
+const RISKY_METHOD_NAMES = new Set(['payProformaInvoice']);
 
 export default {
     meta: {

@@ -37,11 +37,11 @@ export class AccessScopeService {
         return this.resolveScope(ctx, 'teamVisibility');
     }
 
-    // Invoice's own resource — PaymentAttempt (plugin-acquiring) is a resource *derived* from
-    // Invoice (joined via invoiceId), so it reuses this same scope rather than getting its own
+    // ProformaInvoice's own resource — PaymentAttempt (plugin-acquiring) is a resource *derived* from
+    // ProformaInvoice (joined via proformaInvoiceId), so it reuses this same scope rather than getting its own
     // resolvePaymentScope, per docs/access-control.md's "derived resource" rule (same pattern as
     // documents inheriting counterparty scope).
-    async resolveInvoiceScope(ctx: RequestContext): Promise<AccessScope> {
+    async resolveProformaInvoiceScope(ctx: RequestContext): Promise<AccessScope> {
         return this.resolveScope(ctx, 'invoice');
     }
 
@@ -95,7 +95,7 @@ export class AccessScopeService {
     }
 
     // Shared "own" scope condition for any query joined against a Counterparty-aliased row —
-    // used by CounterpartyService, OrderVisibilityService and InvoiceVisibilityService instead
+    // used by CounterpartyService, OrderVisibilityService and ProformaInvoiceVisibilityService instead
     // of each repeating `counterparty.assignedManagerId = :id`. A counterparty is "own" for the
     // caller if they are either the Owner (assignedManagerId) OR a CounterpartyTeamMember
     // (backup/observer) — see `packages/plugins/counterparty/src/entities/

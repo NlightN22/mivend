@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
-import { InvoiceVisibilityService } from '../../invoice-visibility.service';
+import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibility.service';
 
 // Deliberately un-annotated (not `Record<string, ReturnType<typeof vi.fn>>`) — an explicit
 // annotation here defeats TS's own inference of each mock's real call signature and produces
@@ -39,7 +39,7 @@ const mockCtx = {} as unknown as RequestContext;
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
 function mockAccessScopeService() {
     return {
-        resolveInvoiceScope: vi.fn(),
+        resolveProformaInvoiceScope: vi.fn(),
         // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter).
         applyOwnCounterpartyFilter: vi.fn(
             (
@@ -60,8 +60,8 @@ function mockAccessScopeService() {
     };
 }
 
-describe('InvoiceVisibilityService', () => {
-    let service: InvoiceVisibilityService;
+describe('ProformaInvoiceVisibilityService', () => {
+    let service: ProformaInvoiceVisibilityService;
     let qb: ReturnType<typeof mockQueryBuilder>;
     let accessScopeService: ReturnType<typeof mockAccessScopeService>;
 
@@ -71,14 +71,14 @@ describe('InvoiceVisibilityService', () => {
             getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
         };
         accessScopeService = mockAccessScopeService();
-        service = new InvoiceVisibilityService(
+        service = new ProformaInvoiceVisibilityService(
             connection as unknown as TransactionalConnection,
             accessScopeService as unknown as AccessScopeService,
         );
     });
 
     it('filters by assignedManagerId OR team membership for "own" scope, with no branch restriction', async () => {
-        accessScopeService.resolveInvoiceScope.mockResolvedValue({
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({
             kind: 'own',
             administratorId: 'admin-1',
         });
@@ -92,8 +92,8 @@ describe('InvoiceVisibilityService', () => {
         );
     });
 
-    it('filters by the invoice\'s own denormalized branch for "department" scope, ignoring departmentId entirely', async () => {
-        accessScopeService.resolveInvoiceScope.mockResolvedValue({
+    it('filters by the proforma invoice\'s own denormalized branch for "department" scope, ignoring departmentId entirely', async () => {
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({
             kind: 'department',
             departmentId: 'dept-1',
             branchId: 'branch-1',
@@ -101,13 +101,13 @@ describe('InvoiceVisibilityService', () => {
 
         await service.findVisible(mockCtx);
 
-        expect(qb.andWhere).toHaveBeenCalledWith('invoice.branchId = :branchId', {
+        expect(qb.andWhere).toHaveBeenCalledWith('proformaInvoice.branchId = :branchId', {
             branchId: 'branch-1',
         });
     });
 
     it('applies no scope filter for "all" scope', async () => {
-        accessScopeService.resolveInvoiceScope.mockResolvedValue({ kind: 'all' });
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx);
 
@@ -115,30 +115,35 @@ describe('InvoiceVisibilityService', () => {
     });
 
     it('filters by status when provided, in addition to scope', async () => {
-        accessScopeService.resolveInvoiceScope.mockResolvedValue({ kind: 'all' });
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, { status: 'paid' });
 
-        expect(qb.andWhere).toHaveBeenCalledWith('invoice.status = :status', { status: 'paid' });
+        expect(qb.andWhere).toHaveBeenCalledWith('proformaInvoice.status = :status', {
+            status: 'paid',
+        });
     });
 
     it('filters by search (number substring) when provided, in addition to scope', async () => {
-        accessScopeService.resolveInvoiceScope.mockResolvedValue({ kind: 'all' });
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, { search: '42' });
 
-        expect(qb.andWhere).toHaveBeenCalledWith('invoice.number ILIKE :search', {
+        expect(qb.andWhere).toHaveBeenCalledWith('proformaInvoice.number ILIKE :search', {
             search: '%42%',
         });
     });
 
     it('filters by counterpartyId when provided, in addition to scope', async () => {
-        accessScopeService.resolveInvoiceScope.mockResolvedValue({ kind: 'all' });
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, undefined, 'cnt-1');
 
-        expect(qb.andWhere).toHaveBeenCalledWith('invoice.counterpartyId = :counterpartyId', {
-            counterpartyId: 'cnt-1',
-        });
+        expect(qb.andWhere).toHaveBeenCalledWith(
+            'proformaInvoice.counterpartyId = :counterpartyId',
+            {
+                counterpartyId: 'cnt-1',
+            },
+        );
     });
 });

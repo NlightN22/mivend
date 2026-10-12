@@ -63,7 +63,7 @@ export class OrganizationRequisites extends VendureEntity {
 
 // Narrowed type document generation actually needs — DocumentsService.assertRequisitesComplete is
 // the one place that proves inn/legalAddress are non-null (a type predicate), so PdfGeneratorService
-// and the invoice/contract templates never have to re-check them.
+// and the proforma invoice/contract templates never have to re-check them.
 export type CompleteOrganizationRequisites = OrganizationRequisites & {
     inn: string;
     legalAddress: string;

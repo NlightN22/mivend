@@ -196,7 +196,7 @@ export default [
     // event sources (a webhook, an ERP/the ERP callback, a branch→central sync consumer) — must never
     // call a risky payment-processing method directly. See AGENTS.md sync rule #12 and
     // eslint-rules/no-sync-payment-processing.js's own header comment for the full rationale.
-    // GraphQL *resolvers* are deliberately NOT in scope here: a mutation like `payInvoice` invoked
+    // GraphQL *resolvers* are deliberately NOT in scope here: a mutation like `payProformaInvoice` invoked
     // synchronously by an authenticated client (a "pay now" button waiting for a real-time
     // result) is a normal request/response command, not the "external system fired an event and
     // moved on" scenario rule #12 is about — an early version of this rule scoped resolvers too

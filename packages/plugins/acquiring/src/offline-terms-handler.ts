@@ -7,25 +7,25 @@ import {
     PaymentMetadata,
     RequestContext,
 } from '@vendure/core';
-import { Invoice } from './entities/invoice.entity';
-import { InvoiceService } from './invoice.service';
+import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { ProformaInvoiceService } from './proforma-invoice.service';
 
 export const OFFLINE_TERMS_METHOD_CODE = 'offline-terms';
 
-let invoiceService: InvoiceService;
+let proformaInvoiceService: ProformaInvoiceService;
 let globalSettingsService: GlobalSettingsService;
 
 interface SplitResult {
     metadata: PaymentMetadata;
     declineMessage?: string;
-    invoices: Invoice[];
+    proformaInvoices: ProformaInvoice[];
 }
 
-// Shared computeInvoiceSplit shape with online-payment's onlineStubPaymentHandler (see
+// Shared computeProformaInvoiceSplit shape with online-payment's onlineStubPaymentHandler (see
 // docs/payments.md — issue #46's split-payment acquirer, Robokassa, is not wired here yet).
-// Always computes and materializes the real per-organization Invoice split (InvoiceService,
+// Always computes and materializes the real per-organization ProformaInvoice split (ProformaInvoiceService,
 // decided direction in docs/payments.md "Organizations") — offline terms need this too (issue
-// #46 open question #5: the split applies to invoice/deferred payment the same as online, just
+// #46 open question #5: the split applies to proforma invoice/deferred payment the same as online, just
 // without online payment's time pressure) — and surfaces it in Payment.metadata.invoices for
 // visibility. Still creates exactly one Vendure Payment for the whole order (real per-organization
 // payment routing is issue #46, out of scope here).
@@ -35,53 +35,62 @@ interface SplitResult {
 // (erp-import rejects records without one, see ProductHandler) and a split that can't be
 // computed is a real payment failure, not a silent single-payment fallback — there is no
 // legitimate "no organization" case once the toggle is on.
-async function computeInvoiceSplit(ctx: RequestContext, order: Order): Promise<SplitResult> {
+async function computeProformaInvoiceSplit(
+    ctx: RequestContext,
+    order: Order,
+): Promise<SplitResult> {
     const settings = await globalSettingsService.getSettings(ctx);
     const splitEnabled = Boolean(settings.customFields?.organizationSplitEnabled);
 
     try {
-        const invoices = await invoiceService.createInvoicesForOrder(ctx, order);
+        const proformaInvoices = await proformaInvoiceService.createProformaInvoicesForOrder(
+            ctx,
+            order,
+        );
         return {
             metadata: {
-                invoices: invoices.map(invoice => ({
-                    organizationId: invoice.organizationId,
-                    amount: invoice.amount,
+                proformaInvoices: proformaInvoices.map(proformaInvoice => ({
+                    organizationId: proformaInvoice.organizationId,
+                    amount: proformaInvoice.amount,
                 })),
             },
-            invoices,
+            proformaInvoices,
         };
     } catch (err) {
         if (splitEnabled) {
             return {
                 metadata: {},
                 declineMessage: `Organization split required but could not be computed: ${(err as Error).message}`,
-                invoices: [],
+                proformaInvoices: [],
             };
         }
-        return { metadata: {}, invoices: [] };
+        return { metadata: {}, proformaInvoices: [] };
     }
 }
 
-// Invoice/deferred are offline payment terms — the customer doesn't pay through
+// ProformaInvoice/deferred are offline payment terms — the customer doesn't pay through
 // Vendure at checkout time, so the handler settles the payment step immediately
 // on the "Authorized" state to move the order out of ArrangingPayment. Actual
 // money collection happens outside Vendure (per contract), tracked via the
 // existing ERP status sync (see plugin-erp-order), not via Vendure's payment flow.
 // No PaymentAttempt is recorded here — no money has actually moved yet, so there is
-// nothing for the /payments ledger to reflect until a real payInvoice/kassa/bank-transfer
-// event happens later (see PaymentAttemptService.payInvoice).
+// nothing for the /payments ledger to reflect until a real payProformaInvoice/kassa/bank-transfer
+// event happens later (see PaymentAttemptService.payProformaInvoice).
 export const offlineTermsPaymentHandler = new PaymentMethodHandler({
     code: OFFLINE_TERMS_METHOD_CODE,
     description: [
-        { languageCode: LanguageCode.en, value: 'Invoice / deferred payment (offline terms)' },
+        {
+            languageCode: LanguageCode.en,
+            value: 'ProformaInvoice / deferred payment (offline terms)',
+        },
     ],
     args: {},
     init(injector: Injector) {
-        invoiceService = injector.get(InvoiceService);
+        proformaInvoiceService = injector.get(ProformaInvoiceService);
         globalSettingsService = injector.get(GlobalSettingsService);
     },
     createPayment: async (ctx, order) => {
-        const { metadata, declineMessage } = await computeInvoiceSplit(ctx, order);
+        const { metadata, declineMessage } = await computeProformaInvoiceSplit(ctx, order);
         if (declineMessage) {
             return {
                 amount: order.totalWithTax,
@@ -90,7 +99,7 @@ export const offlineTermsPaymentHandler = new PaymentMethodHandler({
                 metadata: {},
             };
         }
-        await invoiceService.updateStatusForOrder(ctx, Number(order.id), 'issued');
+        await proformaInvoiceService.updateStatusForOrder(ctx, Number(order.id), 'issued');
         return {
             amount: order.totalWithTax,
             state: 'Authorized' as const,

@@ -187,7 +187,7 @@ describe('CounterpartyService.findVisible (integration, real Postgres)', () => {
 
     // Deny-by-default: an unassigned Counterparty.branchId (no automatic-assignment worker yet,
     // issue #65/#123) must be invisible to every branch-scoped role, not shown to all of them —
-    // no `OR branchId IS NULL` carve-out, unlike Order/Invoice's own denormalized-branch filter.
+    // no `OR branchId IS NULL` carve-out, unlike Order/ProformaInvoice's own denormalized-branch filter.
     it('"department" scope never sees a Counterparty with no branchId assigned', async () => {
         await dataSource.getRepository(TestCounterparty).save([
             {

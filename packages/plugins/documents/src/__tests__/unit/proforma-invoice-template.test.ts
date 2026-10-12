@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-    buildInvoiceTemplateData,
-    renderInvoiceHtml,
-    InvoiceSource,
-} from '../../pdf/invoice-template';
+    buildProformaInvoiceTemplateData,
+    renderProformaInvoiceHtml,
+    ProformaInvoiceSource,
+} from '../../pdf/proforma-invoice-template';
 import type { CompleteOrganizationRequisites } from '../../entities/organization-requisites.entity';
 
-function makeSource(overrides: Partial<InvoiceSource> = {}): InvoiceSource {
+function makeSource(overrides: Partial<ProformaInvoiceSource> = {}): ProformaInvoiceSource {
     return {
         documentNumber: 'ORD-202607-TEST',
         issueDate: new Date('2026-07-01T10:00:00.000Z'),
@@ -40,9 +40,9 @@ function makeRequisites(
     } as CompleteOrganizationRequisites;
 }
 
-describe('buildInvoiceTemplateData', () => {
+describe('buildProformaInvoiceTemplateData', () => {
     it('maps order lines, amounts and requisites correctly', () => {
-        const data = buildInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
+        const data = buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
 
         expect(data.documentNumber).toBe('ORD-202607-TEST');
         expect(data.issueDate).toBe('2026-07-01');
@@ -61,14 +61,14 @@ describe('buildInvoiceTemplateData', () => {
     });
 
     it('falls back to ogrn when kpp is null for registrationNumber, and to a dash when both are null', () => {
-        const withOgrn = buildInvoiceTemplateData(
+        const withOgrn = buildProformaInvoiceTemplateData(
             makeSource(),
             makeRequisites({ kpp: null, ogrn: '1234567890123' }),
             'Buyer LLC',
         );
         expect(withOgrn.seller.registrationNumber).toBe('1234567890123');
 
-        const withNeither = buildInvoiceTemplateData(
+        const withNeither = buildProformaInvoiceTemplateData(
             makeSource(),
             makeRequisites({ kpp: null, ogrn: null }),
             'Buyer LLC',
@@ -77,7 +77,7 @@ describe('buildInvoiceTemplateData', () => {
     });
 
     it('omits bank details when no bank is configured', () => {
-        const data = buildInvoiceTemplateData(
+        const data = buildProformaInvoiceTemplateData(
             makeSource(),
             makeRequisites({ bankName: null, bankAccount: null, bankBik: null }),
             'Buyer LLC',
@@ -86,10 +86,10 @@ describe('buildInvoiceTemplateData', () => {
     });
 });
 
-describe('renderInvoiceHtml', () => {
+describe('renderProformaInvoiceHtml', () => {
     it('embeds the seller, buyer, line items and total into the HTML output', () => {
-        const data = buildInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
-        const html = renderInvoiceHtml(data);
+        const data = buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
+        const html = renderProformaInvoiceHtml(data);
 
         expect(html).toContain('ORD-202607-TEST');
         expect(html).toContain('Demo Trading Co.');
@@ -99,9 +99,9 @@ describe('renderInvoiceHtml', () => {
     });
 
     it('renders a generic initial-letter badge when no logo has been set', () => {
-        const data = buildInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
+        const data = buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
         expect(data.logoDataUri).toBeNull();
-        const html = renderInvoiceHtml(data);
+        const html = renderProformaInvoiceHtml(data);
         expect(html).toContain('logo--fallback');
         expect(html).toContain('>D<'); // first letter of "Demo Trading Co."
         expect(html).not.toContain('<img');
@@ -109,14 +109,14 @@ describe('renderInvoiceHtml', () => {
 
     it('renders the real logo image when a logo data URI is provided', () => {
         const logoDataUri = 'data:image/png;base64,iVBORw0KGgo=';
-        const data = buildInvoiceTemplateData(
+        const data = buildProformaInvoiceTemplateData(
             makeSource(),
             makeRequisites(),
             'Buyer LLC',
             logoDataUri,
         );
         expect(data.logoDataUri).toBe(logoDataUri);
-        const html = renderInvoiceHtml(data);
+        const html = renderProformaInvoiceHtml(data);
         expect(html).toContain(`<img class="logo" src="${logoDataUri}"`);
         expect(html).not.toContain('class="logo logo--fallback"');
     });

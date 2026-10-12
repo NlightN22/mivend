@@ -9,7 +9,7 @@ import {
 } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
-import { AcquiringPlugin, InvoiceService } from '@mivend/plugin-acquiring';
+import { AcquiringPlugin, ProformaInvoiceService } from '@mivend/plugin-acquiring';
 import { subscribeAndLog } from 'shared';
 
 import { loggerCtx } from './constants';
@@ -27,13 +27,13 @@ import { adminApiExtensions } from './api/admin.schema';
 import { PdfBrowserService } from './pdf/pdf-browser.service';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
 
-// Offline-terms (invoice/deferred) payments settle straight to `Authorized`
+// Offline-terms (proforma invoice/deferred) payments settle straight to `Authorized`
 // (see @mivend/plugin-acquiring's offline-terms-handler.ts), which Vendure's default
 // order process transitions to `PaymentAuthorized` — confirmed empirically
 // against a real deferred-payment checkout in dev (see docs/ai/PROJECT_CONTEXT.md
 // "checkout never actually placed orders"). Online-stub payments settle straight
 // to `PaymentSettled` and are excluded here — only offline-terms orders need an
-// invoice document generated automatically.
+// proforma invoice document generated automatically.
 const OFFLINE_TERMS_METHOD = 'offline-terms';
 const INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
 
@@ -58,7 +58,7 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
         private connection: TransactionalConnection,
         private documentsService: DocumentsService,
         private pdfGeneratorService: PdfGeneratorService,
-        private invoiceService: InvoiceService,
+        private proformaInvoiceService: ProformaInvoiceService,
     ) {}
 
     onApplicationBootstrap(): void {
@@ -86,16 +86,19 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
         const isOfflineTerms = order.payments?.some(p => p.method === OFFLINE_TERMS_METHOD);
         if (!isOfflineTerms) return;
 
-        // One invoice document per organization-split Invoice (docs/payments.md
+        // One proforma invoice document per organization-split ProformaInvoice (docs/payments.md
         // "Organizations"), not one per order — offlineTermsPaymentHandler already
-        // materialized the real Invoice split in createPayment(), before this transition
+        // materialized the real ProformaInvoice split in createPayment(), before this transition
         // fires, so this is just reading it back (idempotent, no re-computation).
-        const invoices = await this.invoiceService.findByOrderId(event.ctx, Number(order.id));
-        for (const invoice of invoices) {
-            const document = await this.documentsService.createInvoicePlaceholder(
+        const proformaInvoices = await this.proformaInvoiceService.findByOrderId(
+            event.ctx,
+            Number(order.id),
+        );
+        for (const proformaInvoice of proformaInvoices) {
+            const document = await this.documentsService.createProformaInvoicePlaceholder(
                 event.ctx,
                 order,
-                invoice,
+                proformaInvoice,
             );
             await this.pdfGeneratorService.enqueue(document.id);
         }

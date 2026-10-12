@@ -7,60 +7,70 @@ import {
     PaymentMetadata,
     RequestContext,
 } from '@vendure/core';
-import { Invoice, InvoiceService, PaymentAttemptService } from '@mivend/plugin-acquiring';
+import {
+    ProformaInvoice,
+    ProformaInvoiceService,
+    PaymentAttemptService,
+} from '@mivend/plugin-acquiring';
 
 export const ONLINE_STUB_METHOD_CODE = 'online-stub';
 
-let invoiceService: InvoiceService;
+let proformaInvoiceService: ProformaInvoiceService;
 let globalSettingsService: GlobalSettingsService;
 let paymentAttemptService: PaymentAttemptService;
 
 interface SplitResult {
     metadata: PaymentMetadata;
     declineMessage?: string;
-    invoices: Invoice[];
+    proformaInvoices: ProformaInvoice[];
 }
 
-// Mirrors plugin-acquiring's offlineTermsPaymentHandler computeInvoiceSplit (see
+// Mirrors plugin-acquiring's offlineTermsPaymentHandler computeProformaInvoiceSplit (see
 // docs/payments.md — issue #46's split-payment acquirer, Robokassa, is not wired here yet).
-async function computeInvoiceSplit(ctx: RequestContext, order: Order): Promise<SplitResult> {
+async function computeProformaInvoiceSplit(
+    ctx: RequestContext,
+    order: Order,
+): Promise<SplitResult> {
     const settings = await globalSettingsService.getSettings(ctx);
     const splitEnabled = Boolean(settings.customFields?.organizationSplitEnabled);
 
     try {
-        const invoices = await invoiceService.createInvoicesForOrder(ctx, order);
+        const proformaInvoices = await proformaInvoiceService.createProformaInvoicesForOrder(
+            ctx,
+            order,
+        );
         return {
             metadata: {
-                invoices: invoices.map(invoice => ({
-                    organizationId: invoice.organizationId,
-                    amount: invoice.amount,
+                proformaInvoices: proformaInvoices.map(proformaInvoice => ({
+                    organizationId: proformaInvoice.organizationId,
+                    amount: proformaInvoice.amount,
                 })),
             },
-            invoices,
+            proformaInvoices,
         };
     } catch (err) {
         if (splitEnabled) {
             return {
                 metadata: {},
                 declineMessage: `Organization split required but could not be computed: ${(err as Error).message}`,
-                invoices: [],
+                proformaInvoices: [],
             };
         }
-        return { metadata: {}, invoices: [] };
+        return { metadata: {}, proformaInvoices: [] };
     }
 }
 
 // PaymentStubPage.vue's success/pending/fail buttons map directly to this handler's result via
 // the `status` metadata arg. This represents a real (demo-stub) attempt to move money right now —
-// each invoice in the split gets its own PaymentAttempt via PaymentAttemptService.payInvoice (the
-// same recording/allocation path the standalone "Pay invoice" flow uses), so /payments reflects
-// checkout-originated payments too, not only ones made later from the invoice detail page.
+// each proforma invoice in the split gets its own PaymentAttempt via PaymentAttemptService.payProformaInvoice (the
+// same recording/allocation path the standalone "Pay proforma invoice" flow uses), so /payments reflects
+// checkout-originated payments too, not only ones made later from the proforma invoice detail page.
 export const onlineStubPaymentHandler = new PaymentMethodHandler({
     code: ONLINE_STUB_METHOD_CODE,
     description: [{ languageCode: LanguageCode.en, value: 'Online payment (demo stub)' }],
     args: {},
     init(injector: Injector) {
-        invoiceService = injector.get(InvoiceService);
+        proformaInvoiceService = injector.get(ProformaInvoiceService);
         globalSettingsService = injector.get(GlobalSettingsService);
         paymentAttemptService = injector.get(PaymentAttemptService);
     },
@@ -72,10 +82,10 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         metadata: PaymentMetadata & { status?: string },
     ) => {
         const {
-            metadata: invoiceMetadata,
+            metadata: proformaInvoiceMetadata,
             declineMessage,
-            invoices,
-        } = await computeInvoiceSplit(ctx, order);
+            proformaInvoices,
+        } = await computeProformaInvoiceSplit(ctx, order);
         if (declineMessage) {
             return {
                 amount: order.totalWithTax,
@@ -86,13 +96,13 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         }
 
         if (metadata?.status === 'fail') {
-            // Record the failed attempt against each invoice for the /payments ledger — left as
+            // Record the failed attempt against each proforma invoice for the /payments ledger — left as
             // 'pending' (not 'cancelled') by PaymentAttemptService: the customer can still retry
-            // payment on the same order, so the invoice's payment obligation still stands.
-            for (const invoice of invoices) {
-                await paymentAttemptService.payInvoice(
+            // payment on the same order, so the proforma invoice's payment obligation still stands.
+            for (const proformaInvoice of proformaInvoices) {
+                await paymentAttemptService.payProformaInvoice(
                     ctx,
-                    Number(invoice.id),
+                    Number(proformaInvoice.id),
                     'fail',
                     'online-acquiring',
                 );
@@ -100,14 +110,14 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
             return {
                 amount: order.totalWithTax,
                 state: 'Declined' as const,
-                metadata: { ...metadata, ...invoiceMetadata },
+                metadata: { ...metadata, ...proformaInvoiceMetadata },
             };
         }
         const settled = metadata?.status !== 'pending';
-        for (const invoice of invoices) {
-            await paymentAttemptService.payInvoice(
+        for (const proformaInvoice of proformaInvoices) {
+            await paymentAttemptService.payProformaInvoice(
                 ctx,
-                Number(invoice.id),
+                Number(proformaInvoice.id),
                 settled ? 'success' : 'pending',
                 'online-acquiring',
             );
@@ -115,7 +125,7 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         return {
             amount: order.totalWithTax,
             state: settled ? ('Settled' as const) : ('Authorized' as const),
-            metadata: { ...metadata, ...invoiceMetadata },
+            metadata: { ...metadata, ...proformaInvoiceMetadata },
         };
     },
     settlePayment: () => ({ success: true }),

@@ -94,14 +94,18 @@ describe('PaymentFieldResolver.processingEvents', () => {
     it('surfaces the real lastError note when the event dead-lettered', async () => {
         const resolver = makeResolver({
             findByProviderAndEventId: vi.fn(async () =>
-                makeEvent({ status: 'failed', attempts: 5, lastError: 'Invoice 42 not found' }),
+                makeEvent({
+                    status: 'failed',
+                    attempts: 5,
+                    lastError: 'ProformaInvoice 42 not found',
+                }),
             ),
         });
 
         const result = await resolver.processingEvents(mockCtx, makePayment());
 
         expect(result.map(s => s.stage)).toEqual(['Received', 'Processing', 'Failed']);
-        expect(result[2].note).toBe('Invoice 42 not found');
+        expect(result[2].note).toBe('ProformaInvoice 42 not found');
     });
 
     it('looks up branch-kassa events under provider="branch-kassa"', async () => {

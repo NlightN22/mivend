@@ -1,15 +1,15 @@
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Invoice } from '../../entities/invoice.entity';
-import { InvoiceService } from '../../invoice.service';
+import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
+import { ProformaInvoiceService } from '../../proforma-invoice.service';
 import { PaymentAttemptService } from '../../payment-attempt.service';
 import { SettlementEntryService } from '../../settlement-entry.service';
 
 const mockCtx = {} as unknown as RequestContext;
 const mockNumberingService = { next: vi.fn(async () => 'test-payment-number') };
 
-function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
+function makeProformaInvoice(overrides: Partial<ProformaInvoice> = {}): ProformaInvoice {
     return {
         id: 1,
         orderId: 10,
@@ -19,19 +19,19 @@ function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
         currencyCode: 'RUB',
         status: 'issued',
         ...overrides,
-    } as Invoice;
+    } as ProformaInvoice;
 }
 
-describe('PaymentAttemptService.payInvoice', () => {
+describe('PaymentAttemptService.payProformaInvoice', () => {
     let service: PaymentAttemptService;
-    let mockInvoiceService: ReturnType<typeof createMockInvoiceService>;
+    let mockProformaInvoiceService: ReturnType<typeof createMockProformaInvoiceService>;
     let mockSettlementEntryService: ReturnType<typeof createMockSettlementEntryService>;
     let mockReconciliationIssueService: ReturnType<typeof createMockReconciliationIssueService>;
     let mockPaymentAttemptRepo: ReturnType<typeof createMockPaymentAttemptRepo>;
     let mockConnection: TransactionalConnection;
 
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
-    function createMockInvoiceService() {
+    function createMockProformaInvoiceService() {
         return { findOne: vi.fn(), updateStatus: vi.fn() };
     }
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -47,7 +47,7 @@ describe('PaymentAttemptService.payInvoice', () => {
         return {
             create: vi.fn(input => input),
             save: vi.fn(async entity => entity),
-            // payInvoice's level-3 idempotency check (the external-integration-rules skill) — defaults to "no
+            // payProformaInvoice's level-3 idempotency check (the external-integration-rules skill) — defaults to "no
             // existing attempt for this (channel, externalReference)" so these tests exercise the
             // normal create path; tests specifically for the idempotent-retry behavior override
             // this per-test.
@@ -66,12 +66,12 @@ describe('PaymentAttemptService.payInvoice', () => {
                 work(ctx),
             ),
         } as unknown as TransactionalConnection;
-        mockInvoiceService = createMockInvoiceService();
+        mockProformaInvoiceService = createMockProformaInvoiceService();
         mockSettlementEntryService = createMockSettlementEntryService();
         mockReconciliationIssueService = createMockReconciliationIssueService();
         service = new PaymentAttemptService(
             mockConnection,
-            mockInvoiceService as unknown as InvoiceService,
+            mockProformaInvoiceService as unknown as ProformaInvoiceService,
             mockSettlementEntryService as unknown as SettlementEntryService,
             mockReconciliationIssueService as never,
             mockNumberingService as never,
@@ -79,16 +79,16 @@ describe('PaymentAttemptService.payInvoice', () => {
     });
 
     it('records a captured PaymentAttempt and delegates allocation on a "success" outcome', async () => {
-        const invoice = makeInvoice({ status: 'issued' });
-        mockInvoiceService.findOne
-            .mockResolvedValueOnce(invoice)
-            .mockResolvedValueOnce({ ...invoice, status: 'paid' });
+        const proformaInvoice = makeProformaInvoice({ status: 'issued' });
+        mockProformaInvoiceService.findOne
+            .mockResolvedValueOnce(proformaInvoice)
+            .mockResolvedValueOnce({ ...proformaInvoice, status: 'paid' });
 
-        const result = await service.payInvoice(mockCtx, 1, 'success');
+        const result = await service.payProformaInvoice(mockCtx, 1, 'success');
 
         expect(mockPaymentAttemptRepo.create).toHaveBeenCalledWith(
             expect.objectContaining({
-                invoiceId: 1,
+                proformaInvoiceId: 1,
                 orderId: 10,
                 amount: 5000,
                 currencyCode: 'RUB',
@@ -98,29 +98,31 @@ describe('PaymentAttemptService.payInvoice', () => {
         );
         expect(mockSettlementEntryService.allocate).toHaveBeenCalledWith(
             mockCtx,
-            expect.objectContaining({ invoiceId: 1, paymentStatus: 'captured' }),
+            expect.objectContaining({ proformaInvoiceId: 1, paymentStatus: 'captured' }),
         );
         expect(result.status).toBe('paid');
     });
 
-    it('moves a "pending" invoice to "issued" on a "pending" outcome, without marking it paid', async () => {
-        const invoice = makeInvoice({ status: 'pending' });
-        mockInvoiceService.findOne
-            .mockResolvedValueOnce(invoice)
-            .mockResolvedValueOnce({ ...invoice, status: 'issued' });
+    it('moves a "pending" proforma invoice to "issued" on a "pending" outcome, without marking it paid', async () => {
+        const proformaInvoice = makeProformaInvoice({ status: 'pending' });
+        mockProformaInvoiceService.findOne
+            .mockResolvedValueOnce(proformaInvoice)
+            .mockResolvedValueOnce({ ...proformaInvoice, status: 'issued' });
 
-        await service.payInvoice(mockCtx, 1, 'pending');
+        await service.payProformaInvoice(mockCtx, 1, 'pending');
 
-        expect(mockInvoiceService.updateStatus).toHaveBeenCalledWith(mockCtx, 1, 'issued');
+        expect(mockProformaInvoiceService.updateStatus).toHaveBeenCalledWith(mockCtx, 1, 'issued');
         expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
     });
 
     it('is a no-op when a PaymentAttempt already exists for the same (channel, externalReference) — level 3 idempotency, the external-integration-rules skill', async () => {
-        const invoice = makeInvoice({ status: 'issued' });
-        mockInvoiceService.findOne.mockResolvedValueOnce(invoice).mockResolvedValueOnce(invoice);
+        const proformaInvoice = makeProformaInvoice({ status: 'issued' });
+        mockProformaInvoiceService.findOne
+            .mockResolvedValueOnce(proformaInvoice)
+            .mockResolvedValueOnce(proformaInvoice);
         mockPaymentAttemptRepo.findOne.mockResolvedValueOnce({ id: 99 } as never);
 
-        const result = await service.payInvoice(
+        const result = await service.payProformaInvoice(
             mockCtx,
             1,
             'success',
@@ -134,13 +136,13 @@ describe('PaymentAttemptService.payInvoice', () => {
         expect(result.status).toBe('issued');
     });
 
-    it('leaves the invoice status untouched on a "fail" outcome (retryable)', async () => {
-        const invoice = makeInvoice({ status: 'issued' });
-        mockInvoiceService.findOne.mockResolvedValue(invoice);
+    it('leaves the proforma invoice status untouched on a "fail" outcome (retryable)', async () => {
+        const proformaInvoice = makeProformaInvoice({ status: 'issued' });
+        mockProformaInvoiceService.findOne.mockResolvedValue(proformaInvoice);
 
-        const result = await service.payInvoice(mockCtx, 1, 'fail');
+        const result = await service.payProformaInvoice(mockCtx, 1, 'fail');
 
-        expect(mockInvoiceService.updateStatus).not.toHaveBeenCalled();
+        expect(mockProformaInvoiceService.updateStatus).not.toHaveBeenCalled();
         expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
         expect(mockPaymentAttemptRepo.create).toHaveBeenCalledWith(
             expect.objectContaining({ paymentStatus: 'failed' }),
@@ -148,11 +150,13 @@ describe('PaymentAttemptService.payInvoice', () => {
         expect(result.status).toBe('issued');
     });
 
-    it('does NOT reject a "success" outcome against an already-paid invoice — delegates to allocate instead (cash application handles the overflow/duplicate, see docs/payments.md)', async () => {
-        const invoice = makeInvoice({ status: 'paid' });
-        mockInvoiceService.findOne.mockResolvedValueOnce(invoice).mockResolvedValueOnce(invoice);
+    it('does NOT reject a "success" outcome against an already-paid proforma invoice — delegates to allocate instead (cash application handles the overflow/duplicate, see docs/payments.md)', async () => {
+        const proformaInvoice = makeProformaInvoice({ status: 'paid' });
+        mockProformaInvoiceService.findOne
+            .mockResolvedValueOnce(proformaInvoice)
+            .mockResolvedValueOnce(proformaInvoice);
 
-        await service.payInvoice(mockCtx, 1, 'success');
+        await service.payProformaInvoice(mockCtx, 1, 'success');
 
         expect(mockPaymentAttemptRepo.create).toHaveBeenCalledWith(
             expect.objectContaining({ paymentStatus: 'captured' }),
@@ -160,23 +164,31 @@ describe('PaymentAttemptService.payInvoice', () => {
         expect(mockSettlementEntryService.allocate).toHaveBeenCalled();
     });
 
-    it('rejects paying a cancelled invoice', async () => {
-        mockInvoiceService.findOne.mockResolvedValue(makeInvoice({ status: 'cancelled' }));
+    it('rejects paying a cancelled proforma invoice', async () => {
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'cancelled' }),
+        );
 
-        await expect(service.payInvoice(mockCtx, 1, 'success')).rejects.toThrow(/cancelled/);
+        await expect(service.payProformaInvoice(mockCtx, 1, 'success')).rejects.toThrow(
+            /cancelled/,
+        );
         expect(mockPaymentAttemptRepo.create).not.toHaveBeenCalled();
     });
 
-    it('rejects paying an invoice that does not exist', async () => {
-        mockInvoiceService.findOne.mockResolvedValue(null);
+    it('rejects paying a proforma invoice that does not exist', async () => {
+        mockProformaInvoiceService.findOne.mockResolvedValue(null);
 
-        await expect(service.payInvoice(mockCtx, 999, 'success')).rejects.toThrow(/not found/);
+        await expect(service.payProformaInvoice(mockCtx, 999, 'success')).rejects.toThrow(
+            /not found/,
+        );
     });
 
     it('defaults to the "online-acquiring" channel when none is given', async () => {
-        mockInvoiceService.findOne.mockResolvedValue(makeInvoice({ status: 'issued' }));
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'issued' }),
+        );
 
-        await service.payInvoice(mockCtx, 1, 'fail');
+        await service.payProformaInvoice(mockCtx, 1, 'fail');
 
         expect(mockPaymentAttemptRepo.create).toHaveBeenCalledWith(
             expect.objectContaining({ channel: 'online-acquiring' }),
@@ -184,9 +196,11 @@ describe('PaymentAttemptService.payInvoice', () => {
     });
 
     it('records the given channel when one is passed (e.g. simulating an ERP-reported bank transfer)', async () => {
-        mockInvoiceService.findOne.mockResolvedValue(makeInvoice({ status: 'issued' }));
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'issued' }),
+        );
 
-        await service.payInvoice(mockCtx, 1, 'success', 'bank-transfer-erp');
+        await service.payProformaInvoice(mockCtx, 1, 'success', 'bank-transfer-erp');
 
         expect(mockPaymentAttemptRepo.create).toHaveBeenCalledWith(
             expect.objectContaining({ channel: 'bank-transfer-erp' }),
@@ -194,9 +208,11 @@ describe('PaymentAttemptService.payInvoice', () => {
     });
 
     it('stores the given externalReference as providerPaymentId (e.g. an RRN from a branch-kassa card terminal, or an ERP payment-document id)', async () => {
-        mockInvoiceService.findOne.mockResolvedValue(makeInvoice({ status: 'issued' }));
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'issued' }),
+        );
 
-        await service.payInvoice(mockCtx, 1, 'success', 'branch-kassa', '123456789012');
+        await service.payProformaInvoice(mockCtx, 1, 'success', 'branch-kassa', '123456789012');
 
         expect(mockPaymentAttemptRepo.create).toHaveBeenCalledWith(
             expect.objectContaining({ providerPaymentId: '123456789012' }),
@@ -204,9 +220,11 @@ describe('PaymentAttemptService.payInvoice', () => {
     });
 
     it('generates a structured stub providerPaymentId when no externalReference is given — the external reference is mandatory for every channel', async () => {
-        mockInvoiceService.findOne.mockResolvedValue(makeInvoice({ status: 'issued' }));
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'issued' }),
+        );
 
-        await service.payInvoice(mockCtx, 1, 'success');
+        await service.payProformaInvoice(mockCtx, 1, 'success');
 
         expect(mockPaymentAttemptRepo.create).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -216,74 +234,85 @@ describe('PaymentAttemptService.payInvoice', () => {
     });
 
     it('runs the PaymentAttempt insert and allocation inside a single transaction', async () => {
-        mockInvoiceService.findOne.mockResolvedValue(makeInvoice({ status: 'issued' }));
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'issued' }),
+        );
 
-        await service.payInvoice(mockCtx, 1, 'success');
+        await service.payProformaInvoice(mockCtx, 1, 'success');
 
         expect(mockConnection.withTransaction).toHaveBeenCalledWith(mockCtx, expect.any(Function));
     });
 
     it('propagates a failure from inside the transaction (e.g. allocate throwing) rather than swallowing it — the caller sees the whole operation failed and can safely retry', async () => {
-        mockInvoiceService.findOne.mockResolvedValue(makeInvoice({ status: 'issued' }));
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'issued' }),
+        );
         mockSettlementEntryService.allocate.mockRejectedValueOnce(
             new Error('simulated crash mid-allocation'),
         );
 
-        await expect(service.payInvoice(mockCtx, 1, 'success')).rejects.toThrow(
+        await expect(service.payProformaInvoice(mockCtx, 1, 'success')).rejects.toThrow(
             /simulated crash mid-allocation/,
         );
     });
 
-    it('a "cancel" outcome records paymentStatus "canceled" and leaves the invoice untouched', async () => {
-        const invoice = makeInvoice({ status: 'issued' });
-        mockInvoiceService.findOne.mockResolvedValue(invoice);
+    it('a "cancel" outcome records paymentStatus "canceled" and leaves the proforma invoice untouched', async () => {
+        const proformaInvoice = makeProformaInvoice({ status: 'issued' });
+        mockProformaInvoiceService.findOne.mockResolvedValue(proformaInvoice);
 
-        const result = await service.payInvoice(mockCtx, 1, 'cancel');
+        const result = await service.payProformaInvoice(mockCtx, 1, 'cancel');
 
         expect(mockPaymentAttemptRepo.create).toHaveBeenCalledWith(
             expect.objectContaining({ paymentStatus: 'canceled' }),
         );
-        expect(mockInvoiceService.updateStatus).not.toHaveBeenCalled();
+        expect(mockProformaInvoiceService.updateStatus).not.toHaveBeenCalled();
         expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
         expect(result.status).toBe('issued');
     });
 
-    it("rejects an expectedOrganizationId that does not match the invoice's real organization, reports a PaymentReconciliationIssue, and never applies the payment", async () => {
-        const invoice = makeInvoice({ organizationId: 1, status: 'issued' });
-        mockInvoiceService.findOne.mockResolvedValue(invoice);
+    it("rejects an expectedOrganizationId that does not match the proforma invoice's real organization, reports a PaymentReconciliationIssue, and never applies the payment", async () => {
+        const proformaInvoice = makeProformaInvoice({ organizationId: 1, status: 'issued' });
+        mockProformaInvoiceService.findOne.mockResolvedValue(proformaInvoice);
 
         await expect(
-            service.payInvoice(mockCtx, 1, 'success', 'bank-transfer-erp', 'ERP-EVT-1', 2),
+            service.payProformaInvoice(mockCtx, 1, 'success', 'bank-transfer-erp', 'ERP-EVT-1', 2),
         ).rejects.toThrow(/organization 1.*organization 2/s);
 
         expect(mockReconciliationIssueService.report).toHaveBeenCalledWith(
             mockCtx,
             'ORGANIZATION_MISMATCH',
-            expect.objectContaining({ invoiceId: 1, organizationId: 2 }),
+            expect.objectContaining({ proformaInvoiceId: 1, organizationId: 2 }),
         );
         expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
         expect(mockPaymentAttemptRepo.save).not.toHaveBeenCalled();
     });
 
-    it("applies the payment when expectedOrganizationId matches the invoice's real organization", async () => {
-        const invoice = makeInvoice({ organizationId: 1, status: 'issued' });
-        mockInvoiceService.findOne
-            .mockResolvedValueOnce(invoice)
-            .mockResolvedValueOnce({ ...invoice, status: 'paid' });
+    it("applies the payment when expectedOrganizationId matches the proforma invoice's real organization", async () => {
+        const proformaInvoice = makeProformaInvoice({ organizationId: 1, status: 'issued' });
+        mockProformaInvoiceService.findOne
+            .mockResolvedValueOnce(proformaInvoice)
+            .mockResolvedValueOnce({ ...proformaInvoice, status: 'paid' });
 
-        await service.payInvoice(mockCtx, 1, 'success', 'bank-transfer-erp', 'ERP-EVT-1', 1);
+        await service.payProformaInvoice(
+            mockCtx,
+            1,
+            'success',
+            'bank-transfer-erp',
+            'ERP-EVT-1',
+            1,
+        );
 
         expect(mockReconciliationIssueService.report).not.toHaveBeenCalled();
         expect(mockSettlementEntryService.allocate).toHaveBeenCalledTimes(1);
     });
 
     it('skips organization validation entirely when expectedOrganizationId is not provided (a direct "pay now" call has no externally-claimed scope)', async () => {
-        const invoice = makeInvoice({ organizationId: 1, status: 'issued' });
-        mockInvoiceService.findOne
-            .mockResolvedValueOnce(invoice)
-            .mockResolvedValueOnce({ ...invoice, status: 'paid' });
+        const proformaInvoice = makeProformaInvoice({ organizationId: 1, status: 'issued' });
+        mockProformaInvoiceService.findOne
+            .mockResolvedValueOnce(proformaInvoice)
+            .mockResolvedValueOnce({ ...proformaInvoice, status: 'paid' });
 
-        await service.payInvoice(mockCtx, 1, 'success');
+        await service.payProformaInvoice(mockCtx, 1, 'success');
 
         expect(mockReconciliationIssueService.report).not.toHaveBeenCalled();
         expect(mockSettlementEntryService.allocate).toHaveBeenCalledTimes(1);
@@ -313,7 +342,7 @@ describe('PaymentAttemptService queries', () => {
         return qb;
     }
 
-    it('findForCounterparty scopes payments by counterparty via a join through Invoice', async () => {
+    it('findForCounterparty scopes payments by counterparty via a join through ProformaInvoice', async () => {
         const qb = createMockQb();
         qb.getManyAndCount.mockResolvedValue([[{ id: 1 }], 1]);
         const mockConnection = {
@@ -321,7 +350,7 @@ describe('PaymentAttemptService queries', () => {
         } as unknown as TransactionalConnection;
         const service = new PaymentAttemptService(
             mockConnection,
-            {} as unknown as InvoiceService,
+            {} as unknown as ProformaInvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
             {} as never,
@@ -329,7 +358,7 @@ describe('PaymentAttemptService queries', () => {
 
         const result = await service.findForCounterparty(mockCtx, '5', { take: 10, skip: 0 });
 
-        expect(qb.where).toHaveBeenCalledWith('invoice.counterpartyId = :counterpartyId', {
+        expect(qb.where).toHaveBeenCalledWith('proformaInvoice.counterpartyId = :counterpartyId', {
             counterpartyId: 5,
         });
         expect(result).toEqual({ items: [{ id: 1 }], totalItems: 1 });
@@ -343,7 +372,7 @@ describe('PaymentAttemptService queries', () => {
         } as unknown as TransactionalConnection;
         const service = new PaymentAttemptService(
             mockConnection,
-            {} as unknown as InvoiceService,
+            {} as unknown as ProformaInvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
             {} as never,
@@ -364,7 +393,7 @@ describe('PaymentAttemptService queries', () => {
         } as unknown as TransactionalConnection;
         const service = new PaymentAttemptService(
             mockConnection,
-            {} as unknown as InvoiceService,
+            {} as unknown as ProformaInvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
             {} as never,
@@ -385,7 +414,7 @@ describe('PaymentAttemptService queries', () => {
         } as unknown as TransactionalConnection;
         const service = new PaymentAttemptService(
             mockConnection,
-            {} as unknown as InvoiceService,
+            {} as unknown as ProformaInvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
             {} as never,
@@ -398,59 +427,67 @@ describe('PaymentAttemptService queries', () => {
         });
     });
 
-    it('belongsToCounterparty is false when the payment has no invoiceId', async () => {
+    it('belongsToCounterparty is false when the payment has no proformaInvoiceId', async () => {
         const mockConnection = {
             getRepository: vi.fn(),
         } as unknown as TransactionalConnection;
         const service = new PaymentAttemptService(
             mockConnection,
-            {} as unknown as InvoiceService,
+            {} as unknown as ProformaInvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
             {} as never,
         );
 
-        const owned = await service.belongsToCounterparty(mockCtx, { invoiceId: null } as never, 5);
+        const owned = await service.belongsToCounterparty(
+            mockCtx,
+            { proformaInvoiceId: null } as never,
+            5,
+        );
 
         expect(owned).toBe(false);
     });
 
-    it("belongsToCounterparty matches the invoice's counterpartyId", async () => {
-        const mockInvoiceRepo = { findOne: vi.fn(async () => makeInvoice({ counterpartyId: 5 })) };
+    it("belongsToCounterparty matches the proforma invoice's counterpartyId", async () => {
+        const mockProformaInvoiceRepo = {
+            findOne: vi.fn(async () => makeProformaInvoice({ counterpartyId: 5 })),
+        };
         const mockConnection = {
-            getRepository: vi.fn(() => mockInvoiceRepo),
+            getRepository: vi.fn(() => mockProformaInvoiceRepo),
         } as unknown as TransactionalConnection;
         const service = new PaymentAttemptService(
             mockConnection,
-            {} as unknown as InvoiceService,
+            {} as unknown as ProformaInvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
             {} as never,
         );
 
-        expect(await service.belongsToCounterparty(mockCtx, { invoiceId: 1 } as never, 5)).toBe(
-            true,
-        );
-        expect(await service.belongsToCounterparty(mockCtx, { invoiceId: 1 } as never, 9)).toBe(
-            false,
-        );
+        expect(
+            await service.belongsToCounterparty(mockCtx, { proformaInvoiceId: 1 } as never, 5),
+        ).toBe(true);
+        expect(
+            await service.belongsToCounterparty(mockCtx, { proformaInvoiceId: 1 } as never, 9),
+        ).toBe(false);
     });
 
-    it('getAllocationsForPayment joins each SettlementEntry to its invoice, with null for the advance row', async () => {
+    it('getAllocationsForPayment joins each SettlementEntry to its proforma invoice, with null for the advance row', async () => {
         const entries = [
-            { id: 1, invoiceId: 2, sourcePaymentId: 99, amount: 3000 },
-            { id: 2, invoiceId: null, sourcePaymentId: 99, amount: 1500 },
+            { id: 1, proformaInvoiceId: 2, sourcePaymentId: 99, amount: 3000 },
+            { id: 2, proformaInvoiceId: null, sourcePaymentId: 99, amount: 1500 },
         ];
         const mockSettlementRepo = { find: vi.fn(async () => entries) };
-        const mockInvoiceRepo = { findOne: vi.fn(async () => makeInvoice({ id: 2 })) };
+        const mockProformaInvoiceRepo = {
+            findOne: vi.fn(async () => makeProformaInvoice({ id: 2 })),
+        };
         const mockConnection = {
             getRepository: vi.fn((_ctx, entity) =>
-                entity === Invoice ? mockInvoiceRepo : mockSettlementRepo,
+                entity === ProformaInvoice ? mockProformaInvoiceRepo : mockSettlementRepo,
             ),
         } as unknown as TransactionalConnection;
         const service = new PaymentAttemptService(
             mockConnection,
-            {} as unknown as InvoiceService,
+            {} as unknown as ProformaInvoiceService,
             {} as unknown as SettlementEntryService,
             {} as never,
             {} as never,
@@ -459,8 +496,8 @@ describe('PaymentAttemptService queries', () => {
         const allocations = await service.getAllocationsForPayment(mockCtx, 99);
 
         expect(allocations).toHaveLength(2);
-        expect(allocations[0].invoice).toEqual(makeInvoice({ id: 2 }));
-        expect(allocations[1].invoice).toBeNull();
+        expect(allocations[0].proformaInvoice).toEqual(makeProformaInvoice({ id: 2 }));
+        expect(allocations[1].proformaInvoice).toBeNull();
     });
 
     describe('sumCapturedAmountsByOrderIds', () => {
@@ -488,7 +525,7 @@ describe('PaymentAttemptService queries', () => {
             } as unknown as TransactionalConnection;
             const service = new PaymentAttemptService(
                 mockConnection,
-                {} as unknown as InvoiceService,
+                {} as unknown as ProformaInvoiceService,
                 {} as unknown as SettlementEntryService,
                 {} as never,
                 {} as never,
@@ -511,7 +548,7 @@ describe('PaymentAttemptService queries', () => {
             } as unknown as TransactionalConnection;
             const service = new PaymentAttemptService(
                 mockConnection,
-                {} as unknown as InvoiceService,
+                {} as unknown as ProformaInvoiceService,
                 {} as unknown as SettlementEntryService,
                 {} as never,
                 {} as never,

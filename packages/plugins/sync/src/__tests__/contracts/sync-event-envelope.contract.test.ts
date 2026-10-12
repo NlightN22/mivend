@@ -205,7 +205,7 @@ describe('SyncEventSchema (contract)', () => {
             };
         }
 
-        it('accepts the legacy native-Order shape with no invoiceId/organizationId/outcome/rrn at all', () => {
+        it('accepts the legacy native-Order shape with no proformaInvoiceId/organizationId/outcome/rrn at all', () => {
             const result = SyncEventSchema.safeParse({
                 ...validEnvelope(),
                 eventType: 'payment.recorded',
@@ -214,7 +214,7 @@ describe('SyncEventSchema (contract)', () => {
             expect(result.success).toBe(true);
         });
 
-        it('accepts the full plugin-acquiring shape (invoiceId + organizationId + outcome + rrn all present)', () => {
+        it('accepts the full plugin-acquiring shape (proformaInvoiceId + organizationId + outcome + rrn all present)', () => {
             const result = SyncEventSchema.safeParse({
                 ...validEnvelope(),
                 eventType: 'payment.recorded',
@@ -256,7 +256,7 @@ describe('SyncEventSchema (contract)', () => {
             expect(result.success).toBe(false);
         });
 
-        it('rejects a non-positive invoiceId when present — plugin-acquiring Invoice ids are always positive', () => {
+        it('rejects a non-positive proformaInvoiceId when present — plugin-acquiring ProformaInvoice ids are always positive', () => {
             const result = SyncEventSchema.safeParse({
                 ...validEnvelope(),
                 eventType: 'payment.recorded',
@@ -265,12 +265,12 @@ describe('SyncEventSchema (contract)', () => {
             expect(result.success).toBe(false);
         });
 
-        // This wire-format layer intentionally leaves invoiceId/organizationId/outcome/rrn all
+        // This wire-format layer intentionally leaves proformaInvoiceId/organizationId/outcome/rrn all
         // optional (see PaymentRecordedPayload's own comment) — the mandatory-together
-        // requirement (an invoiceId with no rrn is invalid) is enforced downstream by
+        // requirement (a proformaInvoiceId with no rrn is invalid) is enforced downstream by
         // PaymentEventListener, not here. This test documents that boundary explicitly, so it
         // reads as a deliberate design decision rather than a gap this contract suite missed.
-        it('does NOT reject invoiceId present without rrn at the schema level — that combination is rejected by PaymentEventListener instead, not this schema', () => {
+        it('does NOT reject proformaInvoiceId present without rrn at the schema level — that combination is rejected by PaymentEventListener instead, not this schema', () => {
             const result = SyncEventSchema.safeParse({
                 ...validEnvelope(),
                 eventType: 'payment.recorded',

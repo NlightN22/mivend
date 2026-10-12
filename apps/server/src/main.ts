@@ -5,6 +5,7 @@ import { config } from './vendure-config';
 import { mountNotificationSubscriptions } from './subscriptions';
 import { assertDatabaseLocale } from './db-locale-check';
 import { carryOverOrderLineIdentity } from './order-line-identity-carryover';
+import { carryOverProformaInvoice } from './proforma-invoice-carryover';
 
 // Must run in `onBeforeAppListen`: routes registered after bootstrap() resolves are silently 404
 // (Nest finalizes routing at app.listen()). REST-only docs, see issue #28.
@@ -25,6 +26,7 @@ function mountApiDocs(app: INestApplication): void {
 
 assertDatabaseLocale()
     .then(carryOverOrderLineIdentity)
+    .then(carryOverProformaInvoice)
     .then(() =>
         bootstrap(config, {
             onBeforeAppListen: app => {

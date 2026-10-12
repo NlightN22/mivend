@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { PaymentVisibilityService } from '../../payment-visibility.service';
-import { InvoiceVisibilityService } from '../../invoice-visibility.service';
+import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibility.service';
 
 // Deliberately un-annotated object literal (not `Record<string, ReturnType<typeof vi.fn>>`) — an
 // explicit annotation defeats TS's inference of each mock's real call signature and produces
@@ -44,7 +44,7 @@ function mockQueryBuilder() {
 const mockCtx = {} as unknown as RequestContext;
 
 describe('PaymentVisibilityService', () => {
-    let invoiceVisibilityService: {
+    let proformaInvoiceVisibilityService: {
         resolveScope: ReturnType<typeof vi.fn>;
         applyScope: ReturnType<typeof vi.fn>;
     };
@@ -56,30 +56,30 @@ describe('PaymentVisibilityService', () => {
         const connection = {
             getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
         };
-        invoiceVisibilityService = { resolveScope: vi.fn(), applyScope: vi.fn() };
+        proformaInvoiceVisibilityService = { resolveScope: vi.fn(), applyScope: vi.fn() };
         service = new PaymentVisibilityService(
             connection as unknown as TransactionalConnection,
-            invoiceVisibilityService as unknown as InvoiceVisibilityService,
+            proformaInvoiceVisibilityService as unknown as ProformaInvoiceVisibilityService,
         );
     });
 
-    it('reuses InvoiceVisibilityService to resolve and apply scope, joined on invoice/counterparty', async () => {
+    it('reuses ProformaInvoiceVisibilityService to resolve and apply scope, joined on proforma invoice/counterparty', async () => {
         const scope = { kind: 'department', departmentId: 'd1', branchId: 'b1' };
-        invoiceVisibilityService.resolveScope.mockResolvedValue(scope);
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue(scope);
 
         await service.findVisible(mockCtx);
 
-        expect(invoiceVisibilityService.resolveScope).toHaveBeenCalledWith(mockCtx);
-        expect(invoiceVisibilityService.applyScope).toHaveBeenCalledWith(
+        expect(proformaInvoiceVisibilityService.resolveScope).toHaveBeenCalledWith(mockCtx);
+        expect(proformaInvoiceVisibilityService.applyScope).toHaveBeenCalledWith(
             qb,
             scope,
-            'invoice',
+            'proformaInvoice',
             'counterparty',
         );
     });
 
     it('filters by status/channel when provided, in addition to scope', async () => {
-        invoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, { status: 'captured', channel: 'branch-kassa' });
 
@@ -92,7 +92,7 @@ describe('PaymentVisibilityService', () => {
     });
 
     it('filters by search (number substring) when provided, in addition to scope', async () => {
-        invoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, { search: '42' });
 
@@ -102,20 +102,23 @@ describe('PaymentVisibilityService', () => {
     });
 
     it('filters by counterpartyId when provided, in addition to scope', async () => {
-        invoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx, undefined, 'cnt-1');
 
-        expect(qb.andWhere).toHaveBeenCalledWith('invoice.counterpartyId = :counterpartyId', {
-            counterpartyId: 'cnt-1',
-        });
+        expect(qb.andWhere).toHaveBeenCalledWith(
+            'proformaInvoice.counterpartyId = :counterpartyId',
+            {
+                counterpartyId: 'cnt-1',
+            },
+        );
     });
 
-    it('attaches counterpartyId from the joined invoice raw row onto each returned item', async () => {
-        invoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
+    it('attaches counterpartyId from the joined proforma invoice raw row onto each returned item', async () => {
+        proformaInvoiceVisibilityService.resolveScope.mockResolvedValue({ kind: 'all' });
         qb.getRawAndEntities.mockResolvedValue({
             entities: [{ id: 'p1' }],
-            raw: [{ invoice_counterpartyId: 'cnt-9' }],
+            raw: [{ proformaInvoice_counterpartyId: 'cnt-9' }],
         });
 
         const result = await service.findVisible(mockCtx);

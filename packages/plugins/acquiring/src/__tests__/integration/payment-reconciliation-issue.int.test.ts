@@ -10,7 +10,7 @@ import {
 
 import { PaymentReconciliationIssueService } from '../../payment-reconciliation-issue.service';
 
-// Same approach as invoice.service.int.test.ts: PaymentReconciliationIssue extends VendureEntity,
+// Same approach as proforma-invoice.service.int.test.ts: PaymentReconciliationIssue extends VendureEntity,
 // which needs a bootstrapped EntityIdStrategy — mirror the production table with a standalone
 // TypeORM entity against real Postgres instead of using the real class.
 @Entity('payment_reconciliation_issue')
@@ -20,7 +20,7 @@ class TestPaymentReconciliationIssue {
 
     @Column({ type: 'varchar' }) issueType!: string;
     @Column({ type: 'int', nullable: true }) paymentId!: number | null;
-    @Column({ type: 'int', nullable: true }) invoiceId!: number | null;
+    @Column({ type: 'int', nullable: true }) proformaInvoiceId!: number | null;
     @Column({ type: 'int', nullable: true }) organizationId!: number | null;
     @Column({ type: 'varchar', nullable: true }) providerPaymentId!: string | null;
     @Column({ type: 'varchar', nullable: true }) erpDocumentId!: string | null;
@@ -77,7 +77,7 @@ async function createIssue(
     return dataSource.getRepository(TestPaymentReconciliationIssue).save({
         issueType: 'AMOUNT_MISMATCH',
         paymentId: null,
-        invoiceId: 1,
+        proformaInvoiceId: 1,
         organizationId: 1,
         providerPaymentId: 'prov-1',
         erpDocumentId: null,

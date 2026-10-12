@@ -12,17 +12,17 @@ import {
 } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
-import { Invoice } from './entities/invoice.entity';
-import { InvoiceService, InvoiceListOptions } from './invoice.service';
-import { PaymentAttemptService, PayInvoiceOutcome } from './payment-attempt.service';
+import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { ProformaInvoiceService, ProformaInvoiceListOptions } from './proforma-invoice.service';
+import { PaymentAttemptService, PayProformaInvoiceOutcome } from './payment-attempt.service';
 import { PaymentChannel } from './entities/payment-attempt.entity';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
 import { MoneyAmount, SettlementEntryService } from './settlement-entry.service';
 
 @Resolver()
-export class InvoiceAdminResolver {
+export class ProformaInvoiceAdminResolver {
     constructor(
-        private invoiceService: InvoiceService,
+        private proformaInvoiceService: ProformaInvoiceService,
         private paymentInboxProcessorService: PaymentInboxProcessorService,
     ) {}
 
@@ -31,8 +31,8 @@ export class InvoiceAdminResolver {
     async invoicesForOrder(
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: string },
-    ): Promise<Invoice[]> {
-        return this.invoiceService.findByOrderId(ctx, Number(args.orderId));
+    ): Promise<ProformaInvoice[]> {
+        return this.proformaInvoiceService.findByOrderId(ctx, Number(args.orderId));
     }
 
     @Mutation()
@@ -45,9 +45,9 @@ export class InvoiceAdminResolver {
 }
 
 @Resolver()
-export class InvoiceShopResolver {
+export class ProformaInvoiceShopResolver {
     constructor(
-        private invoiceService: InvoiceService,
+        private proformaInvoiceService: ProformaInvoiceService,
         private customerService: CustomerService,
         private counterpartyService: CounterpartyService,
         private paymentAttemptService: PaymentAttemptService,
@@ -56,45 +56,46 @@ export class InvoiceShopResolver {
 
     @Query()
     @Allow(Permission.Owner)
-    async myInvoices(
+    async myProformaInvoices(
         @Ctx() ctx: RequestContext,
-        @Args() args: { options?: InvoiceListOptions },
-    ): Promise<PaginatedList<Invoice>> {
+        @Args() args: { options?: ProformaInvoiceListOptions },
+    ): Promise<PaginatedList<ProformaInvoice>> {
         const counterparty = await this.getOwnCounterparty(ctx);
         if (!counterparty) return { items: [], totalItems: 0 };
-        return this.invoiceService.findForCounterparty(ctx, counterparty.id, args.options);
+        return this.proformaInvoiceService.findForCounterparty(ctx, counterparty.id, args.options);
     }
 
     @Query()
     @Allow(Permission.Owner)
-    async invoice(
+    async proformaInvoice(
         @Ctx() ctx: RequestContext,
         @Args() args: { id: string },
-    ): Promise<Invoice | null> {
+    ): Promise<ProformaInvoice | null> {
         const counterparty = await this.getOwnCounterparty(ctx);
         if (!counterparty) return null;
-        const invoice = await this.invoiceService.findOne(ctx, Number(args.id));
-        if (!invoice || invoice.counterpartyId !== Number(counterparty.id)) return null;
-        return invoice;
+        const proformaInvoice = await this.proformaInvoiceService.findOne(ctx, Number(args.id));
+        if (!proformaInvoice || proformaInvoice.counterpartyId !== Number(counterparty.id))
+            return null;
+        return proformaInvoice;
     }
 
     @Mutation()
     @Allow(Permission.Owner)
-    async payInvoice(
+    async payProformaInvoice(
         @Ctx() ctx: RequestContext,
-        @Args() args: { invoiceId: string; status: string; channel?: string },
-    ): Promise<Invoice> {
+        @Args() args: { proformaInvoiceId: string; status: string; channel?: string },
+    ): Promise<ProformaInvoice> {
         const counterparty = await this.getOwnCounterparty(ctx);
-        const invoice = counterparty
-            ? await this.invoiceService.findOne(ctx, Number(args.invoiceId))
+        const proformaInvoice = counterparty
+            ? await this.proformaInvoiceService.findOne(ctx, Number(args.proformaInvoiceId))
             : null;
-        if (!invoice || invoice.counterpartyId !== Number(counterparty!.id)) {
+        if (!proformaInvoice || proformaInvoice.counterpartyId !== Number(counterparty!.id)) {
             throw new ForbiddenError();
         }
-        return this.paymentAttemptService.payInvoice(
+        return this.paymentAttemptService.payProformaInvoice(
             ctx,
-            Number(invoice.id),
-            args.status as PayInvoiceOutcome,
+            Number(proformaInvoice.id),
+            args.status as PayProformaInvoiceOutcome,
             args.channel ? (args.channel as PaymentChannel) : undefined,
         );
     }
@@ -118,26 +119,31 @@ export class InvoiceShopResolver {
     }
 }
 
-@Resolver('Invoice')
-export class InvoiceFieldResolver {
+@Resolver('ProformaInvoice')
+export class ProformaInvoiceFieldResolver {
     constructor(
-        private invoiceService: InvoiceService,
+        private proformaInvoiceService: ProformaInvoiceService,
         private orderService: OrderService,
     ) {}
 
     @ResolveField()
-    async lines(@Ctx() ctx: RequestContext, @Parent() invoice: Invoice): Promise<OrderLine[]> {
-        return this.invoiceService.getLinesForInvoice(ctx, invoice);
+    async lines(
+        @Ctx() ctx: RequestContext,
+        @Parent() proformaInvoice: ProformaInvoice,
+    ): Promise<OrderLine[]> {
+        return this.proformaInvoiceService.getLinesForProformaInvoice(ctx, proformaInvoice);
     }
 
     @ResolveField()
     async order(
         @Ctx() ctx: RequestContext,
-        @Parent() invoice: Invoice,
+        @Parent() proformaInvoice: ProformaInvoice,
     ): Promise<{ id: string; code: string }> {
-        const order = await this.orderService.findOne(ctx, invoice.orderId);
+        const order = await this.orderService.findOne(ctx, proformaInvoice.orderId);
         if (!order) {
-            throw new Error(`Order ${invoice.orderId} not found for invoice ${invoice.id}`);
+            throw new Error(
+                `Order ${proformaInvoice.orderId} not found for proforma invoice ${proformaInvoice.id}`,
+            );
         }
         return { id: String(order.id), code: order.code };
     }

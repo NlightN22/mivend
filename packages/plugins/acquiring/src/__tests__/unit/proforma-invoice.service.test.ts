@@ -2,13 +2,13 @@ import { EntityHydrator, Order, RequestContext, TransactionalConnection } from '
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Invoice } from '../../entities/invoice.entity';
-import { InvoiceService } from '../../invoice.service';
+import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
+import { ProformaInvoiceService } from '../../proforma-invoice.service';
 
 const mockRepo = {
     find: vi.fn(),
-    create: vi.fn((input: Partial<Invoice>) => ({ ...input }) as Invoice),
-    save: vi.fn(async (entities: Invoice[]) => entities),
+    create: vi.fn((input: Partial<ProformaInvoice>) => ({ ...input }) as ProformaInvoice),
+    save: vi.fn(async (entities: ProformaInvoice[]) => entities),
     query: vi.fn(),
 };
 
@@ -48,12 +48,12 @@ function makeOrder(
     } as unknown as Order;
 }
 
-describe('InvoiceService', () => {
-    let service: InvoiceService;
+describe('ProformaInvoiceService', () => {
+    let service: ProformaInvoiceService;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        service = new InvoiceService(
+        service = new ProformaInvoiceService(
             mockConnection,
             mockEntityHydrator as unknown as EntityHydrator,
             mockCounterpartyService as unknown as CounterpartyService,
@@ -94,8 +94,8 @@ describe('InvoiceService', () => {
         });
     });
 
-    describe('createInvoicesForOrder', () => {
-        it('creates one Invoice per organization and resolves the counterparty', async () => {
+    describe('createProformaInvoicesForOrder', () => {
+        it('creates one ProformaInvoice per organization and resolves the counterparty', async () => {
             mockRepo.find.mockResolvedValue([]);
             mockCounterpartyService.getForCustomer.mockResolvedValue({ id: '42' });
             const order = makeOrder([
@@ -103,9 +103,9 @@ describe('InvoiceService', () => {
                 { organizationId: 2, linePriceWithTax: 500 },
             ]);
 
-            const invoices = await service.createInvoicesForOrder(mockCtx, order);
+            const proformaInvoices = await service.createProformaInvoicesForOrder(mockCtx, order);
 
-            expect(invoices).toHaveLength(2);
+            expect(proformaInvoices).toHaveLength(2);
             expect(mockCounterpartyService.getForCustomer).toHaveBeenCalledWith(mockCtx, 'cust-1');
             expect(mockRepo.save).toHaveBeenCalledWith(
                 expect.arrayContaining([
@@ -125,7 +125,7 @@ describe('InvoiceService', () => {
             );
         });
 
-        it("generates each invoice's own distinct number — <order number>-NN per docs/identifiers.md", async () => {
+        it("generates each proforma invoice's own distinct number — <order number>-NN per docs/identifiers.md", async () => {
             mockRepo.find.mockResolvedValue([]);
             mockCounterpartyService.getForCustomer.mockResolvedValue({ id: '42' });
             const order = makeOrder([
@@ -133,9 +133,9 @@ describe('InvoiceService', () => {
                 { organizationId: 2, linePriceWithTax: 500 },
             ]);
 
-            const invoices = await service.createInvoicesForOrder(mockCtx, order);
+            const proformaInvoices = await service.createProformaInvoicesForOrder(mockCtx, order);
 
-            const numbers = invoices.map(i => i.number);
+            const numbers = proformaInvoices.map(i => i.number);
             expect(new Set(numbers).size).toBe(2);
             for (const number of numbers) {
                 expect(number).toMatch(new RegExp(`^${order.code}-\\d{2}$`));
@@ -150,7 +150,7 @@ describe('InvoiceService', () => {
             });
             const order = makeOrder([{ organizationId: 1, linePriceWithTax: 1000 }]);
 
-            await service.createInvoicesForOrder(mockCtx, order);
+            await service.createProformaInvoicesForOrder(mockCtx, order);
 
             expect(mockTradingPointService.getPreferredForCustomer).toHaveBeenCalledWith(
                 mockCtx,
@@ -167,21 +167,21 @@ describe('InvoiceService', () => {
             mockTradingPointService.getPreferredForCustomer.mockResolvedValue(null);
             const order = makeOrder([{ organizationId: 1, linePriceWithTax: 1000 }]);
 
-            await service.createInvoicesForOrder(mockCtx, order);
+            await service.createProformaInvoicesForOrder(mockCtx, order);
 
             expect(mockRepo.save).toHaveBeenCalledWith(
                 expect.arrayContaining([expect.objectContaining({ branchId: null })]),
             );
         });
 
-        it('is idempotent — returns existing invoices instead of creating duplicates', async () => {
-            const existing = [{ id: 1, orderId: 1 } as Invoice];
+        it('is idempotent — returns existing proforma invoices instead of creating duplicates', async () => {
+            const existing = [{ id: 1, orderId: 1 } as ProformaInvoice];
             mockRepo.find.mockResolvedValue(existing);
             const order = makeOrder([{ organizationId: 1, linePriceWithTax: 1000 }]);
 
-            const invoices = await service.createInvoicesForOrder(mockCtx, order);
+            const proformaInvoices = await service.createProformaInvoicesForOrder(mockCtx, order);
 
-            expect(invoices).toBe(existing);
+            expect(proformaInvoices).toBe(existing);
             expect(mockRepo.save).not.toHaveBeenCalled();
             expect(mockCounterpartyService.getForCustomer).not.toHaveBeenCalled();
         });
@@ -191,7 +191,7 @@ describe('InvoiceService', () => {
             mockCounterpartyService.getForCustomer.mockResolvedValue(null);
             const order = makeOrder([{ organizationId: 1, linePriceWithTax: 1000 }]);
 
-            await expect(service.createInvoicesForOrder(mockCtx, order)).rejects.toThrow(
+            await expect(service.createProformaInvoicesForOrder(mockCtx, order)).rejects.toThrow(
                 /has no counterparty/,
             );
         });

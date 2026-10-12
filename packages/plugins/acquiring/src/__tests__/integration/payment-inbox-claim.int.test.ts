@@ -19,7 +19,7 @@ import { InboxService } from '../../inbox.service';
 
 // InboxService.claimBatch's real risk is concurrency, not lifecycle logic (that's covered by the
 // unit test's mocked-repo scenarios) — two independent callers (the scheduled BullMQ sweep and
-// the admin-triggered "run sweep now" mutation, see invoice.resolver.ts) can call it at the same
+// the admin-triggered "run sweep now" mutation, see proforma-invoice.resolver.ts) can call it at the same
 // moment. This suite exercises that for real against Postgres: real concurrent claimBatch calls
 // (not two sequential ones — see docs/testing-strategy.md's concurrency pattern), plus recovery
 // of a row abandoned mid-'processing' by a crashed worker.

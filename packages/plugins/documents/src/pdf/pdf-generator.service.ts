@@ -13,13 +13,17 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { Counterparty } from '@mivend/plugin-counterparty';
-import { InvoiceService } from '@mivend/plugin-acquiring';
+import { ProformaInvoiceService } from '@mivend/plugin-acquiring';
 
 import { GENERATE_DOCUMENT_QUEUE, loggerCtx } from '../constants';
 import { Document } from '../entities/document.entity';
 import { DocumentsService } from '../documents.service';
 import { resolveBuyerLegalName } from './buyer-legal-name';
-import { buildInvoiceTemplateData, renderInvoiceHtml, InvoiceSource } from './invoice-template';
+import {
+    buildProformaInvoiceTemplateData,
+    renderProformaInvoiceHtml,
+    ProformaInvoiceSource,
+} from './proforma-invoice-template';
 import { buildContractTemplateData, renderContractHtml } from './contract-template';
 import { PdfBrowserService } from './pdf-browser.service';
 
@@ -44,7 +48,7 @@ export class PdfGeneratorService implements OnModuleInit {
         private configService: ConfigService,
         private documentsService: DocumentsService,
         private pdfBrowserService: PdfBrowserService,
-        private invoiceService: InvoiceService,
+        private proformaInvoiceService: ProformaInvoiceService,
     ) {}
 
     async onModuleInit(): Promise<void> {
@@ -73,7 +77,7 @@ export class PdfGeneratorService implements OnModuleInit {
             const html =
                 document.type === 'contract'
                     ? await this.buildContractHtml(ctx, document)
-                    : await this.buildInvoiceHtml(ctx, document);
+                    : await this.buildProformaInvoiceHtml(ctx, document);
             const pdfBuffer = await this.pdfBrowserService.renderPdf(html);
 
             const asset = await this.assetService.createFromFileStream(
@@ -118,9 +122,14 @@ export class PdfGeneratorService implements OnModuleInit {
         return `data:${asset.mimeType};base64,${buffer.toString('base64')}`;
     }
 
-    private async buildInvoiceHtml(ctx: RequestContext, document: Document): Promise<string> {
+    private async buildProformaInvoiceHtml(
+        ctx: RequestContext,
+        document: Document,
+    ): Promise<string> {
         if (!document.orderId) {
-            throw new Error(`Document ${document.id} has no orderId — cannot render an invoice`);
+            throw new Error(
+                `Document ${document.id} has no orderId — cannot render a proforma invoice`,
+            );
         }
         const order = await this.connection
             .getRepository(ctx, Order)
@@ -133,27 +142,36 @@ export class PdfGeneratorService implements OnModuleInit {
             throw new Error(`Order ${document.orderId} not found for document ${document.id}`);
         }
 
-        // One document per organization-split Invoice (docs/payments.md "Organizations") —
+        // One document per organization-split ProformaInvoice (docs/payments.md "Organizations") —
         // render only that organization's lines/requisites/total, not the whole order. Legacy
-        // documents with no invoiceId (predate splitting) fall back to the whole order against
+        // documents with no proformaInvoiceId (predate splitting) fall back to the whole order against
         // the single "active" organization, same as before.
         let requisites;
-        let source: InvoiceSource;
-        if (document.invoiceId) {
-            const invoice = await this.invoiceService.findOne(ctx, Number(document.invoiceId));
-            if (!invoice) {
+        let source: ProformaInvoiceSource;
+        if (document.proformaInvoiceId) {
+            const proformaInvoice = await this.proformaInvoiceService.findOne(
+                ctx,
+                Number(document.proformaInvoiceId),
+            );
+            if (!proformaInvoice) {
                 throw new Error(
-                    `Invoice ${document.invoiceId} not found for document ${document.id}`,
+                    `ProformaInvoice ${document.proformaInvoiceId} not found for document ${document.id}`,
                 );
             }
-            requisites = await this.documentsService.getRequisitesById(ctx, invoice.organizationId);
+            requisites = await this.documentsService.getRequisitesById(
+                ctx,
+                proformaInvoice.organizationId,
+            );
             this.documentsService.assertRequisitesComplete(requisites);
-            const orgLines = await this.invoiceService.getLinesForInvoice(ctx, invoice);
+            const orgLines = await this.proformaInvoiceService.getLinesForProformaInvoice(
+                ctx,
+                proformaInvoice,
+            );
             source = {
                 documentNumber: document.number,
                 issueDate: document.issueDate,
-                currencyCode: invoice.currencyCode,
-                totalAmount: invoice.amount,
+                currencyCode: proformaInvoice.currencyCode,
+                totalAmount: proformaInvoice.amount,
                 lines: orgLines,
             };
         } else {
@@ -170,8 +188,8 @@ export class PdfGeneratorService implements OnModuleInit {
 
         const buyerLegalName = await this.getBuyerLegalName(ctx, document.counterpartyId);
         const logoDataUri = await this.getLogoDataUri(ctx, requisites);
-        return renderInvoiceHtml(
-            buildInvoiceTemplateData(source, requisites, buyerLegalName, logoDataUri),
+        return renderProformaInvoiceHtml(
+            buildProformaInvoiceTemplateData(source, requisites, buyerLegalName, logoDataUri),
         );
     }
 

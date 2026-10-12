@@ -6,7 +6,7 @@ describe('documentNumberSearchTerm', () => {
         expect(documentNumberSearchTerm('100-0000002')).toBe('%1000000002%');
     });
 
-    it('keeps a real Invoice -NN suffix intact — only the leading dash is cosmetic', () => {
+    it('keeps a real ProformaInvoice -NN suffix intact — only the leading dash is cosmetic', () => {
         expect(documentNumberSearchTerm('100-0000002-01')).toBe('%1000000002-01%');
     });
 

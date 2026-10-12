@@ -583,7 +583,7 @@ export const config: VendureConfig = {
                         value:
                             'When enabled, every product must be assigned to one of our own ' +
                             'legal entities (organization), and online payment splits into ' +
-                            'one invoice per organization before charging the customer.',
+                            'one proforma invoice per organization before charging the customer.',
                     },
                 ],
             },

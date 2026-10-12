@@ -124,7 +124,7 @@ export class CentralConsumer implements OnModuleInit {
             event.payload.organizationId !== undefined &&
             event.payload.outcome !== undefined
         ) {
-            // Publishes only — the risky work (payInvoice) happens later, in
+            // Publishes only — the risky work (payProformaInvoice) happens later, in
             // plugin-acquiring's inbox worker (the external-integration-rules skill).
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
             this.eventBus.publish(
