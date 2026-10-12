@@ -345,6 +345,12 @@ than requiring a translation layer between two different allocation models.
 
 ## Organizations (our own legal entities) — a payment cannot be captured without this
 
+Field ownership: the `organization` stream and `erp-import` both write `OrganizationRequisites`; the
+stream carries name, active state, inn/kpp/ogrn, legal address and bank details. An empty value means "not
+provided" and never overwrites a stored one, a non-empty value always does; signatory and logo stay
+erp-import/admin-only. When a row first gets inn and legal address, failed proforma documents of that
+organization are re-queued once (a conditional `failed` -> `pending` update, so no duplicates).
+
 `OrganizationRequisites` (`plugin-documents`) already models one of **our own** legal entities
 (the seller side — requisites/bank details for document rendering), sourced from the ERP. Today
 it's used for exactly one purpose: `DocumentsService.getActiveRequisites()` picks "the" single
