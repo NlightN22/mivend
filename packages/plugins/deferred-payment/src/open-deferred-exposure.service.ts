@@ -36,8 +36,8 @@ export class OpenDeferredExposureService {
         return days && days > 0 ? days : DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS;
     }
 
-    // Per order, once: order total minus Settled payments, for orders with a live payment that does not
-    // opt out (card awaiting payment). Excludes `excludeOrderId`, cancelled and too-old orders.
+    // Per order, once: order total minus Settled payments, for orders with a live payment whose latest
+    // placement does not opt out (card awaiting payment). Excludes `excludeOrderId`, cancelled and too-old orders.
     async sumUnconfirmedRubles(
         ctx: RequestContext,
         counterpartyId: ID,
@@ -55,10 +55,17 @@ export class OpenDeferredExposureService {
                  FROM "order" o
                  INNER JOIN customer cu ON cu.id = o."customerId"
                  WHERE cu."customFieldsCounterpartyid"::text = $1
+                   AND COALESCE((
+                       SELECT p.metadata::jsonb -> $2::text ->> 'countsAgainstLimit'
+                       FROM payment p
+                       WHERE p."orderId" = o.id AND p.state IN ('Created', 'Authorized', 'Settled')
+                         AND p.metadata::jsonb ? $2::text
+                       ORDER BY p."createdAt" DESC, p.id DESC
+                       LIMIT 1
+                   ), 'true') <> 'false'
                    AND EXISTS (
                        SELECT 1 FROM payment p
                        WHERE p."orderId" = o.id AND p.state IN ('Created', 'Authorized', 'Settled')
-                         AND COALESCE(p.metadata::jsonb -> $2::text ->> 'countsAgainstLimit', 'true') <> 'false'
                    )
                    AND o.id <> $3
                    AND o."customFieldsErpstatus" = ANY($4)

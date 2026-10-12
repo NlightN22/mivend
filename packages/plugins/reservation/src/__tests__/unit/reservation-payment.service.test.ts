@@ -352,6 +352,21 @@ describe('ReservationPaymentService', () => {
             },
         );
 
+        it('takes the route of the latest live payment, not a stale or declined attempt', async () => {
+            const at = (iso: string): Date => new Date(iso);
+            paymentRepo.find.mockResolvedValue([
+                { ...withPlacement('erp-now', 'Cancelled'), id: 1, createdAt: at('2026-01-01') },
+                {
+                    ...withPlacement('after-payment', 'Settled'),
+                    id: 2,
+                    createdAt: at('2026-01-02'),
+                },
+                { ...withPlacement('erp-now', 'Declined'), id: 3, createdAt: at('2026-01-03') },
+            ]);
+            await service.handlePaymentStateReached(ctx, order as never);
+            expect(reservationService.reserveOrder).toHaveBeenCalledTimes(1);
+        });
+
         it('is a no-op for payments without a placement route', async () => {
             paymentRepo.find.mockResolvedValue([{ method: 'offline-terms', state: 'Settled' }]);
             await service.handlePaymentStateReached(ctx, order as never);

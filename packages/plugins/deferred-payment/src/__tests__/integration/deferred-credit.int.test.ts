@@ -106,6 +106,32 @@ describe('credit control over open orders (real SQL + decide)', () => {
         expect(await exceeded(buyer, 90_000)).toBe(false);
     });
 
+    it('takes the placement of the latest live payment: a form change from bank transfer to card stops counting', async () => {
+        const buyer = await h.addBuyer(100_000);
+        const orderId = await h.addOrder(buyer, 90_000, {
+            method: 'offline-terms',
+            paymentState: 'Cancelled',
+            metadata: { placement: { route: 'manager-confirmation', countsAgainstLimit: true } },
+        });
+        await h.addPayment(orderId, 'online-stub', 'Created', 9_000_000, {
+            placement: { route: 'after-payment', countsAgainstLimit: false },
+        });
+        expect(await exceeded(buyer, 90_000)).toBe(false);
+    });
+
+    it('ignores the placement of a declined newer attempt and keeps the live one', async () => {
+        const buyer = await h.addBuyer(100_000);
+        const orderId = await h.addOrder(buyer, 90_000, {
+            method: 'offline-terms',
+            paymentState: 'Created',
+            metadata: { placement: { route: 'manager-confirmation', countsAgainstLimit: true } },
+        });
+        await h.addPayment(orderId, 'online-stub', 'Declined', 9_000_000, {
+            placement: { route: 'after-payment', countsAgainstLimit: false },
+        });
+        expect(await exceeded(buyer, 20_000)).toBe(true);
+    });
+
     it('counts a legacy payment without a placement marker', async () => {
         const buyer = await h.addBuyer(100_000);
         await h.addOrder(buyer, 90_000, { method: 'offline-terms', metadata: {} });

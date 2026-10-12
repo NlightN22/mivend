@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 import {
     Column,
+    CreateDateColumn,
     DataSource,
     Entity,
     EntityManager,
@@ -76,6 +77,8 @@ export class TestPayment {
     @PrimaryGeneratedColumn('uuid') id!: string;
     @Column({ type: 'varchar' }) state!: string;
     @Column({ type: 'varchar' }) orderId!: string;
+    @Column({ type: 'simple-json', nullable: true }) metadata!: Record<string, unknown> | null;
+    @CreateDateColumn() createdAt!: Date;
     @ManyToOne(() => TestOrder)
     @JoinColumn({ name: 'orderId' })
     order!: TestOrder;

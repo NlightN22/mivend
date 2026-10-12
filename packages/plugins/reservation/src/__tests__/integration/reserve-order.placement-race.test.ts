@@ -8,6 +8,7 @@ import {
     mockCtx,
     TestOrder,
     TestOrderLine,
+    TestPayment,
     TestReservation,
     TestStockLevel,
     useReserveOrderHarness,
@@ -89,6 +90,44 @@ describe('auto-reserve on placement vs manual confirm (real Postgres)', () => {
 
         const order = await h.dataSource.getRepository(TestOrder).findOneByOrFail({ id });
         expect(order.customFields.reservationState).toBe('AWAITING_CONFIRMATION');
+    });
+
+    it('keeps a concurrent write to another custom field when the state is moved (key-only write, #209)', async () => {
+        const { id, placed } = await placedOrder();
+        const service = paymentService() as unknown as {
+            markAwaitingConfirmation: (ctx: unknown, order: Order) => Promise<void>;
+        };
+        await Promise.all([
+            service.markAwaitingConfirmation(mockCtx, placed),
+            h.dataSource
+                .getRepository(TestOrder)
+                .update({ id }, { customFields: { branchId: 'branch-2' } }),
+        ]);
+
+        const order = await h.dataSource.getRepository(TestOrder).findOneByOrFail({ id });
+        expect(order.customFields.reservationState).toBe('AWAITING_CONFIRMATION');
+        expect(order.customFields.branchId).toBe('branch-2');
+    });
+
+    // Reuses #194: expiry cancels via reservation-expiry.component.test, reserveUntil reaches the ERP event via
+    // order-submitted.builder.test; this pins the missing link, the stored prepayment TTL into the reservation deadline.
+    it('a prepayment placement (reserveDays 3) holds the reservation until placement + 3 days', async () => {
+        const { id, placed } = await placedOrder();
+        await h.dataSource.getRepository(TestPayment).save({
+            orderId: id,
+            state: 'Authorized',
+            metadata: { placement: { route: 'erp-now', countsAgainstLimit: true, reserveDays: 3 } },
+        });
+        const before = Date.now();
+
+        await paymentService().handleOrderPlaced(mockCtx, placed);
+
+        const [reservation] = await h.dataSource
+            .getRepository(TestReservation)
+            .find({ where: { orderId: id, status: 'active' } });
+        const days = (reservation.expiresAt.getTime() - before) / 86_400_000;
+        expect(days).toBeGreaterThan(2.99);
+        expect(days).toBeLessThan(3.01);
     });
 
     it('a manual confirm racing with the placement auto-reserve yields one reservation set and a RESERVED order', async () => {

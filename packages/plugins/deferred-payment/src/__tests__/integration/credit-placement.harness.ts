@@ -202,7 +202,7 @@ export function useCreditPlacementHarness(schemaName: string) {
             "subTotalWithTax" int NOT NULL DEFAULT 0, "shippingWithTax" int NOT NULL DEFAULT 0)`);
         await run(`CREATE TABLE payment (
             id serial PRIMARY KEY, "orderId" int, method varchar, state varchar, amount int,
-            metadata text NOT NULL DEFAULT '{}')`);
+            metadata text NOT NULL DEFAULT '{}', "createdAt" timestamp NOT NULL DEFAULT now())`);
     });
 
     afterAll(async () => {

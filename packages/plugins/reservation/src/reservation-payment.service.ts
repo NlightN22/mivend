@@ -20,6 +20,8 @@ import {
     type ReservationCreationMethod,
 } from './types';
 
+const INACTIVE_PAYMENT_STATES: string[] = ['Cancelled', 'Declined', 'Error'];
+
 // Owns which trigger applies to an order and its TTL; reserve/state writes stay in ReservationService.
 @Injectable()
 export class ReservationPaymentService {
@@ -57,38 +59,25 @@ export class ReservationPaymentService {
         if (!placement) await this.autoReserveIfEnabled(ctx, order);
     }
 
-    // Row lock + stored NOT_REQUIRED guard, so a manual confirm is never rolled back (#199); re-applied if a trailing save reverts it.
+    // Row lock + stored NOT_REQUIRED guard, so a manual confirm is never rolled back (#199); writes only the changed key (#209).
     private async markAwaitingConfirmation(ctx: RequestContext, order: Order): Promise<void> {
-        const apply = (): Promise<void> =>
-            this.connection.withTransaction(ctx, async txCtx => {
-                const repo = this.connection.getRepository(txCtx, Order);
-                const current = await repo
-                    .createQueryBuilder('o')
-                    .setLock('pessimistic_write')
-                    .where('o.id = :id', { id: order.id })
-                    .getOne();
-                if (current?.customFields?.reservationState !== 'NOT_REQUIRED') return;
-                // A manual confirm that won the race left an active reservation: the state is RESERVED.
-                const reserved =
-                    (await this.connection
-                        .getRepository(txCtx, Reservation)
-                        .count({ where: { orderId: String(order.id), status: 'active' } })) > 0;
-                await repo.update(order.id, {
-                    customFields: {
-                        ...current.customFields,
-                        reservationState: reserved ? 'RESERVED' : 'AWAITING_CONFIRMATION',
-                    },
-                });
-            });
-        await apply();
-        for (let attempt = 0; attempt < 3; attempt++) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            const current = await this.connection
-                .getRepository(ctx, Order)
-                .findOne({ where: { id: order.id } });
+        await this.connection.withTransaction(ctx, async txCtx => {
+            const repo = this.connection.getRepository(txCtx, Order);
+            const current = await repo
+                .createQueryBuilder('o')
+                .setLock('pessimistic_write')
+                .where('o.id = :id', { id: order.id })
+                .getOne();
             if (current?.customFields?.reservationState !== 'NOT_REQUIRED') return;
-            await apply();
-        }
+            // A manual confirm that won the race left an active reservation: the state is RESERVED.
+            const reserved =
+                (await this.connection
+                    .getRepository(txCtx, Reservation)
+                    .count({ where: { orderId: String(order.id), status: 'active' } })) > 0;
+            await repo.update(order.id, {
+                customFields: { reservationState: reserved ? 'RESERVED' : 'AWAITING_CONFIRMATION' },
+            });
+        });
     }
 
     // Orders without a placement route only: GlobalSettings.autoReserveOnPlacement skips the manual queue.
@@ -154,7 +143,12 @@ export class ReservationPaymentService {
     }
 
     private placementOf(payments: Payment[]): PlacementMetadata | null {
-        const holder = payments.find(p => p.metadata?.[PLACEMENT_KEY]);
+        const holder = payments
+            .filter(p => !INACTIVE_PAYMENT_STATES.includes(p.state) && p.metadata?.[PLACEMENT_KEY])
+            .sort(
+                (a, b) =>
+                    b.createdAt.getTime() - a.createdAt.getTime() || Number(b.id) - Number(a.id),
+            )[0];
         return holder ? (holder.metadata[PLACEMENT_KEY] as PlacementMetadata) : null;
     }
 }
