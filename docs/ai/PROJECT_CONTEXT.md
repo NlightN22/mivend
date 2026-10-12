@@ -15,6 +15,11 @@ Updated: 2026-10-12 12:00
 - **Caution**: the integration `outbound_command` queue is shared by production and dev 1C bases — never create test commands there without the owner confirming which base will pick them up.
 - **Open**: live check of a package-only order with the 1C line (needs the Integration Service owner); a unit field on `order-registration-result`; pack display in catalog cards; dataloader for `packagingLevels`; the 1C trace prefix is shown to managers as-is.
 
+## #222 stage 2a: placement policy for every payment form (2026-10-12, backend done, not yet audited)
+- `deferred-payment` method removed; forms are `cash` / `offline-terms` (bank transfer) / `online-stub` (card). One pure matrix `decidePlacement` + `CreditPlacementService.place` (lock `credit-exposure:<counterparty>`) store `Payment.metadata.placement` (route, countsAgainstLimit, reserveDays); reservation reads the route (`paymentClassification` and `reservationTtlDays` removed). Details and decisions: `docs/payments.md` "Stage 2a done".
+- New: `BranchSettings.prepaymentReserveDays` (default 3), mutation `confirmPaymentReceived` + permission `ConfirmPaymentReceived`, shop `deferredCreditPreview` extended. Migrations 1791492000000/1791493000000 (synchronize contours: apply the data SQL by hand).
+- Storefront follow-ups (next run): checkout forms cash/bank-transfer/card (rename `'invoice'`/`'deferred'`), send `creditLimitAcknowledged` in payment metadata, show `payableCardAmount` and `acknowledgementRequired`.
+
 ## #222 stage 1: limit exposure by payment fact (2026-10-12, done, not yet audited; stages 2+ open)
 - `OpenDeferredExposureService` counts any unpaid unconfirmed order (any method); a Settled non-`deferred-payment` payment frees it; legacy deferred keeps counting. Details: `docs/payments.md` "Target model".
 - `BranchSettings.allowExceedingCreditLimit` (default off, migration 1791489000000, manager Branch settings "Credit" section) is returned by `DeferredCreditAssessmentService.assess`; checkout does not act on it yet (stage 2). Manager `generated/graphql.ts` was edited by hand (codegen needs the dev server): re-run `codegen` when convenient.
@@ -193,8 +198,8 @@ its own local `declare module '@vendure/core'` augmentation, or the standalone b
 `counterparty` (incl. `Contract`, #105) · `erp-import` (legacy, test-only) · `search` ·
 `erp-order` · `sync` (RabbitMQ hub↔branch only) · `documents` · `acquiring` (ProformaInvoice, Dispute,
 FiscalReceipt, PaymentAttempt, SettlementEntry, `offline-terms` PaymentMethod bootstrap) ·
-`online-payment` (`online-stub` PaymentMethod bootstrap) · `deferred-payment` (`deferred-payment`
-PaymentMethod bootstrap, groundwork for #143) · `pickup-shipping` (`pickup` ShippingMethod
+`online-payment` (`online-stub` PaymentMethod bootstrap) · `deferred-payment` (credit-limit exposure
+and the placement policy used by every payment form) · `pickup-shipping` (`pickup` ShippingMethod
 bootstrap) · `popular-products` · `versioning` · `access-control` (Branch/Department/Warehouse/
 Administrator lifecycle) · `approval-workflow` · `reservation` · `moq` · `session-management` ·
 `erp-integration` (Kafka consumer central-only; `freight-delivery` ShippingMethod bootstrap +

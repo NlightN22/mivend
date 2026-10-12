@@ -10656,6 +10656,12 @@ export type CancelOrderAsStaffMutation = {
         | { outcome: OrderCancelOutcome };
 };
 
+export type ConfirmPaymentReceivedMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type ConfirmPaymentReceivedMutation = { confirmPaymentReceived: { id: string } };
+
 export type OrderCreateCounterpartiesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type OrderCreateCounterpartiesQuery = {
@@ -10942,6 +10948,7 @@ export type OrderDetailQuery = {
             creditLimitExceeded: boolean;
             currencyCode: CurrencyCode;
             packagesOnlySales: boolean;
+            payments: Array<{ id: string; method: string; state: string }> | null;
             subTotalWithTax: any;
             shippingWithTax: any;
             totalWithTax: any;
@@ -13368,6 +13375,16 @@ export const CancelOrderAsStaffDocument = new TypedDocumentString(`
     CancelOrderAsStaffMutation,
     CancelOrderAsStaffMutationVariables
 >;
+export const ConfirmPaymentReceivedDocument = new TypedDocumentString(`
+    mutation ConfirmPaymentReceived($orderId: ID!) {
+  confirmPaymentReceived(orderId: $orderId) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ConfirmPaymentReceivedMutation,
+    ConfirmPaymentReceivedMutationVariables
+>;
 export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
     query OrderCreateCounterparties {
   counterparties(options: {take: 500}) {
@@ -13707,6 +13724,11 @@ export const OrderDetailDocument = new TypedDocumentString(`
       orderPlacedAt
       createdAt
       creditLimitExceeded
+      payments {
+        id
+        method
+        state
+      }
       currencyCode
       packagesOnlySales
       subTotalWithTax

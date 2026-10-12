@@ -12,7 +12,7 @@ ERP inbound/outbound handlers. Never from an automated suite: orders reach the r
   (order number + `orderUuid`), who reads the Integration Service database.
 - Place orders with the shop API as the contour test customer (`docs/environments.md`): add items,
   `setOrderShippingMethod`, `transitionOrderToState ArrangingPayment`, `addPaymentToOrder`
-  (`deferred-payment`). Pick variants with free stock in the customer's branch location and an
+  (`cash`/`offline-terms`). Pick variants with free stock in the customer's branch location and an
   organization; global "in stock" search results are not enough.
 - Check state read-only in the contour database: `order` custom fields (`reservationState`,
   `erpStatus`, `erpOrderId`), `reservation`, `reservation_reconciliation_issue`, `integration_outbox`,

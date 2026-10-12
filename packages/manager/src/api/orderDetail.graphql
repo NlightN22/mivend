@@ -8,6 +8,11 @@ query OrderDetail($code: String!) {
             orderPlacedAt
             createdAt
             creditLimitExceeded
+            payments {
+                id
+                method
+                state
+            }
             currencyCode
             packagesOnlySales
             subTotalWithTax

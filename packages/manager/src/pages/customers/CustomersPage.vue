@@ -162,7 +162,7 @@ const attentionItems = computed<AttentionEntry[]>(() => {
         return {
             customerId: c.id,
             title: c.shortName,
-            meta: `Credit balance is at ${percent}%; new deferred-payment order may need approval.`,
+            meta: `Credit balance is at ${percent}%; a new order may exceed the limit and need approval.`,
             tag: 'Risk',
             variant: 'danger',
         };

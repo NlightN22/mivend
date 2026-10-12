@@ -1,0 +1,5 @@
+mutation ConfirmPaymentReceived($orderId: ID!) {
+    confirmPaymentReceived(orderId: $orderId) {
+        id
+    }
+}

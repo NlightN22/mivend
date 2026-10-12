@@ -175,12 +175,11 @@ export async function requestPriceAdjustment(
     return result.requestPriceAdjustment as PriceAdjustmentResult;
 }
 
-// Only two payment handlers actually exist (see @mivend/plugin-acquiring's
-// offline-terms-handler.ts and @mivend/plugin-online-payment's online-stub-handler.ts) —
-// "Deferred"/"ProformaInvoice" from the design concept both map to the same offline-terms handler.
+// One option per payment form: cash, bank transfer (offline-terms), card (online-stub).
 export const PAYMENT_METHOD_OPTIONS = [
+    { value: 'cash', label: 'Cash' },
     { value: 'online-stub', label: 'Online payment' },
-    { value: 'offline-terms', label: 'Proforma invoice / deferred payment' },
+    { value: 'offline-terms', label: 'Bank transfer (proforma invoice)' },
 ] as const;
 
 export async function finalizeOrder(

@@ -677,10 +677,10 @@ These are real, acknowledged gaps — not guessed at here, tracked for a future 
   `ONLINE_PAYMENT_STUB_ENABLED=true` (`apps/server/.env.central`; the staging-integration contour leaves
   it unset, so it is disabled there).
 
-### Target model: form of payment vs terms (issue #222, decided 2026-10-12, not built yet)
+### Target model: form of payment vs terms (issue #222, decided 2026-10-12, backend built in stages 1-2a)
 
 The checkout list below mixes a form (proforma invoice, online) with terms (deferred). The decided model separates them;
-until #222 ships, the sections that follow describe the current behavior.
+"Stage 2a done" below describes what the backend does now, the older sections that follow are history.
 
 - **Form** (customer choice): cash, bank proforma invoice, card online. There is no "deferred" option.
 - **Terms** (derived, never chosen): limit > 0 and payment delay days > 0 means limit control applies; otherwise
@@ -718,6 +718,42 @@ until #222 ships, the sections that follow describe the current behavior.
 other than `deferred-payment` is `Settled`. Legacy `deferred-payment` payments (`Authorized` at placement, no money)
 keep counting. New branch setting `allowExceedingCreditLimit` (default off, manager portal Settings -> Branches) is
 exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; checkout does not use it yet (stage 2).
+
+**Stage 2a done (#222, backend only; storefront checkout UI is the next run):**
+
+- Forms are PaymentMethods `cash` (new, bootstrap-created once), `offline-terms` (= bank transfer, name "Bank transfer")
+  and `online-stub` (= card). `deferred-payment` is gone: handler, eligibility checker and bootstrap deleted, migration
+  `1791493000000` renames its payments to `offline-terms` (still unpaid, so they keep occupying the limit) and deletes
+  the method row. `PAYMENT_FORM_BY_METHOD_CODE` in `packages/shared` maps method code to form id.
+- Terms are derived in `DeferredCreditAssessmentService` (`limitControlled` = limit > 0 and delay days > 0); the matrix
+  lives in one pure function, `decidePlacement` (deferred-payment `placement-policy.ts`). Every handler calls
+  `CreditPlacementService.place` at placement; the result is stored in `Payment.metadata.placement`
+  (`route`: `erp-now` | `after-payment` | `manager-confirmation`, `countsAgainstLimit`, `reserveDays`) plus the public
+  `creditLimitExceeded` flag. Reservation reads `route`; the exposure SQL skips a payment with
+  `countsAgainstLimit = false` (card awaiting payment) and counts everything else not Settled.
+- Over the limit the server never trusts the UI: `erp-now` needs the branch setting `allowExceedingCreditLimit` AND the
+  customer's `creditLimitAcknowledged: true` in the `addPaymentToOrder` metadata; otherwise the order waits in
+  `AWAITING_CONFIRMATION`. This also holds for card (the matrix says "any form").
+- Concurrency: exposure read, decision and payment creation run under the advisory lock
+  `credit-exposure:<counterpartyId>` inside the `addPaymentToOrder` transaction, so two racing orders of one
+  counterparty cannot both pass (concurrent-writer integration test).
+- Card amount: `Payment.amount` = `max(0, balance + open exposure - limit)` before the order + the order total;
+  the excess is not allocated to the older orders' proforma invoices yet (acquirer/allocation work).
+- Prepayment reserve: `BranchSettings.prepaymentReserveDays` (default 3, manager portal Branch settings -> Credit) is
+  copied into `placement.reserveDays` at placement and becomes the reservation TTL, so it reaches the ERP as
+  `reserveUntil`; expiry is the standard #194 auto-cancel. Orders on credit terms keep the 7-day default, paid card
+  orders 30 days.
+- Vendure places an order only on an `Authorized` payment, so cash and bank transfer stay `Authorized` at placement
+  (meaning "obligation accepted"); `Settled` is the payment fact. The previous `paymentClassification` /
+  `reservationTtlDays` PaymentMethod fields are removed (columns dropped by the migration).
+- "Payment received": Admin mutation `confirmPaymentReceived(orderId)`, permission `ConfirmPaymentReceived` (operator,
+  manager, general-director, portal-admin), settles the order's Authorized cash/bank-transfer payment under
+  `payment-received:<orderId>`; a repeat is a no-op. Manager order page shows "Cash received" / "Bank transfer received".
+  A manager may still confirm an order without payment through `ConfirmOrder`; it keeps occupying the limit.
+- Shop API `deferredCreditPreview` (additive) now also returns `limitControlled`, `allowExceedingCreditLimit`,
+  `acknowledgementRequired`, `payableCardAmount` (rubles) and `availableForms` (`cash`, `bank-transfer`, `card`).
+- Open: manager marking of a bank transfer does not create a `PaymentAttempt`; partial payments and allocating a card
+  excess to older orders are later work.
 
 ### Credit limit on deferred orders
 

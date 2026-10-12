@@ -21,6 +21,7 @@ import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
 import OrderCancelPanel from '../../components/order-detail/OrderCancelPanel.vue';
+import PaymentReceivedPanel from '../../components/order-detail/PaymentReceivedPanel.vue';
 import OrderContractPanel from '../../components/order-detail/OrderContractPanel.vue';
 import ReservationFailurePanel from '../../components/order-detail/ReservationFailurePanel.vue';
 import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
@@ -160,6 +161,11 @@ watch(() => route.params.code, load);
             </div>
 
             <aside class="order-detail__right-stack">
+                <PaymentReceivedPanel
+                    :order-id="order.id"
+                    :payments="order.payments ?? []"
+                    @confirmed="reload"
+                />
                 <OrderCancelPanel
                     :order-id="order.id"
                     :cancellable="order.cancellable"

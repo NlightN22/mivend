@@ -195,13 +195,13 @@ stock-check + reservation-write for **both** paths:
 This guarantees identical stock-safety behavior regardless of which path triggered the
 reservation — no divergent logic between "automatic" and "manual."
 
-**Payment classification (decided)**: don't infer prepaid/non-prepaid by matching a payment
-handler's name in a switch statement. Add `PaymentMethod.customFields.paymentClassification`
-(string, one of `PREPAID` / `CREDIT` / `OFFLINE_TERMS`) — configured per payment method in
-the **native Vendure Admin UI (port 3000)**, same as the TTL field above. Pre-filled defaults
-for this project's two existing handlers (`apps/server/src/payment-method-handlers.ts`):
-`online-stub` → `PREPAID`, `offline-terms` → `OFFLINE_TERMS`. Both classifications resolve to
-"non-prepaid" for reservation purposes except `PREPAID` itself.
+**Payment classification (superseded by #222 stage 2a)**: the reserve trigger is no longer a per-method
+classification. The placement policy stores `Payment.metadata.placement.route` (`erp-now`,
+`after-payment`, `manager-confirmation`) at checkout and `ReservationPaymentService` reads it:
+`erp-now` reserves at placement (TTL = `placement.reserveDays` for prepayment, else 7 days),
+`after-payment` (card) reserves once the payment is Settled (30 days), `manager-confirmation` and
+payments without a route (admin-created orders) wait in the confirmation queue (the global
+`autoReserveOnPlacement` switch now only affects orders without a route). See `docs/payments.md`.
 
 ### Concurrency safety
 
@@ -521,11 +521,10 @@ qty/location context, so the manager-portal UI can show exactly what's wrong per
 
 ## Decisions (resolved 2026-07-15)
 
-- Payment classification: `PaymentMethod.customFields.paymentClassification`
-  (`PREPAID`/`CREDIT`/`OFFLINE_TERMS`), configured in the native Vendure Admin UI (port
-  3000). Pre-filled: `online-stub` → `PREPAID`, `offline-terms` → `OFFLINE_TERMS`.
-- TTL: 30 days (prepaid) / 7 days (non-prepaid) default, overridable per payment method via
-  `PaymentMethod.customFields.reservationTtlDays`, same native Admin UI.
+- Payment classification and the per-method TTL override were replaced by the placement route
+  (#222 stage 2a, see above); the per-method custom fields no longer exist.
+- TTL: 30 days (card paid) / 7 days (credit terms) / `prepaymentReserveDays` (default 3, branch
+  setting) for prepayment orders.
 - `safetyStock`: not needed — dropped from the ATP formula.
 - Audit: reuse Vendure's `HistoryEntry`/`ReadEntityHistory` — no new audit table.
 - `multiplicity` data: will arrive correctly once the ERP integration is live; current seed data
