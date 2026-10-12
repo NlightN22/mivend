@@ -829,6 +829,11 @@ export type CustomFieldConfig =
     | StructCustomFieldConfig
     | TextCustomFieldConfig;
 
+export type CustomProductMappings = {
+    fullName?: Maybe<Scalars['String']['output']>;
+    oemCodes?: Maybe<Array<Scalars['String']['output']>>;
+};
+
 export type Customer = Node & {
     addresses?: Maybe<Array<Address>>;
     counterparty?: Maybe<Counterparty>;
@@ -1453,45 +1458,6 @@ export type InvalidCredentialsError = ErrorResult & {
     authenticationError: Scalars['String']['output'];
     errorCode: ErrorCode;
     message: Scalars['String']['output'];
-};
-
-export type ProformaInvoice = {
-    amount: Scalars['Int']['output'];
-    currencyCode: Scalars['String']['output'];
-    id: Scalars['ID']['output'];
-    lines: Array<ProformaInvoiceLine>;
-    order: ProformaInvoiceOrder;
-    orderId: Scalars['ID']['output'];
-    organizationId: Scalars['ID']['output'];
-    status: Scalars['String']['output'];
-};
-
-export type ProformaInvoiceLine = {
-    linePriceWithTax: Scalars['Int']['output'];
-    productVariant: ProformaInvoiceLineProductVariant;
-    quantity: Scalars['Int']['output'];
-    unitPriceWithTax: Scalars['Int']['output'];
-};
-
-export type ProformaInvoiceLineProductVariant = {
-    name: Scalars['String']['output'];
-    sku: Scalars['String']['output'];
-};
-
-export type ProformaInvoiceList = {
-    items: Array<ProformaInvoice>;
-    totalItems: Scalars['Int']['output'];
-};
-
-export type ProformaInvoiceListOptions = {
-    skip?: InputMaybe<Scalars['Int']['input']>;
-    status?: InputMaybe<Scalars['String']['input']>;
-    take?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type ProformaInvoiceOrder = {
-    code: Scalars['String']['output'];
-    id: Scalars['ID']['output'];
 };
 
 /**
@@ -2719,8 +2685,8 @@ export type Payment = Node & {
 
 export type PaymentAllocation = {
     amount: Scalars['Int']['output'];
-    proformaInvoice?: Maybe<ProformaInvoice>;
     isAdvance: Scalars['Boolean']['output'];
+    proformaInvoice?: Maybe<ProformaInvoice>;
 };
 
 export type PaymentAttempt = {
@@ -2732,11 +2698,11 @@ export type PaymentAttempt = {
     disputes: Array<Dispute>;
     externalReference?: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
-    proformaInvoice?: Maybe<ProformaInvoice>;
-    proformaInvoiceId?: Maybe<Scalars['ID']['output']>;
     order?: Maybe<ProformaInvoiceOrder>;
     orderId?: Maybe<Scalars['ID']['output']>;
     processingEvents: Array<PaymentProcessingEvent>;
+    proformaInvoice?: Maybe<ProformaInvoice>;
+    proformaInvoiceId?: Maybe<Scalars['ID']['output']>;
     refunds: Array<PaymentRefund>;
     status: Scalars['String']['output'];
 };
@@ -3110,6 +3076,11 @@ export type PriceRange = {
     min: Scalars['Money']['output'];
 };
 
+export type PriceRangeBucket = {
+    count: Scalars['Int']['output'];
+    to: Scalars['Int']['output'];
+};
+
 export type PriceRangeInput = {
     max: Scalars['Int']['input'];
     min: Scalars['Int']['input'];
@@ -3369,6 +3340,45 @@ export type ProductVariantTranslation = {
     updatedAt: Scalars['DateTime']['output'];
 };
 
+export type ProformaInvoice = {
+    amount: Scalars['Int']['output'];
+    currencyCode: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    lines: Array<ProformaInvoiceLine>;
+    order: ProformaInvoiceOrder;
+    orderId: Scalars['ID']['output'];
+    organizationId: Scalars['ID']['output'];
+    status: Scalars['String']['output'];
+};
+
+export type ProformaInvoiceLine = {
+    linePriceWithTax: Scalars['Int']['output'];
+    productVariant: ProformaInvoiceLineProductVariant;
+    quantity: Scalars['Int']['output'];
+    unitPriceWithTax: Scalars['Int']['output'];
+};
+
+export type ProformaInvoiceLineProductVariant = {
+    name: Scalars['String']['output'];
+    sku: Scalars['String']['output'];
+};
+
+export type ProformaInvoiceList = {
+    items: Array<ProformaInvoice>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type ProformaInvoiceListOptions = {
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    status?: InputMaybe<Scalars['String']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type ProformaInvoiceOrder = {
+    code: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+};
+
 export type Promotion = Node & {
     actions: Array<ConfigurableOperation>;
     conditions: Array<ConfigurableOperation>;
@@ -3470,16 +3480,15 @@ export type Query = {
     facet?: Maybe<Facet>;
     /** A list of Facets available to the shop */
     facets: FacetList;
-    proformaInvoice?: Maybe<ProformaInvoice>;
     /** Returns information about the current authenticated User */
     me?: Maybe<CurrentUser>;
     multiplicityEnforced: Scalars['Boolean']['output'];
     myAdvanceBalance: Array<MoneyAmount>;
     myDocuments: DocumentList;
     myHiddenTradingPoints: Array<TradingPoint>;
-    myProformaInvoices: ProformaInvoiceList;
     myOrders: OrderList;
     myPayments: PaymentAttemptList;
+    myProformaInvoices: ProformaInvoiceList;
     mySessions: Array<SessionSummary>;
     myTradingPoints: Array<TradingPoint>;
     /** Returns the possible next states that the activeOrder can transition to */
@@ -3505,6 +3514,7 @@ export type Query = {
     product?: Maybe<Product>;
     /** Get a list of Products */
     products: ProductList;
+    proformaInvoice?: Maybe<ProformaInvoice>;
     /** Search Products based on the criteria set by the `SearchInput` */
     search: SearchResponse;
     searchCapabilities: SearchCapabilities;
@@ -3528,16 +3538,8 @@ export type QueryFacetsArgs = {
     options?: InputMaybe<FacetListOptions>;
 };
 
-export type QueryProformaInvoiceArgs = {
-    id: Scalars['ID']['input'];
-};
-
 export type QueryMyDocumentsArgs = {
     options?: InputMaybe<DocumentListOptions>;
-};
-
-export type QueryMyProformaInvoicesArgs = {
-    options?: InputMaybe<ProformaInvoiceListOptions>;
 };
 
 export type QueryMyOrdersArgs = {
@@ -3547,6 +3549,10 @@ export type QueryMyOrdersArgs = {
 
 export type QueryMyPaymentsArgs = {
     options?: InputMaybe<PaymentListOptions>;
+};
+
+export type QueryMyProformaInvoicesArgs = {
+    options?: InputMaybe<ProformaInvoiceListOptions>;
 };
 
 export type QueryNotificationsArgs = {
@@ -3576,6 +3582,10 @@ export type QueryProductArgs = {
 
 export type QueryProductsArgs = {
     options?: InputMaybe<ProductListOptions>;
+};
+
+export type QueryProformaInvoiceArgs = {
+    id: Scalars['ID']['input'];
 };
 
 export type QuerySearchArgs = {
@@ -3720,7 +3730,9 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
+    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
+    priceRange?: InputMaybe<PriceRangeInput>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
@@ -3736,7 +3748,15 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
+    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchResponsePriceData = {
+    buckets: Array<PriceRangeBucket>;
+    bucketsWithTax: Array<PriceRangeBucket>;
+    range: PriceRange;
+    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -3744,6 +3764,9 @@ export type SearchResult = {
     collectionIds: Array<Scalars['ID']['output']>;
     compareAtPrice?: Maybe<Scalars['Int']['output']>;
     currencyCode: CurrencyCode;
+    /** @deprecated Use customProductMappings or customProductVariantMappings */
+    customMappings: CustomProductMappings;
+    customProductMappings: CustomProductMappings;
     customerPrice?: Maybe<Scalars['Int']['output']>;
     description: Scalars['String']['output'];
     discountTiers: Array<DiscountTier>;
@@ -3751,6 +3774,7 @@ export type SearchResult = {
     facetValueIds: Array<Scalars['ID']['output']>;
     /** Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels. */
     galleryPreviews: Array<Scalars['String']['output']>;
+    inStock?: Maybe<Scalars['Boolean']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
     /** Order quantity step of the variant, in base units. */
     multiplicity?: Maybe<Scalars['Int']['output']>;

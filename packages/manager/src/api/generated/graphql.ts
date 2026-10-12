@@ -3188,43 +3188,6 @@ export type InvalidFulfillmentHandlerError = ErrorResult & {
     message: Scalars['String']['output'];
 };
 
-export type ProformaInvoice = {
-    amount: Scalars['Int']['output'];
-    branchId: Maybe<Scalars['ID']['output']>;
-    counterpartyId: Scalars['ID']['output'];
-    createdAt: Scalars['DateTime']['output'];
-    currencyCode: Scalars['String']['output'];
-    id: Scalars['ID']['output'];
-    /** Resolved via ProformaInvoiceFieldResolver.lines — must be declared here too: registering ProformaInvoiceFieldResolver without declaring every field it resolves throws 'ProformaInvoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging). */
-    lines: Array<OrderLine>;
-    /** Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts). */
-    number: Scalars['String']['output'];
-    /** Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: InvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page). */
-    order: ProformaInvoiceOrder;
-    orderId: Scalars['ID']['output'];
-    organizationId: Scalars['ID']['output'];
-    status: Scalars['String']['output'];
-};
-
-export type ProformaInvoiceList = {
-    items: Array<ProformaInvoice>;
-    totalItems: Scalars['Int']['output'];
-};
-
-export type ProformaInvoiceListOptions = {
-    /** Substring match against the proforma invoice's own number (ProformaInvoice.number). */
-    search?: InputMaybe<Scalars['String']['input']>;
-    skip?: InputMaybe<Scalars['Int']['input']>;
-    status?: InputMaybe<Scalars['String']['input']>;
-    take?: InputMaybe<Scalars['Int']['input']>;
-};
-
-/** Mirrors shop.schema.ts's ProformaInvoiceOrder — a lightweight ref, not the full core Order type. */
-export type ProformaInvoiceOrder = {
-    code: Scalars['String']['output'];
-    id: Scalars['ID']['output'];
-};
-
 /** Returned if the specified items are already part of a Fulfillment */
 export type ItemsAlreadyFulfilledError = ErrorResult & {
     errorCode: ErrorCode;
@@ -5902,10 +5865,10 @@ export type PaymentAttempt = {
     createdAt: Scalars['DateTime']['output'];
     currencyCode: Scalars['String']['output'];
     id: Scalars['ID']['output'];
-    proformaInvoiceId: Maybe<Scalars['ID']['output']>;
     /** The payment's own internal, human-facing business number — generated the same way as Order.code/ProformaInvoice.number/DiscountGrant.number. See PaymentAttempt.number's own doc comment (payment-attempt.entity.ts) for why this is distinct from providerPaymentId below (the external-integration-rules skill). */
     number: Scalars['String']['output'];
     paymentStatus: Scalars['String']['output'];
+    proformaInvoiceId: Maybe<Scalars['ID']['output']>;
     /** The payment's real external reference — an acquirer RRN, a branch kassa receipt number, an ERP payment-document id, or (until a real acquirer is wired in) a clearly-marked stub value. Mandatory for every channel; used for reconciliation, never as this payment's own displayed identity. */
     providerPaymentId: Scalars['String']['output'];
 };
@@ -6041,10 +6004,10 @@ export type PaymentReconciliationIssue = {
     expectedAmount: Maybe<Scalars['Int']['output']>;
     expectedCurrency: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
-    proformaInvoiceId: Maybe<Scalars['ID']['output']>;
     issueType: Scalars['String']['output'];
     organizationId: Maybe<Scalars['ID']['output']>;
     paymentId: Maybe<Scalars['ID']['output']>;
+    proformaInvoiceId: Maybe<Scalars['ID']['output']>;
     providerPaymentId: Maybe<Scalars['String']['output']>;
     status: Scalars['String']['output'];
 };
@@ -6889,6 +6852,43 @@ export type ProductVariantTranslationInput = {
     name?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type ProformaInvoice = {
+    amount: Scalars['Int']['output'];
+    branchId: Maybe<Scalars['ID']['output']>;
+    counterpartyId: Scalars['ID']['output'];
+    createdAt: Scalars['DateTime']['output'];
+    currencyCode: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    /** Resolved via ProformaInvoiceFieldResolver.lines — must be declared here too: registering ProformaInvoiceFieldResolver without declaring every field it resolves throws 'ProformaInvoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging). */
+    lines: Array<OrderLine>;
+    /** Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts). */
+    number: Scalars['String']['output'];
+    /** Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: InvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page). */
+    order: ProformaInvoiceOrder;
+    orderId: Scalars['ID']['output'];
+    organizationId: Scalars['ID']['output'];
+    status: Scalars['String']['output'];
+};
+
+export type ProformaInvoiceList = {
+    items: Array<ProformaInvoice>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type ProformaInvoiceListOptions = {
+    /** Substring match against the proforma invoice's own number (ProformaInvoice.number). */
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    status?: InputMaybe<Scalars['String']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** Mirrors shop.schema.ts's ProformaInvoiceOrder — a lightweight ref, not the full core Order type. */
+export type ProformaInvoiceOrder = {
+    code: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+};
+
 export type Promotion = Node & {
     actions: Array<ConfigurableOperation>;
     conditions: Array<ConfigurableOperation>;
@@ -7121,9 +7121,7 @@ export type Query = {
     integrationOutboxProblems: IntegrationOutboxProblemList;
     /** One row per stream: union of the event contract, configured topics and inbox rows, with Kafka lag, inbox backlog and drift (issue #195). */
     integrationStreamHealth: IntegrationStreamHealthReport;
-    /** Sum of a counterparty's unpaid (pending/issued) proforma invoices, scoped the same way visibleProformaInvoices is. Null if the counterparty has no unpaid proforma invoices, not zero-with-a-currency. */
-    proformaInvoiceOutstandingBalance: Maybe<MoneyAmount>;
-    proformaInvoicesForOrder: Array<ProformaInvoice>;
+    invoicesForOrder: Array<ProformaInvoice>;
     job: Maybe<Job>;
     jobBufferSize: Array<JobBufferSize>;
     jobQueues: Array<JobQueue>;
@@ -7185,6 +7183,8 @@ export type Query = {
     productVariants: ProductVariantList;
     /** List Products */
     products: ProductList;
+    /** Sum of a counterparty's unpaid (pending/issued) proforma invoices, scoped the same way visibleProformaInvoices is. Null if the counterparty has no unpaid proforma invoices, not zero-with-a-currency. */
+    proformaInvoiceOutstandingBalance: Maybe<MoneyAmount>;
     promotion: Maybe<Promotion>;
     promotionActions: Array<ConfigurableOperationDefinition>;
     promotionConditions: Array<ConfigurableOperationDefinition>;
@@ -7231,11 +7231,11 @@ export type Query = {
     variantOrganizationHealth: VariantOrganizationHealth;
     /** How many variants reference a unit that has not arrived (soft link, issue #200). */
     variantUnitHealth: VariantUnitHealth;
-    /** Manager-portal proforma invoice list, branch-scoped via AccessScopeService.resolveProformaInvoiceScope — see AdminProformaInvoiceVisibilityResolver / docs/access-control.md. */
-    visibleProformaInvoices: ProformaInvoiceList;
     visibleOrders: OrderList;
     /** Manager-portal payment list — derived-from-ProformaInvoice scoping, see PaymentVisibilityService. */
     visiblePayments: PaymentAttemptList;
+    /** Manager-portal proforma invoice list, branch-scoped via AccessScopeService.resolveProformaInvoiceScope — see AdminProformaInvoiceVisibilityResolver / docs/access-control.md. */
+    visibleProformaInvoices: ProformaInvoiceList;
     warehouses: Array<Warehouse>;
     zone: Maybe<Zone>;
     zones: ZoneList;
@@ -7447,11 +7447,7 @@ export type QueryIntegrationOutboxProblemsArgs = {
     options?: InputMaybe<IntegrationOutboxProblemListOptions>;
 };
 
-export type QueryProformaInvoiceOutstandingBalanceArgs = {
-    counterpartyId: Scalars['ID']['input'];
-};
-
-export type QueryProformaInvoicesForOrderArgs = {
+export type QueryInvoicesForOrderArgs = {
     orderId: Scalars['ID']['input'];
 };
 
@@ -7603,6 +7599,10 @@ export type QueryProductsArgs = {
     options?: InputMaybe<ProductListOptions>;
 };
 
+export type QueryProformaInvoiceOutstandingBalanceArgs = {
+    counterpartyId: Scalars['ID']['input'];
+};
+
 export type QueryPromotionArgs = {
     id: Scalars['ID']['input'];
 };
@@ -7712,11 +7712,6 @@ export type QueryTradingPointArgs = {
     id: Scalars['ID']['input'];
 };
 
-export type QueryVisibleProformaInvoicesArgs = {
-    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
-    options?: InputMaybe<ProformaInvoiceListOptions>;
-};
-
 export type QueryVisibleOrdersArgs = {
     customerId?: InputMaybe<Scalars['ID']['input']>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
@@ -7727,6 +7722,11 @@ export type QueryVisibleOrdersArgs = {
 export type QueryVisiblePaymentsArgs = {
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
     options?: InputMaybe<PaymentListOptions>;
+};
+
+export type QueryVisibleProformaInvoicesArgs = {
+    counterpartyId?: InputMaybe<Scalars['ID']['input']>;
+    options?: InputMaybe<ProformaInvoiceListOptions>;
 };
 
 export type QueryZoneArgs = {
@@ -13270,7 +13270,10 @@ export const ProformaInvoicesPageDocument = new TypedDocumentString(`
 >;
 export const ProformaInvoiceViewCountsDocument = new TypedDocumentString(`
     query ProformaInvoiceViewCounts($counterpartyId: ID) {
-  all: visibleProformaInvoices(options: {take: 0}, counterpartyId: $counterpartyId) {
+  all: visibleProformaInvoices(
+    options: {take: 0}
+    counterpartyId: $counterpartyId
+  ) {
     totalItems
   }
   pending: visibleProformaInvoices(
