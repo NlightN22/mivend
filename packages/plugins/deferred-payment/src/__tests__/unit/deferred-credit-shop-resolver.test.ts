@@ -6,7 +6,12 @@ import { DeferredCreditShopResolver } from '../../api/shop.resolver';
 const getActiveOrder = vi.fn();
 const assess = vi.fn();
 const resolver = new DeferredCreditShopResolver({ getActiveOrder } as never, { assess } as never);
-const none = { exceeded: false, availableCredit: 0, orderAmount: 0 };
+const none = {
+    exceeded: false,
+    availableCredit: 0,
+    orderAmount: 0,
+    allowExceedingCreditLimit: false,
+};
 
 describe('deferredCreditPreview', () => {
     it('returns the assessment of the active order', async () => {
