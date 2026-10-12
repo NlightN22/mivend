@@ -57,6 +57,35 @@ describe('BranchSettingsService', () => {
         expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ packagesOnly: false }));
     });
 
+    it('defaults allowExceedingCreditLimit to false and persists an explicit true', async () => {
+        repo.findOne.mockResolvedValue(null);
+        const base = {
+            branchId: 'branch-1',
+            defaultPriceTypeId: 'pt-1',
+            defaultWarehouseId: 'wh-1',
+        };
+        await service.upsert(ctx, base);
+        expect(repo.create).toHaveBeenLastCalledWith(
+            expect.objectContaining({ allowExceedingCreditLimit: false }),
+        );
+        await service.upsert(ctx, { ...base, allowExceedingCreditLimit: true });
+        expect(repo.create).toHaveBeenLastCalledWith(
+            expect.objectContaining({ allowExceedingCreditLimit: true }),
+        );
+    });
+
+    it('keeps the existing allowExceedingCreditLimit when an update omits it', async () => {
+        repo.findOne.mockResolvedValue({ branchId: 'branch-1', allowExceedingCreditLimit: true });
+        await service.upsert(ctx, {
+            branchId: 'branch-1',
+            defaultPriceTypeId: 'pt-1',
+            defaultWarehouseId: 'wh-1',
+        });
+        expect(repo.save).toHaveBeenCalledWith(
+            expect.objectContaining({ allowExceedingCreditLimit: true }),
+        );
+    });
+
     it('persists an explicit packagesOnly: true', async () => {
         repo.findOne.mockResolvedValue(null);
         await service.upsert(ctx, {

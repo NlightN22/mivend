@@ -68,6 +68,7 @@ const adminApiSchema = gql`
         visibleWarehouseIds: [String!]
         packagesOnly: Boolean!
         enforceMultiplicity: Boolean!
+        allowExceedingCreditLimit: Boolean!
     }
 
     type TeamMember {
@@ -225,6 +226,7 @@ const adminApiSchema = gql`
             visibleWarehouseIds: [String!]
             packagesOnly: Boolean
             enforceMultiplicity: Boolean
+            allowExceedingCreditLimit: Boolean
         ): BranchSettings!
         createBranch(name: String!): Branch!
         createAdministratorFromErpUser(erpId: String!): Administrator!

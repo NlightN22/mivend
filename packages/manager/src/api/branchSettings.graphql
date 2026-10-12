@@ -16,6 +16,7 @@ fragment BranchSettingsFields on BranchSettings {
     visibleWarehouseIds
     packagesOnly
     enforceMultiplicity
+    allowExceedingCreditLimit
 }
 
 query Warehouses {
@@ -68,6 +69,7 @@ mutation SetBranchSettings(
     $visibleWarehouseIds: [String!]
     $packagesOnly: Boolean!
     $enforceMultiplicity: Boolean!
+    $allowExceedingCreditLimit: Boolean!
 ) {
     setBranchSettings(
         branchId: $branchId
@@ -77,6 +79,7 @@ mutation SetBranchSettings(
         visibleWarehouseIds: $visibleWarehouseIds
         packagesOnly: $packagesOnly
         enforceMultiplicity: $enforceMultiplicity
+        allowExceedingCreditLimit: $allowExceedingCreditLimit
     ) {
         ...BranchSettingsFields
     }

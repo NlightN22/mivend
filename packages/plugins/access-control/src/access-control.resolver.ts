@@ -216,6 +216,7 @@ export class AccessControlResolver {
             visibleWarehouseIds?: string[];
             packagesOnly?: boolean;
             enforceMultiplicity?: boolean;
+            allowExceedingCreditLimit?: boolean;
         },
     ): Promise<BranchSettings> {
         return this.branchSettingsService.upsert(ctx, {
@@ -226,6 +227,7 @@ export class AccessControlResolver {
             visibleWarehouseIds: args.visibleWarehouseIds ?? null,
             packagesOnly: args.packagesOnly,
             enforceMultiplicity: args.enforceMultiplicity,
+            allowExceedingCreditLimit: args.allowExceedingCreditLimit,
         });
     }
 

@@ -34,6 +34,7 @@ export interface BranchSettingsInput {
     visibleWarehouseIds: string[] | null;
     packagesOnly: boolean;
     enforceMultiplicity: boolean;
+    allowExceedingCreditLimit: boolean;
 }
 
 // Warehouses are ERP org-structure master data (see access-control's Warehouse entity) — one

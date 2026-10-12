@@ -21,6 +21,7 @@ const emit = defineEmits<{
             visibleWarehouseIds: string[];
             packagesOnly: boolean;
             enforceMultiplicity: boolean;
+            allowExceedingCreditLimit: boolean;
         },
     ];
 }>();
@@ -32,6 +33,7 @@ const form = reactive({
     visibleWarehouseIds: [] as string[],
     packagesOnly: false,
     enforceMultiplicity: false,
+    allowExceedingCreditLimit: false,
 });
 
 // Re-seeds the form whenever a different branch's settings load (or none exist yet) — the two
@@ -46,6 +48,7 @@ watch(
         form.visibleWarehouseIds = settings?.visibleWarehouseIds ?? [];
         form.packagesOnly = settings?.packagesOnly ?? false;
         form.enforceMultiplicity = settings?.enforceMultiplicity ?? false;
+        form.allowExceedingCreditLimit = settings?.allowExceedingCreditLimit ?? false;
     },
     { immediate: true },
 );
@@ -77,6 +80,7 @@ function onSave(): void {
         visibleWarehouseIds: form.visibleWarehouseIds,
         packagesOnly: form.packagesOnly,
         enforceMultiplicity: form.enforceMultiplicity,
+        allowExceedingCreditLimit: form.allowExceedingCreditLimit,
     });
 }
 </script>
@@ -125,6 +129,19 @@ function onSave(): void {
                 <p class="branch-settings-form__hint">
                     When on, quantities must be multiples of the product multiplicity, and it is
                     shown in the catalog. When off, multiplicity is neither enforced nor shown.
+                </p>
+            </MvFormField>
+        </section>
+
+        <section class="branch-settings-form__section">
+            <h3 class="branch-settings-form__section-title">Credit</h3>
+
+            <MvFormField label="Allow exceeding the credit limit">
+                <MvSwitch v-model="form.allowExceedingCreditLimit" label="Enabled" />
+                <p class="branch-settings-form__hint">
+                    When on, a customer over the credit limit can place the order after
+                    acknowledging it, without waiting for a manager. When off, such orders wait for
+                    manager confirmation.
                 </p>
             </MvFormField>
         </section>

@@ -17,6 +17,7 @@ export interface BranchSettingsInput {
     visibleWarehouseIds?: string[] | null;
     packagesOnly?: boolean;
     enforceMultiplicity?: boolean;
+    allowExceedingCreditLimit?: boolean;
 }
 
 // CRUD + fallback resolution for issue #66's per-branch business settings. Never a source of
@@ -43,6 +44,8 @@ export class BranchSettingsService {
             settings.packagesOnly = input.packagesOnly ?? settings.packagesOnly;
             settings.enforceMultiplicity =
                 input.enforceMultiplicity ?? settings.enforceMultiplicity;
+            settings.allowExceedingCreditLimit =
+                input.allowExceedingCreditLimit ?? settings.allowExceedingCreditLimit;
         } else {
             settings = repo.create({
                 branchId: input.branchId,
@@ -52,6 +55,7 @@ export class BranchSettingsService {
                 visibleWarehouseIds: input.visibleWarehouseIds ?? null,
                 packagesOnly: input.packagesOnly ?? false,
                 enforceMultiplicity: input.enforceMultiplicity ?? false,
+                allowExceedingCreditLimit: input.allowExceedingCreditLimit ?? false,
             });
         }
         const saved = await repo.save(settings);

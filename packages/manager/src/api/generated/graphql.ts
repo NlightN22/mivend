@@ -531,6 +531,7 @@ export type Branch = {
 };
 
 export type BranchSettings = {
+    allowExceedingCreditLimit: Scalars['Boolean']['output'];
     branchId: Scalars['String']['output'];
     defaultPriceTypeId: Scalars['String']['output'];
     defaultWarehouseId: Maybe<Scalars['String']['output']>;
@@ -4934,6 +4935,7 @@ export type MutationSetAdministratorActiveArgs = {
 };
 
 export type MutationSetBranchSettingsArgs = {
+    allowExceedingCreditLimit?: InputMaybe<Scalars['Boolean']['input']>;
     branchId: Scalars['String']['input'];
     defaultPriceTypeId: Scalars['String']['input'];
     defaultWarehouseId: Scalars['String']['input'];
@@ -9717,6 +9719,7 @@ export type BranchSettingsFieldsFragment = {
     visibleWarehouseIds: Array<string> | null;
     packagesOnly: boolean;
     enforceMultiplicity: boolean;
+    allowExceedingCreditLimit: boolean;
 };
 
 export type WarehousesQueryVariables = Exact<{ [key: string]: never }>;
@@ -9773,6 +9776,7 @@ export type BranchSettingsForBranchQuery = {
         visibleWarehouseIds: Array<string> | null;
         packagesOnly: boolean;
         enforceMultiplicity: boolean;
+        allowExceedingCreditLimit: boolean;
     } | null;
 };
 
@@ -9788,6 +9792,7 @@ export type SetBranchSettingsMutationVariables = Exact<{
     >;
     packagesOnly: Scalars['Boolean']['input'];
     enforceMultiplicity: Scalars['Boolean']['input'];
+    allowExceedingCreditLimit: Scalars['Boolean']['input'];
 }>;
 
 export type SetBranchSettingsMutation = {
@@ -9800,6 +9805,7 @@ export type SetBranchSettingsMutation = {
         visibleWarehouseIds: Array<string> | null;
         packagesOnly: boolean;
         enforceMultiplicity: boolean;
+        allowExceedingCreditLimit: boolean;
     };
 };
 
@@ -11808,6 +11814,7 @@ export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
   visibleWarehouseIds
   packagesOnly
   enforceMultiplicity
+  allowExceedingCreditLimit
 }
     `,
     { fragmentName: 'BranchSettingsFields' },
@@ -12383,12 +12390,13 @@ export const BranchSettingsForBranchDocument = new TypedDocumentString(`
   visibleWarehouseIds
   packagesOnly
   enforceMultiplicity
+  allowExceedingCreditLimit
 }`) as unknown as TypedDocumentString<
     BranchSettingsForBranchQuery,
     BranchSettingsForBranchQueryVariables
 >;
 export const SetBranchSettingsDocument = new TypedDocumentString(`
-    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!, $enforceMultiplicity: Boolean!) {
+    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!, $enforceMultiplicity: Boolean!, $allowExceedingCreditLimit: Boolean!) {
   setBranchSettings(
     branchId: $branchId
     defaultPriceTypeId: $defaultPriceTypeId
@@ -12397,6 +12405,7 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
     visibleWarehouseIds: $visibleWarehouseIds
     packagesOnly: $packagesOnly
     enforceMultiplicity: $enforceMultiplicity
+    allowExceedingCreditLimit: $allowExceedingCreditLimit
   ) {
     ...BranchSettingsFields
   }
@@ -12410,6 +12419,7 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
   visibleWarehouseIds
   packagesOnly
   enforceMultiplicity
+  allowExceedingCreditLimit
 }`) as unknown as TypedDocumentString<
     SetBranchSettingsMutation,
     SetBranchSettingsMutationVariables

@@ -38,4 +38,8 @@ export class BranchSettings extends VendureEntity {
     // #219: variant multiplicity is enforced and shown only when true.
     @Column({ type: 'boolean', default: false })
     enforceMultiplicity!: boolean;
+
+    // #222: an over-limit order may go on with the customer's acknowledgement, no manager wait.
+    @Column({ type: 'boolean', default: false })
+    allowExceedingCreditLimit!: boolean;
 }
