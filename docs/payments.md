@@ -771,11 +771,39 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
   debt above the limit cleared together with the order.
 - After a bank-transfer placement one browser tab opens per non-cancelled proforma invoice of the order
   (`/proforma-invoices/:id?print=1`, the detail page prints itself when loaded; sidebar hidden in print); the current
-  tab lands on the order-created page, which also lists a print link per invoice (popup blockers). Shop API
+  tab lands on the order-created page, which also lists a print link per proforma invoice (popup blockers). Shop API
   `ProformaInvoiceListOptions.orderCode` (additive) selects the invoices of one own order.
 - Cash: the order-created page shows "waiting for the manager to confirm receipt" until the manager marks the cash
   received. Public payment metadata flag `awaitingManagerConfirmation` (route `manager-confirmation`) drives the
   over-limit manager-wait notice.
+
+**Stage 2 audit follow-ups (#222):**
+
+- Placement choice is deterministic: when an order has several payments (card retry, form change), the placement
+  (route, `countsAgainstLimit`, `reserveDays`) comes from the latest payment that is not Cancelled/Declined/Error
+  (`createdAt`, then `id`); the exposure SQL applies the same rule.
+- Card amount confirmation: the storefront sends `expectedAmountKopecks` (the figure it displayed) in the card
+  `addPaymentToOrder` metadata; if the recomputed amount differs the payment is Declined with a
+  `CARD_AMOUNT_CHANGED` message before any proforma invoice is created, and the storefront returns to checkout to
+  re-confirm the refreshed amount. The card button shows the amount.
+- `confirmPaymentReceived(orderId, paymentId?)` settles only payments carrying `placement` metadata (a legacy payment
+  is never "paid" by it), records `confirmedByAdministratorId` and `confirmedAt` in the (non-public) payment metadata,
+  and can target one payment.
+- Migration `1791494000000` labels payments migrated from the removed deferred method with metadata
+  `origin: "legacy-deferred"` (offline-terms payments with neither `placement` nor `proformaInvoices`). The removal of
+  the deferred method is irreversible: its method row, classification fields and the original method code are gone, and
+  `down()` of both migrations cannot restore them.
+- `ERP_CALLBACK_API_KEY` guards refuse the dev placeholder key when `NODE_ENV=production`, like the import guard.
+
+**Known gaps (#222, deliberate):**
+
+- Orders in `SHIPPING`/`DELIVERING` stop counting in the open exposure (the ERP balance is expected to include them),
+  so there is a window until the ERP balance reflects the sales document; accepted, the balance sync delay is the
+  ERP's.
+- Orders with a NULL `erpStatus` are not counted: they are imported/external orders (#215) whose debt is already in
+  the ERP balance, by decision.
+- Leftover names: the plugin package `deferred-payment`, `OpenDeferredExposureService` and the Shop API field
+  `deferredCreditPreview` keep the old wording until a dedicated rename.
 
 ### Credit limit on deferred orders
 

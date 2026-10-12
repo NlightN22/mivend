@@ -263,7 +263,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
    placeholder only).
 3. **Issue #143** — real credit-limit check for `deferred-payment` (via `plugin-approval-workflow`'s
    `creditTermApproval`), storefront routing fix (`CheckoutSummary.vue`/`cart.ts` currently route
-   both `'invoice'` and `'deferred'` to the same `offline-terms` call), limit-exceeded UX.
+   both `'invoice'` and `'deferred'` to the same `offline-terms` call; since #222 routing is by payment form), limit-exceeded UX.
 4. **`access-control-review`** pass on `AcquiringPlugin` running fully on branch — confirm
    branch-level RBAC actually scopes its mutations correctly, not yet checked.
 5. **Issue #138** — sort/filter audit for ~17 remaining `MvAdvancedDataTable` consumers in
