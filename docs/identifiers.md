@@ -95,7 +95,7 @@ and is never an idempotency key for a business entity.
   blocks a new one. If a case arises where a legitimate re-submit should be allowed on some other signal, that
   needs its own design, not a workaround here.
 - Done: `NumberingService` (`packages/plugins/numbering`) — `next(ctx, documentType)` against a fixed, hardcoded
-  Postgres sequence per `NumberingDocumentType` (`order`/`invoice`/`payment`/`refund`/`discount-grant`/`proforma`,
+  Postgres sequence per `NumberingDocumentType` (`order`/`proforma invoice`/`payment`/`refund`/`discount-grant`/`proforma`,
   migration `1791470000000-numbering-sequences`), formats `<3-digit INSTANCE_NUMBER_CODE><7+-digit sequence value>`;
   `formatOrderDocumentNumber(orderNumber, ordinal)` is the pure `<order number>-NN` helper. `INSTANCE_NUMBER_CODE` is
   validated as exactly 3 digits at plugin init and documented in `.env.local.example`/`docs/environments.md`.
@@ -140,7 +140,7 @@ and is never an idempotency key for a business entity.
   `apps/server/.env.central.staging-integration` (both are the central-hub deployment identity, just two
   different contours/databases — no collision risk, per docs/environments.md's "one code for the hub, one per
   branch"); `INSTANCE_NUMBER_CODE=101` set in `apps/server/.env.branch`.
-- Done: the one-off renumbering (`infrastructure/scripts/renumber-documents-207.sql`) has been **run against
+- Done: the one-off renumbering (a deleted SQL script) has been **run against
   both real local (`mivend_central`) and staging-integration (`mivend_central_staging_integration`) databases**,
   with `instance_code=100`. Verified: zero remaining `ORD-`/`INV-`/`PAY-`/`DSC-` rows in either database, all
   renumbered values unique, a second run against the same database is a no-op (idempotency holds against real

@@ -17,7 +17,8 @@ Fixed vocabulary for documents and payments. Use these terms in code, UI, docs a
 
 **Do not use bare "invoice" anywhere** (code, UI, docs, issues, commits). Say *proforma invoice* or
 *sales invoice*. The old `Invoice` entity is the proforma invoice and was renamed in #223 (table `proforma_invoice`); the SalesInvoice mirror
-is a separate later task. Legacy mentions in older docs are corrected as files are touched.
+is a separate later task. The legacy persisted keys, routes and file names were renamed in #223 (document type `proforma-invoice`,
+`/proforma-invoices` routes, `ReadProformaInvoice` permission, access-scope key `proformaInvoice`).
 
 ## Mapping from external and legacy names
 
@@ -25,9 +26,6 @@ is a separate later task. Legacy mentions in older docs are corrected as files a
   ProformaInvoice; type `realization` maps to the future SalesInvoice.
 - GraphQL fields and types renamed to `proformaInvoice*` (for example `PaymentAttempt.proformaInvoiceId`) are a
   breaking change for external Shop API / Admin API clients.
-- Legacy persisted keys, routes and file names that still say `invoice` (document type key `invoice`, `/invoices`
-  portal routes, `invoices/` page folders, `Invoice*` component and file names) are renamed in a separate later
-  run; do not rename them piecemeal.
 
 ## Related
 

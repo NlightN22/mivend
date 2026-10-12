@@ -22,7 +22,7 @@ Operator (основной сценарий, самый частый польз�
         - Индикатор результата: зелёный "✓ Within self-service limit — applies immediately" ИЛИ оранжевый "⚠ Below floor price — requires approval, order will be saved as draft pending approval".
         - Поле "Justification" (обязательно только во втором случае).
         - **Важно (конфиденциальность)**: как и в исходном описании — сотрудник никогда не видит числовое значение floor price, только результат проверки. Не выводи это число в HTML для роли Operator/Manager.
-4. **Блок "Delivery & Payment"**: select "Trading point / delivery address", select "Payment method" (Online / Deferred / Invoice — переиспользуй логику из storefront checkout, см. референс-скриншоты).
+4. **Блок "Delivery & Payment"**: select "Trading point / delivery address", select "Payment method" (Online / Deferred / ProformaInvoice — переиспользуй логику из storefront checkout, см. референс-скриншоты).
 5. Итоговая панель снизу (можно закреплённая/sticky): подытог, скидки суммарно, итого → кнопка **"Place order"** (если ни одна строка не требует согласования) или **"Save as draft & submit for approval"** (если хотя бы одна строка вне лимита — текст кнопки должен явно показывать, что произойдёт).
 
 ## Состояния

@@ -19,7 +19,7 @@ over anything below that overlaps with it.
    mobile nav UX guidance) puts the practical ceiling at 4-6 tabs before touch targets get
    cramped or the row stops fitting — past that, collapsing extra tabs behind a "More" control
    is the standard fix, not a wider/scrollable bar. Real incident: `CustomerDetailPage.vue`'s
-   7-tab row (Overview/Orders/Invoices/Payments/Discounts/Documents/History) had no
+   7-tab row (Overview/Orders/ProformaInvoices/Payments/Discounts/Documents/History) had no
    `overflow-x` handling at all, so on a narrow mobile viewport the overflowing buttons
    stretched the _entire document_ horizontally — which, combined with `position: fixed` on
    `MvAppMobileNav`, dragged the app's bottom navigation bar out of the visible viewport
@@ -47,7 +47,7 @@ over anything below that overlaps with it.
    be premature.
 
 3. **A list page's toolbar search box defaults to searching only that list's own non-hideable
-   identifying column** (e.g. `Order #`/`code` for orders, an invoice number, a payment
+   identifying column** (e.g. `Order #`/`code` for orders, a proforma invoice number, a payment
    reference) — never silently promise cross-column search the backend doesn't do. Concretely:
    that column is declared `required: true` in the table's own column config (never hideable via
    the column-toggle), and the search input is wired to that one column only. Real, full
@@ -61,7 +61,7 @@ over anything below that overlaps with it.
 4. **Any reactive-params-driven fetch (page/filter/sort change → refetch) must guard against an
    out-of-order response overwriting fresher state — use `useLatestRequest` (`@mivend/ui-kit`),
    never a bare `async function load() { ... }` with no ordering guard.** Real incident: neither
-   `CustomerOrdersTab.vue` nor `CustomerInvoicesTab.vue` had this originally — PrimeVue's paginator
+   `CustomerOrdersTab.vue` nor `CustomerProformaInvoicesTab.vue` had this originally — PrimeVue's paginator
    doesn't disable itself while a page fetch is in flight, so a second page-change click (or just
    real network latency through a VPN/proxy, which a local `localhost` dev loopback never
    surfaces) can start a second fetch before the first one's response resolves; whichever response

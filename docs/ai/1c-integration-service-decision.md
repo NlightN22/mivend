@@ -48,8 +48,8 @@ ERP
   `MultiChannelStockLocationStrategy` — instead of the current
   `ProductVariant.customFields.organizationId` shortcut. This is a bigger lift than the current
   customField, but replaces ad-hoc plumbing with Vendure's built-in multi-seller/multi-warehouse
-  primitives, which is what the organization-based invoice-splitting behavior
-  (`plugin-acquiring`'s `Invoice` per organization) actually needs long-term.
+  primitives, which is what the organization-based proforma-invoice-splitting behavior
+  (`plugin-acquiring`'s `ProformaInvoice` per organization) actually needs long-term.
 - **Pricing**: `PriceType`/`Price` events carry no per-customer resolution — Integration Service
   and search-service never model `Counterparty`/`Contract`. MiVend's own
   `customer-pricing`/`price-entry` plugins (assigning a `PriceType` to a customer, resolving
@@ -69,7 +69,7 @@ ERP
   Integration Service's own consumer turns into a row in its own durable `outbound_commands`
   table (`pending` → `delivered` → `acknowledged`/`rejected`), handed to the ERP via the same
   regulated-job PUSH/PULL/ACK cycle the ERP already uses for catalog export, on a separate, more
-  frequent schedule (target defaults: order/reservation PULL+result every 1 minute, invoice/
+  frequent schedule (target defaults: order/reservation PULL+result every 1 minute, proforma invoice/
   payment PUSH every 5 minutes — starting point, subject to revision after load testing, not
   blocking). The API contract for this (PULL/ACK endpoints, DTOs, a `business_rejection_reason`
   lookup table per this project's "business data lives in the database" rule) is implemented on

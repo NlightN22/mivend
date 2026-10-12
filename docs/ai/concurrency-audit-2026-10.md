@@ -33,13 +33,13 @@ or fixed. Procedure: `.claude/skills/concurrency-audit/SKILL.md`.
    and the update is overwritten (an extended reservation expires; a released one becomes
    expired and the order state is rewritten). Two overlapping sweeps double-process. Fix: select
    `FOR UPDATE SKIP LOCKED` and add `status = 'active'` to the update.
-6. HIGH - `acquiring/src/payment-attempt.service.ts:167-190`: `invoice` is read outside the
-   transaction and `invoice.status === 'pending'` from that snapshot decides the unconditional
-   `updateStatus(..., 'issued')`. A concurrent captured payment that set the invoice to `paid`
+6. HIGH - `acquiring/src/payment-attempt.service.ts:167-190`: `proforma invoice` is read outside the
+   transaction and `proforma invoice.status === 'pending'` from that snapshot decides the unconditional
+   `updateStatus(..., 'issued')`. A concurrent captured payment that set the proforma invoice to `paid`
    is regressed to `issued`. The PaymentAttempt amount also comes from the snapshot. Fix: lock
-   and re-read the invoice inside the transaction; make the status update conditional.
-7. MEDIUM - `acquiring/src/invoice.service.ts:126`: `updateStatusForOrder` rewrites every invoice
-   of the order to one status with no current-status condition; can regress `paid` invoices.
+   and re-read the proforma invoice inside the transaction; make the status update conditional.
+7. MEDIUM - `acquiring/src/proforma-invoice.service.ts:126`: `updateStatusForOrder` rewrites every proforma invoice
+   of the order to one status with no current-status condition; can regress `paid` proforma invoices.
    Fix: conditional update (`WHERE status IN (...)`).
 8. MEDIUM - `reservation/src/reservation.service.ts:333-381`: `setOrderReservationState` sleeps
    300 ms up to three times in a verify-and-rewrite loop; inside `reserveOrder` this runs while
@@ -127,8 +127,8 @@ or fixed. Procedure: `.claude/skills/concurrency-audit/SKILL.md`.
 26. LOW - `reservation/src/reservation-expiry.service.ts:93-106`: notifications are created
     inside the sweep transaction; a failure rolls back the expiry of unrelated reservations.
 27. LOW - `acquiring/src/settlement-entry.service.ts:~90-110`: partial allocation uses
-    `invoice.amount` as the amount owed and ignores earlier allocations; two partial payments can
-    over-allocate one invoice (logic, not lock related; found while reading the lock code).
+    `proforma invoice.amount` as the amount owed and ignores earlier allocations; two partial payments can
+    over-allocate one proforma invoice (logic, not lock related; found while reading the lock code).
 28. LOW - `access-control/src/user-enrichment.service.ts:119-133` and
     `session-management/src/session-login-listener.service.ts:26`: spread-from-snapshot of
     Administrator/Session customFields (outside the audited scope, same pattern as finding 1).

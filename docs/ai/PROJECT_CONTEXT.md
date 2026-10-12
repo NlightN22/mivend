@@ -2,6 +2,12 @@
 
 Updated: 2026-10-12 12:00
 
+## #223 legacy-name rename (2026-10-12, done)
+
+- Routes `/proforma-invoices` (both portals), `ProformaInvoice*`/`useProformaInvoices` files and `pages/proforma-invoices` folders; persisted keys: Document.type `proforma-invoice`, numbering type `proforma-invoice` (`mivend_number_seq_proforma_invoice`), permission `ReadProformaInvoice`, access-scope key `proformaInvoice`.
+- Migration `1791490000000-proforma-invoice-persisted-keys` is plain UPDATE/RENAME; the synchronize contours (local, staging-integration) do not run migrations, so its SQL was applied once by hand there.
+- Left on purpose: storefront checkout payment-form id `'invoice'` (maps to `offline-terms`), unused numbering type `proforma`; the one-off `renumber-documents-207` script and test were deleted.
+
 ## #218 + event-contracts 0.57.0-0.61.0 + cross-check with search-platform (2026-10-11, shipped/audited/closed, on main)
 
 - **Done**: `OrderChanged.document_number` (field 15, sent on every emission) refreshes `erpRegistrationDocumentNumber` from every `order-changed` (non-empty only; stale events dropped by the inbox version check); a registration result without a number no longer erases a known one (`81ed1e72`). `order-changed` line `unit_id` and `order.submitted` `unitId` shipped in #214. Contracts now `^0.61.0` (only `PromoRuleChanged.effective_to` became optional; a promo rule without an end date is NOT legitimate and stays skipped, owner decision). `pnpm-lock.yaml` was edited by hand (pnpm 11 rewrites the whole file otherwise).
@@ -42,7 +48,7 @@ Updated: 2026-10-12 12:00
 
 ## Orders, contracts, organizations, reserve model (2026-10-08/09; #201/#202/#203/#205/#199 shipped/audited/closed; #194/#206/#208 filed) — decisions in `docs/order-contracts.md`
 
-- **Organization**: `ProductVariant.organizationId` comes from `storage-location` (winner per product from `storage_location_assignment`, any row with an organization). A variant without one is not sellable: hidden for customers, checkout gate (`organizationOrderGuard`, re-checked in `reserveOrder` and the `order.submitted` listener), the external search gets `requireOrganization` (post-filter stays). Line organization is stamped at `ArrangingPayment`; proforma invoices per line organization only for pay-by-invoice/online payment, none for deferred terms (the ERP holds accounting documents); proforma snapshots are #206.
+- **Organization**: `ProductVariant.organizationId` comes from `storage-location` (winner per product from `storage_location_assignment`, any row with an organization). A variant without one is not sellable: hidden for customers, checkout gate (`organizationOrderGuard`, re-checked in `reserveOrder` and the `order.submitted` listener), the external search gets `requireOrganization` (post-filter stays). Line organization is stamped at `ArrangingPayment`; proforma invoices per line organization only for pay-by-proforma-invoice/online payment, none for deferred terms (the ERP holds accounting documents); proforma snapshots are #206.
 - **Contract**: `selectedContractId` set at `ArrangingPayment` (stored valid, else main active, else another active by price type/recency/`erpId`, else blocked); manager `setOrderContract` (ConfirmOrder, lock `reserve-order:<id>`, only before reservation/ERP receipt). `order.submitted` is per warehouse, header organization = the contract's organization + `contractId`; schema from `@nlightn22/event-contracts` (producer-owned, subject FORWARD, Confluent wire format); the ERP rejects a contract/organization mismatch.
 - **#199**: a failed auto-reserve is stored on the order (`reservationFailureReason/Detail/At`, cleared on success) and shown to managers; the ERP's reserved quantities win (local hold released, difference recorded); the placement handler marks AWAITING_CONFIRMATION under a row lock only while NOT_REQUIRED.
 - **Reserve/cancel model (#194, spec in the issue body, NOT implemented, separate session)**: A = cancel the reserve (1C closing document, scheduled job at `РезервДо`), B = cancel the order (mark for deletion, includes A); B only for pending orders (automatic), in progress = a request to a person, shipped = never; mivend must send `reserveUntil` (else the 1C job picks orders after ~4 months); the closing document exports no `order-changed` (live test), so explicit ERP signals are required (search-platform#179/#180). Today the expiry task still returns the order to AWAITING_CONFIRMATION.
@@ -75,7 +81,7 @@ Updated: 2026-10-12 12:00
 
 ## #198 order branch fallback + auto-reserve switch (compressed, shipped/audited — full text: `.backup/PROJECT_CONTEXT-2026-10-12-198-branch-fallback-full.md`)
 
-- Branch of an order/invoice = `TradingPointService.resolveServicingBranchId` (point servicingBranchId -> Counterparty.branchId -> global default). `GlobalSettings.autoReserveOnPlacement` (default off) switches auto-reserve; a cart stuck in `ArrangingPayment` keeps its old `branchId`.
+- Branch of an order/proforma-invoice = `TradingPointService.resolveServicingBranchId` (point servicingBranchId -> Counterparty.branchId -> global default). `GlobalSettings.autoReserveOnPlacement` (default off) switches auto-reserve; a cart stuck in `ArrangingPayment` keeps its old `branchId`.
 
 ## #188 credit control MVP (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-10-188-credit-control.md`)
 
@@ -390,7 +396,7 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
   ... NOT NULL`, which fails outright) — and the migration file itself **never runs** on those
   contours anyway (`synchronize:true` means TypeORM migrations are production-only). For a new
   non-nullable column: let `synchronize` add it nullable, then by hand (or via a one-off SQL
-  script, #207's `infrastructure/scripts/renumber-documents-207.sql` is the reference) backfill
+  script) backfill
   existing rows, THEN `ALTER COLUMN ... SET NOT NULL` — never ship a migration that assumes it will
   actually execute against a real local/staging-integration database.
 - **Always run `make ci` before pushing**, not just `make lint`/`make test`/`pnpm build:plugins` —

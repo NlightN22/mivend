@@ -72,14 +72,14 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
 
 ## Proforma invoices
 
-Terminology (owner decision, #223): our payment request is a **proforma invoice** (the entity was named `Invoice` before
+Terminology (owner decision, #223): our payment request is a **proforma invoice** (the entity was named `ProformaInvoice` before
 #223); "sales invoice" is reserved for the ERP's fact of sale (1C realization), which mivend never issues. It will be mirrored as a read-only, ERP-owned `SalesInvoice` (fact of
 shipment) in a later task; #223 only frees the name.
 
 - Proforma invoices (`ProformaInvoice`, one per distinct line organization) are created for the payment methods that
-  need them: pay-by-invoice and online payment. Orders on deferred terms get no automatic proforma invoices:
+  need them: pay-by-proforma-invoice and online payment. Orders on deferred terms get no automatic proforma invoices:
   the ERP holds the accounting documents (sales documents after its own distribution, settlements).
-- A customer who needs a document to pay against requests a **proforma payment invoice**: an
+- A customer who needs a document to pay against requests a **proforma payment proforma invoice**: an
   immutable snapshot (number, organization, lines, amounts), idempotent per order content, a new
   version when the order changed, the older unpaid one marked superseded, a paid one never rewritten
   (a later difference is shown on the order and settled through the ERP). Not an accounting document

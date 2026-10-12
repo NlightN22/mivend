@@ -428,7 +428,7 @@ producer/consumer agreement, not just a static list comparison — plus an expli
 unrecognized type is rejected as a per-record error. Found and fixed the same class of gap here
 too: the switch had no `default` case, so an unrecognized `type` fell through silently and the
 caller's `processed++` counted it as a success; the controller also didn't check `exchangeId`/
-`records`/`invoiceId` presence at all.
+`records`/`proformaInvoiceId` presence at all.
 
 **Exceptions**: internal-only interfaces with a single producer and consumer deployed atomically
 (same release) can skip version-skew scenarios, but must still check required-field/shape drift.

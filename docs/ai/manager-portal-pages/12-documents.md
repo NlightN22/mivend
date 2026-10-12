@@ -9,7 +9,7 @@
 ## Структура контента
 
 1. Заголовок "Documents".
-2. **FilterBar**: поиск по клиенту/номеру документа, select "Type" (Invoice / Contract / Return / Reconciliation report), select "Status" (Ready / Generating / Failed), кнопка "Reset".
+2. **FilterBar**: поиск по клиенту/номеру документа, select "Type" (ProformaInvoice / Contract / Return / Reconciliation report), select "Status" (Ready / Generating / Failed), кнопка "Reset".
 3. **DataTable**, столбцы:
     - Document # / номер
     - Type (иконка типа)

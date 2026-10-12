@@ -62,11 +62,11 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 
 ## Documents: what we have and what we do not
 
-- `Invoice` (plugin-acquiring) is our own payment-request object that a payment settles, not an ERP
-  document. `plugin-documents`' `Document` is a generic file record (invoice/contract/reconciliation/
+- `ProformaInvoice` (plugin-acquiring) is our own payment-request object that a payment settles, not an ERP
+  document. `plugin-documents`' `Document` is a generic file record (proforma-invoice/contract/reconciliation/
   return), type not enforced.
 - **No shipment document ("РеализацияТоваровУслуг") exists in our model.** The only trace is that the
-  `granted-discount` stream is sourced from it. `@nlightn22/event-contracts@0.47.0` has no invoice,
+  `granted-discount` stream is sourced from it. `@nlightn22/event-contracts@0.47.0` has no proforma invoice,
   shipment, payment or settlement-register stream: only `counterparty-credit-balance-changed`,
   `contract-changed`, `order-changed`, `order-registration-result`, `granted-discount-changed`.
 - Asked search-platform (sp.auditor.common) to confirm and to say which receivables source is feasible.

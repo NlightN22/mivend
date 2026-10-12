@@ -8,7 +8,7 @@ description: Mandatory before adding a new manager-portal list/table, adding or 
 This is the single canonical checklist for what a "done" manager-portal list/table looks like in
 this project. Reference implementations: `CustomerOrdersTab.vue` +
 `CustomerOrdersDataTable.vue` (packages/manager/src/components/customers/) — the fullest-featured
-example — and `CustomerInvoicesTab.vue`/`CustomerPaymentsTab.vue` + their `*DataTable.vue` for a
+example — and `CustomerProformaInvoicesTab.vue`/`CustomerPaymentsTab.vue` + their `*DataTable.vue` for a
 simpler shape. Read one of these before implementing a new table if you haven't already.
 
 Apply this checklist any time you: add a brand-new table, add/change a column on an existing
@@ -20,20 +20,20 @@ tab or a top-level `*Page.vue`.
 
 1. **One identifying/required column with a real toolbar search box bound to it.**
    Every table has exactly one column that's the table's own natural identifier (an order #,
-   invoice #, payment #, discount #, invoice number — whatever a human would actually search for
+   proforma invoice #, payment #, discount #, proforma invoice number — whatever a human would actually search for
    first). That column:
     - is declared `required: true` in its `AdvancedDataTableColumn` (never hideable via the column
       toggle),
     - has a real `filterConfig` (usually `{ type: 'text', placeholder: '... contains…' }`),
     - is wired as the table's `:search="{ filterKey: '<field>', placeholder: 'Search …' }"` prop on
       `MvAdvancedDataTable`, giving a toolbar search box in addition to the column's own funnel
-      filter (see `CustomerInvoicesDataTable.vue`'s `number` column for the minimal example, or
+      filter (see `CustomerProformaInvoicesDataTable.vue`'s `number` column for the minimal example, or
       `CustomerOrdersDataTable.vue`'s `code` column).
 
 2. **Base column order: identifying number first, creation date second**, before any other
    column. If the entity has no exposed creation date yet, add one (`createdAt: DateTime!` on the
    GraphQL type — every entity extending `VendureEntity` already has the DB column, so this is
-   usually a schema-only change, see `Invoice.createdAt`/`PaymentAttempt.createdAt` in
+   usually a schema-only change, see `ProformaInvoice.createdAt`/`PaymentAttempt.createdAt` in
    `plugin-acquiring`'s `admin.schema.ts`; a hand-assembled return object like
    `DiscountGrantForCustomer` needs the field copied across explicitly too, see
    `discount-grant.service.ts`'s `findForCounterparty`). Every other column comes after these two,
@@ -51,7 +51,7 @@ tab or a top-level `*Page.vue`.
     - a unit test per the `test-design` skill) — don't ship a filter icon that silently does
       nothing, and don't skip the filter just because backend work is required.
       A `filterConfig: { type: 'none' }` is only correct for a column the backend genuinely cannot
-      filter by (state that clearly, in a code comment, same as `CustomerInvoicesDataTable.vue`'s
+      filter by (state that clearly, in a code comment, same as `CustomerProformaInvoicesDataTable.vue`'s
       `amount`/`order` columns) — not as a default for "haven't checked yet."
 
 4. **A status/enum-shaped column gets a `status`-type filter with real badge variants**, driven by
@@ -66,14 +66,14 @@ from that same `*_BADGE_VARIANT` map from point 4 — never a bespoke `<button>`
 the page/tab component (that's both a duplicate of `MvFilterChips` and a `frontend-rules`
 ui-kit rule violation), and never a chip row that's always green-when-active regardless of what it
 represents. Real incident this fixes: `CustomerOrdersTab.vue`'s and
-`CustomerInvoicesTab.vue`'s view chips each had their own bespoke button styling that only
+`CustomerProformaInvoicesTab.vue`'s view chips each had their own bespoke button styling that only
 ever went green on selection, while the row badge one column over for that exact same status
 could be neutral/warning/danger — "Unpaid" and "Cancelled" looked identical in the chip row
 despite being different colors in the table. See `MvFilterChips.vue`'s own doc comment and
-`CustomerOrdersTab.vue`/`CustomerInvoicesTab.vue`'s `VIEWS`/`viewChips` for the reference
+`CustomerOrdersTab.vue`/`CustomerProformaInvoicesTab.vue`'s `VIEWS`/`viewChips` for the reference
 shape. A chip with no corresponding status color (e.g. "All") just omits `variant`.
 Each chip's count comes from a real lean server COUNT (`options: { take: 0 }`, one GraphQL
-request with an alias per chip — see `api/invoices.ts`'s `fetchInvoiceViewCounts`,
+request with an alias per chip — see `api/proforma-invoices.ts`'s `fetchProformaInvoiceViewCounts`,
 `api/customers.ts`'s `fetchCustomerOrderViewCounts`/`fetchDiscountGrantViewCounts`,
 `api/payments.ts`'s `fetchPaymentViewCounts`), never a count derived client-side from
 whatever page happens to be loaded (that's the same "fetch everything, compute in JS"

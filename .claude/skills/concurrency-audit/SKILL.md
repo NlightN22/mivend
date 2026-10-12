@@ -16,7 +16,7 @@ Do not start from the checklist. Build an inventory of every writer to the share
 
 - EventBus subscribers: `subscribeAndLog`, `registerOutboxProducer`, `registerBlockingEventHandler`.
 - Scheduled tasks, job-queue workers, inbox/outbox processors, Kafka/RabbitMQ consumers.
-- Resolvers/services that mutate `Order`, `OrderLine`, `Reservation`, settlement/invoice rows,
+- Resolvers/services that mutate `Order`, `OrderLine`, `Reservation`, settlement/proforma-invoice rows,
   inbox/outbox rows, counters, version-compared rows.
 - Global Nest interceptors/guards/middleware.
 - Grep starters: `\.save(`, `\.update(`, `customFields: \{ \.\.\.`, `findOne` followed by a write,
