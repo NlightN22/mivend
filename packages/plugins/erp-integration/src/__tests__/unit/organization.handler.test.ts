@@ -3,104 +3,84 @@ import type { RequestContext } from '@vendure/core';
 
 import { OrganizationStreamHandler } from '../../handlers/organization.handler';
 
+const ctx = {} as RequestContext;
+const setup = (stored = true) => {
+    const service = { upsertFromEvent: vi.fn().mockResolvedValue(stored) };
+    return { service, handler: new OrganizationStreamHandler(service as never) };
+};
+const empty = {
+    inn: null,
+    kpp: null,
+    ogrn: null,
+    legalAddress: null,
+    bankName: null,
+    bankAccount: null,
+    bankBik: null,
+    correspondentAccount: null,
+};
+
 describe('OrganizationStreamHandler', () => {
-    const ctx = {} as RequestContext;
-
-    // A deletion tombstone never carries a name (confirmed against real staging-integration
-    // payloads, mivend.issue.84.88 follow-up) — the handler must still forward the update so an
-    // already-known organization can be deactivated; DocumentsService.upsertActiveState is what
-    // refuses to fabricate a brand-new row from a null name, not this handler.
-    it('passes name:null through when the payload has no name (deletion tombstone)', async () => {
-        const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
-        const handler = new OrganizationStreamHandler(documentsService as never);
-
-        await handler.apply(ctx, 'org-1', { isDeleted: true });
-
-        expect(documentsService.upsertActiveState).toHaveBeenCalledWith(ctx, 'org-1', null, false);
-    });
-
-    it('upserts name + isActive, never fabricating legal fields', async () => {
-        const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
-        const handler = new OrganizationStreamHandler(documentsService as never);
-
-        await handler.apply(ctx, 'org-1', { name: 'Acme LLC', isActive: false });
-
-        expect(documentsService.upsertActiveState).toHaveBeenCalledWith(
-            ctx,
-            'org-1',
-            'Acme LLC',
-            false,
-        );
-    });
-
-    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
-    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
-    // explicitly, only as an absent key (confirmed live with Search Platform, mivend#89's
-    // follow-up). Absent must read as false, not true.
-    it('defaults isActive to false when absent (proto3 omits the false zero-value)', async () => {
-        const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
-        const handler = new OrganizationStreamHandler(documentsService as never);
-
-        await handler.apply(ctx, 'org-1', { name: 'Acme LLC' });
-
-        expect(documentsService.upsertActiveState).toHaveBeenCalledWith(
-            ctx,
-            'org-1',
-            'Acme LLC',
-            false,
-        );
-    });
-
-    // isDeleted must fold into isActive the same way every sibling handler does (warehouse/
-    // price/stock/category) — Integration Service can send isActive:true and isDeleted:true on
-    // the same event. This handler previously ignored isDeleted entirely, leaving a deleted
-    // organization permanently isActive:true locally and overcounted by
-    // ReconciliationLocalCountsService.countActiveOrganizations (same class of bug #90 fixed for
-    // categories via isPrivate).
-    it('treats isDeleted:true as inactive even when isActive is true', async () => {
-        const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
-        const handler = new OrganizationStreamHandler(documentsService as never);
-
-        await handler.apply(ctx, 'org-1', {
-            name: 'Acme LLC',
+    it('maps every contract field onto the requisites input', async () => {
+        const { service, handler } = setup();
+        const outcome = await handler.apply(ctx, 'org-1', {
+            name: 'Short',
+            legalName: 'Full Legal LLC',
             isActive: true,
-            isDeleted: true,
+            inn: '7700000000',
+            kpp: '770001001',
+            ogrn: '1020000000000',
+            legalAddress: '1 Demo Ave',
+            bankName: 'Demo Bank',
+            bankAccount: '40702810000000000001',
+            bankBik: '044525000',
+            correspondentAccount: '30101810000000000002',
         });
 
-        expect(documentsService.upsertActiveState).toHaveBeenCalledWith(
-            ctx,
-            'org-1',
-            'Acme LLC',
-            false,
-        );
+        expect(outcome).toEqual({ kind: 'applied' });
+        expect(service.upsertFromEvent).toHaveBeenCalledWith(ctx, 'org-1', {
+            legalName: 'Full Legal LLC',
+            isActive: true,
+            fields: {
+                inn: '7700000000',
+                kpp: '770001001',
+                ogrn: '1020000000000',
+                legalAddress: '1 Demo Ave',
+                bankName: 'Demo Bank',
+                bankAccount: '40702810000000000001',
+                bankBik: '044525000',
+                correspondentAccount: '30101810000000000002',
+            },
+        });
     });
 
-    it('stays active when isDeleted is absent (proto3 omits the false zero-value)', async () => {
-        const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
-        const handler = new OrganizationStreamHandler(documentsService as never);
-
-        await handler.apply(ctx, 'org-1', { name: 'Acme LLC', isActive: true });
-
-        expect(documentsService.upsertActiveState).toHaveBeenCalledWith(
-            ctx,
-            'org-1',
-            'Acme LLC',
-            true,
-        );
+    it('falls back to name when legalName is absent or empty', async () => {
+        const { service, handler } = setup();
+        await handler.apply(ctx, 'org-1', { name: 'Acme', legalName: '' });
+        expect(service.upsertFromEvent).toHaveBeenCalledWith(ctx, 'org-1', {
+            legalName: 'Acme',
+            isActive: false,
+            fields: empty,
+        });
     });
 
-    it('creates a row (issue #88) when no matching OrganizationRequisites exists yet', async () => {
-        const documentsService = { upsertActiveState: vi.fn().mockResolvedValue(undefined) };
-        const handler = new OrganizationStreamHandler(documentsService as never);
+    it('treats empty strings as not provided (null), never as a value', async () => {
+        const { service, handler } = setup();
+        await handler.apply(ctx, 'org-1', { name: 'Acme', inn: '', legalAddress: '  ' });
+        expect(service.upsertFromEvent.mock.calls[0][2].fields).toEqual(empty);
+    });
 
-        await expect(
-            handler.apply(ctx, 'org-unknown', { name: 'Not yet synced' }),
-        ).resolves.toEqual({ kind: 'applied' });
-        expect(documentsService.upsertActiveState).toHaveBeenCalledWith(
-            ctx,
-            'org-unknown',
-            'Not yet synced',
-            false,
-        );
+    it('defaults isActive to false when absent and folds in isDeleted', async () => {
+        const { service, handler } = setup();
+        await handler.apply(ctx, 'org-1', { name: 'Acme' });
+        await handler.apply(ctx, 'org-1', { name: 'Acme', isActive: true, isDeleted: true });
+        expect(service.upsertFromEvent.mock.calls[0][2].isActive).toBe(false);
+        expect(service.upsertFromEvent.mock.calls[1][2].isActive).toBe(false);
+    });
+
+    it('passes legalName:null for a nameless tombstone and returns noop when no row matched', async () => {
+        const { service, handler } = setup(false);
+        const outcome = await handler.apply(ctx, 'org-1', { isDeleted: true });
+        expect(service.upsertFromEvent.mock.calls[0][2].legalName).toBeNull();
+        expect(outcome).toMatchObject({ kind: 'noop' });
     });
 });

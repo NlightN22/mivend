@@ -186,42 +186,6 @@ export class DocumentsService {
         return saved;
     }
 
-    // Creates or updates from erp-integration's OrganizationStreamHandler for the `organization`
-    // Kafka stream, which only ever carries name/isActive — never inn/legalAddress/bank details
-    // (those stay erp-import's job, see OrganizationRequisitesRecord). Issue #88: previously
-    // update-only (returned false and created nothing when no row existed for erpId yet), which
-    // meant an organization mivend only knows about via Kafka was invisible forever, since
-    // erp-import's own richer feed doesn't run against every contour (e.g. staging-integration,
-    // issue #68). Now always creates a row — inn/legalAddress/bank fields stay null until
-    // erp-import's own record arrives (if it ever does in this contour) — never fabricated here.
-    // PdfGeneratorService refuses to render a proforma invoice/contract against a row still missing them
-    // (see assertRequisitesComplete).
-    //
-    // `name: null` (mivend.issue.84.88 follow-up): Integration Service's `organization` deletion
-    // tombstones never carry a name, only entityId/isDeleted — confirmed against real
-    // staging-integration payloads. A null name updates isActive on an already-known
-    // organization without touching legalName, and is a deliberate no-op (never creates a row)
-    // when no existing row matches erpId — a deletion tombstone must never fabricate a brand-new
-    // organization with a blank name.
-    async upsertActiveState(
-        ctx: RequestContext,
-        erpId: string,
-        name: string | null,
-        isActive: boolean,
-    ): Promise<boolean> {
-        const repo = this.connection.getRepository(ctx, OrganizationRequisites);
-        const entity = await repo.findOne({ where: { erpId } });
-        if (entity) {
-            if (name) entity.legalName = name;
-            entity.isActive = isActive;
-            await repo.save(entity);
-            return true;
-        }
-        if (!name) return false;
-        await repo.save(repo.create({ erpId, legalName: name, isActive }));
-        return true;
-    }
-
     // PdfGeneratorService's guard before rendering any document against a given
     // OrganizationRequisites row — a partial row (issue #88, created from Kafka name/isActive
     // alone) must never be used to generate a real proforma invoice/contract with blank/fake legal fields.
@@ -231,7 +195,7 @@ export class DocumentsService {
         if (requisites.inn === null || requisites.legalAddress === null) {
             throw new Error(
                 `Cannot generate a document for organization erpId=${requisites.erpId}: ` +
-                    `missing legal requisites (inn/legalAddress) — awaiting erp-import's full record.`,
+                    `missing legal requisites (inn/legalAddress) — awaiting the organization stream or erp-import's full record.`,
             );
         }
     }

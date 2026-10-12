@@ -70,7 +70,7 @@ describe.each([
         'organization',
         (m: boolean) =>
             new OrganizationStreamHandler({
-                upsertActiveState: vi.fn().mockResolvedValue(m),
+                upsertFromEvent: vi.fn().mockResolvedValue(m),
             } as never),
         { isDeleted: true },
     ],
@@ -108,9 +108,16 @@ describe.each([
     it('applies the valid lines and records the skipped one as a noop reason', async () => {
         const sync = {
             [syncMethod]: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
-        const handler = new Handler(orderConnection('variant-1'), sync as never, {} as never);
+        const handler = new Handler(
+            orderConnection('variant-1'),
+            sync as never,
+            {} as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
+        );
 
         const outcome = await handler.apply(ctx, 'o-1', {
             orderEntityId: 'o-1',
@@ -134,9 +141,12 @@ describe.each([
             orderConnection('variant-1'),
             {
                 [syncMethod]: vi.fn(),
-                isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
             } as never,
             {} as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         const outcome = await handler.apply(ctx, 'o-1', {

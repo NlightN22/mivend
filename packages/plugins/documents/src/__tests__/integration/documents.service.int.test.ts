@@ -8,6 +8,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 import { DocumentsService } from '../../documents.service';
+import { OrganizationEventService } from '../../organization-event.service';
 
 // Vendure's VendureEntity relies on an EntityIdStrategy registered during
 // bootstrap() to generate its primary column — using the real Document/
@@ -46,10 +47,10 @@ class TestOrganizationRequisites {
 
     @Column({ type: 'varchar' }) erpId!: string;
     @Column({ type: 'varchar' }) legalName!: string;
-    @Column({ type: 'varchar' }) inn!: string;
+    @Column({ type: 'varchar', nullable: true }) inn!: string | null;
     @Column({ type: 'varchar', nullable: true }) kpp!: string | null;
     @Column({ type: 'varchar', nullable: true }) ogrn!: string | null;
-    @Column({ type: 'varchar' }) legalAddress!: string;
+    @Column({ type: 'varchar', nullable: true }) legalAddress!: string | null;
     @Column({ type: 'varchar', nullable: true }) bankName!: string | null;
     @Column({ type: 'varchar', nullable: true }) bankAccount!: string | null;
     @Column({ type: 'varchar', nullable: true }) bankBik!: string | null;
@@ -61,6 +62,7 @@ class TestOrganizationRequisites {
 
 let dataSource: DataSource;
 let service: DocumentsService;
+let eventService: OrganizationEventService;
 const mockCtx = {} as RequestContext;
 const mockCounterpartyService = { findByErpId: vi.fn() };
 
@@ -91,6 +93,9 @@ beforeAll(async () => {
         rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
+    eventService = new OrganizationEventService(connectionShim, {
+        enqueue: async () => undefined,
+    } as never);
     service = new DocumentsService(connectionShim, mockCounterpartyService as never);
 });
 
@@ -172,5 +177,29 @@ describe('DocumentsService (integration, real Postgres)', () => {
             .find({ where: { erpId: 'org-1' } });
         expect(rows).toHaveLength(1);
         expect(rows[0].legalName).toBe('Demo Co Updated');
+    });
+
+    it('upsertFromEvent merges requisites: empty keeps stored, non-empty overwrites, one row', async () => {
+        await eventService.upsertFromEvent(mockCtx, 'org-2', {
+            legalName: 'Full Name',
+            isActive: true,
+            fields: { bankName: 'Bank A', bankBik: '044525000' },
+        });
+        await eventService.upsertFromEvent(mockCtx, 'org-2', {
+            legalName: 'Full Name',
+            isActive: true,
+            fields: { bankName: '', bankBik: '044525001', kpp: '770001001' },
+        });
+
+        const rows = await dataSource
+            .getRepository(TestOrganizationRequisites)
+            .find({ where: { erpId: 'org-2' } });
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({
+            bankName: 'Bank A',
+            bankBik: '044525001',
+            kpp: '770001001',
+            inn: null,
+        });
     });
 });
