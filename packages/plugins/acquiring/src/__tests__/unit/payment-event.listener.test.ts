@@ -50,7 +50,14 @@ describe('PaymentEventListener', () => {
     it('enqueues an ErpPaymentReportedEvent as provider="erp", channel="bank-transfer-erp"', () => {
         eventBus.emit(
             ErpPaymentReportedEvent,
-            new ErpPaymentReportedEvent(mockCtx, 42, 1, 'success', 'ERP-EVT-1'),
+            new ErpPaymentReportedEvent(
+                mockCtx,
+                '8b1c7a0e-5d3f-4c1a-9a55-0d3f6f7a1c42',
+                1,
+                'success',
+                'ERP-EVT-1',
+                '1042-01',
+            ),
         );
 
         expect(inboxService.enqueue).toHaveBeenCalledTimes(1);
@@ -59,7 +66,8 @@ describe('PaymentEventListener', () => {
         expect(provider).toBe('erp');
         expect(providerEventId).toBe('ERP-EVT-1');
         expect(payload).toEqual({
-            proformaInvoiceId: 42,
+            proformaInvoiceUuid: '8b1c7a0e-5d3f-4c1a-9a55-0d3f6f7a1c42',
+            proformaInvoiceNumber: '1042-01',
             organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',

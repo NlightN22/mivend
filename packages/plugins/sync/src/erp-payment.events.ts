@@ -2,13 +2,15 @@ import { RequestContext, VendureEvent } from '@vendure/core';
 
 export type ErpPaymentOutcome = 'success' | 'pending' | 'fail' | 'cancel';
 
-// A payment fact reported by the ERP for an ProformaInvoice (plugin-acquiring's model) — never applied
+// A payment fact reported by the ERP for a ProformaInvoice (plugin-acquiring's model) — never applied
 // directly here. plugin-acquiring subscribes and durably enqueues it (the external-integration-rules skill);
 // the risky processing (PaymentAttemptService.payProformaInvoice) only ever runs from the inbox worker.
 export class ErpPaymentReportedEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
-        public readonly proformaInvoiceId: number,
+        // The proforma invoice's immutable uuid; the optional number is a human reference that
+        // must match the document when given.
+        public readonly proformaInvoiceUuid: string,
         // The organization the reporting side (the ERP) believes this payment belongs to — validated
         // against the target ProformaInvoice's real organizationId before applying (the external-integration-rules
         // skill's external-reference-id rule). Payment allocation is scoped by organization only; branch is a visibility
@@ -16,12 +18,13 @@ export class ErpPaymentReportedEvent extends VendureEvent {
         public readonly organizationId: number,
         public readonly outcome: ErpPaymentOutcome,
         public readonly erpEventId: string,
+        public readonly proformaInvoiceNumber?: string,
     ) {
         super();
     }
 }
 
-// The branch-kassa counterpart of ErpPaymentReportedEvent — a cash payment for an ProformaInvoice,
+// The branch-kassa counterpart of ErpPaymentReportedEvent — a cash payment for a ProformaInvoice,
 // witnessed at a branch till and reported up to Central via the existing
 // recordWitnessedPayment/payment.recorded outbox path (see order-sync.service.ts,
 // central.consumer.ts). Same rule #12 constraint: only enqueues, never processes.

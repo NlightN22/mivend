@@ -67,6 +67,8 @@ class TestProformaInvoice {
     @PrimaryGeneratedColumn()
     id!: number;
 
+    @Column({ type: 'uuid', default: () => 'gen_random_uuid()' }) uuid!: string;
+    @Column({ type: 'varchar', default: '1000-01' }) number!: string;
     @Column({ type: 'int' }) orderId!: number;
     @Column({ type: 'int' }) organizationId!: number;
     @Column({ type: 'int' }) counterpartyId!: number;
@@ -260,7 +262,11 @@ beforeAll(async () => {
         numberingServiceShim,
     );
     inboxService = new InboxService(connectionShim);
-    processorService = new PaymentInboxProcessorService(inboxService, paymentAttemptService);
+    processorService = new PaymentInboxProcessorService(
+        inboxService,
+        paymentAttemptService,
+        invoiceService,
+    );
     eventBus = new FakeEventBus();
     paymentEventListener = new PaymentEventListener(eventBus as never, inboxService);
     paymentEventListener.onModuleInit();
@@ -446,10 +452,11 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         await eventBus.publish(
             new ErpPaymentReportedEvent(
                 mockCtx,
-                Number(invoice.id),
+                invoice.uuid,
                 1,
                 'success',
                 'erp-evt-simulated-1',
+                invoice.number,
             ),
         );
 
@@ -459,7 +466,8 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         expect(enqueuedRow.provider).toBe('erp');
         expect(enqueuedRow.status).toBe('pending');
         expect(JSON.parse(enqueuedRow.payload)).toEqual({
-            proformaInvoiceId: Number(invoice.id),
+            proformaInvoiceUuid: invoice.uuid,
+            proformaInvoiceNumber: invoice.number,
             organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
@@ -533,7 +541,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
 
         const event = new ErpPaymentReportedEvent(
             mockCtx,
-            Number(invoice.id),
+            invoice.uuid,
             1,
             'success',
             'erp-evt-dup-1',
@@ -545,6 +553,18 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
             .getRepository(TestIncomingPaymentEvent)
             .find({ where: { providerEventId: 'erp-evt-dup-1' } });
         expect(rows).toHaveLength(1);
+
+        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
+            processed: 1,
+            failed: 0,
+        });
+        await eventBus.publish(event);
+        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
+            processed: 0,
+            failed: 0,
+        });
+        const attempts = await dataSource.getRepository(TestPaymentAttempt).find();
+        expect(attempts).toHaveLength(1);
     });
 
     it('a branch-kassa payment fact with no RRN/kassa receipt is durably recorded but immediately dead-lettered — never silently processed without its mandatory reconciliation reference', async () => {
@@ -595,7 +615,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         await eventBus.publish(
             new ErpPaymentReportedEvent(
                 mockCtx,
-                Number(invoice.id),
+                invoice.uuid,
                 999, // does not match invoice.organizationId (1)
                 'success',
                 'erp-evt-org-mismatch-1',
@@ -619,6 +639,64 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
             .getRepository(TestProformaInvoice)
             .findOneOrFail({ where: { id: Number(invoice.id) } });
         expect(untouchedProformaInvoice.status).toBe('issued'); // never applied
+    });
+
+    it('an ERP payment fact whose declared document number does not match the document is dead-lettered and never applied', async () => {
+        const invoice = await dataSource.getRepository(TestProformaInvoice).save({
+            orderId: 15,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 600,
+            currencyCode: 'RUB',
+            status: 'issued',
+            number: '2000-01',
+        });
+
+        await eventBus.publish(
+            new ErpPaymentReportedEvent(
+                mockCtx,
+                invoice.uuid,
+                1,
+                'success',
+                'erp-evt-number-mismatch-1',
+                '2000-02',
+            ),
+        );
+
+        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
+            processed: 0,
+            failed: 1,
+        });
+        const row = await dataSource
+            .getRepository(TestIncomingPaymentEvent)
+            .findOneOrFail({ where: { providerEventId: 'erp-evt-number-mismatch-1' } });
+        expect(row.status).toBe('failed');
+        expect(row.lastError).toContain('2000-01');
+        const unchanged = await dataSource
+            .getRepository(TestProformaInvoice)
+            .findOneOrFail({ where: { id: Number(invoice.id) } });
+        expect(unchanged.status).toBe('issued');
+    });
+
+    it('an ERP payment fact naming an unknown proforma invoice uuid is dead-lettered, not retried', async () => {
+        await eventBus.publish(
+            new ErpPaymentReportedEvent(
+                mockCtx,
+                '00000000-0000-4000-8000-000000000000',
+                1,
+                'success',
+                'erp-evt-unknown-uuid-1',
+            ),
+        );
+
+        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
+            processed: 0,
+            failed: 1,
+        });
+        const row = await dataSource
+            .getRepository(TestIncomingPaymentEvent)
+            .findOneOrFail({ where: { providerEventId: 'erp-evt-unknown-uuid-1' } });
+        expect(row.status).toBe('failed');
     });
 });
 

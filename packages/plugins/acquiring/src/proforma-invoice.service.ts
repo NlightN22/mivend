@@ -164,6 +164,10 @@ export class ProformaInvoiceService {
             .findOne({ where: { id: proformaInvoiceId } });
     }
 
+    async findByUuid(ctx: RequestContext, uuid: string): Promise<ProformaInvoice | null> {
+        return this.connection.getRepository(ctx, ProformaInvoice).findOne({ where: { uuid } });
+    }
+
     async findForCounterparty(
         ctx: RequestContext,
         counterpartyId: ID,

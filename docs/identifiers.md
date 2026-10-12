@@ -23,6 +23,8 @@ and is never an idempotency key for a business entity.
   entity identity; operation ids stay for operations), rendered Document records, reconciliation issue records, and every
   other mivend-created entity as it is touched (shared base for plugin entities, a custom field for Vendure core entities except OrderLine, whose uuid has its own
   table because line custom fields take part in Vendure's line merge, #221).
+- Example of a contract keyed this way: the ERP payment callback (`POST /erp/callback/payment`) names the
+  document by `proformaInvoiceUuid` (required) and may add `proformaInvoiceNumber` as a checked reference.
 - **Neither** (ERP-owned masters: Counterparty, Contract, Product, Organization, Warehouse, ...): they keep the ERP's own
   `entityId`.
 

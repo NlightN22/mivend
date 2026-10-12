@@ -14,6 +14,8 @@ interface InStockVariant {
 
 export interface InvoiceSummary {
     id: string;
+    uuid: string;
+    number: string;
     status: string;
     organizationId: string;
     amount: number;
@@ -117,7 +119,7 @@ export async function buildOrderAcrossOrganizations(page: Page): Promise<[string
 export async function myInvoicesForOrder(page: Page, orderCode: string): Promise<InvoiceSummary[]> {
     const result = await gql(
         page,
-        `query { myProformaInvoices(options: { take: 50 }) { items { id status organizationId amount currencyCode order { code } } } }`,
+        `query { myProformaInvoices(options: { take: 50 }) { items { id uuid number status organizationId amount currencyCode order { code } } } }`,
     );
     const items = (result.myProformaInvoices as { items: InvoiceSummary[] }).items;
     return items.filter(i => i.order.code === orderCode);

@@ -209,7 +209,8 @@ the async contract.
   body typed as `ErpPaymentReportedDto` with Swagger docs at `/api-docs`, for ERP developers to
   implement against) publishes `ErpPaymentReportedEvent` on the `EventBus`; `plugin-acquiring`'s
   `PaymentEventListener` subscribes and enqueues with `providerEventId = erpEventId` (the ERP's
-  own id for the payment fact — a resend is a safe no-op). Also the simulation entry point until
+  own id for the payment fact — a resend is a safe no-op; the document is named by
+  `proformaInvoiceUuid`, never the internal id). Also the simulation entry point until
   a real ERP integration exists.
 - `provider: 'branch-kassa'` — no separate transport: a branch's existing `payment.recorded`
   outbox event (see "Flow: branch till (kassa) payment" below) carries optional `proformaInvoiceId`/
@@ -525,8 +526,10 @@ bank statement) and needs to push **into** this platform — the reverse directi
 1.  ERP posts a payment document against a ProformaInvoice it knows about (organizationId/counterpartyId
     resolved on the ERP side, same as any other ERP-sourced fact).
 2.  ERP calls POST /erp/callback/payment (plugin-sync's ErpCallbackController) with
-    { invoiceId, outcome, erpEventId } — see ErpPaymentReportedDto, documented at /api-docs for
-    ERP developers to implement against directly.
+    { proformaInvoiceUuid, organizationId, outcome, erpEventId, proformaInvoiceNumber? } — see
+    ErpPaymentReportedDto, documented at /api-docs for ERP developers to implement against
+    directly. The document is addressed by its immutable uuid; the optional number is a
+    reference only and a mismatch dead-letters the event.
 3.  plugin-sync publishes ErpPaymentReportedEvent on the EventBus and returns { ok: true }
     immediately — this ack is unconditional and fast; it says "received", not "processed".
 4.  plugin-acquiring's PaymentEventListener enqueues the event into the payment inbox

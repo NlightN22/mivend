@@ -416,7 +416,7 @@ payment boundary (legacy vs. full shape, `outcome`/`state` enums, positive-profo
 explicit "mandatory-together fields are NOT enforced at this schema layer, PaymentEventListener
 does that instead" boundary). `plugin-sync`'s `ErpCallbackController`/`ErpPaymentReportedDto` (the
 REST ERP→platform boundary, `erp-callback.controller.test.ts`) enforces required fields
-(`invoiceId`, `organizationId`, `erpEventId`) and the `outcome` enum at runtime — found and fixed
+(`proformaInvoiceUuid`, `organizationId`, `erpEventId`; optional `proformaInvoiceNumber` format) and the `outcome` enum at runtime — found and fixed
 as a real gap during the pilot: no global `ValidationPipe` is wired in this project, so
 `@ApiProperty`'s `enum`/`required` are Swagger documentation only, and an unrecognized `outcome`
 value would otherwise have reached `OUTCOME_TO_PAYMENT_STATUS[outcome]` in `plugin-acquiring` as

@@ -8,6 +8,9 @@ import { ErpStatusUpdateDto } from './dto/erp-status-update.dto';
 import { ERP_PAYMENT_OUTCOMES, ErpPaymentReportedDto } from './dto/erp-payment-reported.dto';
 import { ErpPaymentReportedEvent } from './erp-payment.events';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DOCUMENT_NUMBER_PATTERN = /^\d+(-\d+)?$/;
+
 @ApiTags('ERP Callback')
 @Controller('erp/callback')
 export class ErpCallbackController {
@@ -41,7 +44,7 @@ export class ErpCallbackController {
     @HttpCode(200)
     @ApiOperation({
         summary:
-            'Receive a payment fact pushed from the ERP (the ERP) for an ProformaInvoice — durably ' +
+            'Receive a payment fact pushed from the ERP (the ERP) for a ProformaInvoice — durably ' +
             'enqueued by plugin-acquiring, never processed inline (the external-integration-rules skill). ' +
             'Also the simulation entry point until a real ERP integration exists.',
     })
@@ -62,8 +65,16 @@ export class ErpCallbackController {
         if (!payload.organizationId) {
             throw new BadRequestException('organizationId is required');
         }
-        if (!payload.invoiceId) {
-            throw new BadRequestException('invoiceId is required');
+        if (!payload.proformaInvoiceUuid || !UUID_PATTERN.test(payload.proformaInvoiceUuid)) {
+            throw new BadRequestException('proformaInvoiceUuid is required and must be a uuid');
+        }
+        if (
+            payload.proformaInvoiceNumber !== undefined &&
+            !DOCUMENT_NUMBER_PATTERN.test(payload.proformaInvoiceNumber)
+        ) {
+            throw new BadRequestException(
+                'proformaInvoiceNumber must be digits, optionally followed by -NN',
+            );
         }
         if (!ERP_PAYMENT_OUTCOMES.includes(payload.outcome)) {
             throw new BadRequestException(
@@ -74,10 +85,11 @@ export class ErpCallbackController {
         this.eventBus.publish(
             new ErpPaymentReportedEvent(
                 ctx,
-                payload.invoiceId,
+                payload.proformaInvoiceUuid,
                 payload.organizationId,
                 payload.outcome,
                 payload.erpEventId,
+                payload.proformaInvoiceNumber,
             ),
         );
         return { ok: true };

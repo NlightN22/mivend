@@ -3,14 +3,20 @@ import { RequestContext } from '@vendure/core';
 
 import { PaymentChannel } from './entities/payment-attempt.entity';
 import { InboxService } from './inbox.service';
+import { ProformaInvoiceService } from './proforma-invoice.service';
 import {
     PayProformaInvoiceOutcome,
     PaymentAttemptService,
     PaymentOrganizationMismatchError,
 } from './payment-attempt.service';
 
+export class ProformaInvoiceReferenceError extends Error {}
+
 export interface IncomingPaymentPayload {
-    proformaInvoiceId: number;
+    // The ERP names a document by uuid (+ optional number); a branch reports the internal id.
+    proformaInvoiceId?: number;
+    proformaInvoiceUuid?: string;
+    proformaInvoiceNumber?: string;
     // The organization the reporting side (ERP/branch) believes this payment belongs to.
     // PaymentAttemptService.payProformaInvoice validates this against the target ProformaInvoice's real
     // organizationId before applying — a mismatch is a genuine cross-system discrepancy
@@ -44,7 +50,39 @@ export class PaymentInboxProcessorService {
     constructor(
         private inboxService: InboxService,
         private paymentAttemptService: PaymentAttemptService,
+        private proformaInvoiceService: ProformaInvoiceService,
     ) {}
+
+    private async resolveProformaInvoiceId(
+        ctx: RequestContext,
+        payload: IncomingPaymentPayload,
+    ): Promise<number> {
+        if (!payload.proformaInvoiceUuid) {
+            if (payload.proformaInvoiceId === undefined) {
+                throw new ProformaInvoiceReferenceError('Payment fact names no proforma invoice');
+            }
+            return payload.proformaInvoiceId;
+        }
+        const document = await this.proformaInvoiceService.findByUuid(
+            ctx,
+            payload.proformaInvoiceUuid,
+        );
+        if (!document) {
+            throw new ProformaInvoiceReferenceError(
+                `ProformaInvoice with uuid ${payload.proformaInvoiceUuid} not found`,
+            );
+        }
+        if (
+            payload.proformaInvoiceNumber !== undefined &&
+            payload.proformaInvoiceNumber !== document.number
+        ) {
+            throw new ProformaInvoiceReferenceError(
+                `ProformaInvoice ${payload.proformaInvoiceUuid} has number ${document.number}, ` +
+                    `but the payment fact declared number ${payload.proformaInvoiceNumber}`,
+            );
+        }
+        return Number(document.id);
+    }
 
     async processPendingEvents(
         ctx: RequestContext,
@@ -66,7 +104,7 @@ export class PaymentInboxProcessorService {
                 }
                 await this.paymentAttemptService.payProformaInvoice(
                     ctx,
-                    payload.proformaInvoiceId,
+                    await this.resolveProformaInvoiceId(ctx, payload),
                     payload.outcome,
                     payload.channel,
                     payload.externalReference,
@@ -75,11 +113,12 @@ export class PaymentInboxProcessorService {
                 await this.inboxService.markProcessed(ctx, Number(event.id));
                 processed += 1;
             } catch (err) {
-                if (err instanceof PaymentOrganizationMismatchError) {
-                    // A PaymentReconciliationIssue was already recorded (payProformaInvoice) — retrying
-                    // won't change which organization the proforma invoice actually belongs to, so
-                    // dead-letter immediately rather than wasting sweep cycles (same reasoning as
-                    // InboxService.rejectAsInvalid for a missing external reference).
+                if (
+                    err instanceof PaymentOrganizationMismatchError ||
+                    err instanceof ProformaInvoiceReferenceError
+                ) {
+                    // Retrying cannot fix a wrong organization or document reference, so
+                    // dead-letter immediately instead of wasting sweep cycles.
                     await this.inboxService.rejectAsInvalid(ctx, Number(event.id), err.message);
                 } else {
                     await this.inboxService.markFailed(ctx, Number(event.id), err as Error);

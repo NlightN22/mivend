@@ -26,6 +26,8 @@ export const shopApiExtensions: DocumentNode = gql`
 
     type ProformaInvoice {
         id: ID!
+        uuid: String!
+        number: String!
         orderId: ID!
         organizationId: ID!
         amount: Int!

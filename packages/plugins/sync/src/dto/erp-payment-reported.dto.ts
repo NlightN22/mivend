@@ -11,8 +11,20 @@ import { ApiProperty } from '@nestjs/swagger';
 export const ERP_PAYMENT_OUTCOMES = ['success', 'pending', 'fail', 'cancel'] as const;
 
 export class ErpPaymentReportedDto {
-    @ApiProperty({ description: 'plugin-acquiring ProformaInvoice id this payment applies to.' })
-    invoiceId!: number;
+    @ApiProperty({
+        description: 'Immutable uuid of the ProformaInvoice this payment applies to.',
+        format: 'uuid',
+    })
+    proformaInvoiceUuid!: string;
+
+    @ApiProperty({
+        required: false,
+        description:
+            'Human document number of the ProformaInvoice (digits, optionally "-NN"). Reference ' +
+            'only: when given and it does not match the document, the payment is rejected.',
+        example: '1042-01',
+    })
+    proformaInvoiceNumber?: string;
 
     @ApiProperty({
         description:
