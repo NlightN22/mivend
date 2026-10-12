@@ -673,6 +673,41 @@ These are real, acknowledged gaps — not guessed at here, tracked for a future 
   `ONLINE_PAYMENT_STUB_ENABLED=true` (`apps/server/.env.central`; the staging-integration contour leaves
   it unset, so it is disabled there).
 
+### Target model: form of payment vs terms (issue #222, decided 2026-10-12, not built yet)
+
+The checkout list below mixes a form (invoice, online) with terms (deferred). The decided model separates them;
+until #222 ships, the sections that follow describe the current behavior.
+
+- **Form** (customer choice): cash, bank invoice, card online. There is no "deferred" option.
+- **Terms** (derived, never chosen): limit > 0 and payment delay days > 0 means limit control applies; otherwise
+  prepayment, or a one-off manager confirmation. The limit is a hidden control, not a payment method.
+- An order occupies the limit until it is paid (cash accepted, invoices paid, card payment received); a paid order
+  does not count. How shipment/realization replaces the preliminary estimate is a separate discussion.
+- An invoice is a document of the order and can be requested on any form and under any terms (#206).
+
+| Limit state | Form | Placement | Goes to ERP | Counts against limit |
+| --- | --- | --- | --- | --- |
+| Within limit | cash | placed | immediately | until cash accepted |
+| Within limit | bank invoice | invoices generated, printable pages opened in new browser tabs | immediately | until paid |
+| Within limit | card online | payment page at once | after payment | no |
+| Over limit | any | placed with `creditLimitExceeded`, customer ticks an acknowledgement | immediately if the branch allows exceeding and the customer ticked; otherwise after manager confirmation | yes |
+| No limit | cash | placed, waits for a manager | immediately with a short reserve; manager confirms cash received | no (prepayment) |
+| No limit | bank invoice | invoices generated and opened at once | immediately with a short reserve; a manager marks paid (no automatic tracking yet) | no |
+| No limit | card online | payment page at once | after payment | no |
+
+- Prepayment orders go to the ERP at placement with `reserveUntil` = placement + N days (default 3, a business
+  setting in the manager portal, not the Vendure admin); expiry follows the standard reserve auto-cancel (#194).
+- Card payment amount = existing excess over the limit (max(0, exposure - limit), before this order) + the full
+  order total; no excess means the order total. Invoices and payments are always for the full amount; partial
+  payments and overpayment come later.
+- A manager may confirm without payment when there is no limit: a one-off deferral under their responsibility;
+  the order occupies the limit.
+- New branch setting: allow exceeding the limit with the customer's acknowledgement (no manager wait).
+- "Cash received" is a dedicated manager action if cheap, otherwise `ConfirmOrder`.
+- Code consequences: `deferred-payment` becomes a policy applied to every form; `offline-terms` becomes a clean
+  bank-invoice form whose payment is not `Authorized` at placement; the reserve/ERP trigger follows payment or
+  manager confirmation; exposure is computed from payment fact, not ERP status.
+
 ### Credit limit on deferred orders
 
 Decision (2026-10-06): exceeding the limit **does not reject** the order. It is placed, and the

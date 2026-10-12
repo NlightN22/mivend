@@ -79,7 +79,8 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
   immutable snapshot (number, organization, lines, amounts), idempotent per order content, a new
   version when the order changed, the older unpaid one marked superseded, a paid one never rewritten
   (a later difference is shown on the order and settled through the ERP). Not an accounting document
-  and not synced to the ERP. Tracked in #206 together with the question of system-level versioning.
+  and not synced to the ERP. Tracked in #206 together with the question of system-level versioning; requestable on any form and under any
+  terms. Payment forms and terms are separated in #222 (see `docs/payments.md`, "Target model").
 
 ## Reserve and order cancellation (decided and implemented in #194)
 
