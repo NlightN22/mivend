@@ -66,6 +66,22 @@ test.describe('Cart behaviour @cart-totals', () => {
         await expectUiMatchesApi(page, afterRemove);
     });
 
+    test('adding the same variant again merges into one line (#221)', async ({ page }) => {
+        await addSku(page, PLAIN_SKUS[0], 1);
+        await addSku(page, PLAIN_SKUS[0], 2);
+        await addSku(page, DISCOUNTED_SKUS[0], 1);
+        await addSku(page, DISCOUNTED_SKUS[0], 1);
+
+        const cart = await settledCart(page);
+        expect(cart.lines).toHaveLength(2);
+        const bySku = new Map(cart.lines.map(l => [l.productVariant.sku, l.quantity]));
+        expect(bySku.get(PLAIN_SKUS[0])).toBe(3);
+        expect(bySku.get(DISCOUNTED_SKUS[0])).toBe(2);
+
+        await page.goto('/cart');
+        await expect(page.locator('.cart-item')).toHaveCount(2);
+    });
+
     test(`identical carts built ${ATTEMPTS} times produce identical totals`, async ({ page }) => {
         const totals: { total: number; lines: number[] }[] = [];
         for (let i = 0; i < ATTEMPTS; i++) {
