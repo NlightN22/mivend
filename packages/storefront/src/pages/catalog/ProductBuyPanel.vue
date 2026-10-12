@@ -106,6 +106,7 @@ function onStepper(lineId: string | undefined, value: number): void {
                 :model-value="stepperValue"
                 :min="0"
                 :step="salesUnit?.packStep ?? 1"
+                editable
                 block
                 @update:model-value="(val: number) => onStepper(cartLineId, val)"
             />
