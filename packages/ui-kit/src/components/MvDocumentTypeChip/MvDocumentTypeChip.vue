@@ -19,7 +19,7 @@ const style = computed(() => resolveDocumentTypeStyle(props.type));
             :size="14"
             :stroke-width="2"
         />
-        {{ type }}
+        {{ style.label ?? type }}
     </MvStatusBadge>
 </template>
 

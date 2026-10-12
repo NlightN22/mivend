@@ -30,10 +30,14 @@ export const Default: Story = {
                             channel: 'online-acquiring',
                             status: 'captured',
                             createdAt: new Date().toISOString(),
-                            invoiceId: '1',
+                            proformaInvoiceId: '1',
                             order: { id: '1', code: 'ORD-101' },
                             allocations: [
-                                { amount: 460000, isAdvance: false, invoice: { id: '1' } },
+                                {
+                                    amount: 460000,
+                                    isAdvance: false,
+                                    proformaInvoice: { id: '1', number: '1000000001-01' },
+                                },
                             ],
                             refunds: [],
                         },

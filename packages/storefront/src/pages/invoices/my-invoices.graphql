@@ -2,6 +2,7 @@ query MyProformaInvoices($options: ProformaInvoiceListOptions) {
     myProformaInvoices(options: $options) {
         items {
             id
+            number
             orderId
             organizationId
             amount

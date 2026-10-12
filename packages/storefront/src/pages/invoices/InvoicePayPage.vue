@@ -43,7 +43,7 @@ async function choose(outcome: PayInvoiceOutcome): Promise<void> {
 
             <div v-if="loadingInvoice" class="stub-order">Loading…</div>
             <div v-else-if="invoice" class="stub-order">
-                Invoice #{{ invoice.id }} · {{ formatAmount(invoice.amount, invoice.currencyCode) }}
+                Proforma invoice #{{ invoice.number }} · {{ formatAmount(invoice.amount, invoice.currencyCode) }}
             </div>
 
             <div class="stub-actions">

@@ -33,7 +33,12 @@ async function buildAndPayInvoice(
     page: Page,
     outcome: 'success' | 'pending' | 'fail' | 'cancel',
     channel?: 'online-acquiring' | 'branch-kassa' | 'bank-transfer-erp',
-): Promise<{ invoiceId: string; orderCode: string; paymentStatus: string }> {
+): Promise<{
+    invoiceId: string;
+    invoiceNumber: string;
+    orderCode: string;
+    paymentStatus: string;
+}> {
     await buildOrderAcrossOrganizations(page);
     const orderData = await gql(page, `query { activeOrder { code } }`);
     const orderCode = (orderData.activeOrder as { code: string }).code;
@@ -49,6 +54,7 @@ async function buildAndPayInvoice(
     });
     return {
         invoiceId: invoice.id,
+        invoiceNumber: invoice.number,
         orderCode,
         paymentStatus: (result.payment as { status: string }).status,
     };
@@ -64,7 +70,7 @@ test.describe('Payments page', () => {
     test('a payment made with the bank-transfer-erp channel shows the correct source label', async ({
         page,
     }) => {
-        const { invoiceId, paymentStatus } = await buildAndPayInvoice(
+        const { invoiceNumber, paymentStatus } = await buildAndPayInvoice(
             page,
             'success',
             'bank-transfer-erp',
@@ -73,7 +79,7 @@ test.describe('Payments page', () => {
 
         await goToPayments(page);
         const row = page
-            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceId}` })
+            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceNumber}` })
             .first();
         await expect(row).toBeVisible({ timeout: 10000 });
         await expect(row).toContainText('Bank transfer (ERP)');
@@ -98,7 +104,7 @@ test.describe('Payments page', () => {
     });
 
     test('the "Failed" status filter shows only failed payments', async ({ page }) => {
-        // 'fail' never allocates a SettlementEntry, so the row has no "Invoice #X" chip — locate
+        // 'fail' never allocates a SettlementEntry, so the row has no "Proforma invoice #X" chip — locate
         // it by order code instead, which every row shows regardless of allocation.
         const { orderCode } = await buildAndPayInvoice(page, 'fail');
 
@@ -137,14 +143,14 @@ test.describe('Payments page', () => {
         page,
     }) => {
         await buildAndPayInvoice(page, 'success', 'online-acquiring');
-        const { invoiceId } = await buildAndPayInvoice(page, 'success', 'bank-transfer-erp');
+        const { invoiceNumber } = await buildAndPayInvoice(page, 'success', 'bank-transfer-erp');
 
         await goToPayments(page);
         await page.getByRole('button', { name: 'Bank transfer (ERP)' }).click();
         await page.waitForLoadState('networkidle');
 
         const row = page
-            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceId}` })
+            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceNumber}` })
             .first();
         await expect(row).toBeVisible({ timeout: 10000 });
 
@@ -158,7 +164,7 @@ test.describe('Payments page', () => {
     test('combining a status and a source filter narrows to their intersection', async ({
         page,
     }) => {
-        const { invoiceId } = await buildAndPayInvoice(page, 'success', 'branch-kassa');
+        const { invoiceNumber } = await buildAndPayInvoice(page, 'success', 'branch-kassa');
 
         await goToPayments(page);
         await page.getByRole('button', { name: 'Succeeded' }).click();
@@ -167,7 +173,7 @@ test.describe('Payments page', () => {
         await page.waitForLoadState('networkidle');
 
         const row = page
-            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceId}` })
+            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceNumber}` })
             .first();
         await expect(row).toBeVisible({ timeout: 10000 });
         const rowTexts = await page.locator('.payment-row').allTextContents();
@@ -198,7 +204,7 @@ test.describe('Payments page', () => {
 
         await goToPayments(page);
         // Both payments (original + duplicate) share the same order, so filter on that rather
-        // than "Invoice #X" — the duplicate/advance row has no invoice allocation chip at all.
+        // than "Proforma invoice #X" — the duplicate/advance row has no invoice allocation chip at all.
         const rows = page.locator('.payment-row', { hasText: `Order ${orderCode}` });
         await expect(rows.first()).toBeVisible({ timeout: 10000 });
         expect(await rows.count()).toBe(2);
@@ -225,14 +231,14 @@ test.describe('Payment detail page', () => {
     test('detail page shows amount, status, source and the proforma invoice it was applied to', async ({
         page,
     }) => {
-        const { invoiceId } = await buildAndPayInvoice(page, 'success');
+        const { invoiceId, invoiceNumber } = await buildAndPayInvoice(page, 'success');
         const payment = await findPaymentByInvoiceId(page, invoiceId);
 
         await page.goto(`/payments/${payment.id}`);
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.pd-title')).toBeVisible({ timeout: 10000 });
         await expect(page.locator('.pd-source-pill')).toContainText('Online acquiring');
-        await expect(page.locator('.pd-table')).toContainText(`Proforma invoice #${invoiceId}`);
+        await expect(page.locator('.pd-table')).toContainText(`Proforma invoice #${invoiceNumber}`);
     });
 
     test('a payment that ends up entirely as an advance shows the "held entirely as an advance" message and a matching unallocated total', async ({

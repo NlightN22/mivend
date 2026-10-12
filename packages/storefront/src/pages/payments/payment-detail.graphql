@@ -31,6 +31,7 @@ query PaymentDetail($id: ID!) {
         }
         proformaInvoice {
             id
+            number
             status
         }
         order {
@@ -42,6 +43,7 @@ query PaymentDetail($id: ID!) {
             isAdvance
             proformaInvoice {
                 id
+                number
                 amount
                 currencyCode
                 status

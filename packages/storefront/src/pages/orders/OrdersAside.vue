@@ -68,7 +68,7 @@ onMounted(async () => {
         <div class="aside-card">
             <div class="aside-title">Payments &amp; proforma invoices</div>
             <div class="aside-subtitle">
-                Every order can split into several invoices (one per organization) — pay any of them
+                Every order can split into several proforma invoices (one per organization) — pay any of them
                 any time from the proforma invoices page.
             </div>
             <router-link to="/invoices" class="wide-btn orange">Go to proforma invoices</router-link>

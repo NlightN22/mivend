@@ -37,7 +37,7 @@ function formatAmount(cents: number, currency: string): string {
             <template v-else>
                 <div class="id-head">
                     <div>
-                        <h1 class="id-title">Proforma invoice #{{ invoice.id }}</h1>
+                        <h1 class="id-title">Proforma invoice #{{ invoice.number }}</h1>
                         <div class="id-meta">
                             Order {{ formatDocumentNumber(invoice.order.code) }}
                         </div>

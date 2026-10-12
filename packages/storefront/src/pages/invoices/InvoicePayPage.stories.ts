@@ -17,9 +17,10 @@ export const Default: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            registerMock('InvoiceDetail', () => ({
-                invoice: {
+            registerMock('ProformaInvoiceDetail', () => ({
+                proformaInvoice: {
                     id: '1',
+                    number: '1000000001-01',
                     orderId: '1',
                     organizationId: 'org-1',
                     amount: 460000,

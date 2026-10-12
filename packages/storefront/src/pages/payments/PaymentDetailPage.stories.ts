@@ -23,7 +23,7 @@ const PAYMENT_DETAIL = {
     channel: 'online-acquiring',
     status: 'captured',
     createdAt: new Date().toISOString(),
-    invoiceId: '1',
+    proformaInvoiceId: '1',
     orderId: '1',
     externalReference: 'ext-ref-001',
     refunds: [],
@@ -32,14 +32,15 @@ const PAYMENT_DETAIL = {
         { stage: 'received', occurredAt: new Date().toISOString(), note: null },
         { stage: 'captured', occurredAt: new Date().toISOString(), note: null },
     ],
-    invoice: { id: '1', status: 'paid' },
+    proformaInvoice: { id: '1', number: '1000000001-01', status: 'paid' },
     order: { id: '1', code: 'ORD-101' },
     allocations: [
         {
             amount: 460000,
             isAdvance: false,
-            invoice: {
+            proformaInvoice: {
                 id: '1',
+                number: '1000000001-01',
                 amount: 460000,
                 currencyCode: 'RUB',
                 status: 'paid',

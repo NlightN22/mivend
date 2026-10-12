@@ -1,6 +1,7 @@
 query ProformaInvoiceDetail($id: ID!) {
     proformaInvoice(id: $id) {
         id
+        number
         orderId
         organizationId
         amount

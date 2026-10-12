@@ -3345,10 +3345,12 @@ export type ProformaInvoice = {
     currencyCode: Scalars['String']['output'];
     id: Scalars['ID']['output'];
     lines: Array<ProformaInvoiceLine>;
+    number: Scalars['String']['output'];
     order: ProformaInvoiceOrder;
     orderId: Scalars['ID']['output'];
     organizationId: Scalars['ID']['output'];
     status: Scalars['String']['output'];
+    uuid: Scalars['String']['output'];
 };
 
 export type ProformaInvoiceLine = {
@@ -4736,6 +4738,7 @@ export type ProformaInvoiceDetailQueryVariables = Exact<{
 export type ProformaInvoiceDetailQuery = {
     proformaInvoice?: {
         id: string;
+        number: string;
         orderId: string;
         organizationId: string;
         amount: number;
@@ -4760,6 +4763,7 @@ export type MyProformaInvoicesQuery = {
         totalItems: number;
         items: Array<{
             id: string;
+            number: string;
             orderId: string;
             organizationId: string;
             amount: number;
@@ -4891,7 +4895,7 @@ export type MyPaymentsQuery = {
             allocations: Array<{
                 amount: number;
                 isAdvance: boolean;
-                proformaInvoice?: { id: string } | null;
+                proformaInvoice?: { id: string; number: string } | null;
             }>;
             refunds: Array<{ amount: number; status: string }>;
         }>;
@@ -4929,13 +4933,14 @@ export type PaymentDetailQuery = {
             openedAt: any;
         }>;
         processingEvents: Array<{ stage: string; occurredAt: any; note?: string | null }>;
-        proformaInvoice?: { id: string; status: string } | null;
+        proformaInvoice?: { id: string; number: string; status: string } | null;
         order?: { id: string; code: string } | null;
         allocations: Array<{
             amount: number;
             isAdvance: boolean;
             proformaInvoice?: {
                 id: string;
+                number: string;
                 amount: number;
                 currencyCode: string;
                 status: string;
@@ -5859,6 +5864,7 @@ export const ProformaInvoiceDetailDocument = new TypedDocumentString(`
     query ProformaInvoiceDetail($id: ID!) {
   proformaInvoice(id: $id) {
     id
+    number
     orderId
     organizationId
     amount
@@ -5888,6 +5894,7 @@ export const MyProformaInvoicesDocument = new TypedDocumentString(`
   myProformaInvoices(options: $options) {
     items {
       id
+      number
       orderId
       organizationId
       amount
@@ -6030,6 +6037,7 @@ export const MyPaymentsDocument = new TypedDocumentString(`
         isAdvance
         proformaInvoice {
           id
+          number
         }
       }
       refunds {
@@ -6075,6 +6083,7 @@ export const PaymentDetailDocument = new TypedDocumentString(`
     }
     proformaInvoice {
       id
+      number
       status
     }
     order {
@@ -6086,6 +6095,7 @@ export const PaymentDetailDocument = new TypedDocumentString(`
       isAdvance
       proformaInvoice {
         id
+        number
         amount
         currencyCode
         status

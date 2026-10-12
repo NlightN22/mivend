@@ -69,7 +69,7 @@ onMounted(load);
             <div class="invoices-page__breadcrumb">Workspace / Proforma invoices</div>
             <h1 class="invoices-page__title">Proforma invoices</h1>
             <p class="invoices-page__subtitle">
-                {{ totalItems }} invoices across your accessible scope.
+                {{ totalItems }} proforma invoices across your accessible scope.
             </p>
         </div>
 

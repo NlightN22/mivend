@@ -17,6 +17,7 @@ query MyPayments($options: PaymentListOptions) {
                 isAdvance
                 proformaInvoice {
                     id
+                    number
                 }
             }
             refunds {

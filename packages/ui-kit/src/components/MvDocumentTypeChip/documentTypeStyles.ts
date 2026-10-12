@@ -33,10 +33,11 @@ import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 export interface DocumentTypeStyle {
     icon: typeof IconFileText;
     variant: StatusBadgeVariant;
+    label?: string;
 }
 
 const STYLES: Record<string, DocumentTypeStyle> = {
-    invoice: { icon: IconFileInvoice, variant: 'info' },
+    invoice: { icon: IconFileInvoice, variant: 'info', label: 'Proforma invoice' },
     contract: { icon: IconFilePencil, variant: 'warning' },
     return: { icon: IconRotate2, variant: 'danger' },
     reconciliation: { icon: IconScale, variant: 'success' },

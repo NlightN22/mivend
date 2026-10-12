@@ -91,7 +91,7 @@ const refundedTotal = computed(() =>
                     <div class="pd-meta-item" v-if="payment.proformaInvoice">
                         <label>Target proforma invoice</label>
                         <router-link class="pd-link" :to="`/invoices/${payment.proformaInvoice.id}`"
-                            >Proforma invoice #{{ payment.proformaInvoice.id }}</router-link
+                            >Proforma invoice #{{ payment.proformaInvoice.number }}</router-link
                         >
                     </div>
                 </div>
@@ -140,7 +140,7 @@ const refundedTotal = computed(() =>
                                             <router-link
                                                 class="pd-link"
                                                 :to="`/invoices/${a.proformaInvoice?.id}`"
-                                                >Proforma invoice #{{ a.proformaInvoice?.id }}</router-link
+                                                >Proforma invoice #{{ a.proformaInvoice?.number }}</router-link
                                             >
                                             <div class="pd-row-meta" v-if="a.proformaInvoice?.order">
                                                 Order
@@ -319,7 +319,7 @@ const refundedTotal = computed(() =>
                             <div class="pd-detail-row" v-if="payment.proformaInvoice">
                                 <span>Proforma invoice</span>
                                 <router-link class="pd-link" :to="`/invoices/${payment.proformaInvoice.id}`"
-                                    >Proforma invoice #{{ payment.proformaInvoice.id }}</router-link
+                                    >Proforma invoice #{{ payment.proformaInvoice.number }}</router-link
                                 >
                             </div>
                             <div class="pd-detail-row" v-if="payment.order">

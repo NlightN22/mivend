@@ -54,7 +54,7 @@ test.describe('Proforma invoice lifecycle: order split, payment, status, filters
         await page.waitForLoadState('domcontentloaded');
         for (const invoice of invoices) {
             await expect(
-                page.locator('.invoice-row', { hasText: `Proforma invoice #${invoice.id}` }),
+                page.locator('.invoice-row', { hasText: `Proforma invoice #${invoice.number}` }),
             ).toContainText('Paid');
         }
     });
