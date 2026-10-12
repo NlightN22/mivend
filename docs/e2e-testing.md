@@ -9,7 +9,8 @@ Playwright tests are in `packages/e2e/storefront/` (storefront) and `packages/e2
 SERVER_URL=http://localhost:3000 \
   STOREFRONT_URL=http://localhost:5173 \
   MANAGER_URL=http://localhost:5174 \
-  ERP_IMPORT_TOKEN=dev-token \
+  ERP_IMPORT_TOKEN=dev-import-token-change-me-0000 \
+  ERP_CALLBACK_API_KEY=dev-callback-key-change-me-0000 \
   pnpm --filter @mivend/e2e test
 ```
 

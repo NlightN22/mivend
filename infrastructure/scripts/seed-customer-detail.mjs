@@ -23,7 +23,7 @@
 import { execSync } from 'node:child_process';
 
 const BASE_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
-const TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-token';
+const TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-import-token-change-me-0000';
 const TARGET_COUNT = 50;
 const CUSTOMER_EMAIL = 'ivan@autoservice-nord.example';
 const CUSTOMER_PASSWORD = 'Password123!';
@@ -500,7 +500,10 @@ async function topUpErpCancelledOrders(customerToken, directorToken, variantIds)
         const orderCode = orderRes.data.order.code;
         const res = await fetch(`${BASE_URL}/erp/callback/order-status`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Api-Key': process.env.ERP_CALLBACK_API_KEY ?? 'dev-callback-key-change-me-0000',
+            },
             body: JSON.stringify({
                 orderCode,
                 status: 'CANCELLED',

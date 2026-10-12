@@ -74,15 +74,6 @@ export default defineConfig(() => {
                     target: apiTarget,
                     changeOrigin: true,
                 },
-                // REST API docs (issue #28) — not a storefront route, forward to
-                // the server directly so it's reachable through the same public
-                // origin as everything else (the Apache vhost in front of this
-                // dev box forwards its whole public domain to this Vite server;
-                // only paths listed here get relayed on to the actual backend).
-                '/api-docs': {
-                    target: apiTarget,
-                    changeOrigin: true,
-                },
             },
         },
     };

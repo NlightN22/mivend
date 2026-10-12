@@ -27,7 +27,7 @@
 // repeatedly, including CI.
 
 const BASE_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
-const ERP_TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-token';
+const ERP_TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-import-token-change-me-0000';
 const PASSWORD = 'Password123!';
 const VERIFY_OTHER_DEPT_EMAIL = 'verify-other-dept@mivend.dev';
 const VERIFY_SAME_DEPT_DIFFERENT_BRANCH_EMAIL = 'verify-same-dept-diff-branch@mivend.dev';

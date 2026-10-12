@@ -134,7 +134,7 @@ seed:
 	@echo "Waiting for server on :3000..."
 	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
 	@echo "Server ready. Seeding..."
-	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-token} node infrastructure/scripts/seed-erp.mjs
+	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-import-token-change-me-0000} node infrastructure/scripts/seed-erp.mjs
 
 # Requires seed to have already run (demo administrators, counterparty cnt-001 must exist).
 # The manager-portal roles themselves no longer need a manual seed step — issue #134's

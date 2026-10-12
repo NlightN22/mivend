@@ -109,7 +109,7 @@ wait "$MIGRATE_PID" 2>/dev/null || true
 
 echo "==> Seeding..."
 node infrastructure/scripts/seed-access-roles.mjs
-ERP_IMPORT_TOKEN="${ERP_IMPORT_TOKEN:-dev-token}" node infrastructure/scripts/seed-erp.mjs
+ERP_IMPORT_TOKEN="${ERP_IMPORT_TOKEN:-dev-import-token-change-me-0000}" node infrastructure/scripts/seed-erp.mjs
 node infrastructure/scripts/seed-approvals.mjs
 
 echo "==> Starting full dev stack in background..."

@@ -388,3 +388,25 @@ rejected). Changing it logs everybody out exactly once.
 
 The plain rename migrations (#223) do not rename FK/PK/index hash names, so `migration:run` on a
 non-synchronize database drifts those names from entity-derived ones. Accepted: there is no production database yet.
+
+## REST/dev-surface flags
+
+Policy: every non-GraphQL REST endpoint and dev surface is **closed by default** behind an explicit
+enabling flag, and even when enabled requires an API key header (`X-Api-Key`, or
+`Authorization: Bearer` for erp-import). A flag on with a missing/short (<16 chars) key still
+refuses every call (401) and logs a startup error. Payment-provider webhooks would use provider
+signatures instead. Shared guard: `packages/shared/src/api-key.ts`; the controller allow-list test
+is `apps/server/src/__tests__/unit/rest-controller-allowlist.test.ts`.
+
+| Variable | Default | What it opens | Why | Must be true in | Key requirement | Used by | If on in production |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `EMAIL_DEV_MAILBOX_ENABLED` | off (only `true`) | `GET /mailbox` (emails written to disk) | See sent emails locally without a mail transport (#121) | local, e2e/CI | none (dev only) | manager e2e user specs | Anyone can read password-reset tokens and take over accounts |
+| `API_DOCS_ENABLED` | off (only `true`) | `/api-docs`, `/api-docs-json` Swagger | Browse REST DTOs (#28) | local, e2e/CI | none | `swagger-docs.spec.ts` | Discloses the internal REST surface |
+| `ERP_CALLBACK_ENABLED` | off (only `true`) | `POST /erp/callback/order-status`, `POST /erp/callback/payment`, `GET /erp/orders/:code/status`, `GET /erp/kafka-status` | Simulated ERP pushes and status reads | local, e2e/CI; never staging-integration/production until a real caller needs it | `ERP_CALLBACK_API_KEY`, min 16 chars | `order-status-flow.spec.ts`, `payments-erp-callback.spec.ts`, `seed-customer-detail.mjs` | Forged order status and payment facts |
+| `ERP_CALLBACK_API_KEY` | unset (refuses) | key for the four routes above | Authenticates the caller | wherever the flag is true | min 16 chars; local default `dev-callback-key-change-me-0000` only in local env files and e2e fallbacks | same as above | Weak/default key allows forged callbacks |
+| `ERP_IMPORT_ENABLED` | off (only `true`) | `/erp/import/*` legacy direct-REST intake | Synthetic data for local/branch (#68) | local, branch, e2e/CI | `ERP_IMPORT_TOKEN` | `make seed`, `dev-fresh.sh`, `ci-e2e-smoke.sh`, e2e helpers | Arbitrary master-data writes |
+| `ERP_IMPORT_TOKEN` | unset (refuses) | Bearer token for `/erp/import/*` | Authenticates the importer | wherever import is enabled | min 16 chars; literal `dev-token` refused when `NODE_ENV=production`; local default `dev-import-token-change-me-0000` | seed scripts, `packages/e2e/helpers/api.ts` | Weak token allows master-data writes |
+| `SERVER_BIND_ADDRESS` | `127.0.0.1` | Host address the compose `server` port 3000 binds to | Keep the API off public interfaces unless a proxy is intended | set to `0.0.0.0` only deliberately | n/a | `infrastructure/docker/docker-compose.yml` | n/a (compose-only; default is the safe one) |
+
+`infrastructure/docker/docker-compose.yml` sets the first three flags and `ERP_IMPORT_ENABLED`
+explicitly to `false` for the production `server`.

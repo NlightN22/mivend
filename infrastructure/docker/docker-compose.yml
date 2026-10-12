@@ -30,8 +30,13 @@ services:
             SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
             SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-superadmin}
             COOKIE_SECRET: ${COOKIE_SECRET:-}
+            # REST surfaces are closed by default (docs/environments.md); keep these false/unset in production.
+            EMAIL_DEV_MAILBOX_ENABLED: 'false'
+            API_DOCS_ENABLED: 'false'
+            ERP_CALLBACK_ENABLED: 'false'
+            ERP_IMPORT_ENABLED: 'false'
         ports:
-            - '3000:3000'
+            - '${SERVER_BIND_ADDRESS:-127.0.0.1}:3000:3000'
         depends_on:
             postgres:
                 condition: service_healthy

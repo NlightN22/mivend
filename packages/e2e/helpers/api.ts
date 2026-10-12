@@ -1,5 +1,5 @@
 const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
-const ERP_TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-token';
+const ERP_TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-import-token-change-me-0000';
 
 interface RunStatus {
     runId: string;

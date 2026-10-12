@@ -577,3 +577,11 @@ staging-integration.
 
 Run the `test-design` skill before writing or changing any test here, per AGENTS.md's Testing
 requirements.
+
+## Inbound REST callbacks (flag-gated, key mandatory)
+
+Any plain REST endpoint an external system calls must be mounted only behind an explicit env
+flag (closed by default, 404 when off) and must verify an API key header with the shared
+`verifyApiKey` guard helper (fail closed when the key is unset or under 16 characters).
+Provider webhooks use provider signatures instead. See `docs/environments.md`, "REST/dev-surface
+flags", and the controller allow-list test.

@@ -31,7 +31,7 @@ echo "==> Seeding access-control roles..."
 node infrastructure/scripts/seed-access-roles.mjs
 
 echo "==> Seeding database via ERP import..."
-ERP_IMPORT_TOKEN="${ERP_IMPORT_TOKEN:-dev-token}" node infrastructure/scripts/seed-erp.mjs
+ERP_IMPORT_TOKEN="${ERP_IMPORT_TOKEN:-dev-import-token-change-me-0000}" node infrastructure/scripts/seed-erp.mjs
 
 echo "==> Seeding approval workflow requests..."
 node infrastructure/scripts/seed-approvals.mjs

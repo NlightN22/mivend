@@ -7,7 +7,7 @@ import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
-const TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-token';
+const TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-import-token-change-me-0000';
 const ADMIN_USER = process.env.ADMIN_USER ?? 'superadmin';
 const ADMIN_PASS = process.env.ADMIN_PASS ?? 'superadmin';
 

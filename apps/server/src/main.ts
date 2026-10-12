@@ -6,7 +6,7 @@ import { mountNotificationSubscriptions } from './subscriptions';
 import { assertDatabaseLocale } from './db-locale-check';
 import { carryOverOrderLineIdentity } from './order-line-identity-carryover';
 
-// Must run in `onBeforeAppListen`: routes registered after bootstrap() resolves are silently 404
+// Mounted only with API_DOCS_ENABLED=true; must run in `onBeforeAppListen` (later routes 404).
 // (Nest finalizes routing at app.listen()). REST-only docs, see issue #28.
 function mountApiDocs(app: INestApplication): void {
     const document = SwaggerModule.createDocument(
@@ -18,6 +18,7 @@ function mountApiDocs(app: INestApplication): void {
                     'Shop/Admin APIs are GraphQL — see /shop-api and /admin-api.',
             )
             .addBearerAuth({ type: 'http', scheme: 'bearer' }, 'erp-import-token')
+            .addApiKey({ type: 'apiKey', in: 'header', name: 'X-Api-Key' }, 'erp-callback-api-key')
             .build(),
     );
     SwaggerModule.setup('api-docs', app, document);
@@ -28,7 +29,7 @@ assertDatabaseLocale()
     .then(() =>
         bootstrap(config, {
             onBeforeAppListen: app => {
-                mountApiDocs(app);
+                if (process.env.API_DOCS_ENABLED === 'true') mountApiDocs(app);
                 // Needs the raw HTTP server before app.listen() — see subscriptions.ts.
                 mountNotificationSubscriptions(app);
             },
