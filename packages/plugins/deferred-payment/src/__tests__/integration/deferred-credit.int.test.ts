@@ -15,7 +15,10 @@ describe('credit control over open orders (real SQL + decide)', () => {
             creditLimitExceeded: false,
             countsAgainstLimit: true,
         });
-        expect(result.metadata.public).toEqual({ creditLimitExceeded: false });
+        expect(result.metadata.public).toEqual({
+            creditLimitExceeded: false,
+            awaitingManagerConfirmation: false,
+        });
     });
 
     it('still places a single order over the limit but flags it for a manager', async () => {

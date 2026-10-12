@@ -2,6 +2,8 @@ export const DEFAULT_PREPAYMENT_RESERVE_DAYS = 3;
 
 export const PLACEMENT_KEY = 'placement' as const;
 export const CREDIT_ACKNOWLEDGED_KEY = 'creditLimitAcknowledged' as const;
+// Public payment metadata flag: the order waits for a manager before it goes to the ERP.
+export const AWAITING_MANAGER_KEY = 'awaitingManagerConfirmation' as const;
 
 export const PAYMENT_FORMS = ['cash', 'bank-transfer', 'card'] as const;
 export type PaymentForm = (typeof PAYMENT_FORMS)[number];

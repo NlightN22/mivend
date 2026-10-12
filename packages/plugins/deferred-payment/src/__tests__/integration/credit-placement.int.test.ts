@@ -41,13 +41,17 @@ describe('placement matrix on real data', () => {
         expect(result.amount).toBe(4_000_000);
     });
 
-    it('charges a card the existing excess plus the whole order when over the limit', async () => {
+    it('cures an over-limit card order: it goes to the ERP after payment, not to a manager', async () => {
         const buyer = await h.addBuyer(100_000);
         await h.addOrder(buyer, 70_000);
         await h.addOrder(buyer, 60_000);
         const result = await h.place(buyer, 20_000, 'card');
         expect(result.amount).toBe(3_000_000 + 2_000_000); // 30k excess + 20k order
-        expect(result.decision.creditLimitExceeded).toBe(true);
+        expect(result.decision).toMatchObject({
+            route: 'after-payment',
+            countsAgainstLimit: false,
+            creditLimitExceeded: false,
+        });
     });
 
     it('adds the ERP balance to the excess and never charges a negative excess', async () => {
@@ -69,6 +73,15 @@ describe('placement matrix on real data', () => {
             creditLimitAcknowledged: true,
         });
         expect(decision.route).toBe('manager-confirmation');
+    });
+
+    it('publishes the manager-wait flag only for the manager-confirmation route', async () => {
+        const buyer = await h.addBuyer(100_000);
+        await h.addOrder(buyer, 95_000);
+        const waiting = await h.place(buyer, 10_000, 'cash');
+        expect(waiting.metadata.public).toMatchObject({ awaitingManagerConfirmation: true });
+        const card = await h.place(buyer, 10_000, 'card');
+        expect(card.metadata.public).toMatchObject({ awaitingManagerConfirmation: false });
     });
 
     it('goes to the ERP now when over the limit, exceeding is allowed and acknowledged', async () => {

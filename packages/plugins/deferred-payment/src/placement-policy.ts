@@ -16,21 +16,22 @@ export interface PlacementDecision {
 }
 
 // The single placement matrix (docs/payments.md "Target model"): form x limit state -> route.
+// A card payment covers the excess plus the order, so it cures an over-limit order.
 export function decidePlacement(input: PlacementInput): PlacementDecision {
     const { form, limitControlled, exceeded, allowExceeding, acknowledged } = input;
-    if (limitControlled && exceeded) {
-        return {
-            route: allowExceeding && acknowledged ? 'erp-now' : 'manager-confirmation',
-            countsAgainstLimit: true,
-            creditLimitExceeded: true,
-            prepayment: false,
-        };
-    }
     if (form === 'card') {
         return {
             route: 'after-payment',
             countsAgainstLimit: false,
             creditLimitExceeded: false,
+            prepayment: false,
+        };
+    }
+    if (limitControlled && exceeded) {
+        return {
+            route: allowExceeding && acknowledged ? 'erp-now' : 'manager-confirmation',
+            countsAgainstLimit: true,
+            creditLimitExceeded: true,
             prepayment: false,
         };
     }

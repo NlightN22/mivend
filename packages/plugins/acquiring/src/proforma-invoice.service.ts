@@ -26,6 +26,8 @@ export interface ProformaInvoiceListOptions {
     status?: string;
     // Substring match against the proforma invoice's own number (see ProformaInvoice.number's doc comment).
     search?: string;
+    // Shop API: only the proforma invoices of one own order.
+    orderCode?: string;
 }
 
 // Splits one aggregate storefront Order into one ProformaInvoice per organization it touches — decided
@@ -199,6 +201,15 @@ export class ProformaInvoiceService {
             qb.andWhere('proformaInvoice.number ILIKE :search', {
                 search: documentNumberSearchTerm(options.search),
             });
+        }
+
+        if (options?.orderCode) {
+            qb.andWhere(
+                'proformaInvoice.orderId IN (SELECT o.id FROM "order" o WHERE o.code = :orderCode)',
+                {
+                    orderCode: options.orderCode,
+                },
+            );
         }
 
         const [items, totalItems] = await qb.getManyAndCount();

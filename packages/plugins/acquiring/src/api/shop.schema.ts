@@ -46,6 +46,7 @@ export const shopApiExtensions: DocumentNode = gql`
         take: Int
         skip: Int
         status: String
+        orderCode: String
     }
 
     type MoneyAmount {

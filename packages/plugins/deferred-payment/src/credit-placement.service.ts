@@ -8,6 +8,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import {
+    AWAITING_MANAGER_KEY,
     CREDIT_ACKNOWLEDGED_KEY,
     CREDIT_LIMIT_EXCEEDED_KEY,
     DEFAULT_PREPAYMENT_RESERVE_DAYS,
@@ -82,7 +83,10 @@ export class CreditPlacementService {
                 decision,
                 metadata: {
                     ...inputMetadata,
-                    public: { [CREDIT_LIMIT_EXCEEDED_KEY]: decision.creditLimitExceeded },
+                    public: {
+                        [CREDIT_LIMIT_EXCEEDED_KEY]: decision.creditLimitExceeded,
+                        [AWAITING_MANAGER_KEY]: decision.route === 'manager-confirmation',
+                    },
                     [PLACEMENT_KEY]: {
                         route: decision.route,
                         countsAgainstLimit: decision.countsAgainstLimit,

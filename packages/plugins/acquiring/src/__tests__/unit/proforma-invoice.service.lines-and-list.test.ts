@@ -144,6 +144,28 @@ describe('ProformaInvoiceService.findForCounterparty', () => {
     });
 });
 
+describe('ProformaInvoiceService.findForCounterparty orderCode', () => {
+    it('restricts the list to the proforma invoices of one order code', async () => {
+        vi.clearAllMocks();
+        mockQb.getManyAndCount.mockResolvedValue([[], 0]);
+        const service = new ProformaInvoiceService(
+            mockConnection,
+            {} as unknown as EntityHydrator,
+            {} as unknown as CounterpartyService,
+            {} as never,
+            mockTranslator as never,
+            {} as never,
+        );
+        await service.findForCounterparty(mockCtx, '42', { orderCode: 'ORD-1' });
+        expect(mockQb.andWhere).toHaveBeenCalledWith(
+            expect.stringContaining('o.code = :orderCode'),
+            {
+                orderCode: 'ORD-1',
+            },
+        );
+    });
+});
+
 describe('ProformaInvoiceService.updateStatusForOrder', () => {
     let service: ProformaInvoiceService;
     const mockUpdate = vi.fn();

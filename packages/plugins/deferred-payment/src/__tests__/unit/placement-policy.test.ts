@@ -19,7 +19,18 @@ describe('decidePlacement', () => {
         });
     });
 
-    it.each<PaymentForm>(['cash', 'bank-transfer', 'card'])(
+    it('over the limit, a card order is cured by its payment and goes to the ERP after it', () => {
+        expect(
+            decidePlacement({ ...base, form: 'card', exceeded: true, acknowledged: false }),
+        ).toEqual({
+            route: 'after-payment',
+            countsAgainstLimit: false,
+            creditLimitExceeded: false,
+            prepayment: false,
+        });
+    });
+
+    it.each<PaymentForm>(['cash', 'bank-transfer'])(
         'over the limit, %s waits for a manager unless exceeding is allowed and acknowledged',
         form => {
             const over = { ...base, form, exceeded: true };

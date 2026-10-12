@@ -150,8 +150,8 @@ describe('onlineStubPaymentHandler', () => {
             amount: 3500,
             decision: {},
             metadata: {
-                public: { creditLimitExceeded: true },
-                placement: { route: 'manager-confirmation' },
+                public: { creditLimitExceeded: false },
+                placement: { route: 'after-payment' },
             },
         });
         onlineStubPaymentHandler.init(
